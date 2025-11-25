@@ -7,8 +7,8 @@ import mplfinance as mpf
 import numpy as np
 import pandas as pd
 
-import color_style as color
-from graph_util import (
+import quantagent.color_style as color
+from quantagent.graph_util import (
     fit_trendlines_high_low,
     fit_trendlines_single,
     get_line_points,

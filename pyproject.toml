@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quantagent"
+version = "0.1.0"
+description = "Multi-agent trading analysis system using vision-capable LLMs"
+authors = [{name = "QuantAgent Team"}]
+requires-python = ">=3.9"
+dependencies = [
+    "flask",
+    "yfinance",
+    "pandas",
+    "numpy",
+    "matplotlib",
+    "mplfinance",
+    "scipy",
+    "TA-Lib",
+    "langchain",
+    "langchain-openai",
+    "langchain-anthropic",
+    "langchain-qwq",
+    "langchain-core",
+    "langgraph",
+    "openai",
+    "anthropic",
+    "ipython",
+    "Pillow",
+    "requests",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov", "black", "ruff"]
+
+[tool.setuptools]
+packages = ["quantagent"]

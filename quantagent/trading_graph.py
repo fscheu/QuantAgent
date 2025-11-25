@@ -12,9 +12,9 @@ from langchain_openai import ChatOpenAI
 from langchain_qwq import ChatQwen
 from langgraph.prebuilt import ToolNode
 
-from default_config import DEFAULT_CONFIG
-from graph_setup import SetGraph
-from graph_util import TechnicalTools
+from quantagent.default_config import DEFAULT_CONFIG
+from quantagent.graph_setup import SetGraph
+from quantagent.graph_util import TechnicalTools
 
 
 class TradingGraph:

@@ -4,12 +4,12 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode
 
-from agent_state import IndicatorAgentState
-from decision_agent import create_final_trade_decider
-from graph_util import TechnicalTools
-from indicator_agent import create_indicator_agent
-from pattern_agent import create_pattern_agent
-from trend_agent import create_trend_agent
+from quantagent.agent_state import IndicatorAgentState
+from quantagent.decision_agent import create_final_trade_decider
+from quantagent.graph_util import TechnicalTools
+from quantagent.indicator_agent import create_indicator_agent
+from quantagent.pattern_agent import create_pattern_agent
+from quantagent.trend_agent import create_trend_agent
 
 
 class SetGraph:

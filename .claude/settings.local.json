@@ -3,7 +3,8 @@
     "allow": [
       "WebSearch",
       "Bash(tree:*)",
-      "mcp__docs-langchain__SearchDocsByLangChain"
+      "mcp__docs-langchain__SearchDocsByLangChain",
+      "Bash(pip install:*)"
     ],
     "deny": [],
     "ask": []

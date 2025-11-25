@@ -10,7 +10,7 @@ import pandas as pd
 import talib
 from langchain_core.tools import tool
 
-import color_style as color
+import quantagent.color_style as color
 
 matplotlib.use("Agg")
 

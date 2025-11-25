@@ -11,8 +11,8 @@ import yfinance as yf
 from flask import Flask, jsonify, render_template, request, send_file
 from openai import OpenAI
 
-import static_util
-from trading_graph import TradingGraph
+import quantagent.static_util as static_util
+from quantagent.trading_graph import TradingGraph
 
 app = Flask(__name__)
 
@@ -20,7 +20,7 @@ app = Flask(__name__)
 class WebTradingAnalyzer:
     def __init__(self):
         """Initialize the web trading analyzer."""
-        from default_config import DEFAULT_CONFIG
+        from quantagent.default_config import DEFAULT_CONFIG
         # Start with default config (OpenAI)
         self.config = DEFAULT_CONFIG.copy()
         self.trading_graph = TradingGraph(config=self.config)
@@ -1030,14 +1030,14 @@ def validate_api_key():
 def serve_assets(filename):
     """Serve static assets from the assets folder."""
     try:
-        return send_file(f"assets/{filename}")
+        return send_file(f"apps/flask/assets/{filename}")
     except FileNotFoundError:
         return jsonify({"error": "Asset not found"}), 404
 
 
 if __name__ == "__main__":
     # Create templates directory if it doesn't exist
-    templates_dir = Path("templates")
+    templates_dir = Path("apps/flask/templates")
     templates_dir.mkdir(exist_ok=True)
 
     # Create static directory if it doesn't exist

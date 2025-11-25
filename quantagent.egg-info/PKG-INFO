@@ -1,0 +1,30 @@
+Metadata-Version: 2.4
+Name: quantagent
+Version: 0.1.0
+Summary: Multi-agent trading analysis system using vision-capable LLMs
+Author: QuantAgent Team
+Requires-Python: >=3.9
+Requires-Dist: flask
+Requires-Dist: yfinance
+Requires-Dist: pandas
+Requires-Dist: numpy
+Requires-Dist: matplotlib
+Requires-Dist: mplfinance
+Requires-Dist: scipy
+Requires-Dist: TA-Lib
+Requires-Dist: langchain
+Requires-Dist: langchain-openai
+Requires-Dist: langchain-anthropic
+Requires-Dist: langchain-qwq
+Requires-Dist: langchain-core
+Requires-Dist: langgraph
+Requires-Dist: openai
+Requires-Dist: anthropic
+Requires-Dist: ipython
+Requires-Dist: Pillow
+Requires-Dist: requests
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"
+Requires-Dist: black; extra == "dev"
+Requires-Dist: ruff; extra == "dev"
