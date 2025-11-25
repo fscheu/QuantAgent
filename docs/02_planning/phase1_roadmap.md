@@ -91,10 +91,10 @@ streamlit==1.28.0
 
 **1.2 Database Setup**
 - [x] Create PostgreSQL database locally
-- [ ] Setup Alembic for migrations
-- [ ] Define SQLAlchemy models (Order, Fill, Position, Signal, Trade, MarketData)
-- [ ] Create initial migration script
-- [ ] Test migrations work
+- [x] Setup Alembic for migrations
+- [x] Define SQLAlchemy models (Order, Fill, Position, Signal, Trade, MarketData)
+- [x] Create initial migration script
+- [x] Test migrations work
 
 **1.3 Docker Setup**
 - [x] Create `Dockerfile` (Python 3.11 + dependencies)
@@ -104,7 +104,7 @@ streamlit==1.28.0
 
 **1.4 Testing Infrastructure**
 - [x] Create `tests/conftest.py` with fixtures
-- [ ] Write first unit test (models)
+- [x] Write first unit test (models)
 - [x] Setup pytest configuration
 - [ ] Configure GitHub Actions to run tests
 
@@ -123,6 +123,7 @@ streamlit==1.28.0
 - [ ] Implement `thread_id` based state resumption for backtesting
 - [ ] Test: Stop backtest mid-way, resume from checkpoint
 - [ ] Benefit: Long backtests survive crashes, full execution history
+
 
 **Deliverables**:
 - ✅ Database running

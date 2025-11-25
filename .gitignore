@@ -4,3 +4,4 @@ trend_graph.png
 record.csv
 .vscode/settings.json
 .env
+*.db
