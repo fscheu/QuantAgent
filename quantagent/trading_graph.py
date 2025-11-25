@@ -57,24 +57,24 @@ class TradingGraph:
     def _get_api_key(self, provider: str = "openai") -> str:
         """
         Get API key with proper validation and error handling.
-        
+
         Args:
             provider: The provider name ("openai", "anthropic", or "qwen")
-        
+
         Returns:
             str: The API key for the specified provider
-            
+
         Raises:
             ValueError: If API key is missing or invalid
         """
         if provider == "openai":
             # First check if API key is provided in config
             api_key = self.config.get("api_key")
-            
+
             # If not in config, check environment variable
             if not api_key:
                 api_key = os.environ.get("OPENAI_API_KEY")
-            
+
             # Validate the API key
             if not api_key:
                 raise ValueError(
@@ -83,7 +83,7 @@ class TradingGraph:
                     "2. Update the config with: config['api_key'] = 'your-key-here'\n"
                     "3. Use the web interface to update the API key"
                 )
-            
+
             if api_key == "your-openai-api-key-here" or api_key == "":
                 raise ValueError(
                     "Please replace the placeholder API key with your actual OpenAI API key. "
@@ -92,11 +92,11 @@ class TradingGraph:
         elif provider == "anthropic":
             # First check if API key is provided in config
             api_key = self.config.get("anthropic_api_key")
-            
+
             # If not in config, check environment variable
             if not api_key:
                 api_key = os.environ.get("ANTHROPIC_API_KEY")
-            
+
             # Validate the API key
             if not api_key:
                 raise ValueError(
@@ -104,7 +104,7 @@ class TradingGraph:
                     "1. Set environment variable: export ANTHROPIC_API_KEY='your-key-here'\n"
                     "2. Update the config with: config['anthropic_api_key'] = 'your-key-here'\n"
                 )
-            
+
             if api_key == "":
                 raise ValueError(
                     "Please provide your actual Anthropic API key. "
@@ -113,11 +113,11 @@ class TradingGraph:
         elif provider == "qwen":
             # First check if API key is provided in config
             api_key = self.config.get("qwen_api_key")
-            
+
             # If not in config, check environment variable
             if not api_key:
                 api_key = os.environ.get("DASHSCOPE_API_KEY")
-            
+
             # Validate the API key
             if not api_key:
                 raise ValueError(
@@ -125,15 +125,17 @@ class TradingGraph:
                     "1. Set environment variable: export DASHSCOPE_API_KEY='your-key-here'\n"
                     "2. Update the config with: config['qwen_api_key'] = 'your-key-here'\n"
                 )
-            
+
             if api_key == "":
                 raise ValueError(
                     "Please provide your actual Qwen API key. "
                     "You can get one from: https://dashscope.console.aliyun.com/"
                 )
         else:
-            raise ValueError(f"Unsupported provider: {provider}. Must be 'openai', 'anthropic', or 'qwen'")
-        
+            raise ValueError(
+                f"Unsupported provider: {provider}. Must be 'openai', 'anthropic', or 'qwen'"
+            )
+
         return api_key
 
     def _create_llm(
@@ -141,17 +143,17 @@ class TradingGraph:
     ) -> BaseChatModel:
         """
         Create an LLM instance based on the provider.
-        
+
         Args:
             provider: The provider name ("openai", "anthropic", or "qwen")
             model: The model name (e.g., "gpt-4o", "claude-3-5-sonnet-20241022", "qwen-vl-max-latest")
             temperature: The temperature setting for the model
-            
+
         Returns:
             BaseChatModel: An instance of the appropriate LLM class
         """
         api_key = self._get_api_key(provider)
-        
+
         if provider == "openai":
             return ChatOpenAI(
                 model=model,
@@ -175,7 +177,9 @@ class TradingGraph:
                 max_retries=4,
             )
         else:
-            raise ValueError(f"Unsupported provider: {provider}. Must be 'openai', 'anthropic', or 'qwen'")
+            raise ValueError(
+                f"Unsupported provider: {provider}. Must be 'openai', 'anthropic', or 'qwen'"
+            )
 
     # def _set_tool_nodes(self) -> Dict[str, ToolNode]:
     #     """
@@ -231,7 +235,7 @@ class TradingGraph:
         """
         Update the API key in the config and refresh LLMs.
         This method is called by the web interface when API key is updated.
-        
+
         Args:
             api_key (str): The new API key
             provider (str): The provider name ("openai" or "anthropic"), defaults to "openai"
@@ -239,23 +243,25 @@ class TradingGraph:
         if provider == "openai":
             # Update the config with the new API key
             self.config["api_key"] = api_key
-            
+
             # Also update the environment variable for consistency
             os.environ["OPENAI_API_KEY"] = api_key
         elif provider == "anthropic":
             # Update the config with the new API key
             self.config["anthropic_api_key"] = api_key
-            
+
             # Also update the environment variable for consistency
             os.environ["ANTHROPIC_API_KEY"] = api_key
         elif provider == "qwen":
             # Update the config with the new API key
             self.config["qwen_api_key"] = api_key
-            
+
             # Also update the environment variable for consistency
             os.environ["DASHSCOPE_API_KEY"] = api_key
         else:
-            raise ValueError(f"Unsupported provider: {provider}. Must be 'openai', 'anthropic', or 'qwen'")
-        
+            raise ValueError(
+                f"Unsupported provider: {provider}. Must be 'openai', 'anthropic', or 'qwen'"
+            )
+
         # Refresh the LLMs with the new API key
         self.refresh_llms()

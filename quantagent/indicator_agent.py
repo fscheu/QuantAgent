@@ -6,7 +6,7 @@ Uses LLM and toolkit to compute and interpret indicators like MACD, RSI, ROC, St
 import copy
 import json
 
-from langchain_core.messages import ToolMessage, HumanMessage
+from langchain_core.messages import HumanMessage, ToolMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 
@@ -49,11 +49,10 @@ def create_indicator_agent(llm, toolkit):
         if not messages:
             messages = [HumanMessage(content="Begin indicator analysis.")]
 
-
         # --- Step 1: Ask for tool calls ---
         ai_response = chain.invoke(messages)
         messages.append(ai_response)
-        
+
         # --- Step 2: Collect tool results ---
         if hasattr(ai_response, "tool_calls") and ai_response.tool_calls:
             for call in ai_response.tool_calls:
@@ -77,16 +76,19 @@ def create_indicator_agent(llm, toolkit):
         max_iterations = 5  # Prevent infinite loops
         iteration = 0
         final_response = None
-        
+
         while iteration < max_iterations:
             iteration += 1
             final_response = chain.invoke(messages)
             messages.append(final_response)
-            
+
             # If there are no tool calls, we have the final answer
-            if not hasattr(final_response, "tool_calls") or not final_response.tool_calls:
+            if (
+                not hasattr(final_response, "tool_calls")
+                or not final_response.tool_calls
+            ):
                 break
-            
+
             # If there are more tool calls, execute them
             for call in final_response.tool_calls:
                 tool_name = call["name"]
@@ -104,20 +106,30 @@ def create_indicator_agent(llm, toolkit):
         if final_response:
             report_content = final_response.content
             # If content is empty or None, try to get text from recent messages
-            if not report_content or (isinstance(report_content, str) and not report_content.strip()):
+            if not report_content or (
+                isinstance(report_content, str) and not report_content.strip()
+            ):
                 # Check if there's any text content in the messages (skip tool calls)
                 for msg in reversed(messages):
-                    if (hasattr(msg, 'content') and msg.content and 
-                        isinstance(msg.content, str) and msg.content.strip() and 
-                        not hasattr(msg, 'tool_calls')):
+                    if (
+                        hasattr(msg, "content")
+                        and msg.content
+                        and isinstance(msg.content, str)
+                        and msg.content.strip()
+                        and not hasattr(msg, "tool_calls")
+                    ):
                         report_content = msg.content
                         break
         else:
-            report_content = "Indicator analysis completed, but no detailed report was generated."
+            report_content = (
+                "Indicator analysis completed, but no detailed report was generated."
+            )
 
         return {
             "messages": messages,
-            "indicator_report": report_content if report_content else "Indicator analysis completed.",
+            "indicator_report": (
+                report_content if report_content else "Indicator analysis completed."
+            ),
         }
 
     return indicator_agent_node

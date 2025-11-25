@@ -21,6 +21,7 @@ class WebTradingAnalyzer:
     def __init__(self):
         """Initialize the web trading analyzer."""
         from quantagent.default_config import DEFAULT_CONFIG
+
         # Start with default config (OpenAI)
         self.config = DEFAULT_CONFIG.copy()
         self.trading_graph = TradingGraph(config=self.config)
@@ -318,7 +319,7 @@ class WebTradingAnalyzer:
 
         except Exception as e:
             error_msg = str(e)
-            
+
             # Get current provider from config
             provider = self.config.get("agent_llm_provider", "openai")
             if provider == "openai":
@@ -492,57 +493,64 @@ class WebTradingAnalyzer:
             # Get provider from config if not provided
             if provider is None:
                 provider = self.config.get("agent_llm_provider", "openai")
-            
+
             if provider == "openai":
                 from openai import OpenAI
+
                 client = OpenAI()
-                
+
                 # Make a simple test call
                 _ = client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[{"role": "user", "content": "Hello"}],
                     max_tokens=5,
                 )
-                
+
                 provider_name = "OpenAI"
             elif provider == "anthropic":
                 from anthropic import Anthropic
-                api_key = os.environ.get("ANTHROPIC_API_KEY") or self.config.get("anthropic_api_key", "")
+
+                api_key = os.environ.get("ANTHROPIC_API_KEY") or self.config.get(
+                    "anthropic_api_key", ""
+                )
                 if not api_key:
                     return {
                         "valid": False,
                         "error": "❌ Invalid API Key: The Anthropic API key is not set. Please update it in the Settings section.",
                     }
-                
+
                 client = Anthropic(api_key=api_key)
-                
+
                 # Make a simple test call
                 _ = client.messages.create(
                     model="claude-haiku-4-5-20251001",
                     max_tokens=5,
                     messages=[{"role": "user", "content": "Hello"}],
                 )
-                
+
                 provider_name = "Anthropic"
             else:  # qwen
                 from langchain_qwq import ChatQwen
-                api_key = os.environ.get("DASHSCOPE_API_KEY") or self.config.get("qwen_api_key", "")
+
+                api_key = os.environ.get("DASHSCOPE_API_KEY") or self.config.get(
+                    "qwen_api_key", ""
+                )
                 if not api_key:
                     return {
                         "valid": False,
                         "error": "❌ Invalid API Key: The Qwen API key is not set. Please update it in the Settings section.",
                     }
-                
+
                 # Make a simple test call using LangChain
                 llm = ChatQwen(model="qwen-flash", api_key=api_key)
                 _ = llm.invoke([("user", "Hello")])
-                
+
                 provider_name = "Qwen"
             return {"valid": True, "message": f"{provider_name} API key is valid"}
 
         except Exception as e:
             error_msg = str(e)
-            
+
             # Determine provider name for error messages
             if provider is None:
                 provider = self.config.get("agent_llm_provider", "openai")
@@ -869,7 +877,9 @@ def update_provider():
         provider = data.get("provider", "openai")
 
         if provider not in ["openai", "anthropic", "qwen"]:
-            return jsonify({"error": "Provider must be 'openai', 'anthropic', or 'qwen'"})
+            return jsonify(
+                {"error": "Provider must be 'openai', 'anthropic', or 'qwen'"}
+            )
 
         print(f"Updating provider to: {provider}")
 
@@ -878,7 +888,7 @@ def update_provider():
         analyzer.config["graph_llm_provider"] = provider
         analyzer.trading_graph.config["agent_llm_provider"] = provider
         analyzer.trading_graph.config["graph_llm_provider"] = provider
-        
+
         # Update model names if switching providers
         if provider == "anthropic":
             # Set default Claude models if not already set to Anthropic models
@@ -892,21 +902,23 @@ def update_provider():
                 analyzer.config["agent_llm_model"] = "qwen3-max"
             if not analyzer.config["graph_llm_model"].startswith("qwen"):
                 analyzer.config["graph_llm_model"] = "qwen3-vl-plus"
-            
+
         else:
             # Set default OpenAI models if not already set to OpenAI models
             if analyzer.config["agent_llm_model"].startswith(("claude", "qwen")):
                 analyzer.config["agent_llm_model"] = "gpt-4o-mini"
             if analyzer.config["graph_llm_model"].startswith(("claude", "qwen")):
                 analyzer.config["graph_llm_model"] = "gpt-4o"
-        
+
         analyzer.trading_graph.config.update(analyzer.config)
 
         # Refresh the trading graph with new provider
         analyzer.trading_graph.refresh_llms()
 
         print(f"Provider updated to {provider} successfully")
-        print(f"graph_llm_model updated to {analyzer.config['graph_llm_model']} successfully")
+        print(
+            f"graph_llm_model updated to {analyzer.config['graph_llm_model']} successfully"
+        )
         print(f"agent_llm updated to {analyzer.config['agent_llm_model']} successfully")
         return jsonify({"success": True, "message": f"Provider updated to {provider}"})
 
@@ -921,13 +933,17 @@ def update_api_key():
     try:
         data = request.get_json()
         new_api_key = data.get("api_key")
-        provider = data.get("provider", "openai")  # Default to "openai" for backward compatibility
+        provider = data.get(
+            "provider", "openai"
+        )  # Default to "openai" for backward compatibility
 
         if not new_api_key:
             return jsonify({"error": "API key is required"})
 
         if provider not in ["openai", "anthropic", "qwen"]:
-            return jsonify({"error": "Provider must be 'openai', 'anthropic', or 'qwen'"})
+            return jsonify(
+                {"error": "Provider must be 'openai', 'anthropic', or 'qwen'"}
+            )
 
         print(f"Updating {provider} API key to: {new_api_key[:8]}...{new_api_key[-4:]}")
 
@@ -943,7 +959,12 @@ def update_api_key():
         analyzer.trading_graph.update_api_key(new_api_key, provider=provider)
 
         print(f"{provider} API key updated successfully")
-        return jsonify({"success": True, "message": f"{provider.capitalize()} API key updated successfully"})
+        return jsonify(
+            {
+                "success": True,
+                "message": f"{provider.capitalize()} API key updated successfully",
+            }
+        )
 
     except Exception as e:
         print(f"Error in update_api_key: {str(e)}")
@@ -955,26 +976,26 @@ def get_api_key_status():
     """API endpoint to check if API key is set for a provider."""
     try:
         provider = request.args.get("provider", "openai")
-        
+
         # First check environment variables
         if provider == "openai":
             api_key = os.environ.get("OPENAI_API_KEY", "")
             # Fallback to config if not in environment
-            if not api_key and hasattr(analyzer, 'config'):
+            if not api_key and hasattr(analyzer, "config"):
                 api_key = analyzer.config.get("api_key", "")
         elif provider == "anthropic":
             api_key = os.environ.get("ANTHROPIC_API_KEY", "")
             # Fallback to config if not in environment
-            if not api_key and hasattr(analyzer, 'config'):
+            if not api_key and hasattr(analyzer, "config"):
                 api_key = analyzer.config.get("anthropic_api_key", "")
         elif provider == "qwen":
             api_key = os.environ.get("DASHSCOPE_API_KEY", "")
             # Fallback to config if not in environment
-            if not api_key and hasattr(analyzer, 'config'):
+            if not api_key and hasattr(analyzer, "config"):
                 api_key = analyzer.config.get("qwen_api_key", "")
         else:
             api_key = ""
-        
+
         if api_key and api_key != "your-openai-api-key-here" and api_key != "":
             # Return masked version for security
             masked_key = (
@@ -986,6 +1007,7 @@ def get_api_key_status():
     except Exception as e:
         print(f"Error in get_api_key_status: {str(e)}")
         import traceback
+
         traceback.print_exc()
         return jsonify({"error": str(e), "has_key": False})
 
@@ -1019,7 +1041,9 @@ def validate_api_key():
     """API endpoint to validate the current API key."""
     try:
         data = request.get_json() or {}
-        provider = data.get("provider") or analyzer.config.get("agent_llm_provider", "openai")
+        provider = data.get("provider") or analyzer.config.get(
+            "agent_llm_provider", "openai"
+        )
         validation = analyzer.validate_api_key(provider=provider)
         return jsonify(validation)
     except Exception as e:

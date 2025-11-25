@@ -73,11 +73,11 @@ Dashboard (Streamlit)
 #### Tasks
 
 **1.1 Project Setup**
-- [ ] Create subdirectories: `quantagent/{portfolio,risk,trading,backtesting}`
-- [ ] Create `requirements-dev.txt` with new dependencies
-- [ ] Setup pytest framework with conftest.py
+- [x] Create subdirectories: `quantagent/{portfolio,risk,trading,backtesting}`
+- [x] Create `requirements-dev.txt` with new dependencies
+- [x] Setup pytest framework with conftest.py
 - [ ] Create GitHub Actions CI/CD workflow (runs tests on push)
-- [ ] Create Dockerfile + docker-compose.yml (lightweight)
+- [x] Create Dockerfile + docker-compose.yml (lightweight)
 
 **Tools/Dependencies to Add**:
 ```
@@ -90,22 +90,22 @@ streamlit==1.28.0
 ```
 
 **1.2 Database Setup**
-- [ ] Create PostgreSQL database locally
+- [x] Create PostgreSQL database locally
 - [ ] Setup Alembic for migrations
 - [ ] Define SQLAlchemy models (Order, Fill, Position, Signal, Trade, MarketData)
 - [ ] Create initial migration script
 - [ ] Test migrations work
 
 **1.3 Docker Setup**
-- [ ] Create `Dockerfile` (Python 3.11 + dependencies)
-- [ ] Create `docker-compose.yml` (PostgreSQL + app)
-- [ ] Document: "For dev, run `docker-compose up -d db`"
+- [x] Create `Dockerfile` (Python 3.11 + dependencies)
+- [x] Create `docker-compose.yml` (PostgreSQL + app)
+- [x] Document: "For dev, run `docker-compose up -d db`"
 - [ ] Test on clean machine (colleague runs your docker-compose)
 
 **1.4 Testing Infrastructure**
-- [ ] Create `tests/conftest.py` with fixtures
+- [x] Create `tests/conftest.py` with fixtures
 - [ ] Write first unit test (models)
-- [ ] Setup pytest configuration
+- [x] Setup pytest configuration
 - [ ] Configure GitHub Actions to run tests
 
 **1.5 LangGraph Improvements (Reliability & Architecture)**

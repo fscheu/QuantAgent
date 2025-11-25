@@ -156,7 +156,7 @@ class TechnicalTools:
         kline_data: Annotated[
             dict,
             "Dictionary containing OHLCV data with keys 'Datetime', 'Open', 'High', 'Low', 'Close'.",
-        ]
+        ],
     ) -> dict:
         """
         Generate a candlestick chart with trendlines from OHLCV data,
@@ -384,7 +384,7 @@ class TechnicalTools:
         kline_data: Annotated[
             dict,
             "Dictionary with 'High', 'Low', and 'Close' keys, each mapping to lists of float values.",
-        ]
+        ],
     ) -> dict:
         """
         Compute the Stochastic Oscillator %K and %D using TA-Lib.
