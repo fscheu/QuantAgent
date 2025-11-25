@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(tree:*)",
+      "mcp__docs-langchain__SearchDocsByLangChain"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
