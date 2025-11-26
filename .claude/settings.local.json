@@ -7,7 +7,8 @@
       "Bash(pip install:*)",
       "Bash(python -m pytest:*)",
       "Bash(python3 -m pytest:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "WebFetch(domain:docs.langchain.com)"
     ],
     "deny": [],
     "ask": []

@@ -175,19 +175,47 @@ class RiskManager:
 
 **2.5 LangGraph Improvements (Agent Architecture Refactoring)**
 
-*Improvement #2: Convert agents to subgraphs for better separation*
+*Improvement #2: Convert agents to subgraphs with parallelization for independent analysis*
+
+**Phase 2a: Subgraph Architecture** (Sequential foundation)
 - [ ] Create `IndicatorSubgraph` (from `indicator_agent.py`)
-  - [ ] Define subgraph-specific state schema
+  - [ ] Define subgraph-specific state schema (`IndicatorSubgraphState`)
   - [ ] Break agent logic into reasoning + tool execution nodes
-  - [ ] Compile as independent graph
+  - [ ] Compile as independent graph (testable in isolation)
 - [ ] Create `PatternSubgraph` (from `pattern_agent.py`)
+  - [ ] Define state schema (`PatternSubgraphState`)
+  - [ ] Encapsulate vision LLM + K-line chart analysis
+  - [ ] Compile as independent graph
 - [ ] Create `TrendSubgraph` (from `trend_agent.py`)
+  - [ ] Define state schema (`TrendSubgraphState`)
+  - [ ] Encapsulate vision LLM + trendline analysis
+  - [ ] Compile as independent graph
 - [ ] Update `graph_setup.py` to compose subgraphs as nodes
 - [ ] Test: Each subgraph works independently + in parent graph
 - [ ] Benefit: Cleaner parent graph, easier testing, better code organization
 
+**Phase 2b: Parallelization (Performance optimization)**
+- [ ] Analyze agent independence: Pattern & Trend both depend only on initial `kline_data` + Indicator output
+  - [ ] Reference: [LangGraph Parallelization Pattern](https://docs.langchain.com/oss/python/langgraph/workflows-agents#parallelization)
+- [ ] Update parent graph edges to enable fan-out/fan-in:
+  ```python
+  # Sequential: START → Indicator (initial processing)
+  builder.add_edge(START, "Indicator")
+
+  # Parallel: Indicator → [Pattern, Trend] (both independent)
+  builder.add_edge("Indicator", "Pattern")
+  builder.add_edge("Indicator", "Trend")
+
+  # Convergence: [Pattern, Trend] → Decision (aggregator)
+  builder.add_edge("Pattern", "Decision")
+  builder.add_edge("Trend", "Decision")
+  ```
+- [ ] Test: Pattern and Trend execute in parallel (verify with thread/timing logs)
+- [ ] Benchmark: Latency reduction from ~6-9s → ~5-7s
+- [ ] Benefit: 40-50% faster analysis cycle (critical for real-time trading)
+
 *Improvement #4: Use LangGraph's ToolNode for tool execution*
-- [ ] Replace manual tool call handling in each subgraph
+- [ ] Replace manual tool call handling in Indicator subgraph
 - [ ] Use `ToolNode` from `langgraph.prebuilt`
 - [ ] Create conditional edges: "reason" → "tools" (if tool calls) or "end"
 - [ ] Test: Tools execute correctly, results flow back to LLM

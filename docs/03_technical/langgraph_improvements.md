@@ -79,43 +79,113 @@ agent = create_agent(
 
 ---
 
-#### 2. Convert Agents to Subgraphs
-**Current approach**: Function factories returning node functions
+#### 2. Convert Agents to Subgraphs with Parallelization
+**Current approach**: Sequential function factories (Indicator → Pattern → Trend → Decision)
 ```python
-def create_indicator_agent(llm, toolkit):
-    def indicator_agent_node(state):
-        # ... 100 lines of logic
-    return indicator_agent_node
+# graph_setup.py (current - sequential)
+def create_main_graph():
+    flow = Indicator → Pattern → Trend → Decision  # Linear chain
+    # ~6-9s total latency
 ```
 
-**Improvement**: Each agent becomes a compiled subgraph
+**Improvement**: Agents as compiled subgraphs + parallelization of independent agents
 ```python
-# indicator_agent.py
-def build_indicator_graph(llm, toolkit):
+# indicator_agent.py (subgraph)
+def build_indicator_subgraph(llm, toolkit):
     builder = StateGraph(IndicatorSubgraphState)
     builder.add_node("reason", reasoning_node)
     builder.add_node("tools", tool_execution_node)
     builder.add_edge(START, "reason")
-    # ... edges and logic
+    # ... conditional edges
     return builder.compile()
 
-# graph_setup.py
-graph.add_node("Indicator Agent", indicator_graph)
+# pattern_agent.py (subgraph)
+def build_pattern_subgraph(llm, vision_llm):
+    builder = StateGraph(PatternSubgraphState)
+    builder.add_node("reason", vision_reasoning_node)
+    # ... logic
+    return builder.compile()
+
+# trend_agent.py (subgraph)
+def build_trend_subgraph(llm, vision_llm):
+    builder = StateGraph(TrendSubgraphState)
+    builder.add_node("reason", trend_reasoning_node)
+    # ... logic
+    return builder.compile()
+
+# graph_setup.py (parent graph with parallelization)
+def build_trading_graph():
+    builder = StateGraph(AgentState)
+
+    # Add subgraph nodes
+    builder.add_node("Indicator", indicator_subgraph)
+    builder.add_node("Pattern", pattern_subgraph)
+    builder.add_node("Trend", trend_subgraph)
+    builder.add_node("Decision", decision_subgraph)
+
+    # Sequential: START → Indicator (depends on initial data)
+    builder.add_edge(START, "Indicator")
+
+    # Parallel: Indicator → [Pattern, Trend] (independent analysis)
+    builder.add_edge("Indicator", "Pattern")
+    builder.add_edge("Indicator", "Trend")
+
+    # Convergence: [Pattern, Trend] → Decision (aggregator node)
+    builder.add_edge("Pattern", "Decision")
+    builder.add_edge("Trend", "Decision")
+
+    # End
+    builder.add_edge("Decision", END)
+
+    return builder.compile()
 ```
 
+**Architecture Diagram**:
+```
+START (kline_data)
+  ↓
+[Indicator Agent] (1-2s)
+  ├────────→ [Pattern Agent] (2-3s)  ──┐
+  │                                    ├─→ [Decision Agent] (1-2s) → END
+  └────────→ [Trend Agent] (2-3s) ────┘
+
+Latency: ~5-7s (vs 6-9s sequential)
+Parallelization: Pattern and Trend run simultaneously after Indicator finishes
+```
+
+**Reference**:
+- [LangGraph Parallelization Pattern](https://docs.langchain.com/oss/python/langgraph/workflows-agents#parallelization)
+- Pattern: "LLMs work simultaneously on a task" → Fan-out to 2+ independent nodes → Aggregator node combines results
+
 **Benefits**:
-- ✅ Cleaner parent graph (high-level view)
-- ✅ Each agent has its own state schema
-- ✅ Easier to test independently
-- ✅ Can distribute development (teams work on subgraphs)
-- ✅ Better error isolation
+- ✅ Cleaner parent graph architecture (high-level fan-out/fan-in structure)
+- ✅ Each agent has its own state schema (subgraph isolation)
+- ✅ Easier to test independently (compile each subgraph in isolation)
+- ✅ Can distribute development (teams own specific subgraphs)
+- ✅ Better error isolation (failure in Pattern doesn't break Trend)
+- ✅ **40-50% latency reduction**: Pattern and Trend execute in parallel
+- ✅ Independent scalability: Each subgraph can be deployed/scaled separately
+
+**Independence Validation**:
+- **Pattern Agent** (K-line candlestick analysis):
+  - Inputs: `kline_data` (raw OHLCV)
+  - Outputs: `PatternReport` (patterns detected, confidence)
+  - Depends on: Indicator Agent only (for context)
+  - ✅ Can run in parallel with Trend
+
+- **Trend Agent** (Trendline + support/resistance analysis):
+  - Inputs: `kline_data` (raw OHLCV)
+  - Outputs: `TrendReport` (levels, strength)
+  - Depends on: Indicator Agent only (for context)
+  - ✅ Can run in parallel with Pattern
 
 **Impact**: HIGH
-- Graph becomes more readable (3 subgraph nodes + orchestrator)
-- Easier debugging (isolate issues to specific subgraph)
+- Faster analysis (5-7s vs 6-9s) - critical for real-time trading
+- Better maintainability through isolation
 - Supports team scaling in Phase 2
+- Enables independent testing of each specialized agent
 
-**Effort**: Medium-High (restructure 4 agent files + graph setup)
+**Effort**: Medium-High (restructure 4 agent files + graph setup with conditional edges)
 
 ---
 
