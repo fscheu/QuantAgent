@@ -25,7 +25,7 @@ class SetGraph:
         self.toolkit = toolkit
         # self.tool_nodes = tool_nodes
 
-    def set_graph(self):
+    def set_graph(self, checkpointer=None):
         # Create analyst nodes
         agent_nodes = {}
         tool_nodes = {}
@@ -77,4 +77,4 @@ class SetGraph:
         # Decision Maker Process
         graph.add_edge("Decision Maker", END)
 
-        return graph.compile()
+        return graph.compile(checkpointer=checkpointer) if checkpointer else graph.compile()

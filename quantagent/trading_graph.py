@@ -1,10 +1,11 @@
 """
 TradingGraph: Orchestrates the multi-agent trading system using LangChain and LangGraph.
 Initializes LLMs, toolkits, and agent nodes for indicator, pattern, and trend analysis.
+Supports PostgreSQL checkpointing for resilient backtest execution.
 """
 
 import os
-from typing import Dict
+from typing import Dict, Optional
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
@@ -16,6 +17,11 @@ from quantagent.default_config import DEFAULT_CONFIG
 from quantagent.graph_setup import SetGraph
 from quantagent.graph_util import TechnicalTools
 
+try:
+    from langgraph.checkpoint.postgres import PostgresSaver
+except ImportError:
+    PostgresSaver = None
+
 
 class TradingGraph:
     """
@@ -23,7 +29,7 @@ class TradingGraph:
     Sets up LLMs, toolkits, and agent nodes for indicator, pattern, and trend analysis.
     """
 
-    def __init__(self, config=None):
+    def __init__(self, config=None, use_checkpointing: bool = False):
         # --- Configuration and LLMs ---
         self.config = config if config is not None else DEFAULT_CONFIG.copy()
 
@@ -40,6 +46,11 @@ class TradingGraph:
         )
         self.toolkit = TechnicalTools()
 
+        # --- Setup PostgreSQL checkpointing if enabled ---
+        self.checkpointer = None
+        if use_checkpointing:
+            self.checkpointer = self._setup_checkpointer()
+
         # --- Create tool nodes for each agent ---
         # self.tool_nodes = self._set_tool_nodes()
 
@@ -52,7 +63,7 @@ class TradingGraph:
         )
 
         # --- The main LangGraph graph object ---
-        self.graph = self.graph_setup.set_graph()
+        self.graph = self.graph_setup.set_graph(checkpointer=self.checkpointer)
 
     def _get_api_key(self, provider: str = "openai") -> str:
         """
@@ -137,6 +148,37 @@ class TradingGraph:
             )
 
         return api_key
+
+    def _setup_checkpointer(self) -> Optional[PostgresSaver]:
+        """
+        Setup PostgreSQL checkpointer for graph resilience.
+
+        Returns:
+            PostgresSaver instance or None if PostgreSQL not available.
+
+        Raises:
+            ValueError: If DATABASE_URL not set and checkpointing requested.
+        """
+        if not PostgresSaver:
+            raise ImportError(
+                "langgraph.checkpoint.postgres not available. "
+                "Install with: pip install langgraph-checkpoint-postgres"
+            )
+
+        db_url = os.environ.get("DATABASE_URL")
+        if not db_url:
+            raise ValueError(
+                "DATABASE_URL environment variable not set. "
+                "Set it for PostgreSQL checkpointing, or use use_checkpointing=False"
+            )
+
+        try:
+            checkpointer = PostgresSaver.from_conn_string(db_url)
+            return checkpointer
+        except Exception as e:
+            raise ValueError(
+                f"Failed to connect to PostgreSQL at {db_url}: {str(e)}"
+            )
 
     def _create_llm(
         self, provider: str, model: str, temperature: float

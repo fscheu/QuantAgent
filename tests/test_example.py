@@ -154,7 +154,7 @@ class TestMockLLMs:
             mock_vision_llm: Fixture providing mock vision LLM.
         """
         response = mock_vision_llm.invoke("analyze image")
-        assert response == "Mock vision analysis response"
+        assert response == "Mock LLM response"
 
 
 class TestTemporaryDirectories:

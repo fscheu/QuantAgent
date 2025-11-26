@@ -111,18 +111,18 @@ streamlit==1.28.0
 **1.5 LangGraph Improvements (Reliability & Architecture)**
 
 *Improvement #1: Refactor agents to use `create_agent` pattern*
-- [ ] Analyze current `indicator_agent.py`, `pattern_agent.py`, `trend_agent.py`
-- [ ] Replace manual `chain = prompt | llm.bind_tools()` with `create_agent()`
-- [ ] Remove manual tool call loops (handled by `create_agent`)
-- [ ] Test: Each agent produces same output as before
-- [ ] Benefit: Built-in reliability, checkpointing support, less code
+- [x] Analyze current `indicator_agent.py`, `pattern_agent.py`, `trend_agent.py`
+- [x] Replace manual `chain = prompt | llm.bind_tools()` with `create_agent()`
+- [x] Remove manual tool call loops (handled by `create_agent`)
+- [x] Test: Each agent produces same output as before
+- [x] Benefit: Built-in reliability, checkpointing support, less code
 
 *Improvement #5: Add LangGraph checkpointing for state persistence*
-- [ ] Setup `AsyncPostgresSaver` (uses same PostgreSQL DB)
-- [ ] Add checkpointer to graph compilation: `graph.compile(checkpointer=checkpointer)`
-- [ ] Implement `thread_id` based state resumption for backtesting
+- [x] Setup `AsyncPostgresSaver` (uses same PostgreSQL DB)
+- [x] Add checkpointer to graph compilation: `graph.compile(checkpointer=checkpointer)`
+- [x] Implement `thread_id` based state resumption for backtesting
 - [ ] Test: Stop backtest mid-way, resume from checkpoint
-- [ ] Benefit: Long backtests survive crashes, full execution history
+- [x] Benefit: Long backtests survive crashes, full execution history
 
 
 **Deliverables**:

@@ -402,6 +402,9 @@ When adding/modifying documentation:
 6. Link between related documents. **DO NOT REPEAT** the same writing in different docs.
 
 ### Testing & Quality Assurance (tests/)
+
+**See `docs/03_technical/TESTING_PATTERNS.md` for detailed testing guidelines, patterns, and anti-patterns to follow when writing tests for this project.**
+
 - **test_migrations.py** - Comprehensive database migration testing
   - Creates all 6 ORM tables
   - Inserts sample data into all models
@@ -415,6 +418,7 @@ When adding/modifying documentation:
 ### Key Project Files for Management
 - **docs/02_planning/** - Phase planning, milestones, task tracking, TODOs
 - **docs/03_technical/MIGRATIONS.md** - Database setup and migration guide
+- **docs/03_technical/TESTING_PATTERNS.md** - Testing standards, patterns, and best practices
 - **tests/test_migrations.py** - Database test suite
 - **CLAUDE.md** (this file) - Development guidelines and architecture
 
