@@ -138,9 +138,9 @@ Respond ONLY with valid JSON (no markdown, no explanation):
 """
 
         # Build message list
-        messages = state.get("messages", [])
-        if not messages:
-            messages = [system_message, HumanMessage(content=human_content)]
+        # messages = state.get("messages", [])
+        # if not messages:
+        messages = [system_message, HumanMessage(content=human_content)]
 
         try:
             # --- Structured LLM call for decision ---

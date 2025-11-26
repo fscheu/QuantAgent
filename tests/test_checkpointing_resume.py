@@ -194,13 +194,13 @@ class TestStatePersistence:
         assert isinstance(result["messages"], list)
         assert len(result["messages"]) > 0
 
-    def test_agent_reports_preserved_in_state(self, mock_llm, mock_vision_llm, mock_toolkit, sample_backtest_state):
+    def test_agent_reports_preserved_in_state(self, mock_llm, mock_vision_llm, mock_toolkit, sample_state_inicial):
         """Verify each agent's report is preserved in state for downstream use."""
         from quantagent.indicator_agent import create_indicator_agent
         from quantagent.pattern_agent import create_pattern_agent
         from quantagent.trend_agent import create_trend_agent
 
-        state = sample_backtest_state.copy()
+        state = sample_state_inicial.copy()
 
         # Run through pipeline
         indicator_node = create_indicator_agent(mock_llm, mock_toolkit)

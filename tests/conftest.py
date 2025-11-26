@@ -70,6 +70,23 @@ def sample_ohlcv_dataframe(sample_ohlcv_data) -> pd.DataFrame:
     df.index.name = 'datetime'
     return df
 
+@pytest.fixture
+def sample_state_inicial() -> Dict:
+    return {
+        "kline_data": {
+            "open": [100.0] * 30,
+            "high": [101.0] * 30,
+            "low": [99.0] * 30,
+            "close": [100.5] * 30,
+            "volume": [1000000.0] * 30,
+        },
+        "analysis_results": None,
+        "messages": [],
+        "time_frame": "1hour",
+        "stock_name": "BTC",
+        "pattern_image": "base64_encoded_image_data",
+        "trend_image": "base64_encoded_image_data",
+    }
 
 @pytest.fixture
 def sample_state() -> Dict:

@@ -196,17 +196,16 @@ class TestStateManagement:
         human_msgs = [m for m in messages if isinstance(m, HumanMessage)]
         assert len(human_msgs) > 0, "HumanMessage required in message history"
 
-    def test_timeframe_in_system_message(self, mock_llm, mock_vision_llm, mock_toolkit, sample_state):
+    def test_timeframe_in_human_message(self, mock_llm, mock_vision_llm, mock_toolkit, sample_state):
         """Verify timeframe is mentioned in system message."""
         agent_node = create_pattern_agent(mock_llm, mock_vision_llm, mock_toolkit)
         result = agent_node(sample_state)
 
         messages = result["messages"]
-        system_msg = next((m for m in messages if isinstance(m, SystemMessage)), None)
-        assert system_msg is not None, "SystemMessage not found"
-        assert sample_state["time_frame"] in system_msg.content, \
-            f"Timeframe '{sample_state['time_frame']}' not in system message"
-
+        human_msg = next((m for m in messages if isinstance(m, HumanMessage)), None)
+        assert human_msg is not None, "HumanMessage not found"
+        assert sample_state["time_frame"] in human_msg.content[0]['text'], \
+            f"Timeframe '{sample_state['time_frame']}' not in human message"
 
 # ============================================================================
 # VISION INTEGRATION TESTS - Image handling and vision-specific behavior

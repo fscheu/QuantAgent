@@ -169,7 +169,7 @@ class TestAgentOutputTypes:
         assert isinstance(result["trend_report"], TrendReport), \
             "trend_report must be TrendReport Pydantic model"
 
-    def test_decision_agent_output_type(self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state):
+    def test_decision_agent_output_type(self, mock_llm, mock_vision_llm, mock_toolkit, sample_state_inicial):
         """Verify Decision Agent returns TradingDecision Pydantic model."""
         from quantagent.decision_agent import create_final_trade_decider
 
@@ -184,7 +184,7 @@ class TestAgentOutputTypes:
         decision_node = create_final_trade_decider(mock_llm)
 
         # Run through all agents
-        state = complete_sample_state.copy()
+        state = sample_state_inicial.copy()
         state = indicator_node(state)
         state = pattern_node(state)
         state = trend_node(state)

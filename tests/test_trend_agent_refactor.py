@@ -218,11 +218,10 @@ class TestStateManagement:
         result = agent_node(sample_state)
 
         messages = result["messages"]
-        system_msg = next((m for m in messages if isinstance(m, SystemMessage)), None)
-        assert system_msg is not None, "SystemMessage not found"
-        assert sample_state["time_frame"] in system_msg.content, \
-            f"Timeframe '{sample_state['time_frame']}' not in system message"
-
+        human_msg = next((m for m in messages if isinstance(m, HumanMessage)), None)
+        assert human_msg is not None, "HumanMessage not found"
+        assert sample_state["time_frame"] in human_msg.content[0]['text'], \
+            f"Timeframe '{sample_state['time_frame']}' not in human message"
 
 # ============================================================================
 # VISION INTEGRATION TESTS - Image handling and vision-specific behavior

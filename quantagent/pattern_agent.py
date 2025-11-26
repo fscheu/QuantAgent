@@ -93,7 +93,8 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
 
             human_msg = HumanMessage(content=image_prompt)
             system_msg = SystemMessage(content="You are a pattern recognition assistant analyzing candlestick charts.")
-
+            messages = [system_msg, human_msg]
+            
             try:
                 # Try with system message
                 final_response = invoke_with_retry(
