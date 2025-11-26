@@ -359,16 +359,19 @@ class WebTradingAnalyzer:
                 return {"success": False, "error": f"❌ Analysis Error: {error_msg}"}
 
     def extract_analysis_results(self, results: Dict[str, Any]) -> Dict[str, Any]:
-        """Extract and format analysis results for web display."""
+        """Extract and format analysis results for web display.
+
+        Handles both string and Pydantic model outputs from agents.
+        """
         if not results["success"]:
             return {"error": results["error"]}
 
         final_state = results["final_state"]
 
         # Extract analysis results from state fields
-        technical_indicators = final_state.get("indicator_report", "")
-        pattern_analysis = final_state.get("pattern_report", "")
-        trend_analysis = final_state.get("trend_report", "")
+        indicator_report = final_state.get("indicator_report", "")
+        pattern_report = final_state.get("pattern_report", "")
+        trend_report = final_state.get("trend_report", "")
         final_decision_raw = final_state.get("final_trade_decision", "")
 
         # Extract chart data if available
@@ -377,32 +380,26 @@ class WebTradingAnalyzer:
         pattern_image_filename = final_state.get("pattern_image_filename", "")
         trend_image_filename = final_state.get("trend_image_filename", "")
 
+        # Convert Pydantic models to readable format
+        def format_report(report):
+            """Convert Pydantic model or string to readable text."""
+            if hasattr(report, "model_dump"):
+                # It's a Pydantic model
+                data = report.model_dump()
+                return self._format_report_dict(data)
+            elif hasattr(report, "__dict__"):
+                # It's an object with attributes
+                return self._format_report_dict(report.__dict__)
+            else:
+                # It's already a string
+                return str(report)
+
+        technical_indicators = format_report(indicator_report)
+        pattern_analysis = format_report(pattern_report)
+        trend_analysis = format_report(trend_report)
+
         # Parse final decision
-        final_decision = ""
-        if final_decision_raw:
-            try:
-                # Try to extract JSON from the decision
-                start = final_decision_raw.find("{")
-                end = final_decision_raw.rfind("}") + 1
-                if start != -1 and end != 0:
-                    json_str = final_decision_raw[start:end]
-                    decision_data = json.loads(json_str)
-                    final_decision = {
-                        "decision": decision_data.get("decision", "N/A"),
-                        "risk_reward_ratio": decision_data.get(
-                            "risk_reward_ratio", "N/A"
-                        ),
-                        "forecast_horizon": decision_data.get(
-                            "forecast_horizon", "N/A"
-                        ),
-                        "justification": decision_data.get("justification", "N/A"),
-                    }
-                else:
-                    # If no JSON found, return the raw text
-                    final_decision = {"raw": final_decision_raw}
-            except json.JSONDecodeError:
-                # If JSON parsing fails, return the raw text
-                final_decision = {"raw": final_decision_raw}
+        final_decision = self._parse_trading_decision(final_decision_raw)
 
         return {
             "success": True,
@@ -418,6 +415,80 @@ class WebTradingAnalyzer:
             "trend_image_filename": trend_image_filename,
             "final_decision": final_decision,
         }
+
+    def _format_report_dict(self, data: Dict[str, Any]) -> str:
+        """Format a report dictionary into readable text."""
+        lines = []
+
+        # Define readable keys and their order
+        key_labels = {
+            "reasoning": "Analysis",
+            "rsi": "RSI",
+            "rsi_level": "RSI Level",
+            "macd": "MACD",
+            "macd_signal": "MACD Signal",
+            "macd_histogram": "MACD Histogram",
+            "roc": "Rate of Change",
+            "stochastic": "Stochastic",
+            "willr": "Williams %R",
+            "trend_direction": "Trend Direction",
+            "confidence": "Confidence",
+            "patterns_detected": "Patterns Detected",
+            "primary_pattern": "Primary Pattern",
+            "breakout_probability": "Breakout Probability",
+            "support_level": "Support Level",
+            "resistance_level": "Resistance Level",
+            "trend_strength": "Trend Strength",
+        }
+
+        # Format each key-value pair
+        for key, label in key_labels.items():
+            if key in data:
+                value = data[key]
+                if isinstance(value, list):
+                    value = ", ".join(str(v) for v in value)
+                elif isinstance(value, float):
+                    value = f"{value:.2f}"
+                lines.append(f"{label}: {value}")
+
+        return "\n".join(lines)
+
+    def _parse_trading_decision(self, decision_data) -> Dict[str, Any]:
+        """Parse trading decision from Pydantic model or string."""
+        if hasattr(decision_data, "model_dump"):
+            # It's a TradingDecision Pydantic model
+            data = decision_data.model_dump()
+            return {
+                "decision": data.get("decision", "N/A"),
+                "confidence": data.get("confidence", 0.0),
+                "risk_level": data.get("risk_level", "N/A"),
+                "reasoning": data.get("reasoning", "N/A"),
+                "entry_price": data.get("entry_price"),
+                "stop_loss": data.get("stop_loss"),
+                "take_profit": data.get("take_profit"),
+            }
+        elif isinstance(decision_data, str) and decision_data:
+            # It's a string, try to parse as JSON
+            try:
+                start = decision_data.find("{")
+                end = decision_data.rfind("}") + 1
+                if start != -1 and end != 0:
+                    json_str = decision_data[start:end]
+                    decision_obj = json.loads(json_str)
+                    return {
+                        "decision": decision_obj.get("decision", "N/A"),
+                        "confidence": decision_obj.get("confidence", 0.0),
+                        "risk_level": decision_obj.get("risk_level", "N/A"),
+                        "reasoning": decision_obj.get("reasoning", "N/A"),
+                        "entry_price": decision_obj.get("entry_price"),
+                        "stop_loss": decision_obj.get("stop_loss"),
+                        "take_profit": decision_obj.get("take_profit"),
+                    }
+            except (json.JSONDecodeError, AttributeError):
+                pass
+            return {"raw": decision_data}
+        else:
+            return {"raw": "No decision data"}
 
     def get_timeframe_date_limits(self, timeframe: str) -> Dict[str, Any]:
         """Get valid date range limits for a given timeframe."""
