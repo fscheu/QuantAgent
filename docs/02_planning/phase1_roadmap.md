@@ -308,9 +308,9 @@ class StrategyAssembler:
 ```
 
 Tasks:
-- [ ] Implement StrategyAssembler to construct components from a StrategyConfig snapshot
-- [ ] Ensure Order creation persists `environment` and `trigger_signal_id` (provenance)
-- [ ] Reuse assembler in Backtest and (later) Scheduler
+- [x] Implement StrategyAssembler to construct components from a StrategyConfig snapshot
+- [x] Ensure Order creation persists `environment` and `trigger_signal_id` (provenance)
+- [x] Reuse assembler in Backtest and (later) Scheduler
 
 **2.5 LangGraph Improvements (Agent Architecture Refactoring)**
 
