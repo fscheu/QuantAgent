@@ -19,6 +19,7 @@ from quantagent.trading.paper_broker import PaperBroker
 from quantagent.portfolio.manager import PortfolioManager
 from quantagent.models import BacktestRun, Signal, Order, Trade, Environment, TradeSignal
 from quantagent.database import SessionLocal
+from quantagent.strategy.assembler import StrategyAssembler
 
 logger = logging.getLogger(__name__)
 
@@ -100,27 +101,34 @@ class Backtest:
         # Data provider (caching layer)
         self.data_provider = DataProvider(self.db)
 
+        # Resolve config via StrategyAssembler and build components (unify DB session)
+        resolved = StrategyAssembler.from_snapshot(
+            {
+                'initial_cash': initial_capital,
+                'base_position_pct': self.config.get('base_position_pct', 0.05),
+                'max_daily_loss_pct': self.config.get('max_daily_loss_pct', 0.05),
+                'max_position_pct': self.config.get('max_position_pct', 0.10),
+                'slippage_pct': self.config.get('slippage_pct', 0.01),
+                # Normalize model fields into generic ones; accept both
+                'model_provider': self.config.get('agent_llm_provider', self.config.get('model_provider', 'openai')),
+                'model_name': self.config.get('agent_llm_model', self.config.get('model_name', 'gpt-4o-mini')),
+                'temperature': self.config.get('agent_llm_temperature', self.config.get('temperature', 0.1)),
+                'use_checkpointing': use_checkpointing,
+                'universe': self.config.get('universe', []),
+            },
+            environment=Environment.BACKTEST,
+        )
+        components = StrategyAssembler.build_components(resolved, db_session=self.db)
+
         # Trading graph (analysis engine)
-        self.trading_graph = TradingGraph(config=self.config, use_checkpointing=use_checkpointing)
+        self.trading_graph = components.graph
 
         # Trading components
-        self.portfolio = PortfolioManager(initial_cash=initial_capital)
-        self.position_sizer = PositionSizer(
-            base_position_pct=self.config.get('base_position_pct', 0.05)
-        )
-        self.risk_manager = RiskManager(
-            portfolio_manager=self.portfolio,
-            max_daily_loss_pct=self.config.get('max_daily_loss_pct', 0.05),
-            max_position_pct=self.config.get('max_position_pct', 0.10)
-        )
-        self.broker = PaperBroker(slippage_pct=self.config.get('slippage_pct', 0.01))
-        self.order_manager = OrderManager(
-            portfolio_manager=self.portfolio,
-            position_sizer=self.position_sizer,
-            risk_manager=self.risk_manager,
-            broker=self.broker,
-            db=self.db
-        )
+        self.portfolio = components.portfolio_manager
+        self.position_sizer = components.position_sizer
+        self.risk_manager = components.risk_manager
+        self.broker = components.broker
+        self.order_manager = components.order_manager
 
         # Backtest state
         self.current_date = start_date
@@ -205,17 +213,23 @@ class Backtest:
 
     def _build_config_snapshot(self) -> Dict:
         """Build immutable config snapshot for reproducibility."""
-        return {
-            'initial_capital': self.initial_capital,
-            'base_position_pct': self.config.get('base_position_pct', 0.05),
-            'max_daily_loss_pct': self.config.get('max_daily_loss_pct', 0.05),
-            'max_position_pct': self.config.get('max_position_pct', 0.10),
-            'slippage_pct': self.config.get('slippage_pct', 0.01),
-            'model_provider': self.config.get('agent_llm_provider', 'openai'),
-            'model_name': self.config.get('agent_llm_model', 'gpt-4o-mini'),
-            'temperature': self.config.get('agent_llm_temperature', 0.1),
-            'use_checkpointing': self.use_checkpointing
-        }
+        # Re-generate snapshot via assembler to keep alignment
+        resolved = StrategyAssembler.from_snapshot(
+            {
+                'initial_cash': self.initial_capital,
+                'base_position_pct': self.config.get('base_position_pct', 0.05),
+                'max_daily_loss_pct': self.config.get('max_daily_loss_pct', 0.05),
+                'max_position_pct': self.config.get('max_position_pct', 0.10),
+                'slippage_pct': self.config.get('slippage_pct', 0.01),
+                'model_provider': self.config.get('agent_llm_provider', self.config.get('model_provider', 'openai')),
+                'model_name': self.config.get('agent_llm_model', self.config.get('model_name', 'gpt-4o-mini')),
+                'temperature': self.config.get('agent_llm_temperature', self.config.get('temperature', 0.1)),
+                'use_checkpointing': self.use_checkpointing,
+                'universe': self.config.get('universe', []),
+            },
+            environment=Environment.BACKTEST,
+        )
+        return StrategyAssembler.config_snapshot(resolved)
 
     def _get_date_range(self) -> List[datetime]:
         """

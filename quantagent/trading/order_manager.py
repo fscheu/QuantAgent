@@ -17,7 +17,7 @@ import logging
 from typing import Optional
 from sqlalchemy.orm import Session
 
-from quantagent.models import Order, OrderSide, OrderType
+from quantagent.models import Order, OrderSide, OrderType, Signal
 from .position_sizer import PositionSizer
 from .risk_manager import RiskManager
 
@@ -125,6 +125,15 @@ class OrderManager:
             trigger_signal_id=trigger_signal_id,  # Set provenance link
         )
 
+        # Persist order early to obtain ID for provenance
+        try:
+            self.db.add(order)
+            self.db.flush()
+        except Exception as e:
+            logger.error(f"{symbol}: Failed to persist order pre-fill - {str(e)}")
+            self.db.rollback()
+            return None
+
         # Step 5: Place with broker
         try:
             filled_order = self.broker.place_order(order)
@@ -147,8 +156,13 @@ class OrderManager:
         # Step 7: Update risk tracker (post-trade P&L)
         self.risk_manager.on_trade_executed(trade)
 
-        # Step 8: Log to database
+        # Step 8: Log to database (persist filled order and trade)
         try:
+            # Update reverse provenance link if available
+            if trigger_signal_id:
+                sig = self.db.query(Signal).filter(Signal.id == trigger_signal_id).first()
+                if sig and not sig.order_id:
+                    sig.order_id = order.id
             self.db.add(trade)
             self.db.commit()
             logger.info(f"{symbol}: Trade logged to database")
