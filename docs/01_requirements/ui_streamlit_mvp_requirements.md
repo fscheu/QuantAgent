@@ -13,6 +13,11 @@ Assumptions/Constraints (MVP):
 - Single-user operation (no auth). Streamlit app runs locally for dev/test.
 - Background work is handled by backend code (APScheduler/threads); UI polls DB state (st_autorefresh).
 - Large artifacts (charts) referenced by path/id; no large blobs directly in DB.
+- Replay sweeps run sequentially (queued), not concurrently (keeps MVP simple).
+- Images saved to disk by default (“path-only”); state graph stores paths (not base64) wherever posible.
+- Checkpoints persisted via Postgres saver; avoid embedding big payloads in checkpoint rows.
+- Equity curves & metrics stored as JSON/rows (compact), not images.
+- Logging favors summarized reasoning; full dumps only in debug modes.
 - Environments: `backtest`, `paper` (prod is out of MVP scope for UI).
 
 ## Global UI Structure
@@ -69,6 +74,7 @@ Row Details (expand):
 - Indicator/Pattern/Trend reports (structured → pretty text), charts (pattern/trend images), reasoning (if present), links:
   - “Open Order” (if order_id)
   - “Open Checkpoint” (thread_id/checkpoint_id)
+  - Image source is a file path (path-only); optional inline thumbnail when configured
 
 Actions:
 - Run single analysis (symbol/timeframe/last N candles) using current model preset (MVP optional).
@@ -80,6 +86,7 @@ Create Backtest Run form:
 - Assets, timeframe, date range, model preset, strategy profile (for initial execution) and mode:
   - “Generate analyses only” (store signals/analyses + metadata + checkpoints)
   - “Generate + Execute” (run with selected profile immediately)
+- Artifacts saving policy: `none | path-only (default) | path+thumbnail`
 
 Runs table:
 - id, created_at, status (pending/running/completed/failed), progress %, assets/timeframe/range, model preset, profile snapshot hash, metrics (when done).
@@ -92,6 +99,7 @@ Purpose: Reuse stored analyses from a prior backtest run with different portfoli
 
 Form:
 - Select backtest_run_id; select one or multiple profiles (scenario sweep); execute replay.
+  - Multiple profiles are executed sequentially (queued), not concurrently (MVP decision).
 
 Output:
 - Replay runs table with metrics. Compare two runs side-by-side (win_rate, profit_factor, sharpe, max_dd, total_pnl). Equity curves overlay (basic).
@@ -119,12 +127,19 @@ Columns: ts, level, event_type, symbol, ref_id (order_id/signal_id), message.
 - Use `st.autorefresh` (5–10s) in Backtesting and Dashboard.
 - Use lightweight JSON editors (textarea) for profiles; validate on save.
 - Charts via matplotlib/plotly; tables via `st.dataframe` with pagination.
+ - File storage layout for images (example): `data/artifacts/{environment}/{run_or_thread}/{symbol}/{ts}_{pattern|trend}.png`.
+ - Retention: configurable (e.g., keep images for paper N days; in backtests, optional “save none/every Nth candle”).
+
+## Artifacts Storage & Checkpoints (Notes)
+- Images on disk with DB path references; default “path-only”.
+- Replace any image payloads in agent state with path references before persisting state/checkpoints.
+- Checkpoints on Postgres; do not embed large artifacts in checkpointed state.
 
 ## Open Questions
-1) Where to store large artifacts (charts) for long-term? Local path vs object storage (future).
-2) Model presets scope: global default vs per-run override precedence.
-3) Access control (multi-user) out of scope; any need to separate by user in near term?
-4) Replay “scenario sweep”: max profiles per run to avoid overloading UI/backend?
+1) Where to store large artifacts (charts) for long-term? Local path for MVP; object storage in futuro si hace falta (decision: path-only por defecto).
+2) Model presets scope: precedence = per-run override > environment default > global default (decision).
+3) Access control (multi-user) out of scope; si surge necesidad, se agrega owner_id (nota).
+4) Replay “scenario sweep”: ejecutar secuencialmente; límite configurable de perfiles por replay (decision: secuencial, sin concurrencia).
 
 ## Non-Goals (MVP)
 - No authentication/multi-user.
@@ -141,4 +156,3 @@ Columns: ts, level, event_type, symbol, ref_id (order_id/signal_id), message.
 - Can replay runs using stored analyses with different profiles.
 - Can browse analyses with provenance (orders, checkpoints) and artifacts.
 - Can monitor paper trading (scheduler, orders, positions) with environment filters.
-

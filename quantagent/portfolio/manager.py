@@ -49,17 +49,19 @@ class PortfolioManager:
             Trade object with updated portfolio state
 
         Raises:
-            ValueError: If insufficient capital or invalid trade data
+            ValueError: If invalid trade data
+
+        Note:
+            Pre-trade validation (capital, position size, daily loss) is handled by RiskManager
+            BEFORE this method is called. This method only updates state.
         """
         symbol = order.symbol
         qty = float(order.quantity)
         fill_qty = float(order.filled_quantity) if order.filled_quantity else qty
         trade_value = fill_qty * fill_price
 
-        # Validate sufficient capital for BUY orders
-        if order.side == OrderSide.BUY:
-            if self.cash < trade_value:
-                raise ValueError(f"insufficient capital: need {trade_value}, have {self.cash}")
+        # NOTE: Capital validation already done by RiskManager.validate_trade()
+        # If we reach here, the trade is already validated
 
         # Get entry price for SELL orders (from position being closed)
         entry_price_for_sell = None
@@ -176,6 +178,26 @@ class PortfolioManager:
         return sum(
             pos["pnl"] for pos in self.positions.values()
         )
+
+    def get_daily_pnl(self) -> float:
+        """Calculate today's realized + unrealized P&L.
+
+        Returns:
+            Total P&L for today (realized trades + unrealized positions)
+        """
+        from datetime import date
+        today = date.today()
+
+        # Query trades from today
+        trades_today = self.db.query(Trade).filter(
+            Trade.closed_at >= datetime.combine(today, datetime.min.time()),
+            Trade.environment == self.environment,
+        ).all()
+
+        realized_pnl = sum(float(t.pnl) if t.pnl else 0.0 for t in trades_today)
+        unrealized_pnl = self.get_unrealized_pnl()
+
+        return realized_pnl + unrealized_pnl
 
     def get_realized_pnl(self) -> float:
         """Calculate total realized P&L from closed trades.

@@ -105,71 +105,173 @@ Requirements without which the system cannot function as a trading system.
 - Calculate unrealized P&L real-time
 - Track capital allocation
 - Calculate portfolio value
+- **Important**: Only updates state AFTER validated execution (no pre-trade validation)
 
 **MVP Deliverable**:
 ```python
 class PortfolioManager:
     positions: Dict[symbol] → {qty, avg_cost, current_price, pnl}
     cash: float
-    get_total_value() → float
-    get_unrealized_pnl() → float
+
+    def execute_trade(order: Order) → Trade:
+        # ONLY updates positions/cash (validation happens in RiskManager)
+
+    def get_total_value() → float
+    def get_unrealized_pnl() → float
+    def get_daily_pnl() → float
 ```
 
 **Success Criteria**:
 - ✅ Positions accurate vs. trades executed
 - ✅ P&L calculations 100% correct
 - ✅ Portfolio value = cash + position values
+- ✅ No pre-trade validation (that's RiskManager's job)
+
+---
+
+#### 1.1b Position Sizer (NEW)
+**What**: Calculate order size based on capital, confidence, and risk rules
+
+**Scope**:
+- Base position sizing: 5% of portfolio per trade
+- Confidence-adjusted sizing: Low confidence = smaller position, High confidence = full size
+- Volatility-aware sizing (future enhancement, not MVP)
+
+**MVP Deliverable**:
+```python
+class PositionSizer:
+    def calculate_size(symbol, signal_confidence, current_price, portfolio_value) → float:
+        # Returns qty to buy/sell
+        # Base: 5% of portfolio
+        # Adjusted by confidence (0-1)
+        # Examples:
+        #   50% confidence → 2.5% position size
+        #   100% confidence → 5% position size
+```
+
+**Success Criteria**:
+- ✅ Sizes calculated correctly per confidence
+- ✅ Never exceeds 10% portfolio limit
+- ✅ Works for both BUY and SELL
 
 ---
 
 #### 1.2 Risk Management System (RMS)
-**What**: Validate trades before execution and monitor post-execution
+**What**: Validate trades BEFORE execution (gates the OrderManager)
 
-**Pre-Trade Checks**:
-- Sufficient capital available
-- Position size within limits (max 10% per trade)
+**Pre-Trade Checks** (happens BEFORE broker execution):
+- Sufficient capital available for trade value
+- Position size within limits (max 10% of portfolio per trade)
 - Daily loss limit not exceeded (max 5% per day)
+- Circuit breaker not triggered
+- No existing incompatible positions (for SHORT signals, e.g.)
 
-**Post-Trade Monitoring**:
-- Track daily P&L
-- Circuit breaker if daily loss > limit
-- Position limit enforcement
+**Architecture**:
+- RiskManager.validate_trade() called by OrderManager BEFORE PaperBroker.place_order()
+- If validation fails, order is REJECTED and never reaches broker
+- No validation in PortfolioManager (that's post-execution only)
 
 **MVP Deliverable**:
 ```python
 class RiskManager:
-    validate_trade(symbol, qty, price) → (bool, reason)
-    check_circuit_breaker() → (bool, reason)
+    def validate_trade(symbol, qty, price) → (bool, reason):
+        # Called BEFORE execution
+        # Returns (is_valid, rejection_reason)
+        # Checks all 5 pre-trade conditions above
+
+    def get_daily_pnl() → float:
+        # For circuit breaker check
+
+    def on_trade_executed(trade: Trade) → None:
+        # Post-trade: Update daily P&L tracking
 ```
 
 **Success Criteria**:
 - ✅ No trades executed that violate risk rules
-- ✅ Circuit breaker stops all trading if limit hit
+- ✅ Trades rejected at validate_trade(), never reach broker
 - ✅ All rejections logged with reason
+- ✅ Circuit breaker stops all trading if limit hit
 
 ---
 
-#### 1.3 Paper Broker & Order Execution
-**What**: Execute buy/sell orders in simulated environment
+#### 1.3 Order Manager (Orchestrator - NEW)
+**What**: Orchestrates the complete order execution flow
+
+**Responsibilities**:
+1. Call PositionSizer to calculate order size
+2. Call RiskManager to validate trade BEFORE execution
+3. Create Order object
+4. Call PaperBroker to execute (only if validated)
+5. Call PortfolioManager to update positions
+6. Log trade to database
+
+**Execution Flow**:
+```
+Analysis (Decision + Confidence)
+    ↓
+OrderManager.execute_decision()
+    ├─ PositionSizer.calculate_size() → qty
+    ├─ RiskManager.validate_trade(symbol, qty, price) → (valid, reason)
+    │   ├─ If False: REJECT (return None)
+    │   └─ If True: continue
+    ├─ PaperBroker.place_order(Order) → filled_order
+    ├─ PortfolioManager.execute_trade(filled_order) → Trade
+    ├─ RiskManager.on_trade_executed(trade) → update daily P&L
+    └─ Database.add(trade)
+```
+
+**MVP Deliverable**:
+```python
+class OrderManager:
+    def __init__(self, position_sizer, risk_manager, broker, portfolio, db):
+        self.position_sizer = position_sizer
+        self.risk_manager = risk_manager
+        self.broker = broker
+        self.portfolio = portfolio
+        self.db = db
+
+    def execute_decision(
+        symbol: str,
+        decision: str,        # "LONG" | "SHORT" | "HOLD"
+        confidence: float,    # 0-1
+        current_price: float
+    ) → Optional[Order]:
+        # Returns filled Order if executed, None if rejected
+```
+
+**Success Criteria**:
+- ✅ Correct execution order (size → validate → execute → update → log)
+- ✅ Trades rejected at validation stage (never reach broker if invalid)
+- ✅ Successful trades update portfolio immediately
+- ✅ All operations logged to database
+
+---
+
+#### 1.3b Paper Broker & Order Execution
+**What**: Execute buy/sell orders in simulated environment (AFTER validation)
 
 **Scope**:
 - Place MARKET orders only (MVP)
 - Simulate realistic fills (2% slippage)
 - Track order status (PENDING → FILLED)
 - Return fill price and quantity
+- **Note**: Only receives validated orders from OrderManager
 
 **MVP Deliverable**:
 ```python
 class PaperBroker:
-    place_order(Order) → filled_Order
-    get_positions() → Dict
-    get_balance() → float
+    def place_order(Order) → filled_Order:
+        # Order already validated by RiskManager
+        # Just execute with slippage simulation
+
+    def get_positions() → Dict
+    def get_balance() → float
 ```
 
 **Success Criteria**:
-- ✅ 100% order execution rate (no rejections)
-- ✅ Fills within simulated slippage
-- ✅ Portfolio updated on fill
+- ✅ 100% order execution rate (all received orders are valid)
+- ✅ Fills within simulated slippage (±2%)
+- ✅ Returns filled order with actual fill price/qty
 
 ---
 
@@ -408,12 +510,37 @@ AND later runs using the same profile name keep reproducibility
 ```
 ```
 
+### Position Sizer
+```
+GIVEN portfolio value = $100k, base_position_pct = 5%
+WHEN signal_confidence = 50% (low), current_price = $42,000
+THEN position_sizer.calculate_size() returns qty = ($100k * 5% * 50%) / $42,000
+AND qty = 0.0595 BTC (2.5% position size)
+
+WHEN signal_confidence = 100% (high)
+THEN qty = 0.119 BTC (5% position size)
+```
+
 ### Risk Manager
 ```
-GIVEN risk limits: max_loss=5%, max_position=10%
-WHEN requesting trade for 15% of capital
-THEN risk_manager.validate_trade() returns (False, "Position too large")
-AND trade is NOT executed
+GIVEN risk limits: max_loss=5%, max_position=10%, capital=$100k
+WHEN order_manager calls risk_manager.validate_trade(qty=0.119 BTC, price=$42,000)
+THEN risk_manager calculates trade_value = 4,998
+AND returns (True, None) - validation passes
+
+WHEN trade_value would be $15,000 (15% of capital)
+THEN returns (False, "Position too large: $15,000 > max $10,000")
+
+WHEN daily_pnl = -$6,000 (6% loss)
+THEN returns (False, "Daily loss limit exceeded: -6000")
+
+Timing
+```
+GIVEN an order_manager calling execute_decision()
+AND order_manager calls risk_manager.validate_trade() BEFORE broker.place_order()
+WHEN validation fails
+THEN trade is NOT executed and broker never receives it
+```
 
 Profiles & Overrides
 ```

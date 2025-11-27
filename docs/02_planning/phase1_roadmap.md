@@ -95,9 +95,9 @@ streamlit==1.28.0
 - [x] Define SQLAlchemy models (Order, Fill, Position, Signal, Trade, MarketData)
 - [x] Create initial migration script
 - [x] Test migrations work
- - [ ] Add environment tagging to operational tables (orders, trades, signals/analyses, positions)
- - [ ] Add provenance links: `orders.trigger_signal_id` and `signals.order_id`
- - [ ] Add analysis metadata in signals: `thread_id`, `checkpoint_id`, `state_snapshot` (fallback), `model_provider`, `model_name`, `temperature`, `agent_version`, `graph_version`
+ - [x] Add environment tagging to operational tables (orders, trades, signals/analyses, positions)
+ - [x] Add provenance links: `orders.trigger_signal_id` and `signals.order_id`
+ - [x] Add analysis metadata in signals: `thread_id`, `checkpoint_id`, `state_snapshot` (fallback), `model_provider`, `model_name`, `temperature`, `agent_version`, `graph_version`
 
 **1.3 Docker Setup**
 - [x] Create `Dockerfile` (Python 3.11 + dependencies)
@@ -146,36 +146,157 @@ streamlit==1.28.0
 
 #### Tasks
 
-**2.1 Portfolio Manager**
+**2.1 Position Sizer (NEW)**
+```python
+class PositionSizer:
+    def __init__(self, base_position_pct: float = 0.05):
+        # base_position_pct: percentage of portfolio per trade (5% default)
+
+    def calculate_size(
+        symbol: str,
+        signal_confidence: float,  # 0-1 (0.5=low, 1.0=high)
+        current_price: float,
+        portfolio_value: float
+    ) → float:
+        # Returns: qty to buy/sell
+        # Logic: position_value = portfolio_value * base_position_pct * signal_confidence
+        #        qty = position_value / current_price
+```
+
+**Implementation Details**:
+- [x] Create `quantagent/trading/position_sizer.py`
+- [x] Implement confidence-adjusted sizing formula
+- [x] Add unit tests:
+  - [x] 50% confidence → 2.5% position size
+  - [x] 100% confidence → 5% position size
+  - [x] Both BUY and SELL sizing
+- [x] Test never exceeds 10% portfolio limit
+
+**2.2 Portfolio Manager**
 ```python
 class PortfolioManager:
-    positions: Dict[symbol] → {qty, avg_cost, current_price}
+    positions: Dict[symbol] → {qty, avg_cost, current_price, pnl}
     cash: float
 
-    def execute_trade(order: Order) → Trade
+    def execute_trade(order: Order) → Trade:
+        # ONLY updates state (validation already done by RiskManager)
+
     def get_total_value() → float
     def get_unrealized_pnl() → float
+    def get_daily_pnl() → float
     def update_prices(prices: Dict) → None
 ```
 
-**2.2 Risk Manager**
+**Implementation Details**:
+- [x] Modify existing PortfolioManager to remove pre-trade validation
+- [x] Add get_daily_pnl() method for RiskManager circuit breaker checks
+- [x] Ensure execute_trade() handles both BUY and SELL correctly
+- [x] Unit tests:
+  - [x] execute_trade() BUY updates positions/cash correctly
+  - [x] execute_trade() SELL updates positions/cash correctly
+  - [x] get_total_value() = cash + sum(position values)
+  - [x] get_daily_pnl() returns correct daily P&L
+  - [x] **NO validation tests** (that's RiskManager's job)
+
+**2.3 Risk Manager**
 ```python
 class RiskManager:
-    def validate_trade(symbol, qty, price) → (bool, reason)
-    def check_circuit_breaker() → (bool, reason)
-    def on_trade_executed(trade: Trade) → None
+    def __init__(self, portfolio: PortfolioManager, max_daily_loss_pct: float = 0.05):
+        self.portfolio = portfolio
+        self.max_daily_loss_pct = max_daily_loss_pct
+        self.daily_pnl_tracker = {}  # Reset daily
+
+    def validate_trade(
+        symbol: str,
+        qty: float,
+        price: float
+    ) → Tuple[bool, Optional[str]]:
+        # Called by OrderManager BEFORE broker.place_order()
+        # Checks (in order):
+        # 1. Capital available: cash >= trade_value
+        # 2. Position limit: trade_value <= 10% of portfolio_value
+        # 3. Daily loss: current_daily_pnl >= -5% of portfolio_value
+        # 4. Circuit breaker: not already triggered
+        # 5. Position conflict: (e.g., no SHORT if already LONG)
+        # Returns: (is_valid, reason_if_invalid)
+
+    def get_daily_pnl() → float:
+        # Returns: sum of all trades today
+
+    def on_trade_executed(trade: Trade) → None:
+        # Post-execution: update daily P&L tracking
 ```
 
-**2.3 Unit Tests**
-- [ ] Test portfolio.execute_trade() accuracy
-- [ ] Test portfolio.get_total_value() calculation
-- [ ] Test risk_manager.validate_trade() with various scenarios
-- [ ] Test risk_manager.check_circuit_breaker()
+**Implementation Details**:
+- [x] Create `quantagent/trading/risk_manager.py`
+- [x] Implement 5-point validation check
+- [x] Add daily P&L tracking (reset at midnight)
+- [x] Add circuit breaker flag
+- [x] Unit tests:
+  - [x] Insufficient capital → rejects with reason
+  - [x] Position > 10% → rejects with reason
+  - [x] Daily loss > 5% → rejects with reason
+  - [x] Circuit breaker active → rejects with reason
+  - [x] Valid trade → returns (True, None)
+  - [x] on_trade_executed() updates daily P&L correctly
+- [x]Integration test:
+  - [x] validate_trade() called BEFORE broker (simulate in test)
 
-**2.4 Integration**
-- [ ] Wire Portfolio + Risk manager together
-- [ ] Test: Trade is rejected if validation fails
-- [ ] Test: Trade is accepted if validation passes
+**2.4 Order Manager (Orchestrator - NEW)**
+```python
+class OrderManager:
+    def __init__(
+        self,
+        position_sizer: PositionSizer,
+        risk_manager: RiskManager,
+        broker: PaperBroker,
+        portfolio: PortfolioManager,
+        db: SessionLocal
+    ):
+        # All dependencies injected
+
+    def execute_decision(
+        self,
+        symbol: str,
+        decision: str,          # "LONG" | "SHORT" | "HOLD"
+        confidence: float,      # 0-1
+        current_price: float
+    ) → Optional[Order]:
+        # Returns: filled Order if executed, None if rejected
+        # Flow:
+        # 1. If HOLD → return None
+        # 2. Size = position_sizer.calculate_size(...)
+        # 3. Valid = risk_manager.validate_trade(symbol, size, price)
+        #    - If False → log rejection, return None
+        # 4. Order = Order(symbol, side, size, price)
+        # 5. FilledOrder = broker.place_order(order)
+        # 6. Trade = portfolio.execute_trade(filled_order)
+        # 7. risk_manager.on_trade_executed(trade)
+        # 8. db.add(trade) → db.commit()
+        # 9. Return filled_order
+```
+
+**Implementation Details**:
+- [x] Create `quantagent/trading/order_manager.py`
+- [x] Orchestrate flow correctly (Size → Validate → Execute → Update → Log)
+- [x] All logging of rejections/executions
+- [x] Unit tests:
+  - [x] HOLD decision → returns None
+  - [x] LONG with valid trade → executes (size, validate, broker, portfolio, db)
+  - [x] LONG with invalid trade → rejects (validated, returns None, no broker call)
+  - [x] SELL with valid trade → executes correctly
+  - [x] Verify correct order of operations (size before validate before broker)
+- [x] Integration test:
+  - [x] Full end-to-end: LONG decision → fills → portfolio updated → db logged
+
+**2.5 Unit Tests & Integration**
+- [ ] PositionSizer unit tests (70%+ coverage)
+- [ ] Portfolio Manager unit tests (70%+ coverage)
+- [x] Risk Manager unit tests (70%+ coverage)
+- [ ] Order Manager unit tests (70%+ coverage)
+- [x] Integration test: Decision → Size → Validate → Execute → Update → Log
+- [x] Test: Trade is rejected if validation fails (never reaches broker)
+- [x] Test: Trade is accepted if validation passes (all steps complete)
 
 **2.5 LangGraph Improvements (Agent Architecture Refactoring)**
 
@@ -236,7 +357,7 @@ class RiskManager:
 
 ---
 
-### Week 5-6: Trading Execution
+### Week 5-6: Trading Execution - PaperBroker & Full Integration
 
 #### Tasks
 
@@ -244,40 +365,71 @@ class RiskManager:
 ```python
 class Broker(ABC):
     @abstractmethod
-    def place_order(order: Order) → Order
+    def place_order(order: Order) → Order:
+        # Only receives VALIDATED orders (no validation here)
+
     def cancel_order(order_id: str) → bool
     def get_balance() → float
     def get_positions() → Dict
 ```
 
-**3.2 Paper Broker (Mock)**
+**3.2 Paper Broker Implementation**
 ```python
 class PaperBroker(Broker):
     def place_order(order: Order) → Order:
-        # Simulate with 2% slippage
-        # Update internal positions
-        # Return filled order
+        # 1. Simulate 2% slippage
+        #    - BUY: filled_price = current_price * 1.01
+        #    - SELL: filled_price = current_price * 0.99
+        # 2. Mark order as FILLED
+        # 3. Return filled order with actual fill_price and fill_qty
+        # NOTE: Order already validated by RiskManager, just execute
 ```
 
-**3.3 Order Manager (Orchestrator)**
-```python
-class OrderManager:
-    def execute_decision(decision: Dict) → Order:
-        # 1. Risk check
-        # 2. Create order
-        # 3. Place with broker
-        # 4. Update portfolio
-        # 5. Log result
+**Implementation Details**:
+- [ ] Create `quantagent/trading/paper_broker.py`
+- [ ] Implement realistic slippage simulation (±2%)
+- [ ] Implement order status transitions (PENDING → FILLED)
+- [ ] Unit tests:
+  - [ ] BUY order with slippage: fill_price = price * 1.01
+  - [ ] SELL order with slippage: fill_price = price * 0.99
+  - [ ] Order status transitions correctly
+  - [ ] Returns filled order with correct fill_price and filled_qty
+- [ ] **No validation** (risk checks already done upstream)
+
+**3.3 Full End-to-End Integration Test**
+```
+Analysis (Decision + Confidence)
+    → PositionSizer.calculate_size()
+    → RiskManager.validate_trade() [REJECT if invalid]
+    → OrderManager.execute_decision()
+        → PaperBroker.place_order() [only if validated]
+        → PortfolioManager.execute_trade()
+        → RiskManager.on_trade_executed()
+        → Database.add(trade)
+    → Dashboard shows updated portfolio
 ```
 
-**3.4 Full Integration Test**
-- [ ] Decision → Risk Check → Order Creation → Broker Execution → Portfolio Update → Database Log
+- [ ] Test: LONG decision with valid trade → executes all steps
+- [ ] Test: SHORT decision with invalid trade → rejected at validation, broker never called
+- [ ] Test: Portfolio correctly updated after execution
+- [ ] Test: Trade correctly logged to database
+- [ ] Test: Daily P&L tracking correct
+- [ ] Test: Circuit breaker stops all trades if triggered
+
+**3.4 Database Schema Verification**
+- [ ] Verify Order table has all fields (symbol, side, qty, price, status, created_at, filled_at, trigger_signal_id, environment)
+- [ ] Verify Trade table has all fields (symbol, entry_price, exit_price, qty, side, opened_at, closed_at, pnl, environment)
+- [ ] Verify Signal table has provenance fields (trigger_signal_id, model_provider, model_name)
+- [ ] Migration generated correctly for any schema updates
 
 **Deliverables**:
-- ✅ PaperBroker executes orders realistically
-- ✅ OrderManager orchestrates all three (risk, broker, portfolio)
-- ✅ Full end-to-end flow working
-- ✅ Integration tests passing
+- ✅ PaperBroker executes orders realistically (slippage simulation)
+- ✅ OrderManager (implemented in Week 3-4) orchestrates all steps
+- ✅ Full end-to-end flow working: Size → Validate → Execute → Update → Log
+- ✅ All integration tests passing
+- ✅ Trades never reach broker if validation fails
+- ✅ Portfolio updates correctly on execution
+- ✅ Database schema supports all operations
 
 ---
 
@@ -328,16 +480,16 @@ class DataProvider:
 **4.5 LangGraph Improvements (Structured Outputs for Decision Quality)**
 
 *Improvement #3: Use Pydantic models for agent outputs*
-- [ ] Create `IndicatorReport` Pydantic model
-  - [ ] Fields: `macd`, `macd_signal`, `rsi`, `rsi_level`, `trend_direction`, `confidence`
-- [ ] Create `PatternReport` Pydantic model
-  - [ ] Fields: `patterns_detected`, `primary_pattern`, `confidence`, `breakout_probability`
-- [ ] Create `TrendReport` Pydantic model
-  - [ ] Fields: `support_level`, `resistance_level`, `trend_direction`, `trend_strength`
-- [ ] Update agents to return Pydantic models instead of strings
-- [ ] Update `decision_agent.py` to consume structured data (no string parsing)
-- [ ] Test: Decision logic more reliable with type-safe access
-- [ ] Benefit: Type validation, easier decision parsing, fewer bugs in decision agent
+- [x] Create `IndicatorReport` Pydantic model
+  - [x] Fields: `macd`, `macd_signal`, `rsi`, `rsi_level`, `trend_direction`, `confidence`
+- [ x Create `PatternReport` Pydantic model
+  - [x] Fields: `patterns_detected`, `primary_pattern`, `confidence`, `breakout_probability`
+- [x] Create `TrendReport` Pydantic model
+  - [x] Fields: `support_level`, `resistance_level`, `trend_direction`, `trend_strength`
+- [x] Update agents to return Pydantic models instead of strings
+- [x] Update `decision_agent.py` to consume structured data (no string parsing)
+- [x] Test: Decision logic more reliable with type-safe access
+- [x] Benefit: Type validation, easier decision parsing, fewer bugs in decision agent
 
 **Deliverables**:
 - ✅ Backtest runs on 3-4 months historical data
@@ -436,12 +588,30 @@ Additional MVP UI tasks (per UI requirements):
 
 ## Definition of Done: Phase 1 MVP
 
+### Trading Architecture Complete
+- ✅ PositionSizer: Calculates trade size based on confidence
+- ✅ RiskManager: Validates trades BEFORE execution
+- ✅ OrderManager: Orchestrates Size → Validate → Execute → Update → Log
+- ✅ PaperBroker: Executes validated orders with slippage
+- ✅ PortfolioManager: Updates state (no pre-trade validation)
+
 ### System Works Automatically
 - [ ] Runs analysis every 1 hour
-- [ ] Places orders without manual intervention
+- [ ] Calculates trade size per signal confidence
+- [ ] Validates each trade against risk limits
+- [ ] Places orders without manual intervention (if valid)
+- [ ] Rejects invalid orders with logged reasons
 - [ ] Tracks all positions accurately
-- [ ] Enforces risk limits
-- [ ] Logs all activities to database
+- [ ] Enforces all risk limits (capital, position size, daily loss, circuit breaker)
+- [ ] Logs all activities to database (orders, trades, rejections)
+
+### Risk Management Enforced
+- [ ] No trades executed without validation
+- [ ] Insufficient capital → rejects
+- [ ] Position > 10% of portfolio → rejects
+- [ ] Daily loss > 5% → rejects
+- [ ] Circuit breaker triggered → stops all trades
+- [ ] All rejections logged with specific reason
 
 ### Strategy Validated
 - [ ] Backtest on 3-4 months data
@@ -455,18 +625,25 @@ Additional MVP UI tasks (per UI requirements):
 - [ ] Graceful error handling (errors logged, system continues)
 - [ ] Analysis latency ≤ 30 seconds
 - [ ] Order execution ≤ 2 seconds
+- [ ] Daily P&L tracking accurate
 
 ### Code Quality
-- [ ] Test coverage ≥ 70%
+- [ ] PositionSizer test coverage ≥ 70%
+- [ ] RiskManager test coverage ≥ 70%
+- [ ] OrderManager test coverage ≥ 70%
+- [ ] PaperBroker test coverage ≥ 70%
 - [ ] All tests passing
 - [ ] CI/CD pipeline green
 - [ ] Code reviewed
 
 ### Documentation Complete
 - [ ] Setup instructions (README)
-- [ ] Architecture documented
+- [ ] Architecture documented (trading components)
+- [ ] Risk management rules documented
+- [ ] Order execution flow documented
+- [ ] Configuration guide (risk profiles)
 - [ ] API endpoints documented
-- [ ] Configuration guide
+- [ ] Troubleshooting guide
 
 ---
 
@@ -474,7 +651,9 @@ Additional MVP UI tasks (per UI requirements):
 
 ```
 ✅ Can say: "System analyzed BTC, SPX, Oil every hour for 7 days"
-✅ Can say: "Executed 35 trades automatically"
+✅ Can say: "Executed 35 trades automatically (rejected 5 invalid trades)"
+✅ Can say: "All trades sized based on signal confidence (2.5% to 5% of capital)"
+✅ Can say: "No trades executed that violated risk limits (capital, position, daily loss)"
 ✅ Can say: "Backtest shows 42% win rate"
 ✅ Can say: "Dashboard shows all metrics in real-time"
 ✅ Can say: "Anyone can clone and run with docker-compose"
