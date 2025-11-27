@@ -22,3 +22,4 @@ SQLAlchemy>=2.0.0
 alembic>=1.12.0
 psycopg2-binary>=2.9.0
 psycopg[binary,pool]
+streamlit

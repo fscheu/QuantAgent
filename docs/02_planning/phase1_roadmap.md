@@ -386,15 +386,15 @@ class PaperBroker(Broker):
 ```
 
 **Implementation Details**:
-- [ ] Create `quantagent/trading/paper_broker.py`
-- [ ] Implement realistic slippage simulation (±2%)
-- [ ] Implement order status transitions (PENDING → FILLED)
-- [ ] Unit tests:
-  - [ ] BUY order with slippage: fill_price = price * 1.01
-  - [ ] SELL order with slippage: fill_price = price * 0.99
-  - [ ] Order status transitions correctly
-  - [ ] Returns filled order with correct fill_price and filled_qty
-- [ ] **No validation** (risk checks already done upstream)
+- [x] Create `quantagent/trading/paper_broker.py`
+- [x] Implement realistic slippage simulation (±2%)
+- [x] Implement order status transitions (PENDING → FILLED)
+- [x] Unit tests:
+  - [x] BUY order with slippage: fill_price = price * 1.01
+  - [x] SELL order with slippage: fill_price = price * 0.99
+  - [x] Order status transitions correctly
+  - [x] Returns filled order with correct fill_price and filled_qty
+- [x] **No validation** (risk checks already done upstream)
 
 **3.3 Full End-to-End Integration Test**
 ```
@@ -409,18 +409,18 @@ Analysis (Decision + Confidence)
     → Dashboard shows updated portfolio
 ```
 
-- [ ] Test: LONG decision with valid trade → executes all steps
-- [ ] Test: SHORT decision with invalid trade → rejected at validation, broker never called
-- [ ] Test: Portfolio correctly updated after execution
-- [ ] Test: Trade correctly logged to database
-- [ ] Test: Daily P&L tracking correct
-- [ ] Test: Circuit breaker stops all trades if triggered
+- [x] Test: LONG decision with valid trade → executes all steps
+- [x] Test: SHORT decision with invalid trade → rejected at validation, broker never called
+- [x] Test: Portfolio correctly updated after execution
+- [x] Test: Trade correctly logged to database
+- [x] Test: Daily P&L tracking correct
+- [x] Test: Circuit breaker stops all trades if triggered
 
 **3.4 Database Schema Verification**
-- [ ] Verify Order table has all fields (symbol, side, qty, price, status, created_at, filled_at, trigger_signal_id, environment)
-- [ ] Verify Trade table has all fields (symbol, entry_price, exit_price, qty, side, opened_at, closed_at, pnl, environment)
-- [ ] Verify Signal table has provenance fields (trigger_signal_id, model_provider, model_name)
-- [ ] Migration generated correctly for any schema updates
+- [x] Verify Order table has all fields (symbol, side, qty, price, status, created_at, filled_at, trigger_signal_id, environment)
+- [x] Verify Trade table has all fields (symbol, entry_price, exit_price, qty, side, opened_at, closed_at, pnl, environment)
+- [x] Verify Signal table has provenance fields (trigger_signal_id, model_provider, model_name)
+- [x] Migration generated correctly for any schema updates
 
 **Deliverables**:
 - ✅ PaperBroker executes orders realistically (slippage simulation)
