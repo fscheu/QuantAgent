@@ -9,7 +9,8 @@ Welcome! This folder contains all documentation for transforming QuantAgent into
 ### For First Time Reading
 1. **Start here**: [Phase 1 Roadmap](02_planning/phase1_roadmap.md) - Overview of what we're building and timeline
 2. **Then read**: [Trading System Requirements](01_requirements/trading_system_requirements.md) - Detailed specs
-3. **Understand decisions**: [Technical Decisions](03_technical/) - How we're building it
+3. **Database setup**: [MIGRATIONS.md](MIGRATIONS.md) - DB setup and Alembic migrations
+4. **Understand decisions**: [Technical Decisions](03_technical/) - How we're building it
 
 ### By Role
 
@@ -21,6 +22,7 @@ Welcome! This folder contains all documentation for transforming QuantAgent into
 - [Phase 1 Roadmap](02_planning/phase1_roadmap.md) - Week-by-week tasks
 - [Data Caching Architecture](03_technical/data_caching_architecture.md) - DB design
 - [Docker Deployment](03_technical/docker_deployment.md) - Dev environment setup
+- [MIGRATIONS](MIGRATIONS.md) - Alembic workflow and DB models
 
 **QA / Tester**:
 - [Trading System Requirements](01_requirements/trading_system_requirements.md) - Acceptance criteria
@@ -78,6 +80,10 @@ Welcome! This folder contains all documentation for transforming QuantAgent into
   - Why FastAPI+Angular for Phase 2
   - Hybrid migration strategy
   - Code examples
+
+Note on UI: Current UI in this repo is Flask (`apps/flask/web_interface.py`). Streamlit dashboard is proposed for MVP and is marked as Planned in the UI document.
+
+Language: Documentation is bilingual (English/Spanish). Dev tools and workflow guides are in Spanish; most architecture and planning docs are in English.
 
 ---
 

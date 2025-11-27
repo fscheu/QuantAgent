@@ -34,6 +34,8 @@ DataProvider.get_ohlc(symbol, timeframe, start_date, end_date)
 
 ## Database Schema
 
+Note: The following DDL is illustrative/pseudocódigo. In PostgreSQL use `TIMESTAMP` types and create indexes with `CREATE INDEX`. The source of truth for the schema lives in SQLAlchemy models at `quantagent/models.py`.
+
 ```sql
 CREATE TABLE market_data (
     id SERIAL PRIMARY KEY,
@@ -67,7 +69,7 @@ CREATE TABLE market_data (
 ### DataProvider Class
 
 ```python
-# quantagent/data/provider.py
+# quantagent/data/provider.py  (Planned: proposed location)
 
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, desc

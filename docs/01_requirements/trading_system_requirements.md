@@ -14,6 +14,83 @@ Transform QuantAgent from a demo analysis tool into an **automated paper trading
 
 ---
 
+## New MVP Additions: Configuration, Provenance, Replay & Environments
+
+The following additions strengthen reproducibility, auditability, and experimental agility while keeping scope focused.
+
+### A. Preset Profiles for Portfolio & Risk (Configurable & Persisted)
+Goal: Be able to pre‑set and persist different profiles (e.g., moderate by sector, aggressive by asset) and reuse them across backtests/paper trading.
+
+Requirements:
+- Persist named configurations for PortfolioManager and RiskManager (JSON profiles).
+- Allow hierarchical overrides (default → sector → symbol), resolved into a final runtime config snapshot.
+- Load a profile by name for any run; snapshot the resolved config into the run for reproducibility.
+
+Acceptance Criteria:
+- ✅ Can create, list, and load portfolio/risk profiles by name.
+- ✅ Backtest/paper run stores an immutable copy of the resolved profile (config snapshot).
+- ✅ Switching profiles changes sizing/limits without code changes.
+
+### B. Analysis Provenance Linked to Orders
+Goal: Full traceability of “what analysis triggered an order” and “which analyses occurred during the order’s lifetime”.
+
+Requirements:
+- For each order, store the triggering analysis/signal reference.
+- For each analysis/signal, allow linking to an associated order when applicable (before/during/after).
+
+Acceptance Criteria:
+- ✅ Given an order, can retrieve the triggering analysis and the list of related analyses during its lifetime.
+- ✅ Given an analysis, can find the order(s) it affected.
+
+### C. Checkpoint Integration for Analyses (or Fallback Snapshot)
+Goal: Every analysis record should point to its LangGraph checkpoint to enable full replay; if the checkpointer is unavailable, store a minimal state snapshot.
+
+Requirements:
+- Store `thread_id` and `checkpoint_id` alongside each analysis.
+- If checkpointing library/DB is not available, store a compact `state_snapshot` (JSON) sufficient for replaying core results.
+- Attach references to large artifacts (charts/images) by path/id (avoid large blobs in DB where possible).
+
+Acceptance Criteria:
+- ✅ Can resume/replay an analysis from checkpoint when available.
+- ✅ If checkpoint is not available, can reconstruct core analysis from `state_snapshot`.
+- ✅ Charts are retrievable via their stored references.
+
+### D. Backtest Setup Recording and Replayable Execution
+Goal: A backtest records the full setup (profile snapshots, model settings, time ranges, assets) and generates a stable set of analyses that can be replayed with different Portfolio/Risk profiles without re‑calling LLMs.
+
+Requirements:
+- Persist a backtest “run” with parameters and config snapshot.
+- Persist the generated analyses for that run with their model metadata.
+- Provide a “replay execution” mode that consumes the same analyses but uses a different Portfolio/Risk profile to evaluate P&L/metrics without re‑generating analyses.
+
+Acceptance Criteria:
+- ✅ Two executions over the same analysis set but different profiles yield two distinct P&L/metrics sets.
+- ✅ Replay avoids making new LLM calls (uses stored analyses/checkpoints).
+
+### E. Model Variants per (Symbol, Date, Timeframe)
+Goal: Run multiple analysis variants for the exact same candle across different model providers/names/params, and later combine with various portfolio/risk profiles.
+
+Requirements:
+- Tag each analysis with `model_provider`, `model_name`, `temperature` and agent/graph version fields.
+- Allow multiple analyses to exist for the same (symbol, timeframe, timestamp) differentiated by model metadata.
+
+Acceptance Criteria:
+- ✅ Can query and compare analyses across model variants for identical candles.
+- ✅ Backtest/execution can select a specific model variant set.
+
+### F. Environment Separation (Backtest, Paper, Prod)
+Goal: Keep experimental/backtest data clearly separated from production‑oriented records.
+
+Requirements:
+- Tag operational records (signals/analyses, orders, trades, positions) with an `environment` value: `backtest`, `paper`, or `prod`.
+- All queries and dashboards can filter by environment.
+
+Acceptance Criteria:
+- ✅ Backtest data does not pollute paper/prod dashboards.
+- ✅ Paper and prod executions remain cleanly separable for reporting/audit.
+
+---
+
 ## Core Requirements by Tier
 
 ### 🔴 TIER 1: CRITICAL
@@ -148,6 +225,8 @@ class Backtest:
 - ✅ Backtest completes without errors
 - ✅ Metrics calculated correctly
 - ✅ Win rate ≥ 40% (viability threshold)
+- ✅ Backtest run stores full setup (config snapshot, model settings, assets, date range)
+- ✅ Replay execution can reuse stored analyses with different portfolio/risk profiles
 
 ---
 
@@ -170,6 +249,7 @@ class TradingScheduler:
 - ✅ Analysis runs at scheduled times
 - ✅ Trades execute automatically
 - ✅ System stable for 24h+ of testing
+- ✅ Environment tagging is applied as `paper` for all generated records
 
 ---
 
@@ -193,6 +273,7 @@ class DataProvider:
 - ✅ Backtesting 10x faster (local DB queries)
 - ✅ API calls reduced significantly
 - ✅ Reproducible results (same data every run)
+- ✅ Backtests reference a data source/hash for reproducibility
 
 ---
 
@@ -214,6 +295,8 @@ class DataProvider:
 - ✅ Can find "all BTC trades on 2024-11-25"
 - ✅ Can find "all risk rejections"
 - ✅ Can replay any day's activity
+- ✅ Given an order id, can retrieve triggering analysis and related analyses (provenance)
+- ✅ Given a run id, can retrieve the config snapshot used
 
 ---
 
@@ -232,6 +315,7 @@ class DataProvider:
 - YAML config file
 - Environment variables for secrets
 - Validation at startup
+- Profiles persisted (Portfolio/Risk) and selectable by name
 
 ---
 
@@ -314,6 +398,14 @@ THEN portfolio.positions["BTC"].qty = 0.1
 AND portfolio.positions["BTC"].avg_cost = 42,000
 AND portfolio.cash = 57,800
 AND portfolio.get_total_value() = 100,000 (assuming price stable)
+
+Profiles & Persistence
+```
+GIVEN a saved profile named "moderate_equities"
+WHEN starting a backtest with that profile
+THEN the run stores a config snapshot identical to the resolved profile
+AND later runs using the same profile name keep reproducibility
+```
 ```
 
 ### Risk Manager
@@ -322,6 +414,13 @@ GIVEN risk limits: max_loss=5%, max_position=10%
 WHEN requesting trade for 15% of capital
 THEN risk_manager.validate_trade() returns (False, "Position too large")
 AND trade is NOT executed
+
+Profiles & Overrides
+```
+GIVEN a sector override that caps Tech exposure at 5%
+WHEN a trade would cause Tech exposure to exceed 5%
+THEN risk_manager.validate_trade() returns (False, "Sector cap exceeded")
+```
 ```
 
 ### Paper Broker
@@ -341,6 +440,18 @@ THEN results include:
   - win_rate: 40-60%
   - profit_factor: > 1.0
   - max_drawdown: < 20%
+
+Replay & Model Variants
+```
+GIVEN a backtest run that generated analyses with model="gpt-4o-mini"
+AND a replay execution uses the same analyses with a different portfolio/risk profile
+THEN it reuses the stored analyses without LLM calls
+AND produces a different P&L curve consistent with the new sizing/limits
+
+GIVEN the same (symbol, timeframe, timestamp)
+WHEN generating analyses with two models (A and B)
+THEN both analyses can be compared side-by-side for that candle
+```
 ```
 
 ---
@@ -361,6 +472,8 @@ price: float (nullable)
 status: "PENDING" | "FILLED" | "CANCELLED"
 created_at: datetime
 filled_at: datetime (nullable)
+environment: "backtest" | "paper" | "prod"
+trigger_signal_id: int (FK → Signal) (nullable)
 ```
 
 **Fill**
@@ -391,6 +504,37 @@ decision: "LONG" | "SHORT" | "HOLD"
 confidence: float (0-1)
 reason: str (1000 char max)
 created_at: datetime
+environment: "backtest" | "paper" | "prod"
+order_id: int (FK → Order) (nullable)
+thread_id: str (nullable)
+checkpoint_id: str (nullable)
+state_snapshot: json (nullable)
+model_provider: str (nullable)
+model_name: str (nullable)
+temperature: float (nullable)
+agent_version: str (nullable)
+graph_version: str (nullable)
+
+**BacktestRun**
+```
+id: int (PK)
+timeframe: str
+assets: list[str]
+date_range: {start: datetime, end: datetime}
+data_source: str | hash (optional)
+config_snapshot: json  # resolved Portfolio/Risk + model params
+created_at: datetime
+```
+
+**StrategyConfig**
+```
+id: int (PK)
+name: str (unique)
+kind: "portfolio" | "risk" | "combined"
+json_config: json
+version: int
+created_at: datetime
+```
 ```
 
 ---

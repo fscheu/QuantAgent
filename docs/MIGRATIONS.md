@@ -145,7 +145,7 @@ python -m alembic upgrade head
 ```
 
 This will:
-- Create the SQLite database file `quantagent.db` (or connect to your configured database)
+- Connect to the database configured via `DATABASE_URL` (PostgreSQL recommended). If you configured SQLite, it will create the file `quantagent.db`.
 - Create all required tables: `orders`, `fills`, `positions`, `signals`, `trades`, `market_data`
 - Create all indexes for optimal query performance
 
@@ -324,22 +324,17 @@ python -m alembic upgrade <revision_id>
 
 ## Using the Migration Helper
 
-A convenience helper script is available:
+Planned convenience helper (coming soon):
 
 ```bash
-# Run pending migrations
+# NOTE: The following helper module is planned but not yet available in the repo.
+# Use Alembic commands directly for now (see sections above).
+
+# Intended usage once implemented:
 python -m quantagent.migrations_helper upgrade
-
-# Create new migration
 python -m quantagent.migrations_helper create "Your migration description"
-
-# Show current revision
 python -m quantagent.migrations_helper current
-
-# Show migration history
 python -m quantagent.migrations_helper history
-
-# Downgrade one step
 python -m quantagent.migrations_helper downgrade
 ```
 
@@ -348,7 +343,11 @@ python -m quantagent.migrations_helper downgrade
 ### Run the Migration Test Suite
 
 ```bash
-python test_migrations.py
+# Option A: plain Python
+python tests/test_migrations.py
+
+# Option B: pytest (recommended)
+pytest -q tests/test_migrations.py
 ```
 
 This will:
@@ -422,7 +421,7 @@ The schema includes strategic indexes for optimal query performance:
 ## Best Practices
 
 1. **Always use migrations** - Never manually modify the database schema
-2. **Test migrations** - Run `python test_migrations.py` after creating new migrations
+2. **Test migrations** - Run `pytest -q tests/test_migrations.py` (or `python tests/test_migrations.py`) after creating new migrations
 3. **Version control** - Commit migration files to git
 4. **Descriptive messages** - Use clear, descriptive migration messages
 5. **Atomic changes** - Keep migrations focused on a single logical change
@@ -459,17 +458,17 @@ pip install -e .
 quantagent/
 ├── database.py              # SQLAlchemy configuration
 ├── models.py                # ORM models (Order, Fill, etc.)
-└── migrations_helper.py     # CLI helper for migrations
+└── (migrations_helper.py)   # Planned CLI helper for migrations
 
 alembic/
 ├── versions/
-│   └── <revision>_*.py     # Migration scripts
-├── env.py                  # Alembic environment configuration
-├── script.py.mako          # Migration template
+│   └── <revision>_*.py      # Migration scripts
+├── env.py                   # Alembic environment configuration
+├── script.py.mako           # Migration template
 └── README
 
-alembic.ini                 # Alembic configuration file
-test_migrations.py          # Migration test script
+alembic.ini                  # Alembic configuration file
+tests/test_migrations.py     # Migration test script
 ```
 
 ## References

@@ -2,8 +2,11 @@
 
 ## Decision Summary
 
-**Phase 1 MVP**: **Streamlit** (Python only, fast development)
-**Phase 2 Production**: **FastAPI** (API) + **Angular** (UI)
+Current state: The repository ships with a Flask-based UI at `apps/flask/web_interface.py`.
+
+Planned direction:
+- **Phase 1 MVP**: **Streamlit** (Python only, fast development) for a quick dashboard.
+- **Phase 2 Production**: **FastAPI** (API) + **Angular** (UI).
 
 ---
 
@@ -27,7 +30,7 @@
 
 ### Streamlit MVP Dashboard
 
-**File**: `quantagent/dashboard/streamlit_app.py`
+**File**: `quantagent/dashboard/streamlit_app.py` (Planned)
 
 ```python
 import streamlit as st

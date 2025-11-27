@@ -95,6 +95,9 @@ streamlit==1.28.0
 - [x] Define SQLAlchemy models (Order, Fill, Position, Signal, Trade, MarketData)
 - [x] Create initial migration script
 - [x] Test migrations work
+ - [ ] Add environment tagging to operational tables (orders, trades, signals/analyses, positions)
+ - [ ] Add provenance links: `orders.trigger_signal_id` and `signals.order_id`
+ - [ ] Add analysis metadata in signals: `thread_id`, `checkpoint_id`, `state_snapshot` (fallback), `model_provider`, `model_name`, `temperature`, `agent_version`, `graph_version`
 
 **1.3 Docker Setup**
 - [x] Create `Dockerfile` (Python 3.11 + dependencies)
@@ -135,6 +138,7 @@ streamlit==1.28.0
 - ✅ `create_agent` refactoring complete
 - ✅ Checkpointing integrated with DB
 - ✅ Agents more reliable with built-in features
+ - ✅ Environment tagging and basic provenance fields present in schema
 
 ---
 
@@ -311,6 +315,8 @@ class DataProvider:
 - [ ] Execute analysis (same agents as live)
 - [ ] Compare decision vs actual price 4h later
 - [ ] Record result
+ - [ ] Persist backtest run setup (config snapshot, model params, assets/time ranges)
+ - [ ] Persist generated analyses with model metadata and checkpoint references
 
 **4.4 Metrics Calculation**
 - [ ] Win rate: % of winning trades
@@ -341,6 +347,9 @@ class DataProvider:
 - ✅ Pydantic models enforce output structure
 - ✅ Decision agent simplified (no string parsing)
 - ✅ Type-safe state transitions
+ - ✅ Backtest run records full setup (config snapshot, model settings)
+ - ✅ Replay execution can reuse stored analyses without new LLM calls
+ - ✅ Support multiple model variants per (symbol, timeframe, timestamp)
 
 ---
 
@@ -392,6 +401,7 @@ class TradingScheduler:
 - ✅ Streamlit dashboard live
 - ✅ System stable 24h+
 - ✅ Full documentation
+ - ✅ Dashboard/queries filterable by environment (backtest, paper)
 
 ---
 
