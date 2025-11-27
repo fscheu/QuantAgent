@@ -124,7 +124,7 @@ class OrderManager:
             filled_order = self.broker.place_order(order)
             logger.info(
                 f"{symbol}: Order filled - {filled_order.side} {filled_order.filled_quantity:.6f} "
-                f"@ ${filled_order.filled_price:.2f}"
+                f"@ ${filled_order.average_fill_price:.2f}"
             )
         except Exception as e:
             logger.error(f"{symbol}: Broker execution failed - {str(e)}")
@@ -132,7 +132,7 @@ class OrderManager:
 
         # Step 6: Update portfolio
         try:
-            trade = self.portfolio.execute_trade(filled_order, filled_order.filled_price)
+            trade = self.portfolio.execute_trade(filled_order, filled_order.average_fill_price)
             logger.info(f"{symbol}: Portfolio updated - {side} {qty:.6f} executed")
         except Exception as e:
             logger.error(f"{symbol}: Portfolio update failed - {str(e)}")
@@ -141,8 +141,15 @@ class OrderManager:
         # Step 7: Update risk tracker (post-trade P&L)
         self.risk_manager.on_trade_executed(trade)
 
-        # Step 8: Log to database (already done in portfolio.execute_trade)
-        logger.info(f"{symbol}: Trade logged to database")
+        # Step 8: Log to database
+        try:
+            self.db.add(trade)
+            self.db.commit()
+            logger.info(f"{symbol}: Trade logged to database")
+        except Exception as e:
+            logger.error(f"{symbol}: Database logging failed - {str(e)}")
+            self.db.rollback()
+            return None
 
         return filled_order
 
@@ -189,7 +196,7 @@ class OrderManager:
 
         # Update portfolio
         try:
-            trade = self.portfolio.execute_trade(filled_order, filled_order.filled_price)
+            trade = self.portfolio.execute_trade(filled_order, filled_order.average_fill_price)
         except Exception as e:
             logger.error(f"{order.symbol}: Portfolio update failed - {str(e)}")
             return None

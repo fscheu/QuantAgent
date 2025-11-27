@@ -463,22 +463,27 @@ class TestFullEndToEndIntegration:
 
         # Critical validations: Order must be filled (reached broker)
         assert result is not None, "Valid LONG decision must return filled order"
-        assert result.status == OrderStatus.FILLED
+        assert result.status == OrderStatus.FILLED, f"Order status should be FILLED, got {result.status}"
         assert result.filled_at is not None, "Order must have fill timestamp"
 
         # Validate slippage was applied (proves broker executed)
         # BUY slippage: price * 1.01
         expected_fill_price = 42000.0 * 1.01
-        assert result.average_fill_price == pytest.approx(expected_fill_price, rel=0.001)
+        assert result.average_fill_price == pytest.approx(expected_fill_price, rel=0.001), \
+            f"Expected fill price {expected_fill_price}, got {result.average_fill_price}"
 
         # Validate quantity was sized correctly (proves position_sizer was called)
         # Expected qty = (portfolio_value * base_pct * confidence) / price
         expected_qty = (100000.0 * 0.05 * 0.8) / 42000.0
-        assert result.filled_quantity == pytest.approx(expected_qty, rel=0.001)
+        assert result.filled_quantity == pytest.approx(expected_qty, rel=0.001), \
+            f"Expected qty {expected_qty}, got {result.filled_quantity}"
 
         # Critical: verify portfolio AND database were updated (full chain executed)
+        assert self.portfolio.execute_trade.called, "Portfolio.execute_trade should have been called"
         self.portfolio.execute_trade.assert_called_once()
+        assert self.db.add.called, "Database.add should have been called to persist trade"
         self.db.add.assert_called()
+        assert self.db.commit.called, "Database.commit should have been called"
         self.db.commit.assert_called()
 
     def test_full_flow_short_valid_trade_executes_all_steps(self):
@@ -502,21 +507,27 @@ class TestFullEndToEndIntegration:
         # Critical validations: Order must be filled (reached broker)
         assert result is not None, "Valid SHORT decision must return filled order"
         assert result.side == OrderSide.SELL, "SHORT decision must create SELL order"
-        assert result.status == OrderStatus.FILLED
+        assert result.status == OrderStatus.FILLED, f"Order status should be FILLED, got {result.status}"
 
         # Validate slippage was applied (proves broker executed)
         # SELL slippage: price * 0.99
         expected_fill_price = 42000.0 * 0.99
-        assert result.average_fill_price == pytest.approx(expected_fill_price, rel=0.001)
+        assert result.average_fill_price == pytest.approx(expected_fill_price, rel=0.001), \
+            f"Expected fill price {expected_fill_price}, got {result.average_fill_price}"
 
         # Validate quantity was sized correctly
         expected_qty = (100000.0 * 0.05 * 0.6) / 42000.0
-        assert result.filled_quantity == pytest.approx(expected_qty, rel=0.001)
+        assert result.filled_quantity == pytest.approx(expected_qty, rel=0.001), \
+            f"Expected qty {expected_qty}, got {result.filled_quantity}"
 
         # Critical: verify chain of execution
+        # 1. Portfolio must be updated
+        assert self.portfolio.execute_trade.called, "Portfolio.execute_trade should have been called"
         self.portfolio.execute_trade.assert_called_once()
-        self.db.add.assert_called()
-        self.db.commit.assert_called()
+
+        # 2. Database must be updated
+        assert self.db.add.called, "Database.add should have been called to persist trade"
+        assert self.db.commit.called, "Database.commit should have been called to finalize trade"
 
     def test_full_flow_invalid_trade_rejected_before_broker(self):
         """Test invalid trade is REJECTED before reaching broker (validation gate)."""

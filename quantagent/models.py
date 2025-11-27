@@ -279,5 +279,6 @@ class BacktestRun(Base):
 
     __table_args__ = (
         Index("idx_start_end_date", "start_date", "end_date"),
-        Index("idx_assets", "assets"),
+        # Note: idx_assets removed - JSON columns need GIN/GIST indexes
+        # For MVP, simple date-based queries are sufficient
     )
