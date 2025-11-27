@@ -65,6 +65,7 @@ class Order(Base):
     status = Column(Enum(OrderStatus), nullable=False, default=OrderStatus.PENDING)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    filled_at = Column(DateTime, nullable=True, index=True)
     filled_quantity = Column(Numeric(precision=18, scale=8), nullable=False, default=0)
     average_fill_price = Column(Numeric(precision=18, scale=8), nullable=True)
     comment = Column(Text, nullable=True)

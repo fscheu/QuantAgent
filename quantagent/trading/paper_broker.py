@@ -64,7 +64,7 @@ class PaperBroker(Broker):
             order: Order object with symbol, side, quantity, price
 
         Returns:
-            Filled Order with actual fill_price and filled_quantity
+            Filled Order with actual average_fill_price and filled_quantity
 
         Note:
             Order already validated by RiskManager, just execute.
@@ -74,17 +74,19 @@ class PaperBroker(Broker):
 
         # Simulate realistic fill price with slippage
         if order.side == OrderSide.BUY:
-            # BUY: market moves against us slightly
-            fill_price = order.price * (1 + self.slippage_pct)
+            # BUY: market moves against us slightly (worse price)
+            # Example: price=$42,000 with 1% slippage → fill_price=$42,420
+            fill_price = float(order.price) * (1 + self.slippage_pct)
         else:  # SELL
-            # SELL: market moves against us slightly
-            fill_price = order.price * (1 - self.slippage_pct)
+            # SELL: market moves against us slightly (worse price)
+            # Example: price=$42,000 with 1% slippage → fill_price=$41,580
+            fill_price = float(order.price) * (1 - self.slippage_pct)
 
         # Fill entire order quantity
         filled_qty = float(order.quantity)
 
         # Update order with fill details
-        order.filled_price = fill_price
+        order.average_fill_price = fill_price
         order.filled_quantity = filled_qty
         order.status = OrderStatus.FILLED
         order.filled_at = datetime.utcnow()
