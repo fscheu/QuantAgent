@@ -124,7 +124,7 @@ streamlit==1.28.0
 - [x] Setup `AsyncPostgresSaver` (uses same PostgreSQL DB)
 - [x] Add checkpointer to graph compilation: `graph.compile(checkpointer=checkpointer)`
 - [x] Implement `thread_id` based state resumption for backtesting
-- [ ] Test: Stop backtest mid-way, resume from checkpoint
+- [x] Test: Stop backtest mid-way, resume from checkpoint
 - [x] Benefit: Long backtests survive crashes, full execution history
 
 
@@ -383,6 +383,15 @@ class TradingScheduler:
     └─ Recent system events
 ```
 
+Additional MVP UI tasks (per UI requirements):
+- [ ] Configuration tab: list/create/edit StrategyConfig (JSON), set defaults per environment; model preset management
+- [ ] Analyses tab: filterable table (env/symbol/timeframe/date), details with reports, charts, checkpoint/thread, model metadata, order link
+- [ ] Backtesting tab: create run (generate-only vs generate+execute), runs table with status/progress/metrics, run details with logs and cancel
+- [ ] Replay tab: select backtest_run, pick profile(s), execute replay; compare metrics (side-by-side) and overlay equity curves
+- [ ] Orders & Positions tab (paper): orders with trigger_signal and provenance; positions with unrealized P&L
+- [ ] Global environment filter and auto-refresh on heavy tabs
+- [ ] Docs: link to `docs/01_requirements/ui_streamlit_mvp_requirements.md`
+
 **5.3 Integration Testing**
 - [ ] Full end-to-end: Analysis → Risk Check → Execution → Portfolio Update → Database → Dashboard
 - [ ] Stress test: 100+ trades execution
@@ -401,6 +410,7 @@ class TradingScheduler:
 - ✅ Streamlit dashboard live
 - ✅ System stable 24h+
 - ✅ Full documentation
+ - ✅ UI supports configuration, analyses exploration, backtest/replay flows, and environment filtering
  - ✅ Dashboard/queries filterable by environment (backtest, paper)
 
 ---
