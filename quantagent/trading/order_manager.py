@@ -57,6 +57,8 @@ class OrderManager:
         decision: str,
         confidence: float,
         current_price: float,
+        environment=None,
+        trigger_signal_id: Optional[int] = None,
     ) -> Optional[Order]:
         """
         Execute a trading decision end-to-end.
@@ -77,6 +79,8 @@ class OrderManager:
             decision: "LONG", "SHORT", or "HOLD"
             confidence: Signal confidence (0-1)
             current_price: Current market price
+            environment: Environment enum (BACKTEST, PAPER, PROD) - optional
+            trigger_signal_id: ID of signal that triggered this order - optional
 
         Returns:
             Filled Order if executed, None if rejected
@@ -117,6 +121,8 @@ class OrderManager:
             quantity=qty,
             price=current_price,
             order_type=OrderType.MARKET,
+            environment=environment,  # Set environment (backtest/paper/prod)
+            trigger_signal_id=trigger_signal_id,  # Set provenance link
         )
 
         # Step 5: Place with broker
