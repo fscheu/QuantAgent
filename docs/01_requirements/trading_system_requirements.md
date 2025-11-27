@@ -19,11 +19,12 @@ Transform QuantAgent from a demo analysis tool into an **automated paper trading
 The following additions strengthen reproducibility, auditability, and experimental agility while keeping scope focused.
 
 ### A. Preset Profiles for Portfolio & Risk (Configurable & Persisted)
-Goal: Be able to pre‑set and persist different profiles (e.g., moderate by sector, aggressive by asset) and reuse them across backtests/paper trading.
+Goal: Be able to pre‑set and persist different profiles and reuse them across backtests/paper trading.
 
 Requirements:
 - Persist named configurations for PortfolioManager and RiskManager (JSON profiles).
-- Allow hierarchical overrides (default → sector → symbol), resolved into a final runtime config snapshot.
+- MVP: Universe (list of instruments) lives as a fixed list inside the Portfolio profile. No sector exposure rules in MVP.
+- Simple overrides allowed (per symbol if needed). Sector-based overrides are out of scope.
 - Load a profile by name for any run; snapshot the resolved config into the run for reproducibility.
 
 Acceptance Criteria:
@@ -62,6 +63,7 @@ Requirements:
 - Persist a backtest “run” with parameters and config snapshot.
 - Persist the generated analyses for that run with their model metadata.
 - Provide a “replay execution” mode that consumes the same analyses but uses a different Portfolio/Risk profile to evaluate P&L/metrics without re‑generating analyses.
+ - Universe for a run can be taken from the Portfolio profile (default) or explicitly overridden at run creation; the final assets list is stored in BacktestRun.
 
 Acceptance Criteria:
 - ✅ Two executions over the same analysis set but different profiles yield two distinct P&L/metrics sets.
@@ -329,6 +331,7 @@ class Backtest:
 - ✅ Win rate ≥ 40% (viability threshold)
 - ✅ Backtest run stores full setup (config snapshot, model settings, assets, date range)
 - ✅ Replay execution can reuse stored analyses with different portfolio/risk profiles
+ - ✅ Universe can be supplied from Portfolio profile or explicitly for the run
 
 ---
 
@@ -418,6 +421,7 @@ class DataProvider:
 - Environment variables for secrets
 - Validation at startup
 - Profiles persisted (Portfolio/Risk) and selectable by name
+ - Portfolio profile includes Universe (fixed list of instruments) for initial runs
 
 ---
 
@@ -578,6 +582,7 @@ AND produces a different P&L curve consistent with the new sizing/limits
 GIVEN the same (symbol, timeframe, timestamp)
 WHEN generating analyses with two models (A and B)
 THEN both analyses can be compared side-by-side for that candle
+AND the run documents the Universe used (assets list), even if derived from the Portfolio profile
 ```
 ```
 
@@ -661,6 +666,31 @@ kind: "portfolio" | "risk" | "combined"
 json_config: json
 version: int
 created_at: datetime
+```
+Example Portfolio profile (MVP):
+```
+{
+  "universe": ["BTC", "SPX", "CL"],
+  "base_position_pct": 0.05,
+  "max_position_pct": 0.10,
+  "max_daily_loss_pct": 0.05,
+  "slippage_pct": 0.01,
+  "overrides": {
+    "symbols": {
+      "BTC": {"base_position_pct": 0.07}
+    }
+  }
+}
+```
+
+Example Model preset fields added to run snapshot (for reference):
+```
+{
+  "model_provider": "openai",
+  "model_name": "gpt-4o-mini",
+  "temperature": 0.1,
+  "use_checkpointing": true
+}
 ```
 ```
 

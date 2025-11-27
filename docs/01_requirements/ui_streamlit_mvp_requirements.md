@@ -19,6 +19,7 @@ Assumptions/Constraints (MVP):
 - Equity curves & metrics stored as JSON/rows (compact), not images.
 - Logging favors summarized reasoning; full dumps only in debug modes.
 - Environments: `backtest`, `paper` (prod is out of MVP scope for UI).
+ - Universe of instruments is a fixed list stored in the Portfolio profile; sector exposure rules are out of scope for MVP.
 
 ## Global UI Structure
 - Global environment filter (default: paper/backtest per tab context).
@@ -53,6 +54,7 @@ Purpose: Manage and persist Strategy profiles and model settings.
 Features:
 - StrategyConfig list (name, kind, version, created_at). Actions: View JSON, Duplicate, Activate for paper/backtest defaults.
 - Create/Edit profile (raw JSON editor for MVP). Kinds: portfolio, risk, combined.
+- Portfolio profile: manage Universe (multi-select symbols) and sizing/risk parameters (base_position_pct, max_position_pct, max_daily_loss_pct, slippage_pct).
 - Model settings: provider, model_name, temperature; save as preset; select default for analyses.
 - Display resolved snapshot preview for the currently selected profile (effective config after overrides).
 
@@ -60,6 +62,7 @@ Acceptance:
 - Create, list, duplicate profiles. Set defaults per environment.
 - Save model presets and set default.
 - Backtest/Paper runs snapshot the resolved config.
+ - Universe can be managed from the Portfolio profile and used as default assets for backtests.
 
 ## Tab 3: Analyses
 Purpose: Explore agent outputs with provenance & checkpoints.
@@ -83,7 +86,7 @@ Actions:
 Purpose: Create and monitor backtest runs.
 
 Create Backtest Run form:
-- Assets, timeframe, date range, model preset, strategy profile (for initial execution) and mode:
+- Assets (optional; if empty, use Portfolio profile's Universe), timeframe, date range, model preset, strategy profile (for initial execution) and mode:
   - “Generate analyses only” (store signals/analyses + metadata + checkpoints)
   - “Generate + Execute” (run with selected profile immediately)
 - Artifacts saving policy: `none | path-only (default) | path+thumbnail`

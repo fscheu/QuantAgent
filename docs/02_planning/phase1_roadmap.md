@@ -98,6 +98,7 @@ streamlit==1.28.0
  - [x] Add environment tagging to operational tables (orders, trades, signals/analyses, positions)
  - [x] Add provenance links: `orders.trigger_signal_id` and `signals.order_id`
  - [x] Add analysis metadata in signals: `thread_id`, `checkpoint_id`, `state_snapshot` (fallback), `model_provider`, `model_name`, `temperature`, `agent_version`, `graph_version`
+ - [ ] Persist StrategyConfig (portfolio/risk/combined) and validate Portfolio profile supports Universe list (fixed instruments)
 
 **1.3 Docker Setup**
 - [x] Create `Dockerfile` (Python 3.11 + dependencies)
@@ -138,6 +139,7 @@ streamlit==1.28.0
 - ✅ `create_agent` refactoring complete
 - ✅ Checkpointing integrated with DB
 - ✅ Agents more reliable with built-in features
+ - ✅ StrategyConfig model persisted; Portfolio profile includes Universe list (fixed instruments)
  - ✅ Environment tagging and basic provenance fields present in schema
 
 ---
@@ -297,6 +299,18 @@ class OrderManager:
 - [x] Integration test: Decision → Size → Validate → Execute → Update → Log
 - [x] Test: Trade is rejected if validation fails (never reaches broker)
 - [x] Test: Trade is accepted if validation passes (all steps complete)
+
+**2.6 Strategy Assembler (Factory)**
+```python
+class StrategyAssembler:
+    def build_components(snapshot, environment):
+        # Returns: portfolio, sizer, risk, broker, order_manager wired from snapshot
+```
+
+Tasks:
+- [ ] Implement StrategyAssembler to construct components from a StrategyConfig snapshot
+- [ ] Ensure Order creation persists `environment` and `trigger_signal_id` (provenance)
+- [ ] Reuse assembler in Backtest and (later) Scheduler
 
 **2.5 LangGraph Improvements (Agent Architecture Refactoring)**
 
@@ -462,20 +476,21 @@ class DataProvider:
 ```
 
 **4.3 Backtest Loop**
-- [ ] Loop through historical dates
-- [ ] Fetch data for each date
-- [ ] Execute analysis (same agents as live)
-- [ ] Compare decision vs actual price 4h later
-- [ ] Record result
- - [ ] Persist backtest run setup (config snapshot, model params, assets/time ranges)
- - [ ] Persist generated analyses with model metadata and checkpoint references
+- [x] Loop through historical dates
+- [x] Fetch data for each date
+- [x] Execute analysis (same agents as live)
+- [x] Compare decision vs actual price 4h later
+- [x] Record result
+ - [x] Persist backtest run setup (config snapshot, model params, assets/time ranges)
+ - [x] Persist generated analyses with model metadata and checkpoint references
+ - [ ] Use Universe from Portfolio profile by default when assets are unspecified; BacktestRun stores the final assets list
 
 **4.4 Metrics Calculation**
-- [ ] Win rate: % of winning trades
-- [ ] Profit factor: sum(wins) / abs(sum(losses))
-- [ ] Sharpe ratio: (return - risk_free) / volatility
-- [ ] Max drawdown: worst peak-to-trough decline
-- [ ] Total P&L: sum of all trade P&L
+- [x] Win rate: % of winning trades
+- [x] Profit factor: sum(wins) / abs(sum(losses))
+- [x] Sharpe ratio: (return - risk_free) / volatility
+- [x] Max drawdown: worst peak-to-trough decline
+- [x] Total P&L: sum of all trade P&L
 
 **4.5 LangGraph Improvements (Structured Outputs for Decision Quality)**
 
@@ -543,6 +558,7 @@ Additional MVP UI tasks (per UI requirements):
 - [ ] Orders & Positions tab (paper): orders with trigger_signal and provenance; positions with unrealized P&L
 - [ ] Global environment filter and auto-refresh on heavy tabs
 - [ ] Docs: link to `docs/01_requirements/ui_streamlit_mvp_requirements.md`
+ - [ ] Configuration tab: manage Universe (multi-select symbols) in Portfolio profile; snapshot preview
 
 **5.3 Integration Testing**
 - [ ] Full end-to-end: Analysis → Risk Check → Execution → Portfolio Update → Database → Dashboard
@@ -562,7 +578,8 @@ Additional MVP UI tasks (per UI requirements):
 - ✅ Streamlit dashboard live
 - ✅ System stable 24h+
 - ✅ Full documentation
- - ✅ UI supports configuration, analyses exploration, backtest/replay flows, and environment filtering
+- ✅ UI supports configuration, analyses exploration, backtest/replay flows, and environment filtering
+ - ✅ UI supports Universe management in Portfolio profile and optional asset override per backtest
  - ✅ Dashboard/queries filterable by environment (backtest, paper)
 
 ---
