@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from sqlalchemy import (
     Column, Integer, String, Float, DateTime, Enum, ForeignKey,
-    Text, Boolean, Numeric, Index
+    Text, Boolean, Numeric, Index, JSON
 )
 from sqlalchemy.orm import relationship
 import enum
@@ -43,6 +43,13 @@ class TradeSignal(str, enum.Enum):
     CLOSE = "close"
 
 
+class Environment(str, enum.Enum):
+    """Enum for execution environments."""
+    BACKTEST = "backtest"
+    PAPER = "paper"
+    PROD = "prod"
+
+
 class Order(Base):
     """Order model for placing and tracking trading orders."""
 
@@ -62,13 +69,19 @@ class Order(Base):
     average_fill_price = Column(Numeric(precision=18, scale=8), nullable=True)
     comment = Column(Text, nullable=True)
 
+    # Environment & Provenance (NEW)
+    environment = Column(Enum(Environment), nullable=False, default=Environment.PAPER, index=True)
+    trigger_signal_id = Column(Integer, ForeignKey("signals.id"), nullable=True)
+
     # Relationships
     fills = relationship("Fill", back_populates="order", cascade="all, delete-orphan")
     trades = relationship("Trade", back_populates="order", cascade="all, delete-orphan")
+    trigger_signal = relationship("Signal", foreign_keys=[trigger_signal_id], back_populates="triggered_orders")
 
     __table_args__ = (
         Index("idx_symbol_created_at", "symbol", "created_at"),
         Index("idx_status_symbol", "status", "symbol"),
+        Index("idx_orders_environment", "environment"),
     )
 
 
@@ -133,9 +146,30 @@ class Signal(Base):
     analysis_summary = Column(Text, nullable=True)
     generated_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
 
+    # Environment & Provenance (NEW)
+    environment = Column(Enum(Environment), nullable=False, default=Environment.PAPER, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=True)
+
+    # Checkpoint & Metadata (NEW)
+    thread_id = Column(String(100), nullable=True)
+    checkpoint_id = Column(String(100), nullable=True)
+    state_snapshot = Column(JSON, nullable=True)
+
+    # Model metadata
+    model_provider = Column(String(50), nullable=True)  # "openai", "anthropic", "qwen"
+    model_name = Column(String(100), nullable=True)  # "gpt-4o", "claude-3-opus", etc.
+    temperature = Column(Float, nullable=True)  # Model temperature used
+    agent_version = Column(String(50), nullable=True)
+    graph_version = Column(String(50), nullable=True)
+
+    # Relationships
+    triggered_orders = relationship("Order", foreign_keys="Order.trigger_signal_id", back_populates="trigger_signal")
+
     __table_args__ = (
         Index("idx_symbol_generated_at", "symbol", "generated_at"),
         Index("idx_symbol_signal", "symbol", "signal"),
+        Index("idx_signals_environment", "environment"),
+        Index("idx_signals_thread_id", "thread_id"),
     )
 
 
@@ -164,12 +198,16 @@ class Trade(Base):
 
     notes = Column(Text, nullable=True)
 
+    # Environment (NEW)
+    environment = Column(Enum(Environment), nullable=False, default=Environment.PAPER, index=True)
+
     # Relationships
     order = relationship("Order", back_populates="trades")
 
     __table_args__ = (
         Index("idx_symbol_opened_at", "symbol", "opened_at"),
         Index("idx_symbol_closed_at", "symbol", "closed_at"),
+        Index("idx_trades_environment", "environment"),
     )
 
 
@@ -194,4 +232,51 @@ class MarketData(Base):
     __table_args__ = (
         Index("idx_symbol_timeframe_timestamp", "symbol", "timeframe", "timestamp"),
         Index("idx_timestamp", "timestamp"),
+    )
+
+
+class StrategyConfig(Base):
+    """StrategyConfig model for persisting portfolio and risk management profiles."""
+
+    __tablename__ = "strategy_configs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False, unique=True, index=True)
+    kind = Column(String(20), nullable=False)  # "portfolio", "risk", "combined"
+    json_config = Column(JSON, nullable=False)  # Persisted configuration dict
+    version = Column(Integer, nullable=False, default=1)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index("idx_name_kind", "name", "kind"),
+    )
+
+
+class BacktestRun(Base):
+    """BacktestRun model for recording backtest executions and configurations."""
+
+    __tablename__ = "backtest_runs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), nullable=True)
+    timeframe = Column(String(10), nullable=False)  # "1h", "4h", "1d", etc.
+    assets = Column(JSON, nullable=False)  # List of symbols, e.g., ["BTC", "SPX", "CL"]
+    start_date = Column(DateTime, nullable=False, index=True)
+    end_date = Column(DateTime, nullable=False, index=True)
+    data_source = Column(String(200), nullable=True)  # Optional source/hash for reproducibility
+    config_snapshot = Column(JSON, nullable=False)  # Immutable config at run time
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+    # Result metrics (nullable until run completes)
+    total_trades = Column(Integer, nullable=True)
+    win_rate = Column(Float, nullable=True)
+    profit_factor = Column(Float, nullable=True)
+    sharpe_ratio = Column(Float, nullable=True)
+    max_drawdown = Column(Float, nullable=True)
+    total_pnl = Column(Numeric(precision=18, scale=8), nullable=True)
+
+    __table_args__ = (
+        Index("idx_start_end_date", "start_date", "end_date"),
+        Index("idx_assets", "assets"),
     )
