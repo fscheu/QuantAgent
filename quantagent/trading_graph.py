@@ -174,6 +174,7 @@ class TradingGraph:
 
         try:
             checkpointer = PostgresSaver.from_conn_string(db_url)
+            # checkpointer.setup()
             return checkpointer
         except Exception as e:
             raise ValueError(

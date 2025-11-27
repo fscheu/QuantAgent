@@ -24,7 +24,7 @@ class WebTradingAnalyzer:
 
         # Start with default config (OpenAI)
         self.config = DEFAULT_CONFIG.copy()
-        self.trading_graph = TradingGraph(config=self.config)
+        self.trading_graph = TradingGraph(config=self.config, use_checkpointing=True)
         self.data_dir = Path("data")
 
         # Ensure data dir exists
@@ -307,7 +307,12 @@ class WebTradingAnalyzer:
             }
 
             # Run the trading graph
-            final_state = self.trading_graph.graph.invoke(initial_state)
+            thread_id = f"{asset_name}:{timeframe}"
+            final_state = self.trading_graph.graph.invoke(
+                initial_state,
+                config={"configurable": {"thread_id": thread_id}},
+            )
+
 
             return {
                 "success": True,
