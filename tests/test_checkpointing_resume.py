@@ -324,7 +324,7 @@ class TestCheckpointingWithVariousConfigs:
     def test_graph_with_different_thread_ids(self, mock_llm, mock_vision_llm, mock_toolkit,
                                              sample_state_inicial):
         """Verify graph can be invoked with multiple different thread_ids."""
-        tg = TradingGraph(use_checkpointing=False)
+        tg = TradingGraph(use_checkpointing=True)
 
         thread_ids = ["thread_001", "thread_002", "thread_003"]
         results = []

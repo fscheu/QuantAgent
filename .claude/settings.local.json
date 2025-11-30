@@ -9,7 +9,9 @@
       "Bash(python3 -m pytest:*)",
       "Bash(find:*)",
       "WebFetch(domain:docs.langchain.com)",
-      "Bash(python -m alembic revision:*)"
+      "Bash(python -m alembic revision:*)",
+      "Bash(python -c:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []

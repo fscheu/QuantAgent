@@ -334,24 +334,23 @@ Tasks:
 - [ ] Benefit: Cleaner parent graph, easier testing, better code organization
 
 **Phase 2b: Parallelization (Performance optimization)**
-- [ ] Analyze agent independence: Pattern & Trend both depend only on initial `kline_data` + Indicator output
+- [ ] All three agents (Indicator, Pattern, Trend) are fully independent - they analyze raw `kline_data` directly
   - [ ] Reference: [LangGraph Parallelization Pattern](https://docs.langchain.com/oss/python/langgraph/workflows-agents#parallelization)
-- [ ] Update parent graph edges to enable fan-out/fan-in:
+- [ ] Update parent graph edges to enable full fan-out/fan-in:
   ```python
-  # Sequential: START → Indicator (initial processing)
+  # Parallel: START → [Indicator, Pattern, Trend] (all three independent)
   builder.add_edge(START, "Indicator")
+  builder.add_edge(START, "Pattern")
+  builder.add_edge(START, "Trend")
 
-  # Parallel: Indicator → [Pattern, Trend] (both independent)
-  builder.add_edge("Indicator", "Pattern")
-  builder.add_edge("Indicator", "Trend")
-
-  # Convergence: [Pattern, Trend] → Decision (aggregator)
+  # Convergence: [Indicator, Pattern, Trend] → Decision (aggregator)
+  builder.add_edge("Indicator", "Decision")
   builder.add_edge("Pattern", "Decision")
   builder.add_edge("Trend", "Decision")
   ```
-- [ ] Test: Pattern and Trend execute in parallel (verify with thread/timing logs)
-- [ ] Benchmark: Latency reduction from ~6-9s → ~5-7s
-- [ ] Benefit: 40-50% faster analysis cycle (critical for real-time trading)
+- [ ] Test: All three agents execute in parallel (verify with thread/timing logs)
+- [ ] Benchmark: Latency reduction from ~6-9s → ~4-5s
+- [ ] Benefit: ~50% faster analysis cycle (critical for real-time trading)
 
 *Improvement #4: Use LangGraph's ToolNode for tool execution*
 - [ ] Replace manual tool call handling in Indicator subgraph

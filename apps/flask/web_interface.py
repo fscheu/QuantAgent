@@ -12,6 +12,7 @@ from flask import Flask, jsonify, render_template, request, send_file
 from openai import OpenAI
 
 import quantagent.static_util as static_util
+from quantagent import settings
 from quantagent.trading_graph import TradingGraph
 
 app = Flask(__name__)
@@ -20,11 +21,8 @@ app = Flask(__name__)
 class WebTradingAnalyzer:
     def __init__(self):
         """Initialize the web trading analyzer."""
-        from quantagent.default_config import DEFAULT_CONFIG
-
-        # Start with default config (OpenAI)
-        self.config = DEFAULT_CONFIG.copy()
-        self.trading_graph = TradingGraph(config=self.config, use_checkpointing=True)
+        # TradingGraph now loads config from .env automatically
+        self.trading_graph = TradingGraph(use_checkpointing=True)
         self.data_dir = Path("data")
 
         # Ensure data dir exists
@@ -243,37 +241,14 @@ class WebTradingAnalyzer:
             print(f"DataFrame index: {type(df.index)}")
             print(f"DataFrame shape: {df.shape}")
 
-            # Prepare data for analysis
-            if len(df) > 49:
-                df_slice = df.tail(49).iloc[:-3]
-            else:
-                df_slice = df.tail(45)
-
-            # Ensure DataFrame has the expected structure
-            required_columns = ["Datetime", "Open", "High", "Low", "Close"]
-            if not all(col in df_slice.columns for col in required_columns):
+            # Format OHLCV data using centralized utility function
+            try:
+                df_slice_dict = static_util.read_and_format_ohlcv(df)
+            except ValueError as e:
                 return {
                     "success": False,
-                    "error": f"Missing required columns. Available: {list(df_slice.columns)}",
+                    "error": str(e),
                 }
-
-            # Reset index to avoid any MultiIndex issues
-            df_slice = df_slice.reset_index(drop=True)
-
-            # Debug: Check the slice before conversion
-            print(f"Slice columns: {df_slice.columns}")
-            print(f"Slice index: {type(df_slice.index)}")
-
-            # Convert to dict for tool input - use explicit conversion to avoid tuple keys
-            df_slice_dict = {}
-            for col in required_columns:
-                if col == "Datetime":
-                    # Convert datetime objects to strings for JSON serialization
-                    df_slice_dict[col] = (
-                        df_slice[col].dt.strftime("%Y-%m-%d %H:%M:%S").tolist()
-                    )
-                else:
-                    df_slice_dict[col] = df_slice[col].tolist()
 
             # Debug: Check the resulting dictionary
             print(f"Dictionary keys: {list(df_slice_dict.keys())}")
@@ -319,14 +294,14 @@ class WebTradingAnalyzer:
                 "final_state": final_state,
                 "asset_name": asset_name,
                 "timeframe": display_timeframe,
-                "data_length": len(df_slice),
+                "data_length": len(df_slice_dict),
             }
 
         except Exception as e:
             error_msg = str(e)
 
-            # Get current provider from config
-            provider = self.config.get("agent_llm_provider", "openai")
+            # Get current provider from config module
+            provider = settings.AGENT_LLM_PROVIDER
             if provider == "openai":
                 provider_name = "OpenAI"
             elif provider == "anthropic":
@@ -566,9 +541,9 @@ class WebTradingAnalyzer:
     def validate_api_key(self, provider: str = None) -> Dict[str, Any]:
         """Validate the current API key by making a simple test call."""
         try:
-            # Get provider from config if not provided
+            # Get provider from config module if not provided
             if provider is None:
-                provider = self.config.get("agent_llm_provider", "openai")
+                provider = settings.AGENT_LLM_PROVIDER
 
             if provider == "openai":
                 from openai import OpenAI
@@ -586,9 +561,7 @@ class WebTradingAnalyzer:
             elif provider == "anthropic":
                 from anthropic import Anthropic
 
-                api_key = os.environ.get("ANTHROPIC_API_KEY") or self.config.get(
-                    "anthropic_api_key", ""
-                )
+                api_key = settings.ANTHROPIC_API_KEY
                 if not api_key:
                     return {
                         "valid": False,
@@ -608,9 +581,7 @@ class WebTradingAnalyzer:
             else:  # qwen
                 from langchain_qwq import ChatQwen
 
-                api_key = os.environ.get("DASHSCOPE_API_KEY") or self.config.get(
-                    "qwen_api_key", ""
-                )
+                api_key = settings.DASHSCOPE_API_KEY
                 if not api_key:
                     return {
                         "valid": False,
@@ -629,7 +600,7 @@ class WebTradingAnalyzer:
 
             # Determine provider name for error messages
             if provider is None:
-                provider = self.config.get("agent_llm_provider", "openai")
+                provider = settings.AGENT_LLM_PROVIDER
             if provider == "openai":
                 provider_name = "OpenAI"
             elif provider == "anthropic":
@@ -959,43 +930,44 @@ def update_provider():
 
         print(f"Updating provider to: {provider}")
 
-        # Update config in both analyzer and trading_graph
-        analyzer.config["agent_llm_provider"] = provider
-        analyzer.config["graph_llm_provider"] = provider
-        analyzer.trading_graph.config["agent_llm_provider"] = provider
-        analyzer.trading_graph.config["graph_llm_provider"] = provider
+        # Update config module
+        settings.AGENT_LLM_PROVIDER = provider
+        settings.GRAPH_LLM_PROVIDER = provider
 
         # Update model names if switching providers
+        from quantagent.default_config import DEFAULT_MODELS
+
         if provider == "anthropic":
             # Set default Claude models if not already set to Anthropic models
-            if not analyzer.config["agent_llm_model"].startswith("claude"):
-                analyzer.config["agent_llm_model"] = "claude-haiku-4-5-20251001"
-            if not analyzer.config["graph_llm_model"].startswith("claude"):
-                analyzer.config["graph_llm_model"] = "claude-haiku-4-5-20251001"
+            if not settings.AGENT_LLM_MODEL.startswith("claude"):
+                settings.AGENT_LLM_MODEL = DEFAULT_MODELS["anthropic"]["agent"]
+            if not settings.GRAPH_LLM_MODEL.startswith("claude"):
+                settings.GRAPH_LLM_MODEL = DEFAULT_MODELS["anthropic"]["graph"]
         elif provider == "qwen":
             # Set default Qwen models if not already set to Qwen models
-            if not analyzer.config["agent_llm_model"].startswith("qwen"):
-                analyzer.config["agent_llm_model"] = "qwen3-max"
-            if not analyzer.config["graph_llm_model"].startswith("qwen"):
-                analyzer.config["graph_llm_model"] = "qwen3-vl-plus"
-
+            if not settings.AGENT_LLM_MODEL.startswith("qwen"):
+                settings.AGENT_LLM_MODEL = DEFAULT_MODELS["qwen"]["agent"]
+            if not settings.GRAPH_LLM_MODEL.startswith("qwen"):
+                settings.GRAPH_LLM_MODEL = DEFAULT_MODELS["qwen"]["graph"]
         else:
             # Set default OpenAI models if not already set to OpenAI models
-            if analyzer.config["agent_llm_model"].startswith(("claude", "qwen")):
-                analyzer.config["agent_llm_model"] = "gpt-4o-mini"
-            if analyzer.config["graph_llm_model"].startswith(("claude", "qwen")):
-                analyzer.config["graph_llm_model"] = "gpt-4o"
+            if settings.AGENT_LLM_MODEL.startswith(("claude", "qwen")):
+                settings.AGENT_LLM_MODEL = DEFAULT_MODELS["openai"]["agent"]
+            if settings.GRAPH_LLM_MODEL.startswith(("claude", "qwen")):
+                settings.GRAPH_LLM_MODEL = DEFAULT_MODELS["openai"]["graph"]
 
-        analyzer.trading_graph.config.update(analyzer.config)
+        # Persist to .env file
+        settings.update_env_file("AGENT_LLM_PROVIDER", provider)
+        settings.update_env_file("GRAPH_LLM_PROVIDER", provider)
+        settings.update_env_file("AGENT_LLM_MODEL", settings.AGENT_LLM_MODEL)
+        settings.update_env_file("GRAPH_LLM_MODEL", settings.GRAPH_LLM_MODEL)
 
         # Refresh the trading graph with new provider
         analyzer.trading_graph.refresh_llms()
 
         print(f"Provider updated to {provider} successfully")
-        print(
-            f"graph_llm_model updated to {analyzer.config['graph_llm_model']} successfully"
-        )
-        print(f"agent_llm updated to {analyzer.config['agent_llm_model']} successfully")
+        print(f"graph_llm_model updated to {settings.GRAPH_LLM_MODEL} successfully")
+        print(f"agent_llm_model updated to {settings.AGENT_LLM_MODEL} successfully")
         return jsonify({"success": True, "message": f"Provider updated to {provider}"})
 
     except Exception as e:
@@ -1005,13 +977,11 @@ def update_provider():
 
 @app.route("/api/update-api-key", methods=["POST"])
 def update_api_key():
-    """API endpoint to update API key for OpenAI or Anthropic."""
+    """API endpoint to update API key and persist to .env."""
     try:
         data = request.get_json()
         new_api_key = data.get("api_key")
-        provider = data.get(
-            "provider", "openai"
-        )  # Default to "openai" for backward compatibility
+        provider = data.get("provider", "openai")
 
         if not new_api_key:
             return jsonify({"error": "API key is required"})
@@ -1023,22 +993,14 @@ def update_api_key():
 
         print(f"Updating {provider} API key to: {new_api_key[:8]}...{new_api_key[-4:]}")
 
-        # Update the environment variable
-        if provider == "openai":
-            os.environ["OPENAI_API_KEY"] = new_api_key
-        elif provider == "anthropic":
-            os.environ["ANTHROPIC_API_KEY"] = new_api_key
-        elif provider == "qwen":
-            os.environ["DASHSCOPE_API_KEY"] = new_api_key
-
-        # Update the API key in the trading graph
+        # Update API key (persists to .env and updates runtime)
         analyzer.trading_graph.update_api_key(new_api_key, provider=provider)
 
-        print(f"{provider} API key updated successfully")
+        print(f"{provider} API key updated successfully and persisted to .env")
         return jsonify(
             {
                 "success": True,
-                "message": f"{provider.capitalize()} API key updated successfully",
+                "message": f"{provider.capitalize()} API key updated and persisted to .env",
             }
         )
 
@@ -1049,30 +1011,21 @@ def update_api_key():
 
 @app.route("/api/get-api-key-status")
 def get_api_key_status():
-    """API endpoint to check if API key is set for a provider."""
+    """API endpoint to check if API key is set."""
     try:
         provider = request.args.get("provider", "openai")
 
-        # First check environment variables
+        # Get API key from config module
         if provider == "openai":
-            api_key = os.environ.get("OPENAI_API_KEY", "")
-            # Fallback to config if not in environment
-            if not api_key and hasattr(analyzer, "config"):
-                api_key = analyzer.config.get("api_key", "")
+            api_key = settings.OPENAI_API_KEY
         elif provider == "anthropic":
-            api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-            # Fallback to config if not in environment
-            if not api_key and hasattr(analyzer, "config"):
-                api_key = analyzer.config.get("anthropic_api_key", "")
+            api_key = settings.ANTHROPIC_API_KEY
         elif provider == "qwen":
-            api_key = os.environ.get("DASHSCOPE_API_KEY", "")
-            # Fallback to config if not in environment
-            if not api_key and hasattr(analyzer, "config"):
-                api_key = analyzer.config.get("qwen_api_key", "")
+            api_key = settings.DASHSCOPE_API_KEY
         else:
-            api_key = ""
+            return jsonify({"has_key": False})
 
-        if api_key and api_key != "your-openai-api-key-here" and api_key != "":
+        if api_key:
             # Return masked version for security
             masked_key = (
                 api_key[:3] + "..." + api_key[-3:] if len(api_key) > 12 else "***"
@@ -1113,13 +1066,11 @@ def get_image(image_type):
 
 
 @app.route("/api/validate-api-key", methods=["POST"])
-def validate_api_key():
+def validate_api_key_endpoint():
     """API endpoint to validate the current API key."""
     try:
         data = request.get_json() or {}
-        provider = data.get("provider") or analyzer.config.get(
-            "agent_llm_provider", "openai"
-        )
+        provider = data.get("provider") or settings.AGENT_LLM_PROVIDER
         validation = analyzer.validate_api_key(provider=provider)
         return jsonify(validation)
     except Exception as e:
