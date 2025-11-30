@@ -123,14 +123,13 @@ def build_trading_graph():
     builder.add_node("Trend", trend_subgraph)
     builder.add_node("Decision", decision_subgraph)
 
-    # Sequential: START → Indicator (depends on initial data)
+    # Parallel: START → [Indicator, Pattern, Trend] (independent analysis)
     builder.add_edge(START, "Indicator")
-
-    # Parallel: Indicator → [Pattern, Trend] (independent analysis)
-    builder.add_edge("Indicator", "Pattern")
-    builder.add_edge("Indicator", "Trend")
+    builder.add_edge(START, "Pattern")
+    builder.add_edge(START, "Trend")
 
     # Convergence: [Pattern, Trend] → Decision (aggregator node)
+    builder.add_edge("Indicator", "Decision")
     builder.add_edge("Pattern", "Decision")
     builder.add_edge("Trend", "Decision")
 
@@ -144,10 +143,10 @@ def build_trading_graph():
 ```
 START (kline_data)
   ↓
-[Indicator Agent] (1-2s)
-  ├────────→ [Pattern Agent] (2-3s)  ──┐
-  │                                    ├─→ [Decision Agent] (1-2s) → END
-  └────────→ [Trend Agent] (2-3s) ────┘
+  ├────────→ [Indicator Agent] (1-2s) ──┐
+  ├────────→ [Pattern Agent] (2-3s)   ──├
+  │                                     ├─→ [Decision Agent] (1-2s) → END
+  └────────→ [Trend Agent] (2-3s) ──────┘
 
 Latency: ~5-7s (vs 6-9s sequential)
 Parallelization: Pattern and Trend run simultaneously after Indicator finishes
