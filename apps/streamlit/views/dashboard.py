@@ -1,8 +1,17 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 import streamlit as st
 
 from apps.streamlit.utils.ui import df_from_query
+
+
+def _to_float(value) -> float:
+    try:
+        return float(value)
+    except Exception:
+        return 0.0
 
 
 def render(db, environment: str) -> None:
@@ -21,16 +30,25 @@ def render(db, environment: str) -> None:
         with SessionLocal() as s:
             try:
                 open_positions = s.query(models.Position).count()
-                open_orders = s.query(models.Order).count()
-                trades_total = s.query(models.Trade).count()
+                open_orders = s.query(models.Order).filter(models.Order.environment == environment).count()
+                trades_query = s.query(models.Trade).filter(models.Trade.environment == environment)
+                trades_total = trades_query.count()
                 if trades_total:
-                    wins = (
-                        s.query(models.Trade)
-                        .filter(models.Trade.pnl.isnot(None))
-                        .filter(models.Trade.pnl > 0)
-                        .count()
-                    )
+                    wins = trades_query.filter(models.Trade.pnl.isnot(None)).filter(models.Trade.pnl > 0).count()
                     win_rate = f"{(wins / max(trades_total, 1)) * 100:.1f}%"
+
+                today_start = datetime.combine(datetime.utcnow().date(), datetime.min.time())
+                daily_trades = (
+                    trades_query.filter(models.Trade.closed_at.isnot(None)).filter(models.Trade.closed_at >= today_start).all()
+                )
+                if daily_trades:
+                    pnl_value = sum(_to_float(t.pnl) for t in daily_trades if t.pnl is not None)
+                    daily_pnl = f"${pnl_value:,.2f}"
+
+                positions = s.query(models.Position).all()
+                portfolio_value = sum(_to_float(p.current_price) * _to_float(p.quantity) for p in positions)
+                if portfolio_value:
+                    total_value = f"${portfolio_value:,.2f}"
             except Exception:
                 pass
 
@@ -50,6 +68,7 @@ def render(db, environment: str) -> None:
                 try:
                     q = (
                         s.query(db.models.Trade)
+                        .filter(db.models.Trade.environment == environment)
                         .order_by(db.models.Trade.opened_at.desc())
                         .limit(50)
                         .all()

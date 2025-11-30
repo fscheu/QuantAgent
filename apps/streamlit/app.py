@@ -77,16 +77,16 @@ with tabs[0]:
     render_dashboard(db, environment)
 
 with tabs[1]:
-    render_configuration()
+    render_configuration(db, environment)
 
 with tabs[2]:
     render_analyses(db, environment)
 
 with tabs[3]:
-    render_backtesting()
+    render_backtesting(db, environment)
 
 with tabs[4]:
-    render_replay()
+    render_replay(db, environment)
 
 with tabs[5]:
     render_orders_positions(db, environment)
