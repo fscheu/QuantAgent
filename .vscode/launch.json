@@ -20,6 +20,17 @@
             ],
             "jinja": true,
             "autoStartBrowser": false
+        },
+        {
+            "name": "Python Debugger: Streamlit",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "streamlit",
+            "args": [
+                "run",
+                "apps/streamlit/app.py"
+            ],
+            "console": "integratedTerminal"
         }
     ]
 }
