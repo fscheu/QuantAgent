@@ -1,11 +1,23 @@
-DEFAULT_CONFIG = {
-    "agent_llm_model": "gpt-4o-mini",
-    "graph_llm_model": "gpt-4o",
-    "agent_llm_provider": "openai",  # "openai", "anthropic", or "qwen"
-    "graph_llm_provider": "openai",  # "openai", "anthropic", or "qwen"
-    "agent_llm_temperature": 0.1,
-    "graph_llm_temperature": 0.1,
-    "api_key": "sk-",  # OpenAI API key
-    "anthropic_api_key": "sk-",  # Anthropic API key (optional, can also use ANTHROPIC_API_KEY env var)
-    "qwen_api_key": "sk-",  # Qwen API key (optional, can also use DASHSCOPE_API_KEY env var)
+"""
+Default configuration values for LLM models.
+API keys and provider selection should be set via environment variables (.env file).
+"""
+
+# Default model configuration by provider
+DEFAULT_MODELS = {
+    "openai": {
+        "agent": "gpt-4o-mini",
+        "graph": "gpt-4o"
+    },
+    "anthropic": {
+        "agent": "claude-haiku-4-5-20251001",
+        "graph": "claude-haiku-4-5-20251001"
+    },
+    "qwen": {
+        "agent": "qwen3-max",
+        "graph": "qwen3-vl-plus"
+    }
 }
+
+# Default temperature (professional, deterministic outputs)
+DEFAULT_TEMPERATURE = 0.1

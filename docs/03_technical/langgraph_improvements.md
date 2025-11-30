@@ -142,14 +142,13 @@ def build_trading_graph():
 **Architecture Diagram**:
 ```
 START (kline_data)
-  ↓
   ├────────→ [Indicator Agent] (1-2s) ──┐
-  ├────────→ [Pattern Agent] (2-3s)   ──├
-  │                                     ├─→ [Decision Agent] (1-2s) → END
+  ├────────→ [Pattern Agent] (2-3s) ────┼─→ [Decision Agent] (1-2s) → END
   └────────→ [Trend Agent] (2-3s) ──────┘
 
-Latency: ~5-7s (vs 6-9s sequential)
-Parallelization: Pattern and Trend run simultaneously after Indicator finishes
+Latency: ~4-5s (vs 6-9s sequential)
+Parallelization: All three agents (Indicator, Pattern, Trend) run simultaneously
+Fan-out from START, fan-in to Decision Agent
 ```
 
 **Reference**:
@@ -161,28 +160,35 @@ Parallelization: Pattern and Trend run simultaneously after Indicator finishes
 - ✅ Each agent has its own state schema (subgraph isolation)
 - ✅ Easier to test independently (compile each subgraph in isolation)
 - ✅ Can distribute development (teams own specific subgraphs)
-- ✅ Better error isolation (failure in Pattern doesn't break Trend)
-- ✅ **40-50% latency reduction**: Pattern and Trend execute in parallel
+- ✅ Better error isolation (failure in one agent doesn't break others)
+- ✅ **~50% latency reduction**: All three agents execute in parallel (4-5s vs 6-9s)
 - ✅ Independent scalability: Each subgraph can be deployed/scaled separately
 
 **Independence Validation**:
+- **Indicator Agent** (Technical indicators analysis):
+  - Inputs: `kline_data` (raw OHLCV)
+  - Outputs: `IndicatorReport` (RSI, MACD, ROC, Stochastic, Williams %R)
+  - Depends on: Nothing (processes raw data directly)
+  - ✅ Fully independent - can run in parallel
+
 - **Pattern Agent** (K-line candlestick analysis):
   - Inputs: `kline_data` (raw OHLCV)
   - Outputs: `PatternReport` (patterns detected, confidence)
-  - Depends on: Indicator Agent only (for context)
-  - ✅ Can run in parallel with Trend
+  - Depends on: Nothing (analyzes raw chart patterns directly)
+  - ✅ Fully independent - can run in parallel
 
 - **Trend Agent** (Trendline + support/resistance analysis):
   - Inputs: `kline_data` (raw OHLCV)
   - Outputs: `TrendReport` (levels, strength)
-  - Depends on: Indicator Agent only (for context)
-  - ✅ Can run in parallel with Pattern
+  - Depends on: Nothing (identifies trends from raw data directly)
+  - ✅ Fully independent - can run in parallel
 
 **Impact**: HIGH
-- Faster analysis (5-7s vs 6-9s) - critical for real-time trading
+- Faster analysis (4-5s vs 6-9s) - ~50% latency reduction, critical for real-time trading
 - Better maintainability through isolation
 - Supports team scaling in Phase 2
 - Enables independent testing of each specialized agent
+- All three agents analyze raw market data independently without dependencies
 
 **Effort**: Medium-High (restructure 4 agent files + graph setup with conditional edges)
 
@@ -1044,7 +1050,127 @@ All nodes use shared: invoke_with_retry() from agent_utils.py
 
 ---
 
-**Document Status**: Phase 1A implementation complete with user feedback integrated
-**Last Updated**: 2025-11-25
+---
+
+## LangGraph Native Interrupts for Middleware (Future Enhancement)
+
+### Overview
+
+Instead of using LangChain's `create_agent` with middleware, we use **LangGraph's native interrupt system** which provides more flexibility for multi-agent orchestration.
+
+### Why Native Interrupts Over LangChain Middleware?
+
+**LangChain `create_agent` + Middleware**:
+- ✅ High-level abstraction with built-in middleware (HumanInTheLoopMiddleware, etc.)
+- ✅ Simple to use for standalone agents
+- ❌ Each agent is a full graph (heavyweight for multi-agent systems)
+- ❌ Not designed for complex multi-agent parallelization
+- ❌ Adds abstraction layer that may limit flexibility
+
+**LangGraph Native Interrupts**:
+- ✅ Low-level control perfect for multi-agent orchestration
+- ✅ Lightweight - works directly in graph nodes
+- ✅ Full flexibility for conditional logic
+- ✅ Supports complex parallel execution patterns
+- ✅ Same underlying mechanism that LangChain middleware uses
+
+### Implementation Pattern
+
+```python
+from langgraph.types import interrupt, Command
+from langgraph.checkpoint.postgres import PostgresSaver
+
+# Inside a decision agent node
+def decision_agent_node(state):
+    # ... generate trading decision ...
+
+    # Human-in-the-loop interrupt for high-confidence trades
+    if decision.confidence > 0.8:
+        # Interrupt execution and request human approval
+        human_decision = interrupt({
+            "type": "trade_approval",
+            "symbol": state["stock_name"],
+            "decision": decision.decision,  # "LONG" or "SHORT"
+            "confidence": decision.confidence,
+            "entry_price": decision.entry_price,
+            "reasoning": decision.reasoning,
+            "allowed_actions": ["approve", "reject", "edit"]
+        })
+
+        # Resume execution based on human input
+        if human_decision["action"] == "reject":
+            return {"final_trade_decision": "HOLD"}
+        elif human_decision["action"] == "edit":
+            decision.entry_price = human_decision["edited_entry_price"]
+
+    return {"final_trade_decision": decision.model_dump_json()}
+
+# Setup graph with checkpointer (required for interrupts)
+checkpointer = PostgresSaver.from_conn_string(DATABASE_URL)
+graph = builder.compile(checkpointer=checkpointer)
+
+# Execute with thread_id for persistence
+config = {"configurable": {"thread_id": "trade_session_123"}}
+result = graph.invoke(initial_state, config=config)
+
+# If interrupted, resume with human input
+if "__interrupt__" in result:
+    # Show interrupt payload to user
+    interrupt_data = result["__interrupt__"][0]
+
+    # Get human decision
+    human_input = get_user_approval(interrupt_data)
+
+    # Resume execution
+    final_result = graph.invoke(
+        Command(resume=human_input),
+        config=config  # Same thread_id
+    )
+```
+
+### Use Cases for Trading System
+
+1. **Trade Approval** (High-Priority):
+   - Interrupt before executing trades with high confidence (>80%)
+   - Allow human to approve, reject, or modify entry/stop prices
+
+2. **Risk Guardrails**:
+   - Interrupt if position size exceeds threshold
+   - Interrupt if daily loss limit approaching
+
+3. **Model Confidence Check**:
+   - Interrupt if agent reports contradict each other
+   - Request human analysis when confidence is low
+
+4. **Backtesting Checkpoints**:
+   - Pause long backtests to save progress
+   - Resume from checkpoint if system crashes
+
+### Advantages for QuantAgent
+
+1. **Already Compatible**: Current architecture (nodes in LangGraph) supports interrupts natively
+2. **No Refactoring**: No need to migrate to `create_agent` pattern
+3. **Fine-Grained Control**: Can add interrupts anywhere in any node
+4. **Conditional Logic**: Interrupts can be dynamic based on state
+5. **Checkpoint Integration**: Works seamlessly with existing PostgreSQL checkpointer
+
+### Migration Path (When Needed)
+
+**Phase 1** (Current): Use LangGraph with nodes (no interrupts yet)
+**Phase 2** (Future): Add interrupt() calls in decision_agent.py for trade approval
+**Phase 3** (Optional): Add interrupts in other agents if needed
+
+No architectural changes required - just add `interrupt()` function calls where needed.
+
+### References
+
+- [LangGraph Interrupts Documentation](https://docs.langchain.com/oss/python/langgraph/interrupts)
+- [Human-in-the-Loop Guide](https://docs.langchain.com/oss/python/langchain/human-in-the-loop)
+- [Checkpointing for State Persistence](https://docs.langchain.com/oss/python/langgraph/persistence)
+
+---
+
+**Document Status**: Phase 1A implementation complete with user feedback integrated + Parallelization implemented
+**Last Updated**: 2025-11-27
 **Authored by**: Claude Code
-**Implementation Phase**: Phase 1A - Refactoring + Structured Outputs (COMPLETE + REFINED)
+**Implementation Phase**: Phase 1A - Refactoring + Structured Outputs + Parallelization (COMPLETE)

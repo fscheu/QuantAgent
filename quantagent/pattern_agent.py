@@ -41,7 +41,9 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
 
         # --- Check for precomputed image in state ---
         pattern_image_b64 = state.get("pattern_image")
-        messages = state.get("messages", [])
+
+        # Initialize agent_messages list (will only populate if we do LLM analysis)
+        agent_messages = []
 
         # --- Generate image if not precomputed ---
         if not pattern_image_b64:
@@ -93,13 +95,15 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
 
             human_msg = HumanMessage(content=image_prompt)
             system_msg = SystemMessage(content="You are a pattern recognition assistant analyzing candlestick charts.")
-            messages = [system_msg, human_msg]
-            
+
+            # Create agent-specific messages (will be added to state via reducer)
+            agent_messages = [system_msg, human_msg]
+
             try:
                 # Try with system message
                 final_response = invoke_with_retry(
                     graph_llm.invoke,
-                    [system_msg, human_msg],
+                    agent_messages,
                     retries=3,
                     wait_sec=8
                 )
@@ -158,8 +162,9 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
                 reasoning=f"Failed to create report: {str(e)}"
             )
 
+        # Don't add messages to shared state - each agent only needs them for its LLM call
+        # Agents work independently and communicate via structured reports, not messages
         return {
-            "messages": messages,
             "pattern_report": pattern_report,
         }
 

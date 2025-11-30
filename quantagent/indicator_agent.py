@@ -51,12 +51,12 @@ def create_indicator_agent(llm, toolkit):
 
         user_message = f"Analyze these indicators from the OHLC data:\n{json.dumps(kline_data, indent=2)}"
 
-        messages = state.get("messages", [])
-        if not messages:
-            messages = [
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=user_message)
-            ]
+        # Create messages for this agent's analysis
+        # Don't modify existing messages, just create new ones for this specific call
+        agent_messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_message)
+        ]
 
         # Bind tools to LLM and use structured output
         llm_with_tools = llm.bind_tools(tools)
@@ -66,7 +66,7 @@ def create_indicator_agent(llm, toolkit):
             # LLM call with tools and structured output
             indicator_report = invoke_with_retry(
                 structured_llm.invoke,
-                messages,
+                agent_messages,
                 retries=3,
                 wait_sec=2
             )
@@ -102,8 +102,9 @@ def create_indicator_agent(llm, toolkit):
             reasoning=f"Analysis failed: {str(e)}"
             )
 
+        # Don't add messages to shared state - each agent only needs them for its LLM call
+        # Agents work independently and communicate via structured reports, not messages
         return {
-            "messages": messages,
             "indicator_report": indicator_report,
         }
 

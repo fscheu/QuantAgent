@@ -1,15 +1,20 @@
 """SQLAlchemy database configuration and engine setup."""
 
-import os
 from sqlalchemy import create_engine, Engine
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from sqlalchemy.pool import StaticPool
 
-# Get database URL from environment
-# Default to PostgreSQL - update with your connection details
-DATABASE_URL = os.getenv(
-    "DATABASE_URL"
-)
+from quantagent import settings
+
+# Get database URL from settings module (loaded from .env)
+DATABASE_URL = settings.DATABASE_URL
+
+if not DATABASE_URL:
+    raise ValueError(
+        "DATABASE_URL not set in .env file. "
+        "Please configure your database connection. "
+        "See docs/MIGRATIONS.md for setup instructions."
+    )
 
 # Create engine with appropriate pool configuration
 if DATABASE_URL.startswith("sqlite"):

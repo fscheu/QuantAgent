@@ -13,7 +13,8 @@ from langchain_openai import ChatOpenAI
 from langchain_qwq import ChatQwen
 from langgraph.prebuilt import ToolNode
 
-from quantagent.default_config import DEFAULT_CONFIG
+from quantagent import settings
+from quantagent.default_config import DEFAULT_MODELS, DEFAULT_TEMPERATURE
 from quantagent.graph_setup import SetGraph
 from quantagent.graph_util import TechnicalTools
 
@@ -29,20 +30,23 @@ class TradingGraph:
     Sets up LLMs, toolkits, and agent nodes for indicator, pattern, and trend analysis.
     """
 
-    def __init__(self, config=None, use_checkpointing: bool = False):
-        # --- Configuration and LLMs ---
-        self.config = config if config is not None else DEFAULT_CONFIG.copy()
+    def __init__(self, use_checkpointing: bool = False):
+        """
+        Initialize TradingGraph with configuration from environment variables.
 
-        # Initialize LLMs with provider support
+        Args:
+            use_checkpointing: Enable PostgreSQL checkpointing for resilience
+        """
+        # All configuration now comes from settings module (loaded from .env)
         self.agent_llm = self._create_llm(
-            provider=self.config.get("agent_llm_provider", "openai"),
-            model=self.config.get("agent_llm_model", "gpt-4o-mini"),
-            temperature=self.config.get("agent_llm_temperature", 0.1),
+            provider=settings.AGENT_LLM_PROVIDER,
+            model=settings.AGENT_LLM_MODEL,
+            temperature=settings.AGENT_LLM_TEMPERATURE,
         )
         self.graph_llm = self._create_llm(
-            provider=self.config.get("graph_llm_provider", "openai"),
-            model=self.config.get("graph_llm_model", "gpt-4o"),
-            temperature=self.config.get("graph_llm_temperature", 0.1),
+            provider=settings.GRAPH_LLM_PROVIDER,
+            model=settings.GRAPH_LLM_MODEL,
+            temperature=settings.GRAPH_LLM_TEMPERATURE,
         )
         self.toolkit = TechnicalTools()
 
@@ -67,7 +71,7 @@ class TradingGraph:
 
     def _get_api_key(self, provider: str = "openai") -> str:
         """
-        Get API key with proper validation and error handling.
+        Get API key from settings module.
 
         Args:
             provider: The provider name ("openai", "anthropic", or "qwen")
@@ -79,68 +83,25 @@ class TradingGraph:
             ValueError: If API key is missing or invalid
         """
         if provider == "openai":
-            # First check if API key is provided in config
-            api_key = self.config.get("api_key")
-
-            # If not in config, check environment variable
-            if not api_key:
-                api_key = os.environ.get("OPENAI_API_KEY")
-
-            # Validate the API key
+            api_key = settings.OPENAI_API_KEY
             if not api_key:
                 raise ValueError(
-                    "OpenAI API key not found. Please set it using one of these methods:\n"
-                    "1. Set environment variable: export OPENAI_API_KEY='your-key-here'\n"
-                    "2. Update the config with: config['api_key'] = 'your-key-here'\n"
-                    "3. Use the web interface to update the API key"
-                )
-
-            if api_key == "your-openai-api-key-here" or api_key == "":
-                raise ValueError(
-                    "Please replace the placeholder API key with your actual OpenAI API key. "
-                    "You can get one from: https://platform.openai.com/api-keys"
+                    "OPENAI_API_KEY not found in .env file. "
+                    "Please set it in your .env file or use the web interface."
                 )
         elif provider == "anthropic":
-            # First check if API key is provided in config
-            api_key = self.config.get("anthropic_api_key")
-
-            # If not in config, check environment variable
-            if not api_key:
-                api_key = os.environ.get("ANTHROPIC_API_KEY")
-
-            # Validate the API key
+            api_key = settings.ANTHROPIC_API_KEY
             if not api_key:
                 raise ValueError(
-                    "Anthropic API key not found. Please set it using one of these methods:\n"
-                    "1. Set environment variable: export ANTHROPIC_API_KEY='your-key-here'\n"
-                    "2. Update the config with: config['anthropic_api_key'] = 'your-key-here'\n"
-                )
-
-            if api_key == "":
-                raise ValueError(
-                    "Please provide your actual Anthropic API key. "
-                    "You can get one from: https://console.anthropic.com/"
+                    "ANTHROPIC_API_KEY not found in .env file. "
+                    "Please set it in your .env file or use the web interface."
                 )
         elif provider == "qwen":
-            # First check if API key is provided in config
-            api_key = self.config.get("qwen_api_key")
-
-            # If not in config, check environment variable
-            if not api_key:
-                api_key = os.environ.get("DASHSCOPE_API_KEY")
-
-            # Validate the API key
+            api_key = settings.DASHSCOPE_API_KEY
             if not api_key:
                 raise ValueError(
-                    "Qwen API key not found. Please set it using one of these methods:\n"
-                    "1. Set environment variable: export DASHSCOPE_API_KEY='your-key-here'\n"
-                    "2. Update the config with: config['qwen_api_key'] = 'your-key-here'\n"
-                )
-
-            if api_key == "":
-                raise ValueError(
-                    "Please provide your actual Qwen API key. "
-                    "You can get one from: https://dashscope.console.aliyun.com/"
+                    "DASHSCOPE_API_KEY not found in .env file. "
+                    "Please set it in your .env file or use the web interface."
                 )
         else:
             raise ValueError(
@@ -165,10 +126,10 @@ class TradingGraph:
                 "Install with: pip install langgraph-checkpoint-postgres"
             )
 
-        db_url = os.environ.get("DATABASE_URL")
+        db_url = settings.DATABASE_URL
         if not db_url:
             raise ValueError(
-                "DATABASE_URL environment variable not set. "
+                "DATABASE_URL not set in .env file. "
                 "Set it for PostgreSQL checkpointing, or use use_checkpointing=False"
             )
 
@@ -251,16 +212,16 @@ class TradingGraph:
         Refresh the LLM objects with the current API key from environment.
         This is called when the API key is updated.
         """
-        # Recreate LLM objects with current config values
+        # Recreate LLM objects with current config values from settings module
         self.agent_llm = self._create_llm(
-            provider=self.config.get("agent_llm_provider", "openai"),
-            model=self.config.get("agent_llm_model", "gpt-4o-mini"),
-            temperature=self.config.get("agent_llm_temperature", 0.1),
+            provider=settings.AGENT_LLM_PROVIDER,
+            model=settings.AGENT_LLM_MODEL,
+            temperature=settings.AGENT_LLM_TEMPERATURE,
         )
         self.graph_llm = self._create_llm(
-            provider=self.config.get("graph_llm_provider", "openai"),
-            model=self.config.get("graph_llm_model", "gpt-4o"),
-            temperature=self.config.get("graph_llm_temperature", 0.1),
+            provider=settings.GRAPH_LLM_PROVIDER,
+            model=settings.GRAPH_LLM_MODEL,
+            temperature=settings.GRAPH_LLM_TEMPERATURE,
         )
 
         # Recreate the graph setup with new LLMs
@@ -276,35 +237,37 @@ class TradingGraph:
 
     def update_api_key(self, api_key: str, provider: str = "openai"):
         """
-        Update the API key in the config and refresh LLMs.
+        Update API key in runtime and persist to .env file.
         This method is called by the web interface when API key is updated.
 
         Args:
-            api_key (str): The new API key
-            provider (str): The provider name ("openai" or "anthropic"), defaults to "openai"
+            api_key: The new API key
+            provider: The provider name ("openai", "anthropic", or "qwen")
         """
-        if provider == "openai":
-            # Update the config with the new API key
-            self.config["api_key"] = api_key
+        # Map provider to env var name
+        env_var_map = {
+            "openai": "OPENAI_API_KEY",
+            "anthropic": "ANTHROPIC_API_KEY",
+            "qwen": "DASHSCOPE_API_KEY"
+        }
 
-            # Also update the environment variable for consistency
-            os.environ["OPENAI_API_KEY"] = api_key
-        elif provider == "anthropic":
-            # Update the config with the new API key
-            self.config["anthropic_api_key"] = api_key
-
-            # Also update the environment variable for consistency
-            os.environ["ANTHROPIC_API_KEY"] = api_key
-        elif provider == "qwen":
-            # Update the config with the new API key
-            self.config["qwen_api_key"] = api_key
-
-            # Also update the environment variable for consistency
-            os.environ["DASHSCOPE_API_KEY"] = api_key
-        else:
+        if provider not in env_var_map:
             raise ValueError(
                 f"Unsupported provider: {provider}. Must be 'openai', 'anthropic', or 'qwen'"
             )
 
-        # Refresh the LLMs with the new API key
+        env_var = env_var_map[provider]
+
+        # Persist to .env file and update runtime
+        settings.update_env_file(env_var, api_key)
+
+        # Refresh the settings module attributes
+        if provider == "openai":
+            settings.OPENAI_API_KEY = api_key
+        elif provider == "anthropic":
+            settings.ANTHROPIC_API_KEY = api_key
+        elif provider == "qwen":
+            settings.DASHSCOPE_API_KEY = api_key
+
+        # Refresh LLMs with new key
         self.refresh_llms()

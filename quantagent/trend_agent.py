@@ -27,7 +27,9 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
 
         # --- Check for precomputed image in state ---
         trend_image_b64 = state.get("trend_image")
-        messages = state.get("messages", [])
+
+        # Initialize agent_messages list (will only populate if we do LLM analysis)
+        agent_messages = []
 
         # --- Generate image if not precomputed ---
         if not trend_image_b64:
@@ -87,13 +89,15 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
             system_msg = SystemMessage(
                 content="You are a K-line trend analysis assistant. Analyze candlestick charts with support/resistance trendlines."
             )
-            messages = [system_msg, human_msg]
+
+            # Create agent-specific messages (will be added to state via reducer)
+            agent_messages = [system_msg, human_msg]
 
             try:
                 # Try with system message
                 final_response = invoke_with_retry(
                     graph_llm.invoke,
-                    messages,
+                    agent_messages,
                     retries=3,
                     wait_sec=4
                 )
@@ -153,8 +157,9 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
                 reasoning=f"Failed to create report: {str(e)}"
             )
 
+        # Don't add messages to shared state - each agent only needs them for its LLM call
+        # Agents work independently and communicate via structured reports, not messages
         return {
-            "messages": messages,
             "trend_report": trend_report,
             "trend_image": trend_image_b64,
             "trend_image_filename": "trend_graph.png",

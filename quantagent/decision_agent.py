@@ -137,10 +137,9 @@ Respond ONLY with valid JSON (no markdown, no explanation):
 ```
 """
 
-        # Build message list
-        # messages = state.get("messages", [])
-        # if not messages:
-        messages = [system_message, HumanMessage(content=human_content)]
+        # Build message list for this agent
+        # Create new messages for decision analysis (will be added to accumulated messages)
+        agent_messages = [system_message, HumanMessage(content=human_content)]
 
         try:
             # --- Structured LLM call for decision ---
@@ -149,7 +148,7 @@ Respond ONLY with valid JSON (no markdown, no explanation):
 
             trading_decision = invoke_with_retry(
                 structured_llm.invoke,
-                messages,
+                agent_messages,
                 retries=3,
                 wait_sec=2
             )
@@ -171,9 +170,12 @@ Respond ONLY with valid JSON (no markdown, no explanation):
                 risk_level="high"
             )
 
+        # Add messages to shared state for conversational follow-up
+        # This enables users to ask questions about the decision after analysis completes
+        # e.g., "Why did you recommend LONG?" or "What if RSI was 80?"
         return {
             "final_trade_decision": trading_decision,
-            "messages": messages,
+            "messages": agent_messages,
         }
 
     return trade_decision_node

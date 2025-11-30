@@ -28,8 +28,6 @@ class SetGraph:
     def set_graph(self, checkpointer=None):
         # Create analyst nodes
         agent_nodes = {}
-        tool_nodes = {}
-        all_agents = ["indicator", "pattern", "trend"]
 
         # create nodes for indicator agent
         agent_nodes["indicator"] = create_indicator_agent(self.graph_llm, self.toolkit)
@@ -60,21 +58,19 @@ class SetGraph:
         # add rest of the nodes
         graph.add_node("Decision Maker", decision_agent_node)
 
-        # set start of graph
+        # Parallelization: Fan-out from START to all three agents
+        # All agents (Indicator, Pattern, Trend) are independent and analyze raw kline_data
         graph.add_edge(START, "Indicator Agent")
+        graph.add_edge(START, "Pattern Agent")
+        graph.add_edge(START, "Trend Agent")
 
-        # add edges to graph
-        for i, agent_type in enumerate(all_agents):
-            current_agent = f"{agent_type.capitalize()} Agent"
+        # Convergence: Fan-in from all three agents to Decision Maker
+        # Decision agent receives reports from all three analysis agents
+        graph.add_edge("Indicator Agent", "Decision Maker")
+        graph.add_edge("Pattern Agent", "Decision Maker")
+        graph.add_edge("Trend Agent", "Decision Maker")
 
-            if i == len(all_agents) - 1:
-                graph.add_edge(current_agent, "Decision Maker")
-            else:
-
-                next_agent = f"{all_agents[i + 1].capitalize()} Agent"
-                graph.add_edge(current_agent, next_agent)
-
-        # Decision Maker Process
+        # Final decision output
         graph.add_edge("Decision Maker", END)
 
         return graph.compile(checkpointer=checkpointer) if checkpointer else graph.compile()

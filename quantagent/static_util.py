@@ -15,6 +15,66 @@ from quantagent.graph_util import (fit_trendlines_high_low,
 matplotlib.use("Agg")
 
 
+def read_and_format_ohlcv(df: pd.DataFrame) -> dict:
+    """
+    Format OHLCV DataFrame for trading graph analysis.
+
+    Takes a DataFrame with OHLCV data and formats it into a dictionary
+    suitable for the trading graph's initial state.
+
+    Args:
+        df (pd.DataFrame): DataFrame with columns ['Datetime', 'Open', 'High', 'Low', 'Close']
+
+    Returns:
+        dict: Dictionary with string keys and list values, ready for graph analysis
+
+    Example:
+        >>> df = pd.DataFrame({
+        ...     'Datetime': pd.date_range('2024-01-01', periods=50, freq='4H'),
+        ...     'Open': [100.0] * 50,
+        ...     'High': [105.0] * 50,
+        ...     'Low': [95.0] * 50,
+        ...     'Close': [102.0] * 50
+        ... })
+        >>> result = read_and_format_ohlcv(df)
+        >>> 'Datetime' in result and isinstance(result['Datetime'], list)
+        True
+    """
+    # Prepare data slice for analysis (last ~46 candles)
+    if len(df) > 49:
+        df_slice = df.tail(49).iloc[:-3]
+    else:
+        df_slice = df.tail(45)
+
+    # Ensure required columns exist
+    required_columns = ["Datetime", "Open", "High", "Low", "Close"]
+    if not all(col in df_slice.columns for col in required_columns):
+        raise ValueError(
+            f"Missing required columns. Available: {list(df_slice.columns)}, "
+            f"Required: {required_columns}"
+        )
+
+    # Reset index to avoid MultiIndex issues
+    df_slice = df_slice.reset_index(drop=True)
+
+    # Convert to dictionary with explicit type conversion
+    df_slice_dict = {}
+    for col in required_columns:
+        if col == "Datetime":
+            # Ensure Datetime column is datetime type, then convert to strings
+            if not pd.api.types.is_datetime64_any_dtype(df_slice[col]):
+                # Convert to datetime if it's not already
+                df_slice[col] = pd.to_datetime(df_slice[col])
+
+            # Convert datetime objects to strings for JSON serialization
+            df_slice_dict[col] = df_slice[col].dt.strftime("%Y-%m-%d %H:%M:%S").tolist()
+        else:
+            # Convert numeric columns to lists
+            df_slice_dict[col] = df_slice[col].tolist()
+
+    return df_slice_dict
+
+
 def generate_kline_image(kline_data) -> dict:
     """
     Generate a candlestick (K-line) chart from OHLCV data, save it locally, and return a base64-encoded image.
