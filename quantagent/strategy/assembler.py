@@ -85,16 +85,23 @@ class StrategyAssembler:
         merged: Dict = {**StrategyAssembler.DEFAULTS}
 
         # Portfolio fields
-        merged.update({
-            k: v for k, v in portfolio_profile.items()
-            if k in {"universe", "base_position_pct", "slippage_pct", "initial_cash"}
-        })
+        merged.update(
+            {
+                k: v
+                for k, v in portfolio_profile.items()
+                if k
+                in {"universe", "base_position_pct", "slippage_pct", "initial_cash"}
+            }
+        )
 
         # Risk fields
-        merged.update({
-            k: v for k, v in risk_profile.items()
-            if k in {"max_daily_loss_pct", "max_position_pct"}
-        })
+        merged.update(
+            {
+                k: v
+                for k, v in risk_profile.items()
+                if k in {"max_daily_loss_pct", "max_position_pct"}
+            }
+        )
 
         # Model fields (normalize to generic names)
         model_norm = StrategyAssembler._normalize_model_profile(model_profile)
@@ -130,7 +137,9 @@ class StrategyAssembler:
         return StrategyAssembler._to_resolved(merged, environment)
 
     @staticmethod
-    def resolve_universe(resolved: ResolvedConfig, assets_override: Optional[List[str]]) -> List[str]:
+    def resolve_universe(
+        resolved: ResolvedConfig, assets_override: Optional[List[str]]
+    ) -> List[str]:
         """Return assets_override if provided, else resolved.universe."""
         if assets_override is not None and len(assets_override) > 0:
             return assets_override
@@ -165,13 +174,14 @@ class StrategyAssembler:
         )
 
         # TradingGraph configuration mapping
-        graph_cfg = {
-            "agent_llm_provider": resolved.model_provider,
-            "agent_llm_model": resolved.model_name,
-            "agent_llm_temperature": resolved.temperature,
-        }
+        # graph_cfg = {
+        #     "agent_llm_provider": resolved.model_provider,
+        #     "agent_llm_model": resolved.model_name,
+        #     "agent_llm_temperature": resolved.temperature,
+        # }
 
-        graph = TradingGraph(config=graph_cfg, use_checkpointing=resolved.use_checkpointing)
+        # graph = TradingGraph(config=graph_cfg, use_checkpointing=resolved.use_checkpointing)
+        graph = TradingGraph(use_checkpointing=resolved.use_checkpointing)
 
         return TradingComponents(
             portfolio_manager=pm,
@@ -209,9 +219,13 @@ class StrategyAssembler:
     def _normalize_model_profile(model_profile: Dict) -> Dict:
         out = {}
         # Accept both generic and agent_llm_* keys
-        provider = model_profile.get("model_provider", model_profile.get("agent_llm_provider"))
+        provider = model_profile.get(
+            "model_provider", model_profile.get("agent_llm_provider")
+        )
         name = model_profile.get("model_name", model_profile.get("agent_llm_model"))
-        temp = model_profile.get("temperature", model_profile.get("agent_llm_temperature"))
+        temp = model_profile.get(
+            "temperature", model_profile.get("agent_llm_temperature")
+        )
 
         if provider is not None:
             out["model_provider"] = provider
@@ -231,13 +245,35 @@ class StrategyAssembler:
     def _to_resolved(merged: Dict, environment: Environment) -> ResolvedConfig:
         # Basic validations and fallbacks
         universe = merged.get("universe") or []
-        base_pct = float(merged.get("base_position_pct", StrategyAssembler.DEFAULTS["base_position_pct"]))
-        max_pos = float(merged.get("max_position_pct", StrategyAssembler.DEFAULTS["max_position_pct"]))
-        max_loss = float(merged.get("max_daily_loss_pct", StrategyAssembler.DEFAULTS["max_daily_loss_pct"]))
-        slip = float(merged.get("slippage_pct", StrategyAssembler.DEFAULTS["slippage_pct"]))
-        initial_cash = float(merged.get("initial_cash", StrategyAssembler.DEFAULTS["initial_cash"]))
-        temp = float(merged.get("temperature", StrategyAssembler.DEFAULTS["temperature"]))
-        use_ckpt = bool(merged.get("use_checkpointing", StrategyAssembler.DEFAULTS["use_checkpointing"]))
+        base_pct = float(
+            merged.get(
+                "base_position_pct", StrategyAssembler.DEFAULTS["base_position_pct"]
+            )
+        )
+        max_pos = float(
+            merged.get(
+                "max_position_pct", StrategyAssembler.DEFAULTS["max_position_pct"]
+            )
+        )
+        max_loss = float(
+            merged.get(
+                "max_daily_loss_pct", StrategyAssembler.DEFAULTS["max_daily_loss_pct"]
+            )
+        )
+        slip = float(
+            merged.get("slippage_pct", StrategyAssembler.DEFAULTS["slippage_pct"])
+        )
+        initial_cash = float(
+            merged.get("initial_cash", StrategyAssembler.DEFAULTS["initial_cash"])
+        )
+        temp = float(
+            merged.get("temperature", StrategyAssembler.DEFAULTS["temperature"])
+        )
+        use_ckpt = bool(
+            merged.get(
+                "use_checkpointing", StrategyAssembler.DEFAULTS["use_checkpointing"]
+            )
+        )
 
         return ResolvedConfig(
             environment=environment,
@@ -247,8 +283,14 @@ class StrategyAssembler:
             max_daily_loss_pct=max_loss,
             max_position_pct=max_pos,
             slippage_pct=slip,
-            model_provider=str(merged.get("model_provider", StrategyAssembler.DEFAULTS["model_provider"])),
-            model_name=str(merged.get("model_name", StrategyAssembler.DEFAULTS["model_name"])),
+            model_provider=str(
+                merged.get(
+                    "model_provider", StrategyAssembler.DEFAULTS["model_provider"]
+                )
+            ),
+            model_name=str(
+                merged.get("model_name", StrategyAssembler.DEFAULTS["model_name"])
+            ),
             temperature=temp,
             use_checkpointing=use_ckpt,
             extras=None,

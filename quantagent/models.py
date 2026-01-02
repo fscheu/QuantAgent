@@ -3,8 +3,18 @@
 from datetime import datetime
 from decimal import Decimal
 from sqlalchemy import (
-    Column, Integer, String, Float, DateTime, Enum, ForeignKey,
-    Text, Boolean, Numeric, Index, JSON
+    Column,
+    Integer,
+    String,
+    Float,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Text,
+    Boolean,
+    Numeric,
+    Index,
+    JSON,
 )
 from sqlalchemy.orm import relationship
 import enum
@@ -14,6 +24,7 @@ from .database import Base
 
 class OrderStatus(str, enum.Enum):
     """Enum for order statuses."""
+
     PENDING = "pending"
     FILLED = "filled"
     PARTIALLY_FILLED = "partially_filled"
@@ -23,12 +34,14 @@ class OrderStatus(str, enum.Enum):
 
 class OrderSide(str, enum.Enum):
     """Enum for order side (buy/sell)."""
+
     BUY = "buy"
     SELL = "sell"
 
 
 class OrderType(str, enum.Enum):
     """Enum for order types."""
+
     MARKET = "market"
     LIMIT = "limit"
     STOP = "stop"
@@ -37,6 +50,7 @@ class OrderType(str, enum.Enum):
 
 class TradeSignal(str, enum.Enum):
     """Enum for trading signals."""
+
     LONG = "long"
     SHORT = "short"
     NEUTRAL = "neutral"
@@ -45,6 +59,7 @@ class TradeSignal(str, enum.Enum):
 
 class Environment(str, enum.Enum):
     """Enum for execution environments."""
+
     BACKTEST = "backtest"
     PAPER = "paper"
     PROD = "prod"
@@ -64,20 +79,26 @@ class Order(Base):
     stop_price = Column(Numeric(precision=18, scale=8), nullable=True)
     status = Column(Enum(OrderStatus), nullable=False, default=OrderStatus.PENDING)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(
+        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
     filled_at = Column(DateTime, nullable=True, index=True)
     filled_quantity = Column(Numeric(precision=18, scale=8), nullable=False, default=0)
     average_fill_price = Column(Numeric(precision=18, scale=8), nullable=True)
     comment = Column(Text, nullable=True)
 
     # Environment & Provenance (NEW)
-    environment = Column(Enum(Environment), nullable=False, default=Environment.PAPER, index=True)
+    environment = Column(
+        Enum(Environment), nullable=False, default=Environment.PAPER, index=True
+    )
     trigger_signal_id = Column(Integer, ForeignKey("signals.id"), nullable=True)
 
     # Relationships
     fills = relationship("Fill", back_populates="order", cascade="all, delete-orphan")
     trades = relationship("Trade", back_populates="order", cascade="all, delete-orphan")
-    trigger_signal = relationship("Signal", foreign_keys=[trigger_signal_id], back_populates="triggered_orders")
+    trigger_signal = relationship(
+        "Signal", foreign_keys=[trigger_signal_id], back_populates="triggered_orders"
+    )
 
     __table_args__ = (
         Index("idx_symbol_created_at", "symbol", "created_at"),
@@ -101,9 +122,7 @@ class Fill(Base):
     # Relationships
     order = relationship("Order", back_populates="fills")
 
-    __table_args__ = (
-        Index("idx_order_filled_at", "order_id", "filled_at"),
-    )
+    __table_args__ = (Index("idx_order_filled_at", "order_id", "filled_at"),)
 
 
 class Position(Base):
@@ -120,7 +139,9 @@ class Position(Base):
     unrealized_pnl_pct = Column(Float, nullable=False)
     side = Column(Enum(OrderSide), nullable=False)
     opened_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(
+        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
 
 class Signal(Base):
@@ -148,7 +169,9 @@ class Signal(Base):
     generated_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
 
     # Environment & Provenance (NEW)
-    environment = Column(Enum(Environment), nullable=False, default=Environment.PAPER, index=True)
+    environment = Column(
+        Enum(Environment), nullable=False, default=Environment.PAPER, index=True
+    )
     order_id = Column(Integer, ForeignKey("orders.id"), nullable=True)
 
     # Checkpoint & Metadata (NEW)
@@ -164,7 +187,9 @@ class Signal(Base):
     graph_version = Column(String(50), nullable=True)
 
     # Relationships
-    triggered_orders = relationship("Order", foreign_keys="Order.trigger_signal_id", back_populates="trigger_signal")
+    triggered_orders = relationship(
+        "Order", foreign_keys="Order.trigger_signal_id", back_populates="trigger_signal"
+    )
 
     __table_args__ = (
         Index("idx_symbol_generated_at", "symbol", "generated_at"),
@@ -200,7 +225,9 @@ class Trade(Base):
     notes = Column(Text, nullable=True)
 
     # Environment (NEW)
-    environment = Column(Enum(Environment), nullable=False, default=Environment.PAPER, index=True)
+    environment = Column(
+        Enum(Environment), nullable=False, default=Environment.PAPER, index=True
+    )
 
     # Relationships
     order = relationship("Order", back_populates="trades")
@@ -247,11 +274,11 @@ class StrategyConfig(Base):
     json_config = Column(JSON, nullable=False)  # Persisted configuration dict
     version = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    __table_args__ = (
-        Index("idx_name_kind", "name", "kind"),
+    updated_at = Column(
+        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
     )
+
+    __table_args__ = (Index("idx_name_kind", "name", "kind"),)
 
 
 class BacktestRun(Base):
@@ -265,7 +292,9 @@ class BacktestRun(Base):
     assets = Column(JSON, nullable=False)  # List of symbols, e.g., ["BTC", "SPX", "CL"]
     start_date = Column(DateTime, nullable=False, index=True)
     end_date = Column(DateTime, nullable=False, index=True)
-    data_source = Column(String(200), nullable=True)  # Optional source/hash for reproducibility
+    data_source = Column(
+        String(200), nullable=True
+    )  # Optional source/hash for reproducibility
     config_snapshot = Column(JSON, nullable=False)  # Immutable config at run time
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
 

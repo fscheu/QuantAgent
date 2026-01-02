@@ -14,9 +14,13 @@ def render(db, environment: str) -> None:
     with colF2:
         timeframe_filter = st.text_input("Timeframe", value="")
     with colF3:
-        min_conf = st.number_input("Min confidence", min_value=0.0, max_value=1.0, value=0.0, step=0.05)
+        min_conf = st.number_input(
+            "Min confidence", min_value=0.0, max_value=1.0, value=0.0, step=0.05
+        )
     with colF4:
-        order_link = st.checkbox("Only with order link", value=False, key="only_with_orders")
+        order_link = st.checkbox(
+            "Only with order link", value=False, key="only_with_orders"
+        )
 
     colF5, colF6, colF7 = st.columns(3)
     with colF5:
@@ -24,12 +28,16 @@ def render(db, environment: str) -> None:
     with colF6:
         model_filter = st.text_input("Model name", value="")
     with colF7:
-        days_back = st.number_input("Days back", min_value=0, max_value=90, value=7, step=1)
+        days_back = st.number_input(
+            "Days back", min_value=0, max_value=90, value=7, step=1
+        )
 
     if db.ok:
         with db.SessionLocal() as s:
             try:
-                q = s.query(db.models.Signal).filter(db.models.Signal.environment == environment)
+                q = s.query(db.models.Signal).filter(
+                    db.models.Signal.environment == environment
+                )
                 if symbol_filter:
                     q = q.filter(db.models.Signal.symbol.contains(symbol_filter))
                 if timeframe_filter:
@@ -39,13 +47,17 @@ def render(db, environment: str) -> None:
                 if order_link:
                     q = q.filter(db.models.Signal.order_id.isnot(None))
                 if provider_filter:
-                    q = q.filter(db.models.Signal.model_provider.contains(provider_filter))
+                    q = q.filter(
+                        db.models.Signal.model_provider.contains(provider_filter)
+                    )
                 if model_filter:
                     q = q.filter(db.models.Signal.model_name.contains(model_filter))
                 if days_back:
                     window_start = datetime.utcnow() - timedelta(days=int(days_back))
                     q = q.filter(db.models.Signal.generated_at >= window_start)
-                results = q.order_by(db.models.Signal.generated_at.desc()).limit(200).all()
+                results = (
+                    q.order_by(db.models.Signal.generated_at.desc()).limit(200).all()
+                )
 
                 if not results:
                     st.info("No signals found for the selected filters.")
@@ -58,7 +70,11 @@ def render(db, environment: str) -> None:
                             "generated_at": r.generated_at,
                             "symbol": r.symbol,
                             "timeframe": r.timeframe,
-                            "signal": r.signal.value if hasattr(r.signal, "value") else r.signal,
+                            "signal": (
+                                r.signal.value
+                                if hasattr(r.signal, "value")
+                                else r.signal
+                            ),
                             "confidence": r.confidence,
                             "model_provider": r.model_provider,
                             "model_name": r.model_name,
@@ -69,15 +85,19 @@ def render(db, environment: str) -> None:
                             "order_id": r.order_id,
                         }
                     )
-                st.dataframe(pd.DataFrame(table_rows), use_container_width=True)
+                st.dataframe(pd.DataFrame(table_rows), width='stretch')
 
                 st.markdown("**Details (latest 5)**")
                 for detail in results[:5]:
-                    with st.expander(f"{detail.symbol} {detail.timeframe} @ {detail.generated_at}"):
+                    with st.expander(
+                        f"{detail.symbol} {detail.timeframe} @ {detail.generated_at}"
+                    ):
                         st.write("Signal:", detail.signal)
                         st.write("Confidence:", detail.confidence)
                         st.write("Model:", detail.model_provider, detail.model_name)
-                        st.write("Thread/Checkpoint:", detail.thread_id, detail.checkpoint_id)
+                        st.write(
+                            "Thread/Checkpoint:", detail.thread_id, detail.checkpoint_id
+                        )
                         if detail.analysis_summary:
                             st.markdown("**Analysis summary**")
                             st.write(detail.analysis_summary)
@@ -97,4 +117,3 @@ def render(db, environment: str) -> None:
                 st.info(f"No signals or error reading signals: {e}")
     else:
         st.info("Connect DB to view analyses.")
-

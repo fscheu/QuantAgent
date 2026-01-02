@@ -16,7 +16,9 @@ def setup_postgres_config():
     port = input("  Port (default: 5432): ").strip() or "5432"
     user = input("  User (default: postgres): ").strip() or "postgres"
     password = input("  Password: ").strip()
-    database = input("  Database Name (default: quantagent_dev): ").strip() or "quantagent_dev"
+    database = (
+        input("  Database Name (default: quantagent_dev): ").strip() or "quantagent_dev"
+    )
 
     # Build connection string
     db_url = f"postgresql://{user}:{password}@{host}:{port}/{database}"

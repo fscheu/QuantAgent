@@ -13,11 +13,7 @@ T = TypeVar("T")
 
 
 def invoke_with_retry(
-    call_fn: Callable[..., T],
-    *args,
-    retries: int = 3,
-    wait_sec: int = 4,
-    **kwargs
+    call_fn: Callable[..., T], *args, retries: int = 3, wait_sec: int = 4, **kwargs
 ) -> T:
     """
     Centralized retry wrapper with exponential backoff.

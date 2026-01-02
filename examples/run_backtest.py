@@ -15,18 +15,19 @@ from datetime import datetime, timedelta
 from quantagent.backtesting.backtest import Backtest
 from quantagent.database import SessionLocal
 
+
 def main():
     """Run example backtest."""
 
     # Configuration
     config = {
-        'base_position_pct': 0.05,  # 5% of portfolio per trade
-        'max_daily_loss_pct': 0.05,  # 5% max daily loss
-        'max_position_pct': 0.10,  # 10% max position size
-        'slippage_pct': 0.01,  # 1% slippage simulation
-        'agent_llm_provider': 'openai',
-        'agent_llm_model': 'gpt-4o-mini',
-        'agent_llm_temperature': 0.1
+        "base_position_pct": 0.05,  # 5% of portfolio per trade
+        "max_daily_loss_pct": 0.05,  # 5% max daily loss
+        "max_position_pct": 0.10,  # 10% max position size
+        "slippage_pct": 0.01,  # 1% slippage simulation
+        "agent_llm_provider": "openai",
+        "agent_llm_model": "gpt-4o-mini",
+        "agent_llm_temperature": 0.1,
     }
 
     # Date range for backtest
@@ -37,11 +38,11 @@ def main():
     backtest = Backtest(
         start_date=start_date,
         end_date=end_date,
-        assets=['BTC', 'SPX'],
-        timeframe='4h',
+        assets=["BTC", "SPX"],
+        timeframe="4h",
         initial_capital=100000.0,
         config=config,
-        use_checkpointing=True  # Enable state persistence
+        use_checkpointing=True,  # Enable state persistence
     )
 
     print(f"Running backtest from {start_date.date()} to {end_date.date()}")
@@ -82,8 +83,14 @@ def main():
 
     # Viability assessment
     print("\nStrategy Assessment:")
-    if metrics.win_rate >= 0.4 and metrics.sharpe_ratio >= 1.0 and metrics.max_drawdown <= 0.15:
-        print("✅ Strategy meets viability criteria (Win Rate ≥40%, Sharpe ≥1.0, Max DD ≤15%)")
+    if (
+        metrics.win_rate >= 0.4
+        and metrics.sharpe_ratio >= 1.0
+        and metrics.max_drawdown <= 0.15
+    ):
+        print(
+            "✅ Strategy meets viability criteria (Win Rate ≥40%, Sharpe ≥1.0, Max DD ≤15%)"
+        )
     else:
         print("⚠️  Strategy does not meet all viability criteria")
         if metrics.win_rate < 0.4:

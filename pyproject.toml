@@ -34,7 +34,7 @@ dependencies = [
 dev = ["pytest", "pytest-cov", "pytest-mock", "black", "ruff"]
 
 [tool.setuptools]
-packages = ["quantagent"]
+packages = ["quantagent", "apps"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

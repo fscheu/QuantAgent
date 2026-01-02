@@ -9,7 +9,12 @@ from typing import Any, Dict
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from quantagent.agent_models import IndicatorReport, PatternReport, TrendReport, TradingDecision
+from quantagent.agent_models import (
+    IndicatorReport,
+    PatternReport,
+    TrendReport,
+    TradingDecision,
+)
 from quantagent.agent_utils import invoke_with_retry
 
 
@@ -33,9 +38,21 @@ def create_final_trade_decider(llm):
         stock_name = state["stock_name"]
 
         # Convert Pydantic models to dict for better readability in prompt
-        indicator_dict = indicator_report.model_dump() if hasattr(indicator_report, "model_dump") else indicator_report.__dict__
-        pattern_dict = pattern_report.model_dump() if hasattr(pattern_report, "model_dump") else pattern_report.__dict__
-        trend_dict = trend_report.model_dump() if hasattr(trend_report, "model_dump") else trend_report.__dict__
+        indicator_dict = (
+            indicator_report.model_dump()
+            if hasattr(indicator_report, "model_dump")
+            else indicator_report.__dict__
+        )
+        pattern_dict = (
+            pattern_report.model_dump()
+            if hasattr(pattern_report, "model_dump")
+            else pattern_report.__dict__
+        )
+        trend_dict = (
+            trend_report.model_dump()
+            if hasattr(trend_report, "model_dump")
+            else trend_report.__dict__
+        )
 
         # --- System message ---
         system_message = SystemMessage(
@@ -147,10 +164,7 @@ Respond ONLY with valid JSON (no markdown, no explanation):
             structured_llm = llm.with_structured_output(TradingDecision)
 
             trading_decision = invoke_with_retry(
-                structured_llm.invoke,
-                agent_messages,
-                retries=3,
-                wait_sec=2
+                structured_llm.invoke, agent_messages, retries=3, wait_sec=2
             )
 
             # Ensure we got a valid TradingDecision
@@ -159,7 +173,7 @@ Respond ONLY with valid JSON (no markdown, no explanation):
                     decision="HOLD",
                     confidence=0.0,
                     reasoning="Output validation failed. Decision agent recommends HOLD until signals clarify.",
-                    risk_level="high"
+                    risk_level="high",
                 )
         except Exception as e:
             # Fallback decision if LLM call fails
@@ -167,7 +181,7 @@ Respond ONLY with valid JSON (no markdown, no explanation):
                 decision="HOLD",
                 confidence=0.0,
                 reasoning=f"Decision analysis failed: {str(e)}. Recommending HOLD until signals clarify.",
-                risk_level="high"
+                risk_level="high",
             )
 
         # Add messages to shared state for conversational follow-up

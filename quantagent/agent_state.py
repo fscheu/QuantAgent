@@ -60,7 +60,9 @@ class IndicatorAgentState(TypedDict):
     # Final analysis and messaging context
     analysis_results: Annotated[str, "Computed result of the analysis or decision"]
     messages: Annotated[
-        List[BaseMessage], add_messages, "List of chat messages used in LLM prompt construction"
+        List[BaseMessage],
+        add_messages,
+        "List of chat messages used in LLM prompt construction",
     ]
     decision_prompt: Annotated[str, "decision prompt for reflection"]
     final_trade_decision: Annotated[

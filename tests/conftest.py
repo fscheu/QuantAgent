@@ -32,6 +32,7 @@ from quantagent.agent_models import (
 # Data Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def sample_ohlcv_data() -> Dict[str, List[float]]:
     """
@@ -52,8 +53,10 @@ def sample_ohlcv_data() -> Dict[str, List[float]]:
         "high": [float(p + abs(np.random.randn())) for p in prices],
         "low": [float(p - abs(np.random.randn())) for p in prices],
         "close": [float(p + np.random.randn() * 0.5) for p in prices],
-        "volume": [float(1000000 + np.random.randint(-100000, 100000))
-                   for _ in range(num_candles)],
+        "volume": [
+            float(1000000 + np.random.randint(-100000, 100000))
+            for _ in range(num_candles)
+        ],
     }
 
 
@@ -66,9 +69,10 @@ def sample_ohlcv_dataframe(sample_ohlcv_data) -> pd.DataFrame:
         DataFrame with datetime index and OHLCV columns.
     """
     df = pd.DataFrame(sample_ohlcv_data)
-    df.index = pd.date_range(end=datetime.now(), periods=len(df), freq='1h')
-    df.index.name = 'datetime'
+    df.index = pd.date_range(end=datetime.now(), periods=len(df), freq="1h")
+    df.index.name = "datetime"
     return df
+
 
 @pytest.fixture
 def sample_state_inicial() -> Dict:
@@ -87,6 +91,7 @@ def sample_state_inicial() -> Dict:
         "pattern_image": "base64_encoded_image_data",
         "trend_image": "base64_encoded_image_data",
     }
+
 
 @pytest.fixture
 def sample_state() -> Dict:
@@ -134,6 +139,7 @@ def sample_state() -> Dict:
 # Configuration Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def mock_config() -> Dict:
     """
@@ -172,6 +178,7 @@ def mock_env_vars(monkeypatch):
 # LLM Mock Fixtures
 # ============================================================================
 
+
 class StructuredMockLLM:
     """
     Mock LLM supporting modern LangChain patterns.
@@ -185,7 +192,7 @@ class StructuredMockLLM:
         self.default_overrides = default_overrides or {}
 
     def invoke(self, messages):
-        return  "Mock LLM response"
+        return "Mock LLM response"
 
     def with_structured_output(self, schema):
         """
@@ -212,7 +219,7 @@ class StructuredMockLLM:
                 "willr": -25.0,
                 "trend_direction": "bullish",
                 "confidence": 0.75,
-                "reasoning": "Mock indicator analysis"
+                "reasoning": "Mock indicator analysis",
             }
         elif schema == PatternReport:
             defaults = {
@@ -220,7 +227,7 @@ class StructuredMockLLM:
                 "primary_pattern": "double_bottom",
                 "confidence": 0.75,
                 "breakout_probability": 0.65,
-                "reasoning": "Mock pattern detected"
+                "reasoning": "Mock pattern detected",
             }
         elif schema == TrendReport:
             defaults = {
@@ -228,7 +235,7 @@ class StructuredMockLLM:
                 "resistance_level": 101.5,
                 "trend_direction": "upward",
                 "trend_strength": 0.75,
-                "reasoning": "Mock trend analysis"
+                "reasoning": "Mock trend analysis",
             }
         elif schema == TradingDecision:
             defaults = {
@@ -238,7 +245,7 @@ class StructuredMockLLM:
                 "stop_loss": 98.5,
                 "confidence": 0.75,
                 "risk_level": "medium",
-                "reasoning": "Mock trading decision"
+                "reasoning": "Mock trading decision",
             }
         else:
             defaults = {}
@@ -276,8 +283,10 @@ def mock_llm_custom():
         def test_something(mock_llm_custom):
             llm = mock_llm_custom({"confidence": 0.9, "trend_direction": "bearish"})
     """
+
     def create_with_overrides(overrides):
         return StructuredMockLLM(default_overrides=overrides)
+
     return create_with_overrides
 
 
@@ -318,6 +327,7 @@ def mock_vision_llm():
 # Toolkit Mock Fixtures
 # ============================================================================
 
+
 class MockToolkit:
     """Mock toolkit with indicator and chart generation functions."""
 
@@ -330,19 +340,21 @@ class MockToolkit:
         self.compute_willr = Mock(name="compute_willr")
 
         # Setup default return values for tool invocation
-        self.compute_macd.invoke = Mock(return_value={
-            "macd": 0.5,
-            "signal": 0.3,
-            "histogram": 0.2
-        })
+        self.compute_macd.invoke = Mock(
+            return_value={"macd": 0.5, "signal": 0.3, "histogram": 0.2}
+        )
         self.compute_rsi.invoke = Mock(return_value={"rsi": 65.0})
         self.compute_roc.invoke = Mock(return_value={"roc": 2.5})
         self.compute_stoch.invoke = Mock(return_value={"stochastic": 75.0})
         self.compute_willr.invoke = Mock(return_value={"willr": -25.0})
         self.generate_kline_image = Mock(name="generate_kline_image")
-        self.generate_kline_image.invoke = Mock(return_value={"pattern_image": "mock_b64_encoded_png_pattern"})
+        self.generate_kline_image.invoke = Mock(
+            return_value={"pattern_image": "mock_b64_encoded_png_pattern"}
+        )
         self.generate_trend_image = Mock(name="generate_trend_image")
-        self.generate_trend_image.invoke = Mock(return_value={"trend_image": "mock_b64_encoded_png_trend"})
+        self.generate_trend_image.invoke = Mock(
+            return_value={"trend_image": "mock_b64_encoded_png_trend"}
+        )
 
     # def generate_kline_image(self):
     #     """Mock K-line image generation tool."""
@@ -374,6 +386,7 @@ def mock_toolkit():
 # ============================================================================
 # Temporary Directory Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def temp_output_dir(tmp_path) -> Path:
@@ -411,6 +424,7 @@ def temp_chart_dir(tmp_path) -> Path:
 # Mocking Utilities
 # ============================================================================
 
+
 @pytest.fixture
 def patch_yfinance():
     """
@@ -421,14 +435,17 @@ def patch_yfinance():
     """
     with patch("yfinance.download") as mock_download:
         # Create sample dataframe
-        dates = pd.date_range(end=datetime.now(), periods=30, freq='1h')
-        mock_df = pd.DataFrame({
-            "Open": np.linspace(100, 105, 30),
-            "High": np.linspace(101, 106, 30),
-            "Low": np.linspace(99, 104, 30),
-            "Close": np.linspace(100.5, 105.5, 30),
-            "Volume": [1000000] * 30,
-        }, index=dates)
+        dates = pd.date_range(end=datetime.now(), periods=30, freq="1h")
+        mock_df = pd.DataFrame(
+            {
+                "Open": np.linspace(100, 105, 30),
+                "High": np.linspace(101, 106, 30),
+                "Low": np.linspace(99, 104, 30),
+                "Close": np.linspace(100.5, 105.5, 30),
+                "Volume": [1000000] * 30,
+            },
+            index=dates,
+        )
 
         mock_download.return_value = mock_df
         yield mock_download
@@ -457,17 +474,20 @@ def patch_talib():
         "WILLR": lambda high, low, close, period=14: np.array([-50.0] * len(close)),
     }
 
-    with patch("talib.RSI", side_effect=mocked_indicators["RSI"]), \
-         patch("talib.MACD", side_effect=mocked_indicators["MACD"]), \
-         patch("talib.STOCH", side_effect=mocked_indicators["STOCH"]), \
-         patch("talib.ROC", side_effect=mocked_indicators["ROC"]), \
-         patch("talib.WILLR", side_effect=mocked_indicators["WILLR"]):
+    with (
+        patch("talib.RSI", side_effect=mocked_indicators["RSI"]),
+        patch("talib.MACD", side_effect=mocked_indicators["MACD"]),
+        patch("talib.STOCH", side_effect=mocked_indicators["STOCH"]),
+        patch("talib.ROC", side_effect=mocked_indicators["ROC"]),
+        patch("talib.WILLR", side_effect=mocked_indicators["WILLR"]),
+    ):
         yield mocked_indicators
 
 
 # ============================================================================
 # Session-scoped Fixtures
 # ============================================================================
+
 
 @pytest.fixture(scope="session")
 def project_root() -> Path:
@@ -498,6 +518,7 @@ def benchmark_data_dir(project_root) -> Path:
 # Pytest Configuration Hooks
 # ============================================================================
 
+
 def pytest_configure(config):
     """
     Configure pytest with custom markers and settings.
@@ -508,15 +529,9 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
     )
-    config.addinivalue_line(
-        "markers", "integration: marks tests as integration tests"
-    )
-    config.addinivalue_line(
-        "markers", "api: marks tests requiring API calls"
-    )
-    config.addinivalue_line(
-        "markers", "vision: marks tests using vision-capable LLMs"
-    )
+    config.addinivalue_line("markers", "integration: marks tests as integration tests")
+    config.addinivalue_line("markers", "api: marks tests requiring API calls")
+    config.addinivalue_line("markers", "vision: marks tests using vision-capable LLMs")
 
 
 def pytest_collection_modifyitems(config, items):

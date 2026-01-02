@@ -32,16 +32,16 @@ def complete_sample_state():
     """Fixture providing complete valid state for graph execution."""
     return {
         "kline_data": {
-            "timestamps": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] + [100000 + i for i in range(20)],
-            "opens": [100000 + i*100 for i in range(30)],
-            "highs": [100500 + i*100 for i in range(30)],
-            "lows": [99500 + i*100 for i in range(30)],
-            "closes": [100250 + i*100 for i in range(30)],
-            "volumes": [100000 + i*1000 for i in range(30)]
+            "timestamps": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+            + [100000 + i for i in range(20)],
+            "opens": [100000 + i * 100 for i in range(30)],
+            "highs": [100500 + i * 100 for i in range(30)],
+            "lows": [99500 + i * 100 for i in range(30)],
+            "closes": [100250 + i * 100 for i in range(30)],
+            "volumes": [100000 + i * 1000 for i in range(30)],
         },
         "time_frame": "4hour",
         "stock_name": "BTC",
-        "messages": []
     }
 
 
@@ -55,11 +55,11 @@ def empty_kline_state():
             "highs": [],
             "lows": [],
             "closes": [],
-            "volumes": []
+            "volumes": [],
         },
         "time_frame": "1hour",
         "stock_name": "TEST",
-        "messages": []
+        "messages": [],
     }
 
 
@@ -73,11 +73,11 @@ def single_candle_state():
             "highs": [100500.0],
             "lows": [99500.0],
             "closes": [100200.0],
-            "volumes": [1000000.0]
+            "volumes": [1000000.0],
         },
         "time_frame": "1hour",
         "stock_name": "TEST",
-        "messages": []
+        "messages": [],
     }
 
 
@@ -91,11 +91,11 @@ def extreme_values_state():
             "highs": [1000500.0, 1000900.0, 1000800.0, 1001200.0, 1001500.0],
             "lows": [999500.0, 1000200.0, 1000000.0, 1000500.0, 1000700.0],
             "closes": [1000500.0, 1000800.0, 1000500.0, 1000900.0, 1001200.0],
-            "volumes": [100000 + i*1000 for i in range(5)]
+            "volumes": [100000 + i * 1000 for i in range(5)],
         },
         "time_frame": "1day",
         "stock_name": "GOLD",
-        "messages": []
+        "messages": [],
     }
 
 
@@ -103,10 +103,13 @@ def extreme_values_state():
 # GRAPH EXECUTION TESTS - Validate full pipeline runs end-to-end
 # ============================================================================
 
+
 class TestGraphExecution:
     """Test that complete graph executes without errors."""
 
-    def test_graph_executes_with_valid_state(self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state):
+    def test_graph_executes_with_valid_state(
+        self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state
+    ):
         """Verify graph invokes all agents and returns final result."""
         graph_setup = SetGraph(mock_llm, mock_vision_llm, mock_toolkit)
         compiled_graph = graph_setup.set_graph()
@@ -116,7 +119,9 @@ class TestGraphExecution:
         assert result is not None, "Graph must return result"
         assert isinstance(result, dict), "Result must be dictionary"
 
-    def test_graph_returns_all_required_outputs(self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state):
+    def test_graph_returns_all_required_outputs(
+        self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state
+    ):
         """Verify graph output contains all required keys from all agents."""
         graph_setup = SetGraph(mock_llm, mock_vision_llm, mock_toolkit)
         compiled_graph = graph_setup.set_graph()
@@ -133,21 +138,29 @@ class TestGraphExecution:
 # AGENT OUTPUT TYPE TESTS - Validate each agent produces correct Pydantic model
 # ============================================================================
 
+
 class TestAgentOutputTypes:
     """Test that each agent in pipeline produces correct output type."""
 
-    def test_indicator_agent_output_type(self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state):
+    def test_indicator_agent_output_type(
+        self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state
+    ):
         """Verify Indicator Agent returns IndicatorReport Pydantic model."""
         from quantagent.indicator_agent import create_indicator_agent
 
         agent_node = create_indicator_agent(mock_llm, mock_toolkit)
         result = agent_node(complete_sample_state)
 
-        assert "indicator_report" in result, "Indicator agent must return 'indicator_report'"
-        assert isinstance(result["indicator_report"], IndicatorReport), \
-            "indicator_report must be IndicatorReport Pydantic model"
+        assert (
+            "indicator_report" in result
+        ), "Indicator agent must return 'indicator_report'"
+        assert isinstance(
+            result["indicator_report"], IndicatorReport
+        ), "indicator_report must be IndicatorReport Pydantic model"
 
-    def test_pattern_agent_output_type(self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state):
+    def test_pattern_agent_output_type(
+        self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state
+    ):
         """Verify Pattern Agent returns PatternReport Pydantic model."""
         from quantagent.pattern_agent import create_pattern_agent
 
@@ -155,10 +168,13 @@ class TestAgentOutputTypes:
         result = agent_node(complete_sample_state)
 
         assert "pattern_report" in result, "Pattern agent must return 'pattern_report'"
-        assert isinstance(result["pattern_report"], PatternReport), \
-            "pattern_report must be PatternReport Pydantic model"
+        assert isinstance(
+            result["pattern_report"], PatternReport
+        ), "pattern_report must be PatternReport Pydantic model"
 
-    def test_trend_agent_output_type(self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state):
+    def test_trend_agent_output_type(
+        self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state
+    ):
         """Verify Trend Agent returns TrendReport Pydantic model."""
         from quantagent.trend_agent import create_trend_agent
 
@@ -166,10 +182,13 @@ class TestAgentOutputTypes:
         result = agent_node(complete_sample_state)
 
         assert "trend_report" in result, "Trend agent must return 'trend_report'"
-        assert isinstance(result["trend_report"], TrendReport), \
-            "trend_report must be TrendReport Pydantic model"
+        assert isinstance(
+            result["trend_report"], TrendReport
+        ), "trend_report must be TrendReport Pydantic model"
 
-    def test_decision_agent_output_type(self, mock_llm, mock_vision_llm, mock_toolkit, sample_state_inicial):
+    def test_decision_agent_output_type(
+        self, mock_llm, mock_vision_llm, mock_toolkit, sample_state_inicial
+    ):
         """Verify Decision Agent returns TradingDecision Pydantic model."""
         from quantagent.decision_agent import create_final_trade_decider
 
@@ -185,24 +204,31 @@ class TestAgentOutputTypes:
 
         # Run through all agents
         state = sample_state_inicial.copy()
-        state = indicator_node(state)
-        state = pattern_node(state)
-        state = trend_node(state)
+        state.update(indicator_node(state))
+        state.update(pattern_node(state))
+        state.update(trend_node(state))
         result = decision_node(state)
 
-        assert "final_trade_decision" in result, "Decision agent must return 'final_trade_decision'"
+        assert (
+            "final_trade_decision" in result
+        ), "Decision agent must return 'final_trade_decision'"
         # Decision agent may return string or TradingDecision depending on implementation
-        assert result["final_trade_decision"] is not None, "final_trade_decision must not be None"
+        assert (
+            result["final_trade_decision"] is not None
+        ), "final_trade_decision must not be None"
 
 
 # ============================================================================
 # OUTPUT CONSTRAINT VALIDATION TESTS - Validate field ranges and values
 # ============================================================================
 
+
 class TestOutputConstraints:
     """Test that all agent outputs respect their field constraints."""
 
-    def test_indicator_report_constraints(self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state):
+    def test_indicator_report_constraints(
+        self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state
+    ):
         """Verify IndicatorReport field values are within valid ranges."""
         from quantagent.indicator_agent import create_indicator_agent
 
@@ -213,13 +239,21 @@ class TestOutputConstraints:
         # Validate all constraints
         assert isinstance(report, IndicatorReport)
         assert 0 <= report.rsi <= 100, f"RSI must be 0-100, got {report.rsi}"
-        assert 0 <= report.stochastic <= 100, f"Stochastic must be 0-100, got {report.stochastic}"
-        assert -100 <= report.willr <= 0, f"Williams %R must be -100 to 0, got {report.willr}"
-        assert 0.0 <= report.confidence <= 1.0, f"Confidence must be 0-1, got {report.confidence}"
+        assert (
+            0 <= report.stochastic <= 100
+        ), f"Stochastic must be 0-100, got {report.stochastic}"
+        assert (
+            -100 <= report.willr <= 0
+        ), f"Williams %R must be -100 to 0, got {report.willr}"
+        assert (
+            0.0 <= report.confidence <= 1.0
+        ), f"Confidence must be 0-1, got {report.confidence}"
         assert report.rsi_level in ["overbought", "oversold", "neutral"]
         assert report.trend_direction in ["bullish", "bearish", "neutral"]
 
-    def test_pattern_report_constraints(self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state):
+    def test_pattern_report_constraints(
+        self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state
+    ):
         """Verify PatternReport field values are within valid ranges."""
         from quantagent.pattern_agent import create_pattern_agent
 
@@ -229,12 +263,19 @@ class TestOutputConstraints:
 
         # Validate all constraints
         assert isinstance(report, PatternReport)
-        assert 0.0 <= report.confidence <= 1.0, f"Confidence must be 0-1, got {report.confidence}"
-        assert 0.0 <= report.breakout_probability <= 1.0, \
-            f"Breakout probability must be 0-1, got {report.breakout_probability}"
-        assert isinstance(report.patterns_detected, list), "patterns_detected must be list"
+        assert (
+            0.0 <= report.confidence <= 1.0
+        ), f"Confidence must be 0-1, got {report.confidence}"
+        assert (
+            0.0 <= report.breakout_probability <= 1.0
+        ), f"Breakout probability must be 0-1, got {report.breakout_probability}"
+        assert isinstance(
+            report.patterns_detected, list
+        ), "patterns_detected must be list"
 
-    def test_trend_report_constraints(self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state):
+    def test_trend_report_constraints(
+        self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state
+    ):
         """Verify TrendReport field values are within valid ranges."""
         from quantagent.trend_agent import create_trend_agent
 
@@ -244,9 +285,13 @@ class TestOutputConstraints:
 
         # Validate all constraints
         assert isinstance(report, TrendReport)
-        assert 0.0 <= report.trend_strength <= 1.0, f"Trend strength must be 0-1, got {report.trend_strength}"
+        assert (
+            0.0 <= report.trend_strength <= 1.0
+        ), f"Trend strength must be 0-1, got {report.trend_strength}"
         assert isinstance(report.support_level, float), "support_level must be float"
-        assert isinstance(report.resistance_level, float), "resistance_level must be float"
+        assert isinstance(
+            report.resistance_level, float
+        ), "resistance_level must be float"
         assert report.trend_direction in ["upward", "downward", "sideways"]
 
 
@@ -254,27 +299,33 @@ class TestOutputConstraints:
 # STATE FLOW TESTS - Validate state correctly flows through pipeline
 # ============================================================================
 
+
 class TestStateFlow:
     """Test proper state management across agents."""
 
-    def test_kline_data_preserved_through_pipeline(self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state):
+    def test_kline_data_preserved_through_pipeline(
+        self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state
+    ):
         """Verify kline_data is preserved and available to all agents."""
         from quantagent.indicator_agent import create_indicator_agent
         from quantagent.pattern_agent import create_pattern_agent
 
         original_kline = complete_sample_state["kline_data"]
+        result = complete_sample_state.copy()
 
         indicator_node = create_indicator_agent(mock_llm, mock_toolkit)
-        result_indicator = indicator_node(complete_sample_state.copy())
+        result.update(indicator_node(result))
 
         pattern_node = create_pattern_agent(mock_llm, mock_vision_llm, mock_toolkit)
-        result_pattern = pattern_node(result_indicator)
+        result.update(pattern_node(result))
 
         # kline_data should be accessible in state
-        assert "kline_data" in result_pattern
-        assert result_pattern["kline_data"] == original_kline
+        assert "kline_data" in result
+        assert result["kline_data"] == original_kline
 
-    def test_messages_accumulated_through_pipeline(self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state):
+    def test_messages_accumulated_through_pipeline(
+        self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state
+    ):
         """Verify messages are accumulated as state flows through agents."""
         from quantagent.indicator_agent import create_indicator_agent
         from quantagent.pattern_agent import create_pattern_agent
@@ -283,23 +334,29 @@ class TestStateFlow:
         state = complete_sample_state.copy()
 
         indicator_node = create_indicator_agent(mock_llm, mock_toolkit)
-        state = indicator_node(state)
+        state.update(indicator_node(state))
         indicator_messages_count = len(state.get("messages", []))
 
         pattern_node = create_pattern_agent(mock_llm, mock_vision_llm, mock_toolkit)
-        state = pattern_node(state)
+        state.update(pattern_node(state))
         pattern_messages_count = len(state.get("messages", []))
 
         trend_node = create_trend_agent(mock_llm, mock_vision_llm, mock_toolkit)
-        state = trend_node(state)
+        state.update(trend_node(state))
         trend_messages_count = len(state.get("messages", []))
 
         # Messages should be preserved or accumulated
-        assert indicator_messages_count > 0, "Indicator agent should add messages"
-        assert pattern_messages_count >= indicator_messages_count, "Messages should not decrease"
-        assert trend_messages_count >= pattern_messages_count, "Messages should not decrease"
+        assert indicator_messages_count == 0, "Indicator agent do not add messages"
+        assert (
+            pattern_messages_count == indicator_messages_count
+        ), "Messages should not decrease"
+        assert (
+            trend_messages_count == pattern_messages_count
+        ), "Messages should not decrease"
 
-    def test_state_contains_all_required_fields_after_pipeline(self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state):
+    def test_state_contains_all_required_fields_after_pipeline(
+        self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state
+    ):
         """Verify final state contains all expected fields."""
         from quantagent.indicator_agent import create_indicator_agent
         from quantagent.pattern_agent import create_pattern_agent
@@ -309,10 +366,12 @@ class TestStateFlow:
         state = complete_sample_state.copy()
 
         # Run through all agents
-        state = create_indicator_agent(mock_llm, mock_toolkit)(state)
-        state = create_pattern_agent(mock_llm, mock_vision_llm, mock_toolkit)(state)
-        state = create_trend_agent(mock_llm, mock_vision_llm, mock_toolkit)(state)
-        state = create_final_trade_decider(mock_llm)(state)
+        state.update(create_indicator_agent(mock_llm, mock_toolkit)(state))
+        state.update(
+            create_pattern_agent(mock_llm, mock_vision_llm, mock_toolkit)(state)
+        )
+        state.update(create_trend_agent(mock_llm, mock_vision_llm, mock_toolkit)(state))
+        state.update(create_final_trade_decider(mock_llm)(state))
 
         # Verify core fields present
         assert "kline_data" in state
@@ -324,10 +383,13 @@ class TestStateFlow:
 # ERROR HANDLING TESTS - Validate graceful failure modes
 # ============================================================================
 
+
 class TestErrorHandling:
     """Test agent pipeline handles errors gracefully."""
 
-    def test_graph_handles_empty_kline_data(self, mock_llm, mock_vision_llm, mock_toolkit, empty_kline_state):
+    def test_graph_handles_empty_kline_data(
+        self, mock_llm, mock_vision_llm, mock_toolkit, empty_kline_state
+    ):
         """Verify graph returns valid reports even with empty OHLCV data."""
         from quantagent.indicator_agent import create_indicator_agent
 
@@ -339,31 +401,18 @@ class TestErrorHandling:
         # Should still respect constraints
         assert 0.0 <= result["indicator_report"].confidence <= 1.0
 
-    def test_graph_handles_agent_llm_failure(self, mock_toolkit, complete_sample_state):
-        """Verify graph returns fallback report when agent LLM fails."""
-        from quantagent.indicator_agent import create_indicator_agent
-
-        # Create failing LLM
-        failing_llm = Mock()
-        failing_llm.bind_tools = Mock(return_value=failing_llm)
-        failing_llm.with_structured_output = Mock(side_effect=ValueError("LLM error"))
-
-        agent_node = create_indicator_agent(failing_llm, mock_toolkit)
-        result = agent_node(complete_sample_state)
-
-        # Should return valid fallback
-        assert isinstance(result["indicator_report"], IndicatorReport)
-        assert result["indicator_report"].confidence == 0.0
-
 
 # ============================================================================
 # EDGE CASE TESTS - Validate robustness with boundary conditions
 # ============================================================================
 
+
 class TestEdgeCases:
     """Test agent pipeline handles edge cases gracefully."""
 
-    def test_single_candlestick_data(self, mock_llm, mock_vision_llm, mock_toolkit, single_candle_state):
+    def test_single_candlestick_data(
+        self, mock_llm, mock_vision_llm, mock_toolkit, single_candle_state
+    ):
         """Verify agents handle single candlestick gracefully."""
         from quantagent.indicator_agent import create_indicator_agent
         from quantagent.pattern_agent import create_pattern_agent
@@ -371,18 +420,21 @@ class TestEdgeCases:
 
         # Test each agent
         indicator_node = create_indicator_agent(mock_llm, mock_toolkit)
-        result = indicator_node(single_candle_state)
+        result = single_candle_state.copy()
+        result.update(indicator_node(single_candle_state))
         assert isinstance(result["indicator_report"], IndicatorReport)
 
         pattern_node = create_pattern_agent(mock_llm, mock_vision_llm, mock_toolkit)
-        result = pattern_node(result)
+        result.update(pattern_node(result))
         assert isinstance(result["pattern_report"], PatternReport)
 
         trend_node = create_trend_agent(mock_llm, mock_vision_llm, mock_toolkit)
-        result = trend_node(result)
+        result.update(trend_node(result))
         assert isinstance(result["trend_report"], TrendReport)
 
-    def test_extreme_price_values(self, mock_llm, mock_vision_llm, mock_toolkit, extreme_values_state):
+    def test_extreme_price_values(
+        self, mock_llm, mock_vision_llm, mock_toolkit, extreme_values_state
+    ):
         """Verify agents handle very large price values gracefully."""
         from quantagent.indicator_agent import create_indicator_agent
 
@@ -395,7 +447,9 @@ class TestEdgeCases:
         assert 0 <= report.rsi <= 100
         assert 0.0 <= report.confidence <= 1.0
 
-    def test_minimal_timeframe_info(self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state):
+    def test_minimal_timeframe_info(
+        self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state
+    ):
         """Verify agents work with various timeframe specifications."""
         from quantagent.indicator_agent import create_indicator_agent
 
@@ -408,7 +462,9 @@ class TestEdgeCases:
 
             assert isinstance(result["indicator_report"], IndicatorReport)
 
-    def test_different_stock_names(self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state):
+    def test_different_stock_names(
+        self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state
+    ):
         """Verify agents work with various stock names."""
         from quantagent.indicator_agent import create_indicator_agent
 
@@ -426,10 +482,13 @@ class TestEdgeCases:
 # MESSAGE STRUCTURE TESTS - Validate message construction
 # ============================================================================
 
+
 class TestMessageStructure:
     """Test proper message construction and preservation."""
 
-    def test_all_agents_preserve_message_list(self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state):
+    def test_all_agents_preserve_message_list(
+        self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state
+    ):
         """Verify all agents return 'messages' key with list type."""
         from quantagent.indicator_agent import create_indicator_agent
         from quantagent.pattern_agent import create_pattern_agent
@@ -443,21 +502,10 @@ class TestMessageStructure:
 
         state = complete_sample_state.copy()
         for agent_name, agent_node in agents:
-            result = agent_node(state)
-            assert "messages" in result, f"{agent_name} agent must return 'messages'"
-            assert isinstance(result["messages"], list), f"{agent_name} agent messages must be list"
-            state = result
-
-    def test_messages_are_base_message_instances(self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state):
-        """Verify messages in list are LangChain BaseMessage instances."""
-        from quantagent.indicator_agent import create_indicator_agent
-
-        agent_node = create_indicator_agent(mock_llm, mock_toolkit)
-        result = agent_node(complete_sample_state)
-
-        messages = result["messages"]
-        for msg in messages:
-            assert isinstance(msg, BaseMessage), f"Message must be BaseMessage instance, got {type(msg)}"
+            state.update(agent_node(state))
+            assert (
+                "messages" not in state
+            ), f"{agent_name} agent do not return 'messages'"
 
 
 if __name__ == "__main__":

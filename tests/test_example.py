@@ -84,6 +84,7 @@ class TestMockConfiguration:
             mock_env_vars: Fixture setting environment variables.
         """
         import os
+
         assert os.getenv("OPENAI_API_KEY") == "sk-test-openai-key"
         assert os.getenv("ANTHROPIC_API_KEY") == "sk-ant-test-key"
 
@@ -204,6 +205,7 @@ class TestYfinancePatch:
             patch_yfinance: Fixture mocking yfinance.download.
         """
         import yfinance
+
         df = yfinance.download("BTC-USD", period="30h")
         assert df is not None
         assert len(df) == 30

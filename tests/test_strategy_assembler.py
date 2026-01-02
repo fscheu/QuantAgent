@@ -9,7 +9,9 @@ from quantagent.models import Base, Environment, Signal, TradeSignal, Order, Ord
 
 
 def make_session():
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+    engine = create_engine(
+        "sqlite:///:memory:", connect_args={"check_same_thread": False}
+    )
     Base.metadata.create_all(bind=engine)
     Session = sessionmaker(bind=engine, autocommit=False, autoflush=False)
     return Session()
@@ -32,7 +34,9 @@ def test_build_components_from_snapshot():
         "universe": ["BTC", "ETH"],
     }
 
-    resolved = StrategyAssembler.from_snapshot(snapshot, environment=Environment.BACKTEST)
+    resolved = StrategyAssembler.from_snapshot(
+        snapshot, environment=Environment.BACKTEST
+    )
     components = StrategyAssembler.build_components(resolved, db_session=db)
 
     assert components.portfolio_manager is not None

@@ -34,7 +34,7 @@ def test_insert_market_data():
             high=Decimal("45500.00"),
             low=Decimal("44800.00"),
             close=Decimal("45200.00"),
-            volume=Decimal("100.5")
+            volume=Decimal("100.5"),
         )
         db.add(market_data)
         db.commit()
@@ -65,13 +65,15 @@ def test_insert_signal():
             williams_r=-25.0,
             pattern="Bullish Engulfing",
             trend="Uptrend",
-            analysis_summary="Strong bullish signal based on technical indicators"
+            analysis_summary="Strong bullish signal based on technical indicators",
         )
         db.add(signal)
         db.commit()
         print(f"✓ Signal inserted: {signal.signal.value} for {signal.symbol}")
         db.refresh(signal)
-        print(f"  ID: {signal.id}, Confidence: {signal.confidence}, Pattern: {signal.pattern}")
+        print(
+            f"  ID: {signal.id}, Confidence: {signal.confidence}, Pattern: {signal.pattern}"
+        )
     finally:
         db.close()
 
@@ -92,7 +94,7 @@ def test_insert_order():
             quantity=Decimal("0.5"),
             price=Decimal("45000.00"),
             status=OrderStatus.PENDING,
-            comment="Test buy order"
+            comment="Test buy order",
         )
         db.add(order)
         db.commit()
@@ -118,7 +120,7 @@ def test_insert_fill():
             side=OrderSide.BUY,
             order_type=OrderType.MARKET,
             quantity=Decimal("10.0"),
-            status=OrderStatus.FILLED
+            status=OrderStatus.FILLED,
         )
         db.add(order)
         db.flush()
@@ -128,13 +130,15 @@ def test_insert_fill():
             order_id=order.id,
             quantity=Decimal("10.0"),
             price=Decimal("2500.00"),
-            commission=Decimal("2.50")
+            commission=Decimal("2.50"),
         )
         db.add(fill)
         db.commit()
         print(f"✓ Fill inserted: {fill.quantity} {order.symbol} @ {fill.price}")
         db.refresh(fill)
-        print(f"  ID: {fill.id}, Order ID: {fill.order_id}, Commission: {fill.commission}")
+        print(
+            f"  ID: {fill.id}, Order ID: {fill.order_id}, Commission: {fill.commission}"
+        )
     finally:
         db.close()
 
@@ -160,7 +164,7 @@ def test_insert_trade():
             entry_signal="LONG",
             exit_signal="TAKE_PROFIT",
             timeframe="1h",
-            notes="Test trade"
+            notes="Test trade",
         )
         db.add(trade)
         db.commit()
@@ -186,22 +190,26 @@ def test_insert_position():
             current_price=Decimal("45500.00"),
             unrealized_pnl=Decimal("250.00"),
             unrealized_pnl_pct=0.556,
-            side=OrderSide.BUY
+            side=OrderSide.BUY,
         )
         db.add(position)
         db.commit()
-        print(f"✓ Position inserted: {position.side.value} {position.quantity} {position.symbol}")
+        print(
+            f"✓ Position inserted: {position.side.value} {position.quantity} {position.symbol}"
+        )
         db.refresh(position)
-        print(f"  ID: {position.id}, Current Price: {position.current_price}, Unrealized P&L: {position.unrealized_pnl}")
+        print(
+            f"  ID: {position.id}, Current Price: {position.current_price}, Unrealized P&L: {position.unrealized_pnl}"
+        )
     finally:
         db.close()
 
 
 def test_query_data():
     """Test querying all created data."""
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("QUERYING DATA")
-    print("="*50)
+    print("=" * 50)
 
     db = SessionLocal()
     try:
@@ -219,6 +227,7 @@ def cleanup():
     """Clean up test data."""
     print("\nCleaning up...")
     from quantagent.database import drop_all_tables
+
     drop_all_tables()
     print("✓ All tables dropped")
 
@@ -246,6 +255,7 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n✗ TEST FAILED: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

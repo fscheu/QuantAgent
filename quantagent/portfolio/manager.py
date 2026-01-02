@@ -5,7 +5,14 @@ from decimal import Decimal
 from typing import Dict, Optional
 from sqlalchemy.orm import Session
 
-from quantagent.models import Order, Trade, Position, OrderStatus, OrderSide, Environment
+from quantagent.models import (
+    Order,
+    Trade,
+    Position,
+    OrderStatus,
+    OrderSide,
+    Environment,
+)
 from quantagent.database import SessionLocal
 
 
@@ -23,7 +30,7 @@ class PortfolioManager:
         self,
         initial_cash: float,
         environment: Environment = Environment.PAPER,
-        db: Optional[Session] = None
+        db: Optional[Session] = None,
     ):
         """Initialize portfolio manager.
 
@@ -36,7 +43,9 @@ class PortfolioManager:
         self.cash = float(initial_cash)
         self.environment = environment
         self.db = db or SessionLocal()
-        self.positions: Dict[str, Dict] = {}  # symbol → {qty, avg_cost, current_price, pnl}
+        self.positions: Dict[str, Dict] = (
+            {}
+        )  # symbol → {qty, avg_cost, current_price, pnl}
 
     def execute_trade(self, order: Order, fill_price: float) -> Trade:
         """Execute a trade, update positions, persist to database.
@@ -87,8 +96,16 @@ class PortfolioManager:
         trade = Trade(
             symbol=symbol,
             order_id=order.id,
-            entry_price=Decimal(str(fill_price)) if order.side == OrderSide.BUY else Decimal(str(entry_price_for_sell)) if entry_price_for_sell else None,
-            exit_price=Decimal(str(fill_price)) if order.side == OrderSide.SELL else None,
+            entry_price=(
+                Decimal(str(fill_price))
+                if order.side == OrderSide.BUY
+                else (
+                    Decimal(str(entry_price_for_sell)) if entry_price_for_sell else None
+                )
+            ),
+            exit_price=(
+                Decimal(str(fill_price)) if order.side == OrderSide.SELL else None
+            ),
             quantity=Decimal(str(fill_qty)),
             side=order.side,
             commission=Decimal(str(0)),  # TODO: Support commission
@@ -133,7 +150,9 @@ class PortfolioManager:
 
         pos = self.positions[symbol]
         if pos["qty"] < qty:
-            raise ValueError(f"Insufficient qty in {symbol}: have {pos['qty']}, trying to sell {qty}")
+            raise ValueError(
+                f"Insufficient qty in {symbol}: have {pos['qty']}, trying to sell {qty}"
+            )
 
         pos["qty"] -= qty
         pos["current_price"] = price
@@ -155,7 +174,9 @@ class PortfolioManager:
             pos["pnl_pct"] = 0.0
         else:
             pos["pnl"] = pos["qty"] * (pos["current_price"] - pos["avg_cost"])
-            pos["pnl_pct"] = ((pos["current_price"] - pos["avg_cost"]) / pos["avg_cost"]) * 100
+            pos["pnl_pct"] = (
+                (pos["current_price"] - pos["avg_cost"]) / pos["avg_cost"]
+            ) * 100
 
     def get_total_value(self) -> float:
         """Calculate total portfolio value (cash + positions).
@@ -164,8 +185,7 @@ class PortfolioManager:
             Total portfolio value in base currency
         """
         position_value = sum(
-            pos["qty"] * pos["current_price"]
-            for pos in self.positions.values()
+            pos["qty"] * pos["current_price"] for pos in self.positions.values()
         )
         return self.cash + position_value
 
@@ -175,9 +195,7 @@ class PortfolioManager:
         Returns:
             Sum of all position P&L
         """
-        return sum(
-            pos["pnl"] for pos in self.positions.values()
-        )
+        return sum(pos["pnl"] for pos in self.positions.values())
 
     def get_daily_pnl(self) -> float:
         """Calculate today's realized + unrealized P&L.
@@ -186,13 +204,18 @@ class PortfolioManager:
             Total P&L for today (realized trades + unrealized positions)
         """
         from datetime import date
+
         today = date.today()
 
         # Query trades from today
-        trades_today = self.db.query(Trade).filter(
-            Trade.closed_at >= datetime.combine(today, datetime.min.time()),
-            Trade.environment == self.environment,
-        ).all()
+        trades_today = (
+            self.db.query(Trade)
+            .filter(
+                Trade.closed_at >= datetime.combine(today, datetime.min.time()),
+                Trade.environment == self.environment,
+            )
+            .all()
+        )
 
         realized_pnl = sum(float(t.pnl) if t.pnl else 0.0 for t in trades_today)
         unrealized_pnl = self.get_unrealized_pnl()
@@ -205,11 +228,15 @@ class PortfolioManager:
         Returns:
             Sum of realized P&L from Trade records
         """
-        trades = self.db.query(Trade).filter(
-            Trade.environment == self.environment,
-            Trade.pnl.isnot(None),
-            Trade.closed_at.isnot(None)
-        ).all()
+        trades = (
+            self.db.query(Trade)
+            .filter(
+                Trade.environment == self.environment,
+                Trade.pnl.isnot(None),
+                Trade.closed_at.isnot(None),
+            )
+            .all()
+        )
 
         return float(sum(float(t.pnl) for t in trades))
 

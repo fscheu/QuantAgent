@@ -30,23 +30,42 @@ def render(db, environment: str) -> None:
         with SessionLocal() as s:
             try:
                 open_positions = s.query(models.Position).count()
-                open_orders = s.query(models.Order).filter(models.Order.environment == environment).count()
-                trades_query = s.query(models.Trade).filter(models.Trade.environment == environment)
+                open_orders = (
+                    s.query(models.Order)
+                    .filter(models.Order.environment == environment)
+                    .count()
+                )
+                trades_query = s.query(models.Trade).filter(
+                    models.Trade.environment == environment
+                )
                 trades_total = trades_query.count()
                 if trades_total:
-                    wins = trades_query.filter(models.Trade.pnl.isnot(None)).filter(models.Trade.pnl > 0).count()
+                    wins = (
+                        trades_query.filter(models.Trade.pnl.isnot(None))
+                        .filter(models.Trade.pnl > 0)
+                        .count()
+                    )
                     win_rate = f"{(wins / max(trades_total, 1)) * 100:.1f}%"
 
-                today_start = datetime.combine(datetime.utcnow().date(), datetime.min.time())
+                today_start = datetime.combine(
+                    datetime.utcnow().date(), datetime.min.time()
+                )
                 daily_trades = (
-                    trades_query.filter(models.Trade.closed_at.isnot(None)).filter(models.Trade.closed_at >= today_start).all()
+                    trades_query.filter(models.Trade.closed_at.isnot(None))
+                    .filter(models.Trade.closed_at >= today_start)
+                    .all()
                 )
                 if daily_trades:
-                    pnl_value = sum(_to_float(t.pnl) for t in daily_trades if t.pnl is not None)
+                    pnl_value = sum(
+                        _to_float(t.pnl) for t in daily_trades if t.pnl is not None
+                    )
                     daily_pnl = f"${pnl_value:,.2f}"
 
                 positions = s.query(models.Position).all()
-                portfolio_value = sum(_to_float(p.current_price) * _to_float(p.quantity) for p in positions)
+                portfolio_value = sum(
+                    _to_float(p.current_price) * _to_float(p.quantity)
+                    for p in positions
+                )
                 if portfolio_value:
                     total_value = f"${portfolio_value:,.2f}"
             except Exception:
@@ -73,7 +92,7 @@ def render(db, environment: str) -> None:
                         .limit(50)
                         .all()
                     )
-                    st.dataframe(df_from_query(q), use_container_width=True)
+                    st.dataframe(df_from_query(q), width='stretch')
                 except Exception as e:
                     st.info(f"No trades or error reading trades: {e}")
         else:
@@ -83,4 +102,3 @@ def render(db, environment: str) -> None:
         st.markdown("**Scheduler Status**")
         st.write("Status: unknown (MVP placeholder)")
         st.write("Next run: -  | Last run: -  | Errors: -")
-

@@ -147,7 +147,9 @@ class OrderManager:
 
         # Step 6: Update portfolio
         try:
-            trade = self.portfolio.execute_trade(filled_order, filled_order.average_fill_price)
+            trade = self.portfolio.execute_trade(
+                filled_order, filled_order.average_fill_price
+            )
             logger.info(f"{symbol}: Portfolio updated - {side} {qty:.6f} executed")
         except Exception as e:
             logger.error(f"{symbol}: Portfolio update failed - {str(e)}")
@@ -160,7 +162,9 @@ class OrderManager:
         try:
             # Update reverse provenance link if available
             if trigger_signal_id:
-                sig = self.db.query(Signal).filter(Signal.id == trigger_signal_id).first()
+                sig = (
+                    self.db.query(Signal).filter(Signal.id == trigger_signal_id).first()
+                )
                 if sig and not sig.order_id:
                     sig.order_id = order.id
             self.db.add(trade)
@@ -216,7 +220,9 @@ class OrderManager:
 
         # Update portfolio
         try:
-            trade = self.portfolio.execute_trade(filled_order, filled_order.average_fill_price)
+            trade = self.portfolio.execute_trade(
+                filled_order, filled_order.average_fill_price
+            )
         except Exception as e:
             logger.error(f"{order.symbol}: Portfolio update failed - {str(e)}")
             return None

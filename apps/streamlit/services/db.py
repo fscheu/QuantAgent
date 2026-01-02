@@ -24,7 +24,9 @@ def get_db_handle() -> DbHandle:
     try:
         db_url = os.getenv("DATABASE_URL")
         if not db_url:
-            return DbHandle(False, "DATABASE_URL is not set. See docs/MIGRATIONS.md to configure.")
+            return DbHandle(
+                False, "DATABASE_URL is not set. See docs/MIGRATIONS.md to configure."
+            )
 
         from quantagent.database import SessionLocal  # type: ignore
         import quantagent.models as models  # type: ignore
@@ -39,4 +41,3 @@ def get_db_handle() -> DbHandle:
         return DbHandle(True, None, SessionLocal=SessionLocal, models=models)
     except Exception as e:  # pragma: no cover
         return DbHandle(False, f"DB import error: {e}")
-

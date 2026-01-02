@@ -55,7 +55,7 @@ def create_indicator_agent(llm, toolkit):
         # Don't modify existing messages, just create new ones for this specific call
         agent_messages = [
             SystemMessage(content=system_prompt),
-            HumanMessage(content=user_message)
+            HumanMessage(content=user_message),
         ]
 
         # Bind tools to LLM and use structured output
@@ -65,10 +65,7 @@ def create_indicator_agent(llm, toolkit):
         try:
             # LLM call with tools and structured output
             indicator_report = invoke_with_retry(
-                structured_llm.invoke,
-                agent_messages,
-                retries=3,
-                wait_sec=2
+                structured_llm.invoke, agent_messages, retries=3, wait_sec=2
             )
 
             # Ensure we got a valid IndicatorReport
@@ -84,7 +81,7 @@ def create_indicator_agent(llm, toolkit):
                     willr=-50.0,
                     trend_direction="neutral",
                     confidence=0.0,
-                    reasoning="Output validation failed"
+                    reasoning="Output validation failed",
                 )
         except Exception as e:
             # Fallback to minimal valid report
@@ -99,7 +96,7 @@ def create_indicator_agent(llm, toolkit):
                 willr=-50.0,
                 trend_direction="neutral",
                 confidence=0.0,
-            reasoning=f"Analysis failed: {str(e)}"
+                reasoning=f"Analysis failed: {str(e)}",
             )
 
         # Don't add messages to shared state - each agent only needs them for its LLM call

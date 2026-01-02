@@ -73,4 +73,8 @@ class SetGraph:
         # Final decision output
         graph.add_edge("Decision Maker", END)
 
-        return graph.compile(checkpointer=checkpointer) if checkpointer else graph.compile()
+        return (
+            graph.compile(checkpointer=checkpointer)
+            if checkpointer
+            else graph.compile()
+        )

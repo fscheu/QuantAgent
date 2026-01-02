@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -35,12 +34,23 @@ def _get_universe_from_profile(db, profile_name: Optional[str]) -> List[str]:
 
 def render(db, environment: str) -> None:
     st.subheader("Backtesting – Create & Monitor Runs")
-    st.caption("Create backtest runs; backend execution wiring is pending. Uses portfolio Universe when assets are not provided.")
+    st.caption(
+        "Create backtest runs; backend execution wiring is pending. Uses portfolio Universe when assets are not provided."
+    )
 
     st.session_state.setdefault("backtest_runs", [])
-    st.session_state.setdefault("ui_profiles", {"portfolio": {}, "risk": {}, "combined": {}})
     st.session_state.setdefault(
-        "model_presets", {"default": {"provider": "openai", "model_name": "gpt-4o-mini", "temperature": 0.1}}
+        "ui_profiles", {"portfolio": {}, "risk": {}, "combined": {}}
+    )
+    st.session_state.setdefault(
+        "model_presets",
+        {
+            "default": {
+                "provider": "openai",
+                "model_name": "gpt-4o-mini",
+                "temperature": 0.1,
+            }
+        },
     )
 
     autorefresh_fn = getattr(st, "autorefresh", None)
@@ -51,16 +61,24 @@ def render(db, environment: str) -> None:
     model_presets = list(st.session_state.model_presets.keys())
 
     with st.form("create_backtest"):
-        assets_raw = st.text_input("Assets (comma separated; empty → use Universe)", value="")
+        assets_raw = st.text_input(
+            "Assets (comma separated; empty → use Universe)", value=""
+        )
         timeframe = st.text_input("Timeframe", value="1h")
         start_date = st.date_input("Start date")
         end_date = st.date_input("End date")
-        model_preset = st.selectbox("Model preset", model_presets, index=model_presets.index("default"))
+        model_preset = st.selectbox(
+            "Model preset", model_presets, index=model_presets.index("default")
+        )
         profile_name = st.selectbox(
             "Portfolio profile (for sizing/universe)", [""] + portfolio_options, index=0
         )
-        mode = st.selectbox("Mode", ["Generate analyses only", "Generate + Execute"], index=1)
-        artifacts_policy = st.selectbox("Artifacts saving", ["none", "path-only", "path+thumbnail"], index=1)
+        mode = st.selectbox(
+            "Mode", ["Generate analyses only", "Generate + Execute"], index=1
+        )
+        artifacts_policy = st.selectbox(
+            "Artifacts saving", ["none", "path-only", "path+thumbnail"], index=1
+        )
         submitted = st.form_submit_button("Create run")
 
     if submitted:
@@ -124,18 +142,26 @@ def render(db, environment: str) -> None:
     if db.ok:
         try:
             with db.SessionLocal() as s:
-                for r in s.query(db.models.BacktestRun).order_by(db.models.BacktestRun.created_at.desc()).limit(50):
+                for r in (
+                    s.query(db.models.BacktestRun)
+                    .order_by(db.models.BacktestRun.created_at.desc())
+                    .limit(50)
+                ):
                     rows.append(
                         {
                             "id": r.id,
                             "created_at": r.created_at,
-                            "status": "completed" if r.total_trades is not None else "pending",
+                            "status": (
+                                "completed" if r.total_trades is not None else "pending"
+                            ),
                             "progress": 100 if r.total_trades is not None else 0,
                             "assets": r.assets,
                             "timeframe": r.timeframe,
                             "range_start": r.start_date,
                             "range_end": r.end_date,
-                            "model_preset": (r.config_snapshot or {}).get("model_preset"),
+                            "model_preset": (r.config_snapshot or {}).get(
+                                "model_preset"
+                            ),
                             "profile": (r.config_snapshot or {}).get("profile"),
                             "mode": (r.config_snapshot or {}).get("mode"),
                             "artifacts": (r.config_snapshot or {}).get("artifacts"),
@@ -149,7 +175,7 @@ def render(db, environment: str) -> None:
         except Exception as e:
             st.info(f"Could not load DB runs: {e}")
     if rows:
-        st.dataframe(pd.DataFrame(rows), use_container_width=True)
+        st.dataframe(pd.DataFrame(rows), width='stretch')
     else:
         st.info("No runs yet.")
 

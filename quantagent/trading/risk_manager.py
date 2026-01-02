@@ -129,9 +129,11 @@ class RiskManager:
         # Query realized trades from today
         from quantagent.models import Trade
 
-        trades_today = self.db.query(Trade).filter(
-            Trade.closed_at >= datetime.combine(today, datetime.min.time())
-        ).all()
+        trades_today = (
+            self.db.query(Trade)
+            .filter(Trade.closed_at >= datetime.combine(today, datetime.min.time()))
+            .all()
+        )
 
         realized_pnl = sum(float(t.pnl) if t.pnl else 0.0 for t in trades_today)
 

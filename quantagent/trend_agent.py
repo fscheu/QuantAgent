@@ -41,7 +41,7 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
                     toolkit.generate_trend_image.invoke,
                     {"kline_data": state["kline_data"]},
                     retries=3,
-                    wait_sec=4
+                    wait_sec=4,
                 )
                 trend_image_b64 = tool_result.get("trend_image")
             except Exception as e:
@@ -96,21 +96,17 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
             try:
                 # Try with system message
                 final_response = invoke_with_retry(
-                    graph_llm.invoke,
-                    agent_messages,
-                    retries=3,
-                    wait_sec=4
+                    graph_llm.invoke, agent_messages, retries=3, wait_sec=4
                 )
             except Exception as e:
                 # Fallback: retry without system message for Anthropic compatibility
                 if "at least one message" in str(e).lower():
-                    print("Retrying without system message for Anthropic compatibility...")
+                    print(
+                        "Retrying without system message for Anthropic compatibility..."
+                    )
                     try:
                         final_response = invoke_with_retry(
-                            graph_llm.invoke,
-                            [human_msg],
-                            retries=3,
-                            wait_sec=4
+                            graph_llm.invoke, [human_msg], retries=3, wait_sec=4
                         )
                     except Exception as retry_error:
                         reasoning = f"LLM error: {str(retry_error)}"
@@ -125,7 +121,9 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
                     # Extract JSON from response (handle markdown)
                     response_text = final_response.content
                     if "```json" in response_text:
-                        response_text = response_text.split("```json")[1].split("```")[0]
+                        response_text = response_text.split("```json")[1].split("```")[
+                            0
+                        ]
                     elif "```" in response_text:
                         response_text = response_text.split("```")[1].split("```")[0]
 
@@ -134,7 +132,9 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
                     resistance_level = float(response_dict.get("resistance_level", 0.0))
                     trend_direction = response_dict.get("trend_direction", "sideways")
                     trend_strength = float(response_dict.get("trend_strength", 0.0))
-                    reasoning = response_dict.get("reasoning", "Trend analysis completed")
+                    reasoning = response_dict.get(
+                        "reasoning", "Trend analysis completed"
+                    )
                 except (json.JSONDecodeError, ValueError, KeyError) as parse_err:
                     reasoning = f"Trend analysis completed with fallback parsing: {final_response.content[:100]}"
 
@@ -145,7 +145,7 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
                 resistance_level=resistance_level,
                 trend_direction=trend_direction,
                 trend_strength=min(1.0, max(0.0, trend_strength)),
-                reasoning=reasoning
+                reasoning=reasoning,
             )
         except Exception as e:
             # Fallback valid report
@@ -154,7 +154,7 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
                 resistance_level=0.0,
                 trend_direction="sideways",
                 trend_strength=0.0,
-                reasoning=f"Failed to create report: {str(e)}"
+                reasoning=f"Failed to create report: {str(e)}",
             )
 
         # Don't add messages to shared state - each agent only needs them for its LLM call

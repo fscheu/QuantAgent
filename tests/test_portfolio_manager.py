@@ -15,8 +15,16 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from quantagent.models import (
-    Order, OrderSide, OrderType, OrderStatus, Trade, Position,
-    Signal, TradeSignal, Environment, Base
+    Order,
+    OrderSide,
+    OrderType,
+    OrderStatus,
+    Trade,
+    Position,
+    Signal,
+    TradeSignal,
+    Environment,
+    Base,
 )
 from quantagent.portfolio.manager import PortfolioManager
 from quantagent.database import SessionLocal
@@ -37,9 +45,7 @@ def test_db():
 def portfolio(test_db):
     """Create portfolio manager with initial capital."""
     return PortfolioManager(
-        initial_cash=100000.0,
-        environment=Environment.PAPER,
-        db=test_db
+        initial_cash=100000.0, environment=Environment.PAPER, db=test_db
     )
 
 

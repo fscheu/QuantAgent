@@ -43,7 +43,11 @@ if "ui_profiles" not in st.session_state:
 
 if "model_presets" not in st.session_state:
     st.session_state.model_presets = {
-        "default": {"provider": "openai", "model_name": "gpt-4o-mini", "temperature": 0.1}
+        "default": {
+            "provider": "openai",
+            "model_name": "gpt-4o-mini",
+            "temperature": 0.1,
+        }
     }
 
 if "backtest_runs" not in st.session_state:
@@ -54,7 +58,9 @@ col0, col1 = st.columns([1, 3])
 with col0:
     environment = st.selectbox("Environment", ENVIRONMENTS, index=1)
 with col1:
-    st.caption("Set DATABASE_URL and start PostgreSQL via docker-compose for full functionality.")
+    st.caption(
+        "Set DATABASE_URL and start PostgreSQL via docker-compose for full functionality."
+    )
 
 db = get_db_handle()
 if not db.ok:

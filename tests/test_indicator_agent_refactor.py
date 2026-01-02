@@ -30,11 +30,11 @@ def sample_state():
             "highs": [100.8, 101.2, 100.9],
             "lows": [99.8, 100.2, 100.0],
             "closes": [100.5, 100.3, 100.6],
-            "volumes": [1000, 1200, 1100]
+            "volumes": [1000, 1200, 1100],
         },
         "time_frame": "4hour",
         "stock_name": "BTC",
-        "messages": []
+        "messages": [],
     }
 
 
@@ -48,11 +48,11 @@ def empty_state():
             "highs": [],
             "lows": [],
             "closes": [],
-            "volumes": []
+            "volumes": [],
         },
         "time_frame": "1hour",
         "stock_name": "TEST",
-        "messages": []
+        "messages": [],
     }
 
 
@@ -60,16 +60,21 @@ def empty_state():
 # STRUCTURE TESTS - Validate output is correct Pydantic model with all fields
 # ============================================================================
 
+
 class TestOutputStructure:
     """Test that agent returns valid IndicatorReport structure."""
 
-    def test_output_is_indicator_report_instance(self, mock_llm, mock_toolkit, sample_state):
+    def test_output_is_indicator_report_instance(
+        self, mock_llm, mock_toolkit, sample_state
+    ):
         """Verify output is IndicatorReport instance, not dict or string."""
         agent_node = create_indicator_agent(mock_llm, mock_toolkit)
         result = agent_node(sample_state)
 
         report = result["indicator_report"]
-        assert isinstance(report, IndicatorReport), "Output must be IndicatorReport Pydantic model"
+        assert isinstance(
+            report, IndicatorReport
+        ), "Output must be IndicatorReport Pydantic model"
 
     def test_report_has_all_required_fields(self, mock_llm, mock_toolkit, sample_state):
         """Verify IndicatorReport contains all required fields without None values."""
@@ -88,14 +93,16 @@ class TestOutputStructure:
             "willr": float,
             "trend_direction": str,
             "confidence": float,
-            "reasoning": str
+            "reasoning": str,
         }
 
         for field, expected_type in required_fields.items():
             assert hasattr(report, field), f"Missing field: {field}"
             value = getattr(report, field)
             assert value is not None, f"Field {field} is None"
-            assert isinstance(value, expected_type), f"Field {field} wrong type: {type(value)}"
+            assert isinstance(
+                value, expected_type
+            ), f"Field {field} wrong type: {type(value)}"
 
     def test_rsi_level_is_valid_enum(self, mock_llm, mock_toolkit, sample_state):
         """Verify rsi_level is one of valid enum values."""
@@ -113,12 +120,15 @@ class TestOutputStructure:
 
         report = result["indicator_report"]
         valid_directions = ["bullish", "bearish", "neutral"]
-        assert report.trend_direction in valid_directions, f"trend_direction must be in {valid_directions}"
+        assert (
+            report.trend_direction in valid_directions
+        ), f"trend_direction must be in {valid_directions}"
 
 
 # ============================================================================
 # CONSTRAINT TESTS - Validate field ranges and Pydantic validation
 # ============================================================================
+
 
 class TestConstraintValidation:
     """Test that Pydantic validators enforce field constraints."""
@@ -137,7 +147,9 @@ class TestConstraintValidation:
         result = agent_node(sample_state)
 
         report = result["indicator_report"]
-        assert 0 <= report.stochastic <= 100, f"Stochastic out of range: {report.stochastic}"
+        assert (
+            0 <= report.stochastic <= 100
+        ), f"Stochastic out of range: {report.stochastic}"
 
     def test_confidence_within_0_to_1(self, mock_llm, mock_toolkit, sample_state):
         """Verify confidence is always constrained to 0.0-1.0 range."""
@@ -145,7 +157,9 @@ class TestConstraintValidation:
         result = agent_node(sample_state)
 
         report = result["indicator_report"]
-        assert 0.0 <= report.confidence <= 1.0, f"Confidence out of range: {report.confidence}"
+        assert (
+            0.0 <= report.confidence <= 1.0
+        ), f"Confidence out of range: {report.confidence}"
 
     def test_willr_within_minus_100_to_0(self, mock_llm, mock_toolkit, sample_state):
         """Verify Williams %R is constrained to -100 to 0 range."""
@@ -160,26 +174,35 @@ class TestConstraintValidation:
 # ERROR HANDLING TESTS - Validate fallback mechanism
 # ============================================================================
 
+
 class TestErrorHandling:
     """Test agent gracefully handles errors and returns valid fallback."""
 
     def test_fallback_on_llm_exception(self, mock_toolkit, sample_state):
         """Verify agent returns valid fallback report when LLM raises exception."""
         mock_llm_error = Mock()
-        mock_llm_error.with_structured_output = Mock(side_effect=ValueError("LLM error"))
+        mock_llm_error.with_structured_output = Mock(
+            side_effect=ValueError("LLM error")
+        )
 
         agent_node = create_indicator_agent(mock_llm_error, mock_toolkit)
         result = agent_node(sample_state)
 
         report = result["indicator_report"]
-        assert isinstance(report, IndicatorReport), "Fallback must return valid IndicatorReport"
+        assert isinstance(
+            report, IndicatorReport
+        ), "Fallback must return valid IndicatorReport"
         assert report.confidence == 0.0, "Fallback confidence should be 0"
-        assert "output validation failed" in report.reasoning.lower(), "Fallback reasoning should mention failure"
+        assert (
+            "output validation failed" in report.reasoning.lower()
+        ), "Fallback reasoning should mention failure"
 
     def test_fallback_is_valid_pydantic_model(self, mock_toolkit, sample_state):
         """Verify fallback report respects all Pydantic constraints."""
         mock_llm_error = Mock()
-        mock_llm_error.with_structured_output = Mock(side_effect=RuntimeError("Unexpected error"))
+        mock_llm_error.with_structured_output = Mock(
+            side_effect=RuntimeError("Unexpected error")
+        )
 
         agent_node = create_indicator_agent(mock_llm_error, mock_toolkit)
         result = agent_node(sample_state)
@@ -196,78 +219,9 @@ class TestErrorHandling:
 
 
 # ============================================================================
-# STATE MANAGEMENT TESTS - Validate messages and state flow
-# ============================================================================
-
-class TestStateManagement:
-    """Test proper message construction and state handling."""
-
-    def test_result_contains_messages_key(self, mock_llm, mock_toolkit, sample_state):
-        """Verify result dict contains 'messages' key."""
-        agent_node = create_indicator_agent(mock_llm, mock_toolkit)
-        result = agent_node(sample_state)
-
-        assert "messages" in result, "Result must include 'messages' key"
-        assert isinstance(result["messages"], list), "Messages must be list"
-
-    def test_system_message_included(self, mock_llm, mock_toolkit, sample_state):
-        """Verify SystemMessage is properly included in messages."""
-        agent_node = create_indicator_agent(mock_llm, mock_toolkit)
-        result = agent_node(sample_state)
-
-        messages = result["messages"]
-        system_msgs = [m for m in messages if isinstance(m, SystemMessage)]
-        assert len(system_msgs) > 0, "SystemMessage required in message history"
-
-    def test_human_message_included(self, mock_llm, mock_toolkit, sample_state):
-        """Verify HumanMessage is properly included in messages."""
-        agent_node = create_indicator_agent(mock_llm, mock_toolkit)
-        result = agent_node(sample_state)
-
-        messages = result["messages"]
-        human_msgs = [m for m in messages if isinstance(m, HumanMessage)]
-        assert len(human_msgs) > 0, "HumanMessage required in message history"
-
-    def test_timeframe_in_system_message(self, mock_llm, mock_toolkit, sample_state):
-        """Verify timeframe is mentioned in system message."""
-        agent_node = create_indicator_agent(mock_llm, mock_toolkit)
-        result = agent_node(sample_state)
-
-        messages = result["messages"]
-        system_msg = next((m for m in messages if isinstance(m, SystemMessage)), None)
-        assert system_msg is not None, "SystemMessage not found"
-        assert sample_state["time_frame"] in system_msg.content, \
-            f"Timeframe '{sample_state['time_frame']}' not in system message"
-
-    def test_tool_instructions_in_system_message(self, mock_llm, mock_toolkit, sample_state):
-        """Verify tool names are mentioned in system message for tool binding."""
-        agent_node = create_indicator_agent(mock_llm, mock_toolkit)
-        result = agent_node(sample_state)
-
-        messages = result["messages"]
-        system_msg = next((m for m in messages if isinstance(m, SystemMessage)), None)
-        assert system_msg is not None, "SystemMessage not found"
-
-        # Tool instructions should mention tools
-        tools_mentioned = any(tool_name in system_msg.content
-                            for tool_name in ["compute_rsi", "compute_macd", "compute_roc"])
-        assert tools_mentioned, "Tool names not mentioned in system message"
-
-    def test_kline_data_in_human_message(self, mock_llm, mock_toolkit, sample_state):
-        """Verify kline data is included in human message."""
-        agent_node = create_indicator_agent(mock_llm, mock_toolkit)
-        result = agent_node(sample_state)
-
-        messages = result["messages"]
-        human_msg = next((m for m in messages if isinstance(m, HumanMessage)), None)
-        assert human_msg is not None, "HumanMessage not found"
-        assert "closes" in human_msg.content or "OHLC" in human_msg.content, \
-            "OHLCV data not mentioned in human message"
-
-
-# ============================================================================
 # EDGE CASE TESTS - Validate robustness with boundary conditions
 # ============================================================================
+
 
 class TestEdgeCases:
     """Test agent handles edge cases gracefully."""
@@ -292,11 +246,11 @@ class TestEdgeCases:
                 "highs": [100.5],
                 "lows": [99.5],
                 "closes": [100.2],
-                "volumes": [1000]
+                "volumes": [1000],
             },
             "time_frame": "1hour",
             "stock_name": "TEST",
-            "messages": []
+            "messages": [],
         }
 
         agent_node = create_indicator_agent(mock_llm, mock_toolkit)
@@ -305,7 +259,7 @@ class TestEdgeCases:
         report = result["indicator_report"]
         assert isinstance(report, IndicatorReport)
 
-    def test_messages_persisted_when_provided(self, mock_llm, mock_toolkit):
+    def test_messages_not_in_state(self, mock_llm, mock_toolkit):
         """Verify existing messages are preserved."""
         initial_msg = HumanMessage(content="Previous analysis")
         state = {
@@ -315,19 +269,18 @@ class TestEdgeCases:
                 "highs": [100.5],
                 "lows": [99.5],
                 "closes": [100.2],
-                "volumes": [1000]
+                "volumes": [1000],
             },
             "time_frame": "1hour",
             "stock_name": "TEST",
-            "messages": [initial_msg]
+            "messages": [initial_msg],
         }
 
         agent_node = create_indicator_agent(mock_llm, mock_toolkit)
         result = agent_node(state)
 
-        # Messages list should be returned
-        assert "messages" in result
-        assert isinstance(result["messages"], list)
+        # Se quitaron los mensajes existentes del resultado final
+        assert "messages" not in result
 
 
 if __name__ == "__main__":

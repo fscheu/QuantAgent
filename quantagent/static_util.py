@@ -8,14 +8,37 @@ import numpy as np
 import pandas as pd
 
 import quantagent.color_style as color
-from quantagent.graph_util import (fit_trendlines_high_low,
-                                   fit_trendlines_single, get_line_points,
-                                   split_line_into_segments)
+from quantagent.graph_util import (
+    fit_trendlines_high_low,
+    fit_trendlines_single,
+    get_line_points,
+    split_line_into_segments,
+)
 
 matplotlib.use("Agg")
 
 
+def standardize_ohlcv_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Return a copy of the DataFrame with canonical OHLCV column names."""
+    column_mapping = {
+        "timestamp": "Datetime",
+        "open": "Open",
+        "high": "High",
+        "low": "Low",
+        "close": "Close",
+        "volume": "Volume",
+    }
+    return df.rename(columns=column_mapping)
+
+
+def format_ohlcv_for_agents(df: pd.DataFrame) -> dict:
+    """Convert an OHLCV DataFrame into the dict expected by LangGraph agents."""
+    standardized = standardize_ohlcv_columns(df)
+    return read_and_format_ohlcv(standardized)
+
+
 def read_and_format_ohlcv(df: pd.DataFrame) -> dict:
+
     """
     Format OHLCV DataFrame for trading graph analysis.
 

@@ -239,7 +239,9 @@ class TestRiskManager:
     def test_validate_trade_daily_loss_exceeded(self):
         """Test validation fails if daily loss exceeded."""
         # Daily loss: -$6,000 (exceeds -5% of $100k = -$5,000)
-        self.risk_manager.daily_pnl_tracker[__import__('datetime').date.today()] = -6000.0
+        self.risk_manager.daily_pnl_tracker[__import__("datetime").date.today()] = (
+            -6000.0
+        )
 
         is_valid, reason = self.risk_manager.validate_trade(
             symbol="SPX",
@@ -265,7 +267,7 @@ class TestRiskManager:
 
     def test_get_daily_pnl_no_db(self):
         """Test daily P&L calculation without database."""
-        today = __import__('datetime').date.today()
+        today = __import__("datetime").date.today()
         self.risk_manager.daily_pnl_tracker[today] = -1000.0
 
         pnl = self.risk_manager.get_daily_pnl()
@@ -278,7 +280,7 @@ class TestRiskManager:
 
         self.risk_manager.on_trade_executed(trade)
 
-        today = __import__('datetime').date.today()
+        today = __import__("datetime").date.today()
         assert self.risk_manager.daily_pnl_tracker[today] == 500.0
 
     def test_on_trade_executed_triggers_circuit_breaker(self):
@@ -295,7 +297,7 @@ class TestRiskManager:
 
     def test_reset_daily_tracker(self):
         """Test resetting daily tracker."""
-        today = __import__('datetime').date.today()
+        today = __import__("datetime").date.today()
         self.risk_manager.daily_pnl_tracker[today] = -1000.0
         self.risk_manager.circuit_breaker_triggered = True
 
@@ -399,7 +401,9 @@ class TestOrderManager:
         """Test decision is rejected if position exceeds limit."""
         # Use custom position sizer that returns larger qty
         large_sizer = Mock()
-        large_sizer.calculate_size.return_value = 1.0  # 1 BTC = $42,000 (420% of $10k portfolio!)
+        large_sizer.calculate_size.return_value = (
+            1.0  # 1 BTC = $42,000 (420% of $10k portfolio!)
+        )
         self.order_manager.position_sizer = large_sizer
 
         self.portfolio.get_total_value.return_value = 10000.0  # Smaller portfolio
@@ -463,25 +467,33 @@ class TestFullEndToEndIntegration:
 
         # Critical validations: Order must be filled (reached broker)
         assert result is not None, "Valid LONG decision must return filled order"
-        assert result.status == OrderStatus.FILLED, f"Order status should be FILLED, got {result.status}"
+        assert (
+            result.status == OrderStatus.FILLED
+        ), f"Order status should be FILLED, got {result.status}"
         assert result.filled_at is not None, "Order must have fill timestamp"
 
         # Validate slippage was applied (proves broker executed)
         # BUY slippage: price * 1.01
         expected_fill_price = 42000.0 * 1.01
-        assert result.average_fill_price == pytest.approx(expected_fill_price, rel=0.001), \
-            f"Expected fill price {expected_fill_price}, got {result.average_fill_price}"
+        assert result.average_fill_price == pytest.approx(
+            expected_fill_price, rel=0.001
+        ), f"Expected fill price {expected_fill_price}, got {result.average_fill_price}"
 
         # Validate quantity was sized correctly (proves position_sizer was called)
         # Expected qty = (portfolio_value * base_pct * confidence) / price
         expected_qty = (100000.0 * 0.05 * 0.8) / 42000.0
-        assert result.filled_quantity == pytest.approx(expected_qty, rel=0.001), \
-            f"Expected qty {expected_qty}, got {result.filled_quantity}"
+        assert result.filled_quantity == pytest.approx(
+            expected_qty, rel=0.001
+        ), f"Expected qty {expected_qty}, got {result.filled_quantity}"
 
         # Critical: verify portfolio AND database were updated (full chain executed)
-        assert self.portfolio.execute_trade.called, "Portfolio.execute_trade should have been called"
+        assert (
+            self.portfolio.execute_trade.called
+        ), "Portfolio.execute_trade should have been called"
         self.portfolio.execute_trade.assert_called_once()
-        assert self.db.add.called, "Database.add should have been called to persist trade"
+        assert (
+            self.db.add.called
+        ), "Database.add should have been called to persist trade"
         self.db.add.assert_called()
         assert self.db.commit.called, "Database.commit should have been called"
         self.db.commit.assert_called()
@@ -507,27 +519,37 @@ class TestFullEndToEndIntegration:
         # Critical validations: Order must be filled (reached broker)
         assert result is not None, "Valid SHORT decision must return filled order"
         assert result.side == OrderSide.SELL, "SHORT decision must create SELL order"
-        assert result.status == OrderStatus.FILLED, f"Order status should be FILLED, got {result.status}"
+        assert (
+            result.status == OrderStatus.FILLED
+        ), f"Order status should be FILLED, got {result.status}"
 
         # Validate slippage was applied (proves broker executed)
         # SELL slippage: price * 0.99
         expected_fill_price = 42000.0 * 0.99
-        assert result.average_fill_price == pytest.approx(expected_fill_price, rel=0.001), \
-            f"Expected fill price {expected_fill_price}, got {result.average_fill_price}"
+        assert result.average_fill_price == pytest.approx(
+            expected_fill_price, rel=0.001
+        ), f"Expected fill price {expected_fill_price}, got {result.average_fill_price}"
 
         # Validate quantity was sized correctly
         expected_qty = (100000.0 * 0.05 * 0.6) / 42000.0
-        assert result.filled_quantity == pytest.approx(expected_qty, rel=0.001), \
-            f"Expected qty {expected_qty}, got {result.filled_quantity}"
+        assert result.filled_quantity == pytest.approx(
+            expected_qty, rel=0.001
+        ), f"Expected qty {expected_qty}, got {result.filled_quantity}"
 
         # Critical: verify chain of execution
         # 1. Portfolio must be updated
-        assert self.portfolio.execute_trade.called, "Portfolio.execute_trade should have been called"
+        assert (
+            self.portfolio.execute_trade.called
+        ), "Portfolio.execute_trade should have been called"
         self.portfolio.execute_trade.assert_called_once()
 
         # 2. Database must be updated
-        assert self.db.add.called, "Database.add should have been called to persist trade"
-        assert self.db.commit.called, "Database.commit should have been called to finalize trade"
+        assert (
+            self.db.add.called
+        ), "Database.add should have been called to persist trade"
+        assert (
+            self.db.commit.called
+        ), "Database.commit should have been called to finalize trade"
 
     def test_full_flow_invalid_trade_rejected_before_broker(self):
         """Test invalid trade is REJECTED before reaching broker (validation gate)."""
@@ -557,7 +579,9 @@ class TestFullEndToEndIntegration:
         """Test position size exceeding 10% limit is rejected before broker."""
         # Use custom position sizer returning large qty
         large_sizer = Mock()
-        large_sizer.calculate_size.return_value = 3.0  # 3 BTC = $126,000 (126% of portfolio!)
+        large_sizer.calculate_size.return_value = (
+            3.0  # 3 BTC = $126,000 (126% of portfolio!)
+        )
         self.order_manager.position_sizer = large_sizer
 
         # Execute decision
@@ -654,9 +678,9 @@ class TestFullEndToEndIntegration:
         """Test daily P&L tracking accumulates correctly across multiple trades."""
         # Mock multiple trades with different P&L
         self.portfolio.execute_trade.side_effect = [
-            Mock(pnl=Decimal("500.00")),   # +$500
+            Mock(pnl=Decimal("500.00")),  # +$500
             Mock(pnl=Decimal("-200.00")),  # -$200
-            Mock(pnl=Decimal("300.00")),   # +$300
+            Mock(pnl=Decimal("300.00")),  # +$300
         ]
 
         # Execute three trades

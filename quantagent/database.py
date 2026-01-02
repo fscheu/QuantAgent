@@ -20,24 +20,14 @@ if not DATABASE_URL:
 if DATABASE_URL.startswith("sqlite"):
     # SQLite needs special configuration
     engine = create_engine(
-        DATABASE_URL,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool
+        DATABASE_URL, connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
 else:
     # For other databases (PostgreSQL, MySQL, etc.)
-    engine = create_engine(
-        DATABASE_URL,
-        pool_pre_ping=True,
-        echo=False
-    )
+    engine = create_engine(DATABASE_URL, pool_pre_ping=True, echo=False)
 
 # Create session factory
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Base class for all models
 Base = declarative_base()

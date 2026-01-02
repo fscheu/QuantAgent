@@ -19,11 +19,16 @@ def render(db, environment: str) -> None:
                     .limit(200)
                     .all()
                 )
-                st.dataframe(df_from_query(q1), use_container_width=True)
+                st.dataframe(df_from_query(q1), width='stretch')
 
                 st.markdown("**Positions**")
-                q2 = s.query(db.models.Position).order_by(db.models.Position.opened_at.desc()).limit(200).all()
-                st.dataframe(df_from_query(q2), use_container_width=True)
+                q2 = (
+                    s.query(db.models.Position)
+                    .order_by(db.models.Position.opened_at.desc())
+                    .limit(200)
+                    .all()
+                )
+                st.dataframe(df_from_query(q2), width='stretch')
 
                 st.markdown("**Recent Trades**")
                 q3 = (
@@ -33,9 +38,8 @@ def render(db, environment: str) -> None:
                     .limit(200)
                     .all()
                 )
-                st.dataframe(df_from_query(q3), use_container_width=True)
+                st.dataframe(df_from_query(q3), width='stretch')
             except Exception as e:
                 st.info(f"No orders/positions or error reading: {e}")
     else:
         st.info("Connect DB to view orders & positions.")
-

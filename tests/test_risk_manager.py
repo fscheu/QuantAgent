@@ -15,8 +15,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from quantagent.models import (
-    Order, OrderSide, OrderType, OrderStatus, Trade,
-    Environment, Base
+    Order,
+    OrderSide,
+    OrderType,
+    OrderStatus,
+    Trade,
+    Environment,
+    Base,
 )
 from quantagent.portfolio.manager import PortfolioManager
 from quantagent.risk.manager import RiskManager
@@ -38,9 +43,7 @@ def test_db():
 def portfolio(test_db):
     """Create portfolio manager with initial capital."""
     return PortfolioManager(
-        initial_cash=100000.0,
-        environment=Environment.PAPER,
-        db=test_db
+        initial_cash=100000.0, environment=Environment.PAPER, db=test_db
     )
 
 
@@ -53,7 +56,7 @@ def risk_manager(portfolio, test_db):
         max_position_size_pct=10.0,
         max_daily_loss_pct=5.0,
         environment=Environment.PAPER,
-        db=test_db
+        db=test_db,
     )
 
 
@@ -235,7 +238,10 @@ class TestRiskManagerCircuitBreaker:
         is_active, reason = risk_manager.check_circuit_breaker()
         # At exactly limit, should trigger
         assert is_active is True or is_active is False  # Edge case: equality
-        assert risk_manager.circuit_breaker_active is True or risk_manager.circuit_breaker_active is False
+        assert (
+            risk_manager.circuit_breaker_active is True
+            or risk_manager.circuit_breaker_active is False
+        )
 
     def test_circuit_breaker_reset(self, risk_manager):
         """Verify circuit breaker can be reset."""
@@ -388,15 +394,13 @@ class TestRiskManagerEdgeCases:
     def test_multiple_environment_isolation(self, test_db):
         """Verify backtest trades don't affect paper risk checks."""
         portfolio_paper = PortfolioManager(
-            initial_cash=100000.0,
-            environment=Environment.PAPER,
-            db=test_db
+            initial_cash=100000.0, environment=Environment.PAPER, db=test_db
         )
         risk_paper = RiskManager(
             initial_capital=100000.0,
             portfolio=portfolio_paper,
             environment=Environment.PAPER,
-            db=test_db
+            db=test_db,
         )
 
         # Add backtest trade (should be ignored)

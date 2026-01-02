@@ -41,24 +41,26 @@ class TestDataProvider:
         """Verify get_ohlc returns DataFrame with correct columns."""
         start, end = sample_dates
 
-        with patch.object(provider, '_fetch_yfinance') as mock_fetch:
+        with patch.object(provider, "_fetch_yfinance") as mock_fetch:
             # Mock API response
-            mock_fetch.return_value = pd.DataFrame({
-                'timestamp': [start],
-                'open': [100.0],
-                'high': [105.0],
-                'low': [95.0],
-                'close': [102.0],
-                'volume': [1000.0]
-            })
+            mock_fetch.return_value = pd.DataFrame(
+                {
+                    "timestamp": [start],
+                    "open": [100.0],
+                    "high": [105.0],
+                    "low": [95.0],
+                    "close": [102.0],
+                    "volume": [1000.0],
+                }
+            )
 
-            result = provider.get_ohlc('BTC', '1h', start, end)
+            result = provider.get_ohlc("BTC", "1h", start, end)
 
             # Validate type
             assert isinstance(result, pd.DataFrame)
 
             # Validate columns
-            required_columns = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
+            required_columns = ["timestamp", "open", "high", "low", "close", "volume"]
             for col in required_columns:
                 assert col in result.columns
 
@@ -66,14 +68,23 @@ class TestDataProvider:
         """Verify empty DataFrame returned when no data available."""
         start, end = sample_dates
 
-        with patch.object(provider, '_fetch_yfinance') as mock_fetch:
-            mock_fetch.return_value = pd.DataFrame(columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+        with patch.object(provider, "_fetch_yfinance") as mock_fetch:
+            mock_fetch.return_value = pd.DataFrame(
+                columns=["timestamp", "open", "high", "low", "close", "volume"]
+            )
 
-            result = provider.get_ohlc('INVALID', '1h', start, end)
+            result = provider.get_ohlc("INVALID", "1h", start, end)
 
             assert isinstance(result, pd.DataFrame)
             assert len(result) == 0
-            assert list(result.columns) == ['timestamp', 'open', 'high', 'low', 'close', 'volume']
+            assert list(result.columns) == [
+                "timestamp",
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume",
+            ]
 
     # Cache-Aside Pattern Tests
 
@@ -83,41 +94,43 @@ class TestDataProvider:
 
         # Pre-populate database with data
         cached_data = MarketData(
-            symbol='BTC',
-            timeframe='1h',
+            symbol="BTC",
+            timeframe="1h",
             timestamp=start,
             open=100.0,
             high=105.0,
             low=95.0,
             close=102.0,
-            volume=1000.0
+            volume=1000.0,
         )
         db_session.add(cached_data)
         db_session.commit()
 
-        with patch.object(provider, '_fetch_yfinance') as mock_fetch:
-            result = provider.get_ohlc('BTC', '1h', start, start)
+        with patch.object(provider, "_fetch_yfinance") as mock_fetch:
+            result = provider.get_ohlc("BTC", "1h", start, start)
 
             # Should NOT call API if data is cached
             # Note: May still call for gaps, so we check result instead
             assert len(result) >= 1
-            assert float(result.iloc[0]['close']) == 102.0
+            assert float(result.iloc[0]["close"]) == 102.0
 
     def test_get_ohlc_fetches_from_api_on_cache_miss(self, provider, sample_dates):
         """Verify provider fetches from API when cache is empty."""
         start, end = sample_dates
 
-        with patch.object(provider, '_fetch_yfinance') as mock_fetch:
-            mock_fetch.return_value = pd.DataFrame({
-                'timestamp': [start],
-                'open': [100.0],
-                'high': [105.0],
-                'low': [95.0],
-                'close': [102.0],
-                'volume': [1000.0]
-            })
+        with patch.object(provider, "_fetch_yfinance") as mock_fetch:
+            mock_fetch.return_value = pd.DataFrame(
+                {
+                    "timestamp": [start],
+                    "open": [100.0],
+                    "high": [105.0],
+                    "low": [95.0],
+                    "close": [102.0],
+                    "volume": [1000.0],
+                }
+            )
 
-            result = provider.get_ohlc('BTC', '1h', start, end)
+            result = provider.get_ohlc("BTC", "1h", start, end)
 
             # Should call API when no cached data
             assert mock_fetch.call_count > 0
@@ -127,23 +140,26 @@ class TestDataProvider:
         """Verify fetched data is stored in database."""
         start, end = sample_dates
 
-        with patch.object(provider, '_fetch_yfinance') as mock_fetch:
-            mock_fetch.return_value = pd.DataFrame({
-                'timestamp': [start],
-                'open': [100.0],
-                'high': [105.0],
-                'low': [95.0],
-                'close': [102.0],
-                'volume': [1000.0]
-            })
+        with patch.object(provider, "_fetch_yfinance") as mock_fetch:
+            mock_fetch.return_value = pd.DataFrame(
+                {
+                    "timestamp": [start],
+                    "open": [100.0],
+                    "high": [105.0],
+                    "low": [95.0],
+                    "close": [102.0],
+                    "volume": [1000.0],
+                }
+            )
 
-            provider.get_ohlc('BTC', '1h', start, end)
+            provider.get_ohlc("BTC", "1h", start, end)
 
             # Check database has the record
-            stored = db_session.query(MarketData).filter(
-                MarketData.symbol == 'BTC',
-                MarketData.timestamp == start
-            ).first()
+            stored = (
+                db_session.query(MarketData)
+                .filter(MarketData.symbol == "BTC", MarketData.timestamp == start)
+                .first()
+            )
 
             assert stored is not None
             assert float(stored.close) == 102.0
@@ -152,20 +168,20 @@ class TestDataProvider:
 
     def test_to_yfinance_symbol_mapping(self, provider):
         """Verify symbol mapping to yfinance format."""
-        assert provider._to_yfinance_symbol('BTC') == 'BTC-USD'
-        assert provider._to_yfinance_symbol('SPX') == '^GSPC'
-        assert provider._to_yfinance_symbol('CL') == 'CL=F'
+        assert provider._to_yfinance_symbol("BTC") == "BTC-USD"
+        assert provider._to_yfinance_symbol("SPX") == "^GSPC"
+        assert provider._to_yfinance_symbol("CL") == "CL=F"
         # Unknown symbols pass through
-        assert provider._to_yfinance_symbol('AAPL') == 'AAPL'
+        assert provider._to_yfinance_symbol("AAPL") == "AAPL"
 
     def test_to_yfinance_interval_mapping(self, provider):
         """Verify timeframe mapping to yfinance interval."""
-        assert provider._to_yfinance_interval('1h') == '1h'
-        assert provider._to_yfinance_interval('4h') == '4h'
-        assert provider._to_yfinance_interval('1d') == '1d'
-        assert provider._to_yfinance_interval('1w') == '1wk'
+        assert provider._to_yfinance_interval("1h") == "1h"
+        assert provider._to_yfinance_interval("4h") == "4h"
+        assert provider._to_yfinance_interval("1d") == "1d"
+        assert provider._to_yfinance_interval("1w") == "1wk"
         # Unknown defaults to 1h
-        assert provider._to_yfinance_interval('unknown') == '1h'
+        assert provider._to_yfinance_interval("unknown") == "1h"
 
     def test_rows_to_df_conversion(self, provider):
         """Verify SQLAlchemy rows convert to DataFrame correctly."""
@@ -182,7 +198,7 @@ class TestDataProvider:
 
         assert isinstance(df, pd.DataFrame)
         assert len(df) == 1
-        assert df.iloc[0]['close'] == 102.0
+        assert df.iloc[0]["close"] == 102.0
 
     def test_rows_to_df_empty_list(self, provider):
         """Verify empty list returns empty DataFrame with correct columns."""
@@ -190,7 +206,14 @@ class TestDataProvider:
 
         assert isinstance(df, pd.DataFrame)
         assert len(df) == 0
-        assert list(df.columns) == ['timestamp', 'open', 'high', 'low', 'close', 'volume']
+        assert list(df.columns) == [
+            "timestamp",
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+        ]
 
     # Gap Detection Tests
 
@@ -200,16 +223,18 @@ class TestDataProvider:
 
         # Cached data starts 2 days after requested start
         cached_start = start + timedelta(days=2)
-        cached_df = pd.DataFrame({
-            'timestamp': [cached_start],
-            'open': [100.0],
-            'high': [105.0],
-            'low': [95.0],
-            'close': [102.0],
-            'volume': [1000.0]
-        })
+        cached_df = pd.DataFrame(
+            {
+                "timestamp": [cached_start],
+                "open": [100.0],
+                "high": [105.0],
+                "low": [95.0],
+                "close": [102.0],
+                "volume": [1000.0],
+            }
+        )
 
-        gaps = provider._find_gaps(cached_df, start, end, '1d')
+        gaps = provider._find_gaps(cached_df, start, end, "1d")
 
         # Should find gap at start
         assert len(gaps) > 0
@@ -221,16 +246,18 @@ class TestDataProvider:
 
         # Cached data ends 2 days before requested end
         cached_end = end - timedelta(days=2)
-        cached_df = pd.DataFrame({
-            'timestamp': [cached_end],
-            'open': [100.0],
-            'high': [105.0],
-            'low': [95.0],
-            'close': [102.0],
-            'volume': [1000.0]
-        })
+        cached_df = pd.DataFrame(
+            {
+                "timestamp": [cached_end],
+                "open": [100.0],
+                "high": [105.0],
+                "low": [95.0],
+                "close": [102.0],
+                "volume": [1000.0],
+            }
+        )
 
-        gaps = provider._find_gaps(cached_df, start, end, '1d')
+        gaps = provider._find_gaps(cached_df, start, end, "1d")
 
         # Should find gap at end
         assert len(gaps) > 0
@@ -240,8 +267,10 @@ class TestDataProvider:
         """Verify gap detection returns full range when no cached data."""
         start, end = sample_dates
 
-        empty_df = pd.DataFrame(columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-        gaps = provider._find_gaps(empty_df, start, end, '1d')
+        empty_df = pd.DataFrame(
+            columns=["timestamp", "open", "high", "low", "close", "volume"]
+        )
+        gaps = provider._find_gaps(empty_df, start, end, "1d")
 
         # Should return entire range as gap
         assert len(gaps) == 1
@@ -249,39 +278,43 @@ class TestDataProvider:
 
     # Cache Management Tests
 
-    def test_get_cache_stats_returns_correct_structure(self, provider, db_session, sample_dates):
+    def test_get_cache_stats_returns_correct_structure(
+        self, provider, db_session, sample_dates
+    ):
         """Verify cache stats returns dictionary with expected fields."""
         stats = provider.get_cache_stats()
 
         assert isinstance(stats, dict)
-        assert 'total_records' in stats
-        assert 'symbols' in stats
-        assert 'earliest' in stats
-        assert 'latest' in stats
+        assert "total_records" in stats
+        assert "symbols" in stats
+        assert "earliest" in stats
+        assert "latest" in stats
 
-    def test_get_cache_stats_filters_by_symbol(self, provider, db_session, sample_dates):
+    def test_get_cache_stats_filters_by_symbol(
+        self, provider, db_session, sample_dates
+    ):
         """Verify cache stats can filter by symbol."""
         start, _ = sample_dates
 
         # Add data for multiple symbols
-        for symbol in ['BTC', 'SPX']:
+        for symbol in ["BTC", "SPX"]:
             record = MarketData(
                 symbol=symbol,
-                timeframe='1h',
+                timeframe="1h",
                 timestamp=start,
                 open=100.0,
                 high=105.0,
                 low=95.0,
                 close=102.0,
-                volume=1000.0
+                volume=1000.0,
             )
             db_session.add(record)
         db_session.commit()
 
-        stats = provider.get_cache_stats(symbol='BTC')
+        stats = provider.get_cache_stats(symbol="BTC")
 
-        assert stats['total_records'] >= 1
-        assert 'BTC' in stats['symbols']
+        assert stats["total_records"] >= 1
+        assert "BTC" in stats["symbols"]
 
     def test_clear_cache_removes_all_data(self, provider, db_session, sample_dates):
         """Verify clear_cache removes all cached data."""
@@ -289,14 +322,14 @@ class TestDataProvider:
 
         # Add test data
         record = MarketData(
-            symbol='BTC',
-            timeframe='1h',
+            symbol="BTC",
+            timeframe="1h",
             timestamp=start,
             open=100.0,
             high=105.0,
             low=95.0,
             close=102.0,
-            volume=1000.0
+            volume=1000.0,
         )
         db_session.add(record)
         db_session.commit()
@@ -314,26 +347,28 @@ class TestDataProvider:
         start, _ = sample_dates
 
         # Add data for multiple symbols
-        for symbol in ['BTC', 'SPX']:
+        for symbol in ["BTC", "SPX"]:
             record = MarketData(
                 symbol=symbol,
-                timeframe='1h',
+                timeframe="1h",
                 timestamp=start,
                 open=100.0,
                 high=105.0,
                 low=95.0,
                 close=102.0,
-                volume=1000.0
+                volume=1000.0,
             )
             db_session.add(record)
         db_session.commit()
 
         # Clear only BTC
-        count = provider.clear_cache(symbol='BTC')
+        count = provider.clear_cache(symbol="BTC")
 
         assert count >= 1
         # SPX should still exist
-        remaining = db_session.query(MarketData).filter(MarketData.symbol == 'SPX').count()
+        remaining = (
+            db_session.query(MarketData).filter(MarketData.symbol == "SPX").count()
+        )
         assert remaining >= 1
 
     # Edge Cases
@@ -342,10 +377,10 @@ class TestDataProvider:
         """Verify provider handles API errors without crashing."""
         start, end = sample_dates
 
-        with patch.object(provider, '_fetch_yfinance') as mock_fetch:
+        with patch.object(provider, "_fetch_yfinance") as mock_fetch:
             mock_fetch.side_effect = Exception("API Error")
 
-            result = provider.get_ohlc('BTC', '1h', start, end)
+            result = provider.get_ohlc("BTC", "1h", start, end)
 
             # Should return empty DataFrame instead of crashing
             assert isinstance(result, pd.DataFrame)
@@ -354,23 +389,26 @@ class TestDataProvider:
         """Verify _store_data doesn't create duplicate records."""
         start, _ = sample_dates
 
-        df = pd.DataFrame({
-            'timestamp': [start],
-            'open': [100.0],
-            'high': [105.0],
-            'low': [95.0],
-            'close': [102.0],
-            'volume': [1000.0]
-        })
+        df = pd.DataFrame(
+            {
+                "timestamp": [start],
+                "open": [100.0],
+                "high": [105.0],
+                "low": [95.0],
+                "close": [102.0],
+                "volume": [1000.0],
+            }
+        )
 
         # Store same data twice
-        provider._store_data('BTC', '1h', df)
-        provider._store_data('BTC', '1h', df)
+        provider._store_data("BTC", "1h", df)
+        provider._store_data("BTC", "1h", df)
 
         # Should only have one record
-        count = db_session.query(MarketData).filter(
-            MarketData.symbol == 'BTC',
-            MarketData.timestamp == start
-        ).count()
+        count = (
+            db_session.query(MarketData)
+            .filter(MarketData.symbol == "BTC", MarketData.timestamp == start)
+            .count()
+        )
 
         assert count == 1

@@ -46,9 +46,7 @@ class RiskManager:
         self.db = db or SessionLocal()
         self.circuit_breaker_active = False
 
-    def validate_trade(
-        self, symbol: str, qty: float, price: float
-    ) -> Tuple[bool, str]:
+    def validate_trade(self, symbol: str, qty: float, price: float) -> Tuple[bool, str]:
         """Validate trade before execution.
 
         Checks:
@@ -71,10 +69,15 @@ class RiskManager:
         # Check 1: Sufficient capital
         trade_value = qty * price
         if self.portfolio.cash < trade_value:
-            return False, f"Insufficient capital: need {trade_value}, have {self.portfolio.cash}"
+            return (
+                False,
+                f"Insufficient capital: need {trade_value}, have {self.portfolio.cash}",
+            )
 
         # Check 2: Position size limit
-        max_position_value = (self.max_position_size_pct / 100.0) * self.portfolio.get_total_value()
+        max_position_value = (
+            self.max_position_size_pct / 100.0
+        ) * self.portfolio.get_total_value()
         if trade_value > max_position_value:
             return False, (
                 f"Position too large: {trade_value} exceeds max {max_position_value} "
@@ -103,7 +106,10 @@ class RiskManager:
 
         if abs(daily_loss) >= max_daily_loss:
             self.circuit_breaker_active = True
-            return True, f"Circuit breaker activated: daily loss {abs(daily_loss)} >= limit {max_daily_loss}"
+            return (
+                True,
+                f"Circuit breaker activated: daily loss {abs(daily_loss)} >= limit {max_daily_loss}",
+            )
 
         return False, "Circuit breaker not active"
 
@@ -140,13 +146,19 @@ class RiskManager:
         Returns:
             Daily P&L (negative if loss)
         """
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = datetime.utcnow().replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
 
-        daily_trades = self.db.query(Trade).filter(
-            Trade.environment == self.environment,
-            Trade.closed_at >= today_start,
-            Trade.pnl.isnot(None),
-        ).all()
+        daily_trades = (
+            self.db.query(Trade)
+            .filter(
+                Trade.environment == self.environment,
+                Trade.closed_at >= today_start,
+                Trade.pnl.isnot(None),
+            )
+            .all()
+        )
 
         total_daily_pnl = sum(float(t.pnl) for t in daily_trades)
         return total_daily_pnl

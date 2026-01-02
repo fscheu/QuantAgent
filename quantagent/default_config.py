@@ -5,18 +5,12 @@ API keys and provider selection should be set via environment variables (.env fi
 
 # Default model configuration by provider
 DEFAULT_MODELS = {
-    "openai": {
-        "agent": "gpt-4o-mini",
-        "graph": "gpt-4o"
-    },
+    "openai": {"agent": "gpt-4o-mini", "graph": "gpt-4o"},
     "anthropic": {
         "agent": "claude-haiku-4-5-20251001",
-        "graph": "claude-haiku-4-5-20251001"
+        "graph": "claude-haiku-4-5-20251001",
     },
-    "qwen": {
-        "agent": "qwen3-max",
-        "graph": "qwen3-vl-plus"
-    }
+    "qwen": {"agent": "qwen3-max", "graph": "qwen3-vl-plus"},
 }
 
 # Default temperature (professional, deterministic outputs)

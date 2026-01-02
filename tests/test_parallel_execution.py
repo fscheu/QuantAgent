@@ -32,7 +32,7 @@ def test_parallel_execution():
         "kline_data": df_dict,
         "time_frame": "4hour",
         "stock_name": "BTC",
-        "messages": []
+        "messages": [],
     }
 
     # Execute graph and measure time

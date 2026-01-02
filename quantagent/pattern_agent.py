@@ -55,7 +55,7 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
                     toolkit.generate_kline_image.invoke,
                     {"kline_data": state["kline_data"]},
                     retries=3,
-                    wait_sec=4
+                    wait_sec=4,
                 )
                 pattern_image_b64 = tool_result.get("pattern_image")
             except Exception as e:
@@ -75,7 +75,9 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
                     "text": (
                         f"This is a {time_frame} candlestick chart from recent OHLC market data.\n\n"
                         "Known patterns to identify:\n"
-                        + "\n".join([f"- {k}: {v}" for k, v in pattern_descriptions.items()])
+                        + "\n".join(
+                            [f"- {k}: {v}" for k, v in pattern_descriptions.items()]
+                        )
                         + "\n\nDetermine which patterns (if any) match the chart. "
                         "Respond in JSON format:\n"
                         "{\n"
@@ -94,7 +96,9 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
             ]
 
             human_msg = HumanMessage(content=image_prompt)
-            system_msg = SystemMessage(content="You are a pattern recognition assistant analyzing candlestick charts.")
+            system_msg = SystemMessage(
+                content="You are a pattern recognition assistant analyzing candlestick charts."
+            )
 
             # Create agent-specific messages (will be added to state via reducer)
             agent_messages = [system_msg, human_msg]
@@ -102,21 +106,17 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
             try:
                 # Try with system message
                 final_response = invoke_with_retry(
-                    graph_llm.invoke,
-                    agent_messages,
-                    retries=3,
-                    wait_sec=8
+                    graph_llm.invoke, agent_messages, retries=3, wait_sec=8
                 )
             except Exception as e:
                 # Fallback: retry without system message for Anthropic compatibility
                 if "at least one message" in str(e).lower():
-                    print("Retrying without system message for Anthropic compatibility...")
+                    print(
+                        "Retrying without system message for Anthropic compatibility..."
+                    )
                     try:
                         final_response = invoke_with_retry(
-                            graph_llm.invoke,
-                            [human_msg],
-                            retries=3,
-                            wait_sec=8
+                            graph_llm.invoke, [human_msg], retries=3, wait_sec=8
                         )
                     except Exception as retry_error:
                         reasoning = f"Vision LLM failed: {str(retry_error)}"
@@ -131,14 +131,18 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
                     # Extract JSON from response (handle markdown)
                     response_text = final_response.content
                     if "```json" in response_text:
-                        response_text = response_text.split("```json")[1].split("```")[0]
+                        response_text = response_text.split("```json")[1].split("```")[
+                            0
+                        ]
                     elif "```" in response_text:
                         response_text = response_text.split("```")[1].split("```")[0]
 
                     response_dict = json.loads(response_text.strip())
                     pattern_detected = response_dict.get("patterns_detected", [])
                     confidence = float(response_dict.get("confidence", 0.0))
-                    breakout_probability = float(response_dict.get("breakout_probability", 0.0))
+                    breakout_probability = float(
+                        response_dict.get("breakout_probability", 0.0)
+                    )
                     reasoning = response_dict.get("reasoning", "Pattern detected")
                 except (json.JSONDecodeError, ValueError, KeyError) as parse_err:
                     reasoning = f"Pattern analysis completed with fallback parsing: {final_response.content[:100]}"
@@ -147,10 +151,12 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
         try:
             pattern_report = PatternReport(
                 patterns_detected=pattern_detected or [],
-                primary_pattern=pattern_detected[0] if pattern_detected else "failed to analyze",
+                primary_pattern=(
+                    pattern_detected[0] if pattern_detected else "failed to analyze"
+                ),
                 confidence=min(1.0, max(0.0, confidence)),
                 breakout_probability=min(1.0, max(0.0, breakout_probability)),
-                reasoning=reasoning
+                reasoning=reasoning,
             )
         except Exception as e:
             # Fallback valid report
@@ -159,7 +165,7 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
                 primary_pattern="failed to analyze",
                 confidence=0.0,
                 breakout_probability=0.0,
-                reasoning=f"Failed to create report: {str(e)}"
+                reasoning=f"Failed to create report: {str(e)}",
             )
 
         # Don't add messages to shared state - each agent only needs them for its LLM call

@@ -100,7 +100,9 @@ class PaperBroker(Broker):
 
     def cancel_order(self, order_id: str) -> bool:
         """Cancel an order (MVP: not supported in paper broker)."""
-        logger.warning(f"Order cancellation not yet supported in paper broker (order_id={order_id})")
+        logger.warning(
+            f"Order cancellation not yet supported in paper broker (order_id={order_id})"
+        )
         return False
 
     def get_balance(self) -> float:

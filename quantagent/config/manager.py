@@ -38,9 +38,9 @@ class ConfigManager:
         Returns:
             StrategyConfig object (persisted)
         """
-        existing = self.db.query(StrategyConfig).filter(
-            StrategyConfig.name == name
-        ).first()
+        existing = (
+            self.db.query(StrategyConfig).filter(StrategyConfig.name == name).first()
+        )
 
         if existing:
             # Update existing
@@ -71,9 +71,9 @@ class ConfigManager:
         Returns:
             Configuration dict or None if not found
         """
-        db_config = self.db.query(StrategyConfig).filter(
-            StrategyConfig.name == name
-        ).first()
+        db_config = (
+            self.db.query(StrategyConfig).filter(StrategyConfig.name == name).first()
+        )
 
         return db_config.json_config if db_config else None
 
@@ -86,9 +86,7 @@ class ConfigManager:
         Returns:
             StrategyConfig object or None if not found
         """
-        return self.db.query(StrategyConfig).filter(
-            StrategyConfig.name == name
-        ).first()
+        return self.db.query(StrategyConfig).filter(StrategyConfig.name == name).first()
 
     def list_profiles(self, kind: Optional[str] = None) -> List[Dict]:
         """List all saved profiles, optionally filtered by kind.
@@ -126,9 +124,9 @@ class ConfigManager:
         Returns:
             True if deleted, False if not found
         """
-        result = self.db.query(StrategyConfig).filter(
-            StrategyConfig.name == name
-        ).delete()
+        result = (
+            self.db.query(StrategyConfig).filter(StrategyConfig.name == name).delete()
+        )
 
         self.db.commit()
         return result > 0

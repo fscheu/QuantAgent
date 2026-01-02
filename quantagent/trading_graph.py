@@ -52,8 +52,9 @@ class TradingGraph:
 
         # --- Setup PostgreSQL checkpointing if enabled ---
         self.checkpointer = None
+        self._checkpointer_context = None
         if use_checkpointing:
-            self.checkpointer = self._setup_checkpointer()
+            self.checkpointer, self._checkpointer_context = self._setup_checkpointer()
 
         # --- Create tool nodes for each agent ---
         # self.tool_nodes = self._set_tool_nodes()
@@ -110,12 +111,12 @@ class TradingGraph:
 
         return api_key
 
-    def _setup_checkpointer(self) -> Optional[PostgresSaver]:
+    def _setup_checkpointer(self):
         """
         Setup PostgreSQL checkpointer for graph resilience.
 
         Returns:
-            PostgresSaver instance or None if PostgreSQL not available.
+            Tuple of (checkpointer, context_manager) to keep connection alive.
 
         Raises:
             ValueError: If DATABASE_URL not set and checkpointing requested.
@@ -134,13 +135,14 @@ class TradingGraph:
             )
 
         try:
-            checkpointer = PostgresSaver.from_conn_string(db_url)
-            # checkpointer.setup()
-            return checkpointer
+            # PostgresSaver.from_conn_string returns a context manager
+            # Enter it manually and keep it alive for the TradingGraph lifetime
+            context_manager = PostgresSaver.from_conn_string(db_url)
+            checkpointer = context_manager.__enter__()
+            checkpointer.setup()
+            return checkpointer, context_manager
         except Exception as e:
-            raise ValueError(
-                f"Failed to connect to PostgreSQL at {db_url}: {str(e)}"
-            )
+            raise ValueError(f"Failed to connect to PostgreSQL at {db_url}: {str(e)}")
 
     def _create_llm(
         self, provider: str, model: str, temperature: float
@@ -248,7 +250,7 @@ class TradingGraph:
         env_var_map = {
             "openai": "OPENAI_API_KEY",
             "anthropic": "ANTHROPIC_API_KEY",
-            "qwen": "DASHSCOPE_API_KEY"
+            "qwen": "DASHSCOPE_API_KEY",
         }
 
         if provider not in env_var_map:
@@ -271,3 +273,14 @@ class TradingGraph:
 
         # Refresh LLMs with new key
         self.refresh_llms()
+
+    def close(self):
+        """
+        Close the checkpointer connection if it was opened.
+        Call this when done with the TradingGraph to clean up resources.
+        """
+        if hasattr(self, "_checkpointer_context") and self._checkpointer_context:
+            try:
+                self._checkpointer_context.__exit__(None, None, None)
+            except Exception:
+                pass  # Ignore errors during cleanup
