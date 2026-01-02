@@ -4,16 +4,20 @@ import re
 import urllib.parse
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
+
 
 import pandas as pd
-import yfinance as yf
 from flask import Flask, jsonify, render_template, request, send_file
+
 from openai import OpenAI
 
 import quantagent.static_util as static_util
 from quantagent import settings
+from quantagent.data.provider import DataProvider
+from quantagent.database import SessionLocal
 from quantagent.trading_graph import TradingGraph
+
 
 app = Flask(__name__)
 
@@ -23,7 +27,10 @@ class WebTradingAnalyzer:
         """Initialize the web trading analyzer."""
         # TradingGraph now loads config from .env automatically
         self.trading_graph = TradingGraph(use_checkpointing=True)
+        self.db_session = SessionLocal()
+        self.data_provider = DataProvider(self.db_session)
         self.data_dir = Path("data")
+
 
         # Ensure data dir exists
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -44,178 +51,31 @@ class WebTradingAnalyzer:
             "TSLA": "Tesla Inc.",  # New asset
         }
 
-        # Yahoo Finance symbol mapping
-        self.yfinance_symbols = {
-            "SPX": "^GSPC",  # S&P 500
-            "BTC": "BTC-USD",  # Bitcoin
-            "GC": "GC=F",  # Gold Futures
-            "NQ": "NQ=F",  # Nasdaq Futures
-            "CL": "CL=F",  # Crude Oil
-            "ES": "ES=F",  # E-mini S&P 500
-            "DJI": "^DJI",  # Dow Jones
-            "QQQ": "QQQ",  # Invesco QQQ Trust
-            "VIX": "^VIX",  # Volatility Index
-            "DXY": "DX-Y.NYB",  # US Dollar Index
-        }
-
-        # Yahoo Finance interval mapping
-        self.yfinance_intervals = {
-            "1m": "1m",
-            "5m": "5m",
-            "15m": "15m",
-            "30m": "30m",
-            "1h": "1h",
-            "4h": "4h",  # yfinance supports 4h natively!
-            "1d": "1d",
-            "1w": "1wk",
-            "1mo": "1mo",
-        }
 
         # Load persisted custom assets
         self.custom_assets_file = self.data_dir / "custom_assets.json"
         self.custom_assets = self.load_custom_assets()
 
-    def fetch_yfinance_data(
-        self, symbol: str, interval: str, start_date: str, end_date: str
-    ) -> pd.DataFrame:
-        """Fetch OHLCV data from Yahoo Finance."""
-        try:
-            yf_symbol = self.yfinance_symbols.get(symbol, symbol)
-            yf_interval = self.yfinance_intervals.get(interval, interval)
 
-            df = yf.download(
-                tickers=yf_symbol, start=start_date, end=end_date, interval=yf_interval
-            )
-
-            if df is None or df.empty:
-                return pd.DataFrame()
-
-            # Ensure df is a DataFrame, not a Series
-            if isinstance(df, pd.Series):
-                df = df.to_frame()
-
-            # Reset index to ensure we have a clean DataFrame
-            df = df.reset_index()
-
-            # Ensure we have a DataFrame
-            if not isinstance(df, pd.DataFrame):
-                return pd.DataFrame()
-
-            # Handle potential MultiIndex columns
-            if isinstance(df.columns, pd.MultiIndex):
-                df.columns = df.columns.get_level_values(0)
-
-            # Rename columns if needed
-            column_mapping = {
-                "Date": "Datetime",
-                "Open": "Open",
-                "High": "High",
-                "Low": "Low",
-                "Close": "Close",
-                "Volume": "Volume",
-            }
-
-            # Only rename columns that exist
-            existing_columns = {
-                old: new for old, new in column_mapping.items() if old in df.columns
-            }
-            df = df.rename(columns=existing_columns)
-
-            # Ensure we have the required columns
-            required_columns = ["Datetime", "Open", "High", "Low", "Close"]
-            if not all(col in df.columns for col in required_columns):
-                print(f"Warning: Missing columns. Available: {list(df.columns)}")
-                return pd.DataFrame()
-
-            # Select only the required columns
-            df = df[required_columns]
-            df["Datetime"] = pd.to_datetime(df["Datetime"])
-
-            return df
-
-        except Exception as e:
-            print(f"Error fetching data for {symbol}: {e}")
-            return pd.DataFrame()
-
-    def fetch_yfinance_data_with_datetime(
+    def fetch_market_data(
         self,
         symbol: str,
-        interval: str,
+        timeframe: str,
         start_datetime: datetime,
         end_datetime: datetime,
     ) -> pd.DataFrame:
-        """Fetch OHLCV data from Yahoo Finance using datetime objects for exact time precision."""
+        """Fetch OHLCV data using the shared DataProvider cache."""
         try:
-            yf_symbol = self.yfinance_symbols.get(symbol, symbol)
-            yf_interval = self.yfinance_intervals.get(interval, interval)
-
-            print(
-                f"Fetching {yf_symbol} from {start_datetime} to {end_datetime} with interval {yf_interval}"
+            return self.data_provider.get_ohlc(
+                symbol=symbol,
+                timeframe=timeframe,
+                start_date=start_datetime,
+                end_date=end_datetime,
             )
-
-            # Use datetime objects directly for yfinance
-            df = yf.download(
-                tickers=yf_symbol,
-                start=start_datetime,
-                end=end_datetime,
-                interval=yf_interval,
-                auto_adjust=True,
-                prepost=False,
-            )
-
-            if df is None or df.empty:
-                print(f"No data returned for {symbol}")
-                return pd.DataFrame()
-
-            # Ensure df is a DataFrame, not a Series
-            if isinstance(df, pd.Series):
-                df = df.to_frame()
-
-            # Reset index to ensure we have a clean DataFrame
-            df = df.reset_index()
-
-            # Ensure we have a DataFrame
-            if not isinstance(df, pd.DataFrame):
-                return pd.DataFrame()
-
-            # Handle potential MultiIndex columns
-            if isinstance(df.columns, pd.MultiIndex):
-                df.columns = df.columns.get_level_values(0)
-
-            # Rename columns if needed
-            column_mapping = {
-                "Date": "Datetime",
-                "Open": "Open",
-                "High": "High",
-                "Low": "Low",
-                "Close": "Close",
-                "Volume": "Volume",
-            }
-
-            # Only rename columns that exist
-            existing_columns = {
-                old: new for old, new in column_mapping.items() if old in df.columns
-            }
-            df = df.rename(columns=existing_columns)
-
-            # Ensure we have the required columns
-            required_columns = ["Datetime", "Open", "High", "Low", "Close"]
-            if not all(col in df.columns for col in required_columns):
-                print(f"Warning: Missing columns. Available: {list(df.columns)}")
-                return pd.DataFrame()
-
-            # Select only the required columns
-            df = df[required_columns]
-            df["Datetime"] = pd.to_datetime(df["Datetime"])
-
-            print(f"Successfully fetched {len(df)} data points for {symbol}")
-            print(f"Date range: {df['Datetime'].min()} to {df['Datetime'].max()}")
-
-            return df
-
         except Exception as e:
             print(f"Error fetching data for {symbol}: {e}")
             return pd.DataFrame()
+
 
     def get_available_assets(self) -> list:
         """Get list of available assets from the asset mapping dictionary."""
@@ -243,8 +103,9 @@ class WebTradingAnalyzer:
 
             # Format OHLCV data using centralized utility function
             try:
-                df_slice_dict = static_util.read_and_format_ohlcv(df)
+                df_slice_dict = static_util.format_ohlcv_for_agents(df)
             except ValueError as e:
+
                 return {
                     "success": False,
                     "error": str(e),
@@ -287,7 +148,6 @@ class WebTradingAnalyzer:
                 initial_state,
                 config={"configurable": {"thread_id": thread_id}},
             )
-
 
             return {
                 "success": True,
@@ -740,8 +600,12 @@ def analyze():
         end_time = data.get("end_time", "23:59")
         use_current_time = data.get("use_current_time", False)
 
+        start_dt: Optional[datetime] = None
+        end_dt: Optional[datetime] = None
+
         # Create datetime objects for validation
         if start_date:
+
             start_datetime_str = f"{start_date} {start_time}"
             try:
                 start_dt = datetime.strptime(start_datetime_str, "%Y-%m-%d %H:%M")
@@ -769,10 +633,15 @@ def analyze():
                     {"error": "End date/time cannot be earlier than start date/time."}
                 )
 
+        if start_dt is None or end_dt is None:
+            return jsonify({"error": "Start and end date/time are required."})
+
         # Fetch data with datetime objects
-        df = analyzer.fetch_yfinance_data_with_datetime(
+        df = analyzer.fetch_market_data(
             asset, timeframe, start_dt, end_dt
         )
+
+
         if df.empty:
             return jsonify({"error": "No data available for the specified parameters"})
 
