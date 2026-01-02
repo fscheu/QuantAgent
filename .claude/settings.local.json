@@ -11,7 +11,8 @@
       "WebFetch(domain:docs.langchain.com)",
       "Bash(python -m alembic revision:*)",
       "Bash(python -c:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

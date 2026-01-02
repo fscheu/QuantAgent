@@ -72,13 +72,20 @@ class PortfolioManager:
         # NOTE: Capital validation already done by RiskManager.validate_trade()
         # If we reach here, the trade is already validated
 
-        # Get entry price for SELL orders (from position being closed)
+        # Determine entry price and action type BEFORE updating position
         entry_price_for_sell = None
+        position_qty_before = self.positions[symbol]["qty"] if symbol in self.positions else 0.0
+
         if order.side == OrderSide.SELL:
-            if symbol in self.positions:
+            if position_qty_before > 0:
+                # Closing LONG position
                 entry_price_for_sell = self.positions[symbol]["avg_cost"]
-            else:
-                raise ValueError(f"No position in {symbol} to sell")
+            elif position_qty_before == 0:
+                # Opening new SHORT position
+                entry_price_for_sell = None
+            elif position_qty_before < 0:
+                # Increasing existing SHORT position
+                entry_price_for_sell = self.positions[symbol]["avg_cost"]
 
         # Update positions based on side
         if order.side == OrderSide.BUY:
@@ -86,32 +93,50 @@ class PortfolioManager:
         elif order.side == OrderSide.SELL:
             self._execute_sell(symbol, fill_qty, fill_price)
 
-        # Update cash
+        # Update cash based on action (determined by position state BEFORE trade)
         if order.side == OrderSide.BUY:
+            # BUY always reduces cash (opening LONG or closing SHORT)
             self.cash -= trade_value
-        else:
+        else:  # SELL
+            # SELL always increases cash (closing LONG or opening SHORT)
             self.cash += trade_value
 
-        # Create Trade record
+        # Create Trade record with correct entry/exit prices based on action type
+        # Determine if opening or closing position based on qty BEFORE trade
+        is_opening = position_qty_before == 0
+        is_closing_long = position_qty_before > 0 and order.side == OrderSide.SELL
+        is_closing_short = position_qty_before < 0 and order.side == OrderSide.BUY
+
+        if is_opening:
+            # Opening new position (LONG or SHORT)
+            entry_price = Decimal(str(fill_price))
+            exit_price = None
+            opened_at = datetime.utcnow()
+            closed_at = None
+        elif is_closing_long or is_closing_short:
+            # Closing existing position
+            entry_price = Decimal(str(entry_price_for_sell))
+            exit_price = Decimal(str(fill_price))
+            opened_at = None  # Should reference original trade, but we don't track that yet
+            closed_at = datetime.utcnow()
+        else:
+            # Increasing existing position (LONG or SHORT)
+            entry_price = Decimal(str(fill_price))
+            exit_price = None
+            opened_at = datetime.utcnow()
+            closed_at = None
+
         trade = Trade(
             symbol=symbol,
             order_id=order.id,
-            entry_price=(
-                Decimal(str(fill_price))
-                if order.side == OrderSide.BUY
-                else (
-                    Decimal(str(entry_price_for_sell)) if entry_price_for_sell else None
-                )
-            ),
-            exit_price=(
-                Decimal(str(fill_price)) if order.side == OrderSide.SELL else None
-            ),
+            entry_price=entry_price,
+            exit_price=exit_price,
             quantity=Decimal(str(fill_qty)),
             side=order.side,
             commission=Decimal(str(0)),  # TODO: Support commission
             environment=self.environment,
-            opened_at=datetime.utcnow() if order.side == OrderSide.BUY else None,
-            closed_at=datetime.utcnow() if order.side == OrderSide.SELL else None,
+            opened_at=opened_at or datetime.utcnow(),  # Ensure opened_at is never None
+            closed_at=closed_at,
         )
 
         # Persist to database
@@ -122,49 +147,77 @@ class PortfolioManager:
         return trade
 
     def _execute_buy(self, symbol: str, qty: float, price: float) -> None:
-        """Update position for BUY order."""
+        """Update position for BUY order (open LONG or close SHORT)."""
         if symbol not in self.positions:
+            # Open new LONG position
             self.positions[symbol] = {
-                "qty": 0.0,
-                "avg_cost": 0.0,
+                "qty": qty,
+                "avg_cost": price,
                 "current_price": price,
                 "pnl": 0.0,
                 "pnl_pct": 0.0,
             }
+        else:
+            pos = self.positions[symbol]
+            if pos["qty"] < 0:
+                # Close SHORT position
+                if abs(pos["qty"]) < qty:
+                    raise ValueError(
+                        f"Trying to buy {qty} shares but SHORT position in {symbol} is only {abs(pos['qty'])}"
+                    )
+                pos["qty"] += qty  # Reduce negative (move toward zero)
+            else:
+                # Increase LONG position
+                total_qty = pos["qty"] + qty
+                pos["avg_cost"] = (pos["qty"] * pos["avg_cost"] + qty * price) / total_qty
+                pos["qty"] = total_qty
 
-        pos = self.positions[symbol]
-        total_qty = pos["qty"] + qty
+            pos["current_price"] = price
 
-        # Calculate new average cost
-        if total_qty > 0:
-            pos["avg_cost"] = (pos["qty"] * pos["avg_cost"] + qty * price) / total_qty
+            # If position is fully closed, reset avg_cost
+            if pos["qty"] == 0:
+                pos["avg_cost"] = 0.0
 
-        pos["qty"] = total_qty
-        pos["current_price"] = price
         self._update_position_pnl(symbol)
 
     def _execute_sell(self, symbol: str, qty: float, price: float) -> None:
-        """Update position for SELL order."""
+        """Update position for SELL order (close LONG or open SHORT)."""
         if symbol not in self.positions:
-            raise ValueError(f"No position in {symbol} to sell")
+            # Open new SHORT position (negative qty)
+            self.positions[symbol] = {
+                "qty": -qty,
+                "avg_cost": price,
+                "current_price": price,
+                "pnl": 0.0,
+                "pnl_pct": 0.0,
+            }
+        else:
+            pos = self.positions[symbol]
+            if pos["qty"] > 0:
+                # Close LONG position
+                if pos["qty"] < qty:
+                    raise ValueError(
+                        f"Insufficient qty in {symbol}: have {pos['qty']}, trying to sell {qty}"
+                    )
+                pos["qty"] -= qty
+            else:
+                # Increase SHORT position (make more negative)
+                total_qty = pos["qty"] - qty
+                pos["avg_cost"] = (
+                    abs(pos["qty"]) * pos["avg_cost"] + qty * price
+                ) / abs(total_qty)
+                pos["qty"] = total_qty
 
-        pos = self.positions[symbol]
-        if pos["qty"] < qty:
-            raise ValueError(
-                f"Insufficient qty in {symbol}: have {pos['qty']}, trying to sell {qty}"
-            )
+            pos["current_price"] = price
 
-        pos["qty"] -= qty
-        pos["current_price"] = price
-
-        # If position is fully closed, reset avg_cost
-        if pos["qty"] == 0:
-            pos["avg_cost"] = 0.0
+            # If position is fully closed, reset avg_cost
+            if pos["qty"] == 0:
+                pos["avg_cost"] = 0.0
 
         self._update_position_pnl(symbol)
 
     def _update_position_pnl(self, symbol: str) -> None:
-        """Calculate unrealized P&L for position."""
+        """Calculate unrealized P&L (works for LONG and SHORT positions)."""
         if symbol not in self.positions:
             return
 
@@ -173,20 +226,40 @@ class PortfolioManager:
             pos["pnl"] = 0.0
             pos["pnl_pct"] = 0.0
         else:
-            pos["pnl"] = pos["qty"] * (pos["current_price"] - pos["avg_cost"])
-            pos["pnl_pct"] = (
-                (pos["current_price"] - pos["avg_cost"]) / pos["avg_cost"]
-            ) * 100
+            if pos["qty"] > 0:
+                # LONG: profit when price increases
+                pos["pnl"] = pos["qty"] * (pos["current_price"] - pos["avg_cost"])
+                pos["pnl_pct"] = (
+                    (pos["current_price"] - pos["avg_cost"]) / pos["avg_cost"]
+                ) * 100
+            else:
+                # SHORT: profit when price decreases (inverse P&L)
+                pos["pnl"] = abs(pos["qty"]) * (pos["avg_cost"] - pos["current_price"])
+                pos["pnl_pct"] = (
+                    (pos["avg_cost"] - pos["current_price"]) / pos["avg_cost"]
+                ) * 100
 
     def get_total_value(self) -> float:
         """Calculate total portfolio value (cash + positions).
 
+        For LONG: value = qty × current_price
+        For SHORT: value = qty × (2 × avg_cost - current_price)
+                  = initial_sale_proceeds - current_liability
+
         Returns:
             Total portfolio value in base currency
         """
-        position_value = sum(
-            pos["qty"] * pos["current_price"] for pos in self.positions.values()
-        )
+        position_value = 0.0
+        for pos in self.positions.values():
+            if pos["qty"] > 0:
+                # LONG: value = shares × price
+                position_value += pos["qty"] * pos["current_price"]
+            else:
+                # SHORT: value = initial proceeds - current buyback cost
+                # = qty × avg_cost (proceeds) - qty × current_price (liability)
+                # = qty × (2 × avg_cost - current_price)
+                position_value += abs(pos["qty"]) * (2 * pos["avg_cost"] - pos["current_price"])
+
         return self.cash + position_value
 
     def get_unrealized_pnl(self) -> float:
@@ -295,6 +368,7 @@ class PortfolioManager:
                 db_pos.current_price = Decimal(str(pos_data["current_price"]))
                 db_pos.unrealized_pnl = Decimal(str(pos_data["pnl"]))
                 db_pos.unrealized_pnl_pct = pos_data["pnl_pct"]
+                db_pos.side = OrderSide.BUY if pos_data["qty"] >= 0 else OrderSide.SELL
                 db_pos.updated_at = datetime.utcnow()
             else:
                 # Create new position
@@ -305,7 +379,7 @@ class PortfolioManager:
                     current_price=Decimal(str(pos_data["current_price"])),
                     unrealized_pnl=Decimal(str(pos_data["pnl"])),
                     unrealized_pnl_pct=pos_data["pnl_pct"],
-                    side=OrderSide.BUY,  # TODO: Handle short positions
+                    side=OrderSide.BUY if pos_data["qty"] >= 0 else OrderSide.SELL,
                     opened_at=datetime.utcnow(),
                 )
                 self.db.add(db_pos)

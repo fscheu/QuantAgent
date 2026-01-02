@@ -11,9 +11,19 @@ Usage:
     python examples/run_backtest.py
 """
 
+import logging
 from datetime import datetime, timedelta
 from quantagent.backtesting.backtest import Backtest
 from quantagent.database import SessionLocal
+
+# Configure logging to print to terminal
+logging.basicConfig(
+    level=logging.INFO,  # Change to DEBUG for more detailed output
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()  # Print to terminal/console
+    ]
+)
 
 
 def main():
@@ -32,7 +42,7 @@ def main():
 
     # Date range for backtest
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=90)  # 3 months
+    start_date = end_date - timedelta(days=60)  # 2 months
 
     # Create backtest instance
     backtest = Backtest(

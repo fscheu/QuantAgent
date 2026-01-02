@@ -72,10 +72,10 @@ with tab2:
         st.dataframe(results['trades'])
 
 with tab3:
-    st.dataframe(all_trades, use_container_width=True)
+    st.dataframe(all_trades, width='stretch')
 
 with tab4:
-    st.dataframe(logs, use_container_width=True)
+    st.dataframe(logs, width='stretch')
 
 # Auto-refresh every 5 seconds
 st.rerun()

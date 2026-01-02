@@ -7,3 +7,5 @@ List of small TODOs that pop-up along the way.
 - [ ] Fix test which call several agents and expect to have state updated. 
 - [ ] Change Trading Configuration dict harcoded for env variables or Database Setup.
 - [ ] Use with_structured_output in pattern_agent y trend_agent
+- [ ] Refactor Backtest class to only depend on OrderManager instead of direct references to PositionSizer, RiskManager, PaperBroker. Apply facade pattern properly to reduce coupling and improve encapsulation.
+

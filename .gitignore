@@ -6,4 +6,4 @@ record.csv
 .env
 *.db
 venv_wsl/
-quantagent.egg-info/
+quantagent.egg-info/*.*

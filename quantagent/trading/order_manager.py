@@ -17,7 +17,7 @@ import logging
 from typing import Optional
 from sqlalchemy.orm import Session
 
-from quantagent.models import Order, OrderSide, OrderType, Signal
+from quantagent.models import Order, OrderSide, OrderType, Signal, TradeSignal
 from .position_sizer import PositionSizer
 from .risk_manager import RiskManager
 
@@ -54,7 +54,7 @@ class OrderManager:
     def execute_decision(
         self,
         symbol: str,
-        decision: str,
+        decision: TradeSignal,
         confidence: float,
         current_price: float,
         environment=None,
@@ -86,8 +86,8 @@ class OrderManager:
             Filled Order if executed, None if rejected
         """
         # Step 1: HOLD decision
-        if decision.upper() == "HOLD":
-            logger.info(f"{symbol}: HOLD signal, no trade executed")
+        if decision == TradeSignal.NEUTRAL:
+            logger.info(f"{symbol}: NEUTRAL signal, no trade executed")
             return None
 
         # Step 2: Calculate position size
@@ -104,8 +104,13 @@ class OrderManager:
             f"(confidence={confidence:.1%}, portfolio=${portfolio_value:.2f})"
         )
 
-        # Step 3: Validate trade
-        is_valid, reason = self.risk_manager.validate_trade(symbol, qty, current_price)
+        # Determine order side BEFORE validation (needed for position check)
+        side = OrderSide.BUY if decision.upper() == "LONG" else OrderSide.SELL
+
+        # Step 3: Validate trade (now includes position management check)
+        is_valid, reason = self.risk_manager.validate_trade(
+            symbol, side, qty, current_price
+        )
 
         if not is_valid:
             logger.warning(f"{symbol}: Trade rejected - {reason}")
@@ -114,7 +119,6 @@ class OrderManager:
         logger.info(f"{symbol}: Trade validation passed - proceeding to execution")
 
         # Step 4: Create Order object
-        side = OrderSide.BUY if decision.upper() == "LONG" else OrderSide.SELL
         order = Order(
             symbol=symbol,
             side=side,
@@ -200,9 +204,10 @@ class OrderManager:
             logger.info(f"{order.symbol}: HOLD signal, no trade executed")
             return None
 
-        # Validate trade
+        # Validate trade (includes position management check)
         is_valid, reason = self.risk_manager.validate_trade(
             order.symbol,
+            order.side,
             order.quantity,
             order.price or current_price,
         )

@@ -6,7 +6,8 @@ Performs 5-point validation:
 2. Position limit: trade_value <= 10% of portfolio_value
 3. Daily loss: current_daily_pnl >= -5% of portfolio_value
 4. Circuit breaker: not already triggered
-5. Position conflict: (e.g., no SHORT if already LONG)
+5. Position management: prevent adding to existing positions
+   (only allow closing or reversing positions)
 
 All validation happens BEFORE broker execution.
 If validation fails, order is rejected and never reaches broker.
@@ -48,6 +49,7 @@ class RiskManager:
     def validate_trade(
         self,
         symbol: str,
+        side: OrderSide,
         qty: float,
         price: float,
     ) -> Tuple[bool, Optional[str]]:
@@ -58,6 +60,7 @@ class RiskManager:
 
         Args:
             symbol: Trading symbol
+            side: Order side (BUY or SELL)
             qty: Quantity to buy/sell
             price: Current market price
 
@@ -97,19 +100,33 @@ class RiskManager:
         if self.circuit_breaker_triggered:
             return (False, "Circuit breaker is active - no more trades allowed today")
 
-        # Check 5: Position conflict (e.g., can't SHORT if already LONG)
+        # Check 5: Position management - prevent adding to existing positions
+        # (only allow closing or reversing)
         if symbol in self.portfolio.positions:
             existing_pos = self.portfolio.positions[symbol]
             existing_qty = existing_pos["qty"]
 
-            # You can't short if you already have a long position
-            # (In MVP, we only do single-direction trades per symbol)
-            # This is a simple check - in production you'd allow both long and short
-            if existing_qty > 0:
-                # Already long, trying to buy more is OK (pyramiding)
-                # But trying to sell is OK too (reducing position)
-                # This check is for future: if existing_qty > 0 and we're shorting
-                pass
+            if existing_qty != 0:
+                is_long_position = existing_qty > 0
+                is_short_position = existing_qty < 0
+
+                # Prevent adding to LONG position
+                if is_long_position and side == OrderSide.BUY:
+                    return (
+                        False,
+                        f"Position already open: LONG {abs(existing_qty):.6f} shares. "
+                        f"Cannot add to existing LONG position (prevents over-concentration)",
+                    )
+
+                # Prevent adding to SHORT position
+                if is_short_position and side == OrderSide.SELL:
+                    return (
+                        False,
+                        f"Position already open: SHORT {abs(existing_qty):.6f} shares. "
+                        f"Cannot add to existing SHORT position (prevents over-concentration)",
+                    )
+
+                # Allow closing/reversing positions (LONG→SELL, SHORT→BUY)
 
         return (True, None)
 

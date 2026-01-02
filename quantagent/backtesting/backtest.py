@@ -10,14 +10,24 @@ import pandas as pd
 import numpy as np
 from sqlalchemy.orm import Session
 
+from quantagent.agent_models import TradingDecision
 from quantagent.data.provider import DataProvider
+from quantagent.static_util import format_ohlcv_for_agents
 from quantagent.trading_graph import TradingGraph
+
 from quantagent.trading.order_manager import OrderManager
 from quantagent.trading.position_sizer import PositionSizer
 from quantagent.trading.risk_manager import RiskManager
 from quantagent.trading.paper_broker import PaperBroker
 from quantagent.portfolio.manager import PortfolioManager
-from quantagent.models import BacktestRun, Signal, Order, Trade, Environment, TradeSignal
+from quantagent.models import (
+    BacktestRun,
+    Signal,
+    Order,
+    Trade,
+    Environment,
+    TradeSignal,
+)
 from quantagent.database import SessionLocal
 from quantagent.strategy.assembler import StrategyAssembler
 
@@ -71,7 +81,7 @@ class Backtest:
         initial_capital: float = 100000.0,
         config: Optional[Dict] = None,
         db_session: Optional[Session] = None,
-        use_checkpointing: bool = False
+        use_checkpointing: bool = False,
     ):
         """
         Initialize Backtest.
@@ -104,17 +114,23 @@ class Backtest:
         # Resolve config via StrategyAssembler and build components (unify DB session)
         resolved = StrategyAssembler.from_snapshot(
             {
-                'initial_cash': initial_capital,
-                'base_position_pct': self.config.get('base_position_pct', 0.05),
-                'max_daily_loss_pct': self.config.get('max_daily_loss_pct', 0.05),
-                'max_position_pct': self.config.get('max_position_pct', 0.10),
-                'slippage_pct': self.config.get('slippage_pct', 0.01),
+                "initial_cash": initial_capital,
+                "base_position_pct": self.config.get("base_position_pct", 0.05),
+                "max_daily_loss_pct": self.config.get("max_daily_loss_pct", 0.05),
+                "max_position_pct": self.config.get("max_position_pct", 0.10),
+                "slippage_pct": self.config.get("slippage_pct", 0.01),
                 # Normalize model fields into generic ones; accept both
-                'model_provider': self.config.get('agent_llm_provider', self.config.get('model_provider', 'openai')),
-                'model_name': self.config.get('agent_llm_model', self.config.get('model_name', 'gpt-4o-mini')),
-                'temperature': self.config.get('agent_llm_temperature', self.config.get('temperature', 0.1)),
-                'use_checkpointing': use_checkpointing,
-                'universe': self.config.get('universe', []),
+                "model_provider": self.config.get(
+                    "agent_llm_provider", self.config.get("model_provider", "openai")
+                ),
+                "model_name": self.config.get(
+                    "agent_llm_model", self.config.get("model_name", "gpt-4o-mini")
+                ),
+                "temperature": self.config.get(
+                    "agent_llm_temperature", self.config.get("temperature", 0.1)
+                ),
+                "use_checkpointing": use_checkpointing,
+                "universe": self.config.get("universe", []),
             },
             environment=Environment.BACKTEST,
         )
@@ -157,14 +173,16 @@ class Backtest:
         date_range = self._get_date_range()
         total_periods = len(date_range) * len(self.assets)
 
-        logger.info(f"Backtesting {total_periods} analysis periods ({len(date_range)} dates x {len(self.assets)} assets)")
+        logger.info(
+            f"Backtesting {total_periods} analysis periods ({len(date_range)} dates x {len(self.assets)} assets)"
+        )
 
         # Loop through dates
         for i, current_date in enumerate(date_range):
             self.current_date = current_date
 
             # Reset daily P&L tracking at start of each day
-            if i == 0 or current_date.date() != date_range[i-1].date():
+            if i == 0 or current_date.date() != date_range[i - 1].date():
                 self.risk_manager.reset_daily_tracker()
 
             # Analyze each asset
@@ -172,7 +190,9 @@ class Backtest:
                 try:
                     self._analyze_and_trade(asset, current_date)
                 except Exception as e:
-                    logger.error(f"Error analyzing {asset} at {current_date}: {e}", exc_info=True)
+                    logger.error(
+                        f"Error analyzing {asset} at {current_date}: {e}", exc_info=True
+                    )
                     continue
 
             # Record equity at end of period
@@ -181,7 +201,9 @@ class Backtest:
             # Log progress
             if (i + 1) % 100 == 0 or i == len(date_range) - 1:
                 progress = ((i + 1) / len(date_range)) * 100
-                logger.info(f"Progress: {progress:.1f}% ({i+1}/{len(date_range)} dates)")
+                logger.info(
+                    f"Progress: {progress:.1f}% ({i+1}/{len(date_range)} dates)"
+                )
 
         # Calculate metrics
         metrics = self._calculate_metrics()
@@ -189,8 +211,12 @@ class Backtest:
         # Update backtest run with results
         self._update_backtest_run(metrics)
 
-        logger.info(f"Backtest complete: {metrics.total_trades} trades, Win rate: {metrics.win_rate:.2%}")
-        logger.info(f"Total P&L: ${metrics.total_pnl:,.2f} ({metrics.total_return_pct:.2%})")
+        logger.info(
+            f"Backtest complete: {metrics.total_trades} trades, Win rate: {metrics.win_rate:.2%}"
+        )
+        logger.info(
+            f"Total P&L: ${metrics.total_pnl:,.2f} ({metrics.total_return_pct:.2%})"
+        )
 
         return metrics
 
@@ -202,7 +228,7 @@ class Backtest:
             assets=self.assets,
             start_date=self.start_date,
             end_date=self.end_date,
-            config_snapshot=self._build_config_snapshot()
+            config_snapshot=self._build_config_snapshot(),
         )
 
         self.db.add(run)
@@ -216,16 +242,22 @@ class Backtest:
         # Re-generate snapshot via assembler to keep alignment
         resolved = StrategyAssembler.from_snapshot(
             {
-                'initial_cash': self.initial_capital,
-                'base_position_pct': self.config.get('base_position_pct', 0.05),
-                'max_daily_loss_pct': self.config.get('max_daily_loss_pct', 0.05),
-                'max_position_pct': self.config.get('max_position_pct', 0.10),
-                'slippage_pct': self.config.get('slippage_pct', 0.01),
-                'model_provider': self.config.get('agent_llm_provider', self.config.get('model_provider', 'openai')),
-                'model_name': self.config.get('agent_llm_model', self.config.get('model_name', 'gpt-4o-mini')),
-                'temperature': self.config.get('agent_llm_temperature', self.config.get('temperature', 0.1)),
-                'use_checkpointing': self.use_checkpointing,
-                'universe': self.config.get('universe', []),
+                "initial_cash": self.initial_capital,
+                "base_position_pct": self.config.get("base_position_pct", 0.05),
+                "max_daily_loss_pct": self.config.get("max_daily_loss_pct", 0.05),
+                "max_position_pct": self.config.get("max_position_pct", 0.10),
+                "slippage_pct": self.config.get("slippage_pct", 0.01),
+                "model_provider": self.config.get(
+                    "agent_llm_provider", self.config.get("model_provider", "openai")
+                ),
+                "model_name": self.config.get(
+                    "agent_llm_model", self.config.get("model_name", "gpt-4o-mini")
+                ),
+                "temperature": self.config.get(
+                    "agent_llm_temperature", self.config.get("temperature", 0.1)
+                ),
+                "use_checkpointing": self.use_checkpointing,
+                "universe": self.config.get("universe", []),
             },
             environment=Environment.BACKTEST,
         )
@@ -242,12 +274,12 @@ class Backtest:
         current = self.start_date
 
         # Determine step size based on timeframe
-        if self.timeframe in ['1h', '4h']:
-            step_hours = int(self.timeframe.replace('h', ''))
+        if self.timeframe in ["1h", "4h"]:
+            step_hours = int(self.timeframe.replace("h", ""))
             step = timedelta(hours=step_hours)
-        elif self.timeframe == '1d':
+        elif self.timeframe == "1d":
             step = timedelta(days=1)
-        elif self.timeframe == '1w':
+        elif self.timeframe == "1w":
             step = timedelta(weeks=1)
         else:
             # Default to hourly
@@ -275,98 +307,90 @@ class Backtest:
             symbol=asset,
             timeframe=self.timeframe,
             start_date=data_start,
-            end_date=current_date
+            end_date=current_date,
         )
 
         if df.empty or len(df) < 30:
-            logger.warning(f"Insufficient data for {asset} at {current_date} (got {len(df)} records)")
+            logger.warning(
+                f"Insufficient data for {asset} at {current_date} (got {len(df)} records)"
+            )
             return
 
         # Convert to kline_data format
-        kline_data = self._df_to_kline_data(df)
+        kline_data = format_ohlcv_for_agents(df)
 
         # Execute analysis using TradingGraph
+
         initial_state = {
             "kline_data": kline_data,
             "time_frame": self.timeframe,
             "stock_name": asset,
-            "messages": []
+            "messages": [],
         }
 
         # Run analysis with thread_id for checkpointing
-        thread_id = f"backtest_{self.backtest_run_id}_{asset}_{current_date.isoformat()}"
-        config = {"configurable": {"thread_id": thread_id}} if self.use_checkpointing else None
+        thread_id = (
+            f"backtest_{self.backtest_run_id}_{asset}_{current_date.isoformat()}"
+        )
+        config = (
+            {"configurable": {"thread_id": thread_id}}
+            if self.use_checkpointing
+            else None
+        )
 
         result = self.trading_graph.graph.invoke(initial_state, config=config)
 
         # Extract decision
-        decision_text = result.get("final_trade_decision", "HOLD")
+        trading_decision = result.get("final_trade_decision", "HOLD")
 
-        # Parse decision (extract LONG/SHORT/HOLD)
-        decision = self._parse_decision(decision_text)
-
-        # Get confidence from indicator report (default to 0.5 if not found)
-        confidence = self._extract_confidence(result)
+        # Parse decision (extract LONG/SHORT/HOLD and confidence)
+        trading_signal, confidence = self._parse_decision(trading_decision)
 
         # Get current price
-        current_price = float(df.iloc[-1]['close'])
+        current_price = float(df.iloc[-1]["close"])
 
         # Store signal in database
         signal = self._create_signal(
             asset=asset,
-            decision=decision,
+            decision=trading_signal,
             confidence=confidence,
             result=result,
             current_date=current_date,
-            thread_id=thread_id if self.use_checkpointing else None
+            thread_id=thread_id if self.use_checkpointing else None,
         )
 
         # Execute trade if not HOLD
-        if decision != "NEUTRAL":
+        if trading_signal != TradeSignal.NEUTRAL:
             order = self.order_manager.execute_decision(
                 symbol=asset,
-                decision=decision.value if decision != "NEUTRAL" else "HOLD",
+                decision=trading_signal,
                 confidence=confidence,
                 current_price=current_price,
                 environment=Environment.BACKTEST,
-                trigger_signal_id=signal.id if signal else None
+                trigger_signal_id=signal.id if signal else None,
             )
 
             if order:
-                logger.info(f"Executed {decision.value} for {asset} @ ${current_price:.2f}, qty: {order.filled_quantity}")
+                logger.info(
+                    f"Executed {trading_signal.value} for {asset} @ ${current_price:.2f}, qty: {order.filled_quantity}"
+                )
 
-    def _df_to_kline_data(self, df: pd.DataFrame) -> Dict:
-        """Convert DataFrame to kline_data dict format."""
-        return {
-            'timestamps': df['timestamp'].astype(str).tolist(),
-            'opens': df['open'].tolist(),
-            'highs': df['high'].tolist(),
-            'lows': df['low'].tolist(),
-            'closes': df['close'].tolist(),
-            'volumes': df['volume'].tolist()
-        }
+    def _parse_decision(self, decision: TradingDecision) -> (TradeSignal, float):
 
-    def _parse_decision(self, decision_text: str) -> TradeSignal:
-        """Parse decision text to extract LONG/SHORT/HOLD."""
-        decision_upper = decision_text.upper()
+        """Parse decision text to extract LONG/SHORT/HOLD and confidence."""
+        decision_upper = decision.decision.upper()
+        signal = TradeSignal.NEUTRAL
 
         if "LONG" in decision_upper or "BUY" in decision_upper:
-            return TradeSignal.LONG
+            signal = TradeSignal.LONG
         elif "SHORT" in decision_upper or "SELL" in decision_upper:
-            return TradeSignal.SHORT
+            signal = TradeSignal.SHORT
         else:
-            return TradeSignal.NEUTRAL
+            signal = TradeSignal.NEUTRAL
+        
+        ind = float(decision.confidence)
 
-    def _extract_confidence(self, result: Dict) -> float:
-        """Extract confidence from analysis result."""
-        # Try to get confidence from indicator_report
-        indicator_report = result.get('indicator_report')
-
-        if indicator_report and hasattr(indicator_report, 'confidence'):
-            return float(indicator_report.confidence)
-
-        # Default to medium confidence
-        return 0.5
+        return signal, ind
 
     def _create_signal(
         self,
@@ -375,29 +399,53 @@ class Backtest:
         confidence: float,
         result: Dict,
         current_date: datetime,
-        thread_id: Optional[str] = None
+        thread_id: Optional[str] = None,
     ) -> Optional[Signal]:
         """Create and persist Signal record."""
         try:
             # Extract technical indicators
             rsi = None
             macd = None
+            stochastic = None
+            roc = None
+            williams_r = None
             pattern = None
             trend = None
 
-            if 'rsi' in result and result['rsi']:
-                rsi = float(result['rsi'][-1]) if isinstance(result['rsi'], list) else float(result['rsi'])
+            if "rsi" in result and result["rsi"]:
+                rsi = (
+                    float(result["rsi"][-1])
+                    if isinstance(result["rsi"], list)
+                    else float(result["rsi"])
+                )
 
-            if 'macd' in result and result['macd']:
-                macd = float(result['macd'][-1]) if isinstance(result['macd'], list) else float(result['macd'])
+            if "macd" in result and result["macd"]:
+                macd = (
+                    float(result["macd"][-1])
+                    if isinstance(result["macd"], list)
+                    else float(result["macd"])
+                )
+
+            indicator_report = result.get("indicator_report")
+            if indicator_report and hasattr(indicator_report, "rsi"):
+                rsi = float(indicator_report.rsi)
+            if indicator_report and hasattr(indicator_report, "macd"):
+                macd = float(indicator_report.macd)
+            if indicator_report and hasattr(indicator_report, "stochastic"):
+                stochastic = float(indicator_report.stochastic)
+            if indicator_report and hasattr(indicator_report, "roc"):
+                roc = float(indicator_report.roc)
+            if indicator_report and hasattr(indicator_report, "willr"):
+                williams_r = float(indicator_report.willr)
+            
 
             # Get pattern and trend from reports
-            pattern_report = result.get('pattern_report')
-            if pattern_report and hasattr(pattern_report, 'primary_pattern'):
+            pattern_report = result.get("pattern_report")
+            if pattern_report and hasattr(pattern_report, "primary_pattern"):
                 pattern = pattern_report.primary_pattern
 
-            trend_report = result.get('trend_report')
-            if trend_report and hasattr(trend_report, 'trend_direction'):
+            trend_report = result.get("trend_report")
+            if trend_report and hasattr(trend_report, "trend_direction"):
                 trend = trend_report.trend_direction
 
             # Create signal
@@ -408,15 +456,18 @@ class Backtest:
                 timeframe=self.timeframe,
                 rsi=rsi,
                 macd=macd,
+                stochastic=stochastic,
+                roc=roc,
+                williams_r=williams_r,
                 pattern=pattern,
                 trend=trend,
-                analysis_summary=result.get('final_trade_decision', ''),
+                analysis_summary=result.get("reasoning", ""),
                 generated_at=current_date,
                 environment=Environment.BACKTEST,
                 thread_id=thread_id,
-                model_provider=self.config.get('agent_llm_provider', 'openai'),
-                model_name=self.config.get('agent_llm_model', 'gpt-4o-mini'),
-                temperature=self.config.get('agent_llm_temperature', 0.1)
+                model_provider=self.config.get("agent_llm_provider", "openai"),
+                model_name=self.config.get("agent_llm_model", "gpt-4o-mini"),
+                temperature=self.config.get("agent_llm_temperature", 0.1),
             )
 
             self.db.add(signal)
@@ -432,12 +483,14 @@ class Backtest:
         """Record equity curve data point."""
         total_value = self.portfolio.get_total_value()
 
-        self.equity_curve.append({
-            'date': current_date,
-            'equity': total_value,
-            'cash': self.portfolio.cash,
-            'positions_value': total_value - self.portfolio.cash
-        })
+        self.equity_curve.append(
+            {
+                "date": current_date,
+                "equity": total_value,
+                "cash": self.portfolio.cash,
+                "positions_value": total_value - self.portfolio.cash,
+            }
+        )
 
     def _calculate_metrics(self) -> BacktestMetrics:
         """
@@ -451,11 +504,15 @@ class Backtest:
         - Total P&L: sum of all trade P&L
         """
         # Get all trades from database for this backtest
-        trades = self.db.query(Trade).filter(
-            Trade.environment == Environment.BACKTEST,
-            Trade.opened_at >= self.start_date,
-            Trade.opened_at <= self.end_date
-        ).all()
+        trades = (
+            self.db.query(Trade)
+            .filter(
+                Trade.environment == Environment.BACKTEST,
+                Trade.opened_at >= self.start_date,
+                Trade.opened_at <= self.end_date,
+            )
+            .all()
+        )
 
         if not trades:
             logger.warning("No trades executed during backtest")
@@ -472,7 +529,7 @@ class Backtest:
                 avg_loss=0.0,
                 largest_win=0.0,
                 largest_loss=0.0,
-                total_return_pct=0.0
+                total_return_pct=0.0,
             )
 
         # Calculate basic metrics
@@ -487,7 +544,11 @@ class Backtest:
         win_rate = len(winning_trades) / total_trades if total_trades > 0 else 0.0
 
         # Profit factor
-        profit_factor = total_wins / total_losses if total_losses > 0 else float('inf') if total_wins > 0 else 0.0
+        profit_factor = (
+            total_wins / total_losses
+            if total_losses > 0
+            else float("inf") if total_wins > 0 else 0.0
+        )
 
         # Total P&L
         total_pnl = sum(float(t.pnl) for t in trades if t.pnl)
@@ -501,7 +562,11 @@ class Backtest:
         largest_loss = min((float(t.pnl) for t in losing_trades), default=0.0)
 
         # Total return %
-        total_return_pct = (total_pnl / self.initial_capital) * 100 if self.initial_capital > 0 else 0.0
+        total_return_pct = (
+            (total_pnl / self.initial_capital) * 100
+            if self.initial_capital > 0
+            else 0.0
+        )
 
         # Sharpe ratio
         sharpe_ratio = self._calculate_sharpe_ratio()
@@ -522,7 +587,7 @@ class Backtest:
             avg_loss=avg_loss,
             largest_win=largest_win,
             largest_loss=largest_loss,
-            total_return_pct=total_return_pct
+            total_return_pct=total_return_pct,
         )
 
     def _calculate_sharpe_ratio(self, risk_free_rate: float = 0.02) -> float:
@@ -541,7 +606,7 @@ class Backtest:
             return 0.0
 
         # Calculate returns
-        equity_series = pd.Series([e['equity'] for e in self.equity_curve])
+        equity_series = pd.Series([e["equity"] for e in self.equity_curve])
         returns = equity_series.pct_change().dropna()
 
         if len(returns) == 0 or returns.std() == 0:
@@ -568,7 +633,7 @@ class Backtest:
         if len(self.equity_curve) < 2:
             return 0.0
 
-        equity_series = pd.Series([e['equity'] for e in self.equity_curve])
+        equity_series = pd.Series([e["equity"] for e in self.equity_curve])
 
         # Calculate running maximum
         running_max = equity_series.expanding().max()
@@ -583,13 +648,13 @@ class Backtest:
 
     def _get_periods_per_year(self) -> int:
         """Get number of periods per year based on timeframe."""
-        if self.timeframe == '1h':
+        if self.timeframe == "1h":
             return 252 * 6.5  # Trading days * hours per day
-        elif self.timeframe == '4h':
+        elif self.timeframe == "4h":
             return 252 * 1.625  # Approx 1.6 periods per day
-        elif self.timeframe == '1d':
+        elif self.timeframe == "1d":
             return 252
-        elif self.timeframe == '1w':
+        elif self.timeframe == "1w":
             return 52
         else:
             return 252
@@ -599,7 +664,11 @@ class Backtest:
         if not self.backtest_run_id:
             return
 
-        run = self.db.query(BacktestRun).filter(BacktestRun.id == self.backtest_run_id).first()
+        run = (
+            self.db.query(BacktestRun)
+            .filter(BacktestRun.id == self.backtest_run_id)
+            .first()
+        )
 
         if run:
             run.total_trades = metrics.total_trades
@@ -610,7 +679,9 @@ class Backtest:
             run.total_pnl = Decimal(str(metrics.total_pnl))
 
             self.db.commit()
-            logger.info(f"Updated backtest run #{self.backtest_run_id} with final metrics")
+            logger.info(
+                f"Updated backtest run #{self.backtest_run_id} with final metrics"
+            )
 
     def get_equity_curve(self) -> pd.DataFrame:
         """

@@ -19,7 +19,8 @@
                 "--no-reload"
             ],
             "jinja": true,
-            "autoStartBrowser": false
+            "autoStartBrowser": false,
+            "justMyCode": true
         },
         {
             "name": "Python Debugger: Streamlit",
@@ -30,7 +31,23 @@
                 "run",
                 "apps/streamlit/app.py"
             ],
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Python Debugger: Backtest Script",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/examples/run_backtest.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            //            "logToFile": true,
+            "pythonArgs": [
+                "-B"
+            ],
+            "env": {
+                "PYTHONUNBUFFERED": "1"
+            }
         }
     ]
 }
