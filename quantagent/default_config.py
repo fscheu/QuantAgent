@@ -15,3 +15,13 @@ DEFAULT_MODELS = {
 
 # Default temperature (professional, deterministic outputs)
 DEFAULT_TEMPERATURE = 0.1
+
+# Retry configuration for LLM API calls
+RETRY_CONFIG = {
+    "max_retries": 5,
+    "base_wait": 2.0,
+    "max_wait": 60.0,
+    "exponential_base": 2,
+    "jitter": True,
+    "jitter_factor": 0.5,
+}
