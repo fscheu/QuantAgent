@@ -13,7 +13,10 @@
       "Bash(python -c:*)",
       "Bash(python3:*)",
       "Bash(grep:*)",
-      "Bash(git mv:*)"
+      "Bash(git mv:*)",
+      "Bash(bd new:*)",
+      "Bash(bd ready:*)",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []

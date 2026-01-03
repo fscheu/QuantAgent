@@ -10,16 +10,13 @@ Agents working in this repository should read planning documents in this order:
    - [phase1_roadmap.md](./phase1_roadmap.md) - Phase 1 development plan and milestones
    - [phase2_roadmap.md](./phase2_roadmap.md) - Phase 2 development plan and milestones
 
-2. **Operational Task Lists** (reference)
-   - [little_tasks_todo.md](./little_tasks_todo.md) - Small tasks and maintenance items
-
 ## Current Truth
 
 The roadmap files represent the current development phases and priorities. When planning work:
 
 - Consult the relevant phase roadmap for context
 - Align new tasks with phase objectives
-- Reference `little_tasks_todo.md` for quick maintenance items
+- Use Beads (`bd ready`) to view current backlog and ready tasks
 
 ## Per-Change Planning Documents
 
