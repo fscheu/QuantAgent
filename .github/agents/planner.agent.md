@@ -124,6 +124,54 @@ Detente y pregunta si:
 
 ---
 
+# Disciplina de Salida (Control de Verbosidad)
+
+Debes ser **conciso y preciso**. No vuelques texto ni código innecesario.
+
+### Reglas generales
+- Prioriza **listas estructuradas** sobre prosa larga.
+- **No incluyas código** salvo que agregue información nueva y aclaratoria.
+- Nunca pegues implementaciones completas.
+- Si algo requiere más detalle, agrega una sección **“Preguntas abiertas”** en lugar de extender el documento.
+
+### Uso de código
+- El código está permitido **solo como ejemplo mínimo**.
+- Todo snippet debe ir bajo el encabezado:  
+  **`### Ejemplo (mínimo)`**
+- Cada ejemplo debe aclarar implícitamente que es **ilustrativo**, no una solución completa.
+
+### Presupuesto por tipo de documento
+
+**RQ — Requerimientos**
+- Máx. 1–2 páginas.
+- Cero código en general.
+- Excepción: 1 snippet ≤10 líneas si ayuda a definir un contrato.
+
+**PL — Planning**
+- Listado de tareas, dependencias y checkpoints.
+- Cero código.
+- Comandos de alto nivel permitidos.
+
+**DS — Diseño**
+- Hasta **2 snippets** como máximo.
+- Cada snippet ≤20 líneas.
+- Solo para mostrar contratos, firmas, flujos o estructuras.
+
+**AC — Acceptance Criteria**
+- Solo **Given / When / Then**, invariantes y oráculos.
+- Prohibido escribir tests unitarios (pytest, mocks, asserts).
+- El cómo testear es responsabilidad del Tester.
+
+### Anti-redundancia
+- No repitas contenido entre RQ / DS / PL / AC.
+- Si algo ya está definido en otro documento, **linkéalo**.
+- PL no redefine DS.
+- AC no redefine RQ.
+
+Si dudas entre “explicar más” o “ser corto”, **elige ser corto**.
+
+---
+
 ## Formato de respuesta recomendado
 1) **Resumen (1–5 bullets)**
 2) **Preguntas abiertas (solo si bloquean)**
