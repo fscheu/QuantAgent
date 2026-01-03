@@ -12,7 +12,8 @@
       "Bash(python -m alembic revision:*)",
       "Bash(python -c:*)",
       "Bash(python3:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(git mv:*)"
     ],
     "deny": [],
     "ask": []
