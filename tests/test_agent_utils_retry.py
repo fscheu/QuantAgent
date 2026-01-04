@@ -313,6 +313,7 @@ def test_http_5xx_status_codes_trigger_retry():
 
 def test_global_config_applied_by_default():
     """AC4.1: Global config from RETRY_CONFIG used by default."""
+    from quantagent.default_config import RETRY_CONFIG
 
     class MockRateLimitError(Exception):
         pass
@@ -320,14 +321,15 @@ def test_global_config_applied_by_default():
     MockRateLimitError.__module__ = "openai"
     MockRateLimitError.__name__ = "RateLimitError"
 
-    # RETRY_CONFIG has max_retries=5, so should succeed with 4 failures + 1 success
-    mock_fn = Mock(side_effect=[MockRateLimitError()] * 4 + ["success"])
+    # Use actual RETRY_CONFIG value to avoid brittleness
+    expected_retries = int(RETRY_CONFIG["max_retries"])
+    mock_fn = Mock(side_effect=[MockRateLimitError()] * (expected_retries - 1) + ["success"])
 
     with patch("time.sleep"):
         result = invoke_with_retry(mock_fn)
 
     assert result == "success"
-    assert mock_fn.call_count == 5
+    assert mock_fn.call_count == expected_retries
 
 
 def test_per_call_config_overrides_global():
@@ -373,7 +375,7 @@ def test_partial_override_mix_global_and_local():
 
 
 def test_legacy_signature_works():
-    """AC5.1: Legacy signature with wait_sec works."""
+    """AC5.1: Legacy signature with wait_sec works and maps to base_wait."""
 
     class MockRateLimitError(Exception):
         pass
@@ -384,10 +386,10 @@ def test_legacy_signature_works():
     mock_fn = Mock(side_effect=[MockRateLimitError(), "success"])
 
     with patch("time.sleep") as mock_sleep:
-        result = invoke_with_retry(mock_fn, retries=3, wait_sec=4)
+        result = invoke_with_retry(mock_fn, retries=3, wait_sec=4, jitter=False)
 
     assert result == "success"
-    assert mock_sleep.call_count == 1  # Should have waited
+    mock_sleep.assert_called_once_with(4.0)  # Verifies wait_sec → base_wait
 
 
 def test_deprecation_warning_for_wait_sec(caplog):
@@ -498,12 +500,56 @@ def test_no_logs_on_success(caplog):
 
 
 # ============================================================================
-# Helper Function Tests
+# Additional Tests (Missing ACs)
 # ============================================================================
 
 
-def test_is_retryable_error_with_rate_limit():
-    """Test _is_retryable_error correctly identifies RateLimitError."""
+def test_jitter_reproducible_with_seed():
+    """AC2.4: Jitter calculations are reproducible with seed."""
+    random.seed(42)
+    waits1 = [
+        _calculate_wait_time(
+            attempt=0,
+            base_wait=4.0,
+            max_wait=60.0,
+            exponential_base=2,
+            jitter=True,
+            jitter_factor=0.5,
+        )
+        for _ in range(10)
+    ]
+
+    random.seed(42)
+    waits2 = [
+        _calculate_wait_time(
+            attempt=0,
+            base_wait=4.0,
+            max_wait=60.0,
+            exponential_base=2,
+            jitter=True,
+            jitter_factor=0.5,
+        )
+        for _ in range(10)
+    ]
+
+    assert waits1 == waits2
+
+
+def test_very_large_max_wait_applied():
+    """AC6.2: Very large max_wait values are respected."""
+    wait = _calculate_wait_time(
+        attempt=10,  # 2 * 2^10 = 2048
+        base_wait=2.0,
+        max_wait=3600.0,  # 1 hour
+        exponential_base=2,
+        jitter=False,
+        jitter_factor=0.5,
+    )
+    assert wait == 3600.0  # Should be capped
+
+
+def test_exponential_backoff_full_sequence():
+    """Verify full exponential backoff sequence with real timing."""
 
     class MockRateLimitError(Exception):
         pass
@@ -511,32 +557,114 @@ def test_is_retryable_error_with_rate_limit():
     MockRateLimitError.__module__ = "openai"
     MockRateLimitError.__name__ = "RateLimitError"
 
-    error = MockRateLimitError()
-    assert _is_retryable_error(error) is True
+    mock_fn = Mock(side_effect=[MockRateLimitError()] * 3 + ["success"])
+
+    with patch("time.sleep") as mock_sleep:
+        result = invoke_with_retry(
+            mock_fn, retries=5, base_wait=2.0, max_wait=60.0, jitter=False
+        )
+
+    assert result == "success"
+    assert mock_sleep.call_count == 3
+    expected_waits = [2.0, 4.0, 8.0]
+    actual_waits = [call.args[0] for call in mock_sleep.call_args_list]
+    assert actual_waits == expected_waits
 
 
-def test_is_retryable_error_with_non_retryable():
-    """Test _is_retryable_error correctly rejects non-retryable errors."""
+def test_no_sleep_after_final_failure():
+    """Verify no sleep occurs after the final failed attempt."""
 
-    class MockAuthError(Exception):
+    class MockRateLimitError(Exception):
         pass
 
-    MockAuthError.__module__ = "openai"
-    MockAuthError.__name__ = "AuthenticationError"
+    MockRateLimitError.__module__ = "openai"
+    MockRateLimitError.__name__ = "RateLimitError"
 
-    error = MockAuthError()
-    assert _is_retryable_error(error) is False
+    mock_fn = Mock(side_effect=MockRateLimitError())
+
+    with patch("time.sleep") as mock_sleep:
+        with pytest.raises(RuntimeError):
+            invoke_with_retry(mock_fn, retries=3)
+
+    # Should sleep only between attempts (not after last)
+    assert mock_sleep.call_count == 2  # retries=3 → 3 attempts → 2 sleeps
 
 
-def test_is_retryable_error_with_status_code():
-    """Test _is_retryable_error checks status_code attribute."""
+@pytest.mark.parametrize(
+    "error_module,error_name",
+    [
+        ("openai", "RateLimitError"),
+        ("anthropic", "RateLimitError"),
+        ("requests.exceptions", "Timeout"),
+        ("requests.exceptions", "ConnectionError"),
+    ],
+)
+def test_retryable_errors_parametrized(error_module, error_name):
+    """AC3: All documented retryable errors trigger retry (parametrized)."""
+
+    class MockError(Exception):
+        pass
+
+    MockError.__module__ = error_module
+    MockError.__name__ = error_name
+
+    mock_fn = Mock(side_effect=[MockError(), "success"])
+
+    with patch("time.sleep"):
+        result = invoke_with_retry(mock_fn, retries=3)
+
+    assert result == "success"
+    assert mock_fn.call_count == 2
+
+
+# ============================================================================
+# Helper Function Tests
+# ============================================================================
+
+
+@pytest.mark.parametrize(
+    "error_type,module,name,expected_retryable",
+    [
+        ("RateLimitError", "openai", "RateLimitError", True),
+        ("RateLimitError", "anthropic", "RateLimitError", True),
+        ("Timeout", "requests.exceptions", "Timeout", True),
+        ("ConnectionError", "requests.exceptions", "ConnectionError", True),
+        ("AuthenticationError", "openai", "AuthenticationError", False),
+        ("BadRequestError", "openai", "BadRequestError", False),
+    ],
+)
+def test_is_retryable_error_parametrized(error_type, module, name, expected_retryable):
+    """Test _is_retryable_error correctly identifies retryable vs non-retryable errors."""
+
+    class MockError(Exception):
+        pass
+
+    MockError.__module__ = module
+    MockError.__name__ = name
+
+    error = MockError()
+    assert _is_retryable_error(error) is expected_retryable
+
+
+@pytest.mark.parametrize(
+    "status_code,expected_retryable",
+    [
+        (429, True),
+        (500, True),
+        (502, True),
+        (503, True),
+        (504, True),
+        (400, False),
+        (401, False),
+        (403, False),
+        (404, False),
+    ],
+)
+def test_is_retryable_error_status_codes(status_code, expected_retryable):
+    """Test _is_retryable_error checks status_code attribute correctly."""
 
     class HTTPError(Exception):
         def __init__(self, status_code):
             self.status_code = status_code
 
-    assert _is_retryable_error(HTTPError(429)) is True
-    assert _is_retryable_error(HTTPError(500)) is True
-    assert _is_retryable_error(HTTPError(503)) is True
-    assert _is_retryable_error(HTTPError(400)) is False
-    assert _is_retryable_error(HTTPError(401)) is False
+    assert _is_retryable_error(HTTPError(status_code)) is expected_retryable
