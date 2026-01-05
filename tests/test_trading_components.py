@@ -2,6 +2,7 @@
 Unit tests for trading components: PositionSizer, RiskManager, PaperBroker, OrderManager.
 """
 
+from datetime import datetime
 from decimal import Decimal
 from unittest.mock import Mock
 
@@ -737,7 +738,7 @@ class TestFullEndToEndIntegration:
         # Execute: LONG decision should trigger reversal
         result = self.order_manager.execute_decision(
             symbol="BTC",
-            decision="LONG",
+            decision=TradeSignal.LONG,
             confidence=0.68,
             current_price=106045.33,
         )
@@ -786,7 +787,7 @@ class TestFullEndToEndIntegration:
         # Execute: SHORT decision should trigger reversal
         result = self.order_manager.execute_decision(
             symbol="ETH",
-            decision="SHORT",
+            decision=TradeSignal.SHORT,
             confidence=0.75,
             current_price=3100.0,
         )
@@ -836,7 +837,7 @@ class TestFullEndToEndIntegration:
         # Execute: LONG decision
         result = self.order_manager.execute_decision(
             symbol="BTC",
-            decision="LONG",
+            decision=TradeSignal.LONG,
             confidence=0.80,
             current_price=105000.0,
         )
@@ -865,7 +866,7 @@ class TestFullEndToEndIntegration:
         # Execute: LONG decision should attempt reversal
         result = self.order_manager.execute_decision(
             symbol="BTC",
-            decision="LONG",
+            decision=TradeSignal.LONG,
             confidence=0.70,
             current_price=105000.0,
         )
@@ -889,7 +890,7 @@ class TestFullEndToEndIntegration:
         # Execute: LONG decision (not a reversal)
         result = self.order_manager.execute_decision(
             symbol="SOL",
-            decision="LONG",
+            decision=TradeSignal.LONG,
             confidence=0.70,
             current_price=150.0,
         )
@@ -897,6 +898,197 @@ class TestFullEndToEndIntegration:
         # Verify: single order executed
         assert result is not None
         assert self.portfolio.execute_trade.call_count == 1
+
+    def test_reversal_order_objects_created(self):
+        """Test correct Order objects are created during reversal (AC-1 enhanced)."""
+        # Setup: SHORT position
+        self.portfolio.positions = {
+            "BTC": {
+                "qty": -0.05,
+                "avg_cost": 100000.0,
+                "current_price": 105000.0,
+                "pnl": -250.0,
+                "pnl_pct": -5.0,
+            }
+        }
+        self.portfolio.cash = 95000.0
+
+        # Mock portfolio.execute_trade
+        close_trade = Mock()
+        close_trade.pnl = Decimal("-250.00")
+        open_trade = Mock()
+        open_trade.pnl = Decimal("0.00")
+
+        call_count = [0]
+
+        def mock_execute_trade(order, fill_price):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                self.portfolio.positions["BTC"]["qty"] = 0.0
+                return close_trade
+            else:
+                self.portfolio.positions["BTC"]["qty"] = order.quantity
+                return open_trade
+
+        self.portfolio.execute_trade.side_effect = mock_execute_trade
+
+        # Execute reversal using TradeSignal enum
+        result = self.order_manager.execute_decision(
+            symbol="BTC",
+            decision=TradeSignal.LONG,
+            confidence=0.75,
+            current_price=105000.0,
+        )
+
+        # Verify: result is not None
+        assert result is not None
+
+        # Verify: 2 orders + 2 trades were added to DB
+        assert self.db.add.call_count >= 4
+
+        # Extract created orders from mock calls
+        created_orders = [
+            call[0][0]
+            for call in self.db.add.call_args_list
+            if len(call[0]) > 0 and isinstance(call[0][0], Order)
+        ]
+
+        # Verify: at least 2 orders were created
+        assert len(created_orders) >= 2
+
+        # Verify first order (close SHORT)
+        close_order = created_orders[0]
+        assert close_order.side == OrderSide.BUY
+        assert (
+            abs(close_order.quantity - 0.05) < 0.0001
+        ), f"Close order quantity should be 0.05, got {close_order.quantity}"
+        assert close_order.symbol == "BTC"
+        assert close_order.order_type == OrderType.MARKET
+
+        # Verify second order (open LONG)
+        open_order = created_orders[1]
+        assert open_order.side == OrderSide.BUY
+        assert open_order.quantity > 0, "Open order must have positive quantity"
+        assert open_order.symbol == "BTC"
+        assert open_order.order_type == OrderType.MARKET
+
+    def test_reversal_broker_receives_correct_sequence(self):
+        """Test broker receives orders in correct sequence (close then open)."""
+        # Setup: LONG position
+        self.portfolio.positions = {
+            "ETH": {
+                "qty": 2.5,
+                "avg_cost": 3000.0,
+                "current_price": 3100.0,
+                "pnl": 250.0,
+                "pnl_pct": 3.33,
+            }
+        }
+        self.portfolio.cash = 92500.0
+
+        # Spy on broker calls
+        broker_calls = []
+
+        def spy_place_order(order):
+            broker_calls.append(order)
+            # Return a filled order
+            order.status = OrderStatus.FILLED
+            order.filled_quantity = order.quantity
+            order.average_fill_price = order.price * 0.99  # Simulate slippage
+            order.filled_timestamp = datetime.now()
+            return order
+
+        self.broker.place_order = Mock(side_effect=spy_place_order)
+
+        # Mock portfolio.execute_trade
+        call_count = [0]
+
+        def mock_execute_trade(order, fill_price):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                self.portfolio.positions["ETH"]["qty"] = 0.0
+                trade = Mock()
+                trade.pnl = Decimal("250.00")
+                return trade
+            else:
+                self.portfolio.positions["ETH"]["qty"] = -order.quantity
+                trade = Mock()
+                trade.pnl = Decimal("0.00")
+                return trade
+
+        self.portfolio.execute_trade.side_effect = mock_execute_trade
+
+        # Execute reversal using TradeSignal enum
+        result = self.order_manager.execute_decision(
+            symbol="ETH",
+            decision=TradeSignal.SHORT,
+            confidence=0.80,
+            current_price=3100.0,
+        )
+
+        # Verify: reversal completed
+        assert result is not None
+
+        # Verify: broker received exactly 2 orders
+        assert len(broker_calls) == 2, f"Expected 2 broker calls, got {len(broker_calls)}"
+
+        # Verify first call: close LONG (SELL)
+        close_order = broker_calls[0]
+        assert close_order.side == OrderSide.SELL
+        assert (
+            abs(close_order.quantity - 2.5) < 0.0001
+        ), f"Close order should sell 2.5 ETH, got {close_order.quantity}"
+        assert close_order.symbol == "ETH"
+
+        # Verify second call: open SHORT (SELL)
+        open_order = broker_calls[1]
+        assert open_order.side == OrderSide.SELL
+        assert open_order.quantity > 0, "Open order must have positive quantity"
+        assert open_order.symbol == "ETH"
+
+    def test_reversal_using_tradesiganl_enum(self):
+        """Test reversal works correctly with TradeSignal enum (not strings)."""
+        # Setup: SHORT position
+        self.portfolio.positions = {
+            "BTC": {
+                "qty": -0.02,
+                "avg_cost": 100000.0,
+                "current_price": 102000.0,
+                "pnl": -40.0,
+                "pnl_pct": -2.0,
+            }
+        }
+
+        # Mock portfolio.execute_trade
+        call_count = [0]
+
+        def mock_execute_trade(order, fill_price):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                self.portfolio.positions["BTC"]["qty"] = 0.0
+                trade = Mock()
+                trade.pnl = Decimal("-40.00")
+                return trade
+            else:
+                self.portfolio.positions["BTC"]["qty"] = order.quantity
+                trade = Mock()
+                trade.pnl = Decimal("0.00")
+                return trade
+
+        self.portfolio.execute_trade.side_effect = mock_execute_trade
+
+        # Execute using TradeSignal.LONG enum (not string)
+        result = self.order_manager.execute_decision(
+            symbol="BTC",
+            decision=TradeSignal.LONG,
+            confidence=0.65,
+            current_price=102000.0,
+        )
+
+        # Verify: execution succeeded
+        assert result is not None
+        assert self.portfolio.positions["BTC"]["qty"] > 0
+        assert self.portfolio.execute_trade.call_count == 2
 
 
 if __name__ == "__main__":
