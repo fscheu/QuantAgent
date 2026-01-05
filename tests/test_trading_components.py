@@ -2,15 +2,17 @@
 Unit tests for trading components: PositionSizer, RiskManager, PaperBroker, OrderManager.
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock
 from decimal import Decimal
+from unittest.mock import Mock
 
+import pytest
+
+from quantagent.models import (Order, OrderSide, OrderStatus, OrderType,
+                               TradeSignal)
+from quantagent.trading.order_manager import OrderManager
+from quantagent.trading.paper_broker import PaperBroker
 from quantagent.trading.position_sizer import PositionSizer
 from quantagent.trading.risk_manager import RiskManager
-from quantagent.trading.paper_broker import PaperBroker
-from quantagent.trading.order_manager import OrderManager
-from quantagent.models import Order, OrderSide, OrderStatus, OrderType, TradeSignal
 
 
 class TestPositionSizer:

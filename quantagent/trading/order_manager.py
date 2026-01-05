@@ -15,9 +15,11 @@ Flow:
 
 import logging
 from typing import Optional
+
 from sqlalchemy.orm import Session
 
 from quantagent.models import Order, OrderSide, OrderType, Signal, TradeSignal
+
 from .position_sizer import PositionSizer
 from .risk_manager import RiskManager
 
@@ -242,9 +244,7 @@ class OrderManager:
             symbol, close_side, close_qty, current_price
         )
         if not is_valid:
-            logger.error(
-                f"{symbol}: Reversal failed - close order rejected: {reason}"
-            )
+            logger.error(f"{symbol}: Reversal failed - close order rejected: {reason}")
             return None
 
         # Create and execute close order
@@ -365,9 +365,7 @@ class OrderManager:
         if trigger_signal_id:
             try:
                 sig = (
-                    self.db.query(Signal)
-                    .filter(Signal.id == trigger_signal_id)
-                    .first()
+                    self.db.query(Signal).filter(Signal.id == trigger_signal_id).first()
                 )
                 if sig and not sig.order_id:
                     sig.order_id = open_order.id
