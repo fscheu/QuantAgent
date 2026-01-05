@@ -66,13 +66,11 @@ class OrderManager:
         Flow:
         1. If HOLD → return None
         2. Calculate size based on confidence
-        3. Validate trade
-        4. If invalid → log rejection, return None
-        5. Create Order object
-        6. Place with broker
-        7. Update portfolio
-        8. Update risk tracker
-        9. Log to database
+        3. Detect position reversal (SHORT->LONG or LONG->SHORT)
+        4. If reversal: execute two-order reversal (close + open)
+        5. If not reversal: validate trade and execute single order
+        6. Update risk tracker
+        7. Log to database
 
         Args:
             symbol: Trading symbol (e.g., "BTC", "SPX")
@@ -107,7 +105,30 @@ class OrderManager:
         # Determine order side BEFORE validation (needed for position check)
         side = OrderSide.BUY if decision.upper() == "LONG" else OrderSide.SELL
 
-        # Step 3: Validate trade (now includes position management check)
+        # Step 3: Detect position reversal
+        existing_position = self.portfolio.positions.get(symbol)
+        is_reversal = False
+        if existing_position:
+            existing_qty = existing_position["qty"]
+            is_reversal = (existing_qty > 0 and side == OrderSide.SELL) or (
+                existing_qty < 0 and side == OrderSide.BUY
+            )
+
+        # Step 4: Execute reversal or single order
+        if is_reversal:
+            logger.info(
+                f"{symbol}: Position reversal detected - closing existing position and opening new one"
+            )
+            return self._execute_reversal(
+                symbol=symbol,
+                new_side=side,
+                new_qty=qty,
+                current_price=current_price,
+                environment=environment,
+                trigger_signal_id=trigger_signal_id,
+            )
+
+        # Step 5: Validate trade (now includes position management check)
         is_valid, reason = self.risk_manager.validate_trade(
             symbol, side, qty, current_price
         )
@@ -180,6 +201,183 @@ class OrderManager:
             return None
 
         return filled_order
+
+    def _execute_reversal(
+        self,
+        symbol: str,
+        new_side: OrderSide,
+        new_qty: float,
+        current_price: float,
+        environment=None,
+        trigger_signal_id: Optional[int] = None,
+    ) -> Optional[Order]:
+        """
+        Execute a position reversal as two separate orders.
+
+        Args:
+            symbol: Trading symbol
+            new_side: Desired new position side (BUY for LONG, SELL for SHORT)
+            new_qty: Desired new position quantity
+            current_price: Current market price
+            environment: Environment enum
+            trigger_signal_id: ID of signal that triggered this reversal
+
+        Returns:
+            Last filled Order (open order) if successful, None if failed
+        """
+        existing_position = self.portfolio.positions[symbol]
+        existing_qty = existing_position["qty"]
+
+        # Step 1: Close existing position
+        close_side = OrderSide.BUY if existing_qty < 0 else OrderSide.SELL
+        close_qty = abs(existing_qty)
+
+        logger.info(
+            f"{symbol}: Reversal step 1/2 - closing existing position: "
+            f"{close_side} {close_qty:.6f} @ ${current_price:.2f}"
+        )
+
+        # Validate close order
+        is_valid, reason = self.risk_manager.validate_trade(
+            symbol, close_side, close_qty, current_price
+        )
+        if not is_valid:
+            logger.error(
+                f"{symbol}: Reversal failed - close order rejected: {reason}"
+            )
+            return None
+
+        # Create and execute close order
+        close_order = Order(
+            symbol=symbol,
+            side=close_side,
+            quantity=close_qty,
+            price=current_price,
+            order_type=OrderType.MARKET,
+            environment=environment,
+            trigger_signal_id=trigger_signal_id,
+        )
+
+        try:
+            self.db.add(close_order)
+            self.db.flush()
+        except Exception as e:
+            logger.error(
+                f"{symbol}: Reversal failed - close order persistence failed: {str(e)}"
+            )
+            self.db.rollback()
+            return None
+
+        try:
+            filled_close_order = self.broker.place_order(close_order)
+            logger.info(
+                f"{symbol}: Close order filled - {filled_close_order.side} "
+                f"{filled_close_order.filled_quantity:.6f} @ "
+                f"${filled_close_order.average_fill_price:.2f}"
+            )
+        except Exception as e:
+            logger.error(
+                f"{symbol}: Reversal failed - close order broker execution failed: {str(e)}"
+            )
+            return None
+
+        try:
+            close_trade = self.portfolio.execute_trade(
+                filled_close_order, filled_close_order.average_fill_price
+            )
+            self.risk_manager.on_trade_executed(close_trade)
+            self.db.add(close_trade)
+            self.db.flush()
+            logger.info(f"{symbol}: Close position completed")
+        except Exception as e:
+            logger.error(
+                f"{symbol}: Reversal failed - close portfolio update failed: {str(e)}"
+            )
+            return None
+
+        # Step 2: Open new position
+        logger.info(
+            f"{symbol}: Reversal step 2/2 - opening new position: "
+            f"{new_side} {new_qty:.6f} @ ${current_price:.2f}"
+        )
+
+        # Validate open order
+        is_valid, reason = self.risk_manager.validate_trade(
+            symbol, new_side, new_qty, current_price
+        )
+        if not is_valid:
+            logger.error(
+                f"{symbol}: Reversal partial - open order rejected: {reason} "
+                f"(existing position closed successfully)"
+            )
+            return None
+
+        # Create and execute open order
+        open_order = Order(
+            symbol=symbol,
+            side=new_side,
+            quantity=new_qty,
+            price=current_price,
+            order_type=OrderType.MARKET,
+            environment=environment,
+            trigger_signal_id=trigger_signal_id,
+        )
+
+        try:
+            self.db.add(open_order)
+            self.db.flush()
+        except Exception as e:
+            logger.error(
+                f"{symbol}: Reversal partial - open order persistence failed: {str(e)}"
+            )
+            self.db.rollback()
+            return None
+
+        try:
+            filled_open_order = self.broker.place_order(open_order)
+            logger.info(
+                f"{symbol}: Open order filled - {filled_open_order.side} "
+                f"{filled_open_order.filled_quantity:.6f} @ "
+                f"${filled_open_order.average_fill_price:.2f}"
+            )
+        except Exception as e:
+            logger.error(
+                f"{symbol}: Reversal partial - open order broker execution failed: {str(e)}"
+            )
+            return None
+
+        try:
+            open_trade = self.portfolio.execute_trade(
+                filled_open_order, filled_open_order.average_fill_price
+            )
+            self.risk_manager.on_trade_executed(open_trade)
+            self.db.add(open_trade)
+            self.db.commit()
+            logger.info(f"{symbol}: Position reversal completed successfully")
+        except Exception as e:
+            logger.error(
+                f"{symbol}: Reversal partial - open portfolio update failed: {str(e)}"
+            )
+            self.db.rollback()
+            return None
+
+        # Update reverse provenance link if available
+        if trigger_signal_id:
+            try:
+                sig = (
+                    self.db.query(Signal)
+                    .filter(Signal.id == trigger_signal_id)
+                    .first()
+                )
+                if sig and not sig.order_id:
+                    sig.order_id = open_order.id
+                    self.db.commit()
+            except Exception as e:
+                logger.warning(
+                    f"{symbol}: Failed to update signal provenance: {str(e)}"
+                )
+
+        return filled_open_order
 
     def execute_decision_with_order(
         self,

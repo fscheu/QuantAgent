@@ -10,7 +10,7 @@ from quantagent.trading.position_sizer import PositionSizer
 from quantagent.trading.risk_manager import RiskManager
 from quantagent.trading.paper_broker import PaperBroker
 from quantagent.trading.order_manager import OrderManager
-from quantagent.models import Order, OrderSide, OrderStatus, OrderType
+from quantagent.models import Order, OrderSide, OrderStatus, OrderType, TradeSignal
 
 
 class TestPositionSizer:
@@ -336,7 +336,7 @@ class TestOrderManager:
         """Test HOLD decision returns None."""
         result = self.order_manager.execute_decision(
             symbol="BTC",
-            decision="HOLD",
+            decision=TradeSignal.NEUTRAL,
             confidence=0.8,
             current_price=42000.0,
         )
@@ -369,8 +369,8 @@ class TestOrderManager:
         trade.pnl = Decimal("0.00")
         self.portfolio.execute_trade.return_value = trade
 
-        # First need a position to short
-        self.portfolio.positions["BTC"] = {"qty": 1.0, "avg_cost": 42000.0}
+        # No existing position (clean open SHORT)
+        self.portfolio.positions = {}
 
         result = self.order_manager.execute_decision(
             symbol="BTC",
@@ -500,8 +500,8 @@ class TestFullEndToEndIntegration:
 
     def test_full_flow_short_valid_trade_executes_all_steps(self):
         """Test SHORT decision executes complete chain: Size → Validate → Broker → Portfolio → DB."""
-        # Setup existing position to short
-        self.portfolio.positions["BTC"] = {"qty": 1.0, "avg_cost": 42000.0}
+        # No existing position (clean SHORT open)
+        self.portfolio.positions = {}
 
         # Mock portfolio.execute_trade to return a trade
         trade = Mock()
@@ -696,6 +696,205 @@ class TestFullEndToEndIntegration:
         daily_pnl = self.risk_manager.get_daily_pnl()
         # Expected: 500 - 200 + 300 = 600
         assert daily_pnl == pytest.approx(600.0, rel=0.001)
+
+    def test_short_to_long_reversal(self):
+        """Test reversal from SHORT to LONG position."""
+        # Setup: existing SHORT position
+        self.portfolio.positions = {
+            "BTC": {
+                "qty": -0.033094,
+                "avg_cost": 105000.0,
+                "current_price": 106000.0,
+                "pnl": -33.09,
+                "pnl_pct": -0.95,
+            }
+        }
+        self.portfolio.cash = 103500.0
+
+        # Mock portfolio.execute_trade to return trades
+        close_trade = Mock()
+        close_trade.pnl = Decimal("0.00")
+        open_trade = Mock()
+        open_trade.pnl = Decimal("0.00")
+
+        call_count = [0]
+
+        def mock_execute_trade(order, fill_price):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                # First call: close SHORT position
+                self.portfolio.positions["BTC"]["qty"] = 0.0
+                return close_trade
+            else:
+                # Second call: open LONG position
+                self.portfolio.positions["BTC"]["qty"] = 0.034277
+                return open_trade
+
+        self.portfolio.execute_trade.side_effect = mock_execute_trade
+
+        # Execute: LONG decision should trigger reversal
+        result = self.order_manager.execute_decision(
+            symbol="BTC",
+            decision="LONG",
+            confidence=0.68,
+            current_price=106045.33,
+        )
+
+        # Verify: reversal executed successfully
+        assert result is not None
+        assert self.portfolio.positions["BTC"]["qty"] > 0
+        assert self.portfolio.execute_trade.call_count == 2
+        assert self.db.add.call_count >= 2  # At least 2 orders + 2 trades
+
+    def test_long_to_short_reversal(self):
+        """Test reversal from LONG to SHORT position."""
+        # Setup: existing LONG position
+        self.portfolio.positions = {
+            "ETH": {
+                "qty": 2.5,
+                "avg_cost": 3000.0,
+                "current_price": 3100.0,
+                "pnl": 250.0,
+                "pnl_pct": 3.33,
+            }
+        }
+        self.portfolio.cash = 92500.0
+
+        # Mock portfolio.execute_trade
+        close_trade = Mock()
+        close_trade.pnl = Decimal("250.00")
+        open_trade = Mock()
+        open_trade.pnl = Decimal("0.00")
+
+        call_count = [0]
+
+        def mock_execute_trade(order, fill_price):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                # First call: close LONG position
+                self.portfolio.positions["ETH"]["qty"] = 0.0
+                return close_trade
+            else:
+                # Second call: open SHORT position
+                self.portfolio.positions["ETH"]["qty"] = -2.0
+                return open_trade
+
+        self.portfolio.execute_trade.side_effect = mock_execute_trade
+
+        # Execute: SHORT decision should trigger reversal
+        result = self.order_manager.execute_decision(
+            symbol="ETH",
+            decision="SHORT",
+            confidence=0.75,
+            current_price=3100.0,
+        )
+
+        # Verify: reversal executed successfully
+        assert result is not None
+        assert self.portfolio.positions["ETH"]["qty"] < 0
+        assert self.portfolio.execute_trade.call_count == 2
+
+    def test_reversal_with_different_sizes(self):
+        """Test reversal where close qty != open qty."""
+        # Setup: small SHORT position
+        self.portfolio.positions = {
+            "BTC": {
+                "qty": -0.01,
+                "avg_cost": 100000.0,
+                "current_price": 105000.0,
+                "pnl": -50.0,
+                "pnl_pct": -5.0,
+            }
+        }
+        self.portfolio.cash = 99000.0
+
+        # Mock portfolio.execute_trade
+        close_trade = Mock()
+        close_trade.pnl = Decimal("-50.00")
+        open_trade = Mock()
+        open_trade.pnl = Decimal("0.00")
+
+        call_count = [0]
+
+        def mock_execute_trade(order, fill_price):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                # Close: BUY 0.01
+                assert abs(order.quantity - 0.01) < 0.0001
+                self.portfolio.positions["BTC"]["qty"] = 0.0
+                return close_trade
+            else:
+                # Open: BUY calculated size (larger)
+                assert order.quantity > 0.01
+                self.portfolio.positions["BTC"]["qty"] = order.quantity
+                return open_trade
+
+        self.portfolio.execute_trade.side_effect = mock_execute_trade
+
+        # Execute: LONG decision
+        result = self.order_manager.execute_decision(
+            symbol="BTC",
+            decision="LONG",
+            confidence=0.80,
+            current_price=105000.0,
+        )
+
+        # Verify: reversal completed with two different sizes
+        assert result is not None
+        assert self.portfolio.execute_trade.call_count == 2
+        assert self.portfolio.positions["BTC"]["qty"] > 0.01
+
+    def test_reversal_close_order_fails(self):
+        """Test reversal stops if close order fails."""
+        # Setup: SHORT position exists
+        self.portfolio.positions = {
+            "BTC": {
+                "qty": -0.05,
+                "avg_cost": 100000.0,
+                "current_price": 105000.0,
+                "pnl": -250.0,
+                "pnl_pct": -5.0,
+            }
+        }
+
+        # Mock broker to fail on first order (close)
+        self.broker.place_order = Mock(side_effect=Exception("Broker error"))
+
+        # Execute: LONG decision should attempt reversal
+        result = self.order_manager.execute_decision(
+            symbol="BTC",
+            decision="LONG",
+            confidence=0.70,
+            current_price=105000.0,
+        )
+
+        # Verify: reversal failed, no portfolio update
+        assert result is None
+        assert self.portfolio.execute_trade.call_count == 0
+        assert self.portfolio.positions["BTC"]["qty"] == -0.05  # unchanged
+
+    def test_non_reversal_unchanged(self):
+        """Test non-reversal trades still work as before."""
+        # Setup: no existing position
+        self.portfolio.positions = {}
+        self.portfolio.cash = 100000.0
+
+        # Mock portfolio.execute_trade
+        trade = Mock()
+        trade.pnl = Decimal("0.00")
+        self.portfolio.execute_trade.return_value = trade
+
+        # Execute: LONG decision (not a reversal)
+        result = self.order_manager.execute_decision(
+            symbol="SOL",
+            decision="LONG",
+            confidence=0.70,
+            current_price=150.0,
+        )
+
+        # Verify: single order executed
+        assert result is not None
+        assert self.portfolio.execute_trade.call_count == 1
 
 
 if __name__ == "__main__":
