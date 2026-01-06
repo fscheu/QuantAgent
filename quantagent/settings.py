@@ -5,6 +5,7 @@ Loads environment variables from .env file and provides typed access to all sett
 
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Load .env file (idempotent - only loads once)

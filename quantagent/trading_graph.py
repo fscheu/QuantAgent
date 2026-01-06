@@ -113,7 +113,8 @@ class TradingGraph:
                 )
         else:
             raise ValueError(
-                f"Unsupported provider: {provider}. Must be 'openai', 'anthropic', 'qwen', or 'azure'"
+                f"Unsupported provider: {provider}. "
+                "Must be 'openai', 'anthropic', 'qwen', or 'azure'"
             )
 
         return api_key
@@ -158,8 +159,8 @@ class TradingGraph:
         Create an LLM instance based on the provider.
 
         Args:
-            provider: The provider name ("openai", "anthropic", or "qwen")
-            model: The model name (e.g., "gpt-4o", "claude-3-5-sonnet-20241022", "qwen-vl-max-latest")
+            provider: The provider name ("openai", "anthropic", "qwen", or "azure")
+            model: The model name
             temperature: The temperature setting for the model
 
         Returns:
@@ -216,7 +217,8 @@ class TradingGraph:
             )
         else:
             raise ValueError(
-                f"Unsupported provider: {provider}. Must be 'openai', 'anthropic', 'qwen', or 'azure'"
+                f"Unsupported provider: {provider}. "
+                "Must be 'openai', 'anthropic', 'qwen', or 'azure'"
             )
 
     # def _set_tool_nodes(self) -> Dict[str, ToolNode]:

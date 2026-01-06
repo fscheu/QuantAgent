@@ -14,10 +14,10 @@
       "Bash(python3:*)",
       "Bash(grep:*)",
       "Bash(git mv:*)",
-      "Bash(bd *)",
+      "Bash(bd :*)",
       "Bash(git rm:*)",
       "Bash(bash -l -c 'bd create \"\"Mejorar retry logic con exponential backoff y multi-provider support\"\" --description \"\"Mejorar el sistema actual de retry (invoke_with_retry) en agent_utils.py para:\n- Implementar exponential backoff real (actualmente usa wait fijo)\n- Soportar errores de múltiples providers (OpenAI, Anthropic, Qwen)\n- Hacer configurable los parámetros de retry\n- Considerar fallback a providers alternativos\n\nContexto: El sistema actual maneja RateLimitError de OpenAI con retry básico, pero puede mejorarse para ser más robusto y soportar otros providers de LLM.\n\nNivel: ESTÁNDAR\"\" --label enhancement --label langgraph --priority 2')",
-      "Bash(bash -l -c:*)",
+      "Bash(bash -l -c:*)"
     ],
     "deny": [],
     "ask": []
