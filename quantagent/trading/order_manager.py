@@ -107,6 +107,29 @@ class OrderManager:
         # Determine order side BEFORE validation (needed for position check)
         side = OrderSide.BUY if decision.upper() == "LONG" else OrderSide.SELL
 
+        # Check for position reversal
+        current_position = self.portfolio.get_position(symbol)
+        existing_qty = current_position.get("qty", 0.0) if current_position else 0.0
+        
+        is_reversal = (existing_qty > 0 and side == OrderSide.SELL) or (
+            existing_qty < 0 and side == OrderSide.BUY
+        )
+
+        if is_reversal:
+            logger.info(
+                f"{symbol}: Position reversal detected - existing qty: {existing_qty}, new side: {side}"
+            )
+            # Execute reversal as two orders: close existing + open new
+            return self._execute_reversal(
+                symbol=symbol,
+                existing_qty=existing_qty,
+                new_side=side,
+                new_qty=qty,
+                current_price=current_price,
+                environment=environment,
+                trigger_signal_id=trigger_signal_id,
+            )
+
         # Step 3: Validate trade (now includes position management check)
         is_valid, reason = self.risk_manager.validate_trade(
             symbol, side, qty, current_price
@@ -236,3 +259,182 @@ class OrderManager:
         self.risk_manager.on_trade_executed(trade)
 
         return filled_order
+
+    def _execute_reversal(
+        self,
+        symbol: str,
+        existing_qty: float,
+        new_side: OrderSide,
+        new_qty: float,
+        current_price: float,
+        environment=None,
+        trigger_signal_id: Optional[int] = None,
+    ) -> Optional[Order]:
+        """
+        Execute position reversal as two orders: close existing position, then open new.
+
+        Args:
+            symbol: Trading symbol
+            existing_qty: Current position quantity (positive=LONG, negative=SHORT)
+            new_side: Side of new position (BUY=LONG, SELL=SHORT)
+            new_qty: Quantity for new position
+            current_price: Current market price
+            environment: Environment enum
+            trigger_signal_id: ID of signal that triggered this order
+
+        Returns:
+            Filled Order for the new position if successful, None if failed
+        """
+        # Step 1: Close existing position
+        close_side = OrderSide.SELL if existing_qty > 0 else OrderSide.BUY
+        close_qty = abs(existing_qty)
+
+        logger.info(
+            f"{symbol}: Executing reversal - Step 1: Close {close_side} {close_qty:.6f}"
+        )
+
+        # Validate close trade
+        is_valid, reason = self.risk_manager.validate_trade(
+            symbol, close_side, close_qty, current_price
+        )
+        if not is_valid:
+            logger.warning(f"{symbol}: Close order rejected - {reason}")
+            return None
+
+        # Create close order
+        close_order = Order(
+            symbol=symbol,
+            side=close_side,
+            quantity=close_qty,
+            price=current_price,
+            order_type=OrderType.MARKET,
+            environment=environment,
+            trigger_signal_id=trigger_signal_id,
+        )
+
+        # Persist close order
+        try:
+            self.db.add(close_order)
+            self.db.flush()
+        except Exception as e:
+            logger.error(f"{symbol}: Failed to persist close order - {str(e)}")
+            self.db.rollback()
+            return None
+
+        # Execute close order with broker
+        try:
+            filled_close_order = self.broker.place_order(close_order)
+            logger.info(
+                f"{symbol}: Close order filled - {filled_close_order.side} {filled_close_order.filled_quantity:.6f} "
+                f"@ ${filled_close_order.average_fill_price:.2f}"
+            )
+        except Exception as e:
+            logger.error(f"{symbol}: Close order broker execution failed - {str(e)}")
+            return None
+
+        # Update portfolio for close
+        try:
+            close_trade = self.portfolio.execute_trade(
+                filled_close_order, filled_close_order.average_fill_price
+            )
+            logger.info(
+                f"{symbol}: Portfolio updated - close {close_side} {close_qty:.6f} executed"
+            )
+        except Exception as e:
+            logger.error(f"{symbol}: Close order portfolio update failed - {str(e)}")
+            return None
+
+        # Update risk tracker for close
+        self.risk_manager.on_trade_executed(close_trade)
+
+        # Persist close trade
+        try:
+            if trigger_signal_id:
+                sig = (
+                    self.db.query(Signal)
+                    .filter(Signal.id == trigger_signal_id)
+                    .first()
+                )
+                if sig and not sig.order_id:
+                    sig.order_id = close_order.id
+            self.db.add(close_trade)
+            self.db.commit()
+            logger.info(f"{symbol}: Close trade logged to database")
+        except Exception as e:
+            logger.error(f"{symbol}: Close trade database logging failed - {str(e)}")
+            self.db.rollback()
+            return None
+
+        # Step 2: Open new position
+        logger.info(
+            f"{symbol}: Executing reversal - Step 2: Open {new_side} {new_qty:.6f}"
+        )
+
+        # Validate new trade
+        is_valid, reason = self.risk_manager.validate_trade(
+            symbol, new_side, new_qty, current_price
+        )
+        if not is_valid:
+            logger.warning(
+                f"{symbol}: New position order rejected - {reason} (position already closed)"
+            )
+            return None
+
+        # Create new position order
+        new_order = Order(
+            symbol=symbol,
+            side=new_side,
+            quantity=new_qty,
+            price=current_price,
+            order_type=OrderType.MARKET,
+            environment=environment,
+            trigger_signal_id=trigger_signal_id,
+        )
+
+        # Persist new order
+        try:
+            self.db.add(new_order)
+            self.db.flush()
+        except Exception as e:
+            logger.error(f"{symbol}: Failed to persist new order - {str(e)}")
+            self.db.rollback()
+            return None
+
+        # Execute new order with broker
+        try:
+            filled_new_order = self.broker.place_order(new_order)
+            logger.info(
+                f"{symbol}: New order filled - {filled_new_order.side} {filled_new_order.filled_quantity:.6f} "
+                f"@ ${filled_new_order.average_fill_price:.2f}"
+            )
+        except Exception as e:
+            logger.error(f"{symbol}: New order broker execution failed - {str(e)}")
+            return None
+
+        # Update portfolio for new position
+        try:
+            new_trade = self.portfolio.execute_trade(
+                filled_new_order, filled_new_order.average_fill_price
+            )
+            logger.info(
+                f"{symbol}: Portfolio updated - new {new_side} {new_qty:.6f} executed"
+            )
+        except Exception as e:
+            logger.error(f"{symbol}: New order portfolio update failed - {str(e)}")
+            return None
+
+        # Update risk tracker for new position
+        self.risk_manager.on_trade_executed(new_trade)
+
+        # Persist new trade
+        try:
+            self.db.add(new_trade)
+            self.db.commit()
+            logger.info(f"{symbol}: New trade logged to database")
+        except Exception as e:
+            logger.error(f"{symbol}: New trade database logging failed - {str(e)}")
+            self.db.rollback()
+            return None
+
+        logger.info(f"{symbol}: Position reversal completed successfully")
+        return filled_new_order
