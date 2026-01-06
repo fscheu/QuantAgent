@@ -19,6 +19,12 @@ OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
 DASHSCOPE_API_KEY: str = os.getenv("DASHSCOPE_API_KEY", "")  # Qwen
 
+# Azure OpenAI Configuration
+AZURE_OPENAI_API_KEY: str = os.getenv("AZURE_OPENAI_API_KEY", "")
+AZURE_OPENAI_ENDPOINT: str = os.getenv("AZURE_OPENAI_ENDPOINT", "")
+AZURE_OPENAI_DEPLOYMENT: str = os.getenv("AZURE_OPENAI_DEPLOYMENT", "")
+AZURE_OPENAI_API_VERSION: str = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-01")
+
 # LLM Provider Configuration
 AGENT_LLM_PROVIDER: str = os.getenv("AGENT_LLM_PROVIDER", "openai")
 GRAPH_LLM_PROVIDER: str = os.getenv("GRAPH_LLM_PROVIDER", "openai")
@@ -34,6 +40,7 @@ def get_default_model(provider: str, is_agent: bool = True) -> str:
             "graph": "claude-haiku-4-5-20251001",
         },
         "qwen": {"agent": "qwen3-max", "graph": "qwen3-vl-plus"},
+        "azure": {"agent": "", "graph": ""},
     }
     model_type = "agent" if is_agent else "graph"
     return defaults.get(provider, defaults["openai"])[model_type]
