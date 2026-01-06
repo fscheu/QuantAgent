@@ -21,6 +21,10 @@ The files listed above represent the current functional requirements for the sys
 - Ensure UI changes align with `ui_streamlit_mvp_requirements.md`
 - Consider post-MVP ideas only when explicitly requested
 
+## Active Per-Change Requirements
+
+- [QuantAgent-7bn-RQ-azure-openai-support.md](./QuantAgent-7bn-RQ-azure-openai-support.md) - Azure OpenAI LLM provider support
+
 ## Per-Change Requirements
 
 Per-change requirement documents should follow this naming convention:

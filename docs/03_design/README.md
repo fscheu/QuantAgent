@@ -37,6 +37,10 @@ These documents represent the current technical design of the system. When imple
 - Reference TESTING_PATTERNS.md for test conventions
 - Check CONFIGURATION.md and LOGGING_STRATEGY.md for cross-cutting concerns
 
+## Active Per-Change Design
+
+- [QuantAgent-7bn-DS-azure-openai-support.md](./QuantAgent-7bn-DS-azure-openai-support.md) - Azure OpenAI LLM provider support
+
 ## Per-Change Design Documents
 
 Per-change design documents should follow this naming convention:

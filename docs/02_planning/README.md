@@ -18,6 +18,10 @@ The roadmap files represent the current development phases and priorities. When 
 - Align new tasks with phase objectives
 - Use Beads (`bd ready`) to view current backlog and ready tasks
 
+## Active Per-Change Planning
+
+- [QuantAgent-7bn-PL-azure-openai-support.md](./QuantAgent-7bn-PL-azure-openai-support.md) - Azure OpenAI LLM provider support
+
 ## Per-Change Planning Documents
 
 Per-change planning documents should follow this naming convention:
