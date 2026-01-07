@@ -18,6 +18,13 @@ The roadmap files represent the current development phases and priorities. When 
 - Align new tasks with phase objectives
 - Use Beads (`bd ready`) to view current backlog and ready tasks
 
+## Active Per-Change Planning
+
+- [QuantAgent-8vb-backtest-analysis.md](./QuantAgent-8vb-backtest-analysis.md) - Backtest log analysis (P0 bugs identified)
+- [QuantAgent-7bn-PL-azure-openai-support.md](./QuantAgent-7bn-PL-azure-openai-support.md) - Azure OpenAI LLM provider support
+- [QuantAgent-ou3-spx-data-fetch.md](./QuantAgent-ou3-spx-data-fetch.md) - SPX/yfinance intraday data fix (P2)
+- [QuantAgent-lmn-deprecated-parameter.md](./QuantAgent-lmn-deprecated-parameter.md) - Deprecated wait_sec cleanup (P3)
+
 ## Per-Change Planning Documents
 
 Per-change planning documents should follow this naming convention:
