@@ -793,3 +793,63 @@ These require **Implementer** to fix production code.
 
 **Tester Agent Sign-off**: Test code corrections complete. Ready for implementation fixes.
 
+
+---
+
+## Addendum: _extract_confidence Test Removal (2026-01-07)
+
+### Investigation
+
+User requested review of `test_extract_confidence_with_missing_report` test that was previously skipped.
+
+**Findings**:
+1. Method `_extract_confidence()` **did exist** originally (commit `077fb5b`)
+2. Original purpose: Extract confidence from `indicator_report` dict, default to 0.5
+3. Removed in commit `f9f8454` (Refactor portfolio and risk management)
+4. **Reason for removal**: Refactor changed `_parse_decision()` to return tuple `(signal, confidence)` instead of just `signal`
+5. Confidence now extracted directly from `TradingDecision.confidence` field
+
+### Original Implementation (commit 077fb5b)
+```python
+def _extract_confidence(self, result: Dict) -> float:
+    """Extract confidence from analysis result."""
+    indicator_report = result.get('indicator_report')
+    
+    if indicator_report and hasattr(indicator_report, 'confidence'):
+        return float(indicator_report.confidence)
+    
+    return 0.5  # Default to medium confidence
+```
+
+### Current Implementation (commit f9f8454+)
+```python
+def _parse_decision(self, decision: TradingDecision) -> (TradeSignal, float):
+    """Parse decision text to extract LONG/SHORT/HOLD and confidence."""
+    decision_upper = decision.decision.upper()
+    signal = TradeSignal.NEUTRAL
+    
+    if "LONG" in decision_upper or "BUY" in decision_upper:
+        signal = TradeSignal.LONG
+    elif "SHORT" in decision_upper or "SELL" in decision_upper:
+        signal = TradeSignal.SHORT
+    else:
+        signal = TradeSignal.NEUTRAL
+    
+    confidence = float(decision.confidence)  # ← Extracted here now
+    
+    return (signal, confidence)
+```
+
+### Decision
+**Test removed entirely** (not just skipped) because:
+1. Method no longer exists in codebase
+2. Functionality moved to `_parse_decision()` which has its own tests
+3. No plans to re-implement separate `_extract_confidence()` method
+4. Test validates obsolete API contract
+
+**Action**: Deleted lines 756-779 from `tests/test_backtest.py`
+
+**Rationale**: Keeping obsolete tests (even skipped) creates maintenance debt and confusion about system design.
+
+---
+

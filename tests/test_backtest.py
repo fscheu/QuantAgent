@@ -753,27 +753,3 @@ class TestBacktest:
 
         assert isinstance(backtest.config, dict)
 
-    # NOTE: _extract_confidence() method removed from Backtest class
-    # Test disabled until method is re-implemented or test is updated
-    @pytest.mark.skip(reason="_extract_confidence method does not exist in Backtest")
-    def test_extract_confidence_with_missing_report(
-        self, db_session, sample_dates, sample_config
-    ):
-        """Verify confidence extraction defaults when report missing."""
-        start, end = sample_dates
-
-        backtest = Backtest(
-            start_date=start,
-            end_date=end,
-            assets=["BTC"],
-            timeframe="1h",
-            initial_capital=100000.0,
-            config=sample_config,
-            db_session=db_session,
-        )
-
-        result = {}
-        confidence = backtest._extract_confidence(result)
-
-        # Should default to 0.5
-        assert confidence == 0.5
