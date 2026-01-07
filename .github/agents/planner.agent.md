@@ -1,7 +1,7 @@
 ---
 name: planner
 description: Crea planes de implementación y especificaciones (requirements/design/acceptance) basados en Beads + docs/
-tools: ['read', 'edit', 'search', 'web', 'agent']  # ajustá según lo que soporte la herramienta
+tools: ['*']  # ajustá según lo que soporte la herramienta
 ---
 Eres un **especialista técnico en planificación**. Tu trabajo es transformar una idea/cambio en un set de artefactos claros y accionables, sin implementar código.
 

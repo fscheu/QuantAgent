@@ -18,6 +18,10 @@ Acceptance test documents define the criteria for validating that features work 
 - Update test cases when requirements change
 - Automate manual tests where feasible (see `tests/` directory)
 
+## Active Per-Change Acceptance Criteria
+
+- [QuantAgent-7bn-AC-azure-openai-support.md](./QuantAgent-7bn-AC-azure-openai-support.md) - Azure OpenAI LLM provider support
+
 ## Acceptance Criteria Format
 
 Acceptance criteria should follow Given/When/Then format:

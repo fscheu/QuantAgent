@@ -104,9 +104,17 @@ class TradingGraph:
                     "DASHSCOPE_API_KEY not found in .env file. "
                     "Please set it in your .env file or use the web interface."
                 )
+        elif provider == "azure":
+            api_key = settings.AZURE_OPENAI_API_KEY
+            if not api_key:
+                raise ValueError(
+                    "AZURE_OPENAI_API_KEY not found in .env file. "
+                    "Please set it in your .env file or use the web interface."
+                )
         else:
             raise ValueError(
-                f"Unsupported provider: {provider}. Must be 'openai', 'anthropic', or 'qwen'"
+                f"Unsupported provider: {provider}. "
+                "Must be 'openai', 'anthropic', 'qwen', or 'azure'"
             )
 
         return api_key
@@ -151,8 +159,8 @@ class TradingGraph:
         Create an LLM instance based on the provider.
 
         Args:
-            provider: The provider name ("openai", "anthropic", or "qwen")
-            model: The model name (e.g., "gpt-4o", "claude-3-5-sonnet-20241022", "qwen-vl-max-latest")
+            provider: The provider name ("openai", "anthropic", "qwen", or "azure")
+            model: The model name
             temperature: The temperature setting for the model
 
         Returns:
@@ -182,9 +190,35 @@ class TradingGraph:
                 api_key=api_key,
                 max_retries=4,
             )
+        elif provider == "azure":
+            from langchain_openai import AzureChatOpenAI
+
+            endpoint = settings.AZURE_OPENAI_ENDPOINT
+            deployment = settings.AZURE_OPENAI_DEPLOYMENT
+            api_version = settings.AZURE_OPENAI_API_VERSION
+
+            if not endpoint:
+                raise ValueError(
+                    "AZURE_OPENAI_ENDPOINT not found in .env file. "
+                    "Example: https://myresource.openai.azure.com/"
+                )
+            if not deployment:
+                raise ValueError(
+                    "AZURE_OPENAI_DEPLOYMENT not found in .env file. "
+                    "Set this to your Azure deployment name (e.g., gpt-4o)"
+                )
+
+            return AzureChatOpenAI(
+                azure_endpoint=endpoint,
+                azure_deployment=deployment,
+                api_version=api_version,
+                api_key=api_key,
+                temperature=temperature,
+            )
         else:
             raise ValueError(
-                f"Unsupported provider: {provider}. Must be 'openai', 'anthropic', or 'qwen'"
+                f"Unsupported provider: {provider}. "
+                "Must be 'openai', 'anthropic', 'qwen', or 'azure'"
             )
 
     # def _set_tool_nodes(self) -> Dict[str, ToolNode]:
