@@ -207,6 +207,7 @@ class TestRiskManager:
         """Test validation passes for valid trade."""
         is_valid, reason = self.risk_manager.validate_trade(
             symbol="BTC",
+            side=OrderSide.BUY,
             qty=0.1,
             price=42000.0,
         )
@@ -220,6 +221,7 @@ class TestRiskManager:
 
         is_valid, reason = self.risk_manager.validate_trade(
             symbol="BTC",
+            side=OrderSide.BUY,
             qty=0.1,
             price=42000.0,  # Trade value: $4,200
         )
@@ -232,6 +234,7 @@ class TestRiskManager:
         # Trade value: 0.3 * 42000 = $12,600 (12.6% of $100k)
         is_valid, reason = self.risk_manager.validate_trade(
             symbol="BTC",
+            side=OrderSide.BUY,
             qty=0.3,
             price=42000.0,
         )
@@ -248,6 +251,7 @@ class TestRiskManager:
 
         is_valid, reason = self.risk_manager.validate_trade(
             symbol="SPX",
+            side=OrderSide.BUY,
             qty=1.0,
             price=5000.0,
         )
@@ -261,6 +265,7 @@ class TestRiskManager:
 
         is_valid, reason = self.risk_manager.validate_trade(
             symbol="BTC",
+            side=OrderSide.BUY,
             qty=0.1,
             price=42000.0,
         )
@@ -322,6 +327,9 @@ class TestOrderManager:
         self.portfolio.cash = 100000.0
         self.portfolio.positions = {}
         self.portfolio.get_total_value.return_value = 100000.0
+        
+        # Configure get_position to return None (no existing position)
+        self.portfolio.get_position.return_value = None
 
         self.risk_manager = RiskManager(self.portfolio, db=None)
         self.broker = PaperBroker(slippage_pct=0.01)

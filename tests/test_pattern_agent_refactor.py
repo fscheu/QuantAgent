@@ -158,7 +158,10 @@ class TestErrorHandling:
 
     def test_fallback_on_llm_exception(self, mock_toolkit, sample_state):
         """Verify agent returns valid fallback report when LLM raises exception."""
+        # Mock vision LLM to raise exception
         mock_vision_llm_error = Mock()
+        mock_response = Mock()
+        mock_response.content = "Mock error response"  # Return string, not Mock
         mock_vision_llm_error.with_structured_output = Mock(
             side_effect=ValueError("LLM error")
         )
@@ -179,7 +182,10 @@ class TestErrorHandling:
 
     def test_fallback_is_valid_pydantic_model(self, mock_toolkit, sample_state):
         """Verify fallback report respects all Pydantic constraints."""
+        # Mock vision LLM to raise exception
         mock_vision_llm_error = Mock()
+        mock_response = Mock()
+        mock_response.content = "Mock error response"  # Return string
         mock_vision_llm_error.with_structured_output = Mock(
             side_effect=RuntimeError("Vision error")
         )
@@ -303,7 +309,10 @@ class TestVisionIntegration:
 
     def test_vision_failure_returns_fallback(self, mock_toolkit, sample_state):
         """Verify agent handles vision LLM failure gracefully."""
+        # Mock vision LLM to raise exception
         mock_vision_llm_fails = Mock()
+        mock_response = Mock()
+        mock_response.content = "Mock error response"  # Return string
         mock_vision_llm_fails.with_structured_output = Mock(
             side_effect=Exception("Vision model unavailable")
         )

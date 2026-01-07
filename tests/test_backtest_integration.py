@@ -17,11 +17,18 @@ class TestBacktestIntegration:
     @pytest.fixture
     def db_session(self):
         """Create test database session."""
+        from sqlalchemy import text
         session = SessionLocal()
         yield session
-        # Cleanup
+        # Cleanup - Delete all in correct FK order
+        from quantagent.models import Order, Fill
+        session.query(Fill).delete()
         session.query(Trade).delete()
+        # Circular FK between signals/orders, disable FK checks temporarily
+        session.execute(text("SET session_replication_role = 'replica';"))
+        session.query(Order).delete()
         session.query(Signal).delete()
+        session.execute(text("SET session_replication_role = 'origin';"))
         session.query(BacktestRun).delete()
         session.query(MarketData).delete()
         session.commit()

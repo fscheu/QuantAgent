@@ -314,7 +314,10 @@ class TestVisionIntegration:
 
     def test_vision_failure_returns_fallback(self, mock_toolkit, sample_state):
         """Verify agent handles vision LLM failure gracefully."""
+        # Mock vision LLM to raise exception
         mock_vision_llm_fails = Mock()
+        mock_response = Mock()
+        mock_response.content = "Mock error response"  # Return string
         mock_vision_llm_fails.with_structured_output = Mock(
             side_effect=Exception("Vision model unavailable")
         )
