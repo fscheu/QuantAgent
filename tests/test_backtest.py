@@ -133,9 +133,9 @@ class TestBacktest:
             "max_daily_loss_pct",
             "max_position_pct",
             "slippage_pct",
-            "model_provider",
-            "model_name",
-            "temperature",
+            "agent_llm_provider",
+            "agent_llm_model",
+            "agent_llm_temperature",
         ]
 
         for field in required_fields:
