@@ -1,13 +1,13 @@
 """Data provider with caching layer for market data."""
 
+import logging
 from datetime import datetime, timedelta
 from typing import Optional
-import logging
 
 import pandas as pd
 import yfinance as yf
-from sqlalchemy.orm import Session
 from sqlalchemy import and_
+from sqlalchemy.orm import Session
 
 from quantagent.models import MarketData
 
@@ -45,7 +45,6 @@ class DataProvider:
         "VIX": "^VIX",
         "DXY": "DX-Y.NYB",
     }
-
 
     # Timeframe mapping for yfinance
     TIMEFRAME_MAPPING = {

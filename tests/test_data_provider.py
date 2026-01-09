@@ -1,13 +1,14 @@
 """Tests for DataProvider (data caching layer)."""
 
-import pytest
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
+
 import pandas as pd
+import pytest
 
 from quantagent.data.provider import DataProvider
-from quantagent.models import MarketData
 from quantagent.database import SessionLocal
+from quantagent.models import MarketData
 
 
 class TestDataProvider:
