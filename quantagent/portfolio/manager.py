@@ -3,17 +3,12 @@
 from datetime import datetime
 from decimal import Decimal
 from typing import Dict, Optional
+
 from sqlalchemy.orm import Session
 
-from quantagent.models import (
-    Order,
-    Trade,
-    Position,
-    OrderStatus,
-    OrderSide,
-    Environment,
-)
 from quantagent.database import SessionLocal
+from quantagent.models import (Environment, Order, OrderSide, OrderStatus,
+                               Position, Trade)
 
 
 class PortfolioManager:
@@ -74,7 +69,9 @@ class PortfolioManager:
 
         # Determine entry price and action type BEFORE updating position
         entry_price_for_sell = None
-        position_qty_before = self.positions[symbol]["qty"] if symbol in self.positions else 0.0
+        position_qty_before = (
+            self.positions[symbol]["qty"] if symbol in self.positions else 0.0
+        )
 
         if order.side == OrderSide.SELL:
             if position_qty_before > 0:
@@ -117,7 +114,9 @@ class PortfolioManager:
             # Closing existing position
             entry_price = Decimal(str(entry_price_for_sell))
             exit_price = Decimal(str(fill_price))
-            opened_at = None  # Should reference original trade, but we don't track that yet
+            opened_at = (
+                None  # Should reference original trade, but we don't track that yet
+            )
             closed_at = datetime.utcnow()
         else:
             # Increasing existing position (LONG or SHORT)
@@ -126,6 +125,34 @@ class PortfolioManager:
             opened_at = datetime.utcnow()
             closed_at = None
 
+        # Calculate P&L for closing trades
+        pnl: Decimal | None = None
+        pnl_pct: float | None = None
+
+        if is_closing_long or is_closing_short:
+            if entry_price and entry_price > 0 and exit_price is not None:
+                if is_closing_long:
+                    # LONG: profit when exit > entry
+                    pnl = (exit_price - entry_price) * Decimal(str(fill_qty))
+                    pnl_pct = float(
+                        (exit_price - entry_price) / entry_price * 100
+                    )
+                else:  # is_closing_short
+                    # SHORT: profit when entry > exit
+                    pnl = (entry_price - exit_price) * Decimal(str(fill_qty))
+                    pnl_pct = float(
+                        (entry_price - exit_price) / entry_price * 100
+                    )
+            else:
+                # Edge case: invalid entry_price or exit_price
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    f"Cannot calculate P&L for {symbol}: "
+                    f"invalid entry_price={entry_price} or exit_price={exit_price}"
+                )
+
         trade = Trade(
             symbol=symbol,
             order_id=order.id,
@@ -133,6 +160,8 @@ class PortfolioManager:
             exit_price=exit_price,
             quantity=Decimal(str(fill_qty)),
             side=order.side,
+            pnl=pnl,
+            pnl_pct=pnl_pct,
             commission=Decimal(str(0)),  # TODO: Support commission
             environment=self.environment,
             opened_at=opened_at or datetime.utcnow(),  # Ensure opened_at is never None
@@ -169,7 +198,9 @@ class PortfolioManager:
             else:
                 # Increase LONG position
                 total_qty = pos["qty"] + qty
-                pos["avg_cost"] = (pos["qty"] * pos["avg_cost"] + qty * price) / total_qty
+                pos["avg_cost"] = (
+                    pos["qty"] * pos["avg_cost"] + qty * price
+                ) / total_qty
                 pos["qty"] = total_qty
 
             pos["current_price"] = price
@@ -258,7 +289,9 @@ class PortfolioManager:
                 # SHORT: value = initial proceeds - current buyback cost
                 # = qty × avg_cost (proceeds) - qty × current_price (liability)
                 # = qty × (2 × avg_cost - current_price)
-                position_value += abs(pos["qty"]) * (2 * pos["avg_cost"] - pos["current_price"])
+                position_value += abs(pos["qty"]) * (
+                    2 * pos["avg_cost"] - pos["current_price"]
+                )
 
         return self.cash + position_value
 
