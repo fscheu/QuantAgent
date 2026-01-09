@@ -7,8 +7,14 @@ from typing import Dict, Optional
 from sqlalchemy.orm import Session
 
 from quantagent.database import SessionLocal
-from quantagent.models import (Environment, Order, OrderSide, OrderStatus,
-                               Position, Trade)
+from quantagent.models import (
+    Environment,
+    Order,
+    OrderSide,
+    OrderStatus,
+    Position,
+    Trade,
+)
 
 
 class PortfolioManager:
@@ -83,6 +89,10 @@ class PortfolioManager:
             elif position_qty_before < 0:
                 # Increasing existing SHORT position
                 entry_price_for_sell = self.positions[symbol]["avg_cost"]
+        elif order.side == OrderSide.BUY:
+            if position_qty_before < 0:
+                # Closing SHORT position
+                entry_price_for_sell = self.positions[symbol]["avg_cost"]
 
         # Update positions based on side
         if order.side == OrderSide.BUY:
@@ -134,15 +144,11 @@ class PortfolioManager:
                 if is_closing_long:
                     # LONG: profit when exit > entry
                     pnl = (exit_price - entry_price) * Decimal(str(fill_qty))
-                    pnl_pct = float(
-                        (exit_price - entry_price) / entry_price * 100
-                    )
+                    pnl_pct = float((exit_price - entry_price) / entry_price * 100)
                 else:  # is_closing_short
                     # SHORT: profit when entry > exit
                     pnl = (entry_price - exit_price) * Decimal(str(fill_qty))
-                    pnl_pct = float(
-                        (entry_price - exit_price) / entry_price * 100
-                    )
+                    pnl_pct = float((entry_price - exit_price) / entry_price * 100)
             else:
                 # Edge case: invalid entry_price or exit_price
                 import logging
