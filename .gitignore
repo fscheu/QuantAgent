@@ -7,3 +7,4 @@ record.csv
 *.db
 venv_wsl/
 quantagent.egg-info/*.*
+.worktrees/
