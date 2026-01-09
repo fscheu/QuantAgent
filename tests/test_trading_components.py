@@ -448,6 +448,7 @@ class TestFullEndToEndIntegration:
         self.portfolio.positions = {}
         self.portfolio.get_total_value.return_value = 100000.0
         self.portfolio.get_unrealized_pnl.return_value = 0.0
+        self.portfolio.get_position.return_value = None  # No existing position by default
 
         self.risk_manager = RiskManager(self.portfolio, db=None)
         self.broker = PaperBroker(slippage_pct=0.01)
@@ -711,15 +712,15 @@ class TestFullEndToEndIntegration:
     def test_short_to_long_reversal(self):
         """Test reversal from SHORT to LONG position."""
         # Setup: existing SHORT position
-        self.portfolio.positions = {
-            "BTC": {
-                "qty": -0.033094,
-                "avg_cost": 105000.0,
-                "current_price": 106000.0,
-                "pnl": -33.09,
-                "pnl_pct": -0.95,
-            }
+        position_data = {
+            "qty": -0.033094,
+            "avg_cost": 105000.0,
+            "current_price": 106000.0,
+            "pnl": -33.09,
+            "pnl_pct": -0.95,
         }
+        self.portfolio.positions = {"BTC": position_data}
+        self.portfolio.get_position.return_value = position_data
         self.portfolio.cash = 103500.0
 
         # Mock portfolio.execute_trade to return trades
@@ -760,15 +761,15 @@ class TestFullEndToEndIntegration:
     def test_long_to_short_reversal(self):
         """Test reversal from LONG to SHORT position."""
         # Setup: existing LONG position
-        self.portfolio.positions = {
-            "ETH": {
-                "qty": 2.5,
-                "avg_cost": 3000.0,
-                "current_price": 3100.0,
-                "pnl": 250.0,
-                "pnl_pct": 3.33,
-            }
+        position_data = {
+            "qty": 2.5,
+            "avg_cost": 3000.0,
+            "current_price": 3100.0,
+            "pnl": 250.0,
+            "pnl_pct": 3.33,
         }
+        self.portfolio.positions = {"ETH": position_data}
+        self.portfolio.get_position.return_value = position_data
         self.portfolio.cash = 92500.0
 
         # Mock portfolio.execute_trade
@@ -808,15 +809,15 @@ class TestFullEndToEndIntegration:
     def test_reversal_with_different_sizes(self):
         """Test reversal where close qty != open qty."""
         # Setup: small SHORT position
-        self.portfolio.positions = {
-            "BTC": {
-                "qty": -0.01,
-                "avg_cost": 100000.0,
-                "current_price": 105000.0,
-                "pnl": -50.0,
-                "pnl_pct": -5.0,
-            }
+        position_data = {
+            "qty": -0.01,
+            "avg_cost": 100000.0,
+            "current_price": 105000.0,
+            "pnl": -50.0,
+            "pnl_pct": -5.0,
         }
+        self.portfolio.positions = {"BTC": position_data}
+        self.portfolio.get_position.return_value = position_data
         self.portfolio.cash = 99000.0
 
         # Mock portfolio.execute_trade
@@ -858,15 +859,15 @@ class TestFullEndToEndIntegration:
     def test_reversal_close_order_fails(self):
         """Test reversal stops if close order fails."""
         # Setup: SHORT position exists
-        self.portfolio.positions = {
-            "BTC": {
-                "qty": -0.05,
-                "avg_cost": 100000.0,
-                "current_price": 105000.0,
-                "pnl": -250.0,
-                "pnl_pct": -5.0,
-            }
+        position_data = {
+            "qty": -0.05,
+            "avg_cost": 100000.0,
+            "current_price": 105000.0,
+            "pnl": -250.0,
+            "pnl_pct": -5.0,
         }
+        self.portfolio.positions = {"BTC": position_data}
+        self.portfolio.get_position.return_value = position_data
 
         # Mock broker to fail on first order (close)
         self.broker.place_order = Mock(side_effect=Exception("Broker error"))
@@ -910,15 +911,15 @@ class TestFullEndToEndIntegration:
     def test_reversal_order_objects_created(self):
         """Test correct Order objects are created during reversal (AC-1 enhanced)."""
         # Setup: SHORT position
-        self.portfolio.positions = {
-            "BTC": {
-                "qty": -0.05,
-                "avg_cost": 100000.0,
-                "current_price": 105000.0,
-                "pnl": -250.0,
-                "pnl_pct": -5.0,
-            }
+        position_data = {
+            "qty": -0.05,
+            "avg_cost": 100000.0,
+            "current_price": 105000.0,
+            "pnl": -250.0,
+            "pnl_pct": -5.0,
         }
+        self.portfolio.positions = {"BTC": position_data}
+        self.portfolio.get_position.return_value = position_data
         self.portfolio.cash = 95000.0
 
         # Mock portfolio.execute_trade
@@ -983,15 +984,15 @@ class TestFullEndToEndIntegration:
     def test_reversal_broker_receives_correct_sequence(self):
         """Test broker receives orders in correct sequence (close then open)."""
         # Setup: LONG position
-        self.portfolio.positions = {
-            "ETH": {
-                "qty": 2.5,
-                "avg_cost": 3000.0,
-                "current_price": 3100.0,
-                "pnl": 250.0,
-                "pnl_pct": 3.33,
-            }
+        position_data = {
+            "qty": 2.5,
+            "avg_cost": 3000.0,
+            "current_price": 3100.0,
+            "pnl": 250.0,
+            "pnl_pct": 3.33,
         }
+        self.portfolio.positions = {"ETH": position_data}
+        self.portfolio.get_position.return_value = position_data
         self.portfolio.cash = 92500.0
 
         # Spy on broker calls
@@ -1057,15 +1058,15 @@ class TestFullEndToEndIntegration:
     def test_reversal_using_tradesiganl_enum(self):
         """Test reversal works correctly with TradeSignal enum (not strings)."""
         # Setup: SHORT position
-        self.portfolio.positions = {
-            "BTC": {
-                "qty": -0.02,
-                "avg_cost": 100000.0,
-                "current_price": 102000.0,
-                "pnl": -40.0,
-                "pnl_pct": -2.0,
-            }
+        position_data = {
+            "qty": -0.02,
+            "avg_cost": 100000.0,
+            "current_price": 102000.0,
+            "pnl": -40.0,
+            "pnl_pct": -2.0,
         }
+        self.portfolio.positions = {"BTC": position_data}
+        self.portfolio.get_position.return_value = position_data
 
         # Mock portfolio.execute_trade
         call_count = [0]

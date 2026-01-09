@@ -538,7 +538,7 @@ def test_jitter_reproducible_with_seed():
 def test_very_large_max_wait_applied():
     """AC6.2: Very large max_wait values are respected."""
     wait = _calculate_wait_time(
-        attempt=10,  # 2 * 2^10 = 2048
+        attempt=12,  # 2 * 2^12 = 8192 > 3600
         base_wait=2.0,
         max_wait=3600.0,  # 1 hour
         exponential_base=2,

@@ -183,6 +183,10 @@ def test_insert_position():
     print("\nInserting position...")
     db = SessionLocal()
     try:
+        # Clean up any existing BTC position first
+        db.query(Position).filter_by(symbol="BTC").delete()
+        db.commit()
+        
         position = Position(
             symbol="BTC",
             quantity=Decimal("0.5"),
