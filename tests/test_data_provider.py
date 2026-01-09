@@ -169,7 +169,7 @@ class TestDataProvider:
     def test_to_yfinance_symbol_mapping(self, provider):
         """Verify symbol mapping to yfinance format."""
         assert provider._to_yfinance_symbol("BTC") == "BTC-USD"
-        assert provider._to_yfinance_symbol("SPX") == "^GSPC"
+        assert provider._to_yfinance_symbol("SPX") == "SPY"
         assert provider._to_yfinance_symbol("CL") == "CL=F"
         # Unknown symbols pass through
         assert provider._to_yfinance_symbol("AAPL") == "AAPL"

@@ -35,7 +35,7 @@ class DataProvider:
     # Symbol mapping for yfinance
     SYMBOL_MAPPING = {
         "BTC": "BTC-USD",
-        "SPX": "^GSPC",
+        "SPX": "SPY",  # SPY ETF used as proxy for S&P 500 (^GSPC doesn't support intraday data)
         "CL": "CL=F",
         "DAX": "^GDAXI",
         "ES": "ES=F",
