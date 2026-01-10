@@ -39,6 +39,7 @@ These documents represent the current technical design of the system. When imple
 
 ## Active Per-Change Design
 
+- [QuantAgent-nu7-DS-active-position-monitoring.md](./QuantAgent-nu7-DS-active-position-monitoring.md) - Active Position Monitoring System (Epic: QuantAgent-nu7)
 - [QuantAgent-7bn-DS-azure-openai-support.md](./QuantAgent-7bn-DS-azure-openai-support.md) - Azure OpenAI LLM provider support
 
 ## Per-Change Design Documents

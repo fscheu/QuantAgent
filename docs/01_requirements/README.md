@@ -23,6 +23,7 @@ The files listed above represent the current functional requirements for the sys
 
 ## Active Per-Change Requirements
 
+- [QuantAgent-nu7-RQ-active-position-monitoring.md](./QuantAgent-nu7-RQ-active-position-monitoring.md) - Active Position Monitoring System (Epic: QuantAgent-nu7)
 - [QuantAgent-7bn-RQ-azure-openai-support.md](./QuantAgent-7bn-RQ-azure-openai-support.md) - Azure OpenAI LLM provider support
 
 ## Per-Change Requirements

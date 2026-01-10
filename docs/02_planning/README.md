@@ -20,6 +20,7 @@ The roadmap files represent the current development phases and priorities. When 
 
 ## Active Per-Change Planning
 
+- [QuantAgent-nu7-PL-active-position-monitoring.md](./QuantAgent-nu7-PL-active-position-monitoring.md) - Active Position Monitoring System (Epic: QuantAgent-nu7)
 - [QuantAgent-8vb-backtest-analysis.md](./QuantAgent-8vb-backtest-analysis.md) - Backtest log analysis (P0 bugs identified)
 - [QuantAgent-7bn-PL-azure-openai-support.md](./QuantAgent-7bn-PL-azure-openai-support.md) - Azure OpenAI LLM provider support
 - [QuantAgent-ou3-spx-data-fetch.md](./QuantAgent-ou3-spx-data-fetch.md) - SPX/yfinance intraday data fix (P2)
