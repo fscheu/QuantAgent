@@ -15,10 +15,10 @@ from sqlalchemy.orm import Session
 
 from quantagent.models import Environment
 from quantagent.portfolio.manager import PortfolioManager
+from quantagent.trading.order_manager import OrderManager
+from quantagent.trading.paper_broker import PaperBroker
 from quantagent.trading.position_sizer import PositionSizer
 from quantagent.trading.risk_manager import RiskManager
-from quantagent.trading.paper_broker import PaperBroker
-from quantagent.trading.order_manager import OrderManager
 from quantagent.trading_graph import TradingGraph
 
 
