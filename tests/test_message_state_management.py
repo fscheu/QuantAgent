@@ -168,6 +168,136 @@ class TestMessageStateManagement:
         assert "final_trade_decision" in state
         assert isinstance(state["final_trade_decision"], TradingDecision)
 
+    def test_indicator_agent_fallback_does_not_add_messages(
+        self, mock_toolkit, sample_state_inicial
+    ):
+        """
+        Verify Indicator Agent fallback path does NOT add messages.
+
+        Tests the error handling path (lines 86-99 in indicator_agent.py)
+        to ensure fallback reports also exclude messages from state.
+        """
+        from unittest.mock import Mock
+
+        from quantagent.indicator_agent import create_indicator_agent
+
+        # Mock LLM to raise exception at invoke level (after with_structured_output)
+        failing_llm = Mock()
+        failing_llm.bind_tools = Mock(return_value=failing_llm)
+
+        # Create a mock structured LLM that raises on invoke
+        mock_structured = Mock()
+        mock_structured.invoke = Mock(side_effect=Exception("Simulated LLM failure"))
+        failing_llm.with_structured_output = Mock(return_value=mock_structured)
+
+        agent_node = create_indicator_agent(failing_llm, mock_toolkit)
+        result = agent_node(sample_state_inicial)
+
+        # Even in fallback, should NOT add messages
+        assert (
+            "messages" not in result
+        ), "Fallback indicator agent must NOT add messages"
+        assert "indicator_report" in result
+        assert isinstance(result["indicator_report"], IndicatorReport)
+        # Verify it's actually the fallback (confidence should be 0.0)
+        assert result["indicator_report"].confidence == 0.0
+        assert "failed" in result["indicator_report"].reasoning.lower()
+
+    def test_pattern_agent_fallback_does_not_add_messages(
+        self, mock_llm, mock_toolkit, sample_state_inicial
+    ):
+        """
+        Verify Pattern Agent fallback path does NOT add messages.
+
+        Tests the error handling path (lines 161-168 in pattern_agent.py)
+        to ensure fallback reports also exclude messages from state.
+        """
+        from unittest.mock import Mock
+
+        from quantagent.pattern_agent import create_pattern_agent
+
+        # Mock vision LLM to raise exception
+        failing_vision_llm = Mock()
+        failing_vision_llm.invoke = Mock(side_effect=Exception("Vision LLM failed"))
+
+        agent_node = create_pattern_agent(mock_llm, failing_vision_llm, mock_toolkit)
+        result = agent_node(sample_state_inicial)
+
+        # Even in fallback, should NOT add messages
+        assert "messages" not in result, "Fallback pattern agent must NOT add messages"
+        assert "pattern_report" in result
+        assert isinstance(result["pattern_report"], PatternReport)
+        # Verify it's actually the fallback
+        assert result["pattern_report"].primary_pattern == "failed to analyze"
+
+    def test_trend_agent_fallback_does_not_add_messages(
+        self, mock_llm, mock_toolkit, sample_state_inicial
+    ):
+        """
+        Verify Trend Agent fallback path does NOT add messages.
+
+        Tests the error handling path (lines 111-125 in trend_agent.py)
+        to ensure fallback reports also exclude messages from state.
+        """
+        from unittest.mock import Mock
+
+        from quantagent.trend_agent import create_trend_agent
+
+        # Mock vision LLM to raise exception
+        failing_vision_llm = Mock()
+        failing_vision_llm.invoke = Mock(side_effect=Exception("Vision LLM failed"))
+
+        agent_node = create_trend_agent(mock_llm, failing_vision_llm, mock_toolkit)
+        result = agent_node(sample_state_inicial)
+
+        # Even in fallback, should NOT add messages
+        assert "messages" not in result, "Fallback trend agent must NOT add messages"
+        assert "trend_report" in result
+        assert isinstance(result["trend_report"], TrendReport)
+        # Verify it's actually the fallback (trend_strength should be 0.0)
+        assert result["trend_report"].trend_strength == 0.0
+
+    def test_decision_agent_fallback_still_adds_messages(
+        self, mock_llm, mock_vision_llm, mock_toolkit, sample_state_inicial
+    ):
+        """
+        Verify Decision Agent fallback path STILL adds messages.
+
+        Tests the error handling path (lines 174-179 in decision_agent.py)
+        to ensure even fallback decisions include messages for follow-up.
+        """
+        from unittest.mock import Mock
+
+        from quantagent.decision_agent import create_final_trade_decider
+        from quantagent.indicator_agent import create_indicator_agent
+        from quantagent.pattern_agent import create_pattern_agent
+        from quantagent.trend_agent import create_trend_agent
+
+        # Build state with valid reports using working mocks
+        state = sample_state_inicial.copy()
+        state.update(create_indicator_agent(mock_llm, mock_toolkit)(state))
+        state.update(
+            create_pattern_agent(mock_llm, mock_vision_llm, mock_toolkit)(state)
+        )
+        state.update(create_trend_agent(mock_llm, mock_vision_llm, mock_toolkit)(state))
+
+        # Mock decision LLM to raise exception at invoke level
+        failing_decision_llm = Mock()
+        mock_structured = Mock()
+        mock_structured.invoke = Mock(side_effect=Exception("Decision LLM failed"))
+        failing_decision_llm.with_structured_output = Mock(return_value=mock_structured)
+
+        decision_node = create_final_trade_decider(failing_decision_llm)
+        result = decision_node(state)
+
+        # Even in fallback, Decision Agent MUST add messages
+        assert "messages" in result, "Fallback decision agent MUST add messages"
+        assert isinstance(result["messages"], list)
+        assert len(result["messages"]) > 0
+        assert "final_trade_decision" in result
+        # Verify it's actually the fallback (decision should be HOLD)
+        assert result["final_trade_decision"].decision == "HOLD"
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
