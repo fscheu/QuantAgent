@@ -4,12 +4,15 @@ Uses LLM and toolkit to generate and interpret trendline charts for short-term p
 """
 
 import json
+import logging
 from typing import Any, Dict
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from quantagent.agent_models import TrendReport
 from quantagent.agent_utils import invoke_with_retry
+
+logger = logging.getLogger(__name__)
 
 
 def create_trend_agent(tool_llm, graph_llm, toolkit):
@@ -33,7 +36,10 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
 
         # --- Generate image if not precomputed ---
         if not trend_image_b64:
-            print("No precomputed trend image found, generating with tool...")
+            logger.info(
+                "No precomputed trend image found, generating with tool...",
+                extra={"event_type": "trend_image_generation"},
+            )
 
             try:
                 # Call tool with retry wrapper
@@ -45,7 +51,11 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
                 )
                 trend_image_b64 = tool_result.get("trend_image")
             except Exception as e:
-                print(f"Failed to generate trend image: {e}")
+                logger.error(
+                    f"Failed to generate trend image: {e}",
+                    extra={"event_type": "trend_image_generation_failed"},
+                    exc_info=True,
+                )
                 trend_image_b64 = None
 
         # --- Initialize trend analysis output ---
@@ -101,8 +111,9 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
             except Exception as e:
                 # Fallback: retry without system message for Anthropic compatibility
                 if "at least one message" in str(e).lower():
-                    print(
-                        "Retrying without system message for Anthropic compatibility..."
+                    logger.info(
+                        "Retrying without system message for Anthropic compatibility...",
+                        extra={"event_type": "llm_retry_no_system_msg"},
                     )
                     try:
                         final_response = invoke_with_retry(

@@ -1,10 +1,13 @@
 import json
+import logging
 from typing import Any, Dict
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from quantagent.agent_models import PatternReport
 from quantagent.agent_utils import invoke_with_retry
+
+logger = logging.getLogger(__name__)
 
 
 def create_pattern_agent(tool_llm, graph_llm, toolkit):
@@ -47,7 +50,10 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
 
         # --- Generate image if not precomputed ---
         if not pattern_image_b64:
-            print("No precomputed pattern image found, generating with tool...")
+            logger.info(
+                "No precomputed pattern image found, generating with tool...",
+                extra={"event_type": "pattern_image_generation"},
+            )
 
             try:
                 # Call tool with retry wrapper
@@ -59,7 +65,11 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
                 )
                 pattern_image_b64 = tool_result.get("pattern_image")
             except Exception as e:
-                print(f"Failed to generate pattern image: {e}")
+                logger.error(
+                    f"Failed to generate pattern image: {e}",
+                    extra={"event_type": "pattern_image_generation_failed"},
+                    exc_info=True,
+                )
                 pattern_image_b64 = None
 
         # --- Vision analysis with image ---
@@ -111,8 +121,9 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
             except Exception as e:
                 # Fallback: retry without system message for Anthropic compatibility
                 if "at least one message" in str(e).lower():
-                    print(
-                        "Retrying without system message for Anthropic compatibility..."
+                    logger.info(
+                        "Retrying without system message for Anthropic compatibility...",
+                        extra={"event_type": "llm_retry_no_system_msg"},
                     )
                     try:
                         final_response = invoke_with_retry(

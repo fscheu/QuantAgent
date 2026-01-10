@@ -1,5 +1,6 @@
 import base64
 import io
+import logging
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -8,14 +9,13 @@ import numpy as np
 import pandas as pd
 
 import quantagent.color_style as color
-from quantagent.graph_util import (
-    fit_trendlines_high_low,
-    fit_trendlines_single,
-    get_line_points,
-    split_line_into_segments,
-)
+from quantagent.graph_util import (fit_trendlines_high_low,
+                                   fit_trendlines_single, get_line_points,
+                                   split_line_into_segments)
 
 matplotlib.use("Agg")
+
+logger = logging.getLogger(__name__)
 
 
 def standardize_ohlcv_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -38,7 +38,6 @@ def format_ohlcv_for_agents(df: pd.DataFrame) -> dict:
 
 
 def read_and_format_ohlcv(df: pd.DataFrame) -> dict:
-
     """
     Format OHLCV DataFrame for trading graph analysis.
 
@@ -120,7 +119,11 @@ def generate_kline_image(kline_data) -> dict:
         df.index = pd.to_datetime(df["Datetime"], format="%Y-%m-%d %H:%M:%S")
 
     except ValueError:
-        print("ValueError at graph_util.py\n")
+        logger.error(
+            "ValueError at static_util.py during datetime parsing",
+            extra={"event_type": "datetime_parse_error"},
+            exc_info=True,
+        )
 
     # Save image locally
     fig, axlist = mpf.plot(
