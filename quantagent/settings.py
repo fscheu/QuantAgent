@@ -58,6 +58,11 @@ GRAPH_LLM_MODEL: str = os.getenv(
 AGENT_LLM_TEMPERATURE: float = float(os.getenv("AGENT_LLM_TEMPERATURE", "0.1"))
 GRAPH_LLM_TEMPERATURE: float = float(os.getenv("GRAPH_LLM_TEMPERATURE", "0.1"))
 
+# Logging Configuration
+LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
+LOG_TO_CONSOLE: bool = os.getenv("LOG_TO_CONSOLE", "true").lower() == "true"
+LOG_TO_DB: bool = os.getenv("LOG_TO_DB", "true").lower() == "true"
+
 
 def update_env_file(key: str, value: str) -> None:
     """
