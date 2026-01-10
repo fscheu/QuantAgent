@@ -1,35 +1,31 @@
 """Backtesting engine for strategy validation."""
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
-import logging
 from decimal import Decimal
+from typing import Dict, List, Optional
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from sqlalchemy.orm import Session
 
 from quantagent.agent_models import TradingDecision
 from quantagent.data.provider import DataProvider
+from quantagent.database import SessionLocal
+from quantagent.models import (BacktestRun, Environment, Order, OrderSide,
+                               Signal, Trade, TradeSignal)
+from quantagent.portfolio.manager import PortfolioManager
 from quantagent.static_util import format_ohlcv_for_agents
-from quantagent.trading_graph import TradingGraph
-
+from quantagent.strategy.assembler import StrategyAssembler
+from quantagent.strategy.base import TradingStrategy
+from quantagent.strategy.llm_agent_strategy import LLMAgentStrategy
 from quantagent.trading.order_manager import OrderManager
+from quantagent.trading.paper_broker import PaperBroker
+from quantagent.trading.position_monitor import PositionMonitor
 from quantagent.trading.position_sizer import PositionSizer
 from quantagent.trading.risk_manager import RiskManager
-from quantagent.trading.paper_broker import PaperBroker
-from quantagent.portfolio.manager import PortfolioManager
-from quantagent.models import (
-    BacktestRun,
-    Signal,
-    Order,
-    Trade,
-    Environment,
-    TradeSignal,
-)
-from quantagent.database import SessionLocal
-from quantagent.strategy.assembler import StrategyAssembler
+from quantagent.trading_graph import TradingGraph
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +78,7 @@ class Backtest:
         config: Optional[Dict] = None,
         db_session: Optional[Session] = None,
         use_checkpointing: bool = False,
+        strategy: Optional[TradingStrategy] = None,
     ):
         """
         Initialize Backtest.
@@ -95,6 +92,7 @@ class Backtest:
             config: Configuration dict (portfolio/risk params, model settings)
             db_session: Database session (creates new if None)
             use_checkpointing: Enable LangGraph checkpointing for state persistence
+            strategy: Optional TradingStrategy. If None, uses LLMAgentStrategy with TradingGraph
         """
         self.start_date = start_date
         self.end_date = end_date
@@ -139,6 +137,12 @@ class Backtest:
         # Trading graph (analysis engine)
         self.trading_graph = components.graph
 
+        # Trading strategy (use provided or default to LLMAgentStrategy)
+        self.strategy = strategy or LLMAgentStrategy(self.trading_graph)
+
+        # Position monitor for active position tracking
+        self.position_monitor = PositionMonitor(self.db)
+
         # Trading components
         self.portfolio = components.portfolio_manager
         self.position_sizer = components.position_sizer
@@ -174,7 +178,8 @@ class Backtest:
         total_periods = len(date_range) * len(self.assets)
 
         logger.info(
-            f"Backtesting {total_periods} analysis periods ({len(date_range)} dates x {len(self.assets)} assets)"
+            f"Backtesting {total_periods} analysis periods "
+            f"({len(date_range)} dates x {len(self.assets)} assets)"
         )
 
         # Loop through dates
@@ -202,7 +207,7 @@ class Backtest:
             if (i + 1) % 100 == 0 or i == len(date_range) - 1:
                 progress = ((i + 1) / len(date_range)) * 100
                 logger.info(
-                    f"Progress: {progress:.1f}% ({i+1}/{len(date_range)} dates)"
+                    f"Progress: {progress:.1f}% ({i + 1}/{len(date_range)} dates)"
                 )
 
         # Calculate metrics
@@ -295,12 +300,17 @@ class Backtest:
         """
         Execute analysis and trade for a single asset at a given time.
 
+        NEW FLOW (Hybrid Model with PositionMonitor):
+        1. Check for active position
+        2. If active: strategy.should_exit() → close or update tracking (NO invoke)
+        3. If not active: strategy.generate_signal() → open position if signal != HOLD
+
         Args:
             asset: Asset symbol
             current_date: Current backtest date
         """
         # Get historical data for analysis (need lookback period)
-        lookback_days = 30  # Use last 30 days for analysis
+        lookback_days = 30
         data_start = current_date - timedelta(days=lookback_days)
 
         df = self.data_provider.get_ohlc(
@@ -316,67 +326,123 @@ class Backtest:
             )
             return
 
-        # Convert to kline_data format
-        kline_data = format_ohlcv_for_agents(df)
-
-        # Execute analysis using TradingGraph
-
-        initial_state = {
-            "kline_data": kline_data,
-            "time_frame": self.timeframe,
-            "stock_name": asset,
-            "messages": [],
-        }
-
-        # Run analysis with thread_id for checkpointing
-        thread_id = (
-            f"backtest_{self.backtest_run_id}_{asset}_{current_date.isoformat()}"
-        )
-        config = (
-            {"configurable": {"thread_id": thread_id}}
-            if self.use_checkpointing
-            else None
-        )
-
-        result = self.trading_graph.graph.invoke(initial_state, config=config)
-
-        # Extract decision
-        trading_decision = result.get("final_trade_decision", "HOLD")
-
-        # Parse decision (extract LONG/SHORT/HOLD and confidence)
-        trading_signal, confidence = self._parse_decision(trading_decision)
-
-        # Get current price
         current_price = float(df.iloc[-1]["close"])
 
-        # Store signal in database
-        signal = self._create_signal(
-            asset=asset,
-            decision=trading_signal,
-            confidence=confidence,
-            result=result,
-            current_date=current_date,
-            thread_id=thread_id if self.use_checkpointing else None,
-        )
+        # Check for active position
+        active_pos = self.position_monitor.get_active_position(asset)
 
-        # Execute trade if not HOLD
-        if trading_signal != TradeSignal.NEUTRAL:
-            order = self.order_manager.execute_decision(
-                symbol=asset,
-                decision=trading_signal,
-                confidence=confidence,
-                current_price=current_price,
-                environment=Environment.BACKTEST,
-                trigger_signal_id=signal.id if signal else None,
+        if active_pos:
+            # Position active: check exit conditions via strategy
+            should_exit, reason = self.strategy.should_exit(
+                active_pos, current_price, df
             )
 
-            if order:
-                logger.info(
-                    f"Executed {trading_signal.value} for {asset} @ ${current_price:.2f}, qty: {order.filled_quantity}"
+            if should_exit:
+                # Close position
+                self.position_monitor.close_position(active_pos, reason, current_price)
+
+                # Execute close via OrderManager
+                if active_pos.trade_id:
+                    self.order_manager.close_trade(
+                        active_pos.trade_id,
+                        current_price,
+                        environment=Environment.BACKTEST,
+                    )
+                    logger.info(
+                        f"{asset}: Closed position - {reason} @ ${current_price:.2f}"
+                    )
+                # Continue to potentially open new position below
+            else:
+                # Position still active: update tracking only (NO INVOKE)
+                prev_close = (
+                    float(df.iloc[-2]["close"]) if len(df) >= 2 else current_price
                 )
+                self.position_monitor.update_candle_tracking(
+                    active_pos, current_price, prev_close
+                )
+                return  # Early return - invocation saved
+
+        # No active position (or just closed): generate signal
+        kline_data = format_ohlcv_for_agents(df)
+
+        signal = self.strategy.generate_signal(
+            kline_data, asset, self.timeframe, current_price
+        )
+
+        if signal is None or signal.decision == "HOLD":
+            return
+
+        # Execute trade
+        trading_signal = (
+            TradeSignal.LONG if signal.decision == "LONG" else TradeSignal.SHORT
+        )
+
+        # Store signal in database
+        db_signal = self._create_signal_from_strategy(
+            asset=asset,
+            decision=trading_signal,
+            confidence=signal.confidence,
+            reasoning=signal.reasoning,
+            current_date=current_date,
+        )
+
+        # Execute order
+        order = self.order_manager.execute_decision(
+            symbol=asset,
+            decision=trading_signal,
+            confidence=signal.confidence,
+            current_price=current_price,
+            environment=Environment.BACKTEST,
+            trigger_signal_id=db_signal.id if db_signal else None,
+        )
+
+        if order and order.filled_quantity and order.filled_quantity > 0:
+            # Create ActivePosition
+            side = (
+                OrderSide.BUY if trading_signal == TradeSignal.LONG else OrderSide.SELL
+            )
+
+            # Get trade_id from order
+            trade_id = None
+            if order.id:
+                trade = (
+                    self.db.query(Trade)
+                    .filter(Trade.entry_order_id == order.id)
+                    .first()
+                )
+                if trade:
+                    trade_id = trade.id
+
+            self.position_monitor.open_position(
+                symbol=asset,
+                side=side,
+                entry_price=signal.entry_price or current_price,
+                stop_loss=signal.stop_loss
+                or (
+                    current_price * 0.98
+                    if side == OrderSide.BUY
+                    else current_price * 1.02
+                ),
+                take_profit=signal.take_profit
+                or (
+                    current_price * 1.03
+                    if side == OrderSide.BUY
+                    else current_price * 0.97
+                ),
+                quantity=order.filled_quantity,
+                exit_policy=signal.exit_policy.value,
+                trade_id=trade_id,
+                signal_id=db_signal.id if db_signal else None,
+                trailing_stop_pct=signal.trailing_stop_pct,
+                max_hold_candles=signal.max_hold_candles,
+            )
+
+            logger.info(
+                f"Executed {trading_signal.value} for {asset} @ "
+                f"${current_price:.2f}, qty: {order.filled_quantity}"
+            )
 
     def _parse_decision(self, decision: TradingDecision) -> (TradeSignal, float):
-
         """Parse decision text to extract LONG/SHORT/HOLD and confidence."""
         decision_upper = decision.decision.upper()
         signal = TradeSignal.NEUTRAL
@@ -387,10 +453,41 @@ class Backtest:
             signal = TradeSignal.SHORT
         else:
             signal = TradeSignal.NEUTRAL
-        
+
         ind = float(decision.confidence)
 
         return signal, ind
+
+    def _create_signal_from_strategy(
+        self,
+        asset: str,
+        decision: TradeSignal,
+        confidence: float,
+        reasoning: str,
+        current_date: datetime,
+    ) -> Optional[Signal]:
+        """Create Signal record from strategy output (simplified)."""
+        try:
+            signal = Signal(
+                symbol=asset,
+                signal=decision,
+                confidence=confidence,
+                timeframe=self.timeframe,
+                analysis_summary=reasoning,
+                generated_at=current_date,
+                environment=Environment.BACKTEST,
+                model_provider=self.config.get("agent_llm_provider", "openai"),
+                model_name=self.config.get("agent_llm_model", "gpt-4o-mini"),
+                temperature=self.config.get("agent_llm_temperature", 0.1),
+            )
+
+            self.db.add(signal)
+            self.db.commit()
+            return signal
+
+        except Exception as e:
+            logger.error(f"Error creating signal: {e}", exc_info=True)
+            return None
 
     def _create_signal(
         self,
@@ -437,7 +534,6 @@ class Backtest:
                 roc = float(indicator_report.roc)
             if indicator_report and hasattr(indicator_report, "willr"):
                 williams_r = float(indicator_report.willr)
-            
 
             # Get pattern and trend from reports
             pattern_report = result.get("pattern_report")
