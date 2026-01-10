@@ -27,6 +27,17 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
         # --- Tool definitions ---
         tools = [toolkit.generate_trend_image]
         time_frame = state["time_frame"]
+        symbol = state.get("stock_name", "UNKNOWN")
+        thread_id = state.get("thread_id")
+
+        logger.info(
+            f"Starting trend agent for {symbol}",
+            extra={
+                "event_type": "agent_start",
+                "symbol": symbol,
+                "thread_id": thread_id,
+            },
+        )
 
         # --- Check for precomputed image in state ---
         trend_image_b64 = state.get("trend_image")
@@ -170,6 +181,22 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
 
         # Don't add messages to shared state - each agent only needs them for its LLM call
         # Agents work independently and communicate via structured reports, not messages
+
+        logger.info(
+            f"Trend agent completed for {symbol}",
+            extra={
+                "event_type": "agent_end",
+                "symbol": symbol,
+                "thread_id": thread_id,
+                "extra_data": {
+                    "trend": trend_report.trend_direction,
+                    "trend_strength": trend_report.trend_strength,
+                    "support_level": trend_report.support_level,
+                    "resistance_level": trend_report.resistance_level,
+                },
+            },
+        )
+
         return {
             "trend_report": trend_report,
             "trend_image": trend_image_b64,

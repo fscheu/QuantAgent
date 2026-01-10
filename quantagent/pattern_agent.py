@@ -22,6 +22,17 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
         # --- Tool definitions ---
         tools = [toolkit.generate_kline_image]
         time_frame = state["time_frame"]
+        symbol = state.get("stock_name", "UNKNOWN")
+        thread_id = state.get("thread_id")
+
+        logger.info(
+            f"Starting pattern agent for {symbol}",
+            extra={
+                "event_type": "agent_start",
+                "symbol": symbol,
+                "thread_id": thread_id,
+            },
+        )
 
         pattern_descriptions = {
             "inverse_head_and_shoulders": "Three lows with the middle one being the lowest, symmetrical structure, typically indicates upward trend",
@@ -181,6 +192,21 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
 
         # Don't add messages to shared state - each agent only needs them for its LLM call
         # Agents work independently and communicate via structured reports, not messages
+
+        logger.info(
+            f"Pattern agent completed for {symbol}",
+            extra={
+                "event_type": "agent_end",
+                "symbol": symbol,
+                "thread_id": thread_id,
+                "extra_data": {
+                    "pattern": pattern_report.primary_pattern,
+                    "confidence": pattern_report.confidence,
+                    "breakout_probability": pattern_report.breakout_probability,
+                },
+            },
+        )
+
         return {
             "pattern_report": pattern_report,
         }
