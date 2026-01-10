@@ -53,6 +53,10 @@ class LLMAgentStrategy(TradingStrategy):
         # Invoke graph
         result = self.trading_graph.graph.invoke(initial_state)
 
+        # Defensive check: handle None result
+        if result is None:
+            return None
+
         # Extract decision
         trading_decision_raw = result.get("final_trade_decision", "HOLD")
 
