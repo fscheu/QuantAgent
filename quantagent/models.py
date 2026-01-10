@@ -1,23 +1,23 @@
 """SQLAlchemy models for QuantAgent trading system."""
 
+import enum
 from datetime import datetime
-from decimal import Decimal
+
 from sqlalchemy import (
+    JSON,
+    Boolean,
     Column,
-    Integer,
-    String,
-    Float,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
-    Text,
-    Boolean,
-    Numeric,
     Index,
-    JSON,
+    Integer,
+    Numeric,
+    String,
+    Text,
 )
 from sqlalchemy.orm import relationship
-import enum
 
 from .database import Base
 
@@ -63,6 +63,15 @@ class Environment(str, enum.Enum):
     BACKTEST = "backtest"
     PAPER = "paper"
     PROD = "prod"
+
+
+class ExitPolicy(str, enum.Enum):
+    """Enum for position exit policies."""
+
+    SL_TP_ONLY = "sl_tp_only"
+    TIME_BASED = "time_based"
+    REEVALUATE = "reevaluate"
+    TRAILING_STOP = "trailing_stop"
 
 
 class Order(Base):
@@ -306,8 +315,49 @@ class BacktestRun(Base):
     max_drawdown = Column(Float, nullable=True)
     total_pnl = Column(Numeric(precision=18, scale=8), nullable=True)
 
+    __table_args__ = (Index("idx_start_end_date", "start_date", "end_date"),)
+
+
+class ActivePosition(Base):
+    """ActivePosition model for tracking active positions with stop-loss and take-profit."""
+
+    __tablename__ = "active_positions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    symbol = Column(String(20), nullable=False, index=True)
+    side = Column(Enum(OrderSide), nullable=False)
+
+    entry_price = Column(Numeric(precision=18, scale=8), nullable=False)
+    stop_loss = Column(Numeric(precision=18, scale=8), nullable=False)
+    take_profit = Column(Numeric(precision=18, scale=8), nullable=False)
+    quantity = Column(Numeric(precision=18, scale=8), nullable=False)
+
+    decision_timestamp = Column(DateTime, nullable=False, index=True)
+    candles_since_entry = Column(Integer, nullable=False, default=0)
+
+    exit_policy = Column(Enum(ExitPolicy), nullable=False)
+    max_hold_candles = Column(Integer, nullable=True)
+
+    prediction_horizon = Column(Integer, nullable=False, default=3)
+    candles_direction = Column(JSON, nullable=False, default=list)
+
+    trailing_stop_pct = Column(Float, nullable=True)
+    highest_price_seen = Column(Numeric(precision=18, scale=8), nullable=True)
+    lowest_price_seen = Column(Numeric(precision=18, scale=8), nullable=True)
+
+    trade_id = Column(Integer, ForeignKey("trades.id"), nullable=True)
+    signal_id = Column(Integer, ForeignKey("signals.id"), nullable=True)
+
+    is_active = Column(Boolean, nullable=False, default=True, index=True)
+    closed_at = Column(DateTime, nullable=True)
+    close_reason = Column(String(50), nullable=True)
+    accuracy = Column(Float, nullable=True)
+
+    environment = Column(
+        Enum(Environment), nullable=False, default=Environment.BACKTEST, index=True
+    )
+
     __table_args__ = (
-        Index("idx_start_end_date", "start_date", "end_date"),
-        # Note: idx_assets removed - JSON columns need GIN/GIST indexes
-        # For MVP, simple date-based queries are sufficient
+        Index("idx_symbol_is_active", "symbol", "is_active"),
+        Index("idx_active_positions_environment", "environment"),
     )
