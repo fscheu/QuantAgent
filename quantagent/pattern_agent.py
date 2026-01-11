@@ -1,10 +1,13 @@
 import json
+import logging
 from typing import Any, Dict
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from quantagent.agent_models import PatternReport
 from quantagent.agent_utils import invoke_with_retry
+
+logger = logging.getLogger(__name__)
 
 
 def create_pattern_agent(tool_llm, graph_llm, toolkit):
@@ -19,6 +22,17 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
         # --- Tool definitions ---
         tools = [toolkit.generate_kline_image]
         time_frame = state["time_frame"]
+        symbol = state.get("stock_name", "UNKNOWN")
+        thread_id = state.get("thread_id")
+
+        logger.info(
+            f"Starting pattern agent for {symbol}",
+            extra={
+                "event_type": "agent_start",
+                "symbol": symbol,
+                "thread_id": thread_id,
+            },
+        )
 
         pattern_descriptions = {
             "inverse_head_and_shoulders": "Three lows with the middle one being the lowest, symmetrical structure, typically indicates upward trend",
@@ -47,7 +61,10 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
 
         # --- Generate image if not precomputed ---
         if not pattern_image_b64:
-            print("No precomputed pattern image found, generating with tool...")
+            logger.info(
+                "No precomputed pattern image found, generating with tool...",
+                extra={"event_type": "pattern_image_generation"},
+            )
 
             try:
                 # Call tool with retry wrapper
@@ -59,7 +76,11 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
                 )
                 pattern_image_b64 = tool_result.get("pattern_image")
             except Exception as e:
-                print(f"Failed to generate pattern image: {e}")
+                logger.error(
+                    f"Failed to generate pattern image: {e}",
+                    extra={"event_type": "pattern_image_generation_failed"},
+                    exc_info=True,
+                )
                 pattern_image_b64 = None
 
         # --- Vision analysis with image ---
@@ -111,8 +132,9 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
             except Exception as e:
                 # Fallback: retry without system message for Anthropic compatibility
                 if "at least one message" in str(e).lower():
-                    print(
-                        "Retrying without system message for Anthropic compatibility..."
+                    logger.info(
+                        "Retrying without system message for Anthropic compatibility...",
+                        extra={"event_type": "llm_retry_no_system_msg"},
                     )
                     try:
                         final_response = invoke_with_retry(
@@ -170,6 +192,21 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
 
         # Don't add messages to shared state - each agent only needs them for its LLM call
         # Agents work independently and communicate via structured reports, not messages
+
+        logger.info(
+            f"Pattern agent completed for {symbol}",
+            extra={
+                "event_type": "agent_end",
+                "symbol": symbol,
+                "thread_id": thread_id,
+                "extra_data": {
+                    "pattern": pattern_report.primary_pattern,
+                    "confidence": pattern_report.confidence,
+                    "breakout_probability": pattern_report.breakout_probability,
+                },
+            },
+        )
+
         return {
             "pattern_report": pattern_report,
         }

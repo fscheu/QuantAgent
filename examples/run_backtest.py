@@ -11,18 +11,14 @@ Usage:
     python examples/run_backtest.py
 """
 
-import logging
 from datetime import datetime, timedelta
-from quantagent.backtesting.backtest import Backtest
-from quantagent.database import SessionLocal
 
-# Configure logging to print to terminal
-logging.basicConfig(
-    level=logging.INFO,  # Change to DEBUG for more detailed output
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler()  # Print to terminal/console
-    ]
+from quantagent.backtesting.backtest import Backtest
+from quantagent.logging_config import setup_logging
+
+# Initialize logging for backtest environment
+setup_logging(
+    level="INFO", log_to_console=True, log_to_db=True, environment="backtest"
 )
 
 

@@ -4,12 +4,15 @@ Uses LLM and toolkit to generate and interpret trendline charts for short-term p
 """
 
 import json
+import logging
 from typing import Any, Dict
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from quantagent.agent_models import TrendReport
 from quantagent.agent_utils import invoke_with_retry
+
+logger = logging.getLogger(__name__)
 
 
 def create_trend_agent(tool_llm, graph_llm, toolkit):
@@ -24,6 +27,17 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
         # --- Tool definitions ---
         tools = [toolkit.generate_trend_image]
         time_frame = state["time_frame"]
+        symbol = state.get("stock_name", "UNKNOWN")
+        thread_id = state.get("thread_id")
+
+        logger.info(
+            f"Starting trend agent for {symbol}",
+            extra={
+                "event_type": "agent_start",
+                "symbol": symbol,
+                "thread_id": thread_id,
+            },
+        )
 
         # --- Check for precomputed image in state ---
         trend_image_b64 = state.get("trend_image")
@@ -33,7 +47,10 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
 
         # --- Generate image if not precomputed ---
         if not trend_image_b64:
-            print("No precomputed trend image found, generating with tool...")
+            logger.info(
+                "No precomputed trend image found, generating with tool...",
+                extra={"event_type": "trend_image_generation"},
+            )
 
             try:
                 # Call tool with retry wrapper
@@ -45,7 +62,11 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
                 )
                 trend_image_b64 = tool_result.get("trend_image")
             except Exception as e:
-                print(f"Failed to generate trend image: {e}")
+                logger.error(
+                    f"Failed to generate trend image: {e}",
+                    extra={"event_type": "trend_image_generation_failed"},
+                    exc_info=True,
+                )
                 trend_image_b64 = None
 
         # --- Initialize trend analysis output ---
@@ -101,8 +122,9 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
             except Exception as e:
                 # Fallback: retry without system message for Anthropic compatibility
                 if "at least one message" in str(e).lower():
-                    print(
-                        "Retrying without system message for Anthropic compatibility..."
+                    logger.info(
+                        "Retrying without system message for Anthropic compatibility...",
+                        extra={"event_type": "llm_retry_no_system_msg"},
                     )
                     try:
                         final_response = invoke_with_retry(
@@ -159,6 +181,22 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
 
         # Don't add messages to shared state - each agent only needs them for its LLM call
         # Agents work independently and communicate via structured reports, not messages
+
+        logger.info(
+            f"Trend agent completed for {symbol}",
+            extra={
+                "event_type": "agent_end",
+                "symbol": symbol,
+                "thread_id": thread_id,
+                "extra_data": {
+                    "trend": trend_report.trend_direction,
+                    "trend_strength": trend_report.trend_strength,
+                    "support_level": trend_report.support_level,
+                    "resistance_level": trend_report.resistance_level,
+                },
+            },
+        )
+
         return {
             "trend_report": trend_report,
             "trend_image": trend_image_b64,

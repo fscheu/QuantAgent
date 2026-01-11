@@ -1,5 +1,6 @@
 import base64
 import io
+import logging
 from typing import Annotated
 
 import matplotlib
@@ -13,6 +14,8 @@ from langchain_core.tools import tool
 import quantagent.color_style as color
 
 matplotlib.use("Agg")
+
+logger = logging.getLogger(__name__)
 
 
 # helper function for trending graph
@@ -283,7 +286,11 @@ class TechnicalTools:
             df.index = pd.to_datetime(df["Datetime"], format="%Y-%m-%d %H:%M:%S")
 
         except ValueError:
-            print("ValueError at graph_util.py\n")
+            logger.error(
+                "ValueError at graph_util.py during datetime parsing",
+                extra={"event_type": "datetime_parse_error"},
+                exc_info=True,
+            )
 
         # Save image locally
         fig, axlist = mpf.plot(

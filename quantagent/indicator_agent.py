@@ -4,12 +4,15 @@ Uses LLM and toolkit to compute and interpret indicators like MACD, RSI, ROC, St
 """
 
 import json
+import logging
 from typing import Any, Dict
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from quantagent.agent_models import IndicatorReport
 from quantagent.agent_utils import invoke_with_retry
+
+logger = logging.getLogger(__name__)
 
 
 def create_indicator_agent(llm, toolkit):
@@ -37,6 +40,17 @@ def create_indicator_agent(llm, toolkit):
     def indicator_agent_node(state: Dict[str, Any]) -> Dict[str, Any]:
         time_frame = state["time_frame"]
         kline_data = state["kline_data"]
+        symbol = state.get("stock_name", "UNKNOWN")
+        thread_id = state.get("thread_id")
+
+        logger.info(
+            f"Starting indicator agent for {symbol}",
+            extra={
+                "event_type": "agent_start",
+                "symbol": symbol,
+                "thread_id": thread_id,
+            },
+        )
 
         # --- System prompt for LLM with tool instructions ---
         system_prompt = (
@@ -101,6 +115,22 @@ def create_indicator_agent(llm, toolkit):
 
         # Don't add messages to shared state - each agent only needs them for its LLM call
         # Agents work independently and communicate via structured reports, not messages
+
+        logger.info(
+            f"Indicator agent completed for {symbol}",
+            extra={
+                "event_type": "agent_end",
+                "symbol": symbol,
+                "thread_id": thread_id,
+                "extra_data": {
+                    "rsi": indicator_report.rsi,
+                    "macd": indicator_report.macd,
+                    "trend_direction": indicator_report.trend_direction,
+                    "confidence": indicator_report.confidence,
+                },
+            },
+        )
+
         return {
             "indicator_report": indicator_report,
         }

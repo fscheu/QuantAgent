@@ -5,6 +5,7 @@ Combines indicator, pattern, and trend reports to issue a LONG or SHORT order.
 Returns structured TradingDecision using with_structured_output pattern.
 """
 
+import logging
 from typing import Any, Dict
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -12,6 +13,8 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from quantagent.agent_models import (IndicatorReport, PatternReport,
                                      TradingDecision, TrendReport)
 from quantagent.agent_utils import invoke_with_retry
+
+logger = logging.getLogger(__name__)
 
 
 def create_final_trade_decider(llm):
@@ -32,6 +35,17 @@ def create_final_trade_decider(llm):
         trend_report = state["trend_report"]
         time_frame = state["time_frame"]
         stock_name = state["stock_name"]
+        symbol = stock_name
+        thread_id = state.get("thread_id")
+
+        logger.info(
+            f"Starting decision agent for {symbol}",
+            extra={
+                "event_type": "agent_start",
+                "symbol": symbol,
+                "thread_id": thread_id,
+            },
+        )
 
         # Convert Pydantic models to dict for better readability in prompt
         indicator_dict = (
@@ -183,6 +197,21 @@ Respond ONLY with valid JSON (no markdown, no explanation):
         # Add messages to shared state for conversational follow-up
         # This enables users to ask questions about the decision after analysis completes
         # e.g., "Why did you recommend LONG?" or "What if RSI was 80?"
+
+        logger.info(
+            f"Decision agent completed for {symbol}",
+            extra={
+                "event_type": "agent_end",
+                "symbol": symbol,
+                "thread_id": thread_id,
+                "extra_data": {
+                    "signal": trading_decision.decision,
+                    "confidence": trading_decision.confidence,
+                    "risk_level": trading_decision.risk_level,
+                },
+            },
+        )
+
         return {
             "final_trade_decision": trading_decision,
             "messages": agent_messages,

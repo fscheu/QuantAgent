@@ -13,11 +13,15 @@ All validation happens BEFORE broker execution.
 If validation fails, order is rejected and never reaches broker.
 """
 
-from datetime import datetime, date
+import logging
+from datetime import date, datetime
 from typing import Dict, Optional, Tuple
+
 from sqlalchemy.orm import Session
 
-from quantagent.models import Trade, OrderSide
+from quantagent.models import OrderSide, Trade
+
+logger = logging.getLogger(__name__)
 
 
 class RiskManager:
@@ -73,32 +77,71 @@ class RiskManager:
 
         # Check 1: Capital available
         if self.portfolio.cash < trade_value:
-            return (
-                False,
-                f"Insufficient capital: need ${trade_value:.2f}, have ${self.portfolio.cash:.2f}",
+            reason = f"Insufficient capital: need ${trade_value:.2f}, have ${self.portfolio.cash:.2f}"
+            logger.warning(
+                f"Order rejected - {reason}",
+                extra={
+                    "event_type": "order_rejected",
+                    "symbol": symbol,
+                    "extra_data": {
+                        "reason": "insufficient_capital",
+                        "trade_value": trade_value,
+                        "available_cash": self.portfolio.cash,
+                    },
+                },
             )
+            return (False, reason)
 
         # Check 2: Position size <= 10% of portfolio
         portfolio_value = self.portfolio.get_total_value()
         max_position_value = portfolio_value * self.max_position_pct
         if trade_value > max_position_value:
-            return (
-                False,
-                f"Position too large: ${trade_value:.2f} > max ${max_position_value:.2f} (10% limit)",
+            reason = f"Position too large: ${trade_value:.2f} > max ${max_position_value:.2f} (10% limit)"
+            logger.warning(
+                f"Order rejected - {reason}",
+                extra={
+                    "event_type": "order_rejected",
+                    "symbol": symbol,
+                    "extra_data": {
+                        "reason": "position_limit",
+                        "trade_value": trade_value,
+                        "max_position_value": max_position_value,
+                    },
+                },
             )
+            return (False, reason)
 
         # Check 3: Daily loss limit not exceeded
         daily_pnl = self.get_daily_pnl()
         max_daily_loss = -(portfolio_value * self.max_daily_loss_pct)
         if daily_pnl < max_daily_loss:
-            return (
-                False,
-                f"Daily loss limit exceeded: ${daily_pnl:.2f} < max loss ${max_daily_loss:.2f} (5% limit)",
+            reason = f"Daily loss limit exceeded: ${daily_pnl:.2f} < max loss ${max_daily_loss:.2f} (5% limit)"
+            logger.warning(
+                f"Order rejected - {reason}",
+                extra={
+                    "event_type": "order_rejected",
+                    "symbol": symbol,
+                    "extra_data": {
+                        "reason": "daily_loss_limit",
+                        "daily_pnl": daily_pnl,
+                        "max_daily_loss": max_daily_loss,
+                    },
+                },
             )
+            return (False, reason)
 
         # Check 4: Circuit breaker not triggered
         if self.circuit_breaker_triggered:
-            return (False, "Circuit breaker is active - no more trades allowed today")
+            reason = "Circuit breaker is active - no more trades allowed today"
+            logger.warning(
+                f"Order rejected - {reason}",
+                extra={
+                    "event_type": "order_rejected",
+                    "symbol": symbol,
+                    "extra_data": {"reason": "circuit_breaker"},
+                },
+            )
+            return (False, reason)
 
         # Check 5: Position management - prevent adding to existing positions
         # (only allow closing or reversing)
@@ -112,19 +155,41 @@ class RiskManager:
 
                 # Prevent adding to LONG position
                 if is_long_position and side == OrderSide.BUY:
-                    return (
-                        False,
+                    reason = (
                         f"Position already open: LONG {abs(existing_qty):.6f} shares. "
-                        f"Cannot add to existing LONG position (prevents over-concentration)",
+                        f"Cannot add to existing LONG position (prevents over-concentration)"
                     )
+                    logger.warning(
+                        f"Order rejected - {reason}",
+                        extra={
+                            "event_type": "order_rejected",
+                            "symbol": symbol,
+                            "extra_data": {
+                                "reason": "add_to_long",
+                                "existing_qty": existing_qty,
+                            },
+                        },
+                    )
+                    return (False, reason)
 
                 # Prevent adding to SHORT position
                 if is_short_position and side == OrderSide.SELL:
-                    return (
-                        False,
+                    reason = (
                         f"Position already open: SHORT {abs(existing_qty):.6f} shares. "
-                        f"Cannot add to existing SHORT position (prevents over-concentration)",
+                        f"Cannot add to existing SHORT position (prevents over-concentration)"
                     )
+                    logger.warning(
+                        f"Order rejected - {reason}",
+                        extra={
+                            "event_type": "order_rejected",
+                            "symbol": symbol,
+                            "extra_data": {
+                                "reason": "add_to_short",
+                                "existing_qty": existing_qty,
+                            },
+                        },
+                    )
+                    return (False, reason)
 
                 # Allow closing/reversing positions (LONG→SELL, SHORT→BUY)
 
@@ -144,8 +209,6 @@ class RiskManager:
             return self.daily_pnl_tracker.get(today, 0.0)
 
         # Query realized trades from today
-        from quantagent.models import Trade
-
         trades_today = (
             self.db.query(Trade)
             .filter(Trade.closed_at >= datetime.combine(today, datetime.min.time()))

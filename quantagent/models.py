@@ -2,21 +2,11 @@
 
 import enum
 from datetime import datetime
+from decimal import Decimal
 
-from sqlalchemy import (
-    JSON,
-    Boolean,
-    Column,
-    DateTime,
-    Enum,
-    Float,
-    ForeignKey,
-    Index,
-    Integer,
-    Numeric,
-    String,
-    Text,
-)
+from sqlalchemy import (JSON, Boolean, Column, DateTime, Enum, Float,
+                        ForeignKey, Index, Integer, Numeric, String, Text)
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -358,6 +348,25 @@ class ActivePosition(Base):
     )
 
     __table_args__ = (
-        Index("idx_symbol_is_active", "symbol", "is_active"),
-        Index("idx_active_positions_environment", "environment"),
+        Index("idx_start_end_date", "start_date", "end_date"),
+        # Note: idx_assets removed - JSON columns need GIN/GIST indexes
+        # For MVP, simple date-based queries are sufficient
     )
+
+
+class Log(Base):
+    """System event logs for debugging, audit trail, and monitoring."""
+
+    __tablename__ = "logs"
+
+    id = Column(Integer, primary_key=True)
+    timestamp = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    level = Column(String(10), nullable=False, index=True)
+    module = Column(String(100), nullable=False)
+    message = Column(Text, nullable=False)
+    environment = Column(String(20), index=True)
+    symbol = Column(String(20), index=True)
+    event_type = Column(String(50), index=True)
+    extra_data = Column(JSONB)
+    thread_id = Column(String(100), index=True)
+    checkpoint_id = Column(String(100))
