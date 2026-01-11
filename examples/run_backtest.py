@@ -42,7 +42,7 @@ def main():
 
     # Date range for backtest
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=20)  # 20 days
+    start_date = end_date - timedelta(days=10)  # 10 days
 
     # Create backtest instance
     backtest = Backtest(
