@@ -347,12 +347,6 @@ class ActivePosition(Base):
         Enum(Environment), nullable=False, default=Environment.BACKTEST, index=True
     )
 
-    __table_args__ = (
-        Index("idx_start_end_date", "start_date", "end_date"),
-        # Note: idx_assets removed - JSON columns need GIN/GIST indexes
-        # For MVP, simple date-based queries are sufficient
-    )
-
 
 class Log(Base):
     """System event logs for debugging, audit trail, and monitoring."""

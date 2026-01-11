@@ -8,9 +8,16 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# Load .env file (idempotent - only loads once)
+# Load .env files (idempotent - only loads once)
+# Load .env first (shared defaults)
 env_path = Path(__file__).parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
+
+# Load .env.local second (worktree-specific overrides)
+# This allows each worktree to have its own database without changing .env
+env_local_path = Path(__file__).parent.parent / ".env.local"
+if env_local_path.exists():
+    load_dotenv(dotenv_path=env_local_path, override=True)
 
 # Database Configuration
 DATABASE_URL: str = os.getenv("DATABASE_URL", "")

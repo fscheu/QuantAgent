@@ -264,7 +264,7 @@ class Backtest:
                         f"Error analyzing {asset} at {current_date}: {e}",
                        
                         exc_info=True,
-                        extra={"event_type": "backtest_error", "symbol": asset},,
+                        extra={"event_type": "backtest_error", "symbol": asset},
                     )
                     continue
 

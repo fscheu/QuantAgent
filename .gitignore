@@ -4,6 +4,7 @@ trend_graph.png
 record.csv
 .vscode/settings.json
 .env
+.env.local
 *.db
 venv_wsl/
 quantagent.egg-info/*.*
