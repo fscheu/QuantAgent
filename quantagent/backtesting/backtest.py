@@ -13,8 +13,15 @@ from sqlalchemy.orm import Session
 from quantagent.agent_models import TradingDecision
 from quantagent.data.provider import DataProvider
 from quantagent.database import SessionLocal
-from quantagent.models import (BacktestRun, Environment, Order, OrderSide,
-                               Signal, Trade, TradeSignal)
+from quantagent.models import (
+    BacktestRun,
+    Environment,
+    Order,
+    OrderSide,
+    Signal,
+    Trade,
+    TradeSignal,
+)
 from quantagent.portfolio.manager import PortfolioManager
 from quantagent.static_util import format_ohlcv_for_agents
 from quantagent.strategy.assembler import StrategyAssembler
@@ -405,11 +412,7 @@ class Backtest:
             # Get trade_id from order
             trade_id = None
             if order.id:
-                trade = (
-                    self.db.query(Trade)
-                    .filter(Trade.entry_order_id == order.id)
-                    .first()
-                )
+                trade = self.db.query(Trade).filter(Trade.order_id == order.id).first()
                 if trade:
                     trade_id = trade.id
 
