@@ -1,16 +1,21 @@
 """Backtesting engine for strategy validation."""
 
 import logging
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
+from decimal import Decimal
 from typing import Dict, List, Optional
 
+import numpy as np
 import numpy as np
 import pandas as pd
 from sqlalchemy.orm import Session
 
 from quantagent.agent_models import TradingDecision
+from quantagent.data.asset_types import AssetType, get_asset_type
+from quantagent.data.market_calendar import get_market_calendar
 from quantagent.data.provider import DataProvider
 from quantagent.database import SessionLocal
 from quantagent.models import (ActivePosition, BacktestRun, Environment, Order,
@@ -180,6 +185,17 @@ class Backtest:
         self.agent_invocations = 0
         self.total_candles_processed = 0
 
+        # Market hours filtering
+        self.market_hours_filter = self.config.get("market_hours_filter", True)
+        self._market_calendar = (
+            get_market_calendar() if self.market_hours_filter else None
+        )
+
+        # Cache asset types for each symbol
+        self._asset_types: Dict[str, AssetType] = {
+            asset: get_asset_type(asset) for asset in assets
+        }
+
     def run(self, name: Optional[str] = None) -> BacktestMetrics:
         """
         Run backtest and return metrics.
@@ -202,49 +218,69 @@ class Backtest:
             f"Initial capital: ${self.initial_capital:,.2f}",
             extra={"event_type": "backtest_start"},
         )
+        logger.info(
+            f"Market hours filter: {self.market_hours_filter}",
+            extra={"event_type": "backtest_start"},
+        )
 
         # Create backtest run record
         self._create_backtest_run(name)
 
-        # Get date range for iteration
-        date_range = self._get_date_range()
-        total_periods = len(date_range) * len(self.assets)
+        # Process each asset with its filtered date range
+        total_periods = 0
+        for asset in self.assets:
+            asset_dates = self._get_date_range_for_asset(asset)
+            total_periods += len(asset_dates)
+
+            asset_type = self._asset_types.get(asset, AssetType.UNKNOWN)
+            logger.info(
+                f"Asset {asset} ({asset_type.value}): {len(asset_dates)} analysis periods",
+                extra={"event_type": "backtest_start"},
+            )
 
         logger.info(
-            f"Backtesting {total_periods} analysis periods ({len(date_range)} dates x {len(self.assets)} assets)",
+            f"Backtesting {total_periods} total analysis periods",
             extra={"event_type": "backtest_start"},
         )
 
-        # Loop through dates
-        for i, current_date in enumerate(date_range):
-            self.current_date = current_date
+        # Track progress across all periods
+        periods_completed = 0
 
-            # Reset daily P&L tracking at start of each day
-            if i == 0 or current_date.date() != date_range[i - 1].date():
-                self.risk_manager.reset_daily_tracker()
+        # Loop through assets (outer) and their dates (inner)
+        for asset in self.assets:
+            asset_dates = self._get_date_range_for_asset(asset)
 
-            # Analyze each asset
-            for asset in self.assets:
+            for i, current_date in enumerate(asset_dates):
+                self.current_date = current_date
+
+                # Reset daily P&L tracking at start of each day
+                if i == 0 or current_date.date() != asset_dates[i - 1].date():
+                    self.risk_manager.reset_daily_tracker()
+
                 try:
                     self._analyze_and_trade(asset, current_date)
                 except Exception as e:
                     logger.error(
                         f"Error analyzing {asset} at {current_date}: {e}",
+                       
                         exc_info=True,
-                        extra={"event_type": "backtest_error", "symbol": asset},
+                        extra={"event_type": "backtest_error", "symbol": asset},,
                     )
                     continue
 
-            # Record equity at end of period
-            self._record_equity(current_date)
+                # Record equity at end of period
+                self._record_equity(current_date)
 
-            # Log progress
-            if (i + 1) % 100 == 0 or i == len(date_range) - 1:
-                progress = ((i + 1) / len(date_range)) * 100
-                logger.info(
-                    f"Progress: {progress:.1f}% ({i+1}/{len(date_range)} dates)",
-                    extra={"event_type": "backtest_progress"},
-                )
+
+                periods_completed += 1
+
+                # Log progress
+                if periods_completed % 100 == 0 or periods_completed == total_periods:
+                    progress = (periods_completed / total_periods) * 100
+                    logger.info(
+                        f"Progress: {progress:.1f}% ({periods_completed}/{total_periods})",
+                        extra={"event_type": "backtest_progress"},
+                    )
 
         # Calculate metrics
         metrics = self._calculate_metrics()
@@ -336,6 +372,25 @@ class Backtest:
             current += step
 
         return dates
+
+    def _get_date_range_for_asset(self, asset: str) -> List[datetime]:
+        """
+        Get date range filtered by market hours for specific asset.
+
+        Args:
+            asset: Asset symbol
+
+        Returns:
+            List of valid trading timestamps for this asset
+        """
+        all_dates = self._get_date_range()
+
+        if not self.market_hours_filter or self._market_calendar is None:
+            return all_dates
+
+        asset_type = self._asset_types.get(asset, AssetType.UNKNOWN)
+
+        return self._market_calendar.filter_to_trading_hours(all_dates, asset_type)
 
     def _analyze_and_trade(self, asset: str, current_date: datetime) -> None:
         """
@@ -482,7 +537,8 @@ class Backtest:
             )
 
             logger.info(
-                f"Executed {trading_signal.value} for {asset} @ "
+                f"Executed {trading_signal.value} for {asset} "
+                    f"@ "
                 f"${current_price:.2f}, qty: {order.filled_quantity}"
             )
 
