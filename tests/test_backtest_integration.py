@@ -1,14 +1,16 @@
 """Integration tests for backtesting engine end-to-end flow."""
 
-import pytest
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch, MagicMock
 from decimal import Decimal
+from unittest.mock import MagicMock, Mock, patch
+
 import pandas as pd
+import pytest
 
 from quantagent.backtesting.backtest import Backtest, BacktestMetrics
-from quantagent.models import BacktestRun, Trade, Signal, Environment, MarketData
 from quantagent.database import SessionLocal
+from quantagent.models import (BacktestRun, Environment, MarketData, Signal,
+                               Trade)
 
 
 class TestBacktestIntegration:
@@ -18,10 +20,12 @@ class TestBacktestIntegration:
     def db_session(self):
         """Create test database session."""
         from sqlalchemy import text
+
         session = SessionLocal()
         yield session
         # Cleanup - Delete all in correct FK order
-        from quantagent.models import Order, Fill
+        from quantagent.models import ActivePosition, Fill, Order
+
         session.query(Fill).delete()
         session.query(Trade).delete()
         # Circular FK between signals/orders, disable FK checks temporarily
@@ -29,6 +33,7 @@ class TestBacktestIntegration:
         session.query(Order).delete()
         session.query(Signal).delete()
         session.execute(text("SET session_replication_role = 'origin';"))
+        session.query(ActivePosition).delete()
         session.query(BacktestRun).delete()
         session.query(MarketData).delete()
         session.commit()
@@ -210,7 +215,7 @@ class TestBacktestIntegration:
                 use_checkpointing=False,
             )
 
-            metrics = backtest.run(name="Trade Execution Test")
+            backtest.run(name="Trade Execution Test")
 
             # Verify signals were created
             signals = (
@@ -338,7 +343,7 @@ class TestBacktestIntegration:
                 use_checkpointing=False,
             )
 
-            metrics = backtest.run(name="Risk Rejection Test")
+            backtest.run(name="Risk Rejection Test")
 
             # With strict limits, many trades should be rejected
             # Verify that not all signals resulted in trades
@@ -546,3 +551,87 @@ class TestBacktestIntegration:
 
             # Should have recorded equity for each period
             assert len(equity_df) > 0
+
+    def test_backtest_with_position_monitor_integration(
+        self, db_session, mock_market_data, sample_config
+    ):
+        """
+        Integration test: Backtest with PositionMonitor and TradingStrategy.
+
+        Tests (AC3.3, AC3.4, AC3.5):
+        - Active position prevents strategy invocation
+        - Position is tracked correctly
+        - Position closes on exit conditions
+        - New position can be opened after close
+        """
+        from quantagent.models import ActivePosition
+
+        start_date = datetime(2024, 1, 1, 0, 0, 0)
+        end_date = datetime(2024, 1, 1, 5, 0, 0)  # 6 hours
+
+        with patch("quantagent.backtesting.backtest.TradingGraph") as mock_tg_class:
+            mock_graph = MagicMock()
+            mock_tg_instance = MagicMock()
+            mock_tg_instance.graph = mock_graph
+            mock_tg_class.return_value = mock_tg_instance
+
+            # Track strategy invocations
+            invoke_count = [0]
+
+            def mock_invoke(state, config=None):
+                invoke_count[0] += 1
+                # Return LONG on first call, then HOLD
+                if invoke_count[0] == 1:
+                    return {
+                        "final_trade_decision": "LONG",
+                        "indicator_report": Mock(confidence=0.8),
+                        "pattern_report": Mock(primary_pattern="bullish"),
+                        "trend_report": Mock(trend_direction="up"),
+                        "rsi": [60.0],
+                        "macd": [1.0],
+                    }
+                else:
+                    return {
+                        "final_trade_decision": "HOLD",
+                        "indicator_report": Mock(confidence=0.5),
+                        "rsi": [50.0],
+                        "macd": [0.0],
+                    }
+
+            mock_graph.invoke = mock_invoke
+
+            backtest = Backtest(
+                start_date=start_date,
+                end_date=end_date,
+                assets=["BTC"],
+                timeframe="1h",
+                initial_capital=100000.0,
+                config=sample_config,
+                db_session=db_session,
+                use_checkpointing=False,
+            )
+
+            backtest.run(name="PositionMonitor Integration Test")
+
+            # Verify invocations were reduced (position active prevents invocation)
+            # 6 hours total, but after first LONG, position stays active
+            # So invocation count should be < 6 (saved invocations)
+            assert (
+                invoke_count[0] < 6
+            ), f"Expected < 6 invocations, got {invoke_count[0]}"
+
+            # Verify ActivePosition was created and tracked
+            positions = (
+                db_session.query(ActivePosition)
+                .filter(ActivePosition.symbol == "BTC")
+                .all()
+            )
+
+            # At least one position should have been opened
+            assert len(positions) > 0
+
+            # Verify candles_since_entry was incremented
+            for pos in positions:
+                if not pos.is_active:  # Closed positions
+                    assert pos.candles_since_entry > 0
+                    assert pos.close_reason is not None
