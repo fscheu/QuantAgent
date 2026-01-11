@@ -14,14 +14,14 @@ import json
 import streamlit as st
 
 from apps.streamlit.services.db import get_db_handle
-from apps.streamlit.views.dashboard import render as render_dashboard
-from apps.streamlit.views.configuration import render as render_configuration
 from apps.streamlit.views.analyses import render as render_analyses
 from apps.streamlit.views.backtesting import render as render_backtesting
-from apps.streamlit.views.replay import render as render_replay
-from apps.streamlit.views.orders_positions import render as render_orders_positions
+from apps.streamlit.views.configuration import render as render_configuration
+from apps.streamlit.views.dashboard import render as render_dashboard
 from apps.streamlit.views.logs import render as render_logs
-
+from apps.streamlit.views.orders_positions import \
+    render as render_orders_positions
+from apps.streamlit.views.replay import render as render_replay
 
 # -----------------------------
 # UI State & Defaults
@@ -98,4 +98,4 @@ with tabs[5]:
     render_orders_positions(db, environment)
 
 with tabs[6]:
-    render_logs()
+    render_logs(db)
