@@ -19,9 +19,12 @@ from apps.streamlit.views.backtesting import render as render_backtesting
 from apps.streamlit.views.configuration import render as render_configuration
 from apps.streamlit.views.dashboard import render as render_dashboard
 from apps.streamlit.views.logs import render as render_logs
-from apps.streamlit.views.orders_positions import \
-    render as render_orders_positions
+from apps.streamlit.views.orders_positions import render as render_orders_positions
 from apps.streamlit.views.replay import render as render_replay
+from quantagent.logging_config import setup_logging
+
+# Initialize logging for Streamlit (DB only, no console clutter)
+setup_logging(log_to_console=False, log_to_db=True)
 
 # -----------------------------
 # UI State & Defaults

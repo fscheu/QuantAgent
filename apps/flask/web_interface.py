@@ -6,18 +6,19 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-
 import pandas as pd
 from flask import Flask, jsonify, render_template, request, send_file
-
 from openai import OpenAI
 
 import quantagent.static_util as static_util
 from quantagent import settings
 from quantagent.data.provider import DataProvider
 from quantagent.database import SessionLocal
+from quantagent.logging_config import setup_logging
 from quantagent.trading_graph import TradingGraph
 
+# Initialize logging for Flask (console only, no DB)
+setup_logging(log_to_console=True, log_to_db=False)
 
 app = Flask(__name__)
 
@@ -30,7 +31,6 @@ class WebTradingAnalyzer:
         self.db_session = SessionLocal()
         self.data_provider = DataProvider(self.db_session)
         self.data_dir = Path("data")
-
 
         # Ensure data dir exists
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -51,11 +51,9 @@ class WebTradingAnalyzer:
             "TSLA": "Tesla Inc.",  # New asset
         }
 
-
         # Load persisted custom assets
         self.custom_assets_file = self.data_dir / "custom_assets.json"
         self.custom_assets = self.load_custom_assets()
-
 
     def fetch_market_data(
         self,
@@ -75,7 +73,6 @@ class WebTradingAnalyzer:
         except Exception as e:
             print(f"Error fetching data for {symbol}: {e}")
             return pd.DataFrame()
-
 
     def get_available_assets(self) -> list:
         """Get list of available assets from the asset mapping dictionary."""
@@ -637,10 +634,7 @@ def analyze():
             return jsonify({"error": "Start and end date/time are required."})
 
         # Fetch data with datetime objects
-        df = analyzer.fetch_market_data(
-            asset, timeframe, start_dt, end_dt
-        )
-
+        df = analyzer.fetch_market_data(asset, timeframe, start_dt, end_dt)
 
         if df.empty:
             return jsonify({"error": "No data available for the specified parameters"})
