@@ -1,35 +1,28 @@
 """Backtesting engine for strategy validation."""
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
-import logging
 from decimal import Decimal
+from typing import Dict, List, Optional
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from sqlalchemy.orm import Session
 
 from quantagent.agent_models import TradingDecision
 from quantagent.data.provider import DataProvider
+from quantagent.database import SessionLocal
+from quantagent.models import (BacktestRun, Environment, Order, Signal, Trade,
+                               TradeSignal)
+from quantagent.portfolio.manager import PortfolioManager
 from quantagent.static_util import format_ohlcv_for_agents
-from quantagent.trading_graph import TradingGraph
-
+from quantagent.strategy.assembler import StrategyAssembler
 from quantagent.trading.order_manager import OrderManager
+from quantagent.trading.paper_broker import PaperBroker
 from quantagent.trading.position_sizer import PositionSizer
 from quantagent.trading.risk_manager import RiskManager
-from quantagent.trading.paper_broker import PaperBroker
-from quantagent.portfolio.manager import PortfolioManager
-from quantagent.models import (
-    BacktestRun,
-    Signal,
-    Order,
-    Trade,
-    Environment,
-    TradeSignal,
-)
-from quantagent.database import SessionLocal
-from quantagent.strategy.assembler import StrategyAssembler
+from quantagent.trading_graph import TradingGraph
 
 logger = logging.getLogger(__name__)
 
@@ -162,9 +155,18 @@ class Backtest:
         Returns:
             BacktestMetrics with performance statistics
         """
-        logger.info(f"Starting backtest: {self.start_date} to {self.end_date}")
-        logger.info(f"Assets: {self.assets}, Timeframe: {self.timeframe}")
-        logger.info(f"Initial capital: ${self.initial_capital:,.2f}")
+        logger.info(
+            f"Starting backtest: {self.start_date} to {self.end_date}",
+            extra={"event_type": "backtest_start", "environment": "backtest"},
+        )
+        logger.info(
+            f"Assets: {self.assets}, Timeframe: {self.timeframe}",
+            extra={"event_type": "backtest_start"},
+        )
+        logger.info(
+            f"Initial capital: ${self.initial_capital:,.2f}",
+            extra={"event_type": "backtest_start"},
+        )
 
         # Create backtest run record
         self._create_backtest_run(name)
@@ -174,7 +176,8 @@ class Backtest:
         total_periods = len(date_range) * len(self.assets)
 
         logger.info(
-            f"Backtesting {total_periods} analysis periods ({len(date_range)} dates x {len(self.assets)} assets)"
+            f"Backtesting {total_periods} analysis periods ({len(date_range)} dates x {len(self.assets)} assets)",
+            extra={"event_type": "backtest_start"},
         )
 
         # Loop through dates
@@ -191,7 +194,9 @@ class Backtest:
                     self._analyze_and_trade(asset, current_date)
                 except Exception as e:
                     logger.error(
-                        f"Error analyzing {asset} at {current_date}: {e}", exc_info=True
+                        f"Error analyzing {asset} at {current_date}: {e}",
+                        exc_info=True,
+                        extra={"event_type": "backtest_error", "symbol": asset},
                     )
                     continue
 
@@ -202,7 +207,8 @@ class Backtest:
             if (i + 1) % 100 == 0 or i == len(date_range) - 1:
                 progress = ((i + 1) / len(date_range)) * 100
                 logger.info(
-                    f"Progress: {progress:.1f}% ({i+1}/{len(date_range)} dates)"
+                    f"Progress: {progress:.1f}% ({i+1}/{len(date_range)} dates)",
+                    extra={"event_type": "backtest_progress"},
                 )
 
         # Calculate metrics
@@ -212,10 +218,12 @@ class Backtest:
         self._update_backtest_run(metrics)
 
         logger.info(
-            f"Backtest complete: {metrics.total_trades} trades, Win rate: {metrics.win_rate:.2%}"
+            f"Backtest complete: {metrics.total_trades} trades, Win rate: {metrics.win_rate:.2%}",
+            extra={"event_type": "backtest_end", "environment": "backtest"},
         )
         logger.info(
-            f"Total P&L: ${metrics.total_pnl:,.2f} ({metrics.total_return_pct:.2%})"
+            f"Total P&L: ${metrics.total_pnl:,.2f} ({metrics.total_return_pct:.2%})",
+            extra={"event_type": "backtest_end"},
         )
 
         return metrics
@@ -235,7 +243,10 @@ class Backtest:
         self.db.commit()
         self.backtest_run_id = run.id
 
-        logger.info(f"Created backtest run #{self.backtest_run_id}: {run.name}")
+        logger.info(
+            f"Created backtest run #{self.backtest_run_id}: {run.name}",
+            extra={"event_type": "backtest_init"},
+        )
 
     def _build_config_snapshot(self) -> Dict:
         """Build immutable config snapshot for reproducibility."""
@@ -312,7 +323,8 @@ class Backtest:
 
         if df.empty or len(df) < 30:
             logger.warning(
-                f"Insufficient data for {asset} at {current_date} (got {len(df)} records)"
+                f"Insufficient data for {asset} at {current_date} (got {len(df)} records)",
+                extra={"event_type": "backtest_data_warning", "symbol": asset},
             )
             return
 
@@ -372,11 +384,11 @@ class Backtest:
 
             if order:
                 logger.info(
-                    f"Executed {trading_signal.value} for {asset} @ ${current_price:.2f}, qty: {order.filled_quantity}"
+                    f"Executed {trading_signal.value} for {asset} @ ${current_price:.2f}, qty: {order.filled_quantity}",
+                    extra={"event_type": "backtest_trade", "symbol": asset},
                 )
 
     def _parse_decision(self, decision: TradingDecision) -> (TradeSignal, float):
-
         """Parse decision text to extract LONG/SHORT/HOLD and confidence."""
         decision_upper = decision.decision.upper()
         signal = TradeSignal.NEUTRAL
@@ -387,7 +399,7 @@ class Backtest:
             signal = TradeSignal.SHORT
         else:
             signal = TradeSignal.NEUTRAL
-        
+
         ind = float(decision.confidence)
 
         return signal, ind
@@ -437,7 +449,6 @@ class Backtest:
                 roc = float(indicator_report.roc)
             if indicator_report and hasattr(indicator_report, "willr"):
                 williams_r = float(indicator_report.willr)
-            
 
             # Get pattern and trend from reports
             pattern_report = result.get("pattern_report")
@@ -476,7 +487,11 @@ class Backtest:
             return signal
 
         except Exception as e:
-            logger.error(f"Error creating signal: {e}", exc_info=True)
+            logger.error(
+                f"Error creating signal: {e}",
+                exc_info=True,
+                extra={"event_type": "backtest_error"},
+            )
             return None
 
     def _record_equity(self, current_date: datetime) -> None:
@@ -515,7 +530,10 @@ class Backtest:
         )
 
         if not trades:
-            logger.warning("No trades executed during backtest")
+            logger.warning(
+                "No trades executed during backtest",
+                extra={"event_type": "backtest_warning"},
+            )
             return BacktestMetrics(
                 total_trades=0,
                 winning_trades=0,
@@ -680,7 +698,8 @@ class Backtest:
 
             self.db.commit()
             logger.info(
-                f"Updated backtest run #{self.backtest_run_id} with final metrics"
+                f"Updated backtest run #{self.backtest_run_id} with final metrics",
+                extra={"event_type": "backtest_complete"},
             )
 
     def get_equity_curve(self) -> pd.DataFrame:

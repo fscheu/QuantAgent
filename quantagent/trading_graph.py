@@ -4,6 +4,7 @@ Initializes LLMs, toolkits, and agent nodes for indicator, pattern, and trend an
 Supports PostgreSQL checkpointing for resilient backtest execution.
 """
 
+import logging
 import os
 from typing import Dict, Optional
 
@@ -17,6 +18,8 @@ from quantagent import settings
 from quantagent.default_config import DEFAULT_MODELS, DEFAULT_TEMPERATURE
 from quantagent.graph_setup import SetGraph
 from quantagent.graph_util import TechnicalTools
+
+logger = logging.getLogger(__name__)
 
 try:
     from langgraph.checkpoint.postgres import PostgresSaver
@@ -37,6 +40,8 @@ class TradingGraph:
         Args:
             use_checkpointing: Enable PostgreSQL checkpointing for resilience
         """
+        logger.info("Initializing TradingGraph", extra={"event_type": "graph_init"})
+
         # All configuration now comes from settings module (loaded from .env)
         self.agent_llm = self._create_llm(
             provider=settings.AGENT_LLM_PROVIDER,
@@ -48,6 +53,23 @@ class TradingGraph:
             model=settings.GRAPH_LLM_MODEL,
             temperature=settings.GRAPH_LLM_TEMPERATURE,
         )
+
+        logger.info(
+            f"LLM configuration: agent={settings.AGENT_LLM_PROVIDER}/{settings.AGENT_LLM_MODEL}, "
+            f"graph={settings.GRAPH_LLM_PROVIDER}/{settings.GRAPH_LLM_MODEL}",
+            extra={
+                "event_type": "llm_config",
+                "extra_data": {
+                    "agent_provider": settings.AGENT_LLM_PROVIDER,
+                    "agent_model": settings.AGENT_LLM_MODEL,
+                    "agent_temperature": settings.AGENT_LLM_TEMPERATURE,
+                    "graph_provider": settings.GRAPH_LLM_PROVIDER,
+                    "graph_model": settings.GRAPH_LLM_MODEL,
+                    "graph_temperature": settings.GRAPH_LLM_TEMPERATURE,
+                },
+            },
+        )
+
         self.toolkit = TechnicalTools()
 
         # --- Setup PostgreSQL checkpointing if enabled ---
@@ -55,6 +77,13 @@ class TradingGraph:
         self._checkpointer_context = None
         if use_checkpointing:
             self.checkpointer, self._checkpointer_context = self._setup_checkpointer()
+            logger.info(
+                "Checkpointing enabled", extra={"event_type": "checkpointer_init"}
+            )
+        else:
+            logger.info(
+                "Checkpointing disabled", extra={"event_type": "checkpointer_init"}
+            )
 
         # --- Create tool nodes for each agent ---
         # self.tool_nodes = self._set_tool_nodes()
@@ -69,6 +98,10 @@ class TradingGraph:
 
         # --- The main LangGraph graph object ---
         self.graph = self.graph_setup.set_graph(checkpointer=self.checkpointer)
+
+        logger.info(
+            "TradingGraph initialization complete", extra={"event_type": "graph_ready"}
+        )
 
     def _get_api_key(self, provider: str = "openai") -> str:
         """
