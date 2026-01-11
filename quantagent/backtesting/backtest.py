@@ -13,15 +13,8 @@ from sqlalchemy.orm import Session
 from quantagent.agent_models import TradingDecision
 from quantagent.data.provider import DataProvider
 from quantagent.database import SessionLocal
-from quantagent.models import (
-    BacktestRun,
-    Environment,
-    Order,
-    OrderSide,
-    Signal,
-    Trade,
-    TradeSignal,
-)
+from quantagent.models import (ActivePosition, BacktestRun, Environment, Order,
+                               OrderSide, Signal, Trade, TradeSignal)
 from quantagent.portfolio.manager import PortfolioManager
 from quantagent.static_util import format_ohlcv_for_agents
 from quantagent.strategy.assembler import StrategyAssembler
@@ -54,6 +47,20 @@ class BacktestMetrics:
     largest_win: float
     largest_loss: float
     total_return_pct: float
+
+    # Phase 4: Active Position Monitoring metrics
+    agent_invocations: int = 0
+    invocations_saved: int = 0
+    invocation_reduction_pct: float = 0.0
+    mean_directional_accuracy: float = 0.0
+    accuracy_by_candle: Dict[int, float] = None
+    close_reasons: Dict[str, int] = None
+
+    def __post_init__(self):
+        if self.accuracy_by_candle is None:
+            self.accuracy_by_candle = {}
+        if self.close_reasons is None:
+            self.close_reasons = {}
 
 
 class Backtest:
@@ -162,6 +169,10 @@ class Backtest:
         self.backtest_run_id: Optional[int] = None
         self.trades: List[Trade] = []
         self.equity_curve: List[Dict] = []
+
+        # Phase 4: Invocation tracking
+        self.agent_invocations = 0
+        self.total_candles_processed = 0
 
     def run(self, name: Optional[str] = None) -> BacktestMetrics:
         """
@@ -338,6 +349,9 @@ class Backtest:
         # Check for active position
         active_pos = self.position_monitor.get_active_position(asset)
 
+        # Phase 4: Count total candles processed
+        self.total_candles_processed += 1
+
         if active_pos:
             # Position active: check exit conditions via strategy
             should_exit, reason = self.strategy.should_exit(
@@ -371,6 +385,9 @@ class Backtest:
 
         # No active position (or just closed): generate signal
         kline_data = format_ohlcv_for_agents(df)
+
+        # Phase 4: Count agent invocations
+        self.agent_invocations += 1
 
         signal = self.strategy.generate_signal(
             kline_data, asset, self.timeframe, current_price
@@ -615,6 +632,18 @@ class Backtest:
 
         if not trades:
             logger.warning("No trades executed during backtest")
+
+            # Phase 4: Even with no trades, calculate MDA if positions were opened
+            mda, accuracy_by_candle = self._calculate_directional_accuracy()
+            close_reasons = self._calculate_close_reasons()
+
+            invocations_saved = self.total_candles_processed - self.agent_invocations
+            invocation_reduction_pct = (
+                (invocations_saved / self.total_candles_processed * 100)
+                if self.total_candles_processed > 0
+                else 0.0
+            )
+
             return BacktestMetrics(
                 total_trades=0,
                 winning_trades=0,
@@ -629,6 +658,12 @@ class Backtest:
                 largest_win=0.0,
                 largest_loss=0.0,
                 total_return_pct=0.0,
+                agent_invocations=self.agent_invocations,
+                invocations_saved=invocations_saved,
+                invocation_reduction_pct=invocation_reduction_pct,
+                mean_directional_accuracy=mda,
+                accuracy_by_candle=accuracy_by_candle,
+                close_reasons=close_reasons,
             )
 
         # Calculate basic metrics
@@ -673,6 +708,20 @@ class Backtest:
         # Max drawdown
         max_drawdown = self._calculate_max_drawdown()
 
+        # Phase 4: Calculate MDA and accuracy metrics
+        mda, accuracy_by_candle = self._calculate_directional_accuracy()
+
+        # Phase 4: Calculate close reasons distribution
+        close_reasons = self._calculate_close_reasons()
+
+        # Phase 4: Calculate invocation reduction
+        invocations_saved = self.total_candles_processed - self.agent_invocations
+        invocation_reduction_pct = (
+            (invocations_saved / self.total_candles_processed * 100)
+            if self.total_candles_processed > 0
+            else 0.0
+        )
+
         return BacktestMetrics(
             total_trades=total_trades,
             winning_trades=len(winning_trades),
@@ -687,6 +736,12 @@ class Backtest:
             largest_win=largest_win,
             largest_loss=largest_loss,
             total_return_pct=total_return_pct,
+            agent_invocations=self.agent_invocations,
+            invocations_saved=invocations_saved,
+            invocation_reduction_pct=invocation_reduction_pct,
+            mean_directional_accuracy=mda,
+            accuracy_by_candle=accuracy_by_candle,
+            close_reasons=close_reasons,
         )
 
     def _calculate_sharpe_ratio(self, risk_free_rate: float = 0.02) -> float:
@@ -744,6 +799,86 @@ class Backtest:
         max_dd = abs(drawdown.min())
 
         return float(max_dd)
+
+    def _calculate_directional_accuracy(self) -> tuple[float, Dict[int, float]]:
+        """
+        Calculate Mean Directional Accuracy (MDA) and per-candle accuracy.
+
+        MDA = (correct_candles / total_candles_evaluated)
+
+        Returns:
+            Tuple of (mean_directional_accuracy, accuracy_by_candle)
+        """
+        positions = (
+            self.db.query(ActivePosition)
+            .filter(
+                ActivePosition.is_active.is_(False),
+                ActivePosition.decision_timestamp >= self.start_date,
+                ActivePosition.decision_timestamp <= self.end_date,
+            )
+            .all()
+        )
+
+        if not positions:
+            return 0.0, {}
+
+        # Track correct predictions per candle index
+        correct_by_candle = {}
+        total_by_candle = {}
+
+        for pos in positions:
+            expected_direction = "up" if pos.side == OrderSide.BUY else "down"
+
+            # Evaluate up to prediction_horizon candles
+            for i, direction in enumerate(
+                pos.candles_direction[: pos.prediction_horizon]
+            ):
+                candle_idx = i + 1  # 1-indexed (candle 1, 2, 3...)
+
+                if candle_idx not in correct_by_candle:
+                    correct_by_candle[candle_idx] = 0
+                    total_by_candle[candle_idx] = 0
+
+                total_by_candle[candle_idx] += 1
+                if direction == expected_direction:
+                    correct_by_candle[candle_idx] += 1
+
+        # Calculate accuracy per candle
+        accuracy_by_candle = {
+            candle: correct_by_candle[candle] / total_by_candle[candle]
+            for candle in sorted(total_by_candle.keys())
+        }
+
+        # Calculate overall MDA
+        total_correct = sum(correct_by_candle.values())
+        total_candles = sum(total_by_candle.values())
+        mda = total_correct / total_candles if total_candles > 0 else 0.0
+
+        return mda, accuracy_by_candle
+
+    def _calculate_close_reasons(self) -> Dict[str, int]:
+        """
+        Calculate distribution of position close reasons.
+
+        Returns:
+            Dict mapping close_reason to count
+        """
+        positions = (
+            self.db.query(ActivePosition)
+            .filter(
+                ActivePosition.is_active.is_(False),
+                ActivePosition.decision_timestamp >= self.start_date,
+                ActivePosition.decision_timestamp <= self.end_date,
+            )
+            .all()
+        )
+
+        close_reasons = {}
+        for pos in positions:
+            reason = pos.close_reason or "unknown"
+            close_reasons[reason] = close_reasons.get(reason, 0) + 1
+
+        return close_reasons
 
     def _get_periods_per_year(self) -> int:
         """Get number of periods per year based on timeframe."""
