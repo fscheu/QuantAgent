@@ -1,35 +1,30 @@
 """Backtesting engine for strategy validation."""
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
-import logging
 from decimal import Decimal
+from typing import Dict, List, Optional
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from sqlalchemy.orm import Session
 
 from quantagent.agent_models import TradingDecision
+from quantagent.data.asset_types import AssetType, get_asset_type
+from quantagent.data.market_calendar import get_market_calendar
 from quantagent.data.provider import DataProvider
+from quantagent.database import SessionLocal
+from quantagent.models import (BacktestRun, Environment, Order, Signal, Trade,
+                               TradeSignal)
+from quantagent.portfolio.manager import PortfolioManager
 from quantagent.static_util import format_ohlcv_for_agents
-from quantagent.trading_graph import TradingGraph
-
+from quantagent.strategy.assembler import StrategyAssembler
 from quantagent.trading.order_manager import OrderManager
+from quantagent.trading.paper_broker import PaperBroker
 from quantagent.trading.position_sizer import PositionSizer
 from quantagent.trading.risk_manager import RiskManager
-from quantagent.trading.paper_broker import PaperBroker
-from quantagent.portfolio.manager import PortfolioManager
-from quantagent.models import (
-    BacktestRun,
-    Signal,
-    Order,
-    Trade,
-    Environment,
-    TradeSignal,
-)
-from quantagent.database import SessionLocal
-from quantagent.strategy.assembler import StrategyAssembler
+from quantagent.trading_graph import TradingGraph
 
 logger = logging.getLogger(__name__)
 
@@ -152,6 +147,17 @@ class Backtest:
         self.trades: List[Trade] = []
         self.equity_curve: List[Dict] = []
 
+        # Market hours filtering
+        self.market_hours_filter = self.config.get("market_hours_filter", True)
+        self._market_calendar = (
+            get_market_calendar() if self.market_hours_filter else None
+        )
+
+        # Cache asset types for each symbol
+        self._asset_types: Dict[str, AssetType] = {
+            asset: get_asset_type(asset) for asset in assets
+        }
+
     def run(self, name: Optional[str] = None) -> BacktestMetrics:
         """
         Run backtest and return metrics.
@@ -165,45 +171,58 @@ class Backtest:
         logger.info(f"Starting backtest: {self.start_date} to {self.end_date}")
         logger.info(f"Assets: {self.assets}, Timeframe: {self.timeframe}")
         logger.info(f"Initial capital: ${self.initial_capital:,.2f}")
+        logger.info(f"Market hours filter: {self.market_hours_filter}")
 
         # Create backtest run record
         self._create_backtest_run(name)
 
-        # Get date range for iteration
-        date_range = self._get_date_range()
-        total_periods = len(date_range) * len(self.assets)
+        # Process each asset with its filtered date range
+        total_periods = 0
+        for asset in self.assets:
+            asset_dates = self._get_date_range_for_asset(asset)
+            total_periods += len(asset_dates)
 
-        logger.info(
-            f"Backtesting {total_periods} analysis periods ({len(date_range)} dates x {len(self.assets)} assets)"
-        )
+            asset_type = self._asset_types.get(asset, AssetType.UNKNOWN)
+            logger.info(
+                f"Asset {asset} ({asset_type.value}): {len(asset_dates)} analysis periods"
+            )
 
-        # Loop through dates
-        for i, current_date in enumerate(date_range):
-            self.current_date = current_date
+        logger.info(f"Backtesting {total_periods} total analysis periods")
 
-            # Reset daily P&L tracking at start of each day
-            if i == 0 or current_date.date() != date_range[i - 1].date():
-                self.risk_manager.reset_daily_tracker()
+        # Track progress across all periods
+        periods_completed = 0
 
-            # Analyze each asset
-            for asset in self.assets:
+        # Loop through assets (outer) and their dates (inner)
+        for asset in self.assets:
+            asset_dates = self._get_date_range_for_asset(asset)
+
+            for i, current_date in enumerate(asset_dates):
+                self.current_date = current_date
+
+                # Reset daily P&L tracking at start of each day
+                if i == 0 or current_date.date() != asset_dates[i - 1].date():
+                    self.risk_manager.reset_daily_tracker()
+
                 try:
                     self._analyze_and_trade(asset, current_date)
                 except Exception as e:
                     logger.error(
-                        f"Error analyzing {asset} at {current_date}: {e}", exc_info=True
+                        f"Error analyzing {asset} at {current_date}: {e}",
+                        exc_info=True,
                     )
                     continue
 
-            # Record equity at end of period
-            self._record_equity(current_date)
+                # Record equity at end of period
+                self._record_equity(current_date)
 
-            # Log progress
-            if (i + 1) % 100 == 0 or i == len(date_range) - 1:
-                progress = ((i + 1) / len(date_range)) * 100
-                logger.info(
-                    f"Progress: {progress:.1f}% ({i+1}/{len(date_range)} dates)"
-                )
+                periods_completed += 1
+
+                # Log progress
+                if periods_completed % 100 == 0 or periods_completed == total_periods:
+                    progress = (periods_completed / total_periods) * 100
+                    logger.info(
+                        f"Progress: {progress:.1f}% ({periods_completed}/{total_periods})"
+                    )
 
         # Calculate metrics
         metrics = self._calculate_metrics()
@@ -291,6 +310,25 @@ class Backtest:
 
         return dates
 
+    def _get_date_range_for_asset(self, asset: str) -> List[datetime]:
+        """
+        Get date range filtered by market hours for specific asset.
+
+        Args:
+            asset: Asset symbol
+
+        Returns:
+            List of valid trading timestamps for this asset
+        """
+        all_dates = self._get_date_range()
+
+        if not self.market_hours_filter or self._market_calendar is None:
+            return all_dates
+
+        asset_type = self._asset_types.get(asset, AssetType.UNKNOWN)
+
+        return self._market_calendar.filter_to_trading_hours(all_dates, asset_type)
+
     def _analyze_and_trade(self, asset: str, current_date: datetime) -> None:
         """
         Execute analysis and trade for a single asset at a given time.
@@ -372,11 +410,11 @@ class Backtest:
 
             if order:
                 logger.info(
-                    f"Executed {trading_signal.value} for {asset} @ ${current_price:.2f}, qty: {order.filled_quantity}"
+                    f"Executed {trading_signal.value} for {asset} "
+                    f"@ ${current_price:.2f}, qty: {order.filled_quantity}"
                 )
 
     def _parse_decision(self, decision: TradingDecision) -> (TradeSignal, float):
-
         """Parse decision text to extract LONG/SHORT/HOLD and confidence."""
         decision_upper = decision.decision.upper()
         signal = TradeSignal.NEUTRAL
@@ -387,7 +425,7 @@ class Backtest:
             signal = TradeSignal.SHORT
         else:
             signal = TradeSignal.NEUTRAL
-        
+
         ind = float(decision.confidence)
 
         return signal, ind
@@ -437,7 +475,6 @@ class Backtest:
                 roc = float(indicator_report.roc)
             if indicator_report and hasattr(indicator_report, "willr"):
                 williams_r = float(indicator_report.willr)
-            
 
             # Get pattern and trend from reports
             pattern_report = result.get("pattern_report")

@@ -25,3 +25,10 @@ RETRY_CONFIG = {
     "jitter": True,
     "jitter_factor": 0.5,
 }
+
+# Market hours filtering for backtests
+MARKET_HOURS_CONFIG = {
+    "enabled": True,
+    "fallback_to_24_7": True,
+    "include_extended_hours": False,
+}
