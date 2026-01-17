@@ -31,6 +31,10 @@ Implementation documents should include:
 4. **Known Issues** - Technical debt or limitations
 5. **Testing** - How the implementation was validated
 
+## Active Per-Change Implementation
+
+- [QuantAgent-94d-IM-backtest-isolation.md](./QuantAgent-94d-IM-backtest-isolation.md) - Backtest Run ID Isolation (P1, bug)
+
 ## Per-Change Implementation Documents
 
 Per-change implementation documents should follow this naming convention:
