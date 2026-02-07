@@ -468,8 +468,17 @@ class Backtest:
         # Phase 4: Count agent invocations
         self.agent_invocations += 1
 
+        # Generate thread_id for checkpointing (if enabled)
+        thread_id = None
+        if self.use_checkpointing:
+            from quantagent.strategy.assembler import StrategyAssembler
+
+            thread_id = StrategyAssembler.make_thread_id(
+                self.backtest_run_id, asset, current_date
+            )
+
         signal = self.strategy.generate_signal(
-            kline_data, asset, self.timeframe, current_price
+            kline_data, asset, self.timeframe, current_price, thread_id=thread_id
         )
 
         if signal is None or signal.decision == "HOLD":

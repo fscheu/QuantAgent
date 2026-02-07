@@ -29,6 +29,7 @@ class LLMAgentStrategy(TradingStrategy):
         symbol: str,
         timeframe: str,
         current_price: float,
+        thread_id: Optional[str] = None,
     ) -> Optional[TradingSignal]:
         """
         Generate trading signal using TradingGraph agents.
@@ -38,6 +39,7 @@ class LLMAgentStrategy(TradingStrategy):
             symbol: Asset symbol
             timeframe: Timeframe (e.g., "4h")
             current_price: Current market price
+            thread_id: Optional thread ID for checkpointing (required if graph has checkpointer)
 
         Returns:
             TradingSignal or None if HOLD
@@ -50,8 +52,13 @@ class LLMAgentStrategy(TradingStrategy):
             "messages": [],
         }
 
+        # Prepare config for checkpointing (if thread_id provided)
+        config = None
+        if thread_id is not None:
+            config = {"configurable": {"thread_id": thread_id}}
+
         # Invoke graph
-        result = self.trading_graph.graph.invoke(initial_state)
+        result = self.trading_graph.graph.invoke(initial_state, config=config)
 
         # Defensive check: handle None result
         if result is None:

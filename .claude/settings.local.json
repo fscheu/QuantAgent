@@ -28,7 +28,10 @@
       "Bash(DATABASE_URL=\"postgresql://postgres:password@localhost:5432/quantagent_dev\" python:*)",
       "Bash(chmod:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git show:*)",
+      "Bash(bd sync:*)",
+      "Bash(git push)"
     ],
     "deny": [],
     "ask": []

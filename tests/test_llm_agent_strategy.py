@@ -158,3 +158,62 @@ class TestUsesExistingGraph:
         assert call_args["kline_data"] == sample_kline_data
         assert call_args["stock_name"] == "BTCUSDT"
         assert call_args["time_frame"] == "4h"
+
+    def test_invokes_graph_with_thread_id(
+        self, llm_strategy, mock_trading_graph, sample_kline_data
+    ):
+        """Verify strategy passes thread_id config when provided (for checkpointing)."""
+        mock_trading_graph.graph.invoke.return_value = {
+            "final_trade_decision": "LONG with 0.8 confidence",
+            "reasoning": "Bullish trend",
+        }
+
+        thread_id = "backtest_123_BTC_2024-01-01T00:00:00"
+        signal = llm_strategy.generate_signal(
+            sample_kline_data, "BTC", "4h", 50000.0, thread_id=thread_id
+        )
+
+        # Verify graph was invoked with correct config
+        mock_trading_graph.graph.invoke.assert_called_once()
+        call_args = mock_trading_graph.graph.invoke.call_args
+
+        # Verify state (first positional arg)
+        state = call_args[0][0]
+        assert state["stock_name"] == "BTC"
+        assert state["time_frame"] == "4h"
+        assert state["kline_data"] == sample_kline_data
+
+        # Verify config was passed as keyword arg with thread_id
+        config = call_args[1]["config"]
+        assert config is not None
+        assert "configurable" in config
+        assert config["configurable"]["thread_id"] == thread_id
+
+        # Verify signal was generated correctly
+        assert signal is not None
+        assert signal.decision == "LONG"
+        assert signal.confidence == 0.8
+
+    def test_invokes_graph_without_thread_id(
+        self, llm_strategy, mock_trading_graph, sample_kline_data
+    ):
+        """Verify strategy invokes graph without config when thread_id not provided."""
+        mock_trading_graph.graph.invoke.return_value = {
+            "final_trade_decision": "SHORT",
+        }
+
+        signal = llm_strategy.generate_signal(
+            sample_kline_data, "ETH", "1h", 3000.0, thread_id=None
+        )
+
+        # Verify graph was invoked
+        mock_trading_graph.graph.invoke.assert_called_once()
+        call_args = mock_trading_graph.graph.invoke.call_args
+
+        # Verify config is None (second positional arg or keyword arg)
+        config = call_args[1].get("config") if len(call_args) > 1 else None
+        assert config is None
+
+        # Verify signal was generated
+        assert signal is not None
+        assert signal.decision == "SHORT"
