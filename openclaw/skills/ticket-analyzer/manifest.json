@@ -1,0 +1,14 @@
+{
+  "name": "ticket-analyzer",
+  "version": "0.1.0",
+  "description": "Analyzes bd issue complexity and scope",
+  "model": "haiku",
+  "temperature": 0.1,
+  "inputs": {
+    "issue": {"type": "object", "required": true}
+  },
+  "outputs": {
+    "complexity": {"type": "string"},
+    "notes": {"type": "string"}
+  }
+}
