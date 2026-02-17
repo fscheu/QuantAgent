@@ -1,0 +1,6 @@
+{"ts": "2026-02-17T21:47:46.359402+00:00", "event": "orchestrator.start", "repo_root": "/home/azureuser/repos/projects/QuantAgent", "openclaw_workspace": "/home/azureuser/repos/agents/openclaw", "limit": 1, "forced_epic_branch": null, "openclaw_agent": null, "openclaw_timeout": 900, "openclaw_local": true, "lock": "/home/azureuser/repos/projects/QuantAgent/.openclaw/orchestrator.lock"}
+{"ts": "2026-02-17T21:47:46.399307+00:00", "event": "issue.start", "issue_id": "QuantAgent-94d", "title": "Add backtest_run_id isolation to ActivePosition model", "issue_type": "bug", "parent": null, "labels": ["backtest", "database", "openclaw:design_pending"]}
+{"ts": "2026-02-17T21:47:46.399610+00:00", "event": "issue.branch", "issue_id": "QuantAgent-94d", "branch": "feature/QuantAgent-94d-add-backtest-run-id-isolation-to-activep"}
+{"ts": "2026-02-17T21:47:47.150506+00:00", "event": "issue.labels", "issue_id": "QuantAgent-94d", "labels": ["backtest", "database", "openclaw:design_pending"]}
+{"ts": "2026-02-17T21:47:47.150657+00:00", "event": "issue.skip", "issue_id": "QuantAgent-94d", "reason": "design_pending"}
+{"ts": "2026-02-17T21:47:47.150717+00:00", "event": "orchestrator.end", "processed": []}
