@@ -39,6 +39,7 @@ These documents represent the current technical design of the system. When imple
 
 ## Active Per-Change Design
 
+- [QuantAgent-vna-DS-triple-screen-strategy.md](./QuantAgent-vna-DS-triple-screen-strategy.md) - Triple Screen Strategy (Alexander Elder)
 - [QuantAgent-94d-DS-backtest-isolation.md](./QuantAgent-94d-DS-backtest-isolation.md) - Backtest Run ID Isolation (P1, bug)
 - [QuantAgent-r78-DS-trade-pnl-calculation.md](./QuantAgent-r78-DS-trade-pnl-calculation.md) - Trade P&L calculation bug fix (P1)
 - [QuantAgent-nu7-DS-active-position-monitoring.md](./QuantAgent-nu7-DS-active-position-monitoring.md) - Active Position Monitoring System (Epic: QuantAgent-nu7)

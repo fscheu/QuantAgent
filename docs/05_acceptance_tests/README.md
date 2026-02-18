@@ -20,6 +20,7 @@ Acceptance test documents define the criteria for validating that features work 
 
 ## Active Per-Change Acceptance Criteria
 
+- [QuantAgent-vna-AC-triple-screen-strategy.md](./QuantAgent-vna-AC-triple-screen-strategy.md) - Triple Screen Strategy (Alexander Elder)
 - [QuantAgent-94d-AC-backtest-isolation.md](./QuantAgent-94d-AC-backtest-isolation.md) - Backtest Run ID Isolation (P1, bug)
 - [QuantAgent-r78-AC-trade-pnl-calculation.md](./QuantAgent-r78-AC-trade-pnl-calculation.md) - Trade P&L calculation bug fix (P1)
 - [QuantAgent-nu7-AC-active-position-monitoring.md](./QuantAgent-nu7-AC-active-position-monitoring.md) - Active Position Monitoring System (Epic: QuantAgent-nu7)

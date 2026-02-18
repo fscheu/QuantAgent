@@ -23,6 +23,7 @@ The files listed above represent the current functional requirements for the sys
 
 ## Active Per-Change Requirements
 
+- [QuantAgent-vna-RQ-triple-screen-strategy.md](./QuantAgent-vna-RQ-triple-screen-strategy.md) - Triple Screen Strategy (Alexander Elder)
 - [QuantAgent-94d-RQ-backtest-isolation.md](./QuantAgent-94d-RQ-backtest-isolation.md) - Backtest Run ID Isolation (P1, bug)
 - [QuantAgent-r78-RQ-trade-pnl-calculation.md](./QuantAgent-r78-RQ-trade-pnl-calculation.md) - Trade P&L calculation bug fix (P1)
 - [QuantAgent-nu7-RQ-active-position-monitoring.md](./QuantAgent-nu7-RQ-active-position-monitoring.md) - Active Position Monitoring System (Epic: QuantAgent-nu7)
