@@ -26,6 +26,7 @@ The roadmap files represent the current development phases and priorities. When 
 - [QuantAgent-7bn-PL-azure-openai-support.md](./QuantAgent-7bn-PL-azure-openai-support.md) - Azure OpenAI LLM provider support
 - [QuantAgent-ou3-spx-data-fetch.md](./QuantAgent-ou3-spx-data-fetch.md) - SPX/yfinance intraday data fix (P2)
 - [QuantAgent-lmn-deprecated-parameter.md](./QuantAgent-lmn-deprecated-parameter.md) - Deprecated wait_sec cleanup (P3)
+- [QuantAgent-69d-PL-token-time-metrics.md](./QuantAgent-69d-PL-token-time-metrics.md) - Tracking de tokens y tiempo de ejecución para control de costos
 
 ## Per-Change Planning Documents
 

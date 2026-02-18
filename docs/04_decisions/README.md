@@ -9,6 +9,9 @@ Agents working in this repository should review decision documents chronological
 ### Current Decisions
 - [ui_framework_decision.md](./ui_framework_decision.md) - UI framework selection (Streamlit vs alternatives)
 
+### Active Per-Change Decisions
+- [QuantAgent-69d-DC-metrics-storage.md](./QuantAgent-69d-DC-metrics-storage.md) - Metrics storage strategy (logs vs dedicated tables)
+
 ## Current Truth
 
 Decision documents capture the context, alternatives considered, and rationale for significant technical choices. When working on related features:

@@ -43,6 +43,7 @@ These documents represent the current technical design of the system. When imple
 - [QuantAgent-r78-DS-trade-pnl-calculation.md](./QuantAgent-r78-DS-trade-pnl-calculation.md) - Trade P&L calculation bug fix (P1)
 - [QuantAgent-nu7-DS-active-position-monitoring.md](./QuantAgent-nu7-DS-active-position-monitoring.md) - Active Position Monitoring System (Epic: QuantAgent-nu7)
 - [QuantAgent-7bn-DS-azure-openai-support.md](./QuantAgent-7bn-DS-azure-openai-support.md) - Azure OpenAI LLM provider support
+- [QuantAgent-69d-DS-token-time-metrics.md](./QuantAgent-69d-DS-token-time-metrics.md) - Tracking de tokens y tiempo de ejecución para control de costos
 
 ## Per-Change Design Documents
 

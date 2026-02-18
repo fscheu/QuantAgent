@@ -27,6 +27,7 @@ The files listed above represent the current functional requirements for the sys
 - [QuantAgent-r78-RQ-trade-pnl-calculation.md](./QuantAgent-r78-RQ-trade-pnl-calculation.md) - Trade P&L calculation bug fix (P1)
 - [QuantAgent-nu7-RQ-active-position-monitoring.md](./QuantAgent-nu7-RQ-active-position-monitoring.md) - Active Position Monitoring System (Epic: QuantAgent-nu7)
 - [QuantAgent-7bn-RQ-azure-openai-support.md](./QuantAgent-7bn-RQ-azure-openai-support.md) - Azure OpenAI LLM provider support
+- [QuantAgent-69d-RQ-token-time-metrics.md](./QuantAgent-69d-RQ-token-time-metrics.md) - Tracking de tokens y tiempo de ejecución para control de costos
 
 ## Per-Change Requirements
 
