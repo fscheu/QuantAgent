@@ -20,6 +20,7 @@ The roadmap files represent the current development phases and priorities. When 
 
 ## Active Per-Change Planning
 
+- [QuantAgent-e4k-PL-backtest-order-manager-facade.md](./QuantAgent-e4k-PL-backtest-order-manager-facade.md) - Backtest depends only on OrderManager (facade)
 - [QuantAgent-r78-PL-trade-pnl-calculation.md](./QuantAgent-r78-PL-trade-pnl-calculation.md) - Trade P&L calculation bug fix (P1)
 - [QuantAgent-nu7-PL-active-position-monitoring.md](./QuantAgent-nu7-PL-active-position-monitoring.md) - Active Position Monitoring System (Epic: QuantAgent-nu7)
 - [QuantAgent-8vb-backtest-analysis.md](./QuantAgent-8vb-backtest-analysis.md) - Backtest log analysis (P0 bugs identified)
