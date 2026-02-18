@@ -41,6 +41,7 @@ These documents represent the current technical design of the system. When imple
 
 - [QuantAgent-94d-DS-backtest-isolation.md](./QuantAgent-94d-DS-backtest-isolation.md) - Backtest Run ID Isolation (P1, bug)
 - [QuantAgent-r78-DS-trade-pnl-calculation.md](./QuantAgent-r78-DS-trade-pnl-calculation.md) - Trade P&L calculation bug fix (P1)
+- [QuantAgent-les-DS-commissions-pnl.md](./QuantAgent-les-DS-commissions-pnl.md) - Support commissions in P&L calculation (P3, feature)
 - [QuantAgent-nu7-DS-active-position-monitoring.md](./QuantAgent-nu7-DS-active-position-monitoring.md) - Active Position Monitoring System (Epic: QuantAgent-nu7)
 - [QuantAgent-7bn-DS-azure-openai-support.md](./QuantAgent-7bn-DS-azure-openai-support.md) - Azure OpenAI LLM provider support
 
