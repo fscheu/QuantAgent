@@ -7,7 +7,7 @@
 **Then**:
 - Column `backtest_run_id` exists on `active_positions` table
 - Column is nullable
-- FK constraint to `backtest_runs(id)` exists with `ON DELETE SET NULL`
+- FK constraint to `backtest_runs(id)` exists and **prevents deleting a referenced BacktestRun** (delete restricted)
 - Index `idx_active_position_isolation` exists on `(symbol, is_active, backtest_run_id, environment)`
 
 ## AC-2: Position Creation with Isolation
@@ -40,13 +40,7 @@
 **When** `_calculate_close_reasons()` runs for Run A
 **Then** returns close reasons from Run A's 10 positions only
 
-## AC-5: PAPER/PROD Compatibility
-
-**Given** a PositionMonitor initialized without backtest_run_id (None)
-**When** `get_active_position()` is called
-**Then** returns positions where `backtest_run_id IS NULL`
-
-## AC-6: Parallel Backtest Independence
+## AC-5: Parallel Backtest Independence
 
 **Given** two concurrent backtest processes A and B on same database
 **When** both create and query positions for the same symbol
@@ -55,17 +49,11 @@
 - Process B sees only its positions
 - No cross-contamination of metrics
 
-## AC-7: Backward Compatibility - Existing Positions
+## AC-6: BacktestRun Deletion is Prevented When Referenced
 
-**Given** existing positions with `backtest_run_id = NULL` (pre-migration)
-**When** PAPER mode queries positions
-**Then** existing NULL positions are returned
-
-## AC-8: Orphaned Position Handling
-
-**Given** a position with `backtest_run_id = 5`
-**When** BacktestRun id=5 is deleted
-**Then** position remains with `backtest_run_id = NULL`
+**Given** a BacktestRun id=5 with at least one ActivePosition row referencing it
+**When** attempting to delete BacktestRun id=5
+**Then** the delete is rejected by the database (FK restriction) and no ActivePosition rows are modified
 
 ## Negative Cases
 

@@ -14,12 +14,7 @@ Multiple backtest runs sharing the same database see each other's active positio
 - Position queries during backtest MUST filter by `backtest_run_id`
 - Metrics calculations (MDA, close_reasons) MUST scope to current `backtest_run_id`
 
-### FR-2: Backward Compatibility
-- PAPER and PROD environments MUST continue working with `backtest_run_id = NULL`
-- Existing positions (pre-migration) MUST remain queryable
-- No auto-migration of existing NULL positions to specific run IDs
-
-### FR-3: Parallel Execution Support
+### FR-2: Parallel Execution Support
 - Multiple concurrent backtests on same database MUST NOT interfere
 - Each backtest run operates in complete isolation
 
@@ -30,8 +25,7 @@ Multiple backtest runs sharing the same database see each other's active positio
 - No measurable regression in position query latency
 
 ### NFR-2: Data Integrity
-- FK constraint to BacktestRun with `ON DELETE SET NULL`
-- Orphaned positions (deleted run) retain data but lose run association
+- FK constraint to BacktestRun with **delete restricted** (do not allow deleting a BacktestRun while referenced by ActivePosition)
 
 ## Scope
 
@@ -43,14 +37,11 @@ Multiple backtest runs sharing the same database see each other's active positio
 - Metrics query updates (_calculate_directional_accuracy, _calculate_close_reasons)
 
 ### Out of Scope
-- Changes to PAPER/PROD trading logic
 - Auto-closing positions at backtest end
-- Migration of existing NULL positions
 - UI changes
 
 ## Definition of Done
 - Migration runs without errors
 - All backtest positions have non-NULL backtest_run_id
 - Parallel backtests produce isolated results
-- PAPER mode continues working unchanged
-- All existing tests pass
+- All relevant tests pass

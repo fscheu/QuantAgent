@@ -19,7 +19,8 @@ ActivePosition (backtest_run_id)
 | `backtest_run_id` | INTEGER | NULLABLE | FK to backtest_runs.id |
 
 **FK Constraint:**
-- `ON DELETE SET NULL` - preserves position data if run deleted
+- **Do not allow deleting a BacktestRun** if there are ActivePosition rows referencing it.
+- Implement as `ON DELETE RESTRICT` / `NO ACTION` (backend default), i.e. no orphaning.
 
 **New Index:**
 - `idx_active_position_isolation`: `(symbol, is_active, backtest_run_id, environment)`
@@ -41,7 +42,7 @@ Add after line 348:
 
 **Query changes in `get_active_position()`:**
 - When `backtest_run_id` is set: filter `backtest_run_id == self.backtest_run_id`
-- When NULL: filter `backtest_run_id.is_(None)`
+- When `backtest_run_id` is None: **do not add any run filter** (no special-casing to `IS NULL`).
 
 **Position creation in `open_position()`:**
 - Accept `backtest_run_id` parameter
@@ -71,8 +72,6 @@ def get_active_position(self, symbol: str) -> Optional[ActivePosition]:
     )
     if self.backtest_run_id is not None:
         query = query.filter(ActivePosition.backtest_run_id == self.backtest_run_id)
-    else:
-        query = query.filter(ActivePosition.backtest_run_id.is_(None))
     return query.first()
 ```
 
@@ -81,15 +80,14 @@ def get_active_position(self, symbol: str) -> Optional[ActivePosition]:
 | Context | Filter Logic |
 |---------|--------------|
 | Backtest (run_id=5) | `backtest_run_id == 5` |
-| PAPER/PROD | `backtest_run_id IS NULL` |
-| Existing positions | Remain with `NULL`, queryable in PAPER |
+| Non-backtest contexts (no run_id) | no `backtest_run_id` filter |
 
 ## Migration Strategy
 
 1. Add nullable column (no default)
-2. Add FK constraint with `ON DELETE SET NULL`
+2. Add FK constraint with delete restricted (`RESTRICT`/`NO ACTION`)
 3. Add composite index
-4. Existing rows remain `NULL`
+4. No compatibility/backfill guarantees for pre-existing rows (system is not yet production)
 
 ## Risks
 
@@ -97,4 +95,4 @@ def get_active_position(self, symbol: str) -> Optional[ActivePosition]:
 |------|------------|
 | Index bloat | Composite index replaces multiple single-column indexes for this query pattern |
 | Query plan regression | Test with realistic data volume |
-| Orphaned positions | `ON DELETE SET NULL` preserves data |
+| BacktestRun delete blocked | Enforce FK delete restriction |

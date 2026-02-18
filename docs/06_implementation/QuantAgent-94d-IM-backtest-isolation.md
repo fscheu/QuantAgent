@@ -11,14 +11,14 @@
   python -m alembic revision --autogenerate -m "add_backtest_run_id_to_active_positions"
   ```
 - Manual edits required for:
-  - FK constraint with `ON DELETE SET NULL`
+  - FK constraint with delete restricted (`RESTRICT`/`NO ACTION`)
   - Composite index definition
 
 **Task 1.2: Update ActivePosition Model**
 - File: `quantagent/models.py`
 - Location: Lines 311-349
 - Changes:
-  - Add `backtest_run_id = Column(Integer, ForeignKey("backtest_runs.id", ondelete="SET NULL"), nullable=True, index=True)`
+  - Add `backtest_run_id = Column(Integer, ForeignKey("backtest_runs.id"), nullable=True, index=True)` (delete restricted)
   - Add `backtest_run = relationship("BacktestRun", backref="active_positions")`
   - Add to `__table_args__`: `Index("idx_active_position_isolation", "symbol", "is_active", "backtest_run_id", "environment")`
 
@@ -76,8 +76,7 @@
   - `test_position_created_with_backtest_run_id`
   - `test_parallel_runs_isolated`
   - `test_metrics_scoped_to_run`
-  - `test_paper_mode_null_backtest_run_id`
-  - `test_orphaned_position_on_run_delete`
+  - `test_backtest_run_delete_restricted`
 
 **Task 4.2: Run Existing Tests**
 - Commands:
@@ -123,4 +122,4 @@ If issues arise:
 python -m alembic downgrade -1  # Revert migration
 ```
 
-PositionMonitor remains backward compatible (backtest_run_id=None is valid).
+No backward-compatibility guarantees required (system is not yet production).
