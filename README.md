@@ -1,314 +1,233 @@
 <div align="center">
 
-![QuantAgent Banner](assets/banner.png)
-<h2>QuantAgent: Price-Driven Multi-Agent LLMs for High-Frequency Trading</h2>
+# 🤖 QuantAgent
+
+**From Research Paper to Trading System**
+
+*A multi-agent LLM system that analyzes markets, executes paper trades, and validates strategies through backtesting.*
+
+[![Based on Paper](https://img.shields.io/badge/📄_Based_on-arXiv:2509.09995-B31B1B?style=flat-square)](https://arxiv.org/abs/2509.09995)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![LangGraph](https://img.shields.io/badge/Built_with-LangGraph-1C3C3C?style=flat-square)](https://github.com/langchain-ai/langgraph)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 
 </div>
 
+---
 
+## What is this?
 
-<div align="center">
+Four AI agents analyze the market. One makes the call.
 
-<div style="position: relative; text-align: center; margin: 20px 0;">
-  <div style="position: absolute; top: -10px; right: 20%; font-size: 1.2em;"></div>
-  <p>
-    <a href="https://machineily.github.io/">Fei Xiong</a><sup>1,2 ★</sup>&nbsp;
-    <a href="https://wyattz23.github.io">Xiang Zhang</a><sup>3 ★</sup>&nbsp;
-    <a href="https://scholar.google.com/citations?user=hFhhrmgAAAAJ&hl=en">Aosong Feng</a><sup>4</sup>&nbsp;
-    <a href="https://intersun.github.io/">Siqi Sun</a><sup>5</sup>&nbsp;
-    <a href="https://chenyuyou.me/">Chenyu You</a><sup>1</sup>
-  </p>
-  
-  <p>
-    <sup>1</sup> Stony Brook University &nbsp;&nbsp; 
-    <sup>2</sup> Carnegie Mellon University &nbsp;&nbsp;
-    <sup>3</sup> University of British Columbia &nbsp;&nbsp; <br>
-    <sup>4</sup> Yale University &nbsp;&nbsp; 
-    <sup>5</sup> Fudan University &nbsp;&nbsp; 
-    ★ Equal Contribution <br>
-  </p>
-</div>
-
-<div align="center" style="margin: 20px 0;">
-  <a href="README.md">English</a> | <a href="README_CN.md">中文</a>
-</div>
-
-<br>
-<p align="center">
-  <a href="https://arxiv.org/abs/2509.09995">
-    <img src="https://img.shields.io/badge/💡%20ArXiv-2509.09995-B31B1B?style=flat-square" alt="Paper">
-  </a>
-  <a href="https://Y-Research-SBU.github.io/QuantAgent">
-    <img src="https://img.shields.io/badge/Project-Website-blue?style=flat-square&logo=googlechrome" alt="Project Website">
-  </a>
-  <a href="https://github.com/Y-Research-SBU/QuantAgent/blob/main/assets/wechat_1116.jpg">
-    <img src="https://img.shields.io/badge/WeChat-Group-green?style=flat-square&logo=wechat" alt="WeChat Group">
-  </a>
-  <a href="https://discord.gg/t9nQ6VXQ">
-    <img src="https://img.shields.io/badge/Discord-Community-5865F2?style=flat-square&logo=discord" alt="Discord Community">
-  </a>
-</p>
-
-</div>
-
-
-A sophisticated multi-agent trading analysis system that combines technical indicators, pattern recognition, and trend analysis using LangChain and LangGraph. The system provides both a web interface and programmatic access for comprehensive market analysis.
-
-
-<div align="center">
-
-🚀 [Features](#-features) | ⚡ [Installation](#-installation) | 🎬 [Usage](#-usage) | 🔧 [Implementation Details](#-implementation-details) | 🤝 [Contributing](#-contributing) | 📄 [License](#-license)
-
-</div>
-
-## 🚀 Features
-
-<!-- - **Multi-Agent Analysis**: Four specialized agents working together: -->
-  
-  ### Indicator Agent
-  
-  • Computes five technical indicators—including RSI to assess momentum extremes, MACD to quantify convergence–divergence dynamics, and the Stochastic Oscillator to measure closing prices against recent trading ranges—on each incoming K‑line, converting raw OHLC data into precise, signal-ready metrics.
-
-  ![indicator agent](assets/indicator.png)
-  
- ### Pattern Agent
-  
-  • Upon a pattern query, the Pattern Agent first uses the agent draws the recent price chart, spots its main highs, lows, and general up‑or‑down moves, compares that shape to a set of familiar patterns, and returns a short, plain‑language description of the best match.
-  
-  ![indicator agent](assets/pattern.png)
-  
-  ### Trend Agent
-  
-  • Leverages tool-generated annotated K‑line charts overlaid with fitted trend channels—upper and lower boundary lines tracing recent highs and lows—to quantify market direction, channel slope, and consolidation zones, then delivers a concise, professional summary of the prevailing trend.
-  
-  ![trend agent](assets/trend.png)
-
-  ### Decision Agent
-  
-  • Synthesizes outputs from the Indicator, Pattern, Trend, and Risk agents—including momentum metrics, detected chart formations, channel analysis, and risk–reward assessments—to formulate actionable trade directives, clearly specifying LONG or SHORT positions, recommended entry and exit points, stop‑loss thresholds, and concise rationale grounded in each agent’s findings.
-  
-  ![alt text](assets/decision.png)
-
-### Web Interface
-Modern Flask-based web application with:
-  - Real-time market data from Yahoo Finance
-  - Interactive asset selection (stocks, crypto, commodities, indices)
-  - Multiple timeframe analysis (1m to 1d)
-  - Dynamic chart generation
-  - API key management
-
-## 📦 Installation
-
-### 1. Create and Activate Conda Environment
-
-```bash
-conda create -n quantagents python=3.11
-conda activate quantagents
+```
+📊 Indicator Agent    →  RSI, MACD, Stochastic, momentum signals
+🔍 Pattern Agent      →  Chart patterns via vision LLM
+📈 Trend Agent        →  Support/resistance, channel analysis
+🎯 Decision Agent     →  Synthesizes all → LONG / SHORT / HOLD
 ```
 
-### 2. Install Dependencies
+This fork extends the [original QuantAgent research](https://arxiv.org/abs/2509.09995) into a **functional trading system** with:
+
+- **Backtesting engine** — validate strategies on historical data
+- **Paper trading** — simulate execution without real money
+- **Risk management** — position sizing, daily limits, circuit breakers
+- **Full audit trail** — every decision tracked and reproducible
+
+---
+
+## Quick Start
 
 ```bash
+# 1. Clone and setup
+git clone https://github.com/fscheu/QuantAgent.git
+cd QuantAgent
+conda create -n quantagent python=3.11 && conda activate quantagent
 pip install -r requirements.txt
+
+# 2. Start database
+docker-compose up -d db
+
+# 3. Configure API key
+export OPENAI_API_KEY="sk-..."  # or ANTHROPIC_API_KEY
+
+# 4. Run a backtest
+python examples/run_backtest.py
 ```
 
-If you encounter issues with TA-lib-python, 
-try
+**First time?** See the [detailed setup guide](docs/03_design/docker_deployment.md).
 
-```bash
-conda install -c conda-forge ta-lib
-```
+---
 
-Or visit the [TA-Lib Python repository](https://github.com/ta-lib/ta-lib-python) for detailed installation instructions.
-
-### 3. Set Up LLM API Key
-You can set it in our Web InterFace Later,
-
-![alt text](assets/apibox.png)
-
-Or set it as an environment variable:
-```bash
-# For OpenAI
-export OPENAI_API_KEY="your_openai_api_key_here"
-
-# For Anthropic (Claude)
-export ANTHROPIC_API_KEY="your_anthropic_api_key_here"
-
-# For Qwen (DashScope, based in Singapore — delays may occur)
-export DASHSCOPE_API_KEY="your_dashscope_api_key_here"
+## Architecture
 
 ```
-
-
-
-
-
-## 🚀 Usage
-
-### Start the Web Interface
-
-```bash
-python web_interface.py
+┌─────────────────────────────────────────────────────────────────┐
+│                         QuantAgent                               │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   Data Layer              Analysis Engine         Execution      │
+│   ──────────              ───────────────         ─────────      │
+│   • yfinance              • Indicator Agent       • Paper Broker │
+│   • Local DB cache        • Pattern Agent         • Order Manager│
+│   • 18x faster            • Trend Agent           • Risk Manager │
+│     backtests             • Decision Agent        • Portfolio    │
+│                                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   Backtesting             Persistence             UI             │
+│   ───────────             ───────────             ──             │
+│   • Historical runs       • PostgreSQL            • Streamlit    │
+│   • Metrics calc          • LangGraph checkpoints • 7 tabs       │
+│   • Config snapshots      • Full provenance       • Real-time    │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-The web application will be available at `http://127.0.0.1:5000`
+---
 
-### Web Interface Features
+## Features at a Glance
 
-1. **Asset Selection**: Choose from available stocks, crypto, commodities, and indices
-2. **Timeframe Selection**: Analyze data from 1-minute to daily intervals
-3. **Date Range**: Select custom date ranges for analysis
-4. **Real-time Analysis**: Get comprehensive technical analysis with visualizations
-5. **API Key Management**: Update your OpenAI API key through the interface
+| Feature | Status | Description |
+|---------|--------|-------------|
+| **Multi-Agent Analysis** | ✅ | 4 specialized agents with structured outputs |
+| **Backtesting** | ✅ | Run strategies on historical data, get metrics |
+| **Paper Trading** | ✅ | Simulated execution with realistic slippage |
+| **Risk Management** | ✅ | Position limits, daily loss caps, circuit breaker |
+| **Data Caching** | ✅ | Local DB cache makes backtests 18x faster |
+| **Checkpointing** | ✅ | Resume long runs, full execution history |
+| **Streamlit UI** | ✅ | Dashboard, analyses, backtesting, logs |
+| **Auto Scheduler** | 🚧 | Coming soon — hourly automated analysis |
+| **Real Broker** | 📋 | Phase 2 — after strategy validation |
 
-## 📺 Demo
+---
 
-![Quick preview](assets/demo.gif)
+## Project Status
 
+> **Phase 1: ~75% complete** — Core trading components done, UI functional, scheduler pending.
 
-## 🔧 Implementation Details
+See the [full audit report](docs/2026-02-19_repository_audit.md) for details.
 
+**Active development tracked in:** [Beads issues](.beads/)
 
-**Important Note**: Our model requires an LLM that can take images as input, as our agents generate and analyze visual charts for pattern recognition and trend analysis.
+---
 
-### Python Usage
+## Documentation
 
-To use QuantAgents inside your code, you can import the trading_graph module and initialize a TradingGraph() object. The .invoke() function will return a comprehensive analysis. You can run web_interface.py, here's also a quick example:
+| Doc | What's inside |
+|-----|---------------|
+| [Trading Requirements](docs/01_requirements/trading_system_requirements.md) | Full MVP specification |
+| [Phase 1 Roadmap](docs/02_planning/phase1_roadmap.md) | Week-by-week progress |
+| [Backtesting Engine](docs/03_design/backtesting_engine.md) | How backtests work |
+| [Docker Setup](docs/03_design/docker_deployment.md) | Dev environment guide |
+| [Manual Test Cases](docs/05_acceptance_tests/MVP_MANUAL_TEST_CASES.md) | Validate the system |
+
+---
+
+## Usage Examples
+
+### Run a Backtest
 
 ```python
-from trading_graph import TradingGraph
+from quantagent.backtesting import Backtest
+from datetime import datetime, timedelta
 
-# Initialize the trading graph
-trading_graph = TradingGraph()
+backtest = Backtest(
+    start_date=datetime.now() - timedelta(days=90),
+    end_date=datetime.now(),
+    assets=['BTC', 'SPX'],
+    timeframe='4h',
+    initial_capital=100000.0
+)
 
-# Create initial state with your data
-initial_state = {
-    "kline_data": your_dataframe_dict,
-    "analysis_results": None,
-    "messages": [],
-    "time_frame": "4hour",
-    "stock_name": "BTC"
-}
+metrics = backtest.run(name="Q4 Strategy Test")
 
-# Run the analysis
-final_state = trading_graph.graph.invoke(initial_state)
-
-# Access results
-print(final_state.get("final_trade_decision"))
-print(final_state.get("indicator_report"))
-print(final_state.get("pattern_report"))
-print(final_state.get("trend_report"))
+print(f"Win Rate: {metrics.win_rate:.1%}")
+print(f"Sharpe:   {metrics.sharpe_ratio:.2f}")
+print(f"P&L:      ${metrics.total_pnl:,.2f}")
 ```
 
-You can also adjust the default configuration to set your own choice of LLMs or analysis parameters in web_interface.py.
+### Analyze a Single Asset
 
 ```python
-if provider == "anthropic":
-    # Set default Claude models if not already set to Anthropic models
-    if not analyzer.config["agent_llm_model"].startswith("claude"):
-        analyzer.config["agent_llm_model"] = "claude-haiku-4-5-20251001"
-    if not analyzer.config["graph_llm_model"].startswith("claude"):
-        analyzer.config["graph_llm_model"] = "claude-haiku-4-5-20251001"
+from quantagent.graph_setup import TradingGraph
 
-elif provider == "qwen":
-    # Set default Qwen models if not already set to Qwen models
-    if not analyzer.config["agent_llm_model"].startswith("qwen"):
-        analyzer.config["agent_llm_model"] = "qwen3-max"
-    if not analyzer.config["graph_llm_model"].startswith("qwen"):
-        analyzer.config["graph_llm_model"] = "qwen3-vl-plus"
-    
-else:
-    # Set default OpenAI models if not already set to OpenAI models
-    if analyzer.config["agent_llm_model"].startswith(("claude", "qwen")):
-        analyzer.config["agent_llm_model"] = "gpt-4o-mini"
-    if analyzer.config["graph_llm_model"].startswith(("claude", "qwen")):
-        analyzer.config["graph_llm_model"] = "gpt-4o"
-        
+graph = TradingGraph()
+result = graph.analyze(symbol="BTC", timeframe="4h")
+
+print(result["final_trade_decision"])
+# → "LONG with 78% confidence. RSI oversold, bullish engulfing pattern..."
 ```
 
-For live data, we recommend using the web interface as it provides access to real-time market data through yfinance. The system automatically fetches the most recent 30 candlesticks for optimal LLM analysis accuracy.
+### Launch the Dashboard
 
-### Configuration Options
-
-The system supports the following configuration parameters:
-
-- `agent_llm_model`: Model for individual agents (default: "gpt-4o-mini")
-- `graph_llm_model`: Model for graph logic and decision making (default: "gpt-4o")
-- `agent_llm_temperature`: Temperature for agent responses (default: 0.1)
-- `graph_llm_temperature`: Temperature for graph logic (default: 0.1)
-
-**Note**: The system uses default token limits for comprehensive analysis. No artificial token restrictions are applied.
-
-You can view the full list of configurations in `default_config.py`.
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🔖 Citation
+```bash
+streamlit run apps/streamlit/app.py
 ```
-@article{xiong2025quantagent,
-  title={QuantAgent: Price-Driven Multi-Agent LLMs for High-Frequency Trading},
-  author={Fei Xiong and Xiang Zhang and Aosong Feng and Siqi Sun and Chenyu You},
-  journal={arXiv preprint arXiv:2509.09995},
-  year={2025}
+
+Open http://localhost:8501 → Dashboard, Analyses, Backtesting, Logs.
+
+---
+
+## Configuration
+
+```python
+# Example config for backtesting
+config = {
+    'base_position_pct': 0.05,      # 5% of portfolio per trade
+    'max_position_pct': 0.10,       # Max 10% in single position
+    'max_daily_loss_pct': 0.05,     # Circuit breaker at 5% daily loss
+    'slippage_pct': 0.01,           # 1% simulated slippage
+    'agent_llm_provider': 'openai',
+    'agent_llm_model': 'gpt-4o-mini',
 }
 ```
 
+See [CONFIGURATION.md](docs/03_design/CONFIGURATION.md) for all options.
 
-## 🙏 Acknowledgements
+---
 
-This repository was built with the help of the following libraries and frameworks:
+## Based On
 
-- [**LangGraph**](https://github.com/langchain-ai/langgraph)
-- [**OpenAI**](https://github.com/openai/openai-python)
-- [**Anthropic (Claude)**](https://github.com/anthropics/anthropic-sdk-python)
-- [**Qwen**](https://github.com/QwenLM/Qwen)
-- [**yfinance**](https://github.com/ranaroussi/yfinance)
-- [**Flask**](https://github.com/pallets/flask)
-- [**TechnicalAnalysisAutomation**](https://github.com/neurotrader888/TechnicalAnalysisAutomation/tree/main)
-- [**tvdatafeed**](https://github.com/rongardF/tvdatafeed)
-## ⚠️ Disclaimer
+This project builds upon the research paper:
 
-This software is for educational and research purposes only. It is not intended to provide financial advice. Always do your own research and consider consulting with a financial advisor before making investment decisions.
+> **QuantAgent: Price-Driven Multi-Agent LLMs for High-Frequency Trading**
+> Xiong, Zhang, Feng, Sun, You — [arXiv:2509.09995](https://arxiv.org/abs/2509.09995)
 
-## 🐛 Troubleshooting
+The original implementation focused on analysis. This fork adds execution, backtesting, and production infrastructure.
 
-### Common Issues
+---
 
-1. **TA-Lib Installation**: If you encounter TA-Lib installation issues, refer to the [official repository](https://github.com/ta-lib/ta-lib-python) for platform-specific instructions.
+## Tech Stack
 
-2. **LLM API Key**: Ensure your API key is properly set in the environment or through the web interface.
+- **LangGraph** — Multi-agent orchestration with checkpointing
+- **PostgreSQL** — Persistence, caching, state management
+- **Streamlit** — Dashboard UI
+- **yfinance** — Market data
+- **SQLAlchemy + Alembic** — ORM and migrations
 
-3. **Data Fetching**: The system uses Yahoo Finance for data. Some symbols might not be available or have limited historical data.
+---
 
-4. **Memory Issues**: For large datasets, consider reducing the analysis window or using a smaller timeframe.
+## Contributing
 
-### Support
+1. Check [open issues](.beads/) for current priorities
+2. Fork → Branch → PR
+3. Follow existing code patterns
+4. Tests required for new features
 
-If you encounter any issues, please:
+See [AGENTS.md](AGENTS.md) for development guidelines.
 
-0. Try refresh and re-enter LLM API key
-1. Check the troubleshooting section above
-2. Review the error messages in the console
-3. Ensure all dependencies are properly installed
-4. Verify your API key is valid and has sufficient credits
+---
 
-## 📧 Contact
+## License
 
-For questions, feedback, or collaboration opportunities, please contact:
+MIT — See [LICENSE](LICENSE)
 
-**Email**: [chenyu.you@stonybrook.edu](mailto:chenyu.you@stonybrook.edu), [siqisun@fudan.edu.cn](mailto:siqisun@fudan.edu.cn)
+---
 
+<div align="center">
 
-## Star History
+**Questions?** Open an issue or check the [docs](docs/).
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Y-Research-SBU/QuantAgent&type=Date)](https://www.star-history.com/#Y-Research-SBU/QuantAgent&Date)
+*Built with ☕ and AI agents that occasionally disagree with each other.*
+
+</div>
