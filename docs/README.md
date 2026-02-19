@@ -9,8 +9,8 @@ Welcome! This folder contains all documentation for transforming QuantAgent into
 ### For First Time Reading
 1. **Start here**: [Phase 1 Roadmap](02_planning/phase1_roadmap.md) - Overview of what we're building and timeline
 2. **Then read**: [Trading System Requirements](01_requirements/trading_system_requirements.md) - Detailed specs
-3. **Database setup**: [MIGRATIONS.md](MIGRATIONS.md) - DB setup and Alembic migrations
-4. **Understand decisions**: [Technical Decisions](03_technical/) - How we're building it
+3. **Database setup**: [MIGRATIONS.md](03_design/MIGRATIONS.md) - DB setup and Alembic migrations
+4. **Understand decisions**: [Technical Decisions](03_design/) - How we're building it
 
 ### By Role
 
@@ -20,16 +20,16 @@ Welcome! This folder contains all documentation for transforming QuantAgent into
 
 **Backend Engineer**:
 - [Phase 1 Roadmap](02_planning/phase1_roadmap.md) - Week-by-week tasks
-- [Data Caching Architecture](03_technical/data_caching_architecture.md) - DB design
-- [Docker Deployment](03_technical/docker_deployment.md) - Dev environment setup
-- [MIGRATIONS](MIGRATIONS.md) - Alembic workflow and DB models
+- [Data Caching Architecture](03_design/data_caching_architecture.md) - DB design
+- [Docker Deployment](03_design/docker_deployment.md) - Dev environment setup
+- [MIGRATIONS](03_design/MIGRATIONS.md) - Alembic workflow and DB models
 
 **QA / Tester**:
 - [Trading System Requirements](01_requirements/trading_system_requirements.md) - Acceptance criteria
 - [Phase 1 Roadmap](02_planning/phase1_roadmap.md) - Testing milestones
 
 **DevOps / Infrastructure**:
-- [Docker Deployment](03_technical/docker_deployment.md) - Container setup
+- [Docker Deployment](03_design/docker_deployment.md) - Container setup
 - [Phase 2 Roadmap](02_planning/phase2_roadmap.md) - Future deployment (FastAPI+Angular)
 
 ---
@@ -60,22 +60,29 @@ Welcome! This folder contains all documentation for transforming QuantAgent into
   - Advanced features
   - Expected improvements
 
-### 03_technical/
+### 03_design/
 **Purpose**: Technical architecture and implementation decisions
 
-- **[docker_deployment.md](03_technical/docker_deployment.md)**
+- **[docker_deployment.md](03_design/docker_deployment.md)**
   - Lightweight Docker setup (PostgreSQL in container)
   - Development workflow
   - Production deployment approach
   - Troubleshooting
 
-- **[data_caching_architecture.md](03_technical/data_caching_architecture.md)**
+- **[data_caching_architecture.md](03_design/data_caching_architecture.md)**
   - How we cache market data locally
   - Database schema for OHLC data
   - Implementation details
   - Performance characteristics
 
-- **[ui_framework_decision.md](03_technical/ui_framework_decision.md)**
+- **[MIGRATIONS.md](03_design/MIGRATIONS.md)**
+  - Database schema and Alembic migrations
+  - Model definitions and relationships
+
+### 04_decisions/
+**Purpose**: Architecture decision records
+
+- **[ui_framework_decision.md](04_decisions/ui_framework_decision.md)**
   - Why Streamlit for MVP
   - Why FastAPI+Angular for Phase 2
   - Hybrid migration strategy
@@ -157,7 +164,7 @@ Phase 2: Production Ready (8-10 weeks, after MVP validation)
 Each document has its own focus:
 - **"What are we building?"** → [trading_system_requirements.md](01_requirements/trading_system_requirements.md)
 - **"When will it be done?"** → [phase1_roadmap.md](02_planning/phase1_roadmap.md)
-- **"How are we building it?"** → Documents in [03_technical/](03_technical/)
+- **"How are we building it?"** → Documents in [03_design/](03_design/)
 - **"What's the timeline?"** → [phase1_roadmap.md](02_planning/phase1_roadmap.md)
 
 ---
@@ -171,6 +178,6 @@ Each document has its own focus:
 
 ---
 
-**Last Updated**: November 2024
-**Status**: Phase 1 planning complete, ready for implementation
+**Last Updated**: February 2026
+**Status**: Phase 1 implementation in progress (~75% complete per 2026-02-19 audit)
 

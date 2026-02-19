@@ -292,10 +292,10 @@ class OrderManager:
   - [x] Full end-to-end: LONG decision → fills → portfolio updated → db logged
 
 **2.5 Unit Tests & Integration**
-- [ ] PositionSizer unit tests (70%+ coverage)
-- [ ] Portfolio Manager unit tests (70%+ coverage)
+- [x] PositionSizer unit tests (70%+ coverage)
+- [x] Portfolio Manager unit tests (70%+ coverage)
 - [x] Risk Manager unit tests (70%+ coverage)
-- [ ] Order Manager unit tests (70%+ coverage)
+- [x] Order Manager unit tests (70%+ coverage)
 - [x] Integration test: Decision → Size → Validate → Execute → Update → Log
 - [x] Test: Trade is rejected if validation fails (never reaches broker)
 - [x] Test: Trade is accepted if validation passes (all steps complete)
@@ -550,14 +550,14 @@ class TradingScheduler:
 ```
 
 Additional MVP UI tasks (per UI requirements):
-- [ ] Configuration tab: list/create/edit StrategyConfig (JSON), set defaults per environment; model preset management
-- [ ] Analyses tab: filterable table (env/symbol/timeframe/date), details with reports, charts, checkpoint/thread, model metadata, order link
-- [ ] Backtesting tab: create run (generate-only vs generate+execute), runs table with status/progress/metrics, run details with logs and cancel
-- [ ] Replay tab: select backtest_run, pick profile(s), execute replay; compare metrics (side-by-side) and overlay equity curves
-- [ ] Orders & Positions tab (paper): orders with trigger_signal and provenance; positions with unrealized P&L
-- [ ] Global environment filter and auto-refresh on heavy tabs
-- [ ] Docs: link to `docs/01_requirements/ui_streamlit_mvp_requirements.md`
- - [ ] Configuration tab: manage Universe (multi-select symbols) in Portfolio profile; snapshot preview
+- [x] Configuration tab: list/create/edit StrategyConfig (JSON), set defaults per environment; model preset management
+- [x] Analyses tab: filterable table (env/symbol/timeframe/date), details with reports, charts, checkpoint/thread, model metadata, order link
+- [~] Backtesting tab: create run (generate-only vs generate+execute), runs table with status/progress/metrics, run details with logs and cancel *(UI exists, backend execution not wired - see QuantAgent-9wz)*
+- [~] Replay tab: select backtest_run, pick profile(s), execute replay; compare metrics (side-by-side) and overlay equity curves *(UI exists, execution not implemented - see QuantAgent-3o8)*
+- [x] Orders & Positions tab (paper): orders with trigger_signal and provenance; positions with unrealized P&L
+- [x] Global environment filter and auto-refresh on heavy tabs
+- [x] Docs: link to `docs/01_requirements/ui_streamlit_mvp_requirements.md`
+ - [~] Configuration tab: manage Universe (multi-select symbols) in Portfolio profile; snapshot preview *(partial - see QuantAgent-ia2)*
 
 **5.3 Integration Testing**
 - [ ] Full end-to-end: Analysis → Risk Check → Execution → Portfolio Update → Database → Dashboard
@@ -612,45 +612,45 @@ Additional MVP UI tasks (per UI requirements):
 - ✅ PortfolioManager: Updates state (no pre-trade validation)
 
 ### System Works Automatically
-- [ ] Runs analysis every 1 hour
-- [ ] Calculates trade size per signal confidence
-- [ ] Validates each trade against risk limits
-- [ ] Places orders without manual intervention (if valid)
-- [ ] Rejects invalid orders with logged reasons
-- [ ] Tracks all positions accurately
-- [ ] Enforces all risk limits (capital, position size, daily loss, circuit breaker)
-- [ ] Logs all activities to database (orders, trades, rejections)
+- [ ] Runs analysis every 1 hour *(TradingScheduler not implemented - see QuantAgent-3o4)*
+- [x] Calculates trade size per signal confidence
+- [x] Validates each trade against risk limits
+- [x] Places orders without manual intervention (if valid)
+- [x] Rejects invalid orders with logged reasons
+- [x] Tracks all positions accurately
+- [x] Enforces all risk limits (capital, position size, daily loss, circuit breaker)
+- [x] Logs all activities to database (orders, trades, rejections)
 
 ### Risk Management Enforced
-- [ ] No trades executed without validation
-- [ ] Insufficient capital → rejects
-- [ ] Position > 10% of portfolio → rejects
-- [ ] Daily loss > 5% → rejects
-- [ ] Circuit breaker triggered → stops all trades
-- [ ] All rejections logged with specific reason
+- [x] No trades executed without validation
+- [x] Insufficient capital → rejects
+- [x] Position > 10% of portfolio → rejects
+- [x] Daily loss > 5% → rejects
+- [x] Circuit breaker triggered → stops all trades
+- [x] All rejections logged with specific reason
 
 ### Strategy Validated
-- [ ] Backtest on 3-4 months data
-- [ ] Win rate ≥ 40%
-- [ ] Sharpe ratio ≥ 1.0
-- [ ] Max drawdown ≤ 15%
+- [x] Backtest on 3-4 months data *(framework complete, metrics calculated)*
+- [ ] Win rate ≥ 40% *(requires validation run)*
+- [ ] Sharpe ratio ≥ 1.0 *(requires validation run)*
+- [ ] Max drawdown ≤ 15% *(requires validation run)*
 
 ### Operations Reliable
-- [ ] Uptime ≥ 99% over 48h test
-- [ ] Zero database inconsistencies
-- [ ] Graceful error handling (errors logged, system continues)
-- [ ] Analysis latency ≤ 30 seconds
-- [ ] Order execution ≤ 2 seconds
-- [ ] Daily P&L tracking accurate
+- [ ] Uptime ≥ 99% over 48h test *(requires TradingScheduler)*
+- [x] Zero database inconsistencies
+- [x] Graceful error handling (errors logged, system continues)
+- [x] Analysis latency ≤ 30 seconds
+- [x] Order execution ≤ 2 seconds
+- [x] Daily P&L tracking accurate
 
 ### Code Quality
-- [ ] PositionSizer test coverage ≥ 70%
-- [ ] RiskManager test coverage ≥ 70%
-- [ ] OrderManager test coverage ≥ 70%
-- [ ] PaperBroker test coverage ≥ 70%
-- [ ] All tests passing
-- [ ] CI/CD pipeline green
-- [ ] Code reviewed
+- [x] PositionSizer test coverage ≥ 70%
+- [x] RiskManager test coverage ≥ 70%
+- [x] OrderManager test coverage ≥ 70%
+- [x] PaperBroker test coverage ≥ 70%
+- [x] All tests passing
+- [ ] CI/CD pipeline green *(GitHub Actions not configured)*
+- [x] Code reviewed
 
 ### Documentation Complete
 - [ ] Setup instructions (README)
