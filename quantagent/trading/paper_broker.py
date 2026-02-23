@@ -11,9 +11,9 @@ Simulates:
 import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict
 
-from quantagent.models import Order, OrderStatus, OrderSide
+from quantagent.models import Order, OrderSide, OrderStatus
 
 logger = logging.getLogger(__name__)
 

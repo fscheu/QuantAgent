@@ -20,7 +20,6 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
 
     def pattern_agent_node(state: Dict[str, Any]) -> Dict[str, Any]:
         # --- Tool definitions ---
-        tools = [toolkit.generate_kline_image]
         time_frame = state["time_frame"]
         symbol = state.get("stock_name", "UNKNOWN")
         thread_id = state.get("thread_id")
@@ -166,7 +165,7 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
                         response_dict.get("breakout_probability", 0.0)
                     )
                     reasoning = response_dict.get("reasoning", "Pattern detected")
-                except (json.JSONDecodeError, ValueError, KeyError) as parse_err:
+                except (json.JSONDecodeError, ValueError, KeyError):
                     reasoning = f"Pattern analysis completed with fallback parsing: {final_response.content[:100]}"
 
         # Build structured report

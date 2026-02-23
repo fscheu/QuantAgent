@@ -1,14 +1,11 @@
 """Backtesting engine for strategy validation."""
 
 import logging
-import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
-from decimal import Decimal
 from typing import Dict, List, Optional
 
-import numpy as np
 import numpy as np
 import pandas as pd
 from sqlalchemy.orm import Session
@@ -22,35 +19,16 @@ from quantagent.models import (
     ActivePosition,
     BacktestRun,
     Environment,
-    Order,
     OrderSide,
     Signal,
     Trade,
     TradeSignal,
 )
-from quantagent.portfolio.manager import PortfolioManager
-from quantagent.database import SessionLocal
-from quantagent.models import (
-    BacktestRun,
-    Environment,
-    Order,
-    Signal,
-    Trade,
-    TradeSignal,
-)
-from quantagent.portfolio.manager import PortfolioManager
 from quantagent.static_util import format_ohlcv_for_agents
 from quantagent.strategy.assembler import StrategyAssembler
 from quantagent.strategy.base import TradingStrategy
 from quantagent.strategy.llm_agent_strategy import LLMAgentStrategy
-from quantagent.trading.order_manager import OrderManager
-from quantagent.trading.paper_broker import PaperBroker
 from quantagent.trading.position_monitor import PositionMonitor
-from quantagent.trading.paper_broker import PaperBroker
-from quantagent.trading.position_sizer import PositionSizer
-from quantagent.trading.risk_manager import RiskManager
-from quantagent.trading_graph import TradingGraph
-from quantagent.trading_graph import TradingGraph
 
 logger = logging.getLogger(__name__)
 

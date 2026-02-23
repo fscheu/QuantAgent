@@ -1,10 +1,11 @@
 """Configuration Manager for persisting and loading trading profiles."""
 
-from typing import Dict, Optional, List
+from typing import Dict, List, Optional
+
 from sqlalchemy.orm import Session
 
-from quantagent.models import StrategyConfig
 from quantagent.database import SessionLocal
+from quantagent.models import StrategyConfig
 
 
 class ConfigManager:
