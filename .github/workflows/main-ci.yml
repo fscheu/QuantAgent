@@ -1,0 +1,133 @@
+name: Main CI + Notifications
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  ci:
+    name: CI (Lint + Tests)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget
+          # TA-Lib
+          wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz
+          tar -xzf ta-lib-0.4.0-src.tar.gz
+          cd ta-lib
+          ./configure --prefix=/usr
+          make
+          sudo make install
+          cd ..
+      
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-cov ruff
+      
+      - name: Lint with ruff
+        id: lint
+        run: |
+          ruff check quantagent/ --output-format=github
+        continue-on-error: true
+      
+      - name: Run unit tests
+        id: tests
+        run: |
+          pytest tests/ -v --tb=short --maxfail=5 \
+            --ignore=tests/test_integration_full.py \
+            --ignore=tests/test_backtest_integration.py
+        continue-on-error: true
+      
+      - name: Determine overall status
+        id: status
+        run: |
+          LINT_EXIT=${{ steps.lint.outcome }}
+          TESTS_EXIT=${{ steps.tests.outcome }}
+          
+          if [[ "$LINT_EXIT" != "success" ]]; then
+            echo "failed_step=Lint" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          if [[ "$TESTS_EXIT" != "success" ]]; then
+            echo "failed_step=Unit tests" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          echo "All checks passed"
+      
+      - name: Notify Telegram on failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: "-1003835130753"
+          TELEGRAM_TOPIC_ID: "208"
+        run: |
+          COMMIT_SHA="${GITHUB_SHA:0:7}"
+          COMMIT_MSG=$(git log -1 --pretty=%B | head -1)
+          FAILED_STEP="${{ steps.status.outputs.failed_step || 'Unknown' }}"
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          
+          MESSAGE="🚨 **CI Failure in QuantAgent**
+
+**Commit:** \`${COMMIT_SHA}\`
+**Message:** ${COMMIT_MSG}
+**Failed step:** ${FAILED_STEP}
+**Logs:** [View run](${RUN_URL})
+
+@openclaw please investigate and create hotfix issue.
+
+**Run ID:** ${{ github.run_id }}
+**Commit SHA:** ${COMMIT_SHA}
+**Failed step:** ${FAILED_STEP}"
+          
+          curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"chat_id\": \"${TELEGRAM_CHAT_ID}\",
+              \"message_thread_id\": ${TELEGRAM_TOPIC_ID},
+              \"text\": $(echo "$MESSAGE" | jq -Rs .),
+              \"parse_mode\": \"Markdown\",
+              \"disable_web_page_preview\": true
+            }"
+      
+      - name: Notify Telegram on success
+        if: success()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: "7588749528"
+        run: |
+          COMMIT_SHA="${GITHUB_SHA:0:7}"
+          COMMIT_MSG=$(git log -1 --pretty=%B | head -1)
+          
+          MESSAGE="✅ CI passed on main
+
+Commit: \`${COMMIT_SHA}\`
+Message: ${COMMIT_MSG}"
+          
+          curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"chat_id\": \"${TELEGRAM_CHAT_ID}\",
+              \"text\": $(echo "$MESSAGE" | jq -Rs .),
+              \"parse_mode\": \"Markdown\",
+              \"disable_web_page_preview\": true
+            }"
