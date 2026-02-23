@@ -8,15 +8,15 @@ Tests verify:
 - Error handling with fallback HOLD decision
 """
 
-import json
-import pytest
 from unittest.mock import Mock
+
+import pytest
 
 from quantagent.agent_models import (
     IndicatorReport,
     PatternReport,
-    TrendReport,
     TradingDecision,
+    TrendReport,
 )
 from quantagent.decision_agent import create_final_trade_decider
 
@@ -330,7 +330,6 @@ class TestErrorHandling:
     ):
         """Verify malformed JSON creates HOLD fallback decision."""
         # Create llm that will fail to parse (simulate error in with_structured_output)
-        from unittest.mock import Mock
 
         llm = Mock()
         llm.with_structured_output = Mock(side_effect=ValueError("LLM parsing failed"))

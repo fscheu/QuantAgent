@@ -1,10 +1,22 @@
 """SQLAlchemy database configuration and engine setup."""
 
+from __future__ import annotations
+
+import os
+import sys
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from quantagent import settings
+
+_DEFAULT_TEST_DB_URL = "sqlite+pysqlite:///:memory:"
+_TEST_FALLBACK_ENV_FLAGS = {"1", "true", "yes", "on"}
+
+
+def _flag_enabled(name: str) -> bool:
+    return os.getenv(name, "").lower() in _TEST_FALLBACK_ENV_FLAGS
 
 # Base class for all models (safe to import without DB configured)
 Base = declarative_base()
@@ -14,11 +26,30 @@ _engine = None
 _SessionLocal = None
 
 
+def _should_use_test_fallback() -> bool:
+    """Return True when running under pytest or an explicit fallback flag."""
+    if _flag_enabled("QUANTAGENT_DISABLE_SQLITE_FALLBACK"):
+        return False
+    if "pytest" in sys.modules:
+        return True
+    return _flag_enabled("QUANTAGENT_ALLOW_SQLITE_FALLBACK")
+
+
+def _resolve_database_url() -> str:
+    """Resolve DATABASE_URL with graceful fallback for unit tests."""
+    try:
+        return settings.require("DATABASE_URL")
+    except ValueError as exc:
+        if _should_use_test_fallback():
+            return os.getenv("QUANTAGENT_TEST_DATABASE_URL", _DEFAULT_TEST_DB_URL)
+        raise exc
+
+
 def _get_engine():
     """Create or return the cached engine. Validates DATABASE_URL on first call only."""
     global _engine
     if _engine is None:
-        url = settings.require("DATABASE_URL")
+        url = _resolve_database_url()
         if url.startswith("sqlite"):
             _engine = create_engine(
                 url, connect_args={"check_same_thread": False}, poolclass=StaticPool

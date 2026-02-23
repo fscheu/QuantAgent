@@ -1,12 +1,12 @@
 """Tests for Phase 4 metrics (QuantAgent-r6y): MDA, invocation tracking, close reasons."""
 
-import pytest
 from datetime import datetime, timedelta
-from decimal import Decimal
+
+import pytest
 
 from quantagent.backtesting.backtest import Backtest, BacktestMetrics
-from quantagent.models import ActivePosition, OrderSide, ExitPolicy, Environment
 from quantagent.database import SessionLocal
+from quantagent.models import ActivePosition, Environment, ExitPolicy, OrderSide
 
 
 class TestPhase4Metrics:

@@ -4,9 +4,45 @@ Measures execution time and confirms all three agents run simultaneously.
 """
 
 import time
+from pathlib import Path
+
 import pandas as pd
-from quantagent.trading_graph import TradingGraph
+
 from quantagent.static_util import read_and_format_ohlcv
+from quantagent.trading_graph import TradingGraph
+
+_DATA_PATH = Path("benchmark/btc/BTC_4h_1.csv")
+
+
+def _load_sample_ohlcv() -> pd.DataFrame:
+    """Load benchmark data when available, otherwise generate synthetic candles."""
+    if _DATA_PATH.exists():
+        df = pd.read_csv(_DATA_PATH)
+        print(f"   ✓ Loaded {len(df)} candlesticks from benchmark dataset")
+        return df
+
+    print("   ⚠ benchmark/btc/BTC_4h_1.csv missing, generating synthetic dataset")
+    periods = 120
+    timestamps = pd.date_range(end=pd.Timestamp.utcnow(), periods=periods, freq="4H")
+    base_price = 50000
+    closes = [base_price + ((i % 6) - 3) * 120 + i * 3 for i in range(periods)]
+    opens = [price - 60 for price in closes]
+    highs = [price + 150 for price in closes]
+    lows = [price - 180 for price in closes]
+    volumes = [1000 + (i % 10) * 25 for i in range(periods)]
+
+    df = pd.DataFrame(
+        {
+            "Datetime": timestamps,
+            "Open": opens,
+            "High": highs,
+            "Low": lows,
+            "Close": closes,
+            "Volume": volumes,
+        }
+    )
+    print(f"   ✓ Generated {len(df)} synthetic candlesticks for regression tests")
+    return df
 
 
 def test_parallel_execution():
@@ -18,9 +54,9 @@ def test_parallel_execution():
 
     # Load sample data
     print("\n1. Loading sample OHLCV data...")
-    df = pd.read_csv("benchmark/btc/BTC_4h_1.csv")
+    df = _load_sample_ohlcv()
     df_dict = read_and_format_ohlcv(df)
-    print(f"   ✓ Loaded {len(df)} candlesticks")
+    print(f"   ✓ Prepared {len(df)} candlesticks for execution")
 
     # Initialize trading graph
     print("\n2. Initializing TradingGraph...")
@@ -52,7 +88,7 @@ def test_parallel_execution():
     print("=" * 80)
 
     print(f"\n✓ Total execution time: {execution_time:.2f} seconds")
-    print(f"  (Expected: ~4-5s for parallel, ~6-9s for sequential)")
+    print("  (Expected: ~4-5s for parallel, ~6-9s for sequential)")
 
     # Check that all agent reports are present
     has_indicator = "indicator_report" in result and result["indicator_report"]

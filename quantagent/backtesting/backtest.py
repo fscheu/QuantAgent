@@ -29,8 +29,12 @@ from quantagent.strategy.assembler import StrategyAssembler
 from quantagent.strategy.base import TradingStrategy
 from quantagent.strategy.llm_agent_strategy import LLMAgentStrategy
 from quantagent.trading.position_monitor import PositionMonitor
+from quantagent.trading_graph import TradingGraph as _TradingGraph
 
 logger = logging.getLogger(__name__)
+
+# Backwards-compatible export for legacy call sites/tests
+TradingGraph = _TradingGraph
 
 
 @dataclass

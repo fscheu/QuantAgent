@@ -12,12 +12,12 @@ See docs/03_technical/TESTING_PATTERNS.md for testing guidelines.
 """
 
 import os
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-import quantagent.trading_graph as trading_graph_module
+import pytest
 from langgraph.checkpoint.memory import InMemorySaver
 
+import quantagent.trading_graph as trading_graph_module
 from quantagent import settings
 from quantagent.trading_graph import TradingGraph
 
@@ -28,6 +28,20 @@ class _InMemoryPostgresStub(InMemorySaver):
     @classmethod
     def from_conn_string(cls, _conn_string: str) -> "_InMemoryPostgresStub":
         return cls()
+
+    def setup(self) -> None:  # pragma: no cover - no-op for in-memory saver
+        """Mirror PostgresSaver.setup for compatibility."""
+        return None
+
+
+def _setup_in_memory_checkpointer(mock_postgres_saver):
+    """Configure PostgresSaver patch to return an in-memory saver instance."""
+    context_manager = MagicMock()
+    stub = _InMemoryPostgresStub()
+    context_manager.__enter__.return_value = stub
+    context_manager.__exit__.return_value = False
+    mock_postgres_saver.from_conn_string.return_value = context_manager
+    return stub
 
 
 # ============================================================================
@@ -57,8 +71,7 @@ class TestCheckpointingConfiguration:
             "postgresql://postgres:password@localhost:5432/quantagent_dev",
         )
 
-        mock_saver_instance = MagicMock()
-        mock_postgres_saver.from_conn_string.return_value = mock_saver_instance
+        _setup_in_memory_checkpointer(mock_postgres_saver)
 
         tg = TradingGraph(use_checkpointing=True)
 
@@ -71,8 +84,10 @@ class TestCheckpointingConfiguration:
     ):
         """Verify checkpointing raises error when DATABASE_URL setting is empty."""
         monkeypatch.setattr(settings, "DATABASE_URL", "")
+        monkeypatch.delenv("DATABASE_URL", raising=False)
+        monkeypatch.setenv("QUANTAGENT_DISABLE_SQLITE_FALLBACK", "1")
 
-        with patch("quantagent.trading_graph.PostgresSaver") as mock_saver:
+        with patch("quantagent.trading_graph.PostgresSaver"):
             with pytest.raises(ValueError, match="DATABASE_URL not set in .env file"):
                 TradingGraph(use_checkpointing=True)
 
@@ -174,8 +189,7 @@ class TestCheckpointingInfrastructure:
             "postgresql://postgres:password@localhost:5432/quantagent_dev",
         )
 
-        mock_saver_instance = MagicMock()
-        mock_postgres_saver.from_conn_string.return_value = mock_saver_instance
+        _setup_in_memory_checkpointer(mock_postgres_saver)
 
         tg = TradingGraph(use_checkpointing=True)
 
@@ -295,7 +309,7 @@ class TestGraphStateInspection:
         config = {"configurable": {"thread_id": "state_test_001"}}
 
         # Execute graph first
-        result = tg.graph.invoke(sample_state_inicial, config=config)
+        tg.graph.invoke(sample_state_inicial, config=config)
 
         # Now try to get state
         try:
@@ -325,7 +339,7 @@ class TestCheckpointingRobustness:
         )
 
         with patch("quantagent.trading_graph.PostgresSaver") as mock_saver:
-            mock_saver.from_conn_string.return_value = MagicMock()
+            _setup_in_memory_checkpointer(mock_saver)
             tg = TradingGraph(use_checkpointing=True)
 
             original_checkpointer = tg.checkpointer
@@ -346,7 +360,7 @@ class TestCheckpointingRobustness:
         )
 
         with patch("quantagent.trading_graph.PostgresSaver") as mock_saver:
-            mock_saver.from_conn_string.return_value = MagicMock()
+            _setup_in_memory_checkpointer(mock_saver)
             tg = TradingGraph(use_checkpointing=True)
 
             original_checkpointer = tg.checkpointer
@@ -368,7 +382,7 @@ class TestCheckpointingRobustness:
         # One with checkpointing (will fail if no DB, but verifies parameter accepted)
         try:
             with patch("quantagent.trading_graph.PostgresSaver") as mock_saver:
-                mock_saver.from_conn_string.return_value = MagicMock()
+                _setup_in_memory_checkpointer(mock_saver)
                 tg_with_checkpoint = TradingGraph(use_checkpointing=True)
                 assert tg_with_checkpoint.checkpointer is not None
         except ValueError:

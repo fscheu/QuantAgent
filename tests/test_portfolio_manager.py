@@ -8,26 +8,22 @@ Following TESTING_PATTERNS.md:
 - Test edge cases (empty data, extreme values)
 """
 
-import pytest
 from decimal import Decimal
-from datetime import datetime
+
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from quantagent.models import (
+    Base,
+    Environment,
     Order,
     OrderSide,
-    OrderType,
     OrderStatus,
+    OrderType,
     Trade,
-    Position,
-    Signal,
-    TradeSignal,
-    Environment,
-    Base,
 )
 from quantagent.portfolio.manager import PortfolioManager
-from quantagent.database import SessionLocal
 
 
 @pytest.fixture

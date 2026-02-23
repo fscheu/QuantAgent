@@ -1,7 +1,7 @@
 """Tests for DataProvider (data caching layer)."""
 
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pandas as pd
 import pytest
@@ -107,7 +107,7 @@ class TestDataProvider:
         db_session.add(cached_data)
         db_session.commit()
 
-        with patch.object(provider, "_fetch_yfinance") as mock_fetch:
+        with patch.object(provider, "_fetch_yfinance") as _mock_fetch:
             result = provider.get_ohlc("BTC", "1h", start, start)
 
             # Should NOT call API if data is cached

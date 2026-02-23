@@ -4,8 +4,7 @@ from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from quantagent.models import (Base, Environment, Order, OrderStatus, Signal,
-                               TradeSignal)
+from quantagent.models import Base, Environment, Order, OrderStatus, Signal, TradeSignal
 from quantagent.strategy.assembler import StrategyAssembler
 
 

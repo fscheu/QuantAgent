@@ -6,8 +6,21 @@ from datetime import datetime
 from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
+from sqlalchemy.types import TypeDecorator
 
 from .database import Base
+
+
+class JSONBCompat(TypeDecorator):
+    """Use JSONB on PostgreSQL and portable JSON elsewhere."""
+
+    impl = JSON
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(JSONB)
+        return dialect.type_descriptor(JSON)
 
 
 class OrderStatus(str, enum.Enum):
@@ -368,6 +381,6 @@ class Log(Base):
     environment = Column(String(20), index=True)
     symbol = Column(String(20), index=True)
     event_type = Column(String(50), index=True)
-    extra_data = Column(JSONB)
+    extra_data = Column(JSONBCompat())
     thread_id = Column(String(100), index=True)
     checkpoint_id = Column(String(100))

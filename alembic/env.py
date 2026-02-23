@@ -1,10 +1,9 @@
-from logging.config import fileConfig
 import os
 import sys
+from logging.config import fileConfig
 from pathlib import Path
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
@@ -13,14 +12,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Import models
 from quantagent.database import Base
-from quantagent.models import (
-    Order,
-    Fill,
-    Position,
-    Signal,
-    Trade,
-    MarketData,
-)  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

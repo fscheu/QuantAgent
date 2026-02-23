@@ -9,12 +9,10 @@ This module provides pytest fixtures for:
 - Temporary directories for test outputs
 """
 
-import json
-import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import numpy as np
 import pandas as pd
@@ -23,10 +21,9 @@ import pytest
 from quantagent.agent_models import (
     IndicatorReport,
     PatternReport,
-    TrendReport,
     TradingDecision,
+    TrendReport,
 )
-
 
 # ============================================================================
 # Data Fixtures
