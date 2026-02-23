@@ -77,34 +77,18 @@ jobs:
         if: failure()
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: "-1003835130753"
-          TELEGRAM_TOPIC_ID: "208"
         run: |
           COMMIT_SHA="${GITHUB_SHA:0:7}"
-          COMMIT_MSG=$(git log -1 --pretty=%B | head -1)
+          COMMIT_MSG=$(git log -1 --pretty=%B | head -1 | tr '"' "'")
           FAILED_STEP="${{ steps.status.outputs.failed_step || 'Unknown' }}"
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          
-          MESSAGE="🚨 **CI Failure in QuantAgent**
-
-**Commit:** \`${COMMIT_SHA}\`
-**Message:** ${COMMIT_MSG}
-**Failed step:** ${FAILED_STEP}
-**Logs:** [View run](${RUN_URL})
-
-@openclaw please investigate and create hotfix issue.
-
-**Run ID:** ${{ github.run_id }}
-**Commit SHA:** ${COMMIT_SHA}
-**Failed step:** ${FAILED_STEP}"
           
           curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
             -d "{
-              \"chat_id\": \"${TELEGRAM_CHAT_ID}\",
-              \"message_thread_id\": ${TELEGRAM_TOPIC_ID},
-              \"text\": $(echo "$MESSAGE" | jq -Rs .),
-              \"parse_mode\": \"Markdown\",
+              \"chat_id\": \"-1003835130753\",
+              \"message_thread_id\": 208,
+              \"text\": \"🚨 CI Failure\\n\\nCommit: ${COMMIT_SHA}\\nMessage: ${COMMIT_MSG}\\nFailed step: ${FAILED_STEP}\\nLogs: ${RUN_URL}\\n\\n@openclaw Run ID: ${{ github.run_id }}\",
               \"disable_web_page_preview\": true
             }"
       
@@ -112,23 +96,15 @@ jobs:
         if: success()
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: "-1003835130753"
-          TELEGRAM_TOPIC_ID: "208"
         run: |
           COMMIT_SHA="${GITHUB_SHA:0:7}"
-          COMMIT_MSG=$(git log -1 --pretty=%B | head -1)
-          
-          MESSAGE="✅ CI passed on main
-
-Commit: \`${COMMIT_SHA}\`
-Message: ${COMMIT_MSG}"
+          COMMIT_MSG=$(git log -1 --pretty=%B | head -1 | tr '"' "'")
           
           curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
             -d "{
-              \"chat_id\": \"${TELEGRAM_CHAT_ID}\",
-              \"message_thread_id\": ${TELEGRAM_TOPIC_ID},
-              \"text\": $(echo "$MESSAGE" | jq -Rs .),
-              \"parse_mode\": \"Markdown\",
+              \"chat_id\": \"-1003835130753\",
+              \"message_thread_id\": 208,
+              \"text\": \"✅ CI passed\\n\\nCommit: ${COMMIT_SHA}\\nMessage: ${COMMIT_MSG}\",
               \"disable_web_page_preview\": true
             }"
