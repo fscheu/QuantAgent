@@ -65,6 +65,23 @@ GRAPH_LLM_MODEL: str = os.getenv(
 AGENT_LLM_TEMPERATURE: float = float(os.getenv("AGENT_LLM_TEMPERATURE", "0.1"))
 GRAPH_LLM_TEMPERATURE: float = float(os.getenv("GRAPH_LLM_TEMPERATURE", "0.1"))
 
+def require(name: str) -> str:
+    """Return the value of a setting, raising ValueError only when actually needed (lazy validation).
+
+    Use this instead of accessing module-level variables directly when the value
+    is required at runtime (e.g., creating an API client or DB connection).
+    This allows modules to be imported without blowing up in environments that
+    lack certain config (CI, tests, etc.).
+    """
+    value = globals().get(name, "") or os.getenv(name, "")
+    if not value:
+        raise ValueError(
+            f"{name} not configured. "
+            "Set it in your .env file or via the web interface."
+        )
+    return value
+
+
 # Logging Configuration
 LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 LOG_TO_CONSOLE: bool = os.getenv("LOG_TO_CONSOLE", "true").lower() == "true"
