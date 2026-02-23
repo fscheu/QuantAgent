@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(tree:*)",
+      "mcp__docs-langchain__SearchDocsByLangChain",
+      "Bash(pip install:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(python3 -m pytest:*)",
+      "Bash(find:*)",
+      "WebFetch(domain:docs.langchain.com)",
+      "Bash(python -m alembic revision:*)",
+      "Bash(python -c:*)",
+      "Bash(python3:*)",
+      "Bash(grep:*)",
+      "Bash(git mv:*)",
+      "Bash(bd :*)",
+      "Bash(git rm:*)",
+      "Bash(bash -l -c:*)",
+      "Bash(bd create:*)",
+      "Bash(bd dep add:*)",
+      "Bash(bd update:*)",
+      "Bash(bd show:*)",
+      "Bash(bd ready:*)",
+      "Bash(bd list:*)",
+      "Bash(ls:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:password@localhost:5432/quantagent_dev\" python:*)",
+      "Bash(chmod:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git show:*)",
+      "Bash(bd sync:*)",
+      "Bash(git push)",
+      "Bash(python -m bd:*)",
+      "Bash(bd stats:*)",
+      "Bash(xargs:*)",
+      "Bash(bd close:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
