@@ -15,19 +15,25 @@ class PositionMonitor:
     Does NOT decide when to exit - that is TradingStrategy's responsibility.
     """
 
-    def __init__(self, db_session: Session):
+    def __init__(self, db_session: Session, backtest_run_id: Optional[int] = None):
         self.db = db_session
+        self.backtest_run_id = backtest_run_id
+
+    def set_backtest_run_id(self, backtest_run_id: Optional[int]) -> None:
+        """Set or update backtest run context."""
+        self.backtest_run_id = backtest_run_id
 
     def get_active_position(self, symbol: str) -> Optional[ActivePosition]:
         """Get active position for a symbol."""
-        return (
-            self.db.query(ActivePosition)
-            .filter(
-                ActivePosition.symbol == symbol,
-                ActivePosition.is_active.is_(True),
-            )
-            .first()
+        query = self.db.query(ActivePosition).filter(
+            ActivePosition.symbol == symbol,
+            ActivePosition.is_active.is_(True),
         )
+
+        if self.backtest_run_id is not None:
+            query = query.filter(ActivePosition.backtest_run_id == self.backtest_run_id)
+
+        return query.first()
 
     def open_position(
         self,
@@ -43,8 +49,13 @@ class PositionMonitor:
         trailing_stop_pct: Optional[float] = None,
         max_hold_candles: Optional[int] = None,
         prediction_horizon: int = 3,
+        backtest_run_id: Optional[int] = None,
     ) -> ActivePosition:
         """Create new active position."""
+        run_context = (
+            backtest_run_id if backtest_run_id is not None else self.backtest_run_id
+        )
+
         position = ActivePosition(
             symbol=symbol,
             side=side,
@@ -59,6 +70,7 @@ class PositionMonitor:
             prediction_horizon=prediction_horizon,
             trade_id=trade_id,
             signal_id=signal_id,
+            backtest_run_id=run_context,
             candles_direction=[],
         )
 

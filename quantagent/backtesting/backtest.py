@@ -18,12 +18,26 @@ from quantagent.data.asset_types import AssetType, get_asset_type
 from quantagent.data.market_calendar import get_market_calendar
 from quantagent.data.provider import DataProvider
 from quantagent.database import SessionLocal
-from quantagent.models import (ActivePosition, BacktestRun, Environment, Order,
-                               OrderSide, Signal, Trade, TradeSignal)
+from quantagent.models import (
+    ActivePosition,
+    BacktestRun,
+    Environment,
+    Order,
+    OrderSide,
+    Signal,
+    Trade,
+    TradeSignal,
+)
 from quantagent.portfolio.manager import PortfolioManager
 from quantagent.database import SessionLocal
-from quantagent.models import (BacktestRun, Environment, Order, Signal, Trade,
-                               TradeSignal)
+from quantagent.models import (
+    BacktestRun,
+    Environment,
+    Order,
+    Signal,
+    Trade,
+    TradeSignal,
+)
 from quantagent.portfolio.manager import PortfolioManager
 from quantagent.static_util import format_ohlcv_for_agents
 from quantagent.strategy.assembler import StrategyAssembler
@@ -262,7 +276,6 @@ class Backtest:
                 except Exception as e:
                     logger.error(
                         f"Error analyzing {asset} at {current_date}: {e}",
-                       
                         exc_info=True,
                         extra={"event_type": "backtest_error", "symbol": asset},
                     )
@@ -270,7 +283,6 @@ class Backtest:
 
                 # Record equity at end of period
                 self._record_equity(current_date)
-
 
                 periods_completed += 1
 
@@ -313,6 +325,9 @@ class Backtest:
         self.db.add(run)
         self.db.commit()
         self.backtest_run_id = run.id
+
+        if self.position_monitor is not None:
+            self.position_monitor.set_backtest_run_id(self.backtest_run_id)
 
         logger.info(
             f"Created backtest run #{self.backtest_run_id}: {run.name}",
@@ -477,8 +492,12 @@ class Backtest:
                 self.backtest_run_id, asset, current_date
             )
 
+        signal_kwargs = {}
+        if thread_id is not None:
+            signal_kwargs["thread_id"] = thread_id
+
         signal = self.strategy.generate_signal(
-            kline_data, asset, self.timeframe, current_price, thread_id=thread_id
+            kline_data, asset, self.timeframe, current_price, **signal_kwargs
         )
 
         if signal is None or signal.decision == "HOLD":
@@ -547,7 +566,7 @@ class Backtest:
 
             logger.info(
                 f"Executed {trading_signal.value} for {asset} "
-                    f"@ "
+                f"@ "
                 f"${current_price:.2f}, qty: {order.filled_quantity}"
             )
 
@@ -905,15 +924,16 @@ class Backtest:
         Returns:
             Tuple of (mean_directional_accuracy, accuracy_by_candle)
         """
-        positions = (
-            self.db.query(ActivePosition)
-            .filter(
-                ActivePosition.is_active.is_(False),
-                ActivePosition.decision_timestamp >= self.start_date,
-                ActivePosition.decision_timestamp <= self.end_date,
-            )
-            .all()
+        query = self.db.query(ActivePosition).filter(
+            ActivePosition.is_active.is_(False),
+            ActivePosition.decision_timestamp >= self.start_date,
+            ActivePosition.decision_timestamp <= self.end_date,
         )
+
+        if self.backtest_run_id is not None:
+            query = query.filter(ActivePosition.backtest_run_id == self.backtest_run_id)
+
+        positions = query.all()
 
         if not positions:
             return 0.0, {}
@@ -959,15 +979,16 @@ class Backtest:
         Returns:
             Dict mapping close_reason to count
         """
-        positions = (
-            self.db.query(ActivePosition)
-            .filter(
-                ActivePosition.is_active.is_(False),
-                ActivePosition.decision_timestamp >= self.start_date,
-                ActivePosition.decision_timestamp <= self.end_date,
-            )
-            .all()
+        query = self.db.query(ActivePosition).filter(
+            ActivePosition.is_active.is_(False),
+            ActivePosition.decision_timestamp >= self.start_date,
+            ActivePosition.decision_timestamp <= self.end_date,
         )
+
+        if self.backtest_run_id is not None:
+            query = query.filter(ActivePosition.backtest_run_id == self.backtest_run_id)
+
+        positions = query.all()
 
         close_reasons = {}
         for pos in positions:

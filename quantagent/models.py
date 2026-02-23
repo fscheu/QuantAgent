@@ -307,6 +307,9 @@ class BacktestRun(Base):
 
     __table_args__ = (Index("idx_start_end_date", "start_date", "end_date"),)
 
+    # Relationships
+    active_positions = relationship("ActivePosition", back_populates="backtest_run")
+
 
 class ActivePosition(Base):
     """ActivePosition model for tracking active positions with stop-loss and take-profit."""
@@ -337,6 +340,7 @@ class ActivePosition(Base):
 
     trade_id = Column(Integer, ForeignKey("trades.id"), nullable=True)
     signal_id = Column(Integer, ForeignKey("signals.id"), nullable=True)
+    backtest_run_id = Column(Integer, ForeignKey("backtest_runs.id"), nullable=True, index=True)
 
     is_active = Column(Boolean, nullable=False, default=True, index=True)
     closed_at = Column(DateTime, nullable=True)
@@ -345,6 +349,11 @@ class ActivePosition(Base):
 
     environment = Column(
         Enum(Environment), nullable=False, default=Environment.BACKTEST, index=True
+    )
+    backtest_run = relationship("BacktestRun", back_populates="active_positions")
+
+    __table_args__ = (
+        Index("idx_active_position_isolation", "symbol", "is_active", "backtest_run_id", "environment"),
     )
 
 
