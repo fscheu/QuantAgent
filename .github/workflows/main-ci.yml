@@ -12,17 +12,32 @@ jobs:
   ci:
     name: CI (Lint + Tests)
     runs-on: ubuntu-latest
-    
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: quantagent_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -35,44 +50,47 @@ jobs:
           make
           sudo make install
           cd ..
-      
+
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -e .
           pip install pytest pytest-cov ruff
-      
-      - name: Lint with ruff
+
+      - name: Lint with ruff (autofix + check)
         id: lint
         run: |
+          ruff check quantagent/ --fix
           ruff check quantagent/ --output-format=github
         continue-on-error: true
-      
+
       - name: Run unit tests
         id: tests
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/quantagent_test
         run: |
           pytest tests/ -v --tb=short --maxfail=5 \
             -m "not integration and not slow"
         continue-on-error: true
-      
+
       - name: Determine overall status
         id: status
         run: |
           LINT_EXIT=${{ steps.lint.outcome }}
           TESTS_EXIT=${{ steps.tests.outcome }}
-          
+
           if [[ "$LINT_EXIT" != "success" ]]; then
             echo "failed_step=Lint" >> $GITHUB_OUTPUT
             exit 1
           fi
-          
+
           if [[ "$TESTS_EXIT" != "success" ]]; then
             echo "failed_step=Unit tests" >> $GITHUB_OUTPUT
             exit 1
           fi
-          
+
           echo "All checks passed"
-      
+
       - name: Notify Telegram on failure
         if: failure()
         env:
@@ -82,7 +100,7 @@ jobs:
           COMMIT_MSG=$(git log -1 --pretty=%B | head -1 | tr '"' "'")
           FAILED_STEP="${{ steps.status.outputs.failed_step || 'Unknown' }}"
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          
+
           curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
             -d "{
@@ -91,7 +109,7 @@ jobs:
               \"text\": \"🚨 CI Failure\\n\\nCommit: ${COMMIT_SHA}\\nMessage: ${COMMIT_MSG}\\nFailed step: ${FAILED_STEP}\\nLogs: ${RUN_URL}\\n\\n@openclaw Run ID: ${{ github.run_id }}\",
               \"disable_web_page_preview\": true
             }"
-      
+
       - name: Notify Telegram on success
         if: success()
         env:
@@ -99,7 +117,7 @@ jobs:
         run: |
           COMMIT_SHA="${GITHUB_SHA:0:7}"
           COMMIT_MSG=$(git log -1 --pretty=%B | head -1 | tr '"' "'")
-          
+
           curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
             -d "{

@@ -110,7 +110,7 @@ class OrderManager:
         # Check for position reversal
         current_position = self.portfolio.get_position(symbol)
         existing_qty = current_position.get("qty", 0.0) if current_position else 0.0
-        
+
         is_reversal = (existing_qty > 0 and side == OrderSide.SELL) or (
             existing_qty < 0 and side == OrderSide.BUY
         )

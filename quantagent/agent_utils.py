@@ -198,6 +198,6 @@ def invoke_with_retry(
             )
 
             time.sleep(wait_time)
-    
+
     # This should never be reached due to logic above, but satisfies mypy
     raise RuntimeError(f"Max retries ({max_retries}) exceeded")

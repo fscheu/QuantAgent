@@ -8,8 +8,9 @@ These models define the schema for agent reports, enabling:
 - LLM output validation with structured JSON
 """
 
-from pydantic import BaseModel, Field
 from typing import List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class IndicatorReport(BaseModel):

@@ -25,7 +25,6 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
 
     def trend_agent_node(state: Dict[str, Any]) -> Dict[str, Any]:
         # --- Tool definitions ---
-        tools = [toolkit.generate_trend_image]
         time_frame = state["time_frame"]
         symbol = state.get("stock_name", "UNKNOWN")
         thread_id = state.get("thread_id")
@@ -157,7 +156,7 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
                     reasoning = response_dict.get(
                         "reasoning", "Trend analysis completed"
                     )
-                except (json.JSONDecodeError, ValueError, KeyError) as parse_err:
+                except (json.JSONDecodeError, ValueError, KeyError):
                     reasoning = f"Trend analysis completed with fallback parsing: {final_response.content[:100]}"
 
         # Build structured report
