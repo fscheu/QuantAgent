@@ -21,15 +21,14 @@ RUN wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz \
     && cd .. \
     && rm -rf ta-lib ta-lib-0.4.0-src.tar.gz
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
 # Copy application code
 COPY . .
+
+# Install Python dependencies from pyproject.toml
+RUN pip install --no-cache-dir -e .
 
 # Expose Flask port
 EXPOSE 8001
 
-# Run Flask app via QA wrapper
-CMD ["python", "apps/flask/run_qa.py"]
+# Run minimal health server (no API keys required)
+CMD ["python", "apps/flask/health_server.py"]
