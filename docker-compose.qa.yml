@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.qa
+    container_name: quantagent_qa
+    ports:
+      - "8001:8001"
+    environment:
+      - ENV=qa
+      - DATABASE_URL=postgresql://qa_user:qa_pass@db:5432/quantagent_qa
+      - FLASK_ENV=production
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - quantagent-qa-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    mem_limit: 2g
+    cpus: 2.0
+
+  db:
+    image: postgres:15-alpine
+    container_name: quantagent_qa_db
+    environment:
+      POSTGRES_DB: quantagent_qa
+      POSTGRES_USER: qa_user
+      POSTGRES_PASSWORD: qa_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - qa_db_data:/var/lib/postgresql/data
+    networks:
+      - quantagent-qa-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qa_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    mem_limit: 512m
+
+volumes:
+  qa_db_data:
+
+networks:
+  quantagent-qa-network:
+    driver: bridge
