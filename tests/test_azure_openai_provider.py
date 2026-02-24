@@ -13,15 +13,23 @@ See docs/05_acceptance_tests/QuantAgent-7bn-AC-azure-openai-support.md for AC.
 """
 
 import os
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import Mock, patch
 
 from quantagent import settings
 from quantagent.trading_graph import TradingGraph
 
 
+@pytest.fixture(autouse=True)
+def ensure_openai_key(monkeypatch):
+    """Provide a default OpenAI key so graph_llm instantiation never errors."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+
+
+
 # ============================================================================
-# AZURE CONFIGURATION TESTS  
+# AZURE CONFIGURATION TESTS
 # ============================================================================
 
 
