@@ -19,6 +19,7 @@ from unittest.mock import Mock, patch
 from quantagent import settings
 from quantagent.trading_graph import TradingGraph
 
+pytestmark = pytest.mark.api
 
 # ============================================================================
 # AZURE CONFIGURATION TESTS  
