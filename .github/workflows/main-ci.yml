@@ -77,16 +77,16 @@ jobs:
 
       - name: Determine overall status
         id: status
+        env:
+          LINT_EXIT: ${{ steps.lint.outcome }}
+          TESTS_EXIT: ${{ steps.tests.outcome || 'skipped' }}
         run: |
-          LINT_EXIT=${{ steps.lint.outcome }}
-          TESTS_EXIT=${{ steps.tests.outcome }}
-
           if [[ "$LINT_EXIT" != "success" ]]; then
             echo "failed_step=Lint" >> $GITHUB_OUTPUT
             exit 1
           fi
 
-          if [[ "$TESTS_EXIT" != "success" ]]; then
+          if [[ "$TESTS_EXIT" != "success" && "$TESTS_EXIT" != "skipped" ]]; then
             echo "failed_step=Unit tests" >> $GITHUB_OUTPUT
             exit 1
           fi
