@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -18,6 +19,7 @@ def make_session():
     return Session()
 
 
+@pytest.mark.api
 def test_build_components_from_snapshot():
     db = make_session()
     # Ensure API key exists in env for TradingGraph init
@@ -48,6 +50,7 @@ def test_build_components_from_snapshot():
     assert components.graph is not None
 
 
+@pytest.mark.api
 def test_order_creation_persists_environment_and_trigger_signal_id():
     db = make_session()
     # Ensure API key exists in env for TradingGraph init
