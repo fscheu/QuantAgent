@@ -11,6 +11,7 @@ from quantagent.models import BacktestRun, Trade, Signal, Environment, OrderSide
 from quantagent.database import SessionLocal
 from quantagent.static_util import format_ohlcv_for_agents
 
+pytestmark = pytest.mark.api
 
 
 class TestBacktest:

@@ -176,6 +176,8 @@ def mock_env_vars(monkeypatch):
 def ensure_default_llm_api_keys(monkeypatch):
     """Provide deterministic fallback API keys so CI can run without secrets."""
 
+    from quantagent import settings as qa_settings
+
     defaults = {
         "OPENAI_API_KEY": "sk-test-openai-key",
         "ANTHROPIC_API_KEY": "sk-ant-test-key",
@@ -183,8 +185,11 @@ def ensure_default_llm_api_keys(monkeypatch):
     }
 
     for key, value in defaults.items():
-        if not os.environ.get(key):
-            monkeypatch.setenv(key, value)
+        current = os.environ.get(key)
+        if not current:
+            current = value
+            monkeypatch.setenv(key, current)
+        monkeypatch.setattr(qa_settings, key, current, raising=False)
 
 
 # ============================================================================

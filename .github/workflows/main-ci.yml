@@ -64,6 +64,15 @@ jobs:
           ruff check quantagent/ --output-format=github
         continue-on-error: true
 
+      - name: Initialize test database schema
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/quantagent_test
+        run: |
+          python - <<'PY'
+          from quantagent.database import init_db
+          init_db()
+          PY
+
       - name: Run unit tests
         id: tests
         env:
