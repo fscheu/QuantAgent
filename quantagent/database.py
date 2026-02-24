@@ -70,9 +70,14 @@ def get_db() -> Session:
 
 def init_db() -> None:
     """Initialize database by creating all tables."""
+    # Import models lazily so metadata is populated before create_all
+    from quantagent import models  # noqa: F401
+
     Base.metadata.create_all(bind=_get_engine())
 
 
 def drop_all_tables() -> None:
     """Drop all tables (use with caution!)."""
+    from quantagent import models  # noqa: F401
+
     Base.metadata.drop_all(bind=_get_engine())

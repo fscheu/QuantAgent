@@ -8,6 +8,8 @@ from quantagent.backtesting.backtest import Backtest, BacktestMetrics
 from quantagent.models import ActivePosition, OrderSide, ExitPolicy, Environment
 from quantagent.database import SessionLocal
 
+pytestmark = pytest.mark.api
+
 
 class TestPhase4Metrics:
     """Test suite for Phase 4 backtest metrics (QuantAgent-r6y)."""
