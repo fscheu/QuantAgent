@@ -76,6 +76,7 @@ class TestMockConfiguration:
         assert mock_config["agent_llm_provider"] in ["openai", "anthropic", "qwen"]
         assert mock_config["graph_llm_provider"] in ["openai", "anthropic", "qwen"]
 
+    @pytest.mark.api
     def test_mock_env_vars_set(self, mock_env_vars):
         """
         Test that mock environment variables are properly set.

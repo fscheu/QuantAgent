@@ -9,12 +9,11 @@ This module provides pytest fixtures for:
 - Temporary directories for test outputs
 """
 
-import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import numpy as np
 import pandas as pd
@@ -23,10 +22,9 @@ import pytest
 from quantagent.agent_models import (
     IndicatorReport,
     PatternReport,
-    TrendReport,
     TradingDecision,
+    TrendReport,
 )
-
 
 # ============================================================================
 # Data Fixtures
@@ -172,6 +170,21 @@ def mock_env_vars(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-openai-key")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test-key")
     monkeypatch.setenv("DASHSCOPE_API_KEY", "sk-qwen-test-key")
+
+
+@pytest.fixture(autouse=True)
+def ensure_default_llm_api_keys(monkeypatch):
+    """Provide deterministic fallback API keys so CI can run without secrets."""
+
+    defaults = {
+        "OPENAI_API_KEY": "sk-test-openai-key",
+        "ANTHROPIC_API_KEY": "sk-ant-test-key",
+        "DASHSCOPE_API_KEY": "sk-qwen-test-key",
+    }
+
+    for key, value in defaults.items():
+        if not os.environ.get(key):
+            monkeypatch.setenv(key, value)
 
 
 # ============================================================================
