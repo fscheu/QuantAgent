@@ -29,6 +29,8 @@ from quantagent.models import (
 from quantagent.strategy.base import ExitPolicy, TradingSignal, TradingStrategy
 from quantagent.strategy.llm_agent_strategy import LLMAgentStrategy
 
+pytestmark = pytest.mark.api
+
 
 class MockSimpleStrategy(TradingStrategy):
     """Simple mock strategy for testing without LLM dependencies."""

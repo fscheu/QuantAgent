@@ -12,6 +12,8 @@ from quantagent.database import SessionLocal
 from quantagent.models import (BacktestRun, Environment, MarketData, Signal,
                                Trade)
 
+pytestmark = pytest.mark.api
+
 
 class TestBacktestIntegration:
     """Integration test suite for full backtest flow."""
