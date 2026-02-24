@@ -9,8 +9,7 @@ import pytest
 
 from quantagent.backtesting.backtest import Backtest, BacktestMetrics
 from quantagent.database import SessionLocal
-from quantagent.models import (BacktestRun, Environment, MarketData, Signal,
-                               Trade)
+from quantagent.models import BacktestRun, Environment, MarketData, Signal, Trade
 
 pytestmark = pytest.mark.api
 

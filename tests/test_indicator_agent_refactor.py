@@ -12,9 +12,10 @@ Tests validate:
 See docs/03_technical/TESTING_PATTERNS.md for testing guidelines.
 """
 
-import pytest
 from unittest.mock import Mock
-from langchain_core.messages import SystemMessage, HumanMessage
+
+import pytest
+from langchain_core.messages import HumanMessage
 
 from quantagent.agent_models import IndicatorReport
 from quantagent.indicator_agent import create_indicator_agent

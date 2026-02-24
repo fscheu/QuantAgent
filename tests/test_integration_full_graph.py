@@ -14,15 +14,13 @@ Tests validate:
 See docs/03_technical/TESTING_PATTERNS.md for testing guidelines.
 """
 
+
 import pytest
-from unittest.mock import Mock
-from langchain_core.messages import BaseMessage
 
 from quantagent.agent_models import (
     IndicatorReport,
     PatternReport,
     TrendReport,
-    TradingDecision,
 )
 from quantagent.graph_setup import SetGraph
 
@@ -358,10 +356,10 @@ class TestStateFlow:
         self, mock_llm, mock_vision_llm, mock_toolkit, complete_sample_state
     ):
         """Verify final state contains all expected fields."""
+        from quantagent.decision_agent import create_final_trade_decider
         from quantagent.indicator_agent import create_indicator_agent
         from quantagent.pattern_agent import create_pattern_agent
         from quantagent.trend_agent import create_trend_agent
-        from quantagent.decision_agent import create_final_trade_decider
 
         state = complete_sample_state.copy()
 

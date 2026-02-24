@@ -1,18 +1,17 @@
 """Tests for Backtest engine."""
 
-import pytest
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch, MagicMock
 from decimal import Decimal
+
 import pandas as pd
+import pytest
 
 from quantagent.backtesting.backtest import Backtest, BacktestMetrics
-from quantagent.models import BacktestRun, Trade, Signal, Environment, OrderSide
 from quantagent.database import SessionLocal
+from quantagent.models import BacktestRun, Environment, OrderSide, Signal, Trade
 from quantagent.static_util import format_ohlcv_for_agents
 
 pytestmark = pytest.mark.api
-
 
 class TestBacktest:
     """Test suite for Backtest engine."""
@@ -25,7 +24,7 @@ class TestBacktest:
         yield session
         # Cleanup - Delete all in correct FK order
         # Note: circular FK between signals/orders, so delete fills/trades first
-        from quantagent.models import Order, Fill
+        from quantagent.models import Fill, Order
         session.query(Fill).delete()
         session.query(Trade).delete()
         # Now delete orders and signals (order doesn't matter due to circular FK)
@@ -587,10 +586,10 @@ class TestBacktest:
             reasoning="Test reasoning",
             risk_level="medium"  # Required field
         )
-        
+
         signal_long, _ = backtest._parse_decision(decision_long)
         signal_buy, _ = backtest._parse_decision(decision_buy)
-        
+
         assert signal_long == TradeSignal.LONG
         assert signal_buy == TradeSignal.LONG
 
@@ -625,7 +624,7 @@ class TestBacktest:
 
         signal_short, _ = backtest._parse_decision(decision_short)
         signal_sell, _ = backtest._parse_decision(decision_sell)
-        
+
         assert signal_short == TradeSignal.SHORT
         assert signal_sell == TradeSignal.SHORT
 
@@ -660,7 +659,7 @@ class TestBacktest:
 
         signal_hold, _ = backtest._parse_decision(decision_hold)
         signal_unclear, _ = backtest._parse_decision(decision_unclear)
-        
+
         assert signal_hold == TradeSignal.NEUTRAL
         assert signal_unclear == TradeSignal.NEUTRAL
 

@@ -96,14 +96,14 @@ python examples/run_backtest.py
 | **Data Caching** | ✅ | Local DB cache makes backtests 18x faster |
 | **Checkpointing** | ✅ | Resume long runs, full execution history |
 | **Streamlit UI** | ✅ | Dashboard, analyses, backtesting, logs |
-| **Auto Scheduler** | 🚧 | Coming soon — hourly automated analysis |
+| **Auto Scheduler** | ✅ | APScheduler-driven paper trading cycles |
 | **Real Broker** | 📋 | Phase 2 — after strategy validation |
 
 ---
 
 ## Project Status
 
-> **Phase 1: ~75% complete** — Core trading components done, UI functional, scheduler pending.
+> **Phase 1: ~75% complete** — Core trading components done, UI functional, scheduler live for paper trading.
 
 See the [full audit report](docs/2026-02-19_repository_audit.md) for details.
 
@@ -165,6 +165,27 @@ streamlit run apps/streamlit/app.py
 ```
 
 Open http://localhost:8501 → Dashboard, Analyses, Backtesting, Logs.
+
+### Start the TradingScheduler
+
+1. Configure the scheduler in your `.env` (or export variables):
+
+```
+TRADING_SCHEDULER_ENABLED=true
+TRADING_SCHEDULER_INTERVAL_HOURS=1
+TRADING_SCHEDULER_ASSETS=BTC,SPX
+TRADING_SCHEDULER_TIMEFRAME=1h
+TRADING_SCHEDULER_LOOKBACK_HOURS=168
+```
+
+2. Launch the APScheduler-driven runner:
+
+```bash
+python apps/paper_trading.py --enable
+```
+
+Use `--interval-hours 0.5` or `--assets BTC,ETH` to override defaults.
+Add `--run-once` for a single analysis cycle (useful for smoke tests).
 
 ---
 

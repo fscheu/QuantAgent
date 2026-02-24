@@ -17,15 +17,16 @@ Test Strategy:
 - Validate the full reversal flow completes successfully
 """
 
-import pytest
-from unittest.mock import Mock
 from decimal import Decimal
+from unittest.mock import Mock
 
+import pytest
+
+from quantagent.models import OrderSide
+from quantagent.trading.order_manager import OrderManager
+from quantagent.trading.paper_broker import PaperBroker
 from quantagent.trading.position_sizer import PositionSizer
 from quantagent.trading.risk_manager import RiskManager
-from quantagent.trading.paper_broker import PaperBroker
-from quantagent.trading.order_manager import OrderManager
-from quantagent.models import Order, OrderSide, OrderStatus, OrderType
 
 
 class TestQuantAgent8vbConversionFix:
@@ -68,11 +69,11 @@ class TestQuantAgent8vbConversionFix:
         # Capture the close order using real broker (like test_order_manager_reversal.py)
         placed_orders = []
         original_place_order = self.broker.place_order
-        
+
         def capture_order(order):
             placed_orders.append(order)
             return original_place_order(order)  # Use real broker to fill
-        
+
         self.broker.place_order = capture_order
 
         # Mock portfolio.execute_trade
@@ -91,23 +92,23 @@ class TestQuantAgent8vbConversionFix:
         )
 
         # CRITICAL VALIDATIONS for QuantAgent-8vb fix:
-        
+
         # 1. Close order must exist
         assert len(placed_orders) >= 1, "Should create close order"
         close_order = placed_orders[0]
-        
+
         # 2. Close side MUST be BUY (not SELL)
         assert close_order.side == OrderSide.BUY, \
             f"Close SHORT requires BUY side, got {close_order.side}"
-        
+
         # 3. Close quantity MUST be positive
         assert close_order.quantity > 0, \
             f"Close quantity must be positive, got {close_order.quantity}"
-        
+
         # 4. Close quantity must match absolute value of position
         assert close_order.quantity == pytest.approx(abs(existing_qty), rel=1e-9), \
             f"Close qty {close_order.quantity} must equal abs(existing_qty) {abs(existing_qty)}"
-        
+
         # 5. Overall reversal must succeed
         assert result is not None, "Reversal should succeed"
         assert result.side == OrderSide.BUY, "Final position should be LONG (BUY)"
@@ -125,7 +126,7 @@ class TestQuantAgent8vbConversionFix:
         # Track all orders created using real broker
         created_orders = []
         original_place_order = self.broker.place_order
-        
+
         def track_order_creation(order):
             created_orders.append({
                 "side": order.side,
@@ -133,7 +134,7 @@ class TestQuantAgent8vbConversionFix:
                 "symbol": order.symbol
             })
             return original_place_order(order)  # Use real broker
-        
+
         self.broker.place_order = track_order_creation
 
         # Mock portfolio trades
@@ -157,12 +158,12 @@ class TestQuantAgent8vbConversionFix:
             if order["side"] == OrderSide.SELL:
                 assert order["quantity"] > 0, \
                     f"SELL order has negative/zero quantity: {order['quantity']}"
-            
+
             # Rule 2: BUY side must have positive quantity
             if order["side"] == OrderSide.BUY:
                 assert order["quantity"] > 0, \
                     f"BUY order has negative/zero quantity: {order['quantity']}"
-            
+
             # Rule 3: Quantity must NEVER be negative
             assert order["quantity"] > 0, \
                 f"Order quantity must be positive, got {order['quantity']}"
@@ -187,17 +188,17 @@ class TestQuantAgent8vbConversionFix:
         # Exact values from bug report
         existing_qty = -0.04807692307692308
         price = 96382.0
-        
+
         self.portfolio.get_position.return_value = {"qty": existing_qty, "avg_cost": price}
 
         # Capture the exact order details using real broker
         placed_orders = []
         original_place_order = self.broker.place_order
-        
+
         def capture_order(order):
             placed_orders.append(order)
             return original_place_order(order)
-        
+
         self.broker.place_order = capture_order
 
         # Mock trades
@@ -217,19 +218,19 @@ class TestQuantAgent8vbConversionFix:
 
         # The bug manifested as: "Conversion 'ConversionSyntax' received SELL -0.04807..."
         # This means the close order had SELL side with negative quantity
-        
+
         # Validate the fix:
         assert len(placed_orders) >= 1, "Close order should be created"
         captured_close_order = placed_orders[0]
-        
+
         # MUST NOT be: side=SELL, quantity=negative
         # MUST be: side=BUY, quantity=positive
         assert captured_close_order.side == OrderSide.BUY, \
             f"Bug reproduced: Expected BUY to close SHORT, got {captured_close_order.side}"
-        
+
         assert captured_close_order.quantity == pytest.approx(abs(existing_qty), rel=1e-9), \
             f"Bug reproduced: Expected positive quantity {abs(existing_qty)}, got {captured_close_order.quantity}"
-        
+
         # Reversal must complete successfully (no exception)
         assert result is not None, "Bug reproduced: Reversal failed"
 
@@ -244,11 +245,11 @@ class TestQuantAgent8vbConversionFix:
 
         placed_orders = []
         original_place_order = self.broker.place_order
-        
+
         def capture_order(order):
             placed_orders.append(order)
             return original_place_order(order)  # Use real broker
-        
+
         self.broker.place_order = capture_order
 
         # Mock trades
@@ -269,12 +270,12 @@ class TestQuantAgent8vbConversionFix:
         # Validate LONG->SHORT still works
         assert result is not None
         assert len(placed_orders) == 2
-        
+
         # Close LONG requires SELL
         close_order = placed_orders[0]
         assert close_order.side == OrderSide.SELL, "Close LONG requires SELL"
         assert close_order.quantity > 0, "Close quantity must be positive"
-        
+
         # Open SHORT is also SELL (new short position)
         open_order = placed_orders[1]
         assert open_order.side == OrderSide.SELL, "Open SHORT uses SELL"
