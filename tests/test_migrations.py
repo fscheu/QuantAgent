@@ -1,14 +1,13 @@
 """Test script to verify migrations work correctly."""
 
-import os
 import sys
 from pathlib import Path
 
 # Add project to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from quantagent.database import engine, init_db, SessionLocal, Base
-from quantagent.models import Order, Fill, Position, Signal, Trade, MarketData
+from quantagent.database import SessionLocal, init_db
+from quantagent.models import Fill, MarketData, Order, Position, Signal, Trade
 
 
 def test_create_tables():
@@ -38,7 +37,7 @@ def test_insert_market_data():
         )
         db.add(market_data)
         db.commit()
-        print(f"✓ Market data inserted: BTC 1h candle")
+        print("✓ Market data inserted: BTC 1h candle")
         db.refresh(market_data)
         print(f"  ID: {market_data.id}, Close: {market_data.close}")
     finally:
@@ -47,7 +46,6 @@ def test_insert_market_data():
 
 def test_insert_signal():
     """Test inserting trading signal."""
-    from datetime import datetime
     from quantagent.models import TradeSignal
 
     print("\nInserting trading signal...")
@@ -80,9 +78,9 @@ def test_insert_signal():
 
 def test_insert_order():
     """Test inserting trading order."""
-    from datetime import datetime
     from decimal import Decimal
-    from quantagent.models import OrderSide, OrderType, OrderStatus
+
+    from quantagent.models import OrderSide, OrderStatus, OrderType
 
     print("\nInserting order...")
     db = SessionLocal()
@@ -107,9 +105,9 @@ def test_insert_order():
 
 def test_insert_fill():
     """Test inserting order fill."""
-    from datetime import datetime
     from decimal import Decimal
-    from quantagent.models import OrderSide, OrderType, OrderStatus
+
+    from quantagent.models import OrderSide, OrderStatus, OrderType
 
     print("\nInserting order fill...")
     db = SessionLocal()
@@ -145,8 +143,8 @@ def test_insert_fill():
 
 def test_insert_trade():
     """Test inserting completed trade."""
-    from datetime import datetime
     from decimal import Decimal
+
     from quantagent.models import OrderSide
 
     print("\nInserting trade...")
@@ -178,6 +176,7 @@ def test_insert_trade():
 def test_insert_position():
     """Test inserting open position."""
     from decimal import Decimal
+
     from quantagent.models import OrderSide
 
     print("\nInserting position...")
@@ -186,7 +185,7 @@ def test_insert_position():
         # Clean up any existing BTC position first
         db.query(Position).filter_by(symbol="BTC").delete()
         db.commit()
-        
+
         position = Position(
             symbol="BTC",
             quantity=Decimal("0.5"),

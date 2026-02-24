@@ -1,6 +1,5 @@
 """Script to configure PostgreSQL database connection."""
 
-import os
 from pathlib import Path
 
 
@@ -55,7 +54,7 @@ def setup_postgres_config():
     print("✓ Configuration Updated Successfully")
     print("=" * 70)
     print(f"\nConnection String: {db_url}")
-    print(f"✓ Updated .env file with DATABASE_URL")
+    print("✓ Updated .env file with DATABASE_URL")
     print("\nNote: alembic.ini does NOT need to be updated.")
     print("      It reads DATABASE_URL from environment automatically.")
 

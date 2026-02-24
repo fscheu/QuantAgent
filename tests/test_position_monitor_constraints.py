@@ -7,8 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from quantagent.database import Base
-from quantagent.models import (ActivePosition, Environment, ExitPolicy,
-                               OrderSide)
+from quantagent.models import ActivePosition, Environment, ExitPolicy, OrderSide
 from quantagent.trading.position_monitor import PositionMonitor
 
 

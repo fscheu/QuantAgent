@@ -5,6 +5,7 @@ Tests the OHLCV data formatting and image generation utilities.
 
 import pandas as pd
 import pytest
+
 from quantagent.static_util import read_and_format_ohlcv
 
 

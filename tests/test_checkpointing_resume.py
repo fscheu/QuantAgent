@@ -12,12 +12,12 @@ See docs/03_technical/TESTING_PATTERNS.md for testing guidelines.
 """
 
 import os
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-import quantagent.trading_graph as trading_graph_module
+import pytest
 from langgraph.checkpoint.memory import InMemorySaver
 
+import quantagent.trading_graph as trading_graph_module
 from quantagent import settings
 from quantagent.trading_graph import TradingGraph
 

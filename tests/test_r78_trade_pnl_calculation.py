@@ -11,20 +11,20 @@ Following TESTING_PATTERNS.md:
 - Edge cases (opening positions, zero prices)
 """
 
-import pytest
 from decimal import Decimal
-from datetime import datetime
+
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from quantagent.models import (
+    Base,
+    Environment,
     Order,
     OrderSide,
-    OrderType,
     OrderStatus,
+    OrderType,
     Trade,
-    Environment,
-    Base,
 )
 from quantagent.portfolio.manager import PortfolioManager
 
