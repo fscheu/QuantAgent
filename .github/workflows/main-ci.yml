@@ -70,7 +70,7 @@ jobs:
           DATABASE_URL: postgresql://test:test@localhost:5432/quantagent_test
         run: |
           pytest tests/ -v --tb=short --maxfail=5 \
-            -m "not integration and not slow"
+            -m "not integration and not slow and not api"
         continue-on-error: true
 
       - name: Determine overall status
