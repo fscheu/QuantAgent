@@ -69,8 +69,8 @@ class TestDataProvider:
         """Verify empty DataFrame returned when no data available."""
         start, end = sample_dates
 
-        with patch.object(provider, "_fetch_yfinance") as mock_fetch:
-            mock_fetch.return_value = pd.DataFrame(
+        with patch.object(provider, "_fetch_yfinance") as _mock_fetch:
+            _mock_fetch.return_value = pd.DataFrame(
                 columns=["timestamp", "open", "high", "low", "close", "volume"]
             )
 
@@ -107,7 +107,7 @@ class TestDataProvider:
         db_session.add(cached_data)
         db_session.commit()
 
-        with patch.object(provider, "_fetch_yfinance") as mock_fetch:
+        with patch.object(provider, "_fetch_yfinance") as _mock_fetch:
             result = provider.get_ohlc("BTC", "1h", start, start)
 
             # Should NOT call API if data is cached

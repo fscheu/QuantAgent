@@ -94,7 +94,7 @@ class TestLLMAgentStrategyErrorHandling:
 
         # Should handle gracefully (likely returns None or raises)
         # This tests robustness
-        result = strategy.generate_signal(sample_kline_data, "BTCUSDT", "4h", 100.0)
+        strategy.generate_signal(sample_kline_data, "BTCUSDT", "4h", 100.0)
 
         # Either returns None (HOLD) or handles the error
         # Current implementation will raise AttributeError on .get()

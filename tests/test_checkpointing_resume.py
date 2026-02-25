@@ -72,7 +72,7 @@ class TestCheckpointingConfiguration:
         """Verify checkpointing raises error when DATABASE_URL setting is empty."""
         monkeypatch.setattr(settings, "DATABASE_URL", "")
 
-        with patch("quantagent.trading_graph.PostgresSaver") as mock_saver:
+        with patch("quantagent.trading_graph.PostgresSaver"):
             with pytest.raises(ValueError, match="DATABASE_URL not set in .env file"):
                 TradingGraph(use_checkpointing=True)
 
@@ -295,7 +295,7 @@ class TestGraphStateInspection:
         config = {"configurable": {"thread_id": "state_test_001"}}
 
         # Execute graph first
-        result = tg.graph.invoke(sample_state_inicial, config=config)
+        tg.graph.invoke(sample_state_inicial, config=config)
 
         # Now try to get state
         try:

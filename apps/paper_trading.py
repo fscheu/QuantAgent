@@ -9,7 +9,6 @@ import sys
 import time
 from typing import List, Optional
 
-from quantagent.trading.scheduler import TradingScheduler
 from sqlalchemy.orm import Session
 
 from quantagent import settings
@@ -18,6 +17,7 @@ from quantagent.database import SessionLocal
 from quantagent.logging_config import setup_logging
 from quantagent.models import Environment
 from quantagent.strategy.assembler import StrategyAssembler
+from quantagent.trading.scheduler import TradingScheduler
 
 logger = logging.getLogger("quantagent.paper_trading")
 

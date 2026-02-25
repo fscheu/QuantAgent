@@ -143,7 +143,7 @@ class TestPositionReversal:
         self.portfolio.execute_trade.side_effect = [close_trade, open_trade]
 
         # Execute reversal
-        result = self.order_manager.execute_decision(
+        _ = self.order_manager.execute_decision(
             symbol="BTC",
             decision="LONG",
             confidence=0.68,
@@ -453,7 +453,7 @@ class TestPositionReversalRealBugScenario:
     def test_bug_scenario_short_to_long_reversal(self):
         """
         Reproduce bug: SHORT position 0.033094 -> LONG signal with calculated size 0.034277.
-        
+
         Before fix: ValueError "Trying to buy 0.0342770443640196 shares but SHORT position is only 0.0330943811250786"
         After fix: Should succeed with two orders (close 0.033094, open 0.034277)
         """

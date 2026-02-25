@@ -57,7 +57,7 @@ class TestQuantAgent8vbConversionFix:
     def test_close_short_uses_buy_side_not_sell(self):
         """
         CRITICAL: Verify that closing a SHORT position uses OrderSide.BUY, not SELL.
-        
+
         This is the core validation for QuantAgent-8vb.
         Before fix: Would incorrectly use SELL with negative quantity -> ConversionSyntax
         After fix: Must use BUY with positive quantity
@@ -116,7 +116,7 @@ class TestQuantAgent8vbConversionFix:
     def test_no_conversion_syntax_error_on_short_reversal(self):
         """
         Validate that the ConversionSyntax error no longer occurs.
-        
+
         This test ensures that the combination of side + quantity that is passed
         to SQLAlchemy is always valid (no SELL with negative quantity).
         """
@@ -173,15 +173,17 @@ class TestQuantAgent8vbConversionFix:
         assert created_orders[0]["side"] == OrderSide.BUY, "First order (close) must be BUY"
         assert created_orders[0]["quantity"] > 0, "Close quantity must be positive"
 
+        assert result is not None, "Reversal should produce a final order"
+
     def test_exact_bug_scenario_from_report(self):
         """
         Reproduce the EXACT scenario from the bug report that triggered ConversionSyntax.
-        
+
         From docs/02_planning/QuantAgent-8vb-backtest-analysis.md:
         - Existing qty: -0.04807692307692308
         - New side: OrderSide.BUY
         - Price: ~$96382
-        
+
         Before fix: ERROR - "Conversion 'ConversionSyntax' received SELL -0.04807..."
         After fix: Should execute successfully with BUY order
         """
@@ -237,7 +239,7 @@ class TestQuantAgent8vbConversionFix:
     def test_long_to_short_reversal_still_works(self):
         """
         Regression test: Ensure LONG->SHORT reversals still work correctly.
-        
+
         The fix for SHORT->LONG should not break existing LONG->SHORT functionality.
         """
         # Setup: LONG position

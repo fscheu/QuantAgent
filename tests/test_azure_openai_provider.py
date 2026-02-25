@@ -3,7 +3,7 @@ Tests for Azure OpenAI provider support in TradingGraph.
 
 Testing Strategy (QuantAgent-7bn):
 - Test configuration validation and error handling
-- Test Azure provider instantiation with required parameters  
+- Test Azure provider instantiation with required parameters
 - Test API version defaults
 - Verify no regression in existing providers (openai, anthropic, qwen)
 - Avoid tautological mocks; validate structure and constraints

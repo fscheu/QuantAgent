@@ -2,13 +2,13 @@ from unittest.mock import MagicMock, Mock
 
 import pandas as pd
 import pytest
-from quantagent.trading.scheduler import (
-    TradingScheduler,
-)
 
 from quantagent.models import Environment, TradeSignal
 from quantagent.settings import SchedulerSettings
 from quantagent.strategy.base import TradingSignal as StrategyTradingSignal
+from quantagent.trading.scheduler import (
+    TradingScheduler,
+)
 
 
 class DummySession:

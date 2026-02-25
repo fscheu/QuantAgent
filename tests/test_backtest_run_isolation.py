@@ -174,7 +174,7 @@ def test_multiple_positions_in_same_run(db_session):
 
 def test_position_monitor_without_backtest_run_id(db_session):
     """Test that PositionMonitor works without backtest_run_id (for backward compatibility)."""
-    run_a = _create_backtest_run(db_session, "run-no-context")
+    _create_backtest_run(db_session, "run-no-context")
 
     # Create monitor without explicit backtest_run_id
     monitor = PositionMonitor(db_session, backtest_run_id=None)
