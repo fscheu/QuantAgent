@@ -71,7 +71,7 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
                     toolkit.generate_kline_image.invoke,
                     {"kline_data": state["kline_data"]},
                     retries=3,
-                    wait_sec=4,
+                    base_wait=4,
                 )
                 pattern_image_b64 = tool_result.get("pattern_image")
             except Exception as e:
@@ -126,7 +126,7 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
             try:
                 # Try with system message
                 final_response = invoke_with_retry(
-                    graph_llm.invoke, agent_messages, retries=3, wait_sec=8
+                    graph_llm.invoke, agent_messages, retries=3, base_wait=8
                 )
             except Exception as e:
                 # Fallback: retry without system message for Anthropic compatibility
@@ -137,7 +137,7 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
                     )
                     try:
                         final_response = invoke_with_retry(
-                            graph_llm.invoke, [human_msg], retries=3, wait_sec=8
+                            graph_llm.invoke, [human_msg], retries=3, base_wait=8
                         )
                     except Exception as retry_error:
                         reasoning = f"Vision LLM failed: {str(retry_error)}"

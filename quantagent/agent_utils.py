@@ -97,7 +97,6 @@ def invoke_with_retry(
     call_fn: Callable[..., T],
     *args,
     retries: int | None = None,
-    wait_sec: float | None = None,
     base_wait: float | None = None,
     max_wait: float | None = None,
     jitter: bool | None = None,
@@ -113,7 +112,6 @@ def invoke_with_retry(
         call_fn: Function to call (typically llm.invoke)
         *args: Positional arguments for call_fn
         retries: Max retry attempts (default: from RETRY_CONFIG)
-        wait_sec: DEPRECATED - use base_wait instead
         base_wait: Base wait time in seconds (default: from RETRY_CONFIG)
         max_wait: Maximum wait time cap (default: from RETRY_CONFIG)
         jitter: Add randomness to wait time (default: from RETRY_CONFIG)
@@ -130,15 +128,6 @@ def invoke_with_retry(
         >>> result = invoke_with_retry(llm.invoke, messages)
         >>> result = invoke_with_retry(llm.invoke, messages, retries=7, base_wait=4)
     """
-    # Handle deprecated wait_sec parameter
-    if wait_sec is not None:
-        logger.warning(
-            "wait_sec parameter is deprecated, use base_wait instead",
-            extra={"deprecated_param": "wait_sec"},
-        )
-        if base_wait is None:
-            base_wait = float(wait_sec)
-
     # Resolve configuration (local override > global config)
     max_retries: int = retries if retries is not None else int(RETRY_CONFIG["max_retries"])
     resolved_base_wait: float = base_wait if base_wait is not None else float(RETRY_CONFIG["base_wait"])

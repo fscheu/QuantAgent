@@ -17,7 +17,6 @@ from quantagent.agent_utils import (
     invoke_with_retry,
 )
 
-
 # ============================================================================
 # AC1: Core Retry Functionality
 # ============================================================================
@@ -374,8 +373,8 @@ def test_partial_override_mix_global_and_local():
 # ============================================================================
 
 
-def test_legacy_signature_works():
-    """AC5.1: Legacy signature with wait_sec works and maps to base_wait."""
+def test_explicit_base_wait_parameter_is_used():
+    """AC5.1: Explicit base_wait parameter overrides configuration."""
 
     class MockRateLimitError(Exception):
         pass
@@ -386,20 +385,10 @@ def test_legacy_signature_works():
     mock_fn = Mock(side_effect=[MockRateLimitError(), "success"])
 
     with patch("time.sleep") as mock_sleep:
-        result = invoke_with_retry(mock_fn, retries=3, wait_sec=4, jitter=False)
+        result = invoke_with_retry(mock_fn, retries=3, base_wait=4, jitter=False)
 
     assert result == "success"
-    mock_sleep.assert_called_once_with(4.0)  # Verifies wait_sec → base_wait
-
-
-def test_deprecation_warning_for_wait_sec(caplog):
-    """AC5.2: Deprecation warning logged for wait_sec parameter."""
-    mock_fn = Mock(return_value="success")
-
-    with caplog.at_level(logging.WARNING):
-        invoke_with_retry(mock_fn, wait_sec=4)
-
-    assert "wait_sec parameter is deprecated" in caplog.text
+    mock_sleep.assert_called_once_with(4.0)
 
 
 # ============================================================================

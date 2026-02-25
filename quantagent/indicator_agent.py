@@ -79,7 +79,7 @@ def create_indicator_agent(llm, toolkit):
         try:
             # LLM call with tools and structured output
             indicator_report = invoke_with_retry(
-                structured_llm.invoke, agent_messages, retries=3, wait_sec=2
+                structured_llm.invoke, agent_messages, retries=3, base_wait=2
             )
 
             # Ensure we got a valid IndicatorReport
