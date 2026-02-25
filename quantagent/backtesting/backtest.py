@@ -254,10 +254,6 @@ class Backtest:
                 except Exception as e:
                     logger.error(
                         f"Error analyzing {asset} at {current_date}: {e}",
-<<<<<<< HEAD
-=======
-
->>>>>>> 231da16b ([QuantAgent-3o4] Implement change)
                         exc_info=True,
                         extra={"event_type": "backtest_error", "symbol": asset},
                     )
