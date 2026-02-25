@@ -94,7 +94,7 @@ class TestLLMAgentStrategyErrorHandling:
 
         # Should handle gracefully (likely returns None or raises)
         # This tests robustness
-        result = strategy.generate_signal(sample_kline_data, "BTCUSDT", "4h", 100.0)
+        strategy.generate_signal(sample_kline_data, "BTCUSDT", "4h", 100.0)
 
         # Either returns None (HOLD) or handles the error
         # Current implementation will raise AttributeError on .get()
@@ -169,7 +169,6 @@ class TestTrailingStopEdgeCases:
         """
         from decimal import Decimal
 
-        from quantagent.strategy.base import TradingStrategy
 
         class TestStrategy(TradingStrategy):
             def generate_signal(self, kline_data, symbol, timeframe, current_price):
@@ -223,7 +222,6 @@ class TestTrailingStopEdgeCases:
         """Trailing stop disabled when trailing_stop_pct is None."""
         from decimal import Decimal
 
-        from quantagent.strategy.rsi_strategy import RSIMeanReversionStrategy
 
         strategy = RSIMeanReversionStrategy()
 

@@ -17,6 +17,7 @@ dependencies = [
     "mplfinance",
     "scipy",
     "TA-Lib",
+    "APScheduler>=3.10.0,<4.0.0",
     "langchain",
     "langchain-openai",
     "langchain-anthropic",

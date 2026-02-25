@@ -12,12 +12,12 @@ See docs/03_technical/TESTING_PATTERNS.md for testing guidelines.
 """
 
 import os
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-import quantagent.trading_graph as trading_graph_module
+import pytest
 from langgraph.checkpoint.memory import InMemorySaver
 
+import quantagent.trading_graph as trading_graph_module
 from quantagent import settings
 from quantagent.trading_graph import TradingGraph
 
@@ -72,7 +72,7 @@ class TestCheckpointingConfiguration:
         """Verify checkpointing raises error when DATABASE_URL setting is empty."""
         monkeypatch.setattr(settings, "DATABASE_URL", "")
 
-        with patch("quantagent.trading_graph.PostgresSaver") as mock_saver:
+        with patch("quantagent.trading_graph.PostgresSaver"):
             with pytest.raises(ValueError, match="DATABASE_URL not set in .env file"):
                 TradingGraph(use_checkpointing=True)
 
@@ -295,7 +295,7 @@ class TestGraphStateInspection:
         config = {"configurable": {"thread_id": "state_test_001"}}
 
         # Execute graph first
-        result = tg.graph.invoke(sample_state_inicial, config=config)
+        tg.graph.invoke(sample_state_inicial, config=config)
 
         # Now try to get state
         try:

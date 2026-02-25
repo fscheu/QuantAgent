@@ -4,9 +4,11 @@ Measures execution time and confirms all three agents run simultaneously.
 """
 
 import time
+
 import pandas as pd
-from quantagent.trading_graph import TradingGraph
+
 from quantagent.static_util import read_and_format_ohlcv
+from quantagent.trading_graph import TradingGraph
 
 
 def test_parallel_execution():
@@ -52,7 +54,7 @@ def test_parallel_execution():
     print("=" * 80)
 
     print(f"\n✓ Total execution time: {execution_time:.2f} seconds")
-    print(f"  (Expected: ~4-5s for parallel, ~6-9s for sequential)")
+    print("  (Expected: ~4-5s for parallel, ~6-9s for sequential)")
 
     # Check that all agent reports are present
     has_indicator = "indicator_report" in result and result["indicator_report"]

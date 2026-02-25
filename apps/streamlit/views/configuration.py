@@ -6,6 +6,10 @@ from typing import Dict, List
 import pandas as pd
 import streamlit as st
 
+from quantagent.data.provider import DataProvider
+
+SUPPORTED_UNIVERSE_SYMBOLS: List[str] = list(DataProvider.SYMBOL_MAPPING.keys())
+
 
 def _collect_profiles_from_db(db, kind: str) -> List[str]:
     if not db.ok:
@@ -79,21 +83,51 @@ def render(db, environment: str) -> None:
         )
 
         universe_default: List[str] = []
+        parsed = None
         try:
             parsed = json.loads(raw)
-            universe_default = parsed.get("universe", [])
+            if isinstance(parsed, dict):
+                universe_default = parsed.get("universe", []) or []
         except Exception:
-            pass
-        universe = st.multiselect(
-            "Universe (applied on save for portfolio profiles)",
-            ["BTC", "ETH", "SPX", "NQ", "CL", "GC", "AAPL", "QQQ"],
-            default=universe_default,
+            parsed = None
+        allowed_universe_default = [
+            u for u in universe_default if u in SUPPORTED_UNIVERSE_SYMBOLS
+        ]
+        unsupported_universe = [
+            u for u in universe_default if u not in SUPPORTED_UNIVERSE_SYMBOLS
+        ]
+
+        universe: List[str] = allowed_universe_default
+        if kind == "portfolio":
+            universe = st.multiselect(
+                "Universe (portfolio profiles only)",
+                SUPPORTED_UNIVERSE_SYMBOLS,
+                default=allowed_universe_default,
+            )
+        else:
+            st.caption("Universe editing is available for portfolio profiles only.")
+
+        resolved_universe = (
+            universe if kind == "portfolio" else allowed_universe_default
         )
+        st.markdown("**Universe preview**")
+        if resolved_universe:
+            st.dataframe(
+                pd.DataFrame({"symbol": resolved_universe}),
+                width='stretch',
+            )
+        else:
+            st.info("No symbols selected for this profile.")
+        if unsupported_universe:
+            st.warning(
+                "Unsupported symbols were ignored: "
+                + ", ".join(sorted(set(unsupported_universe)))
+            )
 
         if st.button("Save profile"):
             try:
                 data = json.loads(raw)
-                if kind == "portfolio" and universe:
+                if kind == "portfolio":
                     data["universe"] = universe
                 if db.ok:
                     with db.SessionLocal() as s:

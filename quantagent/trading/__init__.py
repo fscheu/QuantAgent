@@ -12,10 +12,12 @@ from .order_manager import OrderManager
 from .paper_broker import PaperBroker
 from .position_sizer import PositionSizer
 from .risk_manager import RiskManager
+from .scheduler import TradingScheduler
 
 __all__ = [
     "PositionSizer",
     "RiskManager",
     "OrderManager",
     "PaperBroker",
+    "TradingScheduler",
 ]

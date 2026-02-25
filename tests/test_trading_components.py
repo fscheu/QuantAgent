@@ -8,8 +8,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from quantagent.models import (Order, OrderSide, OrderStatus, OrderType,
-                               TradeSignal)
+from quantagent.models import Order, OrderSide, OrderStatus, OrderType, TradeSignal
 from quantagent.trading.order_manager import OrderManager
 from quantagent.trading.paper_broker import PaperBroker
 from quantagent.trading.position_sizer import PositionSizer
@@ -327,7 +326,7 @@ class TestOrderManager:
         self.portfolio.cash = 100000.0
         self.portfolio.positions = {}
         self.portfolio.get_total_value.return_value = 100000.0
-        
+
         # Configure get_position to return None (no existing position)
         self.portfolio.get_position.return_value = None
 

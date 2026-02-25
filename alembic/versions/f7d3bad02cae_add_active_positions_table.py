@@ -7,9 +7,10 @@ Create Date: 2026-01-10 02:09:53.812633
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 ENVIRONMENT_ENUM = postgresql.ENUM(
     'BACKTEST', 'PAPER', 'PROD', name='environment', create_type=False

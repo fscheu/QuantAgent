@@ -9,8 +9,7 @@ See docs/03_design/MESSAGE_STATE_MANAGEMENT.md for design rationale.
 
 import pytest
 
-from quantagent.agent_models import (IndicatorReport, PatternReport,
-                                     TradingDecision, TrendReport)
+from quantagent.agent_models import IndicatorReport, PatternReport, TradingDecision, TrendReport
 
 
 class TestMessageStateManagement:

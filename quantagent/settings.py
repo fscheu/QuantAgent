@@ -4,7 +4,9 @@ Loads environment variables from .env file and provides typed access to all sett
 """
 
 import os
+from dataclasses import dataclass, field, replace
 from pathlib import Path
+from typing import List, Optional
 
 from dotenv import load_dotenv
 
@@ -86,6 +88,83 @@ def require(name: str) -> str:
 LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 LOG_TO_CONSOLE: bool = os.getenv("LOG_TO_CONSOLE", "true").lower() == "true"
 LOG_TO_DB: bool = os.getenv("LOG_TO_DB", "true").lower() == "true"
+
+
+DEFAULT_SCHEDULER_ASSETS = ["BTC", "SPX"]
+
+
+def _parse_bool_env(var_name: str, default: bool) -> bool:
+    value = os.getenv(var_name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _parse_float_env(var_name: str, default: float) -> float:
+    value = os.getenv(var_name)
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except ValueError:
+        return default
+
+
+def _parse_assets_env(value: Optional[str]) -> List[str]:
+    if not value:
+        return DEFAULT_SCHEDULER_ASSETS.copy()
+    assets = [asset.strip().upper() for asset in value.split(",") if asset.strip()]
+    return assets or DEFAULT_SCHEDULER_ASSETS.copy()
+
+
+@dataclass
+class SchedulerSettings:
+    enabled: bool = False
+    interval_hours: float = 1.0
+    assets: List[str] = field(default_factory=lambda: DEFAULT_SCHEDULER_ASSETS.copy())
+    environment: str = "paper"
+    timeframe: str = "1h"
+    lookback_hours: float = 168.0
+
+    def __post_init__(self) -> None:
+        self.interval_hours = float(self.interval_hours)
+        self.lookback_hours = float(self.lookback_hours)
+        if self.interval_hours <= 0:
+            raise ValueError("interval_hours must be > 0")
+        if self.lookback_hours <= 0:
+            raise ValueError("lookback_hours must be > 0")
+        normalized_assets = [
+            asset.strip().upper() for asset in self.assets if asset.strip()
+        ]
+        if not normalized_assets:
+            raise ValueError("assets list cannot be empty")
+        self.assets = normalized_assets
+        env_value = self.environment.strip().lower()
+        if env_value not in {"backtest", "paper", "prod"}:
+            raise ValueError("environment must be one of: backtest, paper, prod")
+        self.environment = env_value
+        timeframe_value = self.timeframe.strip().lower()
+        if not timeframe_value:
+            raise ValueError("timeframe cannot be empty")
+        self.timeframe = timeframe_value
+
+    @classmethod
+    def from_env(cls) -> "SchedulerSettings":
+        return cls(
+            enabled=_parse_bool_env("TRADING_SCHEDULER_ENABLED", False),
+            interval_hours=_parse_float_env("TRADING_SCHEDULER_INTERVAL_HOURS", 1.0),
+            assets=_parse_assets_env(os.getenv("TRADING_SCHEDULER_ASSETS")),
+            environment=os.getenv("TRADING_SCHEDULER_ENVIRONMENT", "paper"),
+            timeframe=os.getenv("TRADING_SCHEDULER_TIMEFRAME", "1h"),
+            lookback_hours=_parse_float_env("TRADING_SCHEDULER_LOOKBACK_HOURS", 168.0),
+        )
+
+    def with_overrides(self, **overrides) -> "SchedulerSettings":
+        return replace(self, **overrides)
+
+
+# Scheduler configuration instance accessible as settings.scheduler
+scheduler = SchedulerSettings.from_env()
 
 
 def update_env_file(key: str, value: str) -> None:

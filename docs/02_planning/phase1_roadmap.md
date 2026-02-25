@@ -530,6 +530,8 @@ class TradingScheduler:
     def analyze_asset(symbol) → executes decision if signal
     def stop() → stops scheduler
 ```
+- [x] APScheduler wired into `quantagent/trading/scheduler.py` (QuantAgent-3o4)
+- [x] CLI entry point `apps/paper_trading.py` kicks off the scheduler
 
 **5.2 Streamlit Dashboard** (UI choice for MVP)
 ```
@@ -568,7 +570,7 @@ Additional MVP UI tasks (per UI requirements):
 **5.4 Documentation**
 - [ ] Setup instructions (with docker-compose)
 - [ ] How to run backtest
-- [ ] How to run scheduler
+- [x] How to run scheduler
 - [ ] Configuration options
 
 **Deliverables**:

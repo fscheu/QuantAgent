@@ -28,8 +28,8 @@ def get_db_handle() -> DbHandle:
                 False, "DATABASE_URL is not set. See docs/MIGRATIONS.md to configure."
             )
 
-        from quantagent.database import SessionLocal  # type: ignore
         import quantagent.models as models  # type: ignore
+        from quantagent.database import SessionLocal  # type: ignore
 
         # Try opening a session to validate connectivity
         try:

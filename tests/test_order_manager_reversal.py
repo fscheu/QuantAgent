@@ -12,15 +12,16 @@ Test Strategy:
 5. Edge cases: Zero position, equal sizes, different sizes
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock, call
 from decimal import Decimal
+from unittest.mock import Mock
 
+import pytest
+
+from quantagent.models import OrderSide
+from quantagent.trading.order_manager import OrderManager
+from quantagent.trading.paper_broker import PaperBroker
 from quantagent.trading.position_sizer import PositionSizer
 from quantagent.trading.risk_manager import RiskManager
-from quantagent.trading.paper_broker import PaperBroker
-from quantagent.trading.order_manager import OrderManager
-from quantagent.models import Order, OrderSide, OrderStatus, OrderType
 
 
 class TestPositionReversal:
@@ -65,7 +66,7 @@ class TestPositionReversal:
         close_trade.pnl = Decimal("100.00")
         open_trade = Mock()
         open_trade.pnl = Decimal("0.00")
-        
+
         self.portfolio.execute_trade.side_effect = [close_trade, open_trade]
 
         # Execute: LONG decision triggers reversal
@@ -79,10 +80,10 @@ class TestPositionReversal:
         # Validate structure
         assert result is not None, "Reversal should return filled order"
         assert result.side == OrderSide.BUY, "Final order should be BUY (LONG)"
-        
+
         # Should call execute_trade twice: once for close, once for open
         assert self.portfolio.execute_trade.call_count == 2
-        
+
         # Should add two orders + two trades to DB
         # Orders are flushed, trades are added
         add_calls = [call for call in self.db.add.call_args_list]
@@ -100,7 +101,7 @@ class TestPositionReversal:
         close_trade.pnl = Decimal("200.00")
         open_trade = Mock()
         open_trade.pnl = Decimal("0.00")
-        
+
         self.portfolio.execute_trade.side_effect = [close_trade, open_trade]
 
         # Execute: SHORT decision triggers reversal
@@ -126,11 +127,11 @@ class TestPositionReversal:
         # Capture orders placed with broker
         placed_orders = []
         original_place_order = self.broker.place_order
-        
+
         def capture_order(order):
             placed_orders.append(order)
             return original_place_order(order)
-        
+
         self.broker.place_order = capture_order
 
         # Mock portfolio.execute_trade
@@ -138,11 +139,11 @@ class TestPositionReversal:
         close_trade.pnl = Decimal("50.00")
         open_trade = Mock()
         open_trade.pnl = Decimal("0.00")
-        
+
         self.portfolio.execute_trade.side_effect = [close_trade, open_trade]
 
         # Execute reversal
-        result = self.order_manager.execute_decision(
+        _ = self.order_manager.execute_decision(
             symbol="BTC",
             decision="LONG",
             confidence=0.68,
@@ -152,7 +153,7 @@ class TestPositionReversal:
         # Validate constraint: close order qty == abs(existing_qty)
         assert len(placed_orders) >= 1, "Should place at least close order"
         close_order = placed_orders[0]
-        
+
         assert close_order.side == OrderSide.BUY, "Close SHORT requires BUY"
         assert close_order.quantity == pytest.approx(abs(existing_qty), rel=1e-9), \
             f"Close qty {close_order.quantity} must match existing {abs(existing_qty)}"
@@ -177,7 +178,7 @@ class TestPositionReversal:
 
         # Validate: Should return None (no order executed)
         assert result is None, "Failed close should prevent reversal"
-        
+
         # Verify portfolio.execute_trade never called
         self.portfolio.execute_trade.assert_not_called()
 
@@ -192,7 +193,7 @@ class TestPositionReversal:
         # Mock close succeeds, open fails
         close_trade = Mock()
         close_trade.pnl = Decimal("100.00")
-        
+
         self.portfolio.execute_trade.side_effect = [
             close_trade,  # Close succeeds
             Exception("Portfolio update failed on open")  # Open fails
@@ -208,7 +209,7 @@ class TestPositionReversal:
 
         # Validate: Should return None
         assert result is None, "Failed open should return None"
-        
+
         # Verify close was executed (called once)
         assert self.portfolio.execute_trade.call_count >= 1, "Close should execute before open fails"
 
@@ -226,11 +227,11 @@ class TestPositionReversal:
         # Capture orders
         placed_orders = []
         original_place_order = self.broker.place_order
-        
+
         def capture_order(order):
             placed_orders.append(order)
             return original_place_order(order)
-        
+
         self.broker.place_order = capture_order
 
         # Mock portfolio.execute_trade
@@ -238,7 +239,7 @@ class TestPositionReversal:
         close_trade.pnl = Decimal("50.00")
         open_trade = Mock()
         open_trade.pnl = Decimal("0.00")
-        
+
         self.portfolio.execute_trade.side_effect = [close_trade, open_trade]
 
         # Execute
@@ -252,10 +253,10 @@ class TestPositionReversal:
         # Validate: Should succeed with different sizes
         assert result is not None
         assert len(placed_orders) == 2, "Should place close + open orders"
-        
+
         close_order = placed_orders[0]
         open_order = placed_orders[1]
-        
+
         assert close_order.quantity == pytest.approx(abs(existing_qty), rel=1e-9)
         # Open order quantity determined by position sizer (likely different)
         assert open_order.quantity != close_order.quantity, \
@@ -284,7 +285,7 @@ class TestPositionReversal:
         # Validate: Should execute as single order
         assert result is not None
         assert result.side == OrderSide.BUY
-        
+
         # Should only call execute_trade once (not a reversal)
         assert self.portfolio.execute_trade.call_count == 1
 
@@ -298,12 +299,12 @@ class TestPositionReversal:
 
         # Track portfolio state during reversal
         position_states = []
-        
+
         def track_state(order, price):
             # Record position qty after each trade
             current_pos = self.portfolio.get_position.return_value
             position_states.append(current_pos.get("qty", 0.0) if current_pos else 0.0)
-            
+
             # Simulate portfolio state changes
             if order.side == OrderSide.BUY and position_states[0] < 0:
                 # Close SHORT -> FLAT
@@ -311,11 +312,11 @@ class TestPositionReversal:
             elif order.side == OrderSide.BUY and len(position_states) == 1:
                 # Open LONG
                 self.portfolio.get_position.return_value = {"qty": order.quantity, "avg_cost": price}
-            
+
             trade = Mock()
             trade.pnl = Decimal("0.00")
             return trade
-        
+
         self.portfolio.execute_trade.side_effect = track_state
 
         # Execute reversal
@@ -391,14 +392,14 @@ class TestPositionReversal:
         # Mock close succeeds
         close_trade = Mock()
         close_trade.pnl = Decimal("-5000.00")  # Big loss triggers circuit breaker
-        
+
         def execute_trade_with_circuit_breaker(order, price):
             trade = close_trade
             # After close trade with big loss, trigger circuit breaker
             if order.side == OrderSide.BUY:
                 self.risk_manager.on_trade_executed(trade)
             return trade
-        
+
         self.portfolio.execute_trade.side_effect = execute_trade_with_circuit_breaker
 
         # Execute LONG decision
@@ -430,7 +431,7 @@ class TestPositionReversalRealBugScenario:
         }
         self.portfolio.get_total_value.return_value = 106909.42
         self.portfolio.get_unrealized_pnl.return_value = 0.0
-        
+
         # Return existing SHORT position
         self.portfolio.get_position.return_value = {
             "qty": -0.0330943811250786,
@@ -452,7 +453,7 @@ class TestPositionReversalRealBugScenario:
     def test_bug_scenario_short_to_long_reversal(self):
         """
         Reproduce bug: SHORT position 0.033094 -> LONG signal with calculated size 0.034277.
-        
+
         Before fix: ValueError "Trying to buy 0.0342770443640196 shares but SHORT position is only 0.0330943811250786"
         After fix: Should succeed with two orders (close 0.033094, open 0.034277)
         """
@@ -461,7 +462,7 @@ class TestPositionReversalRealBugScenario:
         close_trade.pnl = Decimal("50.00")
         open_trade = Mock()
         open_trade.pnl = Decimal("0.00")
-        
+
         self.portfolio.execute_trade.side_effect = [close_trade, open_trade]
 
         # Execute: LONG decision with 68% confidence (from bug report)
@@ -475,6 +476,6 @@ class TestPositionReversalRealBugScenario:
         # Validate: Should succeed (no ValueError)
         assert result is not None, "Bug scenario should now succeed"
         assert result.side == OrderSide.BUY
-        
+
         # Verify two trades executed
         assert self.portfolio.execute_trade.call_count == 2

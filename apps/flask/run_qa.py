@@ -5,6 +5,7 @@ Adds health endpoint and runs on port 8001
 """
 import sys
 from pathlib import Path
+
 from flask import Flask, jsonify
 
 # Add project root to path
