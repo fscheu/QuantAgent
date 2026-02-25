@@ -63,9 +63,10 @@ Effective monitoring helps you:
 - ⚠️ Warning if missing
 
 **Scheduler Status**
-*(Coming in Phase 2)*
-- Running = Automated analysis active
-- Stopped = Manual mode only
+- **Running (green):** The `apps/paper_trading.py` scheduler checked in during the last minute. Automation is healthy.
+- **Idle (yellow):** Scheduler is installed but `settings.scheduler.enabled` is `False` or the process was paused. No paper trades will execute until you start it manually.
+- **Stopped (red):** No heartbeat detected. Check the terminal where you started `python apps/paper_trading.py` or review the Logs tab (filter by `quantagent.trading.scheduler`).
+- Use the [Paper Trading Automation guide](paper-trading-automation.md) for startup and recovery steps.
 
 ### Recent Trades Table
 
