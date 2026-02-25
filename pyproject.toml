@@ -10,6 +10,7 @@ authors = [{name = "QuantAgent Team"}]
 requires-python = ">=3.9"
 dependencies = [
     "flask",
+    "click>=8.1",
     "yfinance",
     "pandas",
     "numpy",
@@ -17,6 +18,7 @@ dependencies = [
     "mplfinance",
     "scipy",
     "TA-Lib",
+    "tabulate>=0.9",
     "APScheduler>=3.10.0,<4.0.0",
     "langchain",
     "langchain-openai",
