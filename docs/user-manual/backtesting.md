@@ -49,8 +49,9 @@ You can run backtests two ways:
 - Or leave empty to use default settings
 
 **Assets:**
-- Leave blank to use profile's universe
-- Or manually select specific symbols (e.g., BTC, SPX)
+- **Profile-powered (recommended):** Leave the field blank and QuantAgent automatically injects the universe stored in the selected profile (feature QuantAgent-ia2). The chosen symbols appear as grey pills under the form so there are no surprises at run time.
+- **Manual override:** Select specific symbols if you want to experiment outside the saved universe. The form shows a yellow reminder that you are overriding the profile configuration.
+- **Validation:** If both the profile universe and the Assets field are empty, the Backtesting tab blocks execution until you pick at least one supported symbol (BTC, CL, DAX, DXY, ES, GC, NQ, QQQ, SPX, or VIX).
 
 **Timeframe:**
 - `1h` - 1-hour candles (more trades, slower)

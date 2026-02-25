@@ -81,17 +81,28 @@ QuantAgent supports three profile types:
 
 **Universe multi-select:** Click to select one or more assets
 
-**Supported symbols:**
-- **BTC** - Bitcoin
-- **SPX** - S&P 500 Index
-- **CL** - Crude Oil (WTI)
-- **ETH** - Ethereum (if configured)
-- *(Additional symbols depend on yfinance support)*
+**Supported symbols (from `DataProvider.SYMBOL_MAPPING`):**
+- **BTC** – Bitcoin
+- **CL** – Crude Oil (WTI)
+- **DAX** – German index future
+- **DXY** – US Dollar Index
+- **ES** – E-mini S&P 500
+- **GC** – Gold futures
+- **NQ** – Nasdaq-100 futures
+- **QQQ** – Nasdaq ETF
+- **SPX** – S&P 500 index
+- **VIX** – Volatility index
+
+Selections are alphabetized automatically, duplicates are removed, and unsupported tickers are rejected before saving.
 
 **Tips:**
 - Start with 1-2 assets for testing
 - Mix crypto + traditional (BTC + SPX) for diversification
 - More assets = more potential trades but harder to manage
+
+**Preview panel:** A live "Profile preview" card on the right mirrors whatever you select, so you can confirm the resolved universe (alphabetized, duplicates removed) before saving. If you clear the selection, the preview explicitly shows an empty list, which is valid but will require you to pick assets later when backtesting.
+
+**Profiles table enrichment:** After saving, the Profiles table now includes a **Universe** column so you can spot which watchlist each saved profile uses without reopening the editor.
 
 <!-- screenshot: Universe selector with BTC and SPX selected -->
 
@@ -313,6 +324,15 @@ Model presets control which AI analyzes the markets.
 - Profiles take minimal space
 - Create new profile with different name
 - Or manually delete from database
+
+### How Profile Universes Interact with Backtesting
+
+- When you select a combined profile in the Backtesting tab and leave the **Assets** field empty, the run automatically uses the universe saved inside that profile. The selected symbols appear as pills under the form so you know exactly what will be processed.
+- If you type assets manually, the UI displays a yellow reminder that you are overriding the saved universe. This is useful for experiments, but the scheduler and profile preview continue to show the canonical watchlist.
+- Profiles with an empty universe are allowed, but the Backtesting form will block execution until you either choose assets or update the profile.
+- Replay snapshots and backtest history include the resolved universe, making it easier to audit which symbols were used without digging into raw JSON.
+
+For the underlying functional requirements, see [QuantAgent-ia2-RQ-universe-management.md](../01_requirements/QuantAgent-ia2-RQ-universe-management.md) and the companion acceptance tests in `tests/test_universe_management.py`.
 
 ---
 

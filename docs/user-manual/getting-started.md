@@ -235,6 +235,7 @@ You're now ready to:
 2. **[Understand analysis](analysis-and-signals.md)** - Learn how AI agents make decisions
 3. **[Run more backtests](backtesting.md)** - Test different timeframes and assets
 4. **[Monitor performance](monitoring.md)** - Track system logs and metrics
+5. **[Automate paper trading](paper-trading-automation.md)** - Keep the scheduler running without manual intervention
 
 ---
 
