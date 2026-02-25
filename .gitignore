@@ -7,7 +7,7 @@ record.csv
 .env.local
 *.db
 venv_wsl/
-quantagent.egg-info/*.*
+quantagent.egg-info/
 .worktrees/
 .openclaw/
 .venv/
