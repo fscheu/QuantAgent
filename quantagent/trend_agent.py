@@ -57,7 +57,7 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
                     toolkit.generate_trend_image.invoke,
                     {"kline_data": state["kline_data"]},
                     retries=3,
-                    wait_sec=4,
+                    base_wait=4,
                 )
                 trend_image_b64 = tool_result.get("trend_image")
             except Exception as e:
@@ -116,7 +116,7 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
             try:
                 # Try with system message
                 final_response = invoke_with_retry(
-                    graph_llm.invoke, agent_messages, retries=3, wait_sec=4
+                    graph_llm.invoke, agent_messages, retries=3, base_wait=4
                 )
             except Exception as e:
                 # Fallback: retry without system message for Anthropic compatibility
@@ -127,7 +127,7 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
                     )
                     try:
                         final_response = invoke_with_retry(
-                            graph_llm.invoke, [human_msg], retries=3, wait_sec=4
+                            graph_llm.invoke, [human_msg], retries=3, base_wait=4
                         )
                     except Exception as retry_error:
                         reasoning = f"LLM error: {str(retry_error)}"

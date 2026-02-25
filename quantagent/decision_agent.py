@@ -173,7 +173,7 @@ Respond ONLY with valid JSON (no markdown, no explanation):
             structured_llm = llm.with_structured_output(TradingDecision)
 
             trading_decision = invoke_with_retry(
-                structured_llm.invoke, agent_messages, retries=3, wait_sec=2
+                structured_llm.invoke, agent_messages, retries=3, base_wait=2
             )
 
             # Ensure we got a valid TradingDecision

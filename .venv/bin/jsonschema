@@ -1,0 +1,8 @@
+#!/bin/sh
+'''exec' /home/azureuser/repos/projects/QuantAgent/.worktrees/feature__QuantAgent-lmn-fix-deprecated-wait-sec-parameter-in-age/.venv/bin/python3 "$0" "$@"
+' '''
+import sys
+from jsonschema.cli import main
+if __name__ == '__main__':
+    sys.argv[0] = sys.argv[0].removesuffix('.exe')
+    sys.exit(main())
