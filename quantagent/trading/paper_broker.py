@@ -11,9 +11,10 @@ Simulates:
 import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
+from decimal import Decimal
 from typing import Dict
 
-from quantagent.models import Order, OrderSide, OrderStatus
+from quantagent.models import Fill, Order, OrderSide, OrderStatus
 
 logger = logging.getLogger(__name__)
 
@@ -45,16 +46,31 @@ class Broker(ABC):
 class PaperBroker(Broker):
     """Paper (simulated) broker for backtesting and paper trading."""
 
-    def __init__(self, slippage_pct: float = 0.01):
+    def __init__(
+        self,
+        slippage_pct: float = 0.01,
+        commission_model: str = "none",
+        commission_fixed: float = 0.0,
+        commission_pct: float = 0.0,
+    ):
         """
         Initialize Paper Broker.
 
         Args:
             slippage_pct: Slippage percentage (default 1%, so ±1% for total 2%)
+            commission_model: "none" | "fixed" | "pct" (default "none")
+            commission_fixed: Fixed commission per trade in currency units
+            commission_pct: Commission as percentage of notional (e.g., 0.001 for 0.1%)
         """
         if not 0 <= slippage_pct <= 0.05:
             raise ValueError("slippage_pct should be between 0% and 5%")
+        if commission_model not in ("none", "fixed", "pct"):
+            raise ValueError(f"Invalid commission_model: {commission_model}")
+
         self.slippage_pct = slippage_pct
+        self.commission_model = commission_model
+        self.commission_fixed = commission_fixed
+        self.commission_pct = commission_pct
 
     def place_order(self, order: Order) -> Order:
         """
@@ -85,6 +101,19 @@ class PaperBroker(Broker):
         # Fill entire order quantity
         filled_qty = float(order.quantity)
 
+        # Calculate commission
+        commission = self._calculate_commission(filled_qty, fill_price)
+
+        # Create Fill object
+        fill = Fill(
+            order_id=order.id,
+            quantity=Decimal(str(filled_qty)),
+            price=Decimal(str(fill_price)),
+            commission=commission,
+            filled_at=datetime.utcnow(),
+        )
+        order.fills.append(fill)
+
         # Update order with fill details
         order.average_fill_price = fill_price
         order.filled_quantity = filled_qty
@@ -93,10 +122,33 @@ class PaperBroker(Broker):
 
         logger.info(
             f"{order.symbol}: Order filled - {order.side} {filled_qty:.6f} "
-            f"@ ${fill_price:.2f} (slippage: {self.slippage_pct:.2%})"
+            f"@ ${fill_price:.2f} (slippage: {self.slippage_pct:.2%}, commission: ${float(commission):.2f})"
         )
 
         return order
+
+    def _calculate_commission(self, quantity: float, price: float) -> Decimal:
+        """
+        Calculate commission based on configured commission model.
+
+        Args:
+            quantity: Filled quantity
+            price: Fill price
+
+        Returns:
+            Commission amount as Decimal
+        """
+        if self.commission_model == "none":
+            return Decimal("0")
+        elif self.commission_model == "fixed":
+            return Decimal(str(self.commission_fixed))
+        elif self.commission_model == "pct":
+            notional = abs(quantity) * price
+            commission = notional * self.commission_pct
+            return Decimal(str(commission))
+        else:
+            # Should not reach here due to validation in __init__
+            return Decimal("0")
 
     def cancel_order(self, order_id: str) -> bool:
         """Cancel an order (MVP: not supported in paper broker)."""
