@@ -10,15 +10,14 @@ Following acceptance criteria:
 """
 
 import json
-import pytest
 from datetime import datetime
+
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.mutable import MutableDict
 
-from quantagent.models import Base, StrategyConfig, BacktestRun
 from quantagent.data.provider import DataProvider
-
+from quantagent.models import BacktestRun, StrategyConfig
 
 # ============================================================================
 # Database Fixtures
@@ -28,16 +27,16 @@ from quantagent.data.provider import DataProvider
 @pytest.fixture
 def test_db():
     """Create in-memory SQLite database for testing."""
-    from sqlalchemy import Table, MetaData
+    from sqlalchemy import MetaData
     engine = create_engine("sqlite:///:memory:")
-    
+
     # Only create the tables we need for universe tests (avoid JSONB compatibility issues)
     metadata = MetaData()
-    
+
     # Create only StrategyConfig and BacktestRun tables
     StrategyConfig.__table__.create(engine, checkfirst=True)
     BacktestRun.__table__.create(engine, checkfirst=True)
-    
+
     TestSession = sessionmaker(bind=engine)
     db = TestSession()
     yield db
@@ -247,10 +246,10 @@ class TestUniverseFiltering:
         """Test filtering of supported vs unsupported symbols."""
         supported = set(DataProvider.SYMBOL_MAPPING.keys())
         test_symbols = ["BTC", "SPX", "INVALID", "CL", "UNKNOWN"]
-        
+
         filtered = [s for s in test_symbols if s in supported]
         unsupported = [s for s in test_symbols if s not in supported]
-        
+
         assert "BTC" in filtered
         assert "SPX" in filtered
         assert "CL" in filtered
@@ -276,7 +275,7 @@ class TestUniverseFiltering:
     def test_supported_symbols_constant_matches_provider(self):
         """Verify that supported symbols list is consistent with DataProvider."""
         supported_from_provider = list(DataProvider.SYMBOL_MAPPING.keys())
-        
+
         # Test configuration file should reference the same symbols
         required_symbols = {"BTC", "SPX", "CL", "DAX", "ES", "NQ", "QQQ", "GC", "VIX", "DXY"}
         assert required_symbols.issubset(set(supported_from_provider))
@@ -297,17 +296,17 @@ class TestUniverseJSONSerialization:
             "base_position_pct": 0.05,
             "max_position_pct": 0.1,
         }
-        
+
         json_str = json.dumps(data)
         parsed = json.loads(json_str)
-        
+
         assert parsed["universe"] == ["BTC", "SPX", "CL"]
         assert isinstance(parsed["universe"], list)
 
     def test_universe_roundtrip_in_profile(self, test_db):
         """Test universe survives JSON roundtrip in profile."""
         original_universe = ["BTC", "SPX", "CL", "DAX", "ES"]
-        
+
         # Save
         profile = StrategyConfig(
             name="test_roundtrip",
@@ -316,25 +315,25 @@ class TestUniverseJSONSerialization:
         )
         test_db.add(profile)
         test_db.commit()
-        
+
         # Retrieve
         retrieved = test_db.query(StrategyConfig).filter_by(name="test_roundtrip").one()
         retrieved_universe = retrieved.json_config["universe"]
-        
+
         assert retrieved_universe == original_universe
         assert len(retrieved_universe) == len(original_universe)
 
     def test_universe_preview_dataframe_compatible(self):
         """Test that universe data is compatible with DataFrame display."""
         universe = ["BTC", "SPX", "CL", "DAX", "ES"]
-        
+
         # Simulate what the UI does for preview
         preview_data = {"symbol": universe}
-        
+
         # This should be valid for a pandas DataFrame
         assert isinstance(preview_data["symbol"], list)
         assert all(isinstance(s, str) for s in preview_data["symbol"])
-        
+
         # Verify each symbol is a valid string
         for symbol in universe:
             assert len(symbol) > 0
@@ -468,7 +467,7 @@ class TestUniverseEdgeCases:
         """Test that non-ASCII symbols are rejected."""
         supported = set(DataProvider.SYMBOL_MAPPING.keys())
         test_symbols = ["BTC", "SPX", "BTC€", "₹SPX"]  # EUR and INR symbols
-        
+
         filtered = [s for s in test_symbols if s in supported]
         assert "BTC€" not in filtered
         assert "₹SPX" not in filtered
@@ -477,7 +476,7 @@ class TestUniverseEdgeCases:
         """Test that symbols with whitespace are handled."""
         supported = set(DataProvider.SYMBOL_MAPPING.keys())
         test_symbols = ["BTC", " BTC", "BTC ", "BT C"]
-        
+
         filtered = [s for s in test_symbols if s in supported]
         # Only exact matches should be included
         assert "BTC" in filtered
@@ -502,7 +501,7 @@ class TestUniverseEdgeCases:
     def test_case_sensitivity_of_symbols(self):
         """Test that symbols are case-sensitive."""
         supported = set(DataProvider.SYMBOL_MAPPING.keys())
-        
+
         # All supported symbols should be uppercase
         for symbol in supported:
             assert symbol == symbol.upper()

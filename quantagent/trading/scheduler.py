@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from quantagent import settings
 from quantagent.data.provider import DataProvider
-from quantagent.models import Environment, Signal, TradeSignal
+from quantagent.models import Environment, SchedulerHeartbeat, Signal, TradeSignal
 from quantagent.static_util import format_ohlcv_for_agents
 from quantagent.strategy.base import TradingSignal as StrategyTradingSignal
 from quantagent.strategy.llm_agent_strategy import LLMAgentStrategy
@@ -142,6 +142,9 @@ class TradingScheduler:
         processed = 0
         errors = 0
 
+        # Write heartbeat at cycle start
+        heartbeat = self._upsert_heartbeat_start(cycle_start)
+
         for symbol in self.config.assets:
             try:
                 self._process_asset(symbol)
@@ -202,6 +205,9 @@ class TradingScheduler:
             "total": len(self.config.assets),
         }
         self.last_run_stats = stats
+
+        # Update heartbeat at cycle end
+        self._upsert_heartbeat_complete(heartbeat, stats)
 
         logger.info(
             "Analysis cycle completed: %s/%s processed, %s errors (%.2fs)",
@@ -369,3 +375,108 @@ class TradingScheduler:
     def _make_thread_id(self, symbol: str) -> str:
         timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
         return f"scheduler_{symbol}_{timestamp}"
+
+    def _upsert_heartbeat_start(self, cycle_start: datetime) -> Optional[SchedulerHeartbeat]:
+        """
+        Write or update heartbeat at cycle start.
+
+        Args:
+            cycle_start: Timestamp of cycle start
+
+        Returns:
+            SchedulerHeartbeat instance or None if write fails
+        """
+        try:
+            # Upsert pattern: single row per environment
+            heartbeat = (
+                self.db.query(SchedulerHeartbeat)
+                .filter_by(environment=self.environment)
+                .first()
+            )
+
+            if heartbeat:
+                # Update existing
+                heartbeat.timestamp = cycle_start
+                heartbeat.completed_at = None
+                heartbeat.status = "running"
+                heartbeat.assets = self.config.assets
+                heartbeat.stats = None
+                heartbeat.error_message = None
+            else:
+                # Create new
+                heartbeat = SchedulerHeartbeat(
+                    timestamp=cycle_start,
+                    status="running",
+                    environment=self.environment,
+                    assets=self.config.assets,
+                )
+                self.db.add(heartbeat)
+
+            self.db.commit()
+            logger.debug(
+                "Heartbeat started for environment=%s",
+                self.environment.value,
+                extra={"event_type": "scheduler.heartbeat_start"},
+            )
+            return heartbeat
+
+        except Exception as exc:  # pragma: no cover - defensive
+            # Heartbeat failure should not break scheduler
+            logger.warning(
+                "Failed to write heartbeat: %s",
+                exc,
+                extra={"event_type": "scheduler.heartbeat_error"},
+            )
+            try:
+                self.db.rollback()
+            except Exception:  # pragma: no cover
+                pass
+            return None
+
+    def _upsert_heartbeat_complete(
+        self, heartbeat: Optional[SchedulerHeartbeat], stats: Dict[str, float]
+    ) -> None:
+        """
+        Update heartbeat at cycle end.
+
+        Args:
+            heartbeat: Heartbeat instance from cycle start (may be None if write failed)
+            stats: Cycle statistics
+        """
+        if heartbeat is None:
+            return
+
+        try:
+            heartbeat.completed_at = datetime.utcnow()
+            heartbeat.status = "completed"
+            heartbeat.stats = stats
+
+            # Get last trade ID if any trades exist
+            from quantagent.models import Trade
+
+            last_trade = (
+                self.db.query(Trade)
+                .filter_by(environment=self.environment)
+                .order_by(Trade.id.desc())
+                .first()
+            )
+            if last_trade:
+                heartbeat.last_trade_id = last_trade.id
+
+            self.db.commit()
+            logger.debug(
+                "Heartbeat completed for environment=%s",
+                self.environment.value,
+                extra={"event_type": "scheduler.heartbeat_complete"},
+            )
+
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning(
+                "Failed to update heartbeat: %s",
+                exc,
+                extra={"event_type": "scheduler.heartbeat_error"},
+            )
+            try:
+                self.db.rollback()
+            except Exception:  # pragma: no cover
+                pass

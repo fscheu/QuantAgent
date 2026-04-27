@@ -14,6 +14,94 @@ class DbHandle:
     SessionLocal: Any = None
     models: Any = None
 
+    def get_latest_heartbeat(self, environment: str) -> Optional[dict]:
+        """
+        Get the latest scheduler heartbeat for an environment.
+
+        Args:
+            environment: Environment name (paper/prod/backtest)
+
+        Returns:
+            Dict with heartbeat data or None
+        """
+        if not self.ok:
+            return None
+
+        try:
+            from quantagent.models import Environment, SchedulerHeartbeat
+
+            with self.SessionLocal() as session:
+                hb = (
+                    session.query(SchedulerHeartbeat)
+                    .filter_by(environment=Environment(environment))
+                    .order_by(SchedulerHeartbeat.timestamp.desc())
+                    .first()
+                )
+
+                if not hb:
+                    return None
+
+                return {
+                    "id": hb.id,
+                    "timestamp": hb.timestamp,
+                    "completed_at": hb.completed_at,
+                    "status": hb.status,
+                    "environment": hb.environment.value,
+                    "assets": hb.assets,
+                    "stats": hb.stats,
+                    "last_trade_id": hb.last_trade_id,
+                    "error_message": hb.error_message,
+                }
+        except Exception:
+            # Table may not exist yet (pre-migration)
+            return None
+
+    def get_recent_heartbeats(
+        self, environment: str, limit: int = 10
+    ) -> list[dict]:
+        """
+        Get recent scheduler heartbeats for an environment.
+
+        Args:
+            environment: Environment name (paper/prod/backtest)
+            limit: Maximum number of heartbeats to return
+
+        Returns:
+            List of heartbeat dicts (most recent first)
+        """
+        if not self.ok:
+            return []
+
+        try:
+            from quantagent.models import Environment, SchedulerHeartbeat
+
+            with self.SessionLocal() as session:
+                heartbeats = (
+                    session.query(SchedulerHeartbeat)
+                    .filter_by(environment=Environment(environment))
+                    .order_by(SchedulerHeartbeat.timestamp.desc())
+                    .limit(limit)
+                    .all()
+                )
+
+                return [
+                    {
+                        "id": hb.id,
+                        "timestamp": hb.timestamp,
+                        "completed_at": hb.completed_at,
+                        "status": hb.status,
+                        "environment": hb.environment.value,
+                        "assets": hb.assets,
+                        "stats": hb.stats,
+                        "last_trade_id": hb.last_trade_id,
+                        "error_message": hb.error_message,
+                    }
+                    for hb in heartbeats
+                ]
+        except Exception:
+            # Table may not exist yet (pre-migration)
+            return []
+
 
 @st.cache_resource(show_spinner=False)
 def get_db_handle() -> DbHandle:
