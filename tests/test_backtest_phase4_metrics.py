@@ -5,24 +5,12 @@ from datetime import datetime, timedelta
 import pytest
 
 from quantagent.backtesting.backtest import Backtest, BacktestMetrics
-from quantagent.database import SessionLocal
 from quantagent.models import ActivePosition, Environment, ExitPolicy, OrderSide
 
 pytestmark = pytest.mark.api
 
-
 class TestPhase4Metrics:
     """Test suite for Phase 4 backtest metrics (QuantAgent-r6y)."""
-
-    @pytest.fixture
-    def db_session(self):
-        """Create test database session."""
-        session = SessionLocal()
-        yield session
-        # Cleanup
-        session.query(ActivePosition).delete()
-        session.commit()
-        session.close()
 
     @pytest.fixture
     def sample_dates(self):

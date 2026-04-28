@@ -7,34 +7,13 @@ import pandas as pd
 import pytest
 
 from quantagent.backtesting.backtest import Backtest, BacktestMetrics
-from quantagent.database import SessionLocal
-from quantagent.models import BacktestRun, Environment, OrderSide, Signal, Trade
+from quantagent.models import BacktestRun, Environment, OrderSide, Trade
 from quantagent.static_util import format_ohlcv_for_agents
 
 pytestmark = pytest.mark.api
 
 class TestBacktest:
     """Test suite for Backtest engine."""
-
-    @pytest.fixture
-    def db_session(self):
-        """Create test database session."""
-        from sqlalchemy import text
-        session = SessionLocal()
-        yield session
-        # Cleanup - Delete all in correct FK order
-        # Note: circular FK between signals/orders, so delete fills/trades first
-        from quantagent.models import Fill, Order
-        session.query(Fill).delete()
-        session.query(Trade).delete()
-        # Now delete orders and signals (order doesn't matter due to circular FK)
-        session.execute(text("SET session_replication_role = 'replica';"))  # Disable FK checks
-        session.query(Order).delete()
-        session.query(Signal).delete()
-        session.execute(text("SET session_replication_role = 'origin';"))  # Re-enable FK checks
-        session.query(BacktestRun).delete()
-        session.commit()
-        session.close()
 
     @pytest.fixture
     def sample_config(self):
@@ -688,7 +667,6 @@ class TestBacktest:
         assert formatted["Datetime"][0] == start.strftime("%Y-%m-%d %H:%M:%S")
         assert formatted["Open"][0] == 100.0
         assert formatted["Close"][0] == 102.0
-
 
     def test_get_equity_curve_returns_dataframe(
         self, db_session, sample_dates, sample_config

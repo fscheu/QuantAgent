@@ -572,3 +572,56 @@ def pytest_collection_modifyitems(config, items):
         # Mark tests with 'vision' in the name
         if "vision" in item.nodeid:
             item.add_marker(pytest.mark.vision)
+
+
+# ============================================================================
+# Database Fixtures
+# ============================================================================
+
+
+@pytest.fixture
+def db_session():
+    """
+    Provide isolated SQLite database session for testing.
+
+    Creates an in-memory SQLite database, runs migrations to create all tables,
+    and yields a session for test use. Automatically cleans up after each test.
+
+    Yields:
+        SQLAlchemy Session connected to in-memory SQLite database.
+
+    Note:
+        Foreign key constraints are enabled via SQLite PRAGMA.
+    """
+    from sqlalchemy import create_engine, event, text
+    from sqlalchemy.orm import sessionmaker
+
+    from quantagent.models import Base
+
+    # Create in-memory SQLite engine
+    test_engine = create_engine("sqlite:///:memory:", echo=False)
+
+    # Enable foreign key constraints (SQLite disables by default)
+    @event.listens_for(test_engine, "connect")
+    def set_sqlite_pragma(dbapi_conn, connection_record):
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
+    # Create all tables
+    Base.metadata.create_all(test_engine)
+
+    # Create session
+    TestSession = sessionmaker(bind=test_engine)
+    session = TestSession()
+
+    yield session
+
+    # Cleanup
+    session.close()
+    # Disable foreign keys temporarily for cleanup
+    with test_engine.connect() as conn:
+        conn.execute(text("PRAGMA foreign_keys=OFF"))
+        conn.commit()
+    Base.metadata.drop_all(test_engine)
+    test_engine.dispose()

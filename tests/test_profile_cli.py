@@ -10,10 +10,10 @@ import os
 
 import pytest
 from click.testing import CliRunner
-from quantagent.cli.profile import profile_group
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from quantagent.cli.profile import profile_group
 from quantagent.models import StrategyConfig
 
 

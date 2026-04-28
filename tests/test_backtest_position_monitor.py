@@ -17,20 +17,14 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from quantagent.backtesting.backtest import Backtest, BacktestMetrics
-from quantagent.database import SessionLocal
 from quantagent.models import (
     ActivePosition,
-    BacktestRun,
     MarketData,
-    Order,
-    Signal,
-    Trade,
 )
 from quantagent.strategy.base import ExitPolicy, TradingSignal, TradingStrategy
 from quantagent.strategy.llm_agent_strategy import LLMAgentStrategy
 
 pytestmark = pytest.mark.api
-
 
 class MockSimpleStrategy(TradingStrategy):
     """Simple mock strategy for testing without LLM dependencies."""
@@ -70,33 +64,8 @@ class MockSimpleStrategy(TradingStrategy):
     def should_reevaluate(self, position, current_price):
         return False
 
-
 class TestBacktestPositionMonitorIntegration:
     """Integration tests for Backtest + PositionMonitor + TradingStrategy."""
-
-    @pytest.fixture
-    def db_session(self):
-        """Create test database session with cleanup."""
-        from sqlalchemy import text
-
-        session = SessionLocal()
-        yield session
-
-        # Cleanup - ORDER MATTERS due to FK constraints
-        from quantagent.models import Fill
-
-        session.query(Fill).delete()
-        session.query(ActivePosition).delete()  # BEFORE Trade (has FK to Trade)
-        session.query(Trade).delete()
-        # Circular FK between signals/orders, disable FK checks temporarily
-        session.execute(text("SET session_replication_role = 'replica';"))
-        session.query(Order).delete()
-        session.query(Signal).delete()
-        session.execute(text("SET session_replication_role = 'origin';"))
-        session.query(BacktestRun).delete()
-        session.query(MarketData).delete()
-        session.commit()
-        session.close()
 
     @pytest.fixture
     def sample_config(self):

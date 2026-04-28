@@ -6,7 +6,6 @@ from decimal import Decimal
 import pytest
 
 from quantagent.backtesting.backtest import Backtest
-from quantagent.database import SessionLocal
 from quantagent.models import (
     ActivePosition,
     BacktestRun,
@@ -15,17 +14,6 @@ from quantagent.models import (
     OrderSide,
 )
 from quantagent.trading.position_monitor import PositionMonitor
-
-
-@pytest.fixture
-def db_session():
-    """Provide a clean database session backed by Postgres."""
-    session = SessionLocal()
-    yield session
-    session.query(ActivePosition).delete()
-    session.query(BacktestRun).delete()
-    session.commit()
-    session.close()
 
 
 def _create_backtest_run(session, name: str) -> BacktestRun:
@@ -41,7 +29,6 @@ def _create_backtest_run(session, name: str) -> BacktestRun:
     session.add(run)
     session.commit()
     return run
-
 
 def test_position_monitor_isolates_by_backtest_run_id(db_session):
     run_a = _create_backtest_run(db_session, "run-a")
@@ -81,7 +68,6 @@ def test_position_monitor_isolates_by_backtest_run_id(db_session):
     monitor_a.set_backtest_run_id(run_a.id)
     isolated = monitor_a.get_active_position("BTC")
     assert isolated.id == pos_a.id
-
 
 def test_backtest_metrics_scope_to_current_run(db_session):
     start = datetime(2024, 1, 1)
@@ -145,7 +131,6 @@ def test_backtest_metrics_scope_to_current_run(db_session):
     assert accuracy_by_candle == {1: 1.0, 2: 1.0}
     assert close_reasons == {"close_tp": 1}
 
-
 def test_multiple_positions_in_same_run(db_session):
     """Test that multiple positions in the same run are correctly isolated."""
     run_a = _create_backtest_run(db_session, "multi-pos-run")
@@ -171,7 +156,6 @@ def test_multiple_positions_in_same_run(db_session):
         assert pos.symbol == symbol
         assert pos.backtest_run_id == run_a.id
 
-
 def test_position_monitor_without_backtest_run_id(db_session):
     """Test that PositionMonitor works without backtest_run_id (for backward compatibility)."""
     _create_backtest_run(db_session, "run-no-context")
@@ -195,7 +179,6 @@ def test_position_monitor_without_backtest_run_id(db_session):
     assert pos is not None
     # Position can have any backtest_run_id when queried without context
     assert pos.symbol == "BTC"
-
 
 def test_three_way_run_isolation(db_session):
     """Test isolation with three concurrent runs."""
@@ -227,7 +210,6 @@ def test_three_way_run_isolation(db_session):
         assert pos is not None
         assert pos.backtest_run_id == runs[i].id
         assert pos.entry_price == Decimal(str(100.0 + i * 10))
-
 
 def test_close_reasons_multi_run(db_session):
     """Test that close_reasons are correctly scoped to run."""
@@ -309,7 +291,6 @@ def test_close_reasons_multi_run(db_session):
     assert close_reasons_a_result == {"close_tp": 2, "close_sl": 1}
     assert close_reasons_b_result == {"close_sl": 2, "close_timeout": 1}
 
-
 def test_position_monitor_run_id_change(db_session):
     """Test changing backtest_run_id context in PositionMonitor."""
     run_a = _create_backtest_run(db_session, "context-run-a")
@@ -353,7 +334,6 @@ def test_position_monitor_run_id_change(db_session):
     pos_b = monitor.get_active_position("BTC")
     assert pos_b.backtest_run_id == run_b.id
     assert pos_b.side == OrderSide.SELL
-
 
 def test_backtest_run_id_fk_constraint(db_session):
     """Test that backtest_run_id foreign key constraint is enforced."""

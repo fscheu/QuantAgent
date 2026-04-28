@@ -7,22 +7,11 @@ import pandas as pd
 import pytest
 
 from quantagent.data.provider import DataProvider
-from quantagent.database import SessionLocal
 from quantagent.models import MarketData
 
 
 class TestDataProvider:
     """Test suite for DataProvider."""
-
-    @pytest.fixture
-    def db_session(self):
-        """Create test database session."""
-        session = SessionLocal()
-        yield session
-        # Cleanup
-        session.query(MarketData).delete()
-        session.commit()
-        session.close()
 
     @pytest.fixture
     def provider(self, db_session):

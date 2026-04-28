@@ -8,37 +8,12 @@ import pandas as pd
 import pytest
 
 from quantagent.backtesting.backtest import Backtest, BacktestMetrics
-from quantagent.database import SessionLocal
 from quantagent.models import BacktestRun, Environment, MarketData, Signal, Trade
 
 pytestmark = pytest.mark.api
 
-
 class TestBacktestIntegration:
     """Integration test suite for full backtest flow."""
-
-    @pytest.fixture
-    def db_session(self):
-        """Create test database session."""
-        from sqlalchemy import text
-
-        session = SessionLocal()
-        yield session
-        # Cleanup - Delete all in correct FK order
-        from quantagent.models import ActivePosition, Fill, Order
-
-        session.query(Fill).delete()
-        session.query(Trade).delete()
-        # Circular FK between signals/orders, disable FK checks temporarily
-        session.execute(text("SET session_replication_role = 'replica';"))
-        session.query(Order).delete()
-        session.query(Signal).delete()
-        session.execute(text("SET session_replication_role = 'origin';"))
-        session.query(ActivePosition).delete()
-        session.query(BacktestRun).delete()
-        session.query(MarketData).delete()
-        session.commit()
-        session.close()
 
     @pytest.fixture
     def sample_config(self):

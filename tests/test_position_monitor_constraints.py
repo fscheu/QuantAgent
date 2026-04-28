@@ -3,23 +3,9 @@
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
-from quantagent.database import Base
 from quantagent.models import ActivePosition, Environment, ExitPolicy, OrderSide
 from quantagent.trading.position_monitor import PositionMonitor
-
-
-@pytest.fixture
-def db_session():
-    """Create in-memory SQLite database for testing."""
-    engine = create_engine("sqlite:///:memory:")
-    Base.metadata.create_all(engine)
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    yield session
-    session.close()
 
 
 @pytest.fixture
@@ -27,11 +13,9 @@ def position_monitor(db_session):
     """Create PositionMonitor instance."""
     return PositionMonitor(db_session)
 
-
 # ============================================================================
 # CONSTRAINT VALIDATION TESTS (siguiendo TESTING_PATTERNS.md)
 # ============================================================================
-
 
 def test_active_position_has_required_fields(position_monitor):
     """Validate ActivePosition model has all required fields per design."""
@@ -77,7 +61,6 @@ def test_active_position_has_required_fields(position_monitor):
             "accuracy",
         ], f"Field {attr} should not be None"
 
-
 def test_default_values_are_correct(position_monitor):
     """Validate default values match design specifications."""
     position = position_monitor.open_position(
@@ -99,7 +82,6 @@ def test_default_values_are_correct(position_monitor):
     assert position.closed_at is None
     assert position.close_reason is None
     assert position.accuracy is None
-
 
 def test_position_with_all_optional_fields(position_monitor):
     """Validate position creation with all optional fields set."""
@@ -124,11 +106,9 @@ def test_position_with_all_optional_fields(position_monitor):
     assert position.trade_id == 123
     assert position.signal_id == 456
 
-
 # ============================================================================
 # INVARIANTS TESTS
 # ============================================================================
-
 
 def test_candles_since_entry_never_decrements(position_monitor):
     """Invariant: candles_since_entry should only increment, never decrement."""
@@ -155,7 +135,6 @@ def test_candles_since_entry_never_decrements(position_monitor):
         ), f"candles_since_entry decremented: {prev_value} -> {current_value}"
         prev_value = current_value
 
-
 def test_candles_direction_never_exceeds_prediction_horizon(position_monitor):
     """Invariant: len(candles_direction) <= prediction_horizon."""
     position = position_monitor.open_position(
@@ -177,7 +156,6 @@ def test_candles_direction_never_exceeds_prediction_horizon(position_monitor):
         assert (
             len(position.candles_direction) <= position.prediction_horizon
         ), f"candles_direction exceeded horizon: {len(position.candles_direction)} > {position.prediction_horizon}"
-
 
 def test_accuracy_is_between_zero_and_one(position_monitor):
     """Invariant: accuracy should be in [0.0, 1.0] range."""
@@ -202,7 +180,6 @@ def test_accuracy_is_between_zero_and_one(position_monitor):
         0.0 <= position.accuracy <= 1.0
     ), f"accuracy out of range: {position.accuracy}"
 
-
 def test_closed_position_has_closed_at_timestamp(position_monitor):
     """Invariant: closed position must have closed_at timestamp."""
     position = position_monitor.open_position(
@@ -221,11 +198,9 @@ def test_closed_position_has_closed_at_timestamp(position_monitor):
     assert position.closed_at is not None
     assert position.close_reason == "STOP_LOSS"
 
-
 # ============================================================================
 # EDGE CASES & ERROR HANDLING
 # ============================================================================
-
 
 def test_close_already_closed_position_is_idempotent(position_monitor):
     """Edge case: closing an already closed position should not error."""
@@ -247,7 +222,6 @@ def test_close_already_closed_position_is_idempotent(position_monitor):
 
     assert position.is_active is False
     assert position.close_reason == "MANUAL"  # Reason updated
-
 
 def test_update_tracking_on_closed_position_still_increments(position_monitor):
     """Edge case: tracking on closed position (shouldn't happen but shouldn't crash)."""
@@ -271,7 +245,6 @@ def test_update_tracking_on_closed_position_still_increments(position_monitor):
     # Should still increment (no guard in implementation)
     assert position.candles_since_entry == 1
 
-
 def test_zero_quantity_position(position_monitor):
     """Edge case: position with zero quantity."""
     position = position_monitor.open_position(
@@ -286,7 +259,6 @@ def test_zero_quantity_position(position_monitor):
 
     assert position.quantity == Decimal("0.0")
     assert position.is_active is True
-
 
 def test_candle_tracking_with_equal_prices(position_monitor):
     """Edge case: current_price == prev_close (flat candle)."""
@@ -309,7 +281,6 @@ def test_candle_tracking_with_equal_prices(position_monitor):
     # Should be classified as "down" per implementation logic
     assert position.candles_direction == ["down"]
 
-
 def test_accuracy_calculation_all_correct_predictions(position_monitor):
     """Edge case: 100% accurate predictions."""
     position = position_monitor.open_position(
@@ -328,7 +299,6 @@ def test_accuracy_calculation_all_correct_predictions(position_monitor):
     position_monitor.close_position(position, reason="TIME_EXPIRED", exit_price=110.0)
 
     assert position.accuracy == 1.0
-
 
 def test_accuracy_calculation_all_wrong_predictions(position_monitor):
     """Edge case: 0% accurate predictions."""
@@ -350,7 +320,6 @@ def test_accuracy_calculation_all_wrong_predictions(position_monitor):
 
     assert position.accuracy == 0.0
 
-
 def test_accuracy_calculation_short_with_up_candles(position_monitor):
     """Edge case: SHORT position with up candles (all wrong)."""
     position = position_monitor.open_position(
@@ -370,7 +339,6 @@ def test_accuracy_calculation_short_with_up_candles(position_monitor):
     position_monitor.close_position(position, reason="STOP_LOSS", exit_price=105.0)
 
     assert position.accuracy == 0.0
-
 
 def test_get_active_position_returns_most_recent_if_multiple(
     position_monitor, db_session
@@ -408,11 +376,9 @@ def test_get_active_position_returns_most_recent_if_multiple(
     assert active is not None
     assert active.id == pos1.id  # Returns first one
 
-
 # ============================================================================
 # VALIDATION OF PERSISTENCE
 # ============================================================================
-
 
 def test_position_persists_after_session_close(db_session):
     """Validate position is actually persisted to DB."""
@@ -437,7 +403,6 @@ def test_position_persists_after_session_close(db_session):
     assert db_position.symbol == "BTCUSDT"
     assert db_position.is_active is True
 
-
 def test_closed_position_not_returned_by_get_active(position_monitor):
     """Validate closed positions are not returned by get_active_position."""
     position = position_monitor.open_position(
@@ -456,11 +421,9 @@ def test_closed_position_not_returned_by_get_active(position_monitor):
     active = position_monitor.get_active_position("BTCUSDT")
     assert active is None
 
-
 # ============================================================================
 # TESTS FOR DIFFERENT EXIT POLICIES
 # ============================================================================
-
 
 def test_all_exit_policies_can_be_set(position_monitor):
     """Validate all ExitPolicy enum values are valid."""
