@@ -285,6 +285,15 @@ class OrderManager:
         Returns:
             Filled Order for the new position if successful, None if failed
         """
+        # Log initial state
+        portfolio_value = self.portfolio.get_total_value()
+        logger.info(
+            f"{symbol}: Starting position reversal - "
+            f"Current: {('LONG' if existing_qty > 0 else 'SHORT')} {abs(existing_qty):.6f}, "
+            f"Target: {new_side.name} {new_qty:.6f}, "
+            f"Portfolio value: ${portfolio_value:.2f}"
+        )
+
         # Step 1: Close existing position
         close_side = OrderSide.SELL if existing_qty > 0 else OrderSide.BUY
         close_qty = abs(existing_qty)
@@ -341,7 +350,10 @@ class OrderManager:
                 f"{symbol}: Portfolio updated - close {close_side} {close_qty:.6f} executed"
             )
         except Exception as e:
-            logger.error(f"{symbol}: Close order portfolio update failed - {str(e)}")
+            logger.error(
+                f"{symbol}: Reversal ABORTED at step 1 - Close order portfolio update failed: {type(e).__name__}: {str(e)}. "
+                f"Position may remain in original state. Portfolio value: ${self.portfolio.get_total_value():.2f}"
+            )
             return None
 
         # Update risk tracker for close
@@ -367,7 +379,8 @@ class OrderManager:
 
         # Step 2: Open new position
         logger.info(
-            f"{symbol}: Executing reversal - Step 2: Open {new_side} {new_qty:.6f}"
+            f"{symbol}: Reversal step 1/2 complete - position closed. "
+            f"Proceeding to step 2: Open {new_side} {new_qty:.6f}"
         )
 
         # Validate new trade
@@ -375,8 +388,9 @@ class OrderManager:
             symbol, new_side, new_qty, current_price
         )
         if not is_valid:
-            logger.warning(
-                f"{symbol}: New position order rejected - {reason} (position already closed)"
+            logger.error(
+                f"{symbol}: Reversal PARTIAL FAILURE - Close succeeded but new position rejected: {reason}. "
+                f"Position is now FLAT (no exposure). Portfolio value: ${self.portfolio.get_total_value():.2f}"
             )
             return None
 
@@ -420,7 +434,10 @@ class OrderManager:
                 f"{symbol}: Portfolio updated - new {new_side} {new_qty:.6f} executed"
             )
         except Exception as e:
-            logger.error(f"{symbol}: New order portfolio update failed - {str(e)}")
+            logger.error(
+                f"{symbol}: Reversal PARTIAL FAILURE - Close succeeded but new order portfolio update failed: {type(e).__name__}: {str(e)}. "
+                f"Position is now FLAT (no exposure). Portfolio value: ${self.portfolio.get_total_value():.2f}"
+            )
             return None
 
         # Update risk tracker for new position
@@ -436,5 +453,10 @@ class OrderManager:
             self.db.rollback()
             return None
 
-        logger.info(f"{symbol}: Position reversal completed successfully")
+        logger.info(
+            f"{symbol}: Position reversal COMPLETE - "
+            f"New position: {new_side} {self.portfolio.positions.get(symbol, {}).get('qty', 0):.6f} "
+            f"@ ${self.portfolio.positions.get(symbol, {}).get('avg_cost', 0):.2f}. "
+            f"Portfolio value: ${self.portfolio.get_total_value():.2f}"
+        )
         return filled_new_order
