@@ -10,6 +10,8 @@ This module provides pytest fixtures for:
 """
 
 import os
+import sys
+import types
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
@@ -25,6 +27,46 @@ from quantagent.agent_models import (
     TradingDecision,
     TrendReport,
 )
+
+
+if "apscheduler" not in sys.modules:
+    apscheduler = types.ModuleType("apscheduler")
+    schedulers = types.ModuleType("apscheduler.schedulers")
+    background = types.ModuleType("apscheduler.schedulers.background")
+    triggers = types.ModuleType("apscheduler.triggers")
+    interval = types.ModuleType("apscheduler.triggers.interval")
+
+    class BackgroundScheduler:
+        def __init__(self, *args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+
+        def add_job(self, *args, **kwargs):
+            return None
+
+        def start(self):
+            return None
+
+        def shutdown(self, wait=True):
+            return None
+
+    class IntervalTrigger:
+        def __init__(self, *args, **kwargs):
+            self.args = args
+            self.kwargs = kwargs
+
+    background.BackgroundScheduler = BackgroundScheduler
+    interval.IntervalTrigger = IntervalTrigger
+    schedulers.background = background
+    triggers.interval = interval
+    apscheduler.schedulers = schedulers
+    apscheduler.triggers = triggers
+
+    sys.modules["apscheduler"] = apscheduler
+    sys.modules["apscheduler.schedulers"] = schedulers
+    sys.modules["apscheduler.schedulers.background"] = background
+    sys.modules["apscheduler.triggers"] = triggers
+    sys.modules["apscheduler.triggers.interval"] = interval
 
 # ============================================================================
 # Data Fixtures
