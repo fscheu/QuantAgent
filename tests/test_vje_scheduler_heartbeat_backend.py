@@ -191,3 +191,67 @@ def test_db_handle_missing_heartbeat_table_fails_closed():
 
     assert db.get_latest_heartbeat("paper") is None
     assert db.get_recent_heartbeats("paper", limit=10) == []
+
+
+# ---------------------------------------------------------------------------
+# Additional coverage: full cycle integration + edge cases
+# ---------------------------------------------------------------------------
+
+
+def test_analyze_and_trade_full_cycle_writes_completed_heartbeat():
+    """AC-3 end-to-end: real DB integration — full cycle leaves status='completed'."""
+    SessionLocal = _make_session(["signals", "orders", "trades", "scheduler_heartbeats"])
+    with SessionLocal() as session:
+        scheduler = _make_scheduler(session, ["BTC"])
+        stats = scheduler.analyze_and_trade()
+
+        hb = session.query(SchedulerHeartbeat).first()
+        assert hb is not None
+        assert hb.status == "completed"
+        assert hb.completed_at is not None
+        assert stats["processed"] == 1
+        assert stats["errors"] == 0
+
+
+def test_analyze_and_trade_per_asset_error_completes_heartbeat_with_error_count():
+    """AC-4 variant: per-asset DataFetchError increments error count but heartbeat completes."""
+    SessionLocal = _make_session(["signals", "orders", "trades", "scheduler_heartbeats"])
+    with SessionLocal() as session:
+        scheduler = _make_scheduler(session, ["BTC"])
+        # Empty DataFrame triggers DataFetchError("no data returned")
+        scheduler.data_provider.get_ohlc.return_value = pd.DataFrame()
+
+        stats = scheduler.analyze_and_trade()
+
+        hb = session.query(SchedulerHeartbeat).first()
+        assert hb is not None
+        assert hb.status == "completed"
+        assert stats["errors"] == 1
+        assert stats["processed"] == 0
+
+
+def test_db_handle_returns_none_for_different_environment():
+    """Edge Case 3: 'paper' heartbeat is not returned when querying 'backtest'."""
+    SessionLocal = _make_session(["signals", "orders", "trades", "scheduler_heartbeats"])
+    with SessionLocal() as session:
+        session.add(
+            SchedulerHeartbeat(
+                timestamp=datetime.utcnow() - timedelta(minutes=5),
+                status="completed",
+                environment=Environment.PAPER,
+                assets=["BTC"],
+                stats={"processed": 1, "errors": 0, "duration_seconds": 1.0, "total": 1},
+            )
+        )
+        session.commit()
+
+    db = DbHandle(ok=True, error=None, SessionLocal=SessionLocal)
+    assert db.get_latest_heartbeat("backtest") is None
+    assert db.get_recent_heartbeats("backtest", limit=10) == []
+
+
+def test_db_handle_ok_false_short_circuits_queries():
+    """DbHandle.ok=False short-circuits without touching the DB."""
+    db = DbHandle(ok=False, error="DB unavailable", SessionLocal=None)
+    assert db.get_latest_heartbeat("paper") is None
+    assert db.get_recent_heartbeats("paper", limit=10) == []
