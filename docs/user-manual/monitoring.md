@@ -572,6 +572,7 @@ docker-compose restart db
 
 ### Daily (5 minutes)
 - [ ] Check Dashboard KPIs
+- [ ] Check Paper Trading tab for scheduler health
 - [ ] Scan logs for errors
 - [ ] Verify database connection
 

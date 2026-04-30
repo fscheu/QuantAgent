@@ -31,6 +31,7 @@ The interface has **7 main tabs** organized by function:
 | **Analyses** | Browse AI agent decisions | Review why trades were made |
 | **Backtesting** | Run historical strategy tests | Validate new strategies |
 | **Replay** | Re-test with different settings | Compare risk profiles |
+| **Paper Trading** | Monitor automated scheduler and view live paper trade status | Daily check when automation is active |
 | **Orders & Positions** | View trades and holdings | Track active positions |
 | **Logs** | System events and errors | Troubleshooting |
 
@@ -349,6 +350,41 @@ Trades: 42, Win Rate: 57.1%, P&L: $8,450
 - Module: Which system component
 - Message: What happened
 - Metadata: Additional context (JSON)
+
+---
+
+## Tab 8: Paper Trading
+
+**Purpose:** Monitor the automated paper trading scheduler and inspect its recent execution cycles.
+
+### What You'll See
+
+**Status Card**
+- Current scheduler health: 🟢 Active, 🟡 Stale, 🔴 Stopped, or ⏳ Running
+- Last successful cycle timestamp (human-readable, e.g. "12m ago")
+- Cycle summary: assets processed, errors encountered, duration
+
+**Recent Runs Table**
+Shows up to 10 most recent scheduler cycles in descending order:
+- Timestamp: when the cycle started
+- Duration: how long the full cycle took
+- Assets: tickers processed
+- Errors: count of assets that failed
+- Status: running, completed, or error
+
+> If the table is empty and the scheduler hasn't been started, follow the [Paper Trading Automation guide](paper-trading-automation.md) to launch it.
+
+### How to Use It
+
+**Daily automation check:**
+1. Open the Paper Trading tab
+2. Confirm status is 🟢 Active or ⏳ Running
+3. Review recent runs for error trends (rising error count = check logs)
+4. If status is 🟡 Stale or 🔴 Stopped, investigate the terminal running `python apps/paper_trading.py` or check Logs tab → filter module `quantagent.trading.scheduler`
+
+**Related:** [Paper Trading Automation](paper-trading-automation.md) · [Monitoring Guide](monitoring.md#scheduler-status)
+
+<!-- screenshot: Paper Trading tab showing status card and recent runs table -->
 
 ---
 
