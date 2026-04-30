@@ -370,3 +370,21 @@ class Log(Base):
     extra_data = Column(JSON)
     thread_id = Column(String(100), index=True)
     checkpoint_id = Column(String(100))
+
+
+class SchedulerHeartbeat(Base):
+    """Track TradingScheduler execution cycles for monitoring."""
+
+    __tablename__ = "scheduler_heartbeats"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    timestamp = Column(DateTime, nullable=False, index=True)
+    completed_at = Column(DateTime, nullable=True)
+    status = Column(String(20), nullable=False)  # running, completed, error
+    environment = Column(Enum(Environment), nullable=False, index=True)
+    assets = Column(JSON, nullable=True)  # List of symbols processed
+    stats = Column(JSON, nullable=True)  # {processed, errors, duration_seconds, total}
+    last_trade_id = Column(Integer, ForeignKey("trades.id"), nullable=True)
+    error_message = Column(Text, nullable=True)
+
+    __table_args__ = (Index("idx_heartbeat_env_ts", "environment", "timestamp"),)

@@ -18,6 +18,7 @@ from apps.streamlit.views.configuration import render as render_configuration
 from apps.streamlit.views.dashboard import render as render_dashboard
 from apps.streamlit.views.logs import render as render_logs
 from apps.streamlit.views.orders_positions import render as render_orders_positions
+from apps.streamlit.views.paper_trading import render as render_paper_trading
 from apps.streamlit.views.replay import render as render_replay
 from quantagent.logging_config import setup_logging
 
@@ -71,6 +72,7 @@ if not db.ok:
 tabs = st.tabs(
     [
         "Dashboard",
+        "Paper Trading",
         "Configuration",
         "Analyses",
         "Backtesting",
@@ -84,19 +86,22 @@ with tabs[0]:
     render_dashboard(db, environment)
 
 with tabs[1]:
-    render_configuration(db, environment)
+    render_paper_trading(db, environment)
 
 with tabs[2]:
-    render_analyses(db, environment)
+    render_configuration(db, environment)
 
 with tabs[3]:
-    render_backtesting(db, environment)
+    render_analyses(db, environment)
 
 with tabs[4]:
-    render_replay(db, environment)
+    render_backtesting(db, environment)
 
 with tabs[5]:
-    render_orders_positions(db, environment)
+    render_replay(db, environment)
 
 with tabs[6]:
+    render_orders_positions(db, environment)
+
+with tabs[7]:
     render_logs(db)
