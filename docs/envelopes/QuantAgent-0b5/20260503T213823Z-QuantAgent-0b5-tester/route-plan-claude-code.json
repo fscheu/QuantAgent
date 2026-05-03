@@ -1,0 +1,31 @@
+{
+  "run_id": "20260503T213823Z-QuantAgent-0b5-tester",
+  "created_at": "2026-05-03T21:38:27.826169+00:00",
+  "executor": "claude-code",
+  "phase": "tester",
+  "issue_id": "QuantAgent-0b5",
+  "dry_run": true,
+  "adapter": {
+    "command_name": "claude",
+    "available": true,
+    "requires_pty": false,
+    "output_mode": "stream",
+    "max_turns": null
+  },
+  "paths": {
+    "envelope": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-0b5/20260503T213823Z-QuantAgent-0b5-tester/input-envelope.md",
+    "prompt": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-0b5/20260503T213823Z-QuantAgent-0b5-tester/executor-prompt-claude-code.md",
+    "artifacts_dir": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-0b5/20260503T213823Z-QuantAgent-0b5-tester",
+    "workdir": "/home/azureuser/repos/projects/QuantAgent",
+    "run_report": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-0b5/20260503T213823Z-QuantAgent-0b5-tester/run-report.md",
+    "result_json": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-0b5/20260503T213823Z-QuantAgent-0b5-tester/result.json",
+    "commands_log": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-0b5/20260503T213823Z-QuantAgent-0b5-tester/commands.log",
+    "quality_gates_log": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-0b5/20260503T213823Z-QuantAgent-0b5-tester/quality-gates.log"
+  },
+  "command_preview": "claude -p \"$(cat /home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-0b5/20260503T213823Z-QuantAgent-0b5-tester/executor-prompt-claude-code.md)\" --output-format stream-json --verbose --include-partial-messages --allowedTools Read,Edit,Write,Bash",
+  "notes": [
+    "Dry-run does not invoke the external CLI.",
+    "Codex command is wrapped with script(1) for pseudo-tty when executed by this router.",
+    "During migration, git push / merge / deploy remain blocked by validation."
+  ]
+}
