@@ -127,7 +127,7 @@ class TestNetPnLLongClose:
         )
         assert closing_trade is not None
         assert closing_trade.commission == Decimal("10.0")
-        
+
         # Gross P&L = (65000 - 60000) * 0.1 = $500
         # Net P&L = $500 - $10 = $490
         expected_pnl = Decimal("490.0")
@@ -181,7 +181,7 @@ class TestNetPnLShortClose:
         )
         assert closing_trade is not None
         assert closing_trade.commission == Decimal("10.0")
-        
+
         # Gross P&L = (65000 - 60000) * 0.1 = $500
         # Net P&L = $500 - $10 = $490
         expected_pnl = Decimal("490.0")
@@ -234,7 +234,7 @@ class TestNetPnLPercent:
             .first()
         )
         assert closing_trade is not None
-        
+
         # Net P&L = $490, Entry notional = $6,000
         # pnl_pct = (490 / 6000) * 100 = 8.1667%
         expected_pnl_pct = (Decimal("490") / Decimal("6000")) * 100
@@ -347,7 +347,7 @@ class TestCommissionDefaults:
         )
         assert closing_trade is not None
         assert closing_trade.commission == Decimal("0")
-        
+
         # P&L should be gross (no commission deduction)
         # With 1% slippage: buy at ~60600, sell at ~64350
         # Approximate P&L around $375 (exact value depends on slippage)
