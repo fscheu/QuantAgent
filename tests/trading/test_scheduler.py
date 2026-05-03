@@ -3,12 +3,21 @@ from unittest.mock import MagicMock, Mock
 import pandas as pd
 import pytest
 
-from quantagent.models import Environment, TradeSignal
+from quantagent.models import Environment, OrderSide, TradeSignal
 from quantagent.settings import SchedulerSettings
 from quantagent.strategy.base import TradingSignal as StrategyTradingSignal
 from quantagent.trading.scheduler import (
     TradingScheduler,
 )
+
+
+def _make_mock_order(side=OrderSide.BUY, quantity="1.0", symbol="BTC-USD"):
+    """Create a mock order with necessary attributes for PositionMonitor."""
+    mock_order = Mock()
+    mock_order.side = side
+    mock_order.quantity = quantity
+    mock_order.symbol = symbol
+    return mock_order
 
 
 class DummySession:
@@ -35,6 +44,13 @@ class DummySession:
 
     def rollback(self):
         self.rolled_back = True
+
+    def query(self, model):
+        """Return a mock query object that returns no active positions."""
+        mock_query = Mock()
+        mock_query.filter.return_value.first.return_value = None
+        mock_query.filter.return_value.all.return_value = []
+        return mock_query
 
 
 class DummyScheduler:
@@ -226,7 +242,7 @@ def test_trading_scheduler_long_signal_executes_order():
     data_provider.get_ohlc.return_value = _sample_df()
 
     order_manager = MagicMock()
-    order_manager.execute_decision.return_value = object()
+    order_manager.execute_decision.return_value = _make_mock_order()
 
     strategy = Mock()
     strategy.generate_signal.return_value = StrategyTradingSignal(
@@ -280,7 +296,7 @@ def test_trading_scheduler_short_signal_executes_order():
     data_provider.get_ohlc.return_value = _sample_df()
 
     order_manager = MagicMock()
-    order_manager.execute_decision.return_value = object()
+    order_manager.execute_decision.return_value = _make_mock_order()
 
     strategy = Mock()
     strategy.generate_signal.return_value = StrategyTradingSignal(
@@ -376,7 +392,7 @@ def test_scheduler_transient_error_continue_with_next_asset():
     ]
 
     order_manager = MagicMock()
-    order_manager.execute_decision.return_value = object()
+    order_manager.execute_decision.return_value = _make_mock_order()
 
     strategy = Mock()
     strategy.generate_signal.return_value = StrategyTradingSignal(
@@ -431,7 +447,7 @@ def test_scheduler_analysis_failure_continues_processing():
     data_provider.get_ohlc.return_value = _sample_df()
 
     order_manager = MagicMock()
-    order_manager.execute_decision.return_value = object()
+    order_manager.execute_decision.return_value = _make_mock_order()
 
     strategy = Mock()
     # First call raises exception, second succeeds
@@ -489,7 +505,7 @@ def test_scheduler_environment_tagging_in_execution():
     data_provider.get_ohlc.return_value = _sample_df()
 
     order_manager = MagicMock()
-    order_manager.execute_decision.return_value = object()
+    order_manager.execute_decision.return_value = _make_mock_order()
 
     strategy = Mock()
     strategy.generate_signal.return_value = StrategyTradingSignal(
@@ -580,7 +596,7 @@ def test_scheduler_processes_multiple_assets():
     data_provider.get_ohlc.return_value = _sample_df()
 
     order_manager = MagicMock()
-    order_manager.execute_decision.return_value = object()
+    order_manager.execute_decision.return_value = _make_mock_order()
 
     strategy = Mock()
     strategy.generate_signal.return_value = StrategyTradingSignal(
@@ -637,7 +653,7 @@ def test_scheduler_tracks_last_run_stats():
     data_provider.get_ohlc.return_value = _sample_df()
 
     order_manager = MagicMock()
-    order_manager.execute_decision.return_value = object()
+    order_manager.execute_decision.return_value = _make_mock_order()
 
     strategy = Mock()
     strategy.generate_signal.return_value = StrategyTradingSignal(
