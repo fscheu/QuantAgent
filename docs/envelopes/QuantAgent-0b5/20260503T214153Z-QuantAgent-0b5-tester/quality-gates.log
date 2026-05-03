@@ -1,0 +1,4 @@
+[PASS] ruff check --fix tests/trading/test_scheduler_position_monitor_integration.py tests/trading/test_scheduler.py tests/trading/test_scheduler_position_monitor.py tests/test_vje_scheduler_heartbeat_backend.py
+[PASS] python -m py_compile quantagent/trading/scheduler.py
+[PASS] pytest tests/trading/test_scheduler_position_monitor_integration.py -v -> 3 passed
+[PASS] pytest tests/trading/test_scheduler.py tests/trading/test_scheduler_position_monitor.py tests/test_vje_scheduler_heartbeat_backend.py tests/trading/test_scheduler_position_monitor_integration.py -v -> 45 passed

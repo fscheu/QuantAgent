@@ -1,0 +1,6 @@
+2026-05-03T21:40:58Z /home/azureuser/repos/projects/QuantAgent/.venv/bin/python -m ruff check --fix tests/trading/test_scheduler_position_monitor_integration.py tests/trading/test_scheduler.py tests/trading/test_scheduler_position_monitor.py tests/test_vje_scheduler_heartbeat_backend.py
+2026-05-03T21:40:58Z /home/azureuser/repos/projects/QuantAgent/.venv/bin/python -m py_compile quantagent/trading/scheduler.py
+2026-05-03T21:40:58Z /home/azureuser/repos/projects/QuantAgent/.venv/bin/python -m pytest tests/trading/test_scheduler_position_monitor_integration.py -v
+2026-05-03T21:41:01Z /home/azureuser/repos/projects/QuantAgent/.venv/bin/python -m pytest tests/trading/test_scheduler.py tests/trading/test_scheduler_position_monitor.py tests/test_vje_scheduler_heartbeat_backend.py tests/trading/test_scheduler_position_monitor_integration.py -v
+2026-05-03T21:41:30Z git add tests/trading/test_scheduler_position_monitor_integration.py
+2026-05-03T21:41:31Z git commit -m "test(QuantAgent-0b5): add scheduler position-monitor integration coverage"

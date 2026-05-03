@@ -8,7 +8,15 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from apps.streamlit.services.db import DbHandle
-from quantagent.models import Environment, Order, OrderSide, SchedulerHeartbeat, Signal, Trade
+from quantagent.models import (
+    ActivePosition,
+    Environment,
+    Order,
+    OrderSide,
+    SchedulerHeartbeat,
+    Signal,
+    Trade,
+)
 from quantagent.settings import SchedulerSettings
 from quantagent.strategy.base import TradingSignal as StrategyTradingSignal
 from quantagent.trading.scheduler import TradingScheduler
@@ -22,6 +30,7 @@ def _make_session(table_names: list[str]):
             "orders": Order.__table__,
             "trades": Trade.__table__,
             "scheduler_heartbeats": SchedulerHeartbeat.__table__,
+            "active_positions": ActivePosition.__table__,
         }[name]
         table.create(bind=engine)
     return sessionmaker(bind=engine, autoflush=False, autocommit=False)
@@ -57,7 +66,11 @@ def _make_scheduler(session, assets: list[str] | None = None) -> TradingSchedule
         reasoning="test signal",
     )
     order_manager = MagicMock()
-    order_manager.execute_decision.return_value = object()
+    order_manager.execute_decision.return_value = Mock(
+        side=OrderSide.BUY,
+        quantity="1.0",
+        symbol="BTC",
+    )
     return TradingScheduler(
         trading_graph=Mock(),
         order_manager=order_manager,
@@ -69,7 +82,9 @@ def _make_scheduler(session, assets: list[str] | None = None) -> TradingSchedule
 
 
 def test_upsert_heartbeat_start_updates_existing_row_for_environment():
-    SessionLocal = _make_session(["signals", "orders", "trades", "scheduler_heartbeats"])
+    SessionLocal = _make_session(
+        ["signals", "orders", "trades", "scheduler_heartbeats", "active_positions"]
+    )
     with SessionLocal() as session:
         scheduler = _make_scheduler(session, ["BTC", "ETH"])
         first_started = datetime.utcnow() - timedelta(minutes=5)
@@ -87,7 +102,9 @@ def test_upsert_heartbeat_start_updates_existing_row_for_environment():
 
 
 def test_upsert_heartbeat_complete_sets_last_trade_id():
-    SessionLocal = _make_session(["signals", "orders", "trades", "scheduler_heartbeats"])
+    SessionLocal = _make_session(
+        ["signals", "orders", "trades", "scheduler_heartbeats", "active_positions"]
+    )
     with SessionLocal() as session:
         session.add(
             Trade(
@@ -115,7 +132,9 @@ def test_upsert_heartbeat_complete_sets_last_trade_id():
 
 
 def test_analyze_and_trade_continues_when_heartbeat_start_fails():
-    SessionLocal = _make_session(["signals", "orders", "trades", "scheduler_heartbeats"])
+    SessionLocal = _make_session(
+        ["signals", "orders", "trades", "scheduler_heartbeats", "active_positions"]
+    )
     with SessionLocal() as session:
         scheduler = _make_scheduler(session)
         scheduler._upsert_heartbeat_start = Mock(return_value=None)
@@ -130,7 +149,9 @@ def test_analyze_and_trade_continues_when_heartbeat_start_fails():
 
 
 def test_db_handle_returns_latest_heartbeat_dict():
-    SessionLocal = _make_session(["signals", "orders", "trades", "scheduler_heartbeats"])
+    SessionLocal = _make_session(
+        ["signals", "orders", "trades", "scheduler_heartbeats", "active_positions"]
+    )
     started = datetime.utcnow() - timedelta(minutes=10)
     completed = datetime.utcnow() - timedelta(minutes=9)
     with SessionLocal() as session:
@@ -159,7 +180,9 @@ def test_db_handle_returns_latest_heartbeat_dict():
 
 
 def test_db_handle_recent_heartbeats_are_limited_and_sorted_desc():
-    SessionLocal = _make_session(["signals", "orders", "trades", "scheduler_heartbeats"])
+    SessionLocal = _make_session(
+        ["signals", "orders", "trades", "scheduler_heartbeats", "active_positions"]
+    )
     base = datetime.utcnow()
     with SessionLocal() as session:
         session.add_all(
@@ -200,7 +223,9 @@ def test_db_handle_missing_heartbeat_table_fails_closed():
 
 def test_analyze_and_trade_full_cycle_writes_completed_heartbeat():
     """AC-3 end-to-end: real DB integration — full cycle leaves status='completed'."""
-    SessionLocal = _make_session(["signals", "orders", "trades", "scheduler_heartbeats"])
+    SessionLocal = _make_session(
+        ["signals", "orders", "trades", "scheduler_heartbeats", "active_positions"]
+    )
     with SessionLocal() as session:
         scheduler = _make_scheduler(session, ["BTC"])
         stats = scheduler.analyze_and_trade()
@@ -215,7 +240,9 @@ def test_analyze_and_trade_full_cycle_writes_completed_heartbeat():
 
 def test_analyze_and_trade_per_asset_error_completes_heartbeat_with_error_count():
     """AC-4 variant: per-asset DataFetchError increments error count but heartbeat completes."""
-    SessionLocal = _make_session(["signals", "orders", "trades", "scheduler_heartbeats"])
+    SessionLocal = _make_session(
+        ["signals", "orders", "trades", "scheduler_heartbeats", "active_positions"]
+    )
     with SessionLocal() as session:
         scheduler = _make_scheduler(session, ["BTC"])
         # Empty DataFrame triggers DataFetchError("no data returned")
@@ -232,7 +259,9 @@ def test_analyze_and_trade_per_asset_error_completes_heartbeat_with_error_count(
 
 def test_db_handle_returns_none_for_different_environment():
     """Edge Case 3: 'paper' heartbeat is not returned when querying 'backtest'."""
-    SessionLocal = _make_session(["signals", "orders", "trades", "scheduler_heartbeats"])
+    SessionLocal = _make_session(
+        ["signals", "orders", "trades", "scheduler_heartbeats", "active_positions"]
+    )
     with SessionLocal() as session:
         session.add(
             SchedulerHeartbeat(
