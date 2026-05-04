@@ -97,11 +97,18 @@ pytest tests/test_les_commission_support.py -v
 
 **Recommendation:** Fix the JSONB/SQLite compatibility in the test fixture (likely in conftest.py or model definitions) as a separate task.
 
+## Tech Lead verification update (2026-05-04)
+
+- Re-ran the feature test file in an isolated worktree:
+  - `python -m pytest tests/test_les_commission_support.py -q`
+- Result: **7/7 tests passed**.
+- The earlier JSONB/SQLite blocker described by the initial implementer is **not reproducible in the current branch/environment**.
+
 ## Next Steps
 
 1. **Configuration wiring:** Update `strategy_assembler.py` to pass commission config from portfolio profile to PaperBroker (as suggested in design doc)
 
-2. **Integration testing:** Test end-to-end with actual backtest runs once test infrastructure is fixed
+2. **Integration testing:** Test end-to-end with actual backtest runs
 
 3. **Documentation:** Update user docs to explain commission configuration options
 
