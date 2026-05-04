@@ -1,0 +1,5 @@
+2026-05-04T02:40:03Z git worktree add -b feature/QuantAgent-app-fix-qa-deploy-notify-metadata /tmp/autodev-worktrees/QuantAgent/QuantAgent-app/techlead-correction-20260504T024003Z main
+2026-05-04T02:41:00Z patch .github/workflows/main-ci-deploy.yml (add actions/checkout@v4 to jobs.deploy-qa.steps)
+2026-05-04T02:42:07Z python YAML verification for deploy-qa checkout ordering
+2026-05-04T02:42:07Z git diff --check
+2026-05-04T02:42:07Z git diff -- .github/workflows/main-ci-deploy.yml

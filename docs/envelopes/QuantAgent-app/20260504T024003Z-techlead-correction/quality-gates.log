@@ -1,0 +1,3 @@
+PASS  python YAML verification: deploy-qa includes checkout as first step and success notification remains present
+PASS  git diff --check
+SKIPPED runtime GitHub Actions execution before merge (observed after push during integration)

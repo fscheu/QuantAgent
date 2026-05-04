@@ -135,6 +135,9 @@ jobs:
     if: success()
     
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Deploy to QA via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
