@@ -1,0 +1,3 @@
+2026-05-04T02:50:11Z /home/azureuser/repos/projects/QuantAgent/.venv/bin/python -m pytest tests/test_les_commission_support.py -q
+2026-05-04T02:52:04Z /home/azureuser/repos/projects/QuantAgent/.venv/bin/python -m py_compile quantagent/trading/paper_broker.py quantagent/portfolio/manager.py
+2026-05-04T02:52:05Z /home/azureuser/repos/projects/QuantAgent/.venv/bin/ruff check quantagent/trading/paper_broker.py quantagent/portfolio/manager.py tests/test_les_commission_support.py

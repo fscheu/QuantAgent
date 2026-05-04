@@ -134,20 +134,35 @@ class PortfolioManager:
             opened_at = datetime.utcnow()
             closed_at = None
 
+        # Extract commission from order fills
+        commission = Decimal("0")
+        if order.fills:
+            # Sum commissions from all fills (typically one fill per order in paper broker)
+            commission = sum(
+                (fill.commission for fill in order.fills), Decimal("0")
+            )
+
         # Calculate P&L for closing trades
         pnl: Decimal | None = None
         pnl_pct: float | None = None
 
         if is_closing_long or is_closing_short:
             if entry_price and entry_price > 0 and exit_price is not None:
+                # Calculate gross P&L
                 if is_closing_long:
                     # LONG: profit when exit > entry
-                    pnl = (exit_price - entry_price) * Decimal(str(fill_qty))
-                    pnl_pct = float((exit_price - entry_price) / entry_price * 100)
+                    gross_pnl = (exit_price - entry_price) * Decimal(str(fill_qty))
                 else:  # is_closing_short
                     # SHORT: profit when entry > exit
-                    pnl = (entry_price - exit_price) * Decimal(str(fill_qty))
-                    pnl_pct = float((entry_price - exit_price) / entry_price * 100)
+                    gross_pnl = (entry_price - exit_price) * Decimal(str(fill_qty))
+
+                # Calculate net P&L (gross - commission)
+                pnl = gross_pnl - commission
+
+                # Calculate net pnl_pct based on entry notional
+                entry_notional = entry_price * Decimal(str(fill_qty))
+                if entry_notional > 0:
+                    pnl_pct = float((pnl / entry_notional) * 100)
             else:
                 # Edge case: invalid entry_price or exit_price
                 import logging
@@ -167,7 +182,7 @@ class PortfolioManager:
             side=order.side,
             pnl=pnl,
             pnl_pct=pnl_pct,
-            commission=Decimal(str(0)),  # TODO: Support commission
+            commission=commission,
             environment=self.environment,
             opened_at=opened_at or datetime.utcnow(),  # Ensure opened_at is never None
             closed_at=closed_at,

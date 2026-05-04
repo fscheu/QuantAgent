@@ -1,0 +1,3 @@
+PASS  pytest tests/test_les_commission_support.py -q (7 passed)
+PASS  python -m py_compile quantagent/trading/paper_broker.py quantagent/portfolio/manager.py
+PASS  ruff check quantagent/trading/paper_broker.py quantagent/portfolio/manager.py tests/test_les_commission_support.py
