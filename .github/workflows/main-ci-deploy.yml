@@ -64,15 +64,13 @@ jobs:
           ruff check quantagent/ --output-format=github
         continue-on-error: true
       
-      # Unit tests temporarily disabled (tracked for later deep dive)
-      # - name: Run unit tests
-      #   id: tests
-      #   env:
-      #     DATABASE_URL: postgresql://test:test@localhost:5432/quantagent_test
-      #   run: |
-      #     pytest tests/ -v --tb=short --maxfail=5 \
-      #       -m "not integration and not slow"
-      #   continue-on-error: true
+      - name: Run unit tests
+        id: tests
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/quantagent_test
+        run: |
+          pytest tests/ -v --tb=short --maxfail=10 \
+            -m "not integration and not slow"
       
       - name: Determine overall status
         id: status

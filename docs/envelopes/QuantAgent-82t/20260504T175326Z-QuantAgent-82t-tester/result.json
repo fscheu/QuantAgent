@@ -1,0 +1,42 @@
+{
+  "run_id": "20260504T175326Z-QuantAgent-82t-tester",
+  "phase": "tester",
+  "issue": "QuantAgent-82t",
+  "result": "PARTIAL",
+  "branch": "feature/QuantAgent-82t-re-enable-unit-tests-in-ci-pipeline-main",
+  "date": "2026-05-04",
+  "acceptance_criteria": {
+    "AC-1": {"status": "PASS", "description": "Test step uncommented"},
+    "AC-2": {"status": "PASS", "description": "Correct pytest command (maxfail=10, markers)"},
+    "AC-3": {"status": "PASS", "description": "DATABASE_URL configured correctly"},
+    "AC-4": {"status": "PASS", "description": "No continue-on-error"},
+    "NT-2": {"status": "PASS", "description": "id: tests present"}
+  },
+  "local_test_run": {
+    "command": "pytest tests/ -v --tb=short --maxfail=10 -m 'not integration and not slow'",
+    "passed": 66,
+    "errors": 10,
+    "deselected": 29,
+    "exit_code": 1,
+    "error_cause": "DATABASE_URL not configured locally (expected - no local PostgreSQL)"
+  },
+  "ci_prediction": {
+    "test_backtest_api": "PASS (PostgreSQL available in CI)",
+    "jsonb_sqlite_tests": "FAIL (hardcode sqlite:///:memory:, incompatible with JSONB)",
+    "affected_files": [
+      "tests/test_portfolio_manager.py",
+      "tests/test_position_monitor.py",
+      "tests/test_position_monitor_constraints.py",
+      "tests/test_r78_trade_pnl_calculation.py"
+    ],
+    "pre_existing_issue": true,
+    "introduced_by_this_branch": false
+  },
+  "files_changed_by_implementer": [
+    ".github/workflows/main-ci-deploy.yml"
+  ],
+  "risks": [
+    "JSONB/SQLite incompatibility in 4 test files will cause CI failure even with PostgreSQL available"
+  ],
+  "next_step": "Create issue to fix JSONB/SQLite test fixtures before merging to main"
+}

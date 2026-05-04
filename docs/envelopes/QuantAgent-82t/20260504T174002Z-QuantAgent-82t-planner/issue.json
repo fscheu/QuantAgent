@@ -1,0 +1,27 @@
+{
+  "id": "QuantAgent-82t",
+  "title": "Re-enable unit tests in CI pipeline (main-ci-deploy.yml)",
+  "description": "El step de pytest en `.github/workflows/main-ci-deploy.yml` está comentado (\"Unit tests temporarily disabled\"). El CI actual solo corre lint, permitiendo que código roto llegue a QA. Con QuantAgent-sfc y QuantAgent-4ch resueltos, la suite estará limpia.\n\nEl workflow ya tiene un servicio PostgreSQL efímero configurado (postgres:16, DB `quantagent_test`, puerto 5432).\n\n**Cambio requerido:**\n1. Descomentar el step \"Run unit tests\" en `main-ci-deploy.yml`\n2. Comando: `pytest tests/ -v --tb=short --maxfail=10 -m \"not integration and not slow\"`\n3. Sin `continue-on-error: true` — debe bloquear el deploy si hay fallos\n4. Verificar que `DATABASE_URL` esté disponible en el env del step\n\n**Criterio de aceptación:**\n- Step \"Run unit tests\" habilitado y corriendo en cada push a main\n- Push con tests fallando bloquea el deploy a QA y notifica Telegram\n- Push con tests pasando despliega a QA normalmente\n\n**Archivos relevantes:**\n- `.github/workflows/main-ci-deploy.yml` — step comentado ~líneas 47-55\n- `pytest.ini` — markers: slow, integration, api, vision\n\n**Fuera de scope:** no modificar los tests, no tocar main-ci.yml (ticket separado QuantAgent-ng1).\n\n**Bloqueado por:** QuantAgent-sfc, QuantAgent-4ch\n",
+  "notes": "Bloqueado por QuantAgent-sfc (SQLite/JSONB) y QuantAgent-4ch (test failures)",
+  "status": "open",
+  "priority": 2,
+  "issue_type": "task",
+  "owner": "fscheu@gmail.com",
+  "created_at": "2026-04-21T02:12:55.425651305Z",
+  "created_by": "Federico Scheu",
+  "updated_at": "2026-04-28T12:00:54.922343567Z",
+  "labels": [
+    "openclaw:blocked_by:QuantAgent-4ch",
+    "openclaw:blocked_by:QuantAgent-sfc",
+    "openclaw:design_approved ci"
+  ],
+  "comments": [
+    {
+      "id": 60,
+      "issue_id": "QuantAgent-82t",
+      "author": "Federico Scheu",
+      "text": "### Skill: autodev-planner\n- **Resultado:** SUCCESS\n- **Run-ID:** 20260421-151500Z\n\n#### Qué hice\n- Analicé el workflow CI actual (`.github/workflows/main-ci-deploy.yml`)\n- Identifiqué el step comentado de tests (líneas 62-69)\n- Verifiqué configuración de PostgreSQL service (ya configurado correctamente)\n- Creé documentación completa para re-habilitar tests en CI:\n  - `docs/01_requirements/QuantAgent-82t-RQ-ci-test-enablement.md` — Requirements (problema, scope, 6 ACs)\n  - `docs/03_design/QuantAgent-82t-DS-ci-test-enablement.md` — Design técnico (cambios exactos, decisiones, flujo)\n  - `docs/05_acceptance_tests/QuantAgent-82t-AC-ci-test-enablement.md` — Acceptance criteria detallados + edge cases\n  - `docs/02_planning/QuantAgent-82t-PL-ci-test-enablement.md` — Planning (7 tareas, 1.35h total)\n\n#### Cambios en el ticket\n- No apliqué cambios de labels/estado (issue ya tiene `openclaw:design_approved ci`)\n- Issue permanece bloqueado por QuantAgent-sfc y QuantAgent-4ch (correcto)\n\n#### Problemas encontrados\n- Ninguno — el workflow ya tiene PostgreSQL service configurado correctamente\n- Cambio es simple: descomentar step + ajustar parámetros + remover `continue-on-error`\n\n#### Dudas / decisiones pendientes\n- Ninguna — diseño es directo:\n  1. Descomentar step \"Run unit tests\" (líneas 62-69)\n  2. Cambiar `maxfail=5` → `maxfail=10`\n  3. Eliminar `continue-on-error: true`\n  4. Verificar `DATABASE_URL` (ya está correcto)\n\n**Decisiones clave documentadas:**\n- `maxfail=10`: más contexto de debugging vs original `maxfail=5`\n- Sin `continue-on-error`: tests bloquean deploy (quality gate)\n- Markers `not integration and not slow`: solo unit tests en CI\n\n#### Next step recomendado\n- **autodev-implementer** — ejecutar las 7 tareas en `docs/02_planning/QuantAgent-82t-PL-ci-test-enablement.md`\n- **CRÍTICO Task 5:** validar tests localmente con PostgreSQL Docker antes de push\n- Cambio mínimo: solo editar `.github/workflows/main-ci-deploy.yml` (descomentar + ajustes)\n- **Bloqueadores deben estar resueltos** antes de implementar (QuantAgent-sfc, QuantAgent-4ch)\n",
+      "created_at": "2026-04-21T15:05:42Z"
+    }
+  ]
+}

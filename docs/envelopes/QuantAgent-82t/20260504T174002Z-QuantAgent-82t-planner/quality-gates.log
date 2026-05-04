@@ -1,0 +1,3 @@
+- router validation: PASS | command=validate envelope + capabilities | exit_code=0 | evidence=Envelope parsed and dangerous capabilities rejected.
+- executor availability: PASS | command=which claude | exit_code=0 | evidence=available=True
+- executor run: SUCCESS | command=claude -p "$(cat /home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-82t/20260504T174002Z-QuantAgent-82t-planner/executor-prompt-claude-code.md)" --output-format stream-json --verbose --include-partial-messages --allowedTools Read,Edit,Write,Bash | exit_code=0 | evidence=exit_code=0
