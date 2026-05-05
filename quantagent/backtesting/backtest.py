@@ -456,7 +456,10 @@ class Backtest:
                 return  # Early return - invocation saved
 
         # No active position (or just closed): generate signal
-        kline_data = format_ohlcv_for_agents(df)
+        if isinstance(self.strategy, LLMAgentStrategy):
+            kline_data = format_ohlcv_for_agents(df)
+        else:
+            kline_data = df.to_dict(orient="records")
 
         # Phase 4: Count agent invocations
         self.agent_invocations += 1
