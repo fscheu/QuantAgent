@@ -2,6 +2,7 @@
 
 from typing import Dict, List, Optional
 
+from ..agent_models import TradingDecision
 from ..models import ActivePosition
 from .base import TradingSignal, TradingStrategy
 
@@ -67,20 +68,23 @@ class LLMAgentStrategy(TradingStrategy):
         # Extract decision
         trading_decision_raw = result.get("final_trade_decision", "HOLD")
 
-        # Parse decision (may be string like "LONG with 0.75 confidence")
-        decision, confidence = self._parse_decision(trading_decision_raw)
+        if isinstance(trading_decision_raw, TradingDecision):
+            decision = trading_decision_raw.decision.upper()
+            confidence = trading_decision_raw.confidence
+            reasoning = trading_decision_raw.reasoning or "LLM Agent analysis"
+        else:
+            # Parse decision (may be string like "LONG with 0.75 confidence")
+            decision, confidence = self._parse_decision(trading_decision_raw)
+            reasoning = result.get("reasoning", "")
+            if not reasoning:
+                # Fallback: get from decision agent report
+                decision_report = result.get("decision_report", {})
+                if isinstance(decision_report, dict):
+                    reasoning = decision_report.get("reasoning", "LLM Agent analysis")
 
         # If HOLD, return None
         if decision == "HOLD":
             return None
-
-        # Extract reasoning
-        reasoning = result.get("reasoning", "")
-        if not reasoning:
-            # Fallback: get from decision agent report
-            decision_report = result.get("decision_report", {})
-            if isinstance(decision_report, dict):
-                reasoning = decision_report.get("reasoning", "LLM Agent analysis")
 
         # Calculate default SL/TP (2% and 3% from current price)
         if decision == "LONG":
