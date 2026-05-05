@@ -7,6 +7,7 @@ from typing import Dict, List
 from unittest.mock import Mock, patch
 
 import pandas as pd
+import pytest
 
 from quantagent.backtesting.backtest import Backtest
 from quantagent.models import ActivePosition, ExitPolicy, MarketData, OrderSide
@@ -404,3 +405,47 @@ def test_backtest_reference_profile_completes(db_session):
 def test_default_exit_policy():
     strategy = TripleScreenStrategy()
     assert strategy.get_default_exit_policy() == ExitPolicy.TRAILING_STOP
+
+
+# ---------------------------------------------------------------------------
+# Edge cases: guard conditions and internal helpers
+# ---------------------------------------------------------------------------
+
+def test_screen3_trigger_single_candle_returns_false():
+    """_screen3_trigger guard: < 2 candles must return False, not raise."""
+    strategy = TripleScreenStrategy()
+    assert strategy._screen3_trigger(_make_candles([100.0]), "UP", 101.0) is False
+    assert strategy._screen3_trigger(_make_candles([100.0]), "DOWN", 99.0) is False
+
+
+class TestConfidence:
+    """Validate the confidence score mapping at boundary values."""
+
+    def test_confidence_up_deep_oversold_yields_max(self):
+        """UP trend, stoch_k = 0 → raw = 1.0 → confidence clamped to 1.0."""
+        strategy = TripleScreenStrategy(stoch_oversold=20.0)
+        assert strategy._confidence(0.0, "UP") == pytest.approx(1.0, abs=1e-6)
+
+    def test_confidence_up_at_oversold_boundary_yields_min(self):
+        """UP trend, stoch_k = stoch_oversold → raw = 0.0 → confidence clamped to 0.1."""
+        strategy = TripleScreenStrategy(stoch_oversold=20.0)
+        assert strategy._confidence(20.0, "UP") == pytest.approx(0.1, abs=1e-6)
+
+    def test_confidence_down_deeply_overbought_yields_max(self):
+        """DOWN trend, stoch_k = 100 → raw = 1.0 → confidence clamped to 1.0."""
+        strategy = TripleScreenStrategy(stoch_overbought=80.0)
+        assert strategy._confidence(100.0, "DOWN") == pytest.approx(1.0, abs=1e-6)
+
+    def test_confidence_down_at_overbought_boundary_yields_min(self):
+        """DOWN trend, stoch_k = stoch_overbought → raw = 0.0 → confidence clamped to 0.1."""
+        strategy = TripleScreenStrategy(stoch_overbought=80.0)
+        assert strategy._confidence(80.0, "DOWN") == pytest.approx(0.1, abs=1e-6)
+
+    def test_confidence_always_in_range(self):
+        """Confidence must stay in [0.1, 1.0] for any valid stoch_k input."""
+        strategy = TripleScreenStrategy()
+        for k in [0.0, 10.0, 20.0, 50.0, 80.0, 100.0]:
+            conf_up = strategy._confidence(k, "UP")
+            conf_down = strategy._confidence(k, "DOWN")
+            assert 0.1 <= conf_up <= 1.0, f"UP confidence out of range for k={k}"
+            assert 0.1 <= conf_down <= 1.0, f"DOWN confidence out of range for k={k}"
