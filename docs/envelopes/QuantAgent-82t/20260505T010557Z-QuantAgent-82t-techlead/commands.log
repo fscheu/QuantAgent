@@ -1,0 +1,13 @@
+tech-lead verification commands reviewed in this run:
+- git status -sb
+- git branch --show-current
+- git log --oneline -3
+- read .github/workflows/main-ci-deploy.yml
+- read implementer result.json
+- read tester result.json
+- read tester run-report.md
+- search tests for sqlite:///:memory:
+- read executor contract
+- read failure taxonomy
+- bd_safe.sh show QuantAgent-82t --json
+- bd_safe.sh ready --json
