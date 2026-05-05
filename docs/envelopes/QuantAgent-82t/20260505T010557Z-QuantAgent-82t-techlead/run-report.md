@@ -1,6 +1,6 @@
 # Tech Lead Integration Report — QuantAgent-82t
 
-- **Run ID:** 20260505T010321Z-QuantAgent-82t-techlead
+- **Run ID:** 20260505T010557Z-QuantAgent-82t-techlead
 - **Mode:** integration
 - **Result:** BLOCKED
 - **Failure:** `QUALITY_GATE_FAILED / pre_existing`
