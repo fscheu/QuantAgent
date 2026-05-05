@@ -1,0 +1,65 @@
+{
+  "run_id": "20260505T123933Z-QuantAgent-b8r-planner",
+  "phase": "planner",
+  "skill": "autodev-planner",
+  "executor": "claude-code",
+  "status": "SUCCESS",
+  "dry_run": false,
+  "execution_performed": true,
+  "repo_path": "/home/azureuser/repos/projects/QuantAgent",
+  "beads_issue_id": "QuantAgent-b8r",
+  "branch": "feature/QuantAgent-b8r-m1-strategy-3-52-week-high-momentum-brea",
+  "worktree_path": "/tmp/autodev-worktrees/QuantAgent/QuantAgent-b8r/planner-20260505T123933Z",
+  "started_at": "2026-05-05T12:39:33.604814+00:00",
+  "finished_at": "2026-05-05T12:50:51.661668+00:00",
+  "files_changed": [],
+  "docs_changed": [],
+  "tests_changed": [],
+  "commits": [],
+  "quality_gates": [
+    {
+      "name": "router validation",
+      "command": "validate envelope + capabilities",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "Envelope parsed and dangerous capabilities rejected."
+    },
+    {
+      "name": "executor availability",
+      "command": "which claude",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "available=True"
+    },
+    {
+      "name": "executor run",
+      "command": "claude -p \"$(cat /home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-b8r/20260505T123933Z-QuantAgent-b8r-planner/executor-prompt-claude-code.md)\" --output-format stream-json --verbose --include-partial-messages --allowedTools Read,Edit,Write,Bash",
+      "status": "SUCCESS",
+      "exit_code": 0,
+      "evidence": "exit_code=0"
+    }
+  ],
+  "beads_comment_added": false,
+  "beads_labels_changed": [],
+  "artifacts": [
+    "input-envelope.md",
+    "executor-prompt-claude-code.md",
+    "route-plan-claude-code.json",
+    "commands.log",
+    "quality-gates.log",
+    "result.json",
+    "run-report.md",
+    "executor-stdout-claude-code.log"
+  ],
+  "executor_result_json_source": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-b8r/20260505T123933Z-QuantAgent-b8r-planner/result.json",
+  "risks": [],
+  "open_questions": [],
+  "next_step": "implementer",
+  "router_output_legacy": "router-output-claude-code.md",
+  "planning_readiness": {
+    "context_clear": true,
+    "acceptance_verifiable": true,
+    "scope_out_defined": true,
+    "implementation_ready": true
+  }
+}

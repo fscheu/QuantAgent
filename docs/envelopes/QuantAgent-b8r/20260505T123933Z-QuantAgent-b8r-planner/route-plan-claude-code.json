@@ -1,0 +1,31 @@
+{
+  "run_id": "20260505T123933Z-QuantAgent-b8r-planner",
+  "created_at": "2026-05-05T12:44:49.804584+00:00",
+  "executor": "claude-code",
+  "phase": "planner",
+  "issue_id": "QuantAgent-b8r",
+  "dry_run": false,
+  "adapter": {
+    "command_name": "claude",
+    "available": true,
+    "requires_pty": false,
+    "output_mode": "stream",
+    "max_turns": null
+  },
+  "paths": {
+    "envelope": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-b8r/20260505T123933Z-QuantAgent-b8r-planner/input-envelope.md",
+    "prompt": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-b8r/20260505T123933Z-QuantAgent-b8r-planner/executor-prompt-claude-code.md",
+    "artifacts_dir": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-b8r/20260505T123933Z-QuantAgent-b8r-planner",
+    "workdir": "/home/azureuser/repos/projects/QuantAgent",
+    "run_report": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-b8r/20260505T123933Z-QuantAgent-b8r-planner/run-report.md",
+    "result_json": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-b8r/20260505T123933Z-QuantAgent-b8r-planner/result.json",
+    "commands_log": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-b8r/20260505T123933Z-QuantAgent-b8r-planner/commands.log",
+    "quality_gates_log": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-b8r/20260505T123933Z-QuantAgent-b8r-planner/quality-gates.log"
+  },
+  "command_preview": "claude -p \"$(cat /home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-b8r/20260505T123933Z-QuantAgent-b8r-planner/executor-prompt-claude-code.md)\" --output-format stream-json --verbose --include-partial-messages --allowedTools Read,Edit,Write,Bash",
+  "notes": [
+    "Dry-run does not invoke the external CLI.",
+    "Codex command is wrapped with script(1) for pseudo-tty when executed by this router.",
+    "During migration, git push / merge / deploy remain blocked by validation."
+  ]
+}

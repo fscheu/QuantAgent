@@ -39,6 +39,7 @@ These documents represent the current technical design of the system. When imple
 
 ## Active Per-Change Design
 
+- [QuantAgent-b8r-DS-52week-high-momentum.md](./QuantAgent-b8r-DS-52week-high-momentum.md) - M1 Strategy 3: 52-week high momentum / breakout for US equities
 - [QuantAgent-94d-DS-backtest-isolation.md](./QuantAgent-94d-DS-backtest-isolation.md) - Backtest Run ID Isolation (P1, bug)
 - [QuantAgent-r78-DS-trade-pnl-calculation.md](./QuantAgent-r78-DS-trade-pnl-calculation.md) - Trade P&L calculation bug fix (P1)
 - [QuantAgent-les-DS-commissions-pnl.md](./QuantAgent-les-DS-commissions-pnl.md) - Support commissions in P&L calculation (P3, feature)
