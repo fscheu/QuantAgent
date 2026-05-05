@@ -1,0 +1,2 @@
+python3 -m compileall -q quantagent/strategy/llm_agent_strategy.py tests/test_llm_agent_strategy.py tests/test_trading_strategy_constraints.py
+/home/azureuser/repos/projects/QuantAgent/.venv/bin/python -m pytest tests/test_llm_agent_strategy.py tests/test_trading_strategy_constraints.py -v
