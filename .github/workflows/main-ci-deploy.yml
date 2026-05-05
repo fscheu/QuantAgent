@@ -144,6 +144,7 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: azureuser
           key: ${{ secrets.VM_SSH_KEY }}
+          command_timeout: 20m
           script: |
             cd ~/repos/projects/QuantAgent
             git fetch origin
