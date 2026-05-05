@@ -1,0 +1,40 @@
+{
+  "id": "QuantAgent-c69",
+  "title": "M1 Strategy 2 — Pipeline de Agentes con LangChain / LLMAgentStrategy",
+  "description": "## Contexto\nM1 necesita una estrategia de referencia que represente la hipótesis fundacional de QuantAgent: el pipeline multi-agente con LangChain y LangGraph que analiza mercado y decide señales buy y sell. Aunque el repo ya tiene `TradingGraph` y `LLMAgentStrategy`, hoy esa estrategia no está explicitada como ticket M1 autocontenible para planner, implementer y tester.\n\n## Cambio requerido\nConvertir el pipeline original de agentes en la **Estrategia 2 oficial de M1**, con contrato ejecutable y validación clara de backtesting.\n\nEsto implica, como mínimo:\n- tratar `LLMAgentStrategy` y `TradingGraph` como estrategia de referencia explícita de M1;\n- asegurar que el flujo de backtesting puede ejecutarla end-to-end de forma estable;\n- dejar configurado o documentado un perfil mínimo reproducible para correrla en backtests;\n- validar que la salida del pipeline se traduce correctamente a `TradingSignal` y persiste evidencia útil para análisis.\n\n## Criterio de aceptación\n- [ ] Existe una ruta explícita y documentada para correr la estrategia multi-agente original como estrategia M1\n- [ ] `LLMAgentStrategy` queda integrada o ajustada donde haga falta para operar como referencia estable de backtesting\n- [ ] Hay tests determinísticos para el mapeo de salida del pipeline a `TradingSignal`\n- [ ] Un backtest de referencia completa sin crashes, con señales persistidas y PnL calculado\n- [ ] El flujo deja evidencia útil de reasoning y decision para inspección\n- [ ] Esta estrategia cubre el requisito de validar al menos un flujo multi-agente y multimodal completo dentro de AC3\n\n## Archivos relevantes\n- `quantagent/strategy/llm_agent_strategy.py`\n- `quantagent/trading_graph.py`\n- `quantagent/graph_setup.py`\n- `quantagent/agent_state.py`\n- `quantagent/decision_agent.py`\n- `quantagent/pattern_agent.py`\n- `quantagent/backtesting/backtest.py`\n- `tests/`\n\n## Fuera de scope\n- Cambio de provider o model routing global\n- Optimización de prompts o fine-tuning del sistema\n- Reescritura completa del grafo\n\n## Notas técnicas\n- Este ticket es uno de los 3 hijos que completan AC3 de `QuantAgent-l0h`.\n- Evitar mocks vacíos: los tests deben validar transformación y contrato del pipeline, no solo ramas triviales.\n- Reusar el código existente del sistema original; el objetivo es estabilizarlo como estrategia de referencia de M1, no reinventarlo.\n",
+  "status": "open",
+  "priority": 2,
+  "issue_type": "task",
+  "owner": "fscheu@gmail.com",
+  "created_at": "2026-05-04T23:40:12.307985848Z",
+  "created_by": "Federico Scheu",
+  "updated_at": "2026-05-04T23:40:12.307985848Z",
+  "labels": [
+    "backtesting",
+    "langgraph",
+    "m1",
+    "openclaw:design_pending",
+    "strategy"
+  ],
+  "dependencies": [
+    {
+      "id": "QuantAgent-l0h",
+      "title": "M1 Milestone Tracking — Backtesting Estable para 3+ Estrategias",
+      "description": "# M1 Milestone Tracking — Backtesting Estable para 3+ Estrategias\n\n## Contexto\nQuantAgent está en fase M1 y necesita una definición ejecutable de qué significa \"backtesting estable\" para poder cerrar el milestone con evidencia técnica real. La parte ambigua de AC3 ya quedó resuelta a nivel PM: las 3 estrategias de referencia para M1 son conocidas y deben convertirse en tickets separados para que el pipeline de autodev pueda tomarlas sin cargar todo el scope en un solo issue.\n\n## Estado actual\n- `QuantAgent-sfc` ya está cerrado: la incompatibilidad SQLite/JSONB que bloqueaba la colección del suite fue resuelta.\n- `QuantAgent-4ch` ya está cerrado: los fallos remanentes de tests fueron corregidos.\n- `QuantAgent-82t` sigue siendo el ticket específico para re-habilitar unit tests en CI.\n- AC3 ya no está indefinido: las 3 estrategias de referencia de M1 quedaron fijadas y descompuestas en tickets implementables.\n\n## Cambio requerido\nEste ticket es un **epic de tracking**. No se implementa directamente. Su propósito es:\n1. Mantener la definición oficial de M1\n2. Trackear los tickets que completan AC3\n3. Permitir que autodev trabaje por estrategia en tickets chicos y verificables\n\n## Criterio de aceptación — M1 COMPLETO\n\n### AC1 — Test suite limpio\n- [ ] `pytest tests/ -v` completa con 0 errores de colección\n- [ ] La suite relevante de unidad pasa sin hacks temporales\n- [ ] Los tests de integración con PostgreSQL pasan en el entorno previsto\n\n### AC2 — CI habilitado y funcionando\n- [ ] `QuantAgent-82t` cerrado y mergeado\n- [ ] El workflow de CI vuelve a ejecutar tests en cada push a `main`\n- [ ] Un push con tests fallando bloquea el deploy a QA\n\n### AC3 — Backtesting estable para 3 estrategias de referencia M1\n- [ ] Estrategia 1: `QuantAgent-vna` — Triple Screen de Alexander Elder\n- [ ] Estrategia 2: ticket hijo M1 — Pipeline de Agentes con LangChain / `LLMAgentStrategy`\n- [ ] Estrategia 3: ticket hijo M1 — 52-week high momentum / breakout para equities US\n- [ ] Cada estrategia completa backtests sin crashes y con PnL calculado\n- [ ] Al menos una estrategia valida el flujo multi-agente y multimodal completo (`pattern_agent` y pipeline original)\n\n### AC4 — Documentación M1 actualizada\n- [ ] `docs/02_planning/phase1_roadmap.md` refleja el estado real de M1\n- [ ] `docs/01_requirements/README.md` referencia las estrategias mínimas validadas\n- [ ] Los artifacts y/o docs por ticket dejan verificable qué estrategia quedó estable y cómo se validó\n\n## Mapa de tickets de estrategia para AC3\n- `QuantAgent-vna` — Triple Screen de Alexander Elder (ya existía; refinado como Strategy 1 de M1)\n- Ticket nuevo — Pipeline de Agentes con LangChain / `LLMAgentStrategy` como estrategia de referencia explícita de M1\n- Ticket nuevo — 52-week high momentum / breakout con edge documentado para acciones US\n\n## Archivos y módulos relevantes\n- `quantagent/strategy/base.py`\n- `quantagent/strategy/llm_agent_strategy.py`\n- `quantagent/strategy/rsi_strategy.py`\n- `quantagent/strategy/assembler.py`\n- `quantagent/backtesting/backtest.py`\n- `quantagent/trading_graph.py`\n- `quantagent/data/provider.py`\n- `tests/`\n\n## Fuera de scope\n- Optimización de hiperparámetros\n- Selección de universos institucionales complejos o datasets premium\n- Live trading / broker integration\n- Estrategias adicionales fuera de estas 3 de M1\n\n## Notas técnicas\n- La descomposición por estrategia es intencional: un solo ticket con las 3 implementaciones sería demasiado pesado para planner, implementer y tester, y reduciría trazabilidad.\n- La estrategia 2 debe representar explícitamente la hipótesis fundacional del producto (pipeline multi-agente LangChain/LangGraph), no quedar implícita solo por existir código en el repo.\n- La estrategia 3 debe mantenerse implementable con datos OHLCV estándar de equities US para no introducir datasets o eventos extra en M1.\n",
+      "status": "open",
+      "priority": 2,
+      "issue_type": "epic",
+      "owner": "fscheu@gmail.com",
+      "created_at": "2026-04-21T20:51:04.799492082Z",
+      "created_by": "Federico Scheu",
+      "updated_at": "2026-05-04T23:40:12.086327961Z",
+      "labels": [
+        "m1",
+        "milestone",
+        "openclaw:design_pending"
+      ],
+      "dependency_type": "parent-child"
+    }
+  ],
+  "parent": "QuantAgent-l0h"
+}

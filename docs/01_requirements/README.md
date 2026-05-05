@@ -23,6 +23,7 @@ The files listed above represent the current functional requirements for the sys
 
 ## Active Per-Change Requirements
 
+- [QuantAgent-c69-RQ-llm-agent-strategy-m1.md](./QuantAgent-c69-RQ-llm-agent-strategy-m1.md) - M1 Strategy 2: LLMAgentStrategy as explicit reference pipeline
 - [QuantAgent-94d-RQ-backtest-isolation.md](./QuantAgent-94d-RQ-backtest-isolation.md) - Backtest Run ID Isolation (P1, bug)
 - [QuantAgent-r78-RQ-trade-pnl-calculation.md](./QuantAgent-r78-RQ-trade-pnl-calculation.md) - Trade P&L calculation bug fix (P1)
 - [QuantAgent-les-RQ-commissions-pnl.md](./QuantAgent-les-RQ-commissions-pnl.md) - Support commissions in P&L calculation (P3, feature)

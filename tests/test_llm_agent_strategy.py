@@ -6,6 +6,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from quantagent.agent_models import TradingDecision
 from quantagent.models import ActivePosition, OrderSide
 from quantagent.strategy.llm_agent_strategy import LLMAgentStrategy
 
@@ -87,6 +88,71 @@ class TestGenerateSignalLong:
         """AC2.4: Strategy returns None when HOLD."""
         mock_trading_graph.graph.invoke.return_value = {
             "final_trade_decision": "HOLD",
+        }
+
+        signal = llm_strategy.generate_signal(sample_kline_data, "BTCUSDT", "4h", 100.0)
+
+        assert signal is None
+
+
+class TestGenerateSignalFromTradingDecision:
+    """Test the real Pydantic-object path returned by decision_agent."""
+
+    def test_generate_long_signal_from_trading_decision(
+        self, llm_strategy, mock_trading_graph, sample_kline_data
+    ):
+        """AC2.1/AC2.3: LONG preserves confidence and reasoning from TradingDecision."""
+        mock_trading_graph.graph.invoke.return_value = {
+            "final_trade_decision": TradingDecision(
+                decision="LONG",
+                confidence=0.8,
+                reasoning="Bullish alignment",
+                risk_level="medium",
+            )
+        }
+
+        signal = llm_strategy.generate_signal(sample_kline_data, "BTCUSDT", "4h", 100.0)
+
+        assert signal is not None
+        assert signal.decision == "LONG"
+        assert signal.confidence == 0.8
+        assert signal.reasoning == "Bullish alignment"
+        assert signal.stop_loss == 98.0
+        assert signal.take_profit == 103.0
+
+    def test_generate_short_signal_from_trading_decision(
+        self, llm_strategy, mock_trading_graph, sample_kline_data
+    ):
+        """AC2.2: SHORT preserves confidence and reasoning from TradingDecision."""
+        mock_trading_graph.graph.invoke.return_value = {
+            "final_trade_decision": TradingDecision(
+                decision="SHORT",
+                confidence=0.65,
+                reasoning="Bearish breakdown",
+                risk_level="high",
+            )
+        }
+
+        signal = llm_strategy.generate_signal(sample_kline_data, "ETHUSDT", "4h", 200.0)
+
+        assert signal is not None
+        assert signal.decision == "SHORT"
+        assert signal.confidence == 0.65
+        assert signal.reasoning == "Bearish breakdown"
+        assert signal.stop_loss == 204.0
+        assert signal.take_profit == 194.0
+
+    def test_generate_hold_signal_from_trading_decision_returns_none(
+        self, llm_strategy, mock_trading_graph, sample_kline_data
+    ):
+        """AC2.4: HOLD TradingDecision returns None."""
+        mock_trading_graph.graph.invoke.return_value = {
+            "final_trade_decision": TradingDecision(
+                decision="HOLD",
+                confidence=0.3,
+                reasoning="Conflicting signals",
+                risk_level="high",
+            )
         }
 
         signal = llm_strategy.generate_signal(sample_kline_data, "BTCUSDT", "4h", 100.0)

@@ -20,6 +20,7 @@ The roadmap files represent the current development phases and priorities. When 
 
 ## Active Per-Change Planning
 
+- [QuantAgent-c69-PL-llm-agent-strategy-m1.md](./QuantAgent-c69-PL-llm-agent-strategy-m1.md) - M1 Strategy 2: LLMAgentStrategy reference pipeline (m1, strategy)
 - [QuantAgent-r78-PL-trade-pnl-calculation.md](./QuantAgent-r78-PL-trade-pnl-calculation.md) - Trade P&L calculation bug fix (P1)
 - [QuantAgent-les-PL-commissions-pnl.md](./QuantAgent-les-PL-commissions-pnl.md) - Support commissions in P&L calculation (P3, feature)
 - [QuantAgent-nu7-PL-active-position-monitoring.md](./QuantAgent-nu7-PL-active-position-monitoring.md) - Active Position Monitoring System (Epic: QuantAgent-nu7)
