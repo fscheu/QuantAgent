@@ -1,0 +1,95 @@
+{
+  "id": "QuantAgent-vna",
+  "title": "M1 Strategy 1 — Triple Screen Strategy (Alexander Elder)",
+  "description": "## Contexto\nM1 requiere 3 estrategias de referencia explícitas para declarar backtesting estable. Este ticket pasa a ser la **Estrategia 1 oficial de M1**: Triple Screen de Alexander Elder. Ya existe como idea en backlog, pero necesita un contrato ejecutable para que planner, implementer y tester la puedan tomar con claridad.\n\n## Cambio requerido\nImplementar una versión M1 de Triple Screen sobre la abstracción `TradingStrategy`, integrada al flujo de backtesting actual.\n\nLa implementación debe preservar la lógica de 3 pantallas:\n1. Pantalla 1: filtro de tendencia principal en timeframe superior\n2. Pantalla 2: detección de pullback o corrección contra la tendencia en timeframe intermedio\n3. Pantalla 3: trigger de entrada en timeframe inferior o señal equivalente soportada por los datos disponibles\n\nEl planner puede precisar indicadores concretos, pero debe respetar la semántica Triple Screen y usar datos e infraestructura ya soportados por el repo.\n\n## Criterio de aceptación\n- [ ] Existe una estrategia dedicada para Triple Screen integrada en `quantagent/strategy/`\n- [ ] La estrategia expone parámetros configurables mínimos (timeframes, indicadores o thresholds necesarios)\n- [ ] Hay tests determinísticos para la lógica de tendencia, pullback y trigger\n- [ ] Un backtest de referencia completa sin crashes y con PnL calculado\n- [ ] La estrategia genera señales reales (no solo HOLD permanente) en un escenario de prueba razonable\n- [ ] Queda documentado qué combinación de timeframes e indicadores representa la versión M1\n\n## Archivos relevantes\n- `quantagent/strategy/base.py`\n- `quantagent/strategy/assembler.py`\n- `quantagent/backtesting/backtest.py`\n- `quantagent/data/provider.py`\n- `tests/`\n\n## Fuera de scope\n- Optimización de parámetros por activo\n- Variantes avanzadas de Elder no necesarias para M1\n- Comparativas extensivas de performance versus todas las estrategias del repo\n\n## Notas técnicas\n- Este ticket es uno de los 3 hijos que completan AC3 de `QuantAgent-l0h`.\n- Reusar abstractions existentes antes de introducir nuevas capas.\n- Mantener el diseño minimalista: versión M1 estable y testeable, no una plataforma genérica de research.\n",
+  "status": "open",
+  "priority": 2,
+  "issue_type": "task",
+  "created_at": "2026-01-10T00:10:28.009618882Z",
+  "created_by": "baiscf",
+  "updated_at": "2026-05-05T16:33:08.15718723Z",
+  "metadata": {
+    "openclaw": {
+      "phase": "design_pending",
+      "design_branch": "feature/QuantAgent-vna-triple-screen-strategy-alexander-elder",
+      "epic_branch": null,
+      "updated_at": "2026-02-18T01:41:20.829344+00:00"
+    }
+  },
+  "labels": [
+    "backtesting",
+    "enhancement",
+    "m1",
+    "openclaw:design_approved",
+    "openclaw:impl_done",
+    "strategy"
+  ],
+  "dependencies": [
+    {
+      "id": "QuantAgent-enn",
+      "title": "TradingStrategy Abstraction",
+      "description": "Crear abstracción TradingStrategy con Template Method Pattern para exit logic, TradingSignal, LLMAgentStrategy wrapper, y RSIMeanReversionStrategy ejemplo.\n\n**CLAVE - Template Method Pattern**:\n- TradingStrategy.should_exit() tiene implementación DEFAULT (fixed SL/TP + trailing)\n- Strategies heredan default o hacen override para lógica custom\n- LLMAgentStrategy usa default (no override)\n- TripleScreenStrategy (futuro) puede override con ATR-based stops\n\nArchivos:\n- quantagent/strategy/base.py (nuevo): TradingStrategy ABC + should_exit() default\n- quantagent/strategy/llm_agent_strategy.py (nuevo): wrapper de TradingGraph\n- quantagent/strategy/rsi_strategy.py (nuevo): ejemplo simple\n- tests/test_trading_strategy.py (nuevo): tests de should_exit() default\n- tests/test_llm_agent_strategy.py (nuevo)\n- tests/test_rsi_strategy.py (nuevo)\n\nVer diseño: docs/03_design/QuantAgent-nu7-DS-active-position-monitoring.md (DT6)\n\nAC: docs/05_acceptance_tests/QuantAgent-nu7-AC-active-position-monitoring.md (Fase 2)",
+      "status": "closed",
+      "priority": 1,
+      "issue_type": "task",
+      "created_at": "2026-01-09T23:38:44.850284318Z",
+      "created_by": "baiscf",
+      "updated_at": "2026-01-10T03:10:18.04379381Z",
+      "closed_at": "2026-01-10T03:10:18.04379381Z",
+      "labels": [
+        "enhancement",
+        "langgraph"
+      ],
+      "dependency_type": "blocks"
+    },
+    {
+      "id": "QuantAgent-l0h",
+      "title": "M1 Milestone Tracking — Backtesting Estable para 3+ Estrategias",
+      "description": "# M1 Milestone Tracking — Backtesting Estable para 3+ Estrategias\n\n## Contexto\nQuantAgent está en fase M1 y necesita una definición ejecutable de qué significa \"backtesting estable\" para poder cerrar el milestone con evidencia técnica real. La parte ambigua de AC3 ya quedó resuelta a nivel PM: las 3 estrategias de referencia para M1 son conocidas y deben convertirse en tickets separados para que el pipeline de autodev pueda tomarlas sin cargar todo el scope en un solo issue.\n\n## Estado actual\n- `QuantAgent-sfc` ya está cerrado: la incompatibilidad SQLite/JSONB que bloqueaba la colección del suite fue resuelta.\n- `QuantAgent-4ch` ya está cerrado: los fallos remanentes de tests fueron corregidos.\n- `QuantAgent-82t` sigue siendo el ticket específico para re-habilitar unit tests en CI.\n- AC3 ya no está indefinido: las 3 estrategias de referencia de M1 quedaron fijadas y descompuestas en tickets implementables.\n\n## Cambio requerido\nEste ticket es un **epic de tracking**. No se implementa directamente. Su propósito es:\n1. Mantener la definición oficial de M1\n2. Trackear los tickets que completan AC3\n3. Permitir que autodev trabaje por estrategia en tickets chicos y verificables\n\n## Criterio de aceptación — M1 COMPLETO\n\n### AC1 — Test suite limpio\n- [ ] `pytest tests/ -v` completa con 0 errores de colección\n- [ ] La suite relevante de unidad pasa sin hacks temporales\n- [ ] Los tests de integración con PostgreSQL pasan en el entorno previsto\n\n### AC2 — CI habilitado y funcionando\n- [ ] `QuantAgent-82t` cerrado y mergeado\n- [ ] El workflow de CI vuelve a ejecutar tests en cada push a `main`\n- [ ] Un push con tests fallando bloquea el deploy a QA\n\n### AC3 — Backtesting estable para 3 estrategias de referencia M1\n- [ ] Estrategia 1: `QuantAgent-vna` — Triple Screen de Alexander Elder\n- [ ] Estrategia 2: ticket hijo M1 — Pipeline de Agentes con LangChain / `LLMAgentStrategy`\n- [ ] Estrategia 3: ticket hijo M1 — 52-week high momentum / breakout para equities US\n- [ ] Cada estrategia completa backtests sin crashes y con PnL calculado\n- [ ] Al menos una estrategia valida el flujo multi-agente y multimodal completo (`pattern_agent` y pipeline original)\n\n### AC4 — Documentación M1 actualizada\n- [ ] `docs/02_planning/phase1_roadmap.md` refleja el estado real de M1\n- [ ] `docs/01_requirements/README.md` referencia las estrategias mínimas validadas\n- [ ] Los artifacts y/o docs por ticket dejan verificable qué estrategia quedó estable y cómo se validó\n\n## Mapa de tickets de estrategia para AC3\n- `QuantAgent-vna` — Triple Screen de Alexander Elder (ya existía; refinado como Strategy 1 de M1)\n- Ticket nuevo — Pipeline de Agentes con LangChain / `LLMAgentStrategy` como estrategia de referencia explícita de M1\n- Ticket nuevo — 52-week high momentum / breakout con edge documentado para acciones US\n\n## Archivos y módulos relevantes\n- `quantagent/strategy/base.py`\n- `quantagent/strategy/llm_agent_strategy.py`\n- `quantagent/strategy/rsi_strategy.py`\n- `quantagent/strategy/assembler.py`\n- `quantagent/backtesting/backtest.py`\n- `quantagent/trading_graph.py`\n- `quantagent/data/provider.py`\n- `tests/`\n\n## Fuera de scope\n- Optimización de hiperparámetros\n- Selección de universos institucionales complejos o datasets premium\n- Live trading / broker integration\n- Estrategias adicionales fuera de estas 3 de M1\n\n## Notas técnicas\n- La descomposición por estrategia es intencional: un solo ticket con las 3 implementaciones sería demasiado pesado para planner, implementer y tester, y reduciría trazabilidad.\n- La estrategia 2 debe representar explícitamente la hipótesis fundacional del producto (pipeline multi-agente LangChain/LangGraph), no quedar implícita solo por existir código en el repo.\n- La estrategia 3 debe mantenerse implementable con datos OHLCV estándar de equities US para no introducir datasets o eventos extra en M1.\n",
+      "status": "open",
+      "priority": 2,
+      "issue_type": "epic",
+      "owner": "fscheu@gmail.com",
+      "created_at": "2026-04-21T20:51:04.799492082Z",
+      "created_by": "Federico Scheu",
+      "updated_at": "2026-05-04T23:40:12.086327961Z",
+      "labels": [
+        "m1",
+        "milestone",
+        "openclaw:design_pending"
+      ],
+      "dependency_type": "parent-child"
+    }
+  ],
+  "comments": [
+    {
+      "id": 57,
+      "issue_id": "QuantAgent-vna",
+      "author": "Federico Scheu",
+      "text": "Blocker QuantAgent-enn está cerrado. Puede entrar al backlog activo, aunque sigue siendo P4 (feature de estrategia, no crítico).",
+      "created_at": "2026-04-18T19:05:08Z"
+    },
+    {
+      "id": 106,
+      "issue_id": "QuantAgent-vna",
+      "author": "Federico Scheu",
+      "text": "### Skill: autodev-planner\n- **Resultado:** SUCCESS\n- **Run-ID:** 20260505T123931Z-QuantAgent-vna-planner\n- **Executor:** auto\n\n#### Qué hice\n- Leí la descripción del issue, el epic padre QuantAgent-l0h, y la infraestructura existente (TradingStrategy ABC, RSIMeanReversionStrategy, Backtest engine)\n- Diseñé el plan completo para Triple Screen Strategy de Alexander Elder adaptado a la abstracción actual del repo\n- Produje RQ, DS y AC para QuantAgent-vna\n\n#### Evidencia\n- `docs/01_requirements/QuantAgent-vna-RQ-triple-screen-strategy.md` — 8 FRs con edge cases y definición de done\n- `docs/03_design/QuantAgent-vna-DS-triple-screen-strategy.md` — diseño de clase, algoritmo de las 3 pantallas, defaults documentados, perfil de backtest de referencia\n- `docs/05_acceptance_tests/QuantAgent-vna-AC-triple-screen-strategy.md` — 8 ACs con Given/When/Then testables, cada uno mapeado a un test name específico\n\n#### Quality gates\n- git status --short: PASS (solo archivos esperados sin commitear)\n- issue ID en docs paths: PASS (QuantAgent-vna en los 3 docs)\n- acceptance criteria testables: PASS (todos con pytest path explícito)\n\n#### Problemas encontrados\n- Ninguno. La infraestructura existente soporta la nueva estrategia sin cambios.\n\n#### Next step recomendado\n- Fase: implementer\n- Crear `quantagent/strategy/triple_screen_strategy.py` siguiendo el DS\n- Crear `tests/test_triple_screen_strategy.py` cubriendo los 8 ACs\n- Ejecutar el backtest de referencia y documentar evidencia en IM",
+      "created_at": "2026-05-05T12:43:54Z"
+    },
+    {
+      "id": 108,
+      "issue_id": "QuantAgent-vna",
+      "author": "Federico Scheu",
+      "text": "### Skill: tech-lead-autodev\n- **Resultado:** PARTIAL\n- **Run-ID:** 20260505T123931Z-QuantAgent-vna-techlead\n\n#### Qué hice\n- Revisé el output del planner `20260505T123931Z-QuantAgent-vna-planner` y verifiqué los artifacts en `docs/envelopes/QuantAgent-vna/20260505T123931Z-QuantAgent-vna-planner/`.\n- Confirmé que el ticket queda listo para `implementer`.\n- Voy a persistir los docs/artifacts en la branch `feature/quantagent-m1-strategy-planning-20260505` para evitar push innecesario a `main` y no disparar un redeploy por docs-only.\n\n#### Next step recomendado\n- Implementer sobre la branch `feature/quantagent-m1-strategy-planning-20260505` o cherry-pick del commit de planning a la branch de implementación del ticket.\n",
+      "created_at": "2026-05-05T12:53:17Z"
+    },
+    {
+      "id": 110,
+      "issue_id": "QuantAgent-vna",
+      "author": "Federico Scheu",
+      "text": "### Skill: autodev-implementer\n- **Resultado:** SUCCESS\n- **Run-ID:** 20260505-175906Z\n\n#### Qué hice\n- Branch: feature/QuantAgent-vna-m1-strategy-1-triple-screen-strategy-ale\n- Implementé `TripleScreenStrategy` en `quantagent/strategy/triple_screen_strategy.py`.\n- Exporté la estrategia en `quantagent/strategy/__init__.py`.\n- Agregué `tests/test_triple_screen_strategy.py` cubriendo AC1–AC8, incluyendo smoke de backtest.\n- Ajusté `quantagent/backtesting/backtest.py` para que estrategias no-LLM reciban OHLCV completo (`list[dict]`) en vez del payload truncado orientado al grafo LLM.\n- Agregué `docs/06_implementation/QuantAgent-vna-IM-triple-screen-strategy.md`.\n\n#### Artefactos / evidencia\n- Archivos tocados:\n  - quantagent/backtesting/backtest.py\n  - quantagent/strategy/__init__.py\n  - quantagent/strategy/triple_screen_strategy.py\n  - tests/test_triple_screen_strategy.py\n  - docs/06_implementation/QuantAgent-vna-IM-triple-screen-strategy.md\n- Artefactos de envelope actualizados en:\n  - docs/envelopes/QuantAgent-vna/20260505T174012Z-QuantAgent-vna-implementer/\n\n#### Quality gates\n- Comandos corridos:\n  - `ruff check --fix .`\n  - `ruff check quantagent/backtesting/backtest.py quantagent/strategy/__init__.py quantagent/strategy/triple_screen_strategy.py tests/test_triple_screen_strategy.py`\n  - `/home/azureuser/repos/projects/QuantAgent/.venv/bin/python -m pytest tests/test_triple_screen_strategy.py -v`\n  - `/home/azureuser/repos/projects/QuantAgent/.venv/bin/python -m pytest tests/test_backtest_position_monitor.py -k 'accepts_custom_strategy or active_position_prevents_strategy_invocation' -v`\n  - `/home/azureuser/repos/projects/QuantAgent/.venv/bin/python -m compileall -q .`\n- Resultado:\n  - tests del ticket: PASS (24 passed)\n  - regresión backtest relevante: PASS (2 passed)\n  - compileall: PASS\n  - ruff repo completo: WARN por errores preexistentes fuera de scope\n  - ruff sobre archivos tocados: PASS\n\n#### Problemas encontrados\n- El executor inicial quedó trabado investigando entorno; recuperé manualmente la fase en el worktree aislado.\n- El flujo actual de backtest entregaba payload truncado estilo LLM a estrategias concretas; eso impedía que Triple Screen recibiera suficiente historia para funcionar. Se corrigió de forma mínima en `backtest.py`.\n\n#### Dudas / decisiones pendientes\n1) No hice commit en la branch; queda listo para revisión/tester.\n\n#### Next step recomendado\n- Siguiente skill sugerido: autodev-tester\n",
+      "created_at": "2026-05-05T18:00:16Z"
+    }
+  ],
+  "parent": "QuantAgent-l0h"
+}

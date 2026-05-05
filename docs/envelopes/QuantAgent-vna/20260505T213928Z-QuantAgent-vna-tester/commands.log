@@ -1,0 +1,8 @@
+run_id: 20260505T213928Z-QuantAgent-vna-tester
+phase: tester
+executor: claude-code
+dry_run: False
+workdir: /tmp/autodev-worktrees/planning-20260505/QuantAgent-vna/implementer-20260505T174012Z
+command_preview: claude -p "$(cat /tmp/autodev-worktrees/QuantAgent/techlead-20260505T213844Z/docs/envelopes/QuantAgent-vna/20260505T213928Z-QuantAgent-vna-tester/executor-prompt-claude-code.md)" --output-format stream-json --verbose --include-partial-messages --allowedTools Read,Edit,Write,Bash
+exit_code: 0
+error: none

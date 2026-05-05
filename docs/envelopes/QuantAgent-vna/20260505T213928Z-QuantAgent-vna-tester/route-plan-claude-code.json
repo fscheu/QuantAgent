@@ -1,0 +1,31 @@
+{
+  "run_id": "20260505T213928Z-QuantAgent-vna-tester",
+  "created_at": "2026-05-05T21:39:39.138930+00:00",
+  "executor": "claude-code",
+  "phase": "tester",
+  "issue_id": "QuantAgent-vna",
+  "dry_run": false,
+  "adapter": {
+    "command_name": "claude",
+    "available": true,
+    "requires_pty": false,
+    "output_mode": "stream",
+    "max_turns": null
+  },
+  "paths": {
+    "envelope": "/tmp/autodev-worktrees/QuantAgent/techlead-20260505T213844Z/docs/envelopes/QuantAgent-vna/20260505T213928Z-QuantAgent-vna-tester/input-envelope.md",
+    "prompt": "/tmp/autodev-worktrees/QuantAgent/techlead-20260505T213844Z/docs/envelopes/QuantAgent-vna/20260505T213928Z-QuantAgent-vna-tester/executor-prompt-claude-code.md",
+    "artifacts_dir": "/tmp/autodev-worktrees/QuantAgent/techlead-20260505T213844Z/docs/envelopes/QuantAgent-vna/20260505T213928Z-QuantAgent-vna-tester",
+    "workdir": "/tmp/autodev-worktrees/planning-20260505/QuantAgent-vna/implementer-20260505T174012Z",
+    "run_report": "/tmp/autodev-worktrees/QuantAgent/techlead-20260505T213844Z/docs/envelopes/QuantAgent-vna/20260505T213928Z-QuantAgent-vna-tester/run-report.md",
+    "result_json": "/tmp/autodev-worktrees/QuantAgent/techlead-20260505T213844Z/docs/envelopes/QuantAgent-vna/20260505T213928Z-QuantAgent-vna-tester/result.json",
+    "commands_log": "/tmp/autodev-worktrees/QuantAgent/techlead-20260505T213844Z/docs/envelopes/QuantAgent-vna/20260505T213928Z-QuantAgent-vna-tester/commands.log",
+    "quality_gates_log": "/tmp/autodev-worktrees/QuantAgent/techlead-20260505T213844Z/docs/envelopes/QuantAgent-vna/20260505T213928Z-QuantAgent-vna-tester/quality-gates.log"
+  },
+  "command_preview": "claude -p \"$(cat /tmp/autodev-worktrees/QuantAgent/techlead-20260505T213844Z/docs/envelopes/QuantAgent-vna/20260505T213928Z-QuantAgent-vna-tester/executor-prompt-claude-code.md)\" --output-format stream-json --verbose --include-partial-messages --allowedTools Read,Edit,Write,Bash",
+  "notes": [
+    "Dry-run does not invoke the external CLI.",
+    "Codex command is wrapped with script(1) for pseudo-tty when executed by this router.",
+    "During migration, git push / merge / deploy remain blocked by validation."
+  ]
+}

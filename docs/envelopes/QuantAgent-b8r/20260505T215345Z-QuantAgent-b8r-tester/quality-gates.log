@@ -1,0 +1,5 @@
+- git status --short: PASS | command=git status --short | exit_code=0 | evidence=feature branch clean after tester commit
+- confirm branch is not main: PASS | command=git branch --show-current | exit_code=0 | evidence=feature/QuantAgent-b8r-m1-strategy-3-52-week-high-momentum-brea
+- pytest new tests: PASS | command=pytest tests/test_fifty_two_week_high_strategy.py -v --tb=short | exit_code=0 | evidence=28 passed, 1 skipped
+- pytest relevant subset: PASS | command=pytest tests/test_fifty_two_week_high_strategy.py tests/test_trading_strategy.py tests/test_trading_strategy_constraints.py tests/test_rsi_strategy.py tests/test_strategy_assembler.py -v --tb=short | exit_code=0 | evidence=64 passed, 1 skipped, 1 warning
+- python -m compileall -q: PASS | command=python -m compileall -q tests/test_fifty_two_week_high_strategy.py tests/conftest.py | exit_code=0 | evidence=no syntax errors

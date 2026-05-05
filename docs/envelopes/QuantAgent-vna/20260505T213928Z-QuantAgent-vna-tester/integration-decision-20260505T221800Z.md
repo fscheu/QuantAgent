@@ -1,0 +1,23 @@
+# Integration Decision — QuantAgent-vna
+
+- run_id: `20260505T221800Z-QuantAgent-vna-techlead-integration`
+- tester_run_id: `20260505T213928Z-QuantAgent-vna-tester`
+- decision: `MERGE`
+- merge_strategy: `cherry-pick onto clean integration branch`
+- conflict_status: `none`
+- integrated_commits:
+  - `7db2767c` — feat(QuantAgent-vna): implement TripleScreenStrategy with tests and backtest fix
+  - `a2a3b3b5` — test(QuantAgent-vna): add edge-case tests for _screen3_trigger guard and _confidence boundaries
+- merge_commit: `a2a3b3b5`
+- tester_status: `SUCCESS`
+- tester_evidence:
+  - `tests/test_triple_screen_strategy.py -v` → 30 passed
+  - `tests/test_backtest.py tests/test_trading_strategy.py tests/test_trading_strategy_constraints.py -v` → 49 passed
+  - `compileall` → PASS
+- diff_scope: `strategy implementation + backtest adapter fix + issue implementation doc + tests`
+- beads_status_after_integration: `closed (pending push to origin/main in this run)`
+- post_merge_manual: `skipped`
+- user_manual_reason: `docs/user-manual/ not present in repo`
+- notes:
+  - Source feature branch had stale `.beads/issues.jsonl` relative to `main`; direct merge was avoided.
+  - Integration used a clean branch based on `origin/main` to keep scope limited to code/docs for QuantAgent-vna.
