@@ -1,0 +1,40 @@
+{
+  "id": "QuantAgent-b8r",
+  "title": "M1 Strategy 3 — 52-week high momentum / breakout para equities US",
+  "description": "## Contexto\nM1 necesita una tercera estrategia equity-specific con edge real documentado para acciones de US. La elegida es **52-week high momentum / breakout**, basada en la evidencia de George y Hwang (2004), porque agrega diversidad real respecto a Triple Screen y al pipeline multi-agente, y se puede implementar con datos OHLCV estándar.\n\n## Cambio requerido\nImplementar una estrategia long-biased de 52-week high momentum / breakout para equities US sobre la abstracción `TradingStrategy`.\n\nVersión M1 esperada:\n- usa timeframe diario;\n- detecta cercanía o breakout del máximo de 52 semanas;\n- aplica filtros simples y explícitos de tendencia y volumen para evitar ruido;\n- usa reglas de salida simples (por ejemplo trailing stop y/o pérdida de filtro de tendencia) sin meter datasets adicionales.\n\n## Criterio de aceptación\n- [ ] Existe una estrategia dedicada en `quantagent/strategy/` para 52-week high momentum / breakout\n- [ ] La estrategia calcula correctamente el máximo rolling de 52 semanas y su señal de proximidad o breakout\n- [ ] Incluye filtros mínimos configurables de tendencia y/o volumen apropiados para M1\n- [ ] Hay tests determinísticos para cálculo de 52-week high, señales de entrada y reglas de salida\n- [ ] Un backtest de referencia sobre equities US completa sin crashes y con PnL calculado\n- [ ] La versión M1 queda documentada como long-only salvo que el planner justifique otra cosa sin ampliar scope\n\n## Archivos relevantes\n- `quantagent/strategy/base.py`\n- `quantagent/strategy/assembler.py`\n- `quantagent/data/provider.py`\n- `quantagent/backtesting/backtest.py`\n- `tests/`\n\n## Fuera de scope\n- PEAD o earnings surprise datasets\n- Estrategias intradía dependientes de microestructura\n- Short-selling sofisticado o borrow constraints\n- Optimización cuantitativa avanzada del universo\n\n## Notas técnicas\n- Este ticket es uno de los 3 hijos que completan AC3 de `QuantAgent-l0h`.\n- Mantenerlo implementable con OHLCV diario y filtros simples; si requiere datos o eventos extra, deja de servir como referencia limpia para M1.\n- Referencia conceptual: George y Hwang, \"The 52-Week High and Momentum Investing\" (Journal of Finance, 2004).\n",
+  "status": "open",
+  "priority": 2,
+  "issue_type": "task",
+  "owner": "fscheu@gmail.com",
+  "created_at": "2026-05-04T23:40:12.366872887Z",
+  "created_by": "Federico Scheu",
+  "updated_at": "2026-05-04T23:40:12.366872887Z",
+  "labels": [
+    "backtesting",
+    "equities",
+    "m1",
+    "openclaw:design_pending",
+    "strategy"
+  ],
+  "dependencies": [
+    {
+      "id": "QuantAgent-l0h",
+      "title": "M1 Milestone Tracking — Backtesting Estable para 3+ Estrategias",
+      "description": "# M1 Milestone Tracking — Backtesting Estable para 3+ Estrategias\n\n## Contexto\nQuantAgent está en fase M1 y necesita una definición ejecutable de qué significa \"backtesting estable\" para poder cerrar el milestone con evidencia técnica real. La parte ambigua de AC3 ya quedó resuelta a nivel PM: las 3 estrategias de referencia para M1 son conocidas y deben convertirse en tickets separados para que el pipeline de autodev pueda tomarlas sin cargar todo el scope en un solo issue.\n\n## Estado actual\n- `QuantAgent-sfc` ya está cerrado: la incompatibilidad SQLite/JSONB que bloqueaba la colección del suite fue resuelta.\n- `QuantAgent-4ch` ya está cerrado: los fallos remanentes de tests fueron corregidos.\n- `QuantAgent-82t` sigue siendo el ticket específico para re-habilitar unit tests en CI.\n- AC3 ya no está indefinido: las 3 estrategias de referencia de M1 quedaron fijadas y descompuestas en tickets implementables.\n\n## Cambio requerido\nEste ticket es un **epic de tracking**. No se implementa directamente. Su propósito es:\n1. Mantener la definición oficial de M1\n2. Trackear los tickets que completan AC3\n3. Permitir que autodev trabaje por estrategia en tickets chicos y verificables\n\n## Criterio de aceptación — M1 COMPLETO\n\n### AC1 — Test suite limpio\n- [ ] `pytest tests/ -v` completa con 0 errores de colección\n- [ ] La suite relevante de unidad pasa sin hacks temporales\n- [ ] Los tests de integración con PostgreSQL pasan en el entorno previsto\n\n### AC2 — CI habilitado y funcionando\n- [ ] `QuantAgent-82t` cerrado y mergeado\n- [ ] El workflow de CI vuelve a ejecutar tests en cada push a `main`\n- [ ] Un push con tests fallando bloquea el deploy a QA\n\n### AC3 — Backtesting estable para 3 estrategias de referencia M1\n- [ ] Estrategia 1: `QuantAgent-vna` — Triple Screen de Alexander Elder\n- [ ] Estrategia 2: ticket hijo M1 — Pipeline de Agentes con LangChain / `LLMAgentStrategy`\n- [ ] Estrategia 3: ticket hijo M1 — 52-week high momentum / breakout para equities US\n- [ ] Cada estrategia completa backtests sin crashes y con PnL calculado\n- [ ] Al menos una estrategia valida el flujo multi-agente y multimodal completo (`pattern_agent` y pipeline original)\n\n### AC4 — Documentación M1 actualizada\n- [ ] `docs/02_planning/phase1_roadmap.md` refleja el estado real de M1\n- [ ] `docs/01_requirements/README.md` referencia las estrategias mínimas validadas\n- [ ] Los artifacts y/o docs por ticket dejan verificable qué estrategia quedó estable y cómo se validó\n\n## Mapa de tickets de estrategia para AC3\n- `QuantAgent-vna` — Triple Screen de Alexander Elder (ya existía; refinado como Strategy 1 de M1)\n- Ticket nuevo — Pipeline de Agentes con LangChain / `LLMAgentStrategy` como estrategia de referencia explícita de M1\n- Ticket nuevo — 52-week high momentum / breakout con edge documentado para acciones US\n\n## Archivos y módulos relevantes\n- `quantagent/strategy/base.py`\n- `quantagent/strategy/llm_agent_strategy.py`\n- `quantagent/strategy/rsi_strategy.py`\n- `quantagent/strategy/assembler.py`\n- `quantagent/backtesting/backtest.py`\n- `quantagent/trading_graph.py`\n- `quantagent/data/provider.py`\n- `tests/`\n\n## Fuera de scope\n- Optimización de hiperparámetros\n- Selección de universos institucionales complejos o datasets premium\n- Live trading / broker integration\n- Estrategias adicionales fuera de estas 3 de M1\n\n## Notas técnicas\n- La descomposición por estrategia es intencional: un solo ticket con las 3 implementaciones sería demasiado pesado para planner, implementer y tester, y reduciría trazabilidad.\n- La estrategia 2 debe representar explícitamente la hipótesis fundacional del producto (pipeline multi-agente LangChain/LangGraph), no quedar implícita solo por existir código en el repo.\n- La estrategia 3 debe mantenerse implementable con datos OHLCV estándar de equities US para no introducir datasets o eventos extra en M1.\n",
+      "status": "open",
+      "priority": 2,
+      "issue_type": "epic",
+      "owner": "fscheu@gmail.com",
+      "created_at": "2026-04-21T20:51:04.799492082Z",
+      "created_by": "Federico Scheu",
+      "updated_at": "2026-05-04T23:40:12.086327961Z",
+      "labels": [
+        "m1",
+        "milestone",
+        "openclaw:design_pending"
+      ],
+      "dependency_type": "parent-child"
+    }
+  ],
+  "parent": "QuantAgent-l0h"
+}

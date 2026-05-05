@@ -20,6 +20,7 @@ Acceptance test documents define the criteria for validating that features work 
 
 ## Active Per-Change Acceptance Criteria
 
+- [QuantAgent-b8r-AC-52week-high-momentum.md](./QuantAgent-b8r-AC-52week-high-momentum.md) - M1 Strategy 3: 52-week high momentum / breakout for US equities (m1, strategy)
 - [QuantAgent-c69-AC-llm-agent-strategy.md](./QuantAgent-c69-AC-llm-agent-strategy.md) - M1 Strategy 2: LLMAgentStrategy reference pipeline (m1, strategy)
 - [QuantAgent-94d-AC-backtest-isolation.md](./QuantAgent-94d-AC-backtest-isolation.md) - Backtest Run ID Isolation (P1, bug)
 - [QuantAgent-r78-AC-trade-pnl-calculation.md](./QuantAgent-r78-AC-trade-pnl-calculation.md) - Trade P&L calculation bug fix (P1)
