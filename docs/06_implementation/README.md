@@ -33,6 +33,7 @@ Implementation documents should include:
 
 ## Active Per-Change Implementation
 
+- [QuantAgent-c69-IM-llm-agent-strategy.md](./QuantAgent-c69-IM-llm-agent-strategy.md) - M1 Strategy 2: LLMAgentStrategy reference pipeline (m1, strategy)
 - [QuantAgent-94d-IM-backtest-isolation.md](./QuantAgent-94d-IM-backtest-isolation.md) - Backtest Run ID Isolation (P1, bug)
 
 ## Per-Change Implementation Documents

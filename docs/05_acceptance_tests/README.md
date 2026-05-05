@@ -20,6 +20,7 @@ Acceptance test documents define the criteria for validating that features work 
 
 ## Active Per-Change Acceptance Criteria
 
+- [QuantAgent-c69-AC-llm-agent-strategy.md](./QuantAgent-c69-AC-llm-agent-strategy.md) - M1 Strategy 2: LLMAgentStrategy reference pipeline (m1, strategy)
 - [QuantAgent-94d-AC-backtest-isolation.md](./QuantAgent-94d-AC-backtest-isolation.md) - Backtest Run ID Isolation (P1, bug)
 - [QuantAgent-r78-AC-trade-pnl-calculation.md](./QuantAgent-r78-AC-trade-pnl-calculation.md) - Trade P&L calculation bug fix (P1)
 - [QuantAgent-les-AC-commissions-pnl.md](./QuantAgent-les-AC-commissions-pnl.md) - Support commissions in P&L calculation (P3, feature)
