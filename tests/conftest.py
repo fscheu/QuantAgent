@@ -28,7 +28,6 @@ from quantagent.agent_models import (
     TrendReport,
 )
 
-
 if "apscheduler" not in sys.modules:
     apscheduler = types.ModuleType("apscheduler")
     schedulers = types.ModuleType("apscheduler.schedulers")
@@ -67,6 +66,66 @@ if "apscheduler" not in sys.modules:
     sys.modules["apscheduler.schedulers.background"] = background
     sys.modules["apscheduler.triggers"] = triggers
     sys.modules["apscheduler.triggers.interval"] = interval
+
+# Stub talib and langchain_anthropic so the strategy import chain doesn't fail
+# in environments where these optional C/LLM packages are unavailable.
+if "talib" not in sys.modules:
+    import numpy as _np
+
+    _talib = types.ModuleType("talib")
+
+    def _rsi(data, timeperiod=14):
+        return _np.full(len(data), 50.0)
+
+    def _macd(data, fastperiod=12, slowperiod=26, signalperiod=9):
+        z = _np.zeros(len(data))
+        return z, z, z
+
+    def _stoch(high, low, close, fastk_period=5, slowk_period=3, slowd_period=3):
+        z = _np.full(len(close), 50.0)
+        return z, z
+
+    def _roc(data, timeperiod=12):
+        return _np.zeros(len(data))
+
+    def _willr(high, low, close, timeperiod=14):
+        return _np.full(len(close), -50.0)
+
+    _talib.RSI = _rsi
+    _talib.MACD = _macd
+    _talib.STOCH = _stoch
+    _talib.ROC = _roc
+    _talib.WILLR = _willr
+    sys.modules["talib"] = _talib
+
+for _pkg, _attrs in [
+    ("langchain_anthropic", ["ChatAnthropic"]),
+    ("langchain_openai", ["ChatOpenAI"]),
+    ("langchain_qwq", ["ChatQwen"]),
+]:
+    if _pkg not in sys.modules:
+        _m = types.ModuleType(_pkg)
+        for _attr in _attrs:
+            setattr(_m, _attr, type(_attr, (), {"__init__": lambda self, *a, **k: None}))
+        sys.modules[_pkg] = _m
+
+if "langgraph" not in sys.modules:
+    _langgraph = types.ModuleType("langgraph")
+    _langgraph_graph = types.ModuleType("langgraph.graph")
+    _langgraph_graph.END = "__end__"
+    _langgraph_graph.START = "__start__"
+    _langgraph_graph.add_messages = lambda *a, **k: []
+    _langgraph_graph.StateGraph = type("StateGraph", (), {
+        "__init__": lambda self, *a, **k: None,
+        "add_node": lambda self, *a, **k: None,
+        "add_edge": lambda self, *a, **k: None,
+        "add_conditional_edges": lambda self, *a, **k: None,
+        "compile": lambda self, *a, **k: None,
+        "set_entry_point": lambda self, *a, **k: None,
+    })
+    _langgraph.graph = _langgraph_graph
+    sys.modules["langgraph"] = _langgraph
+    sys.modules["langgraph.graph"] = _langgraph_graph
 
 # ============================================================================
 # Data Fixtures
