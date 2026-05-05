@@ -1,0 +1,4 @@
+git fetch --all --prune
+git merge --no-ff --no-commit origin/feature/QuantAgent-c69-m1-llm-agent-strategy-impl
+/home/azureuser/repos/projects/QuantAgent/.venv/bin/python -m pytest tests/test_llm_agent_strategy.py tests/test_trading_strategy_constraints.py -v
+git commit -m "merge(QuantAgent-c69): integrate llm agent strategy stabilization"
