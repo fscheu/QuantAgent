@@ -1,0 +1,35 @@
+{
+  "id": "QuantAgent-4w4",
+  "title": "Backtest must honor strategy-specific lookback windows",
+  "description": "## Contexto\nDurante la verificación de integración de `QuantAgent-b8r` se ejecutó el backtest de referencia real para AAPL entre 2022-01-01 y 2023-12-31 en un worktree aislado y contra PostgreSQL local. La estrategia `FiftyTwoWeekHighStrategy` quedó implementada y sus tests pasan, pero el backtest no puede entregarle el historial que necesita para una señal de 52-week high.\n\n## Hallazgo verificable\n`quantagent/backtesting/backtest.py` usa un lookback fijo de 30 días en `_analyze_and_trade()`:\n- `lookback_days = 30`\n- `data_start = current_date - timedelta(days=lookback_days)`\n\nPara una estrategia que requiere ~252 ruedas diarias, el engine solo entrega ~21-22 velas y loguea `Insufficient data` en cada fecha. El backtest completa sin crash y con PnL finito, pero genera `TOTAL_TRADES = 0` por una limitación del engine, no por una validación real de la estrategia.\n\n## Cambio requerido\nHacer que el backtest pida una ventana histórica suficiente para la estrategia activa en vez de usar 30 días hardcodeados.\n\nOpciones válidas de implementación (elegir la mínima):\n1. Exponer en `TradingStrategy` / estrategia concreta un requerimiento de historia mínima (`required_history_bars` o equivalente) y usarlo en Backtest.\n2. Resolver el lookback desde config/assembler con un valor explícito para estrategias daily de horizonte largo.\n\n## Criterio de aceptación\n- [ ] `Backtest._analyze_and_trade()` deja de usar 30 días hardcodeados para todas las estrategias.\n- [ ] La estrategia de 52-week high recibe suficiente historia diaria para evaluar el máximo de 52 semanas.\n- [ ] El backtest de referencia AAPL 2022-01-01 → 2023-12-31 deja de emitir warnings sistemáticos de `Insufficient data` por ventana insuficiente.\n- [ ] Existe evidencia automatizada o reproducible de que el engine entrega >252 barras cuando la estrategia lo requiere.\n- [ ] `QuantAgent-b8r` queda desbloqueado para decisión final de integración.\n\n## Archivos relevantes\n- `quantagent/backtesting/backtest.py`\n- `quantagent/strategy/base.py`\n- `quantagent/strategy/fifty_two_week_high_strategy.py`\n- `tests/`\n\n## Fuera de scope\n- Cambiar la lógica de señal de `FiftyTwoWeekHighStrategy`.\n- Optimizar performance del proveedor de datos.\n- Introducir datasets nuevos o premium.",
+  "status": "open",
+  "priority": 1,
+  "issue_type": "task",
+  "owner": "fscheu@gmail.com",
+  "created_at": "2026-05-06T02:49:53.251160707Z",
+  "created_by": "Federico Scheu",
+  "updated_at": "2026-05-06T02:49:53.251160707Z",
+  "dependents": [
+    {
+      "id": "QuantAgent-b8r",
+      "title": "M1 Strategy 3 — 52-week high momentum / breakout para equities US",
+      "description": "## Contexto\nM1 necesita una tercera estrategia equity-specific con edge real documentado para acciones de US. La elegida es **52-week high momentum / breakout**, basada en la evidencia de George y Hwang (2004), porque agrega diversidad real respecto a Triple Screen y al pipeline multi-agente, y se puede implementar con datos OHLCV estándar.\n\n## Cambio requerido\nImplementar una estrategia long-biased de 52-week high momentum / breakout para equities US sobre la abstracción `TradingStrategy`.\n\nVersión M1 esperada:\n- usa timeframe diario;\n- detecta cercanía o breakout del máximo de 52 semanas;\n- aplica filtros simples y explícitos de tendencia y volumen para evitar ruido;\n- usa reglas de salida simples (por ejemplo trailing stop y/o pérdida de filtro de tendencia) sin meter datasets adicionales.\n\n## Criterio de aceptación\n- [ ] Existe una estrategia dedicada en `quantagent/strategy/` para 52-week high momentum / breakout\n- [ ] La estrategia calcula correctamente el máximo rolling de 52 semanas y su señal de proximidad o breakout\n- [ ] Incluye filtros mínimos configurables de tendencia y/o volumen apropiados para M1\n- [ ] Hay tests determinísticos para cálculo de 52-week high, señales de entrada y reglas de salida\n- [ ] Un backtest de referencia sobre equities US completa sin crashes y con PnL calculado\n- [ ] La versión M1 queda documentada como long-only salvo que el planner justifique otra cosa sin ampliar scope\n\n## Archivos relevantes\n- `quantagent/strategy/base.py`\n- `quantagent/strategy/assembler.py`\n- `quantagent/data/provider.py`\n- `quantagent/backtesting/backtest.py`\n- `tests/`\n\n## Fuera de scope\n- PEAD o earnings surprise datasets\n- Estrategias intradía dependientes de microestructura\n- Short-selling sofisticado o borrow constraints\n- Optimización cuantitativa avanzada del universo\n\n## Notas técnicas\n- Este ticket es uno de los 3 hijos que completan AC3 de `QuantAgent-l0h`.\n- Mantenerlo implementable con OHLCV diario y filtros simples; si requiere datos o eventos extra, deja de servir como referencia limpia para M1.\n- Referencia conceptual: George y Hwang, \"The 52-Week High and Momentum Investing\" (Journal of Finance, 2004).\n",
+      "status": "blocked",
+      "priority": 2,
+      "issue_type": "task",
+      "owner": "fscheu@gmail.com",
+      "created_at": "2026-05-04T23:40:12.366872887Z",
+      "created_by": "Federico Scheu",
+      "updated_at": "2026-05-06T02:50:10.754915774Z",
+      "labels": [
+        "backtesting",
+        "equities",
+        "m1",
+        "openclaw:design_approved",
+        "openclaw:impl_done",
+        "strategy"
+      ],
+      "dependency_type": "blocks"
+    }
+  ]
+}
