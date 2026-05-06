@@ -1,6 +1,7 @@
 """Backtesting engine for strategy validation."""
 
 import logging
+import math
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -399,8 +400,13 @@ class Backtest:
             current_date: Current backtest date
         """
         # Get historical data for analysis (need lookback period)
-        lookback_days = 30
-        data_start = current_date - timedelta(days=lookback_days)
+        lookback_bars = self.strategy.required_history_bars
+        if lookback_bars <= 0:
+            lookback_bars = 30
+
+        data_start = current_date - timedelta(
+            days=self._bars_to_calendar_days(lookback_bars)
+        )
 
         df = self.data_provider.get_ohlc(
             symbol=asset,
@@ -409,9 +415,10 @@ class Backtest:
             end_date=current_date,
         )
 
-        if df.empty or len(df) < 30:
+        if df.empty or len(df) < lookback_bars:
             logger.warning(
-                f"Insufficient data for {asset} at {current_date} (got {len(df)} records)",
+                f"Insufficient data for {asset} at {current_date} "
+                f"(got {len(df)}, need {lookback_bars})",
                 extra={"event_type": "backtest_data_warning", "symbol": asset},
             )
             return
@@ -550,6 +557,16 @@ class Backtest:
                 f"@ "
                 f"${current_price:.2f}, qty: {order.filled_quantity}"
             )
+
+    def _bars_to_calendar_days(self, bars: int) -> int:
+        """Convert required trading bars to a calendar-day lookback window."""
+        if self.timeframe == "1d":
+            return math.ceil(bars * 365 / 252)
+        if self.timeframe == "1h":
+            return math.ceil(bars / 6.5 * 7 / 5)
+        if self.timeframe == "4h":
+            return math.ceil(bars * 4 / 6.5 * 7 / 5)
+        return bars * 2
 
     def _parse_decision(self, decision: TradingDecision) -> (TradeSignal, float):
         """Parse decision text to extract LONG/SHORT/HOLD and confidence."""
