@@ -196,3 +196,8 @@ class TradingStrategy(ABC):
             Default ExitPolicy enum value
         """
         return ExitPolicy.TRAILING_STOP
+
+    @property
+    def required_history_bars(self) -> int:
+        """Minimum OHLCV bars required for strategy evaluation."""
+        return 30
