@@ -1,11 +1,40 @@
-"""Additional tests for PositionMonitor - Constraints & Edge Cases."""
+"""Additional tests for PositionMonitor - Constraints & Edge Cases.
 
+Note: These tests require PostgreSQL due to JSON column usage in models.
+They are marked as integration tests to exclude from default pytest run.
+"""
+
+import os
 from decimal import Decimal
 
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
-from quantagent.models import ActivePosition, Environment, ExitPolicy, OrderSide
+from quantagent.models import (
+    ActivePosition,
+    Base,
+    Environment,
+    ExitPolicy,
+    OrderSide,
+)
 from quantagent.trading.position_monitor import PositionMonitor
+
+
+@pytest.fixture
+def db_session():
+    """Create database session for testing using DATABASE_URL if available."""
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        engine = create_engine(database_url)
+    else:
+        # Fallback to SQLite for local development
+        engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    TestSession = sessionmaker(bind=engine)
+    db = TestSession()
+    yield db
+    db.close()
 
 
 @pytest.fixture
