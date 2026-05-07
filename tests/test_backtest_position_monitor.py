@@ -12,7 +12,7 @@ Testing Strategy:
 
 from datetime import datetime, timedelta
 from decimal import Decimal
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -166,22 +166,21 @@ class TestBacktestPositionMonitorIntegration:
         - When no strategy provided, Backtest creates LLMAgentStrategy
         - LLMAgentStrategy wraps TradingGraph
         """
-        with patch("quantagent.backtesting.backtest.TradingGraph"):
-            backtest = Backtest(
-                start_date=datetime(2024, 1, 1),
-                end_date=datetime(2024, 1, 2),
-                assets=["BTC"],
-                timeframe="1h",
-                initial_capital=100000.0,
-                config=sample_config,
-                db_session=db_session,
-                # NO strategy parameter
-            )
+        backtest = Backtest(
+            start_date=datetime(2024, 1, 1),
+            end_date=datetime(2024, 1, 2),
+            assets=["BTC"],
+            timeframe="1h",
+            initial_capital=100000.0,
+            config=sample_config,
+            db_session=db_session,
+            # NO strategy parameter
+        )
 
-            # Type validation
-            assert backtest.strategy is not None
-            assert isinstance(backtest.strategy, LLMAgentStrategy)
-            assert backtest.strategy.trading_graph is not None
+        # Type validation
+        assert backtest.strategy is not None
+        assert isinstance(backtest.strategy, LLMAgentStrategy)
+        assert backtest.strategy.trading_graph is not None
 
     # ==================== AC3.3: Active position prevents invocation ====================
 
@@ -369,45 +368,29 @@ class TestBacktestPositionMonitorIntegration:
         - Uses LLMAgentStrategy internally
         - Generates valid metrics
         """
-        with patch("quantagent.backtesting.backtest.TradingGraph") as mock_tg:
-            # Mock graph to return HOLD (no trades)
-            mock_graph = MagicMock()
-            mock_tg_instance = MagicMock()
-            mock_tg_instance.graph = mock_graph
-            mock_tg.return_value = mock_tg_instance
+        # Legacy instantiation (no strategy parameter)
+        backtest = Backtest(
+            start_date=datetime(2024, 1, 1, 0, 0, 0),
+            end_date=datetime(2024, 1, 1, 2, 0, 0),
+            assets=["BTC"],
+            timeframe="1h",
+            initial_capital=100000.0,
+            config=sample_config,
+            db_session=db_session,
+            # NO strategy parameter (backward compatible)
+        )
 
-            mock_graph.invoke = Mock(
-                return_value={
-                    "final_trade_decision": "HOLD",
-                    "indicator_report": Mock(confidence=0.5),
-                    "rsi": [50.0],
-                    "macd": [0.0],
-                }
-            )
+        metrics = backtest.run(name="AC3.6 Backward Compatibility Test")
 
-            # Legacy instantiation (no strategy parameter)
-            backtest = Backtest(
-                start_date=datetime(2024, 1, 1, 0, 0, 0),
-                end_date=datetime(2024, 1, 1, 2, 0, 0),
-                assets=["BTC"],
-                timeframe="1h",
-                initial_capital=100000.0,
-                config=sample_config,
-                db_session=db_session,
-                # NO strategy parameter (backward compatible)
-            )
+        # API compatibility validation
+        assert isinstance(backtest.strategy, LLMAgentStrategy)
+        assert backtest.position_monitor is not None
 
-            metrics = backtest.run(name="AC3.6 Backward Compatibility Test")
-
-            # API compatibility validation
-            assert isinstance(backtest.strategy, LLMAgentStrategy)
-            assert backtest.position_monitor is not None
-
-            # Metrics structure validation
-            assert isinstance(metrics, BacktestMetrics)
-            assert hasattr(metrics, "total_trades")
-            assert hasattr(metrics, "win_rate")
-            assert hasattr(metrics, "total_pnl")
+        # Metrics structure validation
+        assert isinstance(metrics, BacktestMetrics)
+        assert hasattr(metrics, "total_trades")
+        assert hasattr(metrics, "win_rate")
+        assert hasattr(metrics, "total_pnl")
 
     # ==================== Error path: Position monitor with closed position ====================
 
