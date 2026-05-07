@@ -1,0 +1,63 @@
+{
+  "run_id": "20260507T045839Z-QuantAgent-o2b-implementer",
+  "phase": "implementer",
+  "skill": "autodev-implementer",
+  "executor": "claude-code",
+  "status": "SUCCESS",
+  "dry_run": true,
+  "execution_performed": false,
+  "repo_path": "/tmp/autodev-worktrees/QuantAgent/QuantAgent-o2b/implementer-20260507T045511Z",
+  "beads_issue_id": "QuantAgent-o2b",
+  "branch": "feature/QuantAgent-o2b-fix-azure-provider-gate-failures-after-c",
+  "worktree_path": "/mnt/actions-runner/autodev-runtime/worktrees/implementer-20260507T045511Z/QuantAgent-o2b/implementer-20260507T045839Z",
+  "started_at": "2026-05-07T04:58:39.938833+00:00",
+  "finished_at": "2026-05-07T04:58:40.035093+00:00",
+  "files_changed": [],
+  "docs_changed": [],
+  "tests_changed": [],
+  "commits": [],
+  "quality_gates": [
+    {
+      "name": "router validation",
+      "command": "validate envelope + capabilities",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "Envelope parsed and dangerous capabilities rejected."
+    },
+    {
+      "name": "executor availability",
+      "command": "which claude",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "available=True"
+    },
+    {
+      "name": "executor run",
+      "command": "claude -p \"$(cat /tmp/autodev-worktrees/QuantAgent/QuantAgent-o2b/implementer-20260507T045511Z/docs/envelopes/QuantAgent-o2b/20260507T045839Z-QuantAgent-o2b-implementer/executor-prompt-claude-code.md)\" --output-format stream-json --verbose --include-partial-messages --allowedTools Read,Edit,Write,Bash",
+      "status": "SKIPPED",
+      "exit_code": null,
+      "evidence": "dry-run only"
+    }
+  ],
+  "beads_comment_added": false,
+  "beads_labels_changed": [],
+  "artifacts": [
+    "input-envelope.md",
+    "executor-prompt-claude-code.md",
+    "route-plan-claude-code.json",
+    "commands.log",
+    "quality-gates.log",
+    "result.json",
+    "run-report.md"
+  ],
+  "executor_result_json_source": null,
+  "risks": [],
+  "open_questions": [],
+  "next_step": "execute_phase",
+  "router_output_legacy": "router-output-claude-code.md",
+  "implementation_summary": {
+    "scope_respected": true,
+    "code_written": true,
+    "tests_added_by_implementer": false
+  }
+}

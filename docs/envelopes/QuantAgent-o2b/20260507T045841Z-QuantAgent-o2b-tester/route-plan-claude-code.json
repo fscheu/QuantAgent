@@ -1,0 +1,35 @@
+{
+  "run_id": "20260507T045841Z-QuantAgent-o2b-tester",
+  "created_at": "2026-05-07T04:58:41.373455+00:00",
+  "executor": "claude-code",
+  "phase": "tester",
+  "issue_id": "QuantAgent-o2b",
+  "dry_run": true,
+  "adapter": {
+    "command_name": "claude",
+    "available": true,
+    "requires_pty": false,
+    "output_mode": "stream",
+    "max_turns": null
+  },
+  "paths": {
+    "envelope": "/tmp/autodev-worktrees/QuantAgent/QuantAgent-o2b/implementer-20260507T045511Z/docs/envelopes/QuantAgent-o2b/20260507T045841Z-QuantAgent-o2b-tester/input-envelope.md",
+    "prompt": "/tmp/autodev-worktrees/QuantAgent/QuantAgent-o2b/implementer-20260507T045511Z/docs/envelopes/QuantAgent-o2b/20260507T045841Z-QuantAgent-o2b-tester/executor-prompt-claude-code.md",
+    "artifacts_dir": "/tmp/autodev-worktrees/QuantAgent/QuantAgent-o2b/implementer-20260507T045511Z/docs/envelopes/QuantAgent-o2b/20260507T045841Z-QuantAgent-o2b-tester",
+    "workdir": "/tmp/autodev-worktrees/QuantAgent/QuantAgent-o2b/implementer-20260507T045511Z",
+    "run_report": "/tmp/autodev-worktrees/QuantAgent/QuantAgent-o2b/implementer-20260507T045511Z/docs/envelopes/QuantAgent-o2b/20260507T045841Z-QuantAgent-o2b-tester/run-report.md",
+    "result_json": "/tmp/autodev-worktrees/QuantAgent/QuantAgent-o2b/implementer-20260507T045511Z/docs/envelopes/QuantAgent-o2b/20260507T045841Z-QuantAgent-o2b-tester/result.json",
+    "commands_log": "/tmp/autodev-worktrees/QuantAgent/QuantAgent-o2b/implementer-20260507T045511Z/docs/envelopes/QuantAgent-o2b/20260507T045841Z-QuantAgent-o2b-tester/commands.log",
+    "quality_gates_log": "/tmp/autodev-worktrees/QuantAgent/QuantAgent-o2b/implementer-20260507T045511Z/docs/envelopes/QuantAgent-o2b/20260507T045841Z-QuantAgent-o2b-tester/quality-gates.log"
+  },
+  "environment": {
+    "shared_venv": "/mnt/actions-runner/autodev-runtime/venvs/implementer-20260507T045511Z/.venv",
+    "shared_python": "/mnt/actions-runner/autodev-runtime/venvs/implementer-20260507T045511Z/.venv/bin/python"
+  },
+  "command_preview": "claude -p \"$(cat /tmp/autodev-worktrees/QuantAgent/QuantAgent-o2b/implementer-20260507T045511Z/docs/envelopes/QuantAgent-o2b/20260507T045841Z-QuantAgent-o2b-tester/executor-prompt-claude-code.md)\" --output-format stream-json --verbose --include-partial-messages --allowedTools Read,Edit,Write,Bash",
+  "notes": [
+    "Dry-run does not invoke the external CLI.",
+    "Codex command is wrapped with script(1) for pseudo-tty when executed by this router.",
+    "During migration, git push / merge / deploy remain blocked by validation."
+  ]
+}

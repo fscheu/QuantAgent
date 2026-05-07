@@ -1,0 +1,8 @@
+run_id: 20260507T045845Z-QuantAgent-nrt-tester
+phase: tester
+executor: claude-code
+dry_run: True
+workdir: /tmp/autodev-worktrees/QuantAgent/QuantAgent-nrt/implementer-20260507T045637Z
+command_preview: claude -p "$(cat /tmp/autodev-worktrees/QuantAgent/QuantAgent-nrt/implementer-20260507T045637Z/docs/envelopes/QuantAgent-nrt/20260507T045845Z-QuantAgent-nrt-tester/executor-prompt-claude-code.md)" --output-format stream-json --verbose --include-partial-messages --allowedTools Read,Edit,Write,Bash
+exit_code: not executed
+error: none
