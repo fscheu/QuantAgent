@@ -1,0 +1,16 @@
+Targeted gate:
+- pytest tests/test_backtest_apscheduler_9wz.py tests/test_checkpointing_resume.py tests/test_profile_cli.py -v
+- Result: PASS (66 passed, 3 skipped)
+
+Lint:
+- ruff check --fix tests/conftest.py tests/test_checkpointing_resume.py
+- Result: PASS
+
+Exact CI gate command:
+- DATABASE_URL=postgresql://test:***@localhost:5432/quantagent_test /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m pytest tests/ -v --tb=short --maxfail=10 -m "not integration and not slow"
+- Result: FAIL after collection blockers were removed
+- New first failing clusters observed:
+  1. tests/test_azure_openai_provider.py (4 failures)
+  2. tests/test_backtest_position_monitor.py (2 failures)
+  3. tests/test_logging_infrastructure.py (4 failures)
+- Collection status for original ticket scope: PASS

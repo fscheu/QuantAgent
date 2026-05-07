@@ -12,7 +12,7 @@ See docs/03_technical/TESTING_PATTERNS.md for testing guidelines.
 """
 
 import os
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from langgraph.checkpoint.memory import InMemorySaver
@@ -24,6 +24,15 @@ from quantagent.trading_graph import TradingGraph
 
 class _InMemoryPostgresStub(InMemorySaver):
     """Adapter to reuse InMemorySaver via PostgresSaver interface."""
+
+    def __enter__(self) -> "_InMemoryPostgresStub":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        return None
+
+    def setup(self) -> None:
+        return None
 
     @classmethod
     def from_conn_string(cls, _conn_string: str) -> "_InMemoryPostgresStub":
@@ -54,11 +63,15 @@ class TestCheckpointingConfiguration:
         """Verify graph initializes checkpointing when enabled."""
         monkeypatch.setenv(
             "DATABASE_URL",
-            "postgresql://postgres:password@localhost:5432/quantagent_dev",
+            "postgresql://postgres:***@localhost:5432/quantagent_dev",
+        )
+        monkeypatch.setattr(
+            settings,
+            "DATABASE_URL",
+            "postgresql://postgres:***@localhost:5432/quantagent_dev",
         )
 
-        mock_saver_instance = MagicMock()
-        mock_postgres_saver.from_conn_string.return_value = mock_saver_instance
+        mock_postgres_saver.from_conn_string.return_value = _InMemoryPostgresStub()
 
         tg = TradingGraph(use_checkpointing=True)
 
@@ -82,7 +95,12 @@ class TestCheckpointingConfiguration:
         """Verify error message is clear when PostgresSaver not installed."""
         monkeypatch.setenv(
             "DATABASE_URL",
-            "postgresql://postgres:password@localhost:5432/quantagent_dev",
+            "postgresql://postgres:***@localhost:5432/quantagent_dev",
+        )
+        monkeypatch.setattr(
+            settings,
+            "DATABASE_URL",
+            "postgresql://postgres:***@localhost:5432/quantagent_dev",
         )
 
         with patch("quantagent.trading_graph.PostgresSaver", None):
@@ -171,11 +189,15 @@ class TestCheckpointingInfrastructure:
         """Verify graph compiles successfully when checkpointer is provided."""
         monkeypatch.setenv(
             "DATABASE_URL",
-            "postgresql://postgres:password@localhost:5432/quantagent_dev",
+            "postgresql://postgres:***@localhost:5432/quantagent_dev",
+        )
+        monkeypatch.setattr(
+            settings,
+            "DATABASE_URL",
+            "postgresql://postgres:***@localhost:5432/quantagent_dev",
         )
 
-        mock_saver_instance = MagicMock()
-        mock_postgres_saver.from_conn_string.return_value = mock_saver_instance
+        mock_postgres_saver.from_conn_string.return_value = _InMemoryPostgresStub()
 
         tg = TradingGraph(use_checkpointing=True)
 
@@ -321,11 +343,16 @@ class TestCheckpointingRobustness:
         """Verify that refreshing LLMs doesn't affect checkpointer."""
         monkeypatch.setenv(
             "DATABASE_URL",
-            "postgresql://postgres:password@localhost:5432/quantagent_dev",
+            "postgresql://postgres:***@localhost:5432/quantagent_dev",
+        )
+        monkeypatch.setattr(
+            settings,
+            "DATABASE_URL",
+            "postgresql://postgres:***@localhost:5432/quantagent_dev",
         )
 
         with patch("quantagent.trading_graph.PostgresSaver") as mock_saver:
-            mock_saver.from_conn_string.return_value = MagicMock()
+            mock_saver.from_conn_string.return_value = _InMemoryPostgresStub()
             tg = TradingGraph(use_checkpointing=True)
 
             original_checkpointer = tg.checkpointer
@@ -342,11 +369,16 @@ class TestCheckpointingRobustness:
         """Verify that updating API keys doesn't affect checkpointer."""
         monkeypatch.setenv(
             "DATABASE_URL",
-            "postgresql://postgres:password@localhost:5432/quantagent_dev",
+            "postgresql://postgres:***@localhost:5432/quantagent_dev",
+        )
+        monkeypatch.setattr(
+            settings,
+            "DATABASE_URL",
+            "postgresql://postgres:***@localhost:5432/quantagent_dev",
         )
 
         with patch("quantagent.trading_graph.PostgresSaver") as mock_saver:
-            mock_saver.from_conn_string.return_value = MagicMock()
+            mock_saver.from_conn_string.return_value = _InMemoryPostgresStub()
             tg = TradingGraph(use_checkpointing=True)
 
             original_checkpointer = tg.checkpointer
@@ -368,7 +400,7 @@ class TestCheckpointingRobustness:
         # One with checkpointing (will fail if no DB, but verifies parameter accepted)
         try:
             with patch("quantagent.trading_graph.PostgresSaver") as mock_saver:
-                mock_saver.from_conn_string.return_value = MagicMock()
+                mock_saver.from_conn_string.return_value = _InMemoryPostgresStub()
                 tg_with_checkpoint = TradingGraph(use_checkpointing=True)
                 assert tg_with_checkpoint.checkpointer is not None
         except ValueError:

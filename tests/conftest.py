@@ -9,6 +9,7 @@ This module provides pytest fixtures for:
 - Temporary directories for test outputs
 """
 
+import importlib.util
 import os
 import sys
 import types
@@ -28,34 +29,82 @@ from quantagent.agent_models import (
     TrendReport,
 )
 
-if "apscheduler" not in sys.modules:
+
+def _module_available(module_name: str) -> bool:
+    try:
+        return importlib.util.find_spec(module_name) is not None
+    except (ModuleNotFoundError, ValueError):
+        return False
+
+
+if not _module_available("apscheduler.schedulers.background"):
     apscheduler = types.ModuleType("apscheduler")
     schedulers = types.ModuleType("apscheduler.schedulers")
     background = types.ModuleType("apscheduler.schedulers.background")
     triggers = types.ModuleType("apscheduler.triggers")
     interval = types.ModuleType("apscheduler.triggers.interval")
 
+    class SchedulerAlreadyRunningError(Exception):
+        pass
+
+    class JobLookupError(Exception):
+        pass
+
+    class _IntervalValue:
+        def __init__(self, seconds):
+            self._seconds = seconds
+
+        def total_seconds(self):
+            return self._seconds
+
     class BackgroundScheduler:
         def __init__(self, *args, **kwargs):
             self.args = args
             self.kwargs = kwargs
+            self.running = False
+            self.jobs = {}
 
         def add_job(self, *args, **kwargs):
-            return None
+            job_id = kwargs["id"]
+            if job_id in self.jobs and not kwargs.get("replace_existing"):
+                raise ValueError(f"Job already exists: {job_id}")
+
+            job = types.SimpleNamespace(
+                id=job_id,
+                trigger=kwargs.get("trigger"),
+                max_instances=kwargs.get("max_instances"),
+            )
+            self.jobs[job_id] = job
+            return job
+
+        def get_job(self, job_id):
+            return self.jobs.get(job_id)
+
+        def remove_job(self, job_id):
+            if job_id not in self.jobs:
+                raise JobLookupError(job_id)
+            del self.jobs[job_id]
 
         def start(self):
+            if self.running:
+                raise SchedulerAlreadyRunningError()
+            self.running = True
             return None
 
         def shutdown(self, wait=True):
+            self.running = False
             return None
 
     class IntervalTrigger:
         def __init__(self, *args, **kwargs):
             self.args = args
             self.kwargs = kwargs
+            self.interval = _IntervalValue(kwargs.get("seconds", 0))
 
     background.BackgroundScheduler = BackgroundScheduler
     interval.IntervalTrigger = IntervalTrigger
+    schedulers.SchedulerAlreadyRunningError = SchedulerAlreadyRunningError
+    schedulers.JobLookupError = JobLookupError
     schedulers.background = background
     triggers.interval = interval
     apscheduler.schedulers = schedulers
@@ -100,7 +149,7 @@ if "talib" not in sys.modules:
 
 for _pkg, _attrs in [
     ("langchain_anthropic", ["ChatAnthropic"]),
-    ("langchain_openai", ["ChatOpenAI"]),
+    ("langchain_openai", ["ChatOpenAI", "AzureChatOpenAI"]),
     ("langchain_qwq", ["ChatQwen"]),
 ]:
     if _pkg not in sys.modules:
@@ -109,9 +158,11 @@ for _pkg, _attrs in [
             setattr(_m, _attr, type(_attr, (), {"__init__": lambda self, *a, **k: None}))
         sys.modules[_pkg] = _m
 
-if "langgraph" not in sys.modules:
+if not _module_available("langgraph.graph"):
     _langgraph = types.ModuleType("langgraph")
     _langgraph_graph = types.ModuleType("langgraph.graph")
+    _langgraph_checkpoint = types.ModuleType("langgraph.checkpoint")
+    _langgraph_checkpoint_memory = types.ModuleType("langgraph.checkpoint.memory")
     _langgraph_graph.END = "__end__"
     _langgraph_graph.START = "__start__"
     _langgraph_graph.add_messages = lambda *a, **k: []
@@ -123,9 +174,27 @@ if "langgraph" not in sys.modules:
         "compile": lambda self, *a, **k: None,
         "set_entry_point": lambda self, *a, **k: None,
     })
+    _langgraph_checkpoint_memory.InMemorySaver = type("InMemorySaver", (), {})
     _langgraph.graph = _langgraph_graph
+    _langgraph.checkpoint = _langgraph_checkpoint
+    _langgraph_checkpoint.memory = _langgraph_checkpoint_memory
     sys.modules["langgraph"] = _langgraph
     sys.modules["langgraph.graph"] = _langgraph_graph
+    sys.modules["langgraph.checkpoint"] = _langgraph_checkpoint
+    sys.modules["langgraph.checkpoint.memory"] = _langgraph_checkpoint_memory
+
+if not _module_available("tabulate"):
+    _tabulate = types.ModuleType("tabulate")
+
+    def tabulate(rows, headers=(), tablefmt=None):
+        lines = []
+        if headers:
+            lines.append(" | ".join(str(header) for header in headers))
+        lines.extend(" | ".join(str(cell) for cell in row) for row in rows)
+        return "\n".join(lines)
+
+    _tabulate.tabulate = tabulate
+    sys.modules["tabulate"] = _tabulate
 
 # ============================================================================
 # Data Fixtures
@@ -381,6 +450,19 @@ class StructuredMockLLM:
     def bind_tools(self, tools):
         """Mock tool binding."""
         return self
+
+
+@pytest.fixture(autouse=True)
+def patch_trading_graph_llms(monkeypatch):
+    """Use deterministic mock LLMs for TradingGraph tests."""
+
+    import quantagent.trading_graph as trading_graph_module
+
+    monkeypatch.setattr(
+        trading_graph_module.TradingGraph,
+        "_create_llm",
+        lambda self, provider, model, temperature: StructuredMockLLM(),
+    )
 
 
 @pytest.fixture
