@@ -131,31 +131,27 @@ jobs:
   deploy-qa:
     name: Deploy to QA
     needs: ci
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, quantagent-vm]
     if: success()
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to QA via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VM_HOST }}
-          username: azureuser
-          key: ${{ secrets.VM_SSH_KEY }}
-          command_timeout: 20m
-          script: |
-            cd ~/repos/projects/QuantAgent
-            git fetch origin
-            git reset --hard origin/main
-            sudo docker-compose -f docker-compose.qa.yml down || true
-            sudo docker-compose -f docker-compose.qa.yml build --no-cache
-            sudo docker-compose -f docker-compose.qa.yml up -d
-            echo "Waiting for services to be healthy..."
-            sleep 30
-      
+      - name: Deploy to QA locally
+        id: deploy
+        run: |
+          cd ~/repos/projects/QuantAgent
+          git fetch origin
+          git reset --hard origin/main
+          sudo docker-compose -f docker-compose.qa.yml down || true
+          sudo docker-compose -f docker-compose.qa.yml build --no-cache
+          sudo docker-compose -f docker-compose.qa.yml up -d
+          echo "Waiting for services to be healthy..."
+          sleep 30
+
       - name: Health check
+        id: health
         run: |
           for i in {1..10}; do
             if curl -f https://qa.fedes.dev/health; then
@@ -167,37 +163,57 @@ jobs:
           done
           echo "Health check failed after 10 attempts"
           exit 1
-      
-      - name: Notify Telegram on deploy success
-        if: success()
+
+      - name: Notify Hermes Tech Lead
+        if: always()
         env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          HERMES_WEBHOOK_URL: http://localhost:8644/webhooks/github-deploy-finished
+          HERMES_WEBHOOK_SECRET: ${{ secrets.HERMES_WEBHOOK_SECRET }}
+          JOB_STATUS: ${{ job.status }}
+          DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
+          HEALTH_OUTCOME: ${{ steps.health.outcome }}
         run: |
-          COMMIT_SHA="${GITHUB_SHA:0:7}"
-          COMMIT_MSG=$(git log -1 --pretty=%B | head -1 | tr '"' "'")
-          
-          curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"chat_id\": \"-1003835130753\",
-              \"message_thread_id\": 208,
-              \"text\": \"🚀 QA Deploy Success\\n\\nCommit: ${COMMIT_SHA}\\nMessage: ${COMMIT_MSG}\\nURL: https://qa.fedes.dev\",
-              \"disable_web_page_preview\": true
-            }"
-      
-      - name: Notify Telegram on deploy failure
-        if: failure()
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        run: |
-          COMMIT_SHA="${GITHUB_SHA:0:7}"
-          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          
-          curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"chat_id\": \"-1003835130753\",
-              \"message_thread_id\": 208,
-              \"text\": \"❌ QA Deploy Failed\\n\\nCommit: ${COMMIT_SHA}\\nLogs: ${RUN_URL}\",
-              \"disable_web_page_preview\": true
-            }"
+          python3 - <<'PY'
+          import json
+          import hashlib
+          import hmac
+          import os
+          import urllib.request
+
+          url = os.environ["HERMES_WEBHOOK_URL"]
+          secret = os.environ["HERMES_WEBHOOK_SECRET"]
+          run_id = os.environ.get("GITHUB_RUN_ID", "")
+          run_attempt = os.environ.get("GITHUB_RUN_ATTEMPT", "")
+          repo = os.environ.get("GITHUB_REPOSITORY", "")
+
+          payload = {
+              "event_type": "deploy_finished",
+              "repo": repo,
+              "workflow": os.environ.get("GITHUB_WORKFLOW", ""),
+              "job": os.environ.get("GITHUB_JOB", ""),
+              "environment": "qa",
+              "ref": os.environ.get("GITHUB_REF", ""),
+              "branch": os.environ.get("GITHUB_REF_NAME", ""),
+              "sha": os.environ.get("GITHUB_SHA", ""),
+              "actor": os.environ.get("GITHUB_ACTOR", ""),
+              "conclusion": os.environ.get("JOB_STATUS", ""),
+              "run_id": run_id,
+              "run_attempt": run_attempt,
+              "run_url": f"https://github.com/{repo}/actions/runs/{run_id}",
+              "deployed_url": "https://qa.fedes.dev",
+              "deploy_step_outcome": os.environ.get("DEPLOY_OUTCOME", ""),
+              "health_step_outcome": os.environ.get("HEALTH_OUTCOME", ""),
+          }
+
+          body = json.dumps(payload).encode("utf-8")
+          signature = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
+
+          request = urllib.request.Request(url, data=body, method="POST")
+          request.add_header("Content-Type", "application/json")
+          request.add_header("X-Webhook-Signature", signature)
+          request.add_header("X-Request-ID", f"github-actions-{run_id}-{run_attempt}")
+
+          with urllib.request.urlopen(request, timeout=30) as response:
+              print(response.status)
+              print(response.read().decode())
+          PY
