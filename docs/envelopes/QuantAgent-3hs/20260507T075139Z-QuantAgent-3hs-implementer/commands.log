@@ -1,0 +1,3 @@
+git apply /tmp/QuantAgent-3hs-conftest.patch
+ruff check --fix tests/conftest.py
+DATABASE_URL=postgresql://test:test@localhost:5432/quantagent_test /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m pytest tests/test_azure_openai_provider.py tests/test_checkpointing_resume.py -v --tb=short --maxfail=1
