@@ -458,11 +458,33 @@ def patch_trading_graph_llms(monkeypatch):
 
     import quantagent.trading_graph as trading_graph_module
 
+    def mock_create_llm(self, provider, model, temperature):
+        return StructuredMockLLM()
+
     monkeypatch.setattr(
         trading_graph_module.TradingGraph,
         "_create_llm",
-        lambda self, provider, model, temperature: StructuredMockLLM(),
+        mock_create_llm,
     )
+
+    # Some tests reload quantagent.trading_graph, which can leave previously
+    # imported `TradingGraph` aliases in test modules pointing at a stale class.
+    # Rebind those aliases to the current module class so the mock patch remains
+    # effective across the suite.
+    for module in tuple(sys.modules.values()):
+        if module is None or not getattr(module, "__name__", "").startswith("tests."):
+            continue
+
+        trading_graph_alias = getattr(module, "TradingGraph", None)
+        if getattr(trading_graph_alias, "__module__", None) != "quantagent.trading_graph":
+            continue
+
+        monkeypatch.setattr(
+            module,
+            "TradingGraph",
+            trading_graph_module.TradingGraph,
+            raising=False,
+        )
 
 
 @pytest.fixture
