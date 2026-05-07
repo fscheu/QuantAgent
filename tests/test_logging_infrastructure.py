@@ -24,9 +24,16 @@ import pytest
 from sqlalchemy import inspect, text
 
 from quantagent import settings
-from quantagent.database import SessionLocal
+from quantagent.database import SessionLocal, init_db
 from quantagent.logging_config import DatabaseLogHandler, setup_logging
 from quantagent.models import Log
+
+
+@pytest.fixture(scope="module", autouse=True)
+def ensure_logging_schema():
+    """Create the current ORM schema before validating logging persistence."""
+    init_db()
+    yield
 
 # ============================================================================
 # AC-1.1: Log Model Structure Validation

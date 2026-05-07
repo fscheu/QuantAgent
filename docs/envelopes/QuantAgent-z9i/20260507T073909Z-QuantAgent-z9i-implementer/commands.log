@@ -1,0 +1,8 @@
+run_id: 20260507T073909Z-QuantAgent-z9i-implementer
+phase: implementer
+executor: claude-code
+dry_run: True
+workdir: /mnt/actions-runner/autodev-runtime/worktrees/QuantAgent/QuantAgent-z9i/implementer-20260507T073909Z
+command_preview: claude -p "$(cat /home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-z9i/20260507T073909Z-QuantAgent-z9i-implementer/executor-prompt-claude-code.md)" --output-format stream-json --verbose --include-partial-messages --allowedTools Read,Edit,Write,Bash
+exit_code: not executed
+error: none
