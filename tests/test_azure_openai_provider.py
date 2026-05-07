@@ -17,6 +17,7 @@ from unittest.mock import patch
 
 import pytest
 
+import quantagent.trading_graph as trading_graph_module
 from quantagent import settings
 from quantagent.trading_graph import TradingGraph
 
@@ -94,8 +95,9 @@ class TestAzureConfiguration:
         import importlib
 
         importlib.reload(settings)
+        importlib.reload(trading_graph_module)
 
-        tg = TradingGraph(use_checkpointing=False)
+        tg = trading_graph_module.TradingGraph(use_checkpointing=False)
 
         with pytest.raises(ValueError) as exc_info:
             tg._create_llm("azure", "", 0.1)
@@ -121,8 +123,9 @@ class TestAzureConfiguration:
         import importlib
 
         importlib.reload(settings)
+        importlib.reload(trading_graph_module)
 
-        tg = TradingGraph(use_checkpointing=False)
+        tg = trading_graph_module.TradingGraph(use_checkpointing=False)
 
         with pytest.raises(ValueError) as exc_info:
             tg._create_llm("azure", "", 0.1)
@@ -148,8 +151,9 @@ class TestAzureConfiguration:
         import importlib
 
         importlib.reload(settings)
+        importlib.reload(trading_graph_module)
 
-        tg = TradingGraph(use_checkpointing=False)
+        tg = trading_graph_module.TradingGraph(use_checkpointing=False)
         tg._create_llm("azure", "", 0.1)
 
         # Verify AzureChatOpenAI was called with default api_version
@@ -187,8 +191,9 @@ class TestAzureLLMInstantiation:
         import importlib
 
         importlib.reload(settings)
+        importlib.reload(trading_graph_module)
 
-        tg = TradingGraph(use_checkpointing=False)
+        tg = trading_graph_module.TradingGraph(use_checkpointing=False)
         tg._create_llm("azure", "", 0.1)
 
         # Verify AzureChatOpenAI was called

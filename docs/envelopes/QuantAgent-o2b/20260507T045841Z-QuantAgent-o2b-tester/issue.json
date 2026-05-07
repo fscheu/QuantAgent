@@ -1,0 +1,33 @@
+{
+  "id": "QuantAgent-o2b",
+  "title": "Fix Azure provider gate failures after collection blockers",
+  "description": "## Contexto\nDespués de corregir `QuantAgent-8yr`, el comando exacto del gate de CI dejó de fallar en collection y expuso un nuevo bloqueador real en `tests/test_azure_openai_provider.py`.\n\n## Comando verificado\n`DATABASE_URL=postgresql://test:***@localhost:5432/quantagent_test /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m pytest tests/ -v --tb=short --maxfail=10 -m \"not integration and not slow\"`\n\n## Fallas verificables\n- `TestAzureConfiguration.test_azure_missing_endpoint_raises_error` → no levanta `ValueError`\n- `TestAzureConfiguration.test_azure_missing_deployment_raises_error` → no levanta `ValueError`\n- `TestAzureConfiguration.test_azure_api_version_default` → `AzureChatOpenAI` mock no es invocado\n- `TestAzureLLMInstantiation.test_azure_llm_instantiation_with_correct_params` → `AzureChatOpenAI` mock no es invocado\n\n## Cambio requerido\nCorregir el contrato o los tests del provider Azure para que la suite vuelva a reflejar el comportamiento real esperado con `AzureChatOpenAI`.\n\n## Criterio de aceptación\n- [ ] `tests/test_azure_openai_provider.py -v` pasa en el entorno de test soportado.\n- [ ] El comando exacto del gate deja de fallar por los 4 tests Azure.\n- [ ] La corrección no rompe los providers OpenAI/Anthropic/Qwen ya cubiertos por la misma suite.\n\n## Archivos relevantes\n- `tests/test_azure_openai_provider.py`\n- `quantagent/trading_graph.py`\n- `tests/conftest.py` si la suite requiere bootstrap de provider opcional\n\n## Fuera de scope\n- Cambiar el workflow CI.\n- Resolver fallas de otros módulos no Azure expuestas por el mismo gate.",
+  "status": "open",
+  "priority": 1,
+  "issue_type": "bug",
+  "owner": "fscheu@gmail.com",
+  "created_at": "2026-05-07T02:36:26.9407435Z",
+  "created_by": "Federico Scheu",
+  "updated_at": "2026-05-07T02:36:26.9407435Z",
+  "dependents": [
+    {
+      "id": "QuantAgent-82t",
+      "title": "Re-enable unit tests in CI pipeline (main-ci-deploy.yml)",
+      "description": "El step de pytest en `.github/workflows/main-ci-deploy.yml` está comentado (\"Unit tests temporarily disabled\"). El CI actual solo corre lint, permitiendo que código roto llegue a QA. Con QuantAgent-sfc y QuantAgent-4ch resueltos, la suite estará limpia.\n\nEl workflow ya tiene un servicio PostgreSQL efímero configurado (postgres:16, DB `quantagent_test`, puerto 5432).\n\n**Cambio requerido:**\n1. Descomentar el step \"Run unit tests\" en `main-ci-deploy.yml`\n2. Comando: `pytest tests/ -v --tb=short --maxfail=10 -m \"not integration and not slow\"`\n3. Sin `continue-on-error: true` — debe bloquear el deploy si hay fallos\n4. Verificar que `DATABASE_URL` esté disponible en el env del step\n\n**Criterio de aceptación:**\n- Step \"Run unit tests\" habilitado y corriendo en cada push a main\n- Push con tests fallando bloquea el deploy a QA y notifica Telegram\n- Push con tests pasando despliega a QA normalmente\n\n**Archivos relevantes:**\n- `.github/workflows/main-ci-deploy.yml` — step comentado ~líneas 47-55\n- `pytest.ini` — markers: slow, integration, api, vision\n\n**Fuera de scope:** no modificar los tests, no tocar main-ci.yml (ticket separado QuantAgent-ng1).\n\n**Bloqueado por:** QuantAgent-sfc, QuantAgent-4ch\n",
+      "notes": "Bloqueado por QuantAgent-sfc (SQLite/JSONB) y QuantAgent-4ch (test failures)",
+      "status": "blocked",
+      "priority": 2,
+      "issue_type": "task",
+      "owner": "fscheu@gmail.com",
+      "created_at": "2026-04-21T02:12:55.425651305Z",
+      "created_by": "Federico Scheu",
+      "updated_at": "2026-05-07T01:55:15.494360563Z",
+      "labels": [
+        "openclaw:blocked_by:QuantAgent-4ch",
+        "openclaw:blocked_by:QuantAgent-sfc",
+        "openclaw:design_approved ci"
+      ],
+      "dependency_type": "blocks"
+    }
+  ]
+}
