@@ -2,6 +2,8 @@
 
 Cómo integrar las herramientas de desarrollo en tu flujo de trabajo diario para máxima eficiencia.
 
+Nota operativa: este repo no debe versionar directorios de entorno virtual (`.venv/`, `venv_wsl/`, etc.). Usa un entorno local activado en tu máquina o worktree antes de ejecutar los comandos de esta guía.
+
 ---
 
 ## 1. VSCode On-Save (Recomendado para desarrollo local)

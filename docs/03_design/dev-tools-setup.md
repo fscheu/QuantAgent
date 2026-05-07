@@ -2,6 +2,8 @@
 
 Guía rápida para configurar y usar las herramientas de desarrollo en QuantAgent.
 
+Nota operativa: los entornos virtuales del repo (por ejemplo `.venv/` o `venv_wsl/`) son locales de cada máquina/worktree y no forman parte del código fuente versionado. Activa tu entorno preferido antes de correr estas herramientas, pero no comitees directorios de virtualenv al repositorio.
+
 ---
 
 ## Code Quality & Formatting
