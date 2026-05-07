@@ -1,0 +1,14 @@
+{
+  "issue_id": "QuantAgent-82t",
+  "run_id": "20260507T023257Z-QuantAgent-82t-techlead",
+  "status": "BLOCKED",
+  "decision": "no-merge",
+  "failure_class": "QUALITY_GATE_FAILED",
+  "failure_subclass": "pre_existing_post_collection_failures",
+  "blockers": [
+    "QuantAgent-o2b",
+    "QuantAgent-nrt",
+    "QuantAgent-z9i"
+  ],
+  "next_step": "resolve blocker tickets and rerun the exact CI gate command before reattempting integration"
+}
