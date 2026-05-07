@@ -1,0 +1,13 @@
+# QuantAgent-uz9 — Tech Lead commands
+
+- `git worktree add -b integration/QuantAgent-uz9-final-20260507T175228Z /tmp/autodev-worktrees/QuantAgent/integration-uz9-final-20260507T175228Z main`
+- `git cherry-pick 2bbdf324`
+- `git merge-tree $(git merge-base main HEAD) main HEAD`
+- `git diff --stat main..HEAD`
+- `df -h /`
+- `docker system df`
+- `gh run list --limit 8 --json databaseId,status,conclusion,workflowName,headBranch,headSha,createdAt`
+- `gh run view 25496309598 --json jobs,conclusion,headSha,displayTitle,workflowName,url`
+- `gh run view 25496309598 --job 74817408067 --log-failed | tail -n 40`
+- `bd_safe.sh show QuantAgent-uz9 --json`
+- `bd_safe.sh ready --json`

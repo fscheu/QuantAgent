@@ -1,0 +1,13 @@
+Preflight summary for QuantAgent-uz9 integration:
+
+- `git diff --stat main..HEAD`
+  - `.dockerignore | 1 +`
+- `git merge-tree $(git merge-base main HEAD) main HEAD`
+  - no conflicts reported
+- `df -h /`
+  - `/dev/root 61G total, 59G used, 2.9G avail, 96%`
+- `docker system df`
+  - Images: 28.01GB total, 24.67GB reclaimable
+- Prior failed deploy evidence (`gh run view 25496309598 --job 74817408067 --log-failed | tail -n 40`)
+  - `Step 5/8 : COPY . .`
+  - `write /app/.worktrees/.../.venv/...: no space left on device`

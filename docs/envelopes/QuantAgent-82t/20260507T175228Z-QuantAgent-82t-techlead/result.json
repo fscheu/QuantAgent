@@ -1,0 +1,36 @@
+{
+  "ticket": "QuantAgent-82t",
+  "run_id": "20260507T175228Z-QuantAgent-82t-techlead",
+  "mode": "integration",
+  "status": "BLOCKED",
+  "failure_class": "QUALITY_GATE_FAILED",
+  "failure_subclass": "pre_existing",
+  "decision": "no_merge",
+  "primary_executor": "manual-tech-lead",
+  "fallback_executor": null,
+  "branch": null,
+  "worktree": "/tmp/autodev-worktrees/QuantAgent/integration-uz9-20260507T174725Z",
+  "change_commits": [
+    "fbb483dd"
+  ],
+  "tests": {
+    "status": "failed_in_prior_validated_gate_run",
+    "commands": [
+      "DATABASE_URL=<redacted real CI secret> /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m pytest tests/ -v --tb=short --maxfail=10 -m \"not integration and not slow\""
+    ],
+    "blocker_issue_ids": [
+      "QuantAgent-40j",
+      "QuantAgent-3uf",
+      "QuantAgent-l8r"
+    ]
+  },
+  "deploy": {
+    "status": "not_applicable"
+  },
+  "artifacts": [
+    "docs/envelopes/QuantAgent-82t/20260507T175228Z-QuantAgent-82t-techlead/commands.log",
+    "docs/envelopes/QuantAgent-82t/20260507T175228Z-QuantAgent-82t-techlead/run-report.md",
+    "docs/envelopes/QuantAgent-82t/20260507T175228Z-QuantAgent-82t-techlead/integration-decision-20260507T175228Z.md"
+  ],
+  "user_manual": "not_applicable"
+}

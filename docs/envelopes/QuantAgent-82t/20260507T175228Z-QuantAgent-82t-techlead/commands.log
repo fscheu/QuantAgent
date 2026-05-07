@@ -1,0 +1,11 @@
+# QuantAgent-82t — Tech Lead commands
+
+Evidence source for this integration review:
+- `bd_safe.sh show QuantAgent-82t --json`
+- `bd_safe.sh ready --json`
+- prior same-run validated gate evidence summarized in the cron handoff state
+- ticket blocker creation already completed for `QuantAgent-40j`, `QuantAgent-3uf`, `QuantAgent-l8r`
+
+Caution:
+- a local rerun using the masked placeholder `DATABASE_URL=postgresql://test:***@localhost:5432/quantagent_test` is not a valid reproduction because the real CI secret is intentionally unavailable here.
+- therefore the blocking classification for `QuantAgent-82t` remains based on the earlier exact-gate validation already captured in this cron cycle, not on a masked-password local rerun.

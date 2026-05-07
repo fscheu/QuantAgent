@@ -1,0 +1,12 @@
+This file intentionally avoids storing a fake local pytest rerun with the masked placeholder password.
+
+Why:
+- The workflow file and prior summaries expose `DATABASE_URL` in masked form (`***`), not the real secret.
+- A local rerun with the masked placeholder predictably fails authentication and is not evidence for or against the ticket.
+
+Valid evidence used for this integration decision:
+- the earlier same-cycle exact-gate validation already summarized in the tech-lead handoff;
+- Beads blocker tickets created from that validation: `QuantAgent-40j`, `QuantAgent-3uf`, `QuantAgent-l8r`.
+
+Conclusion:
+- `QuantAgent-82t` remains `BLOCKED` under `QUALITY_GATE_FAILED / pre_existing` until those blockers are resolved.
