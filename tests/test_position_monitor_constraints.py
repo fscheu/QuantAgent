@@ -1,40 +1,19 @@
-"""Additional tests for PositionMonitor - Constraints & Edge Cases.
+"""Additional tests for PositionMonitor - Constraints & Edge Cases."""
 
-Note: These tests require PostgreSQL due to JSON column usage in models.
-They are marked as integration tests to exclude from default pytest run.
-"""
-
-import os
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 from quantagent.models import (
     ActivePosition,
-    Base,
     Environment,
     ExitPolicy,
     OrderSide,
+    Signal,
+    Trade,
+    TradeSignal,
 )
 from quantagent.trading.position_monitor import PositionMonitor
-
-
-@pytest.fixture
-def db_session():
-    """Create database session for testing using DATABASE_URL if available."""
-    database_url = os.getenv("DATABASE_URL")
-    if database_url:
-        engine = create_engine(database_url)
-    else:
-        # Fallback to SQLite for local development
-        engine = create_engine("sqlite:///:memory:")
-    Base.metadata.create_all(engine)
-    TestSession = sessionmaker(bind=engine)
-    db = TestSession()
-    yield db
-    db.close()
 
 
 @pytest.fixture
@@ -112,8 +91,23 @@ def test_default_values_are_correct(position_monitor):
     assert position.close_reason is None
     assert position.accuracy is None
 
-def test_position_with_all_optional_fields(position_monitor):
+def test_position_with_all_optional_fields(position_monitor, db_session):
     """Validate position creation with all optional fields set."""
+    trade = Trade(
+        symbol="BTCUSDT",
+        entry_price=100.0,
+        quantity=Decimal("1.0"),
+        side=OrderSide.BUY,
+    )
+    signal = Signal(
+        symbol="BTCUSDT",
+        signal=TradeSignal.LONG,
+        confidence=0.8,
+        timeframe="1h",
+    )
+    db_session.add_all([trade, signal])
+    db_session.flush()
+
     position = position_monitor.open_position(
         symbol="BTCUSDT",
         side=OrderSide.BUY,
@@ -125,15 +119,15 @@ def test_position_with_all_optional_fields(position_monitor):
         trailing_stop_pct=0.05,
         max_hold_candles=10,
         prediction_horizon=5,
-        trade_id=123,
-        signal_id=456,
+        trade_id=trade.id,
+        signal_id=signal.id,
     )
 
     assert position.trailing_stop_pct == 0.05
     assert position.max_hold_candles == 10
     assert position.prediction_horizon == 5
-    assert position.trade_id == 123
-    assert position.signal_id == 456
+    assert position.trade_id == trade.id
+    assert position.signal_id == signal.id
 
 # ============================================================================
 # INVARIANTS TESTS
