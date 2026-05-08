@@ -6,11 +6,13 @@ Measures execution time and confirms all three agents run simultaneously.
 import time
 
 import pandas as pd
+import pytest
 
 from quantagent.static_util import read_and_format_ohlcv
 from quantagent.trading_graph import TradingGraph
 
 
+@pytest.mark.integration
 def test_parallel_execution():
     """Test that all three agents execute in parallel."""
 
