@@ -1,0 +1,7 @@
+git diff --stat main..integration/QuantAgent-82t-20260508T213950Z
+DATABASE_URL=postgresql://test:***@localhost:5432/quantagent_test /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m pytest tests/test_vje_scheduler_heartbeat_backend.py tests/test_wait_sec_deprecation_removal.py tests/trading/test_scheduler.py -v --tb=short --maxfail=10 -m "not integration and not slow"
+bd create "Fix TradingScheduler heartbeat and scheduler unit-test regressions exposed by CI gate" -t bug -p 1 --description-file /tmp/QuantAgent-82t-blocker-scheduler.md --json
+bd create "Fix stale worktree-path assumptions in wait_sec deprecation validation tests" -t bug -p 1 --description-file /tmp/QuantAgent-82t-blocker-waitsec.md --json
+bd dep add QuantAgent-82t QuantAgent-uzq
+bd dep add QuantAgent-82t QuantAgent-9t5
+bd update QuantAgent-82t --status blocked --json

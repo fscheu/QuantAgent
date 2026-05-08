@@ -1,0 +1,4 @@
+FAIL DATABASE_URL=postgresql://test:***@localhost:5432/quantagent_test /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m pytest tests/test_vje_scheduler_heartbeat_backend.py tests/test_wait_sec_deprecation_removal.py tests/trading/test_scheduler.py -v --tb=short --maxfail=10 -m "not integration and not slow"
+PASS blocker issues created: QuantAgent-uzq, QuantAgent-9t5
+PASS QuantAgent-82t moved to blocked with real dependencies
+SKIP merge to main (gate-enablement rule)

@@ -1,0 +1,24 @@
+{
+  "ticket": "QuantAgent-82t",
+  "run_id": "20260508T214848Z-QuantAgent-82t-techlead",
+  "mode": "integration_review",
+  "status": "BLOCKED",
+  "failure_class": "QUALITY_GATE_FAILED",
+  "failure_subclass": "pre_existing",
+  "decision": "NO_MERGE",
+  "merge_strategy": "none",
+  "conflict_status": "not_attempted",
+  "candidate_branch": "integration/QuantAgent-82t-20260508T213950Z",
+  "verification_worktree": "/tmp/autodev-worktrees/QuantAgent/main-verify-20260508T214724Z",
+  "tests": {
+    "command": "DATABASE_URL=postgresql://test:***@localhost:5432/quantagent_test /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m pytest tests/test_vje_scheduler_heartbeat_backend.py tests/test_wait_sec_deprecation_removal.py tests/trading/test_scheduler.py -v --tb=short --maxfail=10 -m \"not integration and not slow\"",
+    "result": "10 failed, 30 passed",
+    "passed": 30,
+    "failed": 10
+  },
+  "blockers_created": [
+    "QuantAgent-uzq",
+    "QuantAgent-9t5"
+  ],
+  "user_manual": "skipped_internal_change"
+}
