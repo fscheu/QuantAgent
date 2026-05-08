@@ -1,0 +1,25 @@
+{
+  "id": "QuantAgent-6t4",
+  "title": "Use with_structured_output in pattern_agent and trend_agent",
+  "description": "Refactor pattern_agent.py and trend_agent.py to use LangChain's with_structured_output method for PatternReport and TrendReport respectively, matching the pattern already used in indicator_agent.py. This improves type safety and eliminates manual JSON parsing.",
+  "status": "open",
+  "priority": 3,
+  "issue_type": "task",
+  "created_at": "2026-01-03T16:59:06.449048907Z",
+  "created_by": "baiscf",
+  "updated_at": "2026-04-27T14:38:06.290071478Z",
+  "metadata": {
+    "openclaw": {
+      "phase": "design_pending",
+      "design_branch": "feature/QuantAgent-6t4-use-with-structured-output-in-pattern-ag",
+      "epic_branch": null,
+      "updated_at": "2026-02-18T01:14:02.342687+00:00"
+    }
+  },
+  "labels": [
+    "consistency",
+    "langgraph",
+    "openclaw:design_pending",
+    "refactor"
+  ]
+}

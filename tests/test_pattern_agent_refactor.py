@@ -67,6 +67,19 @@ def empty_state():
 class TestOutputStructure:
     """Test that agent returns valid PatternReport structure."""
 
+    def test_uses_pattern_report_structured_output(
+        self, mock_llm, mock_vision_llm, mock_toolkit, sample_state
+    ):
+        """Verify the vision LLM requests PatternReport via structured output."""
+        original = mock_vision_llm.with_structured_output
+        mock_vision_llm.with_structured_output = Mock(side_effect=original)
+
+        agent_node = create_pattern_agent(mock_llm, mock_vision_llm, mock_toolkit)
+        result = agent_node(sample_state)
+
+        mock_vision_llm.with_structured_output.assert_called_once_with(PatternReport)
+        assert isinstance(result["pattern_report"], PatternReport)
+
     def test_output_is_pattern_report_instance(
         self, mock_llm, mock_vision_llm, mock_toolkit, sample_state
     ):
@@ -156,6 +169,23 @@ class TestConstraintValidation:
 
 class TestErrorHandling:
     """Test agent gracefully handles errors and returns valid fallback."""
+
+    def test_fallback_when_structured_output_setup_fails(
+        self, mock_llm, mock_vision_llm, mock_toolkit, sample_state
+    ):
+        """Verify a valid fallback report is returned when structured output setup fails."""
+        mock_vision_llm.with_structured_output = Mock(
+            side_effect=ValueError("structured output unavailable")
+        )
+
+        agent_node = create_pattern_agent(mock_llm, mock_vision_llm, mock_toolkit)
+        result = agent_node(sample_state)
+
+        report = result["pattern_report"]
+        assert isinstance(report, PatternReport)
+        assert report.confidence == 0.0
+        assert report.breakout_probability == 0.0
+        assert "structured output unavailable" in report.reasoning.lower()
 
     @pytest.mark.skip(reason="Mock interface too complex, test not providing value")
     def test_fallback_on_llm_exception(self, mock_toolkit, sample_state):

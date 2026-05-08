@@ -28,6 +28,7 @@ Acceptance test documents define the criteria for validating that features work 
 - [QuantAgent-les-AC-commissions-pnl.md](./QuantAgent-les-AC-commissions-pnl.md) - Support commissions in P&L calculation (P3, feature)
 - [QuantAgent-nu7-AC-active-position-monitoring.md](./QuantAgent-nu7-AC-active-position-monitoring.md) - Active Position Monitoring System (Epic: QuantAgent-nu7)
 - [QuantAgent-7bn-AC-azure-openai-support.md](./QuantAgent-7bn-AC-azure-openai-support.md) - Azure OpenAI LLM provider support
+- [QuantAgent-6t4-AC-structured-output-vision-agents.md](./QuantAgent-6t4-AC-structured-output-vision-agents.md) - Structured output refactor for pattern/trend vision agents
 
 ## Acceptance Criteria Format
 
