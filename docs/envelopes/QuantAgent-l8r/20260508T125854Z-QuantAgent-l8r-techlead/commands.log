@@ -1,0 +1,5 @@
+2026-05-08T12:58:54Z /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/ruff check --fix tests/test_r78_trade_pnl_calculation.py
+2026-05-08T12:58:54Z /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m compileall -q tests/test_r78_trade_pnl_calculation.py
+2026-05-08T12:58:54Z git status -sb
+2026-05-08T12:59:30Z bd show QuantAgent-l8r --json
+2026-05-08T13:00:00Z DATABASE_URL=postgresql://test:***@localhost:5432/quantagent_test /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m pytest tests/ -v --tb=short --maxfail=10 -m "not integration and not slow"  # non-diagnostic redacted-secret replay

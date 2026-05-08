@@ -1,0 +1,4 @@
+PASS ruff check --fix tests/test_r78_trade_pnl_calculation.py
+PASS python -m compileall -q tests/test_r78_trade_pnl_calculation.py
+PASS previous verified pytest run: tests/test_r78_trade_pnl_calculation.py -v --tb=short -q (13 passed)
+INFO exact gate replay with DATABASE_URL=postgresql://test:***@localhost:5432/quantagent_test is non-diagnostic because the credential is redacted

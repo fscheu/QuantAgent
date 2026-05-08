@@ -18,7 +18,7 @@ import os
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 from quantagent.models import (
@@ -43,10 +43,17 @@ def test_db():
         # Fallback to SQLite for local development
         engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
+    if database_url:
+        tables = ", ".join(table.name for table in reversed(Base.metadata.sorted_tables))
+        with engine.begin() as conn:
+            conn.execute(text(f"TRUNCATE TABLE {tables} RESTART IDENTITY CASCADE"))
     TestSession = sessionmaker(bind=engine)
     db = TestSession()
     yield db
     db.close()
+    if database_url:
+        with engine.begin() as conn:
+            conn.execute(text(f"TRUNCATE TABLE {tables} RESTART IDENTITY CASCADE"))
 
 
 @pytest.fixture
