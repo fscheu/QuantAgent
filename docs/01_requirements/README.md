@@ -23,6 +23,7 @@ The files listed above represent the current functional requirements for the sys
 
 ## Active Per-Change Requirements
 
+- [QuantAgent-40j-RQ-parallel-test-fix.md](./QuantAgent-40j-RQ-parallel-test-fix.md) - Fix missing benchmark fixture for parallel execution test (P1, blocks 82t)
 - [QuantAgent-4w4-RQ-lookback-windows.md](./QuantAgent-4w4-RQ-lookback-windows.md) - Backtest must honor strategy-specific lookback windows (P1, blocks b8r)
 - [QuantAgent-b8r-RQ-52week-high-momentum.md](./QuantAgent-b8r-RQ-52week-high-momentum.md) - M1 Strategy 3: 52-week high momentum / breakout for US equities
 - [QuantAgent-c69-RQ-llm-agent-strategy-m1.md](./QuantAgent-c69-RQ-llm-agent-strategy-m1.md) - M1 Strategy 2: LLMAgentStrategy as explicit reference pipeline
