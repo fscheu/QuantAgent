@@ -32,6 +32,7 @@ The files listed above represent the current functional requirements for the sys
 - [QuantAgent-les-RQ-commissions-pnl.md](./QuantAgent-les-RQ-commissions-pnl.md) - Support commissions in P&L calculation (P3, feature)
 - [QuantAgent-nu7-RQ-active-position-monitoring.md](./QuantAgent-nu7-RQ-active-position-monitoring.md) - Active Position Monitoring System (Epic: QuantAgent-nu7)
 - [QuantAgent-7bn-RQ-azure-openai-support.md](./QuantAgent-7bn-RQ-azure-openai-support.md) - Azure OpenAI LLM provider support
+- [QuantAgent-6t4-RQ-structured-output-vision-agents.md](./QuantAgent-6t4-RQ-structured-output-vision-agents.md) - Replace manual JSON parsing with LangChain structured output in pattern/trend agents
 
 ## Per-Change Requirements
 

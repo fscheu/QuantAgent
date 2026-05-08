@@ -3,7 +3,6 @@ Agent for trend analysis in high-frequency trading (HFT) context.
 Uses LLM and toolkit to generate and interpret trendline charts for short-term prediction.
 """
 
-import json
 import logging
 from typing import Any, Dict
 
@@ -69,11 +68,8 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
                 trend_image_b64 = None
 
         # --- Initialize trend analysis output ---
-        support_level = 0.0
-        resistance_level = 0.0
-        trend_direction = "sideways"
-        trend_strength = 0.0
         reasoning = "Trend analysis could not be completed"
+        trend_report = None
 
         # --- Vision analysis with image ---
         if trend_image_b64:
@@ -88,15 +84,7 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
                         "- Are candles bouncing off support/resistance?\n"
                         "- Is price breaking through the lines?\n"
                         "- Is price compressing between them?\n\n"
-                        "Based on trendline slope, spacing, and recent K-line behavior, predict the likely short-term trend.\n"
-                        "Respond in JSON format:\n"
-                        "{\n"
-                        '  "support_level": <float>,\n'
-                        '  "resistance_level": <float>,\n'
-                        '  "trend_direction": "<upward|downward|sideways>",\n'
-                        '  "trend_strength": <float 0.0-1.0>,\n'
-                        '  "reasoning": "<brief explanation>"\n'
-                        "}"
+                        "Based on trendline slope, spacing, and recent K-line behavior, predict the likely short-term trend."
                     ),
                 },
                 {
@@ -114,9 +102,9 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
             agent_messages = [system_msg, human_msg]
 
             try:
-                # Try with system message
-                final_response = invoke_with_retry(
-                    graph_llm.invoke, agent_messages, retries=3, base_wait=4
+                structured_graph_llm = graph_llm.with_structured_output(TrendReport)
+                trend_report = invoke_with_retry(
+                    structured_graph_llm.invoke, agent_messages, retries=3, base_wait=4
                 )
             except Exception as e:
                 # Fallback: retry without system message for Anthropic compatibility
@@ -126,57 +114,34 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
                         extra={"event_type": "llm_retry_no_system_msg"},
                     )
                     try:
-                        final_response = invoke_with_retry(
-                            graph_llm.invoke, [human_msg], retries=3, base_wait=4
+                        structured_graph_llm = graph_llm.with_structured_output(
+                            TrendReport
+                        )
+                        trend_report = invoke_with_retry(
+                            structured_graph_llm.invoke, [human_msg], retries=3, base_wait=4
                         )
                     except Exception as retry_error:
                         reasoning = f"LLM error: {str(retry_error)}"
-                        final_response = None
                 else:
                     reasoning = f"LLM error: {str(e)}"
-                    final_response = None
 
-            # Parse structured output
-            if final_response and hasattr(final_response, "content"):
-                try:
-                    # Extract JSON from response (handle markdown)
-                    response_text = final_response.content
-                    if "```json" in response_text:
-                        response_text = response_text.split("```json")[1].split("```")[
-                            0
-                        ]
-                    elif "```" in response_text:
-                        response_text = response_text.split("```")[1].split("```")[0]
-
-                    response_dict = json.loads(response_text.strip())
-                    support_level = float(response_dict.get("support_level", 0.0))
-                    resistance_level = float(response_dict.get("resistance_level", 0.0))
-                    trend_direction = response_dict.get("trend_direction", "sideways")
-                    trend_strength = float(response_dict.get("trend_strength", 0.0))
-                    reasoning = response_dict.get(
-                        "reasoning", "Trend analysis completed"
-                    )
-                except (json.JSONDecodeError, ValueError, KeyError):
-                    reasoning = f"Trend analysis completed with fallback parsing: {final_response.content[:100]}"
-
-        # Build structured report
-        try:
-            trend_report = TrendReport(
-                support_level=support_level,
-                resistance_level=resistance_level,
-                trend_direction=trend_direction,
-                trend_strength=min(1.0, max(0.0, trend_strength)),
-                reasoning=reasoning,
-            )
-        except Exception as e:
-            # Fallback valid report
-            trend_report = TrendReport(
-                support_level=0.0,
-                resistance_level=0.0,
-                trend_direction="sideways",
-                trend_strength=0.0,
-                reasoning=f"Failed to create report: {str(e)}",
-            )
+        if not isinstance(trend_report, TrendReport):
+            try:
+                trend_report = TrendReport(
+                    support_level=0.0,
+                    resistance_level=0.0,
+                    trend_direction="sideways",
+                    trend_strength=0.0,
+                    reasoning=reasoning,
+                )
+            except Exception as e:
+                trend_report = TrendReport(
+                    support_level=0.0,
+                    resistance_level=0.0,
+                    trend_direction="sideways",
+                    trend_strength=0.0,
+                    reasoning=f"Failed to create report: {str(e)}",
+                )
 
         # Don't add messages to shared state - each agent only needs them for its LLM call
         # Agents work independently and communicate via structured reports, not messages
