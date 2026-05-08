@@ -33,7 +33,7 @@ class PositionMonitor:
         if self.backtest_run_id is not None:
             query = query.filter(ActivePosition.backtest_run_id == self.backtest_run_id)
 
-        return query.first()
+        return query.order_by(ActivePosition.id).first()
 
     def open_position(
         self,

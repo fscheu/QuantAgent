@@ -1,0 +1,28 @@
+## Commands Log — QuantAgent-3uf tester — 2026-05-08
+
+[1] git status --short && git branch --show-current && git log --oneline -3
+  Branch: feature/QuantAgent-3uf-fix-positionmonitor-unit-test-regression
+  Last commit: ac6f8d1f fix(tests): fix PositionMonitor unit-test regressions (QuantAgent-3uf)
+
+[2] DATABASE_URL=postgresql://test:test@localhost:5432/quantagent_test pytest tests/test_position_monitor.py::test_only_one_active_position_per_symbol tests/test_position_monitor_constraints.py::test_position_with_all_optional_fields tests/test_position_monitor_constraints.py::test_get_active_position_returns_most_recent_if_multiple tests/test_position_monitor_constraints.py::test_closed_position_not_returned_by_get_active -v
+  Result: 4 passed in 2.08s
+
+[3] DATABASE_URL=postgresql://test:test@localhost:5432/quantagent_test pytest tests/ -v --tb=short --maxfail=10 -m "not integration and not slow"
+  Result: 10 failed (maxfail hit), 454 passed — all failures pre-existing
+
+[4] DATABASE_URL=postgresql://test:test@localhost:5432/quantagent_test pytest tests/test_position_monitor.py tests/test_position_monitor_constraints.py -v --tb=short
+  Result: 27 passed in 2.96s
+
+[5] DATABASE_URL=postgresql://test:test@localhost:5432/quantagent_test pytest tests/ -v --tb=short -m "not integration and not slow" --ignore=tests/test_r78_trade_pnl_calculation.py
+  Result: 15 failed, 683 passed, 20 skipped, 34 deselected — all failures pre-existing
+
+[6] DATABASE_URL=postgresql://test:test@localhost:5432/quantagent_test pytest tests/test_r78_trade_pnl_calculation.py tests/test_vje_scheduler_heartbeat_backend.py tests/trading/test_scheduler.py -v --tb=line [on main]
+  Result: 15 failed, 24 passed — confirmed identical failures on main
+
+[7] python -m compileall -q .
+  Result: clean (no output)
+
+[8] git diff --name-only HEAD~1 HEAD
+  quantagent/trading/position_monitor.py
+  tests/test_position_monitor.py
+  tests/test_position_monitor_constraints.py
