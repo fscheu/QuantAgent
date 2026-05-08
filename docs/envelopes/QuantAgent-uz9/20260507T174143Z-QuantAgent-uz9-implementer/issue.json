@@ -1,0 +1,33 @@
+{
+  "id": "QuantAgent-uz9",
+  "title": "Fix QA deploy build-context bloat from .worktrees",
+  "description": "## Contexto\nEl deploy QA en el runner self-hosted volvió a fallar con `no space left on device` durante `docker-compose ... build --no-cache`. La verificación post-deploy confirmó dos factores concretos: (1) root disk en 96% y (2) `.worktrees/` del checkout principal entra al contexto Docker porque `.dockerignore` no la excluye.\n\n## Cambio requerido\n1. Excluir `.worktrees/` del contexto Docker de QuantAgent\n2. Mantener el cambio acotado a higiene de build/deploy (sin tocar lógica de app)\n3. Dejar evidencia verificable para que futuros merges a `main` no vuelvan a copiar worktrees locales al build context\n\n## Criterio de aceptación\n- [ ] `.dockerignore` ignora `.worktrees/`\n- [ ] El diff queda limitado a higiene de build context\n- [ ] Se deja artifact/autodev evidence vinculada al ticket\n- [ ] `QuantAgent-82t` puede reevaluarse sin este blocker de contexto Docker\n\n## Archivos relevantes\n- `.dockerignore`\n- `docs/envelopes/deploy-verification-20260507T132230Z.md`\n- `.github/workflows/main-ci-deploy.yml` (solo como contexto; fuera de scope del fix)\n\n## Fuera de scope\n- pruning manual/destructivo de Docker\n- cambios de negocio o app\n- refactor del workflow CI más allá de consumir un checkout más limpio\n",
+  "status": "open",
+  "priority": 1,
+  "issue_type": "bug",
+  "owner": "fscheu@gmail.com",
+  "created_at": "2026-05-07T17:40:53.745908333Z",
+  "created_by": "Federico Scheu",
+  "updated_at": "2026-05-07T17:40:53.745908333Z",
+  "dependents": [
+    {
+      "id": "QuantAgent-82t",
+      "title": "Re-enable unit tests in CI pipeline (main-ci-deploy.yml)",
+      "description": "El step de pytest en `.github/workflows/main-ci-deploy.yml` está comentado (\"Unit tests temporarily disabled\"). El CI actual solo corre lint, permitiendo que código roto llegue a QA. Con QuantAgent-sfc y QuantAgent-4ch resueltos, la suite estará limpia.\n\nEl workflow ya tiene un servicio PostgreSQL efímero configurado (postgres:16, DB `quantagent_test`, puerto 5432).\n\n**Cambio requerido:**\n1. Descomentar el step \"Run unit tests\" en `main-ci-deploy.yml`\n2. Comando: `pytest tests/ -v --tb=short --maxfail=10 -m \"not integration and not slow\"`\n3. Sin `continue-on-error: true` — debe bloquear el deploy si hay fallos\n4. Verificar que `DATABASE_URL` esté disponible en el env del step\n\n**Criterio de aceptación:**\n- Step \"Run unit tests\" habilitado y corriendo en cada push a main\n- Push con tests fallando bloquea el deploy a QA y notifica Telegram\n- Push con tests pasando despliega a QA normalmente\n\n**Archivos relevantes:**\n- `.github/workflows/main-ci-deploy.yml` — step comentado ~líneas 47-55\n- `pytest.ini` — markers: slow, integration, api, vision\n\n**Fuera de scope:** no modificar los tests, no tocar main-ci.yml (ticket separado QuantAgent-ng1).\n\n**Bloqueado por:** QuantAgent-sfc, QuantAgent-4ch\n",
+      "notes": "Bloqueado por QuantAgent-sfc (SQLite/JSONB) y QuantAgent-4ch (test failures)",
+      "status": "blocked",
+      "priority": 2,
+      "issue_type": "task",
+      "owner": "fscheu@gmail.com",
+      "created_at": "2026-04-21T02:12:55.425651305Z",
+      "created_by": "Federico Scheu",
+      "updated_at": "2026-05-07T01:55:15.494360563Z",
+      "labels": [
+        "openclaw:blocked_by:QuantAgent-4ch",
+        "openclaw:blocked_by:QuantAgent-sfc",
+        "openclaw:design_approved ci"
+      ],
+      "dependency_type": "blocks"
+    }
+  ]
+}

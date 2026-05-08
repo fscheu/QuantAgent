@@ -1,0 +1,59 @@
+{
+  "run_id": "20260508T024021Z-QuantAgent-3uf-planner",
+  "phase": "planner",
+  "issue": "QuantAgent-3uf",
+  "result": "SUCCESS",
+  "timestamp": "2026-05-08T02:42:30Z",
+  "artifacts": [
+    "docs/01_requirements/QuantAgent-3uf-RQ-fix-positionmonitor-unit-test-regression.md",
+    "docs/02_planning/QuantAgent-3uf-PL-fix-positionmonitor-unit-test-regression.md",
+    "docs/03_design/QuantAgent-3uf-DS-fix-positionmonitor-unit-test-regression.md",
+    "docs/05_acceptance_tests/QuantAgent-3uf-AC-fix-positionmonitor-unit-test-regression.md"
+  ],
+  "quality_gates": {
+    "git_status_short": "PASS",
+    "issue_id_in_docs_paths": "PASS",
+    "acceptance_criteria_testable": "PASS",
+    "compileall": "SKIPPED"
+  },
+  "root_causes": [
+    {
+      "id": "RC-1",
+      "description": "Local db_session fixtures in both test files override conftest.py SQLite isolation when DATABASE_URL is set (PostgreSQL in CI). Data accumulates across runs with no cleanup.",
+      "files_affected": [
+        "tests/test_position_monitor.py",
+        "tests/test_position_monitor_constraints.py"
+      ]
+    },
+    {
+      "id": "RC-2",
+      "description": "test_position_with_all_optional_fields uses hardcoded trade_id=123 and signal_id=456 as FK references. No parent Trade/Signal records exist, causing ForeignKeyViolation on commit.",
+      "files_affected": [
+        "tests/test_position_monitor_constraints.py"
+      ]
+    },
+    {
+      "id": "RC-3",
+      "description": "get_active_position uses .first() with no ORDER BY, making results non-deterministic when multiple active positions exist (stale data from prior runs).",
+      "files_affected": [
+        "quantagent/trading/position_monitor.py"
+      ]
+    }
+  ],
+  "changes_required": [
+    {
+      "file": "tests/test_position_monitor.py",
+      "change": "Remove local db_session fixture and unused imports (os, create_engine, sessionmaker)"
+    },
+    {
+      "file": "tests/test_position_monitor_constraints.py",
+      "change": "Remove local db_session fixture; in test_position_with_all_optional_fields create actual Trade+Signal records before open_position"
+    },
+    {
+      "file": "quantagent/trading/position_monitor.py",
+      "change": "Add .order_by(ActivePosition.id) to get_active_position query before .first()"
+    }
+  ],
+  "next_phase": "implementer",
+  "feature_branch": "feature/QuantAgent-3uf-fix-positionmonitor-unit-test-regression"
+}

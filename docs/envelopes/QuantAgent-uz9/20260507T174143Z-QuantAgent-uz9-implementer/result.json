@@ -1,0 +1,82 @@
+{
+  "run_id": "20260507T174143Z-QuantAgent-uz9-implementer",
+  "phase": "implementer",
+  "skill": "autodev-implementer",
+  "executor": "claude-code",
+  "status": "SUCCESS",
+  "dry_run": false,
+  "execution_performed": true,
+  "repo_path": "/home/azureuser/repos/projects/QuantAgent",
+  "beads_issue_id": "QuantAgent-uz9",
+  "branch": "feature/QuantAgent-uz9-fix-qa-deploy-build-context-bloat-from-w",
+  "worktree_path": "/mnt/actions-runner/autodev-runtime/worktrees/QuantAgent/QuantAgent-uz9/implementer-20260507T174143Z",
+  "started_at": "2026-05-07T17:41:43.157296+00:00",
+  "finished_at": "2026-05-07T17:45:00.000000+00:00",
+  "files_changed": [
+    ".dockerignore"
+  ],
+  "docs_changed": [],
+  "tests_changed": [],
+  "commits": [
+    {
+      "sha": "3f6677f3",
+      "message": "chore(docker): exclude .worktrees from build context",
+      "branch": "feature/QuantAgent-uz9-fix-qa-deploy-build-context-bloat-from-w",
+      "files": [".dockerignore"]
+    }
+  ],
+  "quality_gates": [
+    {
+      "name": "git status --short",
+      "command": "git status --short",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "Only .dockerignore modified. Scope respected."
+    },
+    {
+      "name": "ruff check --fix .",
+      "command": "ruff check --fix .",
+      "status": "WARN",
+      "exit_code": 1,
+      "evidence": "5 pre-existing errors in alembic/versions/ and tests/. Stash verification confirms none introduced by this PR. .dockerignore is not a Python file."
+    },
+    {
+      "name": "python -m compileall -q .",
+      "command": "python -m compileall -q .",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "No compilation errors."
+    },
+    {
+      "name": "pytest relevant subset",
+      "command": "pytest tests/ -m 'not integration and not slow' -q",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "134 passed, 33 deselected. 5 setup errors pre-existing (DATABASE_URL env). No regressions."
+    }
+  ],
+  "beads_comment_added": false,
+  "beads_labels_changed": [],
+  "artifacts": [
+    "input-envelope.md",
+    "executor-prompt-claude-code.md",
+    "route-plan-claude-code.json",
+    "commands.log",
+    "quality-gates.log",
+    "result.json",
+    "run-report.md",
+    "issue.json"
+  ],
+  "risks": [
+    "Pre-existing ruff lint failures in alembic/versions/ and tests/ unrelated to this PR."
+  ],
+  "open_questions": [],
+  "next_step": "push_and_merge",
+  "implementation_summary": {
+    "scope_respected": true,
+    "code_written": false,
+    "config_changed": true,
+    "tests_added_by_implementer": false,
+    "description": "Added .worktrees to .dockerignore to exclude worktree directories (each carrying ~500MB .venv) from Docker build context. Prevents no-space-left-on-device failures on self-hosted QA runner."
+  }
+}
