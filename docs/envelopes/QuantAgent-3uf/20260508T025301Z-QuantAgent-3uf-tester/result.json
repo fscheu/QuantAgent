@@ -1,0 +1,46 @@
+{
+  "run_id": "20260508T025301Z-QuantAgent-3uf-tester",
+  "phase": "tester",
+  "issue": "QuantAgent-3uf",
+  "result": "SUCCESS",
+  "branch": "feature/QuantAgent-3uf-fix-positionmonitor-unit-test-regression",
+  "timestamp": "2026-05-08T02:53:01Z",
+  "target_tests": {
+    "tests/test_position_monitor.py::test_only_one_active_position_per_symbol": "PASS",
+    "tests/test_position_monitor_constraints.py::test_position_with_all_optional_fields": "PASS",
+    "tests/test_position_monitor_constraints.py::test_get_active_position_returns_most_recent_if_multiple": "PASS",
+    "tests/test_position_monitor_constraints.py::test_closed_position_not_returned_by_get_active": "PASS"
+  },
+  "position_monitor_suite": {
+    "total": 27,
+    "passed": 27,
+    "failed": 0
+  },
+  "full_gate": {
+    "command": "pytest tests/ -v --tb=short --maxfail=10 -m 'not integration and not slow'",
+    "passed": 683,
+    "failed": 15,
+    "skipped": 20,
+    "deselected": 34,
+    "pre_existing_failures": true,
+    "pre_existing_failure_files": [
+      "tests/test_r78_trade_pnl_calculation.py",
+      "tests/test_vje_scheduler_heartbeat_backend.py",
+      "tests/test_wait_sec_deprecation_removal.py",
+      "tests/trading/test_scheduler.py"
+    ],
+    "new_regressions": 0
+  },
+  "quality_gates": {
+    "git_status_clean": false,
+    "branch_not_main": true,
+    "target_tests_pass": true,
+    "relevant_subset_pass": true,
+    "compile_clean": true
+  },
+  "files_changed_by_implementer": [
+    "quantagent/trading/position_monitor.py",
+    "tests/test_position_monitor.py",
+    "tests/test_position_monitor_constraints.py"
+  ]
+}

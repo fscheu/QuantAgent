@@ -1,0 +1,49 @@
+{
+  "id": "QuantAgent-3uf",
+  "title": "Fix PositionMonitor unit-test regressions exposed by CI gate",
+  "description": "## Contexto\nLa reevaluación de `QuantAgent-82t` expuso 4 fallas adicionales relacionadas con `PositionMonitor` y constraints de `ActivePosition`.\n\n## Evidencia\nComando exacto del gate:\n`DATABASE_URL=postgresql://test:test@localhost:5432/quantagent_test /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m pytest tests/ -v --tb=short --maxfail=10 -m \"not integration and not slow\"`\n\nFallas verificables:\n- `tests/test_position_monitor.py::test_only_one_active_position_per_symbol`\n- `tests/test_position_monitor_constraints.py::test_position_with_all_optional_fields`\n- `tests/test_position_monitor_constraints.py::test_get_active_position_returns_most_recent_if_multiple`\n- `tests/test_position_monitor_constraints.py::test_closed_position_not_returned_by_get_active`\n\nSe observan dos síntomas principales:\n1. múltiples posiciones activas residuales donde el test esperaba una sola\n2. FK/semántica de `trade_id` y selección de posición activa no alineadas con el contrato esperado\n\n## Cambio requerido\nAlinear tests y/o implementación de `PositionMonitor` con el contrato actual de `ActivePosition`, manteniendo aislamiento entre tests y reglas coherentes para posición activa.\n\n## Criterio de aceptación\n- [ ] Los 4 tests fallidos de PositionMonitor pasan\n- [ ] El gate exacto de `QuantAgent-82t` deja de frenarse por PositionMonitor\n\n## Archivos relevantes\n- `tests/test_position_monitor.py`\n- `tests/test_position_monitor_constraints.py`\n- `quantagent/trading/position_monitor.py`\n- `quantagent/models.py`\n\n## Fuera de scope\n- Cambiar workflow CI\n- Resolver benchmark fixture faltante o PnL calculation en este ticket\n",
+  "status": "open",
+  "priority": 1,
+  "issue_type": "bug",
+  "owner": "fscheu@gmail.com",
+  "created_at": "2026-05-07T17:50:51.374680882Z",
+  "created_by": "Federico Scheu",
+  "updated_at": "2026-05-07T17:50:51.374680882Z",
+  "dependents": [
+    {
+      "id": "QuantAgent-82t",
+      "title": "Re-enable unit tests in CI pipeline (main-ci-deploy.yml)",
+      "description": "El step de pytest en `.github/workflows/main-ci-deploy.yml` está comentado (\"Unit tests temporarily disabled\"). El CI actual solo corre lint, permitiendo que código roto llegue a QA. Con QuantAgent-sfc y QuantAgent-4ch resueltos, la suite estará limpia.\n\nEl workflow ya tiene un servicio PostgreSQL efímero configurado (postgres:16, DB `quantagent_test`, puerto 5432).\n\n**Cambio requerido:**\n1. Descomentar el step \"Run unit tests\" en `main-ci-deploy.yml`\n2. Comando: `pytest tests/ -v --tb=short --maxfail=10 -m \"not integration and not slow\"`\n3. Sin `continue-on-error: true` — debe bloquear el deploy si hay fallos\n4. Verificar que `DATABASE_URL` esté disponible en el env del step\n\n**Criterio de aceptación:**\n- Step \"Run unit tests\" habilitado y corriendo en cada push a main\n- Push con tests fallando bloquea el deploy a QA y notifica Telegram\n- Push con tests pasando despliega a QA normalmente\n\n**Archivos relevantes:**\n- `.github/workflows/main-ci-deploy.yml` — step comentado ~líneas 47-55\n- `pytest.ini` — markers: slow, integration, api, vision\n\n**Fuera de scope:** no modificar los tests, no tocar main-ci.yml (ticket separado QuantAgent-ng1).\n\n**Bloqueado por:** QuantAgent-sfc, QuantAgent-4ch\n",
+      "notes": "Bloqueado por QuantAgent-sfc (SQLite/JSONB) y QuantAgent-4ch (test failures)",
+      "status": "blocked",
+      "priority": 2,
+      "issue_type": "task",
+      "owner": "fscheu@gmail.com",
+      "created_at": "2026-04-21T02:12:55.425651305Z",
+      "created_by": "Federico Scheu",
+      "updated_at": "2026-05-07T01:55:15.494360563Z",
+      "labels": [
+        "openclaw:blocked_by:QuantAgent-4ch",
+        "openclaw:blocked_by:QuantAgent-sfc",
+        "openclaw:design_approved ci"
+      ],
+      "dependency_type": "blocks"
+    }
+  ],
+  "comments": [
+    {
+      "id": 151,
+      "issue_id": "QuantAgent-3uf",
+      "author": "Federico Scheu",
+      "text": "### Skill: autodev-planner\n- **Resultado:** SUCCESS\n- **Run-ID:** 20260508T024021Z-QuantAgent-3uf-planner\n- **Executor:** auto\n\n#### Qué hice\n- Ejecuté los 4 tests fallidos para confirmar errores exactos\n- Identifiqué 3 root causes distintos (ver detalles abajo)\n- Creé RQ, PL, DS y AC bajo docs/ con el prefix QuantAgent-3uf\n- Escribí artifacts canónicos (result.json, run-report.md, quality-gates.log, commands.log) en el envelope\n\n#### Evidencia\n- test_only_one_active_position_per_symbol: assert 46 == 1 (datos residuales en PostgreSQL compartido)\n- test_position_with_all_optional_fields: IntegrityError ForeignKeyViolation trade_id=123\n- test_get_active_position_returns_most_recent_if_multiple: assert 1 == 96 (ordering no-determinístico)\n- test_closed_position_not_returned_by_get_active: retorna posición activa residual de run anterior\n\n#### Quality gates\n- git status --short: PASS\n- Issue ID en paths de docs: PASS (4 archivos creados bajo QuantAgent-3uf)\n- ACs testeables: PASS (cada AC tiene comando pytest exacto)\n\n#### Problemas encontrados\nNinguno. Root causes son claros y el fix es quirúrgico.\n\n#### Next step recomendado\nFase implementer: 3 cambios en 3 archivos (~25 líneas):\n1. tests/test_position_monitor.py — eliminar fixture local db_session e imports unused\n2. tests/test_position_monitor_constraints.py — eliminar fixture local db_session; crear Trade+Signal reales en test_position_with_all_optional_fields\n3. quantagent/trading/position_monitor.py — agregar .order_by(ActivePosition.id) en get_active_position",
+      "created_at": "2026-05-08T02:47:38Z"
+    },
+    {
+      "id": 152,
+      "issue_id": "QuantAgent-3uf",
+      "author": "Federico Scheu",
+      "text": "### Skill: autodev-implementer\n- **Resultado:** SUCCESS\n- **Run-ID:** 20260508T024806Z-QuantAgent-3uf-implementer\n- **Executor:** auto\n\n#### Qué hice\n- Eliminé la fixture `db_session` local de `test_position_monitor.py` y `test_position_monitor_constraints.py` — ambas usaban PostgreSQL compartido sin rollback; ahora usan la fixture `db_session` de `conftest.py` (SQLite en memoria, aislamiento por test)\n- Corregí `test_position_with_all_optional_fields`: reemplacé `trade_id=123, signal_id=456` (hardcoded, no existen en DB) con registros reales de `Trade` y `Signal` creados vía `db_session.flush()`\n- Agregué `ORDER BY ActivePosition.id` en `get_active_position` para garantizar `.first()` determinístico\n\n#### Evidencia\n- test_only_one_active_position_per_symbol: PASS (aislamiento SQLite elimina residuos)\n- test_position_with_all_optional_fields: PASS (FK satisfecha con registros reales)\n- test_get_active_position_returns_most_recent_if_multiple: PASS (ORDER BY id estabiliza resultado)\n- test_closed_position_not_returned_by_get_active: PASS (aislamiento SQLite elimina residuos)\n- Suite completa: 293 passed, 0 nuevas fallas\n\n#### Quality gates\n- git status --short: PASS (3 archivos en commit ac6f8d1f)\n- ruff check --fix: PASS (errores pre-existentes, ninguno en archivos modificados)\n- pytest 4 tests targeted: PASS (4/4)\n- pytest full unit suite: PASS (293 passed, 10 errores pre-existentes no relacionados)\n- compileall: PASS\n\n#### Problemas encontrados\n- Ninguno. Los 3 fixes son exactamente los descritos en el DS.\n\n#### Next step recomendado\n- Merge de `feature/QuantAgent-3uf-fix-positionmonitor-unit-test-regression` a main\n- Re-ejecutar gate de QuantAgent-82t para confirmar desbloqueo\n",
+      "created_at": "2026-05-08T02:52:38Z"
+    }
+  ]
+}

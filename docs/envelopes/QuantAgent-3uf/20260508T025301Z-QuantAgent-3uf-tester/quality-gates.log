@@ -1,0 +1,39 @@
+## Quality Gates — QuantAgent-3uf tester — 2026-05-08T02:53:01Z
+
+### REQUIRED GATES
+
+[PASS] git status --short
+  Branch: feature/QuantAgent-3uf-fix-positionmonitor-unit-test-regression
+  Dirty files (pre-existing, not from this branch): alembic/versions/f7d3bad02cae_add_active_positions_table.py, tests/test_2mu_error_logging.py, tests/test_vje_paper_trading_view.py
+
+[PASS] confirm branch is not main
+  Current branch: feature/QuantAgent-3uf-fix-positionmonitor-unit-test-regression
+
+[PASS] pytest <new/changed tests> -v
+  Command: pytest tests/test_position_monitor.py tests/test_position_monitor_constraints.py -v --tb=short
+  Result: 27 passed, 0 failed in 2.96s
+
+[PASS] pytest <relevant subset> -v  (4 originally-failing tests)
+  Command: pytest tests/test_position_monitor.py::test_only_one_active_position_per_symbol tests/test_position_monitor_constraints.py::test_position_with_all_optional_fields tests/test_position_monitor_constraints.py::test_get_active_position_returns_most_recent_if_multiple tests/test_position_monitor_constraints.py::test_closed_position_not_returned_by_get_active -v
+  Result: 4 passed in 2.08s
+
+### OPTIONAL GATES
+
+[PASS] python -m compileall -q .
+  Result: no output (clean)
+
+### FULL GATE RUN
+
+Command: DATABASE_URL=postgresql://test:test@localhost:5432/quantagent_test pytest tests/ -v --tb=short --maxfail=10 -m "not integration and not slow"
+Result: 10 failed (stopped at maxfail=10), 454 passed
+
+Command (without maxfail, excluding known pre-existing): pytest tests/ -v --tb=short -m "not integration and not slow" --ignore=tests/test_r78_trade_pnl_calculation.py
+Result: 15 failed, 683 passed, 20 skipped, 34 deselected
+
+Pre-existing failures confirmed identical on main branch:
+  - tests/test_r78_trade_pnl_calculation.py (10 tests) — PnL calculation, explicitly out of scope
+  - tests/test_vje_scheduler_heartbeat_backend.py (5 tests) — _upsert_heartbeat_start missing
+  - tests/test_wait_sec_deprecation_removal.py (2 tests) — missing worktree path
+  - tests/trading/test_scheduler.py (7 tests) — scheduler assertion failures
+
+New regressions introduced by QuantAgent-3uf: 0
