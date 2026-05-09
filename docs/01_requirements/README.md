@@ -23,6 +23,7 @@ The files listed above represent the current functional requirements for the sys
 
 ## Active Per-Change Requirements
 
+- [QuantAgent-vna-RQ-triple-screen-strategy.md](./QuantAgent-vna-RQ-triple-screen-strategy.md) - M1 Strategy 1: Triple Screen Strategy (Alexander Elder)
 - [QuantAgent-40j-RQ-parallel-test-fix.md](./QuantAgent-40j-RQ-parallel-test-fix.md) - Fix missing benchmark fixture for parallel execution test (P1, blocks 82t)
 - [QuantAgent-4w4-RQ-lookback-windows.md](./QuantAgent-4w4-RQ-lookback-windows.md) - Backtest must honor strategy-specific lookback windows (P1, blocks b8r)
 - [QuantAgent-b8r-RQ-52week-high-momentum.md](./QuantAgent-b8r-RQ-52week-high-momentum.md) - M1 Strategy 3: 52-week high momentum / breakout for US equities
@@ -33,6 +34,14 @@ The files listed above represent the current functional requirements for the sys
 - [QuantAgent-nu7-RQ-active-position-monitoring.md](./QuantAgent-nu7-RQ-active-position-monitoring.md) - Active Position Monitoring System (Epic: QuantAgent-nu7)
 - [QuantAgent-7bn-RQ-azure-openai-support.md](./QuantAgent-7bn-RQ-azure-openai-support.md) - Azure OpenAI LLM provider support
 - [QuantAgent-6t4-RQ-structured-output-vision-agents.md](./QuantAgent-6t4-RQ-structured-output-vision-agents.md) - Replace manual JSON parsing with LangChain structured output in pattern/trend agents
+
+## M1 Reference Strategies (Completed)
+
+- `QuantAgent-l0h` milestone tracking is technically complete and should now be treated as closed tracking state.
+- Strategy docs now validated in `main`:
+  - `QuantAgent-vna` — Triple Screen Strategy
+  - `QuantAgent-c69` — LLMAgentStrategy reference pipeline
+  - `QuantAgent-b8r` — 52-week high momentum / breakout
 
 ## Per-Change Requirements
 
