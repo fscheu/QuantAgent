@@ -1,0 +1,17 @@
+# Quality gates — QuantAgent-ait
+
+## Evidence from failed main CI
+- GitHub Actions run: 25601433881
+- Failed job: CI (Lint + Tests)
+- Failure summary: 5 failures in tests/test_static_util.py under pandas 3-compatible runner due to uppercase freq aliases `1H` / `4H`
+
+## Local verification after fix
+- `ruff check --fix tests/test_static_util.py` ✅
+- `python -m pytest tests/test_static_util.py -v` ✅ (6 passed, local pandas 3.0.2)
+- `/mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m pytest tests/test_static_util.py -v` ✅ (6 passed)
+- `DATABASE_URL=postgresql://test:test@localhost:5432/quantagent_test /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m pytest tests/ -v --tb=short --maxfail=10 -m "not integration and not slow"` ✅ (715 passed, 20 skipped, 34 deselected)
+
+## Scope check
+- Only `tests/test_static_util.py` changed.
+- No production code changed.
+- User manual update skipped: internal test-only fix.
