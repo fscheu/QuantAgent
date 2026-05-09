@@ -1,0 +1,17 @@
+Gate: repo-root preflight isolation — PASS
+Evidence: repo root dirty only by untracked docs/envelopes/QuantAgent-l8r/20260508T124108Z-QuantAgent-l8r-planner/; no merge/rebase/unmerged paths; work executed in isolated worktrees.
+
+Gate: detached-origin/main exact pytest rerun — PASS
+Command: DATABASE_URL=postgresql://test:test@localhost:5432/quantagent_test /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m pytest tests/ -v --tb=short --maxfail=10 -m "not integration and not slow"
+Result: 715 passed, 20 skipped, 34 deselected, exit 0, duration 73.19s.
+
+Gate: candidate diff scope — PASS
+Evidence: only .github/workflows/main-ci-deploy.yml differs from origin/main before artifact/BEADS updates.
+
+Gate: merge-conflict pre-detection — PASS
+Evidence: merge-tree origin/main..candidate reported no conflicts.
+
+Gate: runner preflight — PASS
+Evidence: gh run list shows no active main workflow; df -h / => 13G free; docker system df => 16.56GB reclaimable images.
+
+Gate: user-manual evaluation — SKIPPED (not user-facing, no docs/user-manual/ present).

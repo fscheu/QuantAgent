@@ -1,0 +1,12 @@
+[2026-05-09T12:36:02Z] preflight: git status -sb on repo root -> dirty due untracked docs/envelopes/QuantAgent-l8r/20260508T124108Z-QuantAgent-l8r-planner/
+[2026-05-09T12:36:02Z] preflight: git worktree list --porcelain
+[2026-05-09T12:36:02Z] preflight: bd_safe.sh ready --json
+[2026-05-09T12:36:02Z] preflight: bd_safe.sh blocked --json
+[2026-05-09T12:38:05Z] verification: git worktree add --detach /tmp/autodev-worktrees/QuantAgent/main-verify-20260509T123805Z origin/main
+[2026-05-09T12:38:11Z] verification: DATABASE_URL=postgresql://test:test@localhost:5432/quantagent_test /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m pytest tests/ -v --tb=short --maxfail=10 -m "not integration and not slow"
+[2026-05-09T12:40:47Z] integration prep: git worktree add -b integration/QuantAgent-82t-20260509T124047Z /tmp/autodev-worktrees/QuantAgent/QuantAgent-82t/integration-20260509T124047Z origin/main
+[2026-05-09T12:40:50Z] integration prep: git cherry-pick -x fbb483dd3cb862be1d39180fc7c6c672d0f3d57e
+[2026-05-09T12:41:xxZ] integration: create tech lead artifacts under docs/envelopes/QuantAgent-82t/20260509T124047Z-QuantAgent-82t-techlead/
+[2026-05-09T12:41:xxZ] integration: add final BEADS comment, close QuantAgent-82t, export .beads/issues.jsonl
+[2026-05-09T12:41:xxZ] integration: commit candidate branch and push HEAD:main
+[2026-05-09T12:41:xxZ] post-push: observe GitHub Actions run status for main
