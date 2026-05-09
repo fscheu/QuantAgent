@@ -1,0 +1,11 @@
+# QuantAgent-ait correction-mode commands
+
+- gh run view 25601433881 --repo fscheu/QuantAgent --job 75155922392 --log-failed
+- bd create "Fix static util tests for pandas 2.3 frequency compatibility" -t bug -p 1 --json
+- bd update QuantAgent-ait --description ... --json
+- bd dep add QuantAgent-ait QuantAgent-82t --type discovered-from
+- ruff check --fix tests/test_static_util.py
+- python -m pytest tests/test_static_util.py -v
+- /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m pytest tests/test_static_util.py -v
+- DATABASE_URL=postgresql://test:test@localhost:5432/quantagent_test /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m pytest tests/ -v --tb=short --maxfail=10 -m "not integration and not slow"
+- git commit / push / merge / push main

@@ -14,7 +14,7 @@ def test_read_and_format_ohlcv_basic():
     # Create sample DataFrame
     df = pd.DataFrame(
         {
-            "Datetime": pd.date_range("2024-01-01", periods=50, freq="4H"),
+            "Datetime": pd.date_range("2024-01-01", periods=50, freq="4h"),
             "Open": [100.0 + i for i in range(50)],
             "High": [105.0 + i for i in range(50)],
             "Low": [95.0 + i for i in range(50)],
@@ -44,7 +44,7 @@ def test_read_and_format_ohlcv_small_dataset():
     # Create small DataFrame
     df = pd.DataFrame(
         {
-            "Datetime": pd.date_range("2024-01-01", periods=30, freq="1H"),
+            "Datetime": pd.date_range("2024-01-01", periods=30, freq="1h"),
             "Open": [100.0] * 30,
             "High": [105.0] * 30,
             "Low": [95.0] * 30,
@@ -62,7 +62,7 @@ def test_read_and_format_ohlcv_datetime_format():
     """Test that datetime strings are correctly formatted."""
     df = pd.DataFrame(
         {
-            "Datetime": pd.date_range("2024-01-01 10:30:00", periods=50, freq="4H"),
+            "Datetime": pd.date_range("2024-01-01 10:30:00", periods=50, freq="4h"),
             "Open": [100.0] * 50,
             "High": [105.0] * 50,
             "Low": [95.0] * 50,
@@ -87,7 +87,7 @@ def test_read_and_format_ohlcv_missing_columns():
     # Create DataFrame missing 'Close' column
     df = pd.DataFrame(
         {
-            "Datetime": pd.date_range("2024-01-01", periods=50, freq="4H"),
+            "Datetime": pd.date_range("2024-01-01", periods=50, freq="4h"),
             "Open": [100.0] * 50,
             "High": [105.0] * 50,
             "Low": [95.0] * 50,
@@ -102,7 +102,7 @@ def test_read_and_format_ohlcv_numeric_values():
     """Test that numeric values are preserved correctly."""
     df = pd.DataFrame(
         {
-            "Datetime": pd.date_range("2024-01-01", periods=50, freq="4H"),
+            "Datetime": pd.date_range("2024-01-01", periods=50, freq="4h"),
             "Open": [100.5, 101.2, 102.8] + [100.0] * 47,
             "High": [105.5, 106.2, 107.8] + [105.0] * 47,
             "Low": [95.5, 96.2, 97.8] + [95.0] * 47,
