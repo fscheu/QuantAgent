@@ -1,0 +1,64 @@
+{
+  "run_id": "20260509T023809Z-QuantAgent-uzq-planner",
+  "phase": "planner",
+  "issue": "QuantAgent-uzq",
+  "result": "SUCCESS",
+  "executor": "claude-code",
+  "generated_at": "2026-05-09T02:38:09Z",
+  "root_causes": [
+    {
+      "id": "RCA-1",
+      "description": "TradingScheduler missing _upsert_heartbeat_start and _upsert_heartbeat_complete methods; analyze_and_trade() never calls heartbeat methods",
+      "affected_tests": [
+        "test_upsert_heartbeat_start_updates_existing_row_for_environment",
+        "test_upsert_heartbeat_complete_sets_last_trade_id",
+        "test_analyze_and_trade_continues_when_heartbeat_start_fails",
+        "test_analyze_and_trade_full_cycle_writes_completed_heartbeat",
+        "test_analyze_and_trade_per_asset_error_completes_heartbeat_with_error_count"
+      ],
+      "file": "quantagent/trading/scheduler.py"
+    },
+    {
+      "id": "RCA-2",
+      "description": "DummySession.query() missing order_by chain configuration; position_monitor.get_active_position() returns truthy Mock instead of None, causing TypeError in update_candle_tracking",
+      "affected_tests": [
+        "test_trading_scheduler_long_signal_executes_order",
+        "test_trading_scheduler_short_signal_executes_order",
+        "test_trading_scheduler_hold_signal_skips_execution"
+      ],
+      "file": "tests/trading/test_scheduler.py"
+    }
+  ],
+  "files_to_change": [
+    {
+      "path": "quantagent/trading/scheduler.py",
+      "changes": [
+        "Add SchedulerHeartbeat to imports",
+        "Add _upsert_heartbeat_start method",
+        "Add _upsert_heartbeat_complete method",
+        "Modify analyze_and_trade to call both methods"
+      ]
+    },
+    {
+      "path": "tests/trading/test_scheduler.py",
+      "changes": [
+        "Fix DummySession.query() to return self-referential mock for filter/order_by chains"
+      ]
+    }
+  ],
+  "artifacts": [
+    "docs/05_acceptance_tests/QuantAgent-uzq-AC-fix-scheduler-heartbeat.md",
+    "docs/06_implementation/QuantAgent-uzq-IM-fix-scheduler-heartbeat.md",
+    "docs/envelopes/QuantAgent-uzq/20260509T023809Z-QuantAgent-uzq-planner/run-report.md",
+    "docs/envelopes/QuantAgent-uzq/20260509T023809Z-QuantAgent-uzq-planner/commands.log",
+    "docs/envelopes/QuantAgent-uzq/20260509T023809Z-QuantAgent-uzq-planner/quality-gates.log",
+    "docs/envelopes/QuantAgent-uzq/20260509T023809Z-QuantAgent-uzq-planner/result.json"
+  ],
+  "quality_gates": {
+    "git_status_short": "PASS",
+    "issue_id_in_docs_paths": "PASS",
+    "acceptance_criteria_testable": "PASS",
+    "python_compileall": "SKIPPED"
+  },
+  "next_phase": "implementer"
+}

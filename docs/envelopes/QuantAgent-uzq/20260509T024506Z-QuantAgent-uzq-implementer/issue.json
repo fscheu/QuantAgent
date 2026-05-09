@@ -1,0 +1,40 @@
+{
+  "id": "QuantAgent-uzq",
+  "title": "Fix TradingScheduler heartbeat and scheduler unit-test regressions exposed by CI gate",
+  "description": "## Contexto\nLa revalidación de `QuantAgent-82t` sobre `main` con PostgreSQL local mostró 8 fallas pre-existentes concentradas en los tests del scheduler/heartbeat.\n\n## Comando verificado\n`DATABASE_URL=postgresql://test:***@localhost:5432/quantagent_test /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m pytest tests/test_vje_scheduler_heartbeat_backend.py tests/trading/test_scheduler.py -v --tb=short --maxfail=10 -m \"not integration and not slow\"`\n\n## Fallas verificables\n### Heartbeat backend (`tests/test_vje_scheduler_heartbeat_backend.py`)\n- `test_upsert_heartbeat_start_updates_existing_row_for_environment`\n- `test_upsert_heartbeat_complete_sets_last_trade_id`\n- `test_analyze_and_trade_continues_when_heartbeat_start_fails`\n- `test_analyze_and_trade_full_cycle_writes_completed_heartbeat`\n- `test_analyze_and_trade_per_asset_error_completes_heartbeat_with_error_count`\n\nSíntomas observados:\n- `TradingScheduler` ya no expone `_upsert_heartbeat_start`\n- `analyze_and_trade()` no llama al mock `_upsert_heartbeat_complete`\n- no se persiste ninguna fila `SchedulerHeartbeat` en el ciclo real\n\n### Scheduler unit tests (`tests/trading/test_scheduler.py`)\n- `test_trading_scheduler_long_signal_executes_order`\n- `test_trading_scheduler_short_signal_executes_order`\n- `test_trading_scheduler_hold_signal_skips_execution`\n\nSíntoma observado:\n- `stats[\"processed\"] == 0` porque `DummySession.query()` devuelve un `Mock`, el scheduler lo interpreta como posición activa y `PositionMonitor.update_candle_tracking()` rompe con `TypeError: unsupported operand type(s) for +=: 'Mock' and 'int'`\n\n## Cambio requerido\nAlinear implementación y/o tests del `TradingScheduler` con el contrato actual después de la integración de PositionMonitor y del feature de scheduler heartbeat, para que estos tests vuelvan a pasar de forma reproducible en `main`.\n\n## Criterio de aceptación\n- [ ] Los 5 tests fallidos de `tests/test_vje_scheduler_heartbeat_backend.py` pasan\n- [ ] Los 3 tests fallidos de `tests/trading/test_scheduler.py` pasan\n- [ ] El comando exacto del gate de `QuantAgent-82t` deja de frenarse por estos módulos\n\n## Archivos relevantes\n- `quantagent/trading/scheduler.py`\n- `quantagent/trading/position_monitor.py`\n- `tests/test_vje_scheduler_heartbeat_backend.py`\n- `tests/trading/test_scheduler.py`\n- `quantagent/models.py`\n\n## Fuera de scope\n- Cambiar `.github/workflows/main-ci-deploy.yml`\n- Corregir `tests/test_wait_sec_deprecation_removal.py`\n",
+  "status": "open",
+  "priority": 1,
+  "issue_type": "bug",
+  "owner": "fscheu@gmail.com",
+  "created_at": "2026-05-08T21:48:38.761297655Z",
+  "created_by": "Federico Scheu",
+  "updated_at": "2026-05-08T21:48:38.761297655Z",
+  "dependents": [
+    {
+      "id": "QuantAgent-82t",
+      "title": "Re-enable unit tests in CI pipeline (main-ci-deploy.yml)",
+      "description": "El step de pytest en `.github/workflows/main-ci-deploy.yml` está comentado (\"Unit tests temporarily disabled\"). El CI actual solo corre lint, permitiendo que código roto llegue a QA. Con QuantAgent-sfc y QuantAgent-4ch resueltos, la suite estará limpia.\n\nEl workflow ya tiene un servicio PostgreSQL efímero configurado (postgres:16, DB `quantagent_test`, puerto 5432).\n\n**Cambio requerido:**\n1. Descomentar el step \"Run unit tests\" en `main-ci-deploy.yml`\n2. Comando: `pytest tests/ -v --tb=short --maxfail=10 -m \"not integration and not slow\"`\n3. Sin `continue-on-error: true` — debe bloquear el deploy si hay fallos\n4. Verificar que `DATABASE_URL` esté disponible en el env del step\n\n**Criterio de aceptación:**\n- Step \"Run unit tests\" habilitado y corriendo en cada push a main\n- Push con tests fallando bloquea el deploy a QA y notifica Telegram\n- Push con tests pasando despliega a QA normalmente\n\n**Archivos relevantes:**\n- `.github/workflows/main-ci-deploy.yml` — step comentado ~líneas 47-55\n- `pytest.ini` — markers: slow, integration, api, vision\n\n**Fuera de scope:** no modificar los tests, no tocar main-ci.yml (ticket separado QuantAgent-ng1).\n\n**Bloqueado por:** QuantAgent-sfc, QuantAgent-4ch\n",
+      "notes": "Bloqueado por QuantAgent-sfc (SQLite/JSONB) y QuantAgent-4ch (test failures)",
+      "status": "blocked",
+      "priority": 2,
+      "issue_type": "task",
+      "owner": "fscheu@gmail.com",
+      "created_at": "2026-04-21T02:12:55.425651305Z",
+      "created_by": "Federico Scheu",
+      "updated_at": "2026-05-08T21:48:50.123190959Z",
+      "labels": [
+        "openclaw:design_approved ci"
+      ],
+      "dependency_type": "blocks"
+    }
+  ],
+  "comments": [
+    {
+      "id": 164,
+      "issue_id": "QuantAgent-uzq",
+      "author": "Federico Scheu",
+      "text": "### Skill: autodev-planner\n- **Resultado:** SUCCESS\n- **Run-ID:** 20260509T023809Z-QuantAgent-uzq-planner\n- **Executor:** auto\n\n#### Qué hice\n- Leí los archivos fuente relevantes: `scheduler.py`, `position_monitor.py`, `test_vje_scheduler_heartbeat_backend.py`, `tests/trading/test_scheduler.py`, `models.py`\n- Identifiqué las dos causas raíz independientes (ver abajo)\n- Produje acceptance tests (docs/05_acceptance_tests/QuantAgent-uzq-AC-fix-scheduler-heartbeat.md) con 8 ACs verificables\n- Produje plan de implementación (docs/06_implementation/QuantAgent-uzq-IM-fix-scheduler-heartbeat.md) con diffs exactos\n\n#### Evidencia\n- **RCA-1 (5 tests heartbeat):** `TradingScheduler` no tiene métodos `_upsert_heartbeat_start` ni `_upsert_heartbeat_complete`. `analyze_and_trade()` nunca llama a ninguno. El modelo `SchedulerHeartbeat` en `models.py:375` está correcto; solo falta la integración en el scheduler.\n- **RCA-2 (3 tests scheduler):** `DummySession.query()` configura `.filter.return_value.first.return_value = None` pero no `.filter.return_value.order_by.return_value.first.return_value`. `PositionMonitor.get_active_position()` usa `.order_by().first()`, lo que devuelve un Mock truthy → `if position:` es True → `update_candle_tracking()` rompe con TypeError.\n\n#### Quality gates\n- `git status --short`: PASS (solo untracked envelope dirs)\n- Issue ID en paths de docs: PASS\n- ACs verificables: PASS\n\n#### Problemas encontrados\n- Ninguno. Causa raíz clara en ambos grupos.\n\n#### Next step recomendado\n- **implementer phase:** Aplicar los 2 cambios descritos en el IM:\n  1. `quantagent/trading/scheduler.py`: agregar import, 2 métodos, 2 llamadas en `analyze_and_trade()`\n  2. `tests/trading/test_scheduler.py`: fix `DummySession.query()` (self-referential mock)\n- Gate: `pytest tests/test_vje_scheduler_heartbeat_backend.py tests/trading/test_scheduler.py -v --tb=short --maxfail=10 -m 'not integration and not slow'`",
+      "created_at": "2026-05-09T02:44:38Z"
+    }
+  ]
+}
