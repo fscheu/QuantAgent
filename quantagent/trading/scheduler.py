@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from quantagent import settings
 from quantagent.data.provider import DataProvider
-from quantagent.models import Environment, Signal, TradeSignal
+from quantagent.models import Environment, SchedulerHeartbeat, Signal, TradeSignal
 from quantagent.static_util import format_ohlcv_for_agents
 from quantagent.strategy.base import TradingSignal as StrategyTradingSignal
 from quantagent.strategy.llm_agent_strategy import LLMAgentStrategy
@@ -150,6 +150,8 @@ class TradingScheduler:
         processed = 0
         errors = 0
 
+        heartbeat = self._upsert_heartbeat_start(cycle_start)
+
         for symbol in self.config.assets:
             try:
                 self._process_asset(symbol)
@@ -210,6 +212,8 @@ class TradingScheduler:
             "total": len(self.config.assets),
         }
         self.last_run_stats = stats
+
+        self._upsert_heartbeat_complete(heartbeat, stats)
 
         logger.info(
             "Analysis cycle completed: %s/%s processed, %s errors (%.2fs)",
@@ -455,6 +459,53 @@ class TradingScheduler:
     def _make_thread_id(self, symbol: str) -> str:
         timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
         return f"scheduler_{symbol}_{timestamp}"
+
+    def _upsert_heartbeat_start(self, started_at: datetime) -> Optional[SchedulerHeartbeat]:
+        try:
+            existing = (
+                self.db.query(SchedulerHeartbeat)
+                .filter(SchedulerHeartbeat.environment == self.environment)
+                .order_by(SchedulerHeartbeat.id)
+                .first()
+            )
+            if existing is not None:
+                existing.timestamp = started_at
+                existing.status = "running"
+                existing.assets = list(self.config.assets)
+                self.db.commit()
+                self.db.refresh(existing)
+                return existing
+
+            hb = SchedulerHeartbeat(
+                timestamp=started_at,
+                status="running",
+                environment=self.environment,
+                assets=list(self.config.assets),
+            )
+            self.db.add(hb)
+            self.db.commit()
+            self.db.refresh(hb)
+            return hb
+        except Exception:
+            logger.exception("Heartbeat start failed; continuing cycle")
+            return None
+
+    def _upsert_heartbeat_complete(
+        self, heartbeat: Optional[SchedulerHeartbeat], stats: Dict[str, float]
+    ) -> None:
+        if heartbeat is None:
+            return
+        try:
+            from quantagent.models import Trade
+
+            last_trade = self.db.query(Trade).order_by(Trade.id.desc()).first()
+            heartbeat.status = "completed"
+            heartbeat.completed_at = datetime.utcnow()
+            heartbeat.stats = stats
+            heartbeat.last_trade_id = last_trade.id if last_trade else None
+            self.db.commit()
+        except Exception:
+            logger.exception("Heartbeat complete failed")
 
     def _check_exit_conditions(
         self, position, current_price: float
