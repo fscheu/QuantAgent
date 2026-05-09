@@ -46,11 +46,13 @@ class DummySession:
         self.rolled_back = True
 
     def query(self, model):
-        """Return a mock query object that returns no active positions."""
-        mock_query = Mock()
-        mock_query.filter.return_value.first.return_value = None
-        mock_query.filter.return_value.all.return_value = []
-        return mock_query
+        """Return a mock query object that returns no results."""
+        mock_q = Mock()
+        mock_q.filter.return_value = mock_q
+        mock_q.order_by.return_value = mock_q
+        mock_q.first.return_value = None
+        mock_q.all.return_value = []
+        return mock_q
 
 
 class DummyScheduler:
