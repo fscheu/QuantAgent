@@ -30,6 +30,7 @@ Acceptance test documents define the criteria for validating that features work 
 - [QuantAgent-nu7-AC-active-position-monitoring.md](./QuantAgent-nu7-AC-active-position-monitoring.md) - Active Position Monitoring System (Epic: QuantAgent-nu7)
 - [QuantAgent-7bn-AC-azure-openai-support.md](./QuantAgent-7bn-AC-azure-openai-support.md) - Azure OpenAI LLM provider support
 - [QuantAgent-6t4-AC-structured-output-vision-agents.md](./QuantAgent-6t4-AC-structured-output-vision-agents.md) - Structured output refactor for pattern/trend vision agents
+- [QuantAgent-1p7-AC-stategraph-image-paths.md](./QuantAgent-1p7-AC-stategraph-image-paths.md) - Acceptance criteria for disk-backed StateGraph visualization paths
 
 ## Acceptance Criteria Format
 

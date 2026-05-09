@@ -30,6 +30,7 @@ The roadmap files represent the current development phases and priorities. When 
 - [QuantAgent-ou3-spx-data-fetch.md](./QuantAgent-ou3-spx-data-fetch.md) - SPX/yfinance intraday data fix (P2)
 - [QuantAgent-lmn-deprecated-parameter.md](./QuantAgent-lmn-deprecated-parameter.md) - Deprecated wait_sec cleanup (P3)
 - [QuantAgent-6t4-PL-structured-output-vision-agents.md](./QuantAgent-6t4-PL-structured-output-vision-agents.md) - Structured output refactor for pattern/trend vision agents
+- [QuantAgent-1p7-PL-stategraph-image-paths.md](./QuantAgent-1p7-PL-stategraph-image-paths.md) - Minimal implementation plan for disk-backed StateGraph visualization artifacts
 
 ## Per-Change Planning Documents
 

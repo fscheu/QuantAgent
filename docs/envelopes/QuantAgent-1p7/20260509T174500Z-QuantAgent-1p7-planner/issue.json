@@ -1,0 +1,21 @@
+{
+  "id": "QuantAgent-1p7",
+  "title": "Save StateGraph images to disk and reference file paths",
+  "description": "Refactor graph visualization to save generated StateGraph images to disk instead of keeping them in memory. Update references to use file paths. This improves debugging and allows sharing graph visualizations outside runtime.",
+  "status": "in_progress",
+  "priority": 3,
+  "issue_type": "task",
+  "labels": [
+    "dx",
+    "openclaw:design_pending",
+    "refactor"
+  ],
+  "metadata": {
+    "openclaw": {
+      "phase": "design_pending",
+      "design_branch": "feature/QuantAgent-1p7-save-stategraph-images-to-disk-and-refer",
+      "epic_branch": null,
+      "updated_at": "2026-02-17T22:00:34.583293+00:00"
+    }
+  }
+}
