@@ -365,13 +365,16 @@ class TestNoWaitSecInCodebase:
     def test_grep_for_wait_sec_in_quantagent(self):
         """Use grep to verify no wait_sec parameter in quantagent/ directory."""
         import subprocess
+        from pathlib import Path
 
         # Use word boundary to exclude "wait_seconds" (the logging variable)
+        # Run from current repo root instead of hardcoded worktree
+        repo_root = Path(__file__).parent.parent
         result = subprocess.run(
             ["grep", "-r", "-w", "wait_sec", "quantagent/", "--include=*.py"],
             capture_output=True,
             text=True,
-            cwd="/home/azureuser/repos/projects/QuantAgent/.worktrees/feature__QuantAgent-lmn-fix-deprecated-wait-sec-parameter-in-age",
+            cwd=str(repo_root),
         )
 
         # Should return nothing (exit code 1 when no matches with -w flag)
@@ -382,13 +385,16 @@ class TestNoWaitSecInCodebase:
     def test_grep_for_wait_sec_in_tests(self):
         """Use grep to verify no wait_sec in test_agent_utils_retry.py."""
         import subprocess
+        from pathlib import Path
 
         # Check only the original test file (not this new validation test file)
+        # Run from current repo root instead of hardcoded worktree
+        repo_root = Path(__file__).parent.parent
         result = subprocess.run(
             ["grep", "-r", "-w", "wait_sec", "tests/test_agent_utils_retry.py"],
             capture_output=True,
             text=True,
-            cwd="/home/azureuser/repos/projects/QuantAgent/.worktrees/feature__QuantAgent-lmn-fix-deprecated-wait-sec-parameter-in-age",
+            cwd=str(repo_root),
         )
 
         # Should return nothing (exit code 1 when no matches)
