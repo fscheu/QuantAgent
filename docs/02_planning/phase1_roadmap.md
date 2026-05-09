@@ -18,6 +18,18 @@ Week 9-10:  Streamlit Dashboard + Integration Testing
 
 **Total MVP**: 8-10 weeks (vs 12 in original plan)
 
+## Current M1 Status (2026-05-09)
+
+- `QuantAgent-l0h` tracking epic is technically complete.
+- AC3 reference strategies are implemented and validated in `main`:
+  - `QuantAgent-vna` — Triple Screen Strategy
+  - `QuantAgent-c69` — LLMAgentStrategy / multi-agent pipeline
+  - `QuantAgent-b8r` — 52-week high momentum / breakout
+- Remaining follow-up work is operational, not milestone-defining:
+  - `QuantAgent-3hs` and `QuantAgent-z9i` were merge blockers already handled in dedicated tickets.
+  - `QuantAgent-82t` was the CI gate re-enable ticket and is now closed separately from M1 tracking.
+- M1 should be treated as complete for technical milestone tracking; future work should continue in the concrete follow-up tickets, not in `QuantAgent-l0h`.
+
 ---
 
 ## Phase 1 Architecture (What We're Building)
