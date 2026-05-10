@@ -51,7 +51,6 @@ class TradingComponents:
 class StrategyAssembler:
     """Factory to resolve strategy config and assemble trading components."""
 
-    @property
     @staticmethod
     def DEFAULTS() -> dict:
         """Default strategy configuration (loaded from settings.py)."""
@@ -87,7 +86,7 @@ class StrategyAssembler:
         model_profile = model_profile or {}
         overrides = overrides or {}
 
-        merged: Dict = {**StrategyAssembler.DEFAULTS}
+        merged: Dict = {**StrategyAssembler.DEFAULTS()}
 
         # Portfolio fields
         merged.update(
@@ -129,7 +128,7 @@ class StrategyAssembler:
         Accepts both the assembler schema (model_provider/model_name/temperature)
         and Backtest snapshot keys (agent_llm_*).
         """
-        merged = {**StrategyAssembler.DEFAULTS, **snapshot}
+        merged = {**StrategyAssembler.DEFAULTS(), **snapshot}
 
         # Normalize model keys if they come from Backtest snapshot
         if "agent_llm_provider" in merged:
@@ -252,31 +251,31 @@ class StrategyAssembler:
         universe = merged.get("universe") or []
         base_pct = float(
             merged.get(
-                "base_position_pct", StrategyAssembler.DEFAULTS["base_position_pct"]
+                "base_position_pct", StrategyAssembler.DEFAULTS()["base_position_pct"]
             )
         )
         max_pos = float(
             merged.get(
-                "max_position_pct", StrategyAssembler.DEFAULTS["max_position_pct"]
+                "max_position_pct", StrategyAssembler.DEFAULTS()["max_position_pct"]
             )
         )
         max_loss = float(
             merged.get(
-                "max_daily_loss_pct", StrategyAssembler.DEFAULTS["max_daily_loss_pct"]
+                "max_daily_loss_pct", StrategyAssembler.DEFAULTS()["max_daily_loss_pct"]
             )
         )
         slip = float(
-            merged.get("slippage_pct", StrategyAssembler.DEFAULTS["slippage_pct"])
+            merged.get("slippage_pct", StrategyAssembler.DEFAULTS()["slippage_pct"])
         )
         initial_cash = float(
-            merged.get("initial_cash", StrategyAssembler.DEFAULTS["initial_cash"])
+            merged.get("initial_cash", StrategyAssembler.DEFAULTS()["initial_cash"])
         )
         temp = float(
-            merged.get("temperature", StrategyAssembler.DEFAULTS["temperature"])
+            merged.get("temperature", StrategyAssembler.DEFAULTS()["temperature"])
         )
         use_ckpt = bool(
             merged.get(
-                "use_checkpointing", StrategyAssembler.DEFAULTS["use_checkpointing"]
+                "use_checkpointing", StrategyAssembler.DEFAULTS()["use_checkpointing"]
             )
         )
 
@@ -290,11 +289,11 @@ class StrategyAssembler:
             slippage_pct=slip,
             model_provider=str(
                 merged.get(
-                    "model_provider", StrategyAssembler.DEFAULTS["model_provider"]
+                    "model_provider", StrategyAssembler.DEFAULTS()["model_provider"]
                 )
             ),
             model_name=str(
-                merged.get("model_name", StrategyAssembler.DEFAULTS["model_name"])
+                merged.get("model_name", StrategyAssembler.DEFAULTS()["model_name"])
             ),
             temperature=temp,
             use_checkpointing=use_ckpt,
