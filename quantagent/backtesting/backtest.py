@@ -128,25 +128,27 @@ class Backtest:
         self.data_provider = DataProvider(self.db)
 
         # Resolve config via StrategyAssembler and build components (unify DB session)
+        from quantagent import settings
+        
         resolved = StrategyAssembler.from_snapshot(
             {
                 "initial_cash": initial_capital,
-                "base_position_pct": self.config.get("base_position_pct", 0.05),
-                "max_daily_loss_pct": self.config.get("max_daily_loss_pct", 0.05),
-                "max_position_pct": self.config.get("max_position_pct", 0.10),
-                "slippage_pct": self.config.get("slippage_pct", 0.01),
+                "base_position_pct": self.config.get("base_position_pct", settings.TRADING_BASE_POSITION_PCT),
+                "max_daily_loss_pct": self.config.get("max_daily_loss_pct", settings.TRADING_MAX_DAILY_LOSS_PCT),
+                "max_position_pct": self.config.get("max_position_pct", settings.TRADING_MAX_POSITION_PCT),
+                "slippage_pct": self.config.get("slippage_pct", settings.TRADING_SLIPPAGE_PCT),
                 # Normalize model fields into generic ones; accept both
                 "model_provider": self.config.get(
-                    "agent_llm_provider", self.config.get("model_provider", "openai")
+                    "agent_llm_provider", self.config.get("model_provider", settings.AGENT_LLM_PROVIDER)
                 ),
                 "model_name": self.config.get(
-                    "agent_llm_model", self.config.get("model_name", "gpt-4o-mini")
+                    "agent_llm_model", self.config.get("model_name", settings.AGENT_LLM_MODEL)
                 ),
                 "temperature": self.config.get(
-                    "agent_llm_temperature", self.config.get("temperature", 0.1)
+                    "agent_llm_temperature", self.config.get("temperature", settings.AGENT_LLM_TEMPERATURE)
                 ),
                 "use_checkpointing": use_checkpointing,
-                "universe": self.config.get("universe", []),
+                "universe": self.config.get("universe", settings.get_trading_universe()),
             },
             environment=Environment.BACKTEST,
         )
@@ -315,25 +317,27 @@ class Backtest:
 
     def _build_config_snapshot(self) -> Dict:
         """Build immutable config snapshot for reproducibility."""
+        from quantagent import settings
+        
         # Re-generate snapshot via assembler to keep alignment
         resolved = StrategyAssembler.from_snapshot(
             {
                 "initial_cash": self.initial_capital,
-                "base_position_pct": self.config.get("base_position_pct", 0.05),
-                "max_daily_loss_pct": self.config.get("max_daily_loss_pct", 0.05),
-                "max_position_pct": self.config.get("max_position_pct", 0.10),
-                "slippage_pct": self.config.get("slippage_pct", 0.01),
+                "base_position_pct": self.config.get("base_position_pct", settings.TRADING_BASE_POSITION_PCT),
+                "max_daily_loss_pct": self.config.get("max_daily_loss_pct", settings.TRADING_MAX_DAILY_LOSS_PCT),
+                "max_position_pct": self.config.get("max_position_pct", settings.TRADING_MAX_POSITION_PCT),
+                "slippage_pct": self.config.get("slippage_pct", settings.TRADING_SLIPPAGE_PCT),
                 "model_provider": self.config.get(
-                    "agent_llm_provider", self.config.get("model_provider", "openai")
+                    "agent_llm_provider", self.config.get("model_provider", settings.AGENT_LLM_PROVIDER)
                 ),
                 "model_name": self.config.get(
-                    "agent_llm_model", self.config.get("model_name", "gpt-4o-mini")
+                    "agent_llm_model", self.config.get("model_name", settings.AGENT_LLM_MODEL)
                 ),
                 "temperature": self.config.get(
-                    "agent_llm_temperature", self.config.get("temperature", 0.1)
+                    "agent_llm_temperature", self.config.get("temperature", settings.AGENT_LLM_TEMPERATURE)
                 ),
                 "use_checkpointing": self.use_checkpointing,
-                "universe": self.config.get("universe", []),
+                "universe": self.config.get("universe", settings.get_trading_universe()),
             },
             environment=Environment.BACKTEST,
         )
@@ -593,6 +597,8 @@ class Backtest:
         current_date: datetime,
     ) -> Optional[Signal]:
         """Create Signal record from strategy output (simplified)."""
+        from quantagent import settings
+        
         try:
             signal = Signal(
                 symbol=asset,
@@ -602,9 +608,9 @@ class Backtest:
                 analysis_summary=reasoning,
                 generated_at=current_date,
                 environment=Environment.BACKTEST,
-                model_provider=self.config.get("agent_llm_provider", "openai"),
-                model_name=self.config.get("agent_llm_model", "gpt-4o-mini"),
-                temperature=self.config.get("agent_llm_temperature", 0.1),
+                model_provider=self.config.get("agent_llm_provider", settings.AGENT_LLM_PROVIDER),
+                model_name=self.config.get("agent_llm_model", settings.AGENT_LLM_MODEL),
+                temperature=self.config.get("agent_llm_temperature", settings.AGENT_LLM_TEMPERATURE),
             )
 
             self.db.add(signal)
@@ -671,6 +677,8 @@ class Backtest:
                 trend = trend_report.trend_direction
 
             # Create signal
+            from quantagent import settings
+            
             signal = Signal(
                 symbol=asset,
                 signal=decision,
@@ -687,9 +695,9 @@ class Backtest:
                 generated_at=current_date,
                 environment=Environment.BACKTEST,
                 thread_id=thread_id,
-                model_provider=self.config.get("agent_llm_provider", "openai"),
-                model_name=self.config.get("agent_llm_model", "gpt-4o-mini"),
-                temperature=self.config.get("agent_llm_temperature", 0.1),
+                model_provider=self.config.get("agent_llm_provider", settings.AGENT_LLM_PROVIDER),
+                model_name=self.config.get("agent_llm_model", settings.AGENT_LLM_MODEL),
+                temperature=self.config.get("agent_llm_temperature", settings.AGENT_LLM_TEMPERATURE),
             )
 
             self.db.add(signal)
