@@ -1,0 +1,30 @@
+[preflight]
+TZ=America/Argentina/Buenos_Aires date
+ git status -sb (repo root dirty detected)
+ git diff --name-only --diff-filter=U
+ git worktree list --porcelain
+ /home/azureuser/repos/agents/openclaw/scripts/bd_safe.sh ready --json
+ /home/azureuser/repos/agents/openclaw/scripts/bd_safe.sh show QuantAgent-1p7 --json
+
+[feature branch salvage]
+ruff check --fix quantagent/trading_graph.py tests/test_trading_graph_stategraph_artifacts.py
+/mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m pytest tests/test_trading_graph_stategraph_artifacts.py -v
+/mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m compileall -q quantagent tests/test_trading_graph_stategraph_artifacts.py
+git add quantagent/trading_graph.py tests/test_trading_graph_stategraph_artifacts.py
+git commit -m "feat: save stategraph image artifacts (QuantAgent-1p7)"
+git push origin feature/QuantAgent-1p7-save-stategraph-images-to-disk
+
+[integration]
+git fetch origin --prune
+git merge-tree <merge-base> origin/main feature/QuantAgent-1p7-save-stategraph-images-to-disk
+git worktree add -b integration/QuantAgent-1p7-20260510T023830Z /tmp/autodev-worktrees/QuantAgent/QuantAgent-1p7/integration-20260510T023830Z origin/main
+git merge --no-ff feature/QuantAgent-1p7-save-stategraph-images-to-disk -m "merge: integrate QuantAgent-1p7 stategraph image paths"
+ruff check --fix quantagent/trading_graph.py tests/test_trading_graph_stategraph_artifacts.py
+/mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m pytest tests/test_trading_graph_stategraph_artifacts.py -v
+/mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m compileall -q quantagent tests/test_trading_graph_stategraph_artifacts.py
+bd comments add QuantAgent-1p7 -f /tmp/QuantAgent-1p7-techlead-comment.md
+bd update QuantAgent-1p7 --add-label openclaw:test_done --json
+bd close QuantAgent-1p7 --reason "Integrated to main via Hermes Tech Lead run 20260510T023830Z" --json
+bd update QuantAgent-1p7 --remove-label openclaw:design_pending --json
+bd comments add QuantAgent-1p7 -f /tmp/QuantAgent-1p7-patrol-cleanup.md
+bd export -o .beads/issues.jsonl

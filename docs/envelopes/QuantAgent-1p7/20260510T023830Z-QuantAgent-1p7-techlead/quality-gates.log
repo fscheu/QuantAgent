@@ -1,0 +1,9 @@
+RUFF: PASS
+  command: ruff check --fix quantagent/trading_graph.py tests/test_trading_graph_stategraph_artifacts.py
+PYTEST: PASS
+  command: /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m pytest tests/test_trading_graph_stategraph_artifacts.py -v
+  result: 3 passed
+COMPILEALL: PASS
+  command: /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m compileall -q quantagent tests/test_trading_graph_stategraph_artifacts.py
+MERGE_PRECHECK: PASS
+  command: git merge-tree <merge-base> origin/main feature/QuantAgent-1p7-save-stategraph-images-to-disk
