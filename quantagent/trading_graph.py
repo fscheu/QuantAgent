@@ -5,6 +5,8 @@ Supports PostgreSQL checkpointing for resilient backtest execution.
 """
 
 import logging
+from datetime import datetime
+from pathlib import Path
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
@@ -98,6 +100,46 @@ class TradingGraph:
         logger.info(
             "TradingGraph initialization complete", extra={"event_type": "graph_ready"}
         )
+
+    def _render_stategraph_png(self) -> bytes:
+        drawable_graph = self.graph.get_graph() if hasattr(self.graph, "get_graph") else self.graph
+        return drawable_graph.draw_mermaid_png()
+
+    def export_stategraph_image(
+        self,
+        artifacts_policy: str = "path-only",
+        *,
+        artifacts_root: str | Path | None = None,
+        environment: str | None = None,
+        run_id: str | None = None,
+        thread_id: str | None = None,
+        symbol: str | None = None,
+    ) -> str | None:
+        if artifacts_policy == "none":
+            return None
+
+        base_dir = Path(artifacts_root or "data/artifacts").resolve()
+        context_parts = [part for part in (environment, run_id or thread_id, symbol) if part]
+        output_dir = base_dir.joinpath(*context_parts)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        filename = f"stategraph-{datetime.utcnow().strftime('%Y%m%dT%H%M%S%fZ')}.png"
+        output_path = output_dir / filename
+        output_path.write_bytes(self._render_stategraph_png())
+        return str(output_path)
+
+    def build_stategraph_artifact_metadata(
+        self,
+        artifacts_policy: str = "path-only",
+        **export_kwargs,
+    ) -> dict[str, str]:
+        image_path = self.export_stategraph_image(
+            artifacts_policy=artifacts_policy,
+            **export_kwargs,
+        )
+        if image_path is None:
+            return {}
+        return {"stategraph_image_path": image_path}
 
     def _get_api_key(self, provider: str = "openai") -> str:
         """

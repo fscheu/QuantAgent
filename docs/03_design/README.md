@@ -45,6 +45,7 @@ These documents represent the current technical design of the system. When imple
 - [QuantAgent-les-DS-commissions-pnl.md](./QuantAgent-les-DS-commissions-pnl.md) - Support commissions in P&L calculation (P3, feature)
 - [QuantAgent-nu7-DS-active-position-monitoring.md](./QuantAgent-nu7-DS-active-position-monitoring.md) - Active Position Monitoring System (Epic: QuantAgent-nu7)
 - [QuantAgent-7bn-DS-azure-openai-support.md](./QuantAgent-7bn-DS-azure-openai-support.md) - Azure OpenAI LLM provider support
+- [QuantAgent-1p7-DS-stategraph-image-paths.md](./QuantAgent-1p7-DS-stategraph-image-paths.md) - Keep StateGraph visualization export disk-backed and path-only
 
 ## Per-Change Design Documents
 

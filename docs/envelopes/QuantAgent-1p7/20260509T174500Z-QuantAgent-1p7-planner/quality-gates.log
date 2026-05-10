@@ -1,0 +1,5 @@
+git_status=PASS
+issue_id_in_docs_paths=PASS
+acceptance_criteria_testable=PASS
+compile_check=PASS
+route_attempt=FALLBACK (router script path missing locally)

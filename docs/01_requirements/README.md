@@ -34,6 +34,7 @@ The files listed above represent the current functional requirements for the sys
 - [QuantAgent-nu7-RQ-active-position-monitoring.md](./QuantAgent-nu7-RQ-active-position-monitoring.md) - Active Position Monitoring System (Epic: QuantAgent-nu7)
 - [QuantAgent-7bn-RQ-azure-openai-support.md](./QuantAgent-7bn-RQ-azure-openai-support.md) - Azure OpenAI LLM provider support
 - [QuantAgent-6t4-RQ-structured-output-vision-agents.md](./QuantAgent-6t4-RQ-structured-output-vision-agents.md) - Replace manual JSON parsing with LangChain structured output in pattern/trend agents
+- [QuantAgent-1p7-RQ-stategraph-image-paths.md](./QuantAgent-1p7-RQ-stategraph-image-paths.md) - Save StateGraph visualizations to disk and propagate file paths instead of in-memory image payloads
 
 ## M1 Reference Strategies (Completed)
 
