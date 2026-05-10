@@ -51,18 +51,23 @@ class TradingComponents:
 class StrategyAssembler:
     """Factory to resolve strategy config and assemble trading components."""
 
-    DEFAULTS = {
-        "initial_cash": 100000.0,
-        "base_position_pct": 0.05,
-        "max_daily_loss_pct": 0.05,
-        "max_position_pct": 0.10,
-        "slippage_pct": 0.01,
-        "model_provider": "openai",
-        "model_name": "gpt-4o-mini",
-        "temperature": 0.1,
-        "use_checkpointing": False,
-        "universe": [],
-    }
+    @property
+    @staticmethod
+    def DEFAULTS() -> dict:
+        """Default strategy configuration (loaded from settings.py)."""
+        from quantagent import settings
+        return {
+            "initial_cash": settings.TRADING_INITIAL_CASH,
+            "base_position_pct": settings.TRADING_BASE_POSITION_PCT,
+            "max_daily_loss_pct": settings.TRADING_MAX_DAILY_LOSS_PCT,
+            "max_position_pct": settings.TRADING_MAX_POSITION_PCT,
+            "slippage_pct": settings.TRADING_SLIPPAGE_PCT,
+            "model_provider": settings.AGENT_LLM_PROVIDER,
+            "model_name": settings.AGENT_LLM_MODEL,
+            "temperature": settings.AGENT_LLM_TEMPERATURE,
+            "use_checkpointing": settings.TRADING_USE_CHECKPOINTING,
+            "universe": settings.get_trading_universe(),
+        }
 
     @staticmethod
     def from_profiles(

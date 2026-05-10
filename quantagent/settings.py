@@ -67,6 +67,23 @@ GRAPH_LLM_MODEL: str = os.getenv(
 AGENT_LLM_TEMPERATURE: float = float(os.getenv("AGENT_LLM_TEMPERATURE", "0.1"))
 GRAPH_LLM_TEMPERATURE: float = float(os.getenv("GRAPH_LLM_TEMPERATURE", "0.1"))
 
+# Trading Strategy Defaults (QuantAgent-4fm)
+TRADING_INITIAL_CASH: float = float(os.getenv("TRADING_INITIAL_CASH", "100000.0"))
+TRADING_BASE_POSITION_PCT: float = float(os.getenv("TRADING_BASE_POSITION_PCT", "0.05"))
+TRADING_MAX_DAILY_LOSS_PCT: float = float(os.getenv("TRADING_MAX_DAILY_LOSS_PCT", "0.05"))
+TRADING_MAX_POSITION_PCT: float = float(os.getenv("TRADING_MAX_POSITION_PCT", "0.10"))
+TRADING_SLIPPAGE_PCT: float = float(os.getenv("TRADING_SLIPPAGE_PCT", "0.01"))
+TRADING_USE_CHECKPOINTING: bool = os.getenv("TRADING_USE_CHECKPOINTING", "false").lower() in {"true", "1", "yes"}
+TRADING_UNIVERSE: str = os.getenv("TRADING_UNIVERSE", "")
+
+
+def get_trading_universe() -> List[str]:
+    """Parse TRADING_UNIVERSE env var into list of symbols."""
+    if not TRADING_UNIVERSE:
+        return []
+    return [s.strip().upper() for s in TRADING_UNIVERSE.split(",") if s.strip()]
+
+
 def require(name: str) -> str:
     """Return the value of a setting, raising ValueError only when actually needed (lazy validation).
 
