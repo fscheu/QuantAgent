@@ -182,9 +182,20 @@ class Signal(Base):
     agent_version = Column(String(50), nullable=True)
     graph_version = Column(String(50), nullable=True)
 
+    # Backtest provenance: scopes signal to the BacktestRun that produced it.
+    # NULL means the signal was not produced by a backtest run (live/paper).
+    backtest_run_id = Column(
+        Integer, ForeignKey("backtest_runs.id"), nullable=True, index=True
+    )
+
     # Relationships
     triggered_orders = relationship(
         "Order", foreign_keys="Order.trigger_signal_id", back_populates="trigger_signal"
+    )
+    backtest_run = relationship(
+        "BacktestRun",
+        foreign_keys=[backtest_run_id],
+        back_populates="signals",
     )
 
     __table_args__ = (
@@ -192,6 +203,7 @@ class Signal(Base):
         Index("idx_symbol_signal", "symbol", "signal"),
         Index("idx_signals_environment", "environment"),
         Index("idx_signals_thread_id", "thread_id"),
+        Index("idx_signals_backtest_run_id", "backtest_run_id"),
     )
 
 
@@ -302,10 +314,25 @@ class BacktestRun(Base):
     max_drawdown = Column(Float, nullable=True)
     total_pnl = Column(Numeric(precision=18, scale=8), nullable=True)
 
+    # Replay provenance: set when this run is a replay of another run.
+    replay_source_run_id = Column(
+        Integer, ForeignKey("backtest_runs.id"), nullable=True, index=True
+    )
+
     __table_args__ = (Index("idx_start_end_date", "start_date", "end_date"),)
 
     # Relationships
     active_positions = relationship("ActivePosition", back_populates="backtest_run")
+    signals = relationship(
+        "Signal",
+        foreign_keys="Signal.backtest_run_id",
+        back_populates="backtest_run",
+    )
+    replay_source_run = relationship(
+        "BacktestRun",
+        foreign_keys=[replay_source_run_id],
+        remote_side=[id],
+    )
 
 
 class ActivePosition(Base):

@@ -129,7 +129,7 @@ class Backtest:
 
         # Resolve config via StrategyAssembler and build components (unify DB session)
         from quantagent import settings
-        
+
         resolved = StrategyAssembler.from_snapshot(
             {
                 "initial_cash": initial_capital,
@@ -292,7 +292,202 @@ class Backtest:
 
         return metrics
 
-    def _create_backtest_run(self, name: Optional[str]) -> None:
+    def run_replay(
+        self,
+        source_run_id: int,
+        name: Optional[str] = None,
+    ) -> "BacktestMetrics":
+        """
+        Execute replay using signals stored from source_run_id.
+
+        No LLM calls are made — signals are read from the DB and re-applied with
+        the current portfolio/risk config (set at Backtest init time).
+
+        Args:
+            source_run_id: ID of the completed BacktestRun to replay.
+            name: Optional name for the new replay BacktestRun record.
+
+        Returns:
+            BacktestMetrics from replay execution.
+
+        Raises:
+            ValueError: If source run does not exist or has no scoped signals.
+        """
+        source_run = (
+            self.db.query(BacktestRun).filter(BacktestRun.id == source_run_id).first()
+        )
+        if source_run is None:
+            raise ValueError(f"Source BacktestRun {source_run_id} not found")
+
+        # Load only signals scoped to this source run — prevents cross-run contamination.
+        signals = (
+            self.db.query(Signal)
+            .filter(Signal.backtest_run_id == source_run_id)
+            .all()
+        )
+
+        logger.info(
+            f"[REPLAY] Starting replay: source={source_run_id}, signals={len(signals)}",
+            extra={"event_type": "replay_start"},
+        )
+
+        if not signals:
+            raise ValueError(
+                f"No stored signals found for source run {source_run_id}. "
+                "Run the source backtest first (signals must have backtest_run_id set)."
+            )
+
+        # Build lookup: (symbol, generated_at) -> signal
+        signal_map: Dict = {}
+        for sig in signals:
+            signal_map[(sig.symbol, sig.generated_at)] = sig
+
+        # Reset in-memory state
+        self.equity_curve = []
+        self.trades = []
+        self.agent_invocations = 0
+        self.total_candles_processed = 0
+
+        # Override date/asset/timeframe from source run so replay matches it exactly
+        self.start_date = source_run.start_date
+        self.end_date = source_run.end_date
+        self.assets = source_run.assets
+        self.timeframe = source_run.timeframe
+
+        self._create_backtest_run(
+            name or f"Replay_{source_run_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            replay_source_run_id=source_run_id,
+        )
+
+        for asset in self.assets:
+            asset_dates = self._get_date_range_for_asset(asset)
+
+            for i, current_date in enumerate(asset_dates):
+                self.current_date = current_date
+
+                if i == 0 or current_date.date() != asset_dates[i - 1].date():
+                    self.risk_manager.reset_daily_tracker()
+
+                try:
+                    self._replay_and_trade(asset, current_date, signal_map)
+                except Exception as e:
+                    logger.error(
+                        f"[REPLAY] Error replaying {asset} at {current_date}: {e}",
+                        exc_info=True,
+                        extra={"event_type": "replay_error", "symbol": asset},
+                    )
+                    continue
+
+                self._record_equity(current_date)
+
+        metrics = self._calculate_metrics()
+        self._update_backtest_run(metrics)
+
+        logger.info(
+            f"[REPLAY] Completed: {metrics.total_trades} trades, P&L ${metrics.total_pnl:,.2f}",
+            extra={"event_type": "replay_end"},
+        )
+        return metrics
+
+    def _replay_and_trade(
+        self, asset: str, current_date: datetime, signal_map: Dict
+    ) -> None:
+        """Execute a single candle in replay mode — uses stored signal, no LLM call."""
+        lookback_days = 30
+        data_start = current_date - timedelta(days=lookback_days)
+        df = self.data_provider.get_ohlc(
+            symbol=asset,
+            timeframe=self.timeframe,
+            start_date=data_start,
+            end_date=current_date,
+        )
+
+        if df.empty or len(df) < 2:
+            return
+
+        current_price = float(df.iloc[-1]["close"])
+        active_pos = self.position_monitor.get_active_position(asset)
+        self.total_candles_processed += 1
+
+        if active_pos:
+            should_exit, reason = self.strategy.should_exit(
+                active_pos, current_price, df
+            )
+            if should_exit:
+                self.position_monitor.close_position(active_pos, reason, current_price)
+                if active_pos.trade_id:
+                    self.order_manager.close_trade(
+                        active_pos.trade_id,
+                        current_price,
+                        environment=Environment.BACKTEST,
+                    )
+                    logger.debug(
+                        f"[REPLAY] {asset}: Closed position ({reason}) @ ${current_price:.2f}"
+                    )
+            else:
+                prev_close = float(df.iloc[-2]["close"])
+                self.position_monitor.update_candle_tracking(
+                    active_pos, current_price, prev_close
+                )
+                return
+
+        stored_signal = signal_map.get((asset, current_date))
+        if stored_signal is None or stored_signal.signal == TradeSignal.NEUTRAL:
+            return
+
+        logger.debug(
+            f"[REPLAY] {asset} @ {current_date}: using stored signal {stored_signal.id}"
+        )
+
+        trading_signal = stored_signal.signal
+        order = self.order_manager.execute_decision(
+            symbol=asset,
+            decision=trading_signal,
+            confidence=stored_signal.confidence,
+            current_price=current_price,
+            environment=Environment.BACKTEST,
+            trigger_signal_id=stored_signal.id,
+        )
+
+        if order and order.filled_quantity and order.filled_quantity > 0:
+            side = (
+                OrderSide.BUY if trading_signal == TradeSignal.LONG else OrderSide.SELL
+            )
+            trade_id = None
+            if order.id:
+                trade = self.db.query(Trade).filter(Trade.order_id == order.id).first()
+                if trade:
+                    trade_id = trade.id
+
+            self.position_monitor.open_position(
+                symbol=asset,
+                side=side,
+                entry_price=current_price,
+                stop_loss=(
+                    current_price * 0.98
+                    if side == OrderSide.BUY
+                    else current_price * 1.02
+                ),
+                take_profit=(
+                    current_price * 1.03
+                    if side == OrderSide.BUY
+                    else current_price * 0.97
+                ),
+                quantity=order.filled_quantity,
+                exit_policy="sl_tp_only",
+                trade_id=trade_id,
+                signal_id=stored_signal.id,
+            )
+
+            logger.info(
+                f"[REPLAY] Executed {trading_signal.value} for {asset} "
+                f"@ ${current_price:.2f}, qty: {order.filled_quantity}",
+                extra={"event_type": "replay_trade", "symbol": asset},
+            )
+
+    def _create_backtest_run(
+        self, name: Optional[str], replay_source_run_id: Optional[int] = None
+    ) -> None:
         """Create BacktestRun record in database."""
         run = BacktestRun(
             name=name or f"Backtest_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
@@ -301,6 +496,7 @@ class Backtest:
             start_date=self.start_date,
             end_date=self.end_date,
             config_snapshot=self._build_config_snapshot(),
+            replay_source_run_id=replay_source_run_id,
         )
 
         self.db.add(run)
@@ -318,7 +514,7 @@ class Backtest:
     def _build_config_snapshot(self) -> Dict:
         """Build immutable config snapshot for reproducibility."""
         from quantagent import settings
-        
+
         # Re-generate snapshot via assembler to keep alignment
         resolved = StrategyAssembler.from_snapshot(
             {
@@ -598,7 +794,7 @@ class Backtest:
     ) -> Optional[Signal]:
         """Create Signal record from strategy output (simplified)."""
         from quantagent import settings
-        
+
         try:
             signal = Signal(
                 symbol=asset,
@@ -608,6 +804,7 @@ class Backtest:
                 analysis_summary=reasoning,
                 generated_at=current_date,
                 environment=Environment.BACKTEST,
+                backtest_run_id=self.backtest_run_id,
                 model_provider=self.config.get("agent_llm_provider", settings.AGENT_LLM_PROVIDER),
                 model_name=self.config.get("agent_llm_model", settings.AGENT_LLM_MODEL),
                 temperature=self.config.get("agent_llm_temperature", settings.AGENT_LLM_TEMPERATURE),
@@ -678,7 +875,7 @@ class Backtest:
 
             # Create signal
             from quantagent import settings
-            
+
             signal = Signal(
                 symbol=asset,
                 signal=decision,
@@ -694,6 +891,7 @@ class Backtest:
                 analysis_summary=result.get("reasoning", ""),
                 generated_at=current_date,
                 environment=Environment.BACKTEST,
+                backtest_run_id=self.backtest_run_id,
                 thread_id=thread_id,
                 model_provider=self.config.get("agent_llm_provider", settings.AGENT_LLM_PROVIDER),
                 model_name=self.config.get("agent_llm_model", settings.AGENT_LLM_MODEL),
