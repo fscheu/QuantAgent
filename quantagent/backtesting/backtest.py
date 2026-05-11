@@ -173,6 +173,7 @@ class Backtest:
         # Backtest state
         self.current_date = start_date
         self.backtest_run_id: Optional[int] = None
+        self._replay_trade_order_ids: Optional[set[int]] = None
         self.trades: List[Trade] = []
         self.equity_curve: List[Dict] = []
 
@@ -217,6 +218,8 @@ class Backtest:
             f"Market hours filter: {self.market_hours_filter}",
             extra={"event_type": "backtest_start"},
         )
+
+        self._replay_trade_order_ids = None
 
         # Create backtest run record
         self._create_backtest_run(name)
@@ -347,6 +350,7 @@ class Backtest:
         self.trades = []
         self.agent_invocations = 0
         self.total_candles_processed = 0
+        self._replay_trade_order_ids = set()
 
         # Override date/asset/timeframe from source run so replay matches it exactly
         self.start_date = source_run.start_date
@@ -450,6 +454,9 @@ class Backtest:
         )
 
         if order and order.filled_quantity and order.filled_quantity > 0:
+            if order.id is not None and self._replay_trade_order_ids is not None:
+                self._replay_trade_order_ids.add(order.id)
+
             side = (
                 OrderSide.BUY if trading_signal == TradeSignal.LONG else OrderSide.SELL
             )
@@ -945,6 +952,13 @@ class Backtest:
             )
             .all()
         )
+
+        if self._replay_trade_order_ids is not None:
+            trades = [
+                trade
+                for trade in trades
+                if trade.order_id in self._replay_trade_order_ids
+            ]
 
         if not trades:
             logger.warning(

@@ -1,9 +1,23 @@
 """Regression tests for replay signal provenance scoping."""
 
 from datetime import datetime, timedelta
+from decimal import Decimal
+from unittest.mock import Mock
+
+import pandas as pd
 
 from quantagent.backtesting.backtest import Backtest, BacktestMetrics
-from quantagent.models import BacktestRun, Environment, Signal, TradeSignal
+from quantagent.models import (
+    BacktestRun,
+    Environment,
+    Order,
+    OrderSide,
+    OrderStatus,
+    OrderType,
+    Signal,
+    Trade,
+    TradeSignal,
+)
 
 
 def _create_backtest_run(session, name: str) -> BacktestRun:
@@ -220,3 +234,136 @@ def test_run_replay_raises_when_source_run_has_only_pre_migration_signals(db_ses
         raise AssertionError("Expected ValueError for source run with NULL-scoped signals")
     except ValueError as exc:
         assert f"No stored signals found for source run {run.id}" in str(exc)
+
+
+def test_run_replay_executes_stored_signals_without_llm_calls(db_session, monkeypatch):
+    run = _create_backtest_run(db_session, "source-run")
+    signal_time = datetime(2024, 1, 1, 10, 0, 0)
+    source_signal = _create_signal(
+        db_session,
+        run_id=run.id,
+        generated_at=signal_time,
+        signal=TradeSignal.LONG,
+    )
+
+    backtest = _make_backtest(db_session)
+    backtest.strategy = Mock()
+    backtest.strategy.should_exit.return_value = (False, None)
+    backtest.strategy.generate_signal = Mock()
+
+    monkeypatch.setattr(backtest, "_get_date_range_for_asset", lambda asset: [signal_time])
+    monkeypatch.setattr(backtest, "_record_equity", lambda current_date: None)
+    monkeypatch.setattr(
+        backtest.data_provider,
+        "get_ohlc",
+        lambda **kwargs: pd.DataFrame([
+            {"close": 100.0},
+            {"close": 101.0},
+        ]),
+    )
+
+    execute_decision = Mock(
+        return_value=type("ReplayOrder", (), {"id": 77, "filled_quantity": Decimal("1")})()
+    )
+    backtest.order_manager.execute_decision = execute_decision
+    backtest.position_monitor.get_active_position = Mock(return_value=None)
+    backtest.position_monitor.open_position = Mock()
+    backtest._update_backtest_run = Mock()
+
+    metrics = backtest.run_replay(run.id)
+
+    replay_run = (
+        db_session.query(BacktestRun)
+        .filter(BacktestRun.id == backtest.backtest_run_id)
+        .one()
+    )
+
+    backtest.strategy.generate_signal.assert_not_called()
+    execute_decision.assert_called_once()
+    assert execute_decision.call_args.kwargs["trigger_signal_id"] == source_signal.id
+    assert backtest.agent_invocations == 0
+    assert metrics.agent_invocations == 0
+    assert replay_run.replay_source_run_id == run.id
+
+
+def test_calculate_metrics_scopes_replay_to_new_orders_only(db_session):
+    start = datetime(2024, 1, 1, 9, 0, 0)
+    backtest = Backtest(
+        start_date=start,
+        end_date=start + timedelta(hours=2),
+        assets=["BTC"],
+        timeframe="1h",
+        initial_capital=1000.0,
+        db_session=db_session,
+    )
+    backtest._replay_trade_order_ids = {202}
+
+    source_order = Order(
+        symbol="BTC",
+        side=OrderSide.BUY,
+        order_type=OrderType.MARKET,
+        quantity=Decimal("1"),
+        price=Decimal("100"),
+        status=OrderStatus.FILLED,
+        filled_quantity=Decimal("1"),
+        average_fill_price=Decimal("100"),
+        environment=Environment.BACKTEST,
+        created_at=start,
+    )
+    replay_order = Order(
+        symbol="BTC",
+        side=OrderSide.BUY,
+        order_type=OrderType.MARKET,
+        quantity=Decimal("1"),
+        price=Decimal("110"),
+        status=OrderStatus.FILLED,
+        filled_quantity=Decimal("1"),
+        average_fill_price=Decimal("110"),
+        environment=Environment.BACKTEST,
+        created_at=start + timedelta(minutes=30),
+    )
+    db_session.add_all([source_order, replay_order])
+    db_session.commit()
+    backtest._replay_trade_order_ids = {replay_order.id}
+
+    db_session.add_all(
+        [
+            Trade(
+                symbol="BTC",
+                order_id=source_order.id,
+                entry_price=Decimal("100"),
+                exit_price=Decimal("105"),
+                quantity=Decimal("1"),
+                side=OrderSide.BUY,
+                pnl=Decimal("5"),
+                pnl_pct=5.0,
+                commission=Decimal("0"),
+                timeframe="1h",
+                environment=Environment.BACKTEST,
+                opened_at=start,
+                closed_at=start + timedelta(hours=1),
+            ),
+            Trade(
+                symbol="BTC",
+                order_id=replay_order.id,
+                entry_price=Decimal("110"),
+                exit_price=Decimal("117"),
+                quantity=Decimal("1"),
+                side=OrderSide.BUY,
+                pnl=Decimal("7"),
+                pnl_pct=6.36,
+                commission=Decimal("0"),
+                timeframe="1h",
+                environment=Environment.BACKTEST,
+                opened_at=start + timedelta(minutes=30),
+                closed_at=start + timedelta(hours=2),
+            ),
+        ]
+    )
+    db_session.commit()
+
+    metrics = backtest._calculate_metrics()
+
+    assert metrics.total_trades == 1
+    assert metrics.winning_trades == 1
+    assert metrics.total_pnl == 7.0

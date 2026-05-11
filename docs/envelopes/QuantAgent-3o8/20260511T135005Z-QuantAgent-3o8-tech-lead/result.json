@@ -1,0 +1,21 @@
+{
+  "run_id": "20260511T135005Z-QuantAgent-3o8-tech-lead",
+  "issue_id": "QuantAgent-3o8",
+  "phase": "tech_lead",
+  "mode": "correction_mode",
+  "status": "SUCCESS",
+  "failure_class": "NO_FAILURE",
+  "failure_subclass": "NO_FAILURE",
+  "branch": "feature/QuantAgent-3o8-replay-refresh-20260511T1328Z",
+  "files_changed": [
+    "apps/streamlit/views/replay.py",
+    "quantagent/backtesting/backtest.py",
+    "tests/test_replay_signal_scoping.py"
+  ],
+  "quality_gates": {
+    "ruff_fix": "PASS",
+    "pytest_replay": "PASS",
+    "compileall": "PASS"
+  },
+  "next_step": "commit_push_then_integrate"
+}
