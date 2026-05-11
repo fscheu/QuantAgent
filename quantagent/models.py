@@ -302,6 +302,12 @@ class BacktestRun(Base):
     max_drawdown = Column(Float, nullable=True)
     total_pnl = Column(Numeric(precision=18, scale=8), nullable=True)
 
+    # Replay provenance: set if this run is a replay of another run
+    replay_source_run_id = Column(
+        Integer, ForeignKey("backtest_runs.id"), nullable=True, index=True
+    )
+    replay_source_run = relationship("BacktestRun", remote_side=[id])
+
     __table_args__ = (Index("idx_start_end_date", "start_date", "end_date"),)
 
     # Relationships
