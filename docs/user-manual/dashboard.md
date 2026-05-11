@@ -265,16 +265,16 @@ You can trace exactly why a trade was made, which model version decided it, and 
 
 ### How to Run a Replay
 
-1. **Select Source Backtest**: Choose a completed backtest run
-2. **Choose Profiles to Test**: Multi-select different strategy profiles
-3. **Enter Replay Name**: e.g., "Risk Profile Comparison"
-4. **Click "Start Sequential Replay"**
+1. **Select Source Backtest**: Choose a completed backtest run from the dropdown.
+2. **Choose Profiles to Test**: Multi-select one or more saved strategy profiles.
+3. **Or reuse the source config**: Leave the profile list empty to replay with the original run settings.
+4. **Click "Start replay (sequential)"**.
 
 **Execution Mode:**
-Runs one profile at a time (sequential) to avoid overloading the system.
+Runs one profile at a time (sequential) and reuses the stored backtest signals instead of calling the AI agents again.
 
 **When It's Done:**
-View results in the same tab, showing metrics for each profile tested.
+The tab shows one row per replay with the new run ID, trade count, win rate, profit factor, Sharpe ratio, max drawdown, total P&L, return, and elapsed time.
 
 ---
 

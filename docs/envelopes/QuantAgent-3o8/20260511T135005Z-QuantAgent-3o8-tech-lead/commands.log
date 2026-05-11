@@ -1,0 +1,3 @@
+python -m ruff check --fix quantagent/backtesting/backtest.py apps/streamlit/views/replay.py tests/test_replay_signal_scoping.py
+python -m pytest tests/test_replay_signal_scoping.py -q
+python -m compileall -q quantagent apps tests

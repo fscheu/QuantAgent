@@ -1,0 +1,3 @@
+ruff_fix=PASS
+pytest_replay=PASS
+compileall=PASS
