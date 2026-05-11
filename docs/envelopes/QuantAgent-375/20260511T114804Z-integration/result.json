@@ -1,0 +1,16 @@
+{
+  "status": "SUCCESS",
+  "phase": "integration",
+  "beads_issue_id": "QuantAgent-375",
+  "run_id": "20260511T114804Z-QuantAgent-375-integration",
+  "decision": "MERGE",
+  "merge_commit": "3c7467b4",
+  "feature_head": "ec704bad",
+  "tester_run_id": "20260511T114804Z-QuantAgent-375-tester",
+  "conflict_status": "none",
+  "user_manual": "skipped_internal_change",
+  "verification": {
+    "pytest": "PASS: 37 passed, 84 warnings in 4.82s",
+    "compileall": "PASS"
+  }
+}
