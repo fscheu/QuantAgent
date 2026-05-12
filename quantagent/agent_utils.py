@@ -146,6 +146,12 @@ def invoke_with_retry(
     for attempt in range(max_retries):
         try:
             result = call_fn(*args, **kwargs)
+            telemetry_response = result
+            if isinstance(result, dict) and {"raw", "parsed", "parsing_error"}.issubset(result.keys()):
+                if result.get("parsing_error") is not None:
+                    raise result["parsing_error"]
+                telemetry_response = result.get("raw")
+                result = result.get("parsed")
             if telemetry_ctx is not None:
                 from quantagent.llm_telemetry import persist_llm_call
 
@@ -153,7 +159,7 @@ def invoke_with_retry(
                     ctx=telemetry_ctx,
                     status="success",
                     duration_ms=(time.perf_counter() - t_start) * 1000,
-                    response=result,
+                    response=telemetry_response,
                 )
             return result
         except Exception as e:
