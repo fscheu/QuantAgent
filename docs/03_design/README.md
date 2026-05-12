@@ -39,6 +39,7 @@ These documents represent the current technical design of the system. When imple
 
 ## Active Per-Change Design
 
+- [QuantAgent-69d-DS-token-time-metrics.md](./QuantAgent-69d-DS-token-time-metrics.md) - Reuse `logs` + `invoke_with_retry()` for LLM telemetry with on-demand aggregation
 - [QuantAgent-b8r-DS-52week-high-momentum.md](./QuantAgent-b8r-DS-52week-high-momentum.md) - M1 Strategy 3: 52-week high momentum / breakout for US equities
 - [QuantAgent-94d-DS-backtest-isolation.md](./QuantAgent-94d-DS-backtest-isolation.md) - Backtest Run ID Isolation (P1, bug)
 - [QuantAgent-r78-DS-trade-pnl-calculation.md](./QuantAgent-r78-DS-trade-pnl-calculation.md) - Trade P&L calculation bug fix (P1)

@@ -12,6 +12,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from quantagent.agent_models import TradingDecision
 from quantagent.agent_utils import invoke_with_retry
+from quantagent.llm_telemetry import TelemetryCtx
 
 logger = logging.getLogger(__name__)
 
@@ -167,13 +168,22 @@ Respond ONLY with valid JSON (no markdown, no explanation):
         # Create new messages for decision analysis (will be added to accumulated messages)
         agent_messages = [system_message, HumanMessage(content=human_content)]
 
+        telemetry_ctx = TelemetryCtx(
+            operation="decision_agent",
+            symbol=symbol,
+            thread_id=thread_id,
+            environment=state.get("environment"),
+            backtest_run_id=state.get("backtest_run_id"),
+        )
+
         try:
             # --- Structured LLM call for decision ---
             # Use with_structured_output for direct Pydantic instance return
             structured_llm = llm.with_structured_output(TradingDecision)
 
             trading_decision = invoke_with_retry(
-                structured_llm.invoke, agent_messages, retries=3, base_wait=2
+                structured_llm.invoke, agent_messages, retries=3, base_wait=2,
+                telemetry_ctx=telemetry_ctx,
             )
 
             # Ensure we got a valid TradingDecision

@@ -11,6 +11,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from quantagent.agent_models import IndicatorReport
 from quantagent.agent_utils import invoke_with_retry
+from quantagent.llm_telemetry import TelemetryCtx
 
 logger = logging.getLogger(__name__)
 
@@ -76,10 +77,19 @@ def create_indicator_agent(llm, toolkit):
         llm_with_tools = llm.bind_tools(tools)
         structured_llm = llm_with_tools.with_structured_output(IndicatorReport)
 
+        telemetry_ctx = TelemetryCtx(
+            operation="indicator_agent",
+            symbol=symbol,
+            thread_id=thread_id,
+            environment=state.get("environment"),
+            backtest_run_id=state.get("backtest_run_id"),
+        )
+
         try:
             # LLM call with tools and structured output
             indicator_report = invoke_with_retry(
-                structured_llm.invoke, agent_messages, retries=3, base_wait=2
+                structured_llm.invoke, agent_messages, retries=3, base_wait=2,
+                telemetry_ctx=telemetry_ctx,
             )
 
             # Ensure we got a valid IndicatorReport

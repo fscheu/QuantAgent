@@ -7,9 +7,12 @@ Provides centralized retry logic with exponential backoff and structured output 
 import logging
 import random
 import time
-from typing import Callable, TypeVar
+from typing import TYPE_CHECKING, Callable, TypeVar
 
 from quantagent.default_config import RETRY_CONFIG
+
+if TYPE_CHECKING:
+    from quantagent.llm_telemetry import TelemetryCtx
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
@@ -100,6 +103,7 @@ def invoke_with_retry(
     base_wait: float | None = None,
     max_wait: float | None = None,
     jitter: bool | None = None,
+    telemetry_ctx: "TelemetryCtx | None" = None,
     **kwargs,
 ) -> T:
     """
@@ -115,6 +119,7 @@ def invoke_with_retry(
         base_wait: Base wait time in seconds (default: from RETRY_CONFIG)
         max_wait: Maximum wait time cap (default: from RETRY_CONFIG)
         jitter: Add randomness to wait time (default: from RETRY_CONFIG)
+        telemetry_ctx: Optional telemetry context for LLM call metrics logging.
         **kwargs: Keyword arguments for call_fn
 
     Returns:
@@ -136,9 +141,27 @@ def invoke_with_retry(
     exponential_base: float = float(RETRY_CONFIG["exponential_base"])
     jitter_factor: float = float(RETRY_CONFIG["jitter_factor"])
 
+    t_start = time.perf_counter()
+
     for attempt in range(max_retries):
         try:
-            return call_fn(*args, **kwargs)
+            result = call_fn(*args, **kwargs)
+            telemetry_response = result
+            if isinstance(result, dict) and {"raw", "parsed", "parsing_error"}.issubset(result.keys()):
+                if result.get("parsing_error") is not None:
+                    raise result["parsing_error"]
+                telemetry_response = result.get("raw")
+                result = result.get("parsed")
+            if telemetry_ctx is not None:
+                from quantagent.llm_telemetry import persist_llm_call
+
+                persist_llm_call(
+                    ctx=telemetry_ctx,
+                    status="success",
+                    duration_ms=(time.perf_counter() - t_start) * 1000,
+                    response=telemetry_response,
+                )
+            return result
         except Exception as e:
             # Check if error is retryable
             if not _is_retryable_error(e):
@@ -151,6 +174,15 @@ def invoke_with_retry(
                         "error_message": str(e),
                     },
                 )
+                if telemetry_ctx is not None:
+                    from quantagent.llm_telemetry import persist_llm_call
+
+                    persist_llm_call(
+                        ctx=telemetry_ctx,
+                        status="error",
+                        duration_ms=(time.perf_counter() - t_start) * 1000,
+                        error_message=f"{type(e).__name__}: {e}",
+                    )
                 raise
 
             # Check if we have retries left
@@ -165,6 +197,15 @@ def invoke_with_retry(
                         "error_type": type(e).__name__,
                     },
                 )
+                if telemetry_ctx is not None:
+                    from quantagent.llm_telemetry import persist_llm_call
+
+                    persist_llm_call(
+                        ctx=telemetry_ctx,
+                        status="error",
+                        duration_ms=(time.perf_counter() - t_start) * 1000,
+                        error_message=f"Max retries exceeded: {type(e).__name__}: {e}",
+                    )
                 raise RuntimeError(f"Max retries ({max_retries}) exceeded: {str(e)}")
 
             # Calculate wait time and retry

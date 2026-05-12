@@ -20,6 +20,7 @@ Acceptance test documents define the criteria for validating that features work 
 
 ## Active Per-Change Acceptance Criteria
 
+- [QuantAgent-69d-AC-token-time-metrics.md](./QuantAgent-69d-AC-token-time-metrics.md) - Acceptance criteria for LLM token/runtime telemetry persistence and isolation
 - [QuantAgent-uzq-AC-fix-scheduler-heartbeat.md](./QuantAgent-uzq-AC-fix-scheduler-heartbeat.md) - Fix TradingScheduler heartbeat and scheduler unit-test regressions exposed by CI gate (P1, blocks 82t)
 - [QuantAgent-40j-AC-parallel-test-fix.md](./QuantAgent-40j-AC-parallel-test-fix.md) - Fix missing benchmark fixture for parallel execution test (P1, blocks 82t)
 - [QuantAgent-b8r-AC-52week-high-momentum.md](./QuantAgent-b8r-AC-52week-high-momentum.md) - M1 Strategy 3: 52-week high momentum / breakout for US equities (m1, strategy)

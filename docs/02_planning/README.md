@@ -20,6 +20,7 @@ The roadmap files represent the current development phases and priorities. When 
 
 ## Active Per-Change Planning
 
+- [QuantAgent-69d-PL-token-time-metrics.md](./QuantAgent-69d-PL-token-time-metrics.md) - Minimal implementation plan for LLM token/runtime telemetry using existing logs
 - [QuantAgent-40j-PL-parallel-test-fix.md](./QuantAgent-40j-PL-parallel-test-fix.md) - Fix missing benchmark fixture for parallel execution test (P1, blocks 82t)
 - [QuantAgent-c69-PL-llm-agent-strategy-m1.md](./QuantAgent-c69-PL-llm-agent-strategy-m1.md) - M1 Strategy 2: LLMAgentStrategy reference pipeline (m1, strategy)
 - [QuantAgent-r78-PL-trade-pnl-calculation.md](./QuantAgent-r78-PL-trade-pnl-calculation.md) - Trade P&L calculation bug fix (P1)

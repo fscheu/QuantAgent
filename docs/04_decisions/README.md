@@ -27,6 +27,10 @@ Decision documents should include:
 4. **Consequences** - What are the implications?
 5. **Status** - Accepted, superseded, or deprecated
 
+## Active Per-Change Decisions
+
+- [QuantAgent-69d-DC-reuse-logs-for-llm-telemetry.md](./QuantAgent-69d-DC-reuse-logs-for-llm-telemetry.md) - Choose existing `logs` over new metrics tables for this P3 feature
+
 ## Per-Change Decision Documents
 
 Per-change decision documents should follow this naming convention:

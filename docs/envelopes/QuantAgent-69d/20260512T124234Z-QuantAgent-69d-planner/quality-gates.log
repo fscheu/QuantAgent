@@ -1,0 +1,5 @@
+planner docs-only run
+- production code changes: none
+- tests executed: not applicable
+- compile/lint: not applicable for docs-only scope
+- git isolation: PASS (fresh worktree used because repo root was dirty)
