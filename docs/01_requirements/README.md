@@ -23,6 +23,7 @@ The files listed above represent the current functional requirements for the sys
 
 ## Active Per-Change Requirements
 
+- [QuantAgent-69d-RQ-token-time-metrics.md](./QuantAgent-69d-RQ-token-time-metrics.md) - Track LLM token usage and runtime metrics for session/backtest cost analysis
 - [QuantAgent-vna-RQ-triple-screen-strategy.md](./QuantAgent-vna-RQ-triple-screen-strategy.md) - M1 Strategy 1: Triple Screen Strategy (Alexander Elder)
 - [QuantAgent-40j-RQ-parallel-test-fix.md](./QuantAgent-40j-RQ-parallel-test-fix.md) - Fix missing benchmark fixture for parallel execution test (P1, blocks 82t)
 - [QuantAgent-4w4-RQ-lookback-windows.md](./QuantAgent-4w4-RQ-lookback-windows.md) - Backtest must honor strategy-specific lookback windows (P1, blocks b8r)
