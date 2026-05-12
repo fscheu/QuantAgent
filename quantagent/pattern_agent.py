@@ -5,6 +5,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from quantagent.agent_models import PatternReport
 from quantagent.agent_utils import invoke_with_retry
+from quantagent.llm_telemetry import TelemetryCtx
 
 logger = logging.getLogger(__name__)
 
@@ -112,10 +113,19 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
             # Create agent-specific messages (will be added to state via reducer)
             agent_messages = [system_msg, human_msg]
 
+            pattern_telemetry_ctx = TelemetryCtx(
+                operation="pattern_agent",
+                symbol=symbol,
+                thread_id=thread_id,
+                environment=state.get("environment"),
+                backtest_run_id=state.get("backtest_run_id"),
+            )
+
             try:
                 structured_graph_llm = graph_llm.with_structured_output(PatternReport)
                 pattern_report = invoke_with_retry(
-                    structured_graph_llm.invoke, agent_messages, retries=3, base_wait=8
+                    structured_graph_llm.invoke, agent_messages, retries=3, base_wait=8,
+                    telemetry_ctx=pattern_telemetry_ctx,
                 )
             except Exception as e:
                 # Fallback: retry without system message for Anthropic compatibility
@@ -129,7 +139,8 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
                             PatternReport
                         )
                         pattern_report = invoke_with_retry(
-                            structured_graph_llm.invoke, [human_msg], retries=3, base_wait=8
+                            structured_graph_llm.invoke, [human_msg], retries=3, base_wait=8,
+                            telemetry_ctx=pattern_telemetry_ctx,
                         )
                     except Exception as retry_error:
                         reasoning = f"Vision LLM failed: {str(retry_error)}"
