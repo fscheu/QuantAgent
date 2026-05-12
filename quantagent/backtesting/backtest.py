@@ -165,9 +165,6 @@ class Backtest:
 
         # Trading components
         self.portfolio = components.portfolio_manager
-        self.position_sizer = components.position_sizer
-        self.risk_manager = components.risk_manager
-        self.broker = components.broker
         self.order_manager = components.order_manager
 
         # Backtest state
@@ -253,7 +250,7 @@ class Backtest:
 
                 # Reset daily P&L tracking at start of each day
                 if i == 0 or current_date.date() != asset_dates[i - 1].date():
-                    self.risk_manager.reset_daily_tracker()
+                    self.order_manager.reset_daily_tracker()
 
                 try:
                     self._analyze_and_trade(asset, current_date)
@@ -370,7 +367,7 @@ class Backtest:
                 self.current_date = current_date
 
                 if i == 0 or current_date.date() != asset_dates[i - 1].date():
-                    self.risk_manager.reset_daily_tracker()
+                    self.order_manager.reset_daily_tracker()
 
                 try:
                     self._replay_and_trade(asset, current_date, signal_map)
