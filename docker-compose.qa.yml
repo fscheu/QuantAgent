@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   api:
     build:
@@ -7,11 +5,10 @@ services:
       dockerfile: Dockerfile.qa
     container_name: quantagent_qa
     ports:
-      - "8001:8001"
+      - "8501:8501"
     environment:
       - ENV=qa
       - DATABASE_URL=postgresql://qa_user:qa_pass@db:5432/quantagent_qa
-      - FLASK_ENV=production
       - LOG_LEVEL=INFO
     volumes:
       - ./logs:/app/logs
@@ -23,7 +20,7 @@ services:
       - quantagent-qa-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
       interval: 30s
       timeout: 10s
       retries: 3

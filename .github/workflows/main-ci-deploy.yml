@@ -136,31 +136,79 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Reset QA validator run artifacts
+        run: |
+          rm -rf /home/azureuser/repos/agents/qa-validator-poc/runs/poc-qa-validator-local-streamlit-8501
+
       - name: Deploy to QA locally
         id: deploy
         run: |
           cd ~/repos/projects/QuantAgent
           git fetch origin
           git reset --hard origin/main
-          sudo docker-compose -f docker-compose.qa.yml down || true
-          sudo docker-compose -f docker-compose.qa.yml build --no-cache
-          sudo docker-compose -f docker-compose.qa.yml up -d
+          sudo docker image prune -af || true
+          sudo docker container prune -f || true
+          sudo docker builder prune -af || true
+          sudo docker compose -f docker-compose.qa.yml down --remove-orphans || true
+          sudo docker compose -f docker-compose.qa.yml build --no-cache
+          sudo docker compose -f docker-compose.qa.yml up -d
           echo "Waiting for services to be healthy..."
-          sleep 30
+          sleep 20
 
       - name: Health check
         id: health
         run: |
-          for i in {1..10}; do
-            if curl -f https://qa.fedes.dev/health; then
-              echo "QA environment is healthy"
+          for i in {1..18}; do
+            if curl -fsS http://127.0.0.1:8501/_stcore/health; then
+              echo "QA Streamlit is healthy"
               exit 0
             fi
-            echo "Attempt $i/10 failed, waiting..."
+            echo "Attempt $i/18 failed, waiting..."
             sleep 10
           done
-          echo "Health check failed after 10 attempts"
+          echo "Health check failed after 18 attempts"
           exit 1
+
+      - name: Verify pinned QA validator artifacts
+        id: qa_validator_integrity
+        run: |
+          printf '%s  %s\n' \
+            'dfeb61fef2ed354dd014a777131e5d44e1fd866db44ee43736f2fe7e82c6cf6c' '/home/azureuser/repos/agents/qa-validator-poc/runner.py' \
+            '43c15205cd6e3d586e740a212b817bf419d793080eb6a3699432e5082a7b06ce' '/home/azureuser/repos/agents/qa-validator-poc/configs/local-streamlit.yaml' \
+            '870b469879d53314bdd8e824f6bc3584fd14d1859646f1b82aa07c14ab49f47b' '/home/azureuser/repos/agents/qa-validator-poc/prompt_template.md' \
+            'e3b6a8a9daa88d70b014048209b03729c56c5807ba75c15e726077059de9c775' '/home/azureuser/repos/agents/qa-validator-poc/docs/local-streamlit-target.md' \
+            | sha256sum -c -
+
+      - name: Run post-deploy QA validator
+        id: qa_validator
+        continue-on-error: true
+        run: |
+          cd ~/repos/projects/QuantAgent
+          python3 /home/azureuser/repos/agents/qa-validator-poc/runner.py \
+            --config /home/azureuser/repos/agents/qa-validator-poc/configs/local-streamlit.yaml
+
+      - name: Read QA validator verdict
+        id: qa_validator_result
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          result_path = Path('/home/azureuser/repos/agents/qa-validator-poc/runs/poc-qa-validator-local-streamlit-8501/result.json')
+          status = 'MISSING'
+          if result_path.exists():
+              try:
+                  status = json.loads(result_path.read_text()).get('status', 'MISSING')
+              except Exception:
+                  status = 'INVALID'
+
+          with open(Path.cwd() / '.github_output_tmp', 'w', encoding='utf-8') as f:
+              f.write(f'qa_validator_result_status={status}\n')
+              f.write(f'qa_verified={str(status == "SUCCESS").lower()}\n')
+          PY
+          cat .github_output_tmp >> "$GITHUB_OUTPUT"
+          rm -f .github_output_tmp
 
       - name: Notify Hermes Tech Lead
         if: always()
@@ -170,6 +218,9 @@ jobs:
           JOB_STATUS: ${{ job.status }}
           DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
           HEALTH_OUTCOME: ${{ steps.health.outcome }}
+          QA_VALIDATOR_OUTCOME: ${{ steps.qa_validator.outcome }}
+          QA_VALIDATOR_RESULT_STATUS: ${{ steps.qa_validator_result.outputs.qa_validator_result_status }}
+          QA_VERIFIED: ${{ steps.qa_validator_result.outputs.qa_verified }}
         run: |
           python3 - <<'PY'
           import json
@@ -201,6 +252,9 @@ jobs:
               "deployed_url": "https://qa.fedes.dev",
               "deploy_step_outcome": os.environ.get("DEPLOY_OUTCOME", ""),
               "health_step_outcome": os.environ.get("HEALTH_OUTCOME", ""),
+              "qa_validator_step_outcome": os.environ.get("QA_VALIDATOR_OUTCOME", ""),
+              "qa_validator_result_status": os.environ.get("QA_VALIDATOR_RESULT_STATUS", ""),
+              "qa_verified": os.environ.get("QA_VERIFIED", "false"),
           }
 
           body = json.dumps(payload).encode("utf-8")

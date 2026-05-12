@@ -33,6 +33,7 @@ Implementation documents should include:
 
 ## Active Per-Change Implementation
 
+- [QuantAgent-app-IM-qa-streamlit-cutover.md](./QuantAgent-app-IM-qa-streamlit-cutover.md) - QA Streamlit cutover, Cloudflare tunnel alignment, and deploy_finished -> qa_verified contract.
 - [QuantAgent-uzq-IM-fix-scheduler-heartbeat.md](./QuantAgent-uzq-IM-fix-scheduler-heartbeat.md) - Fix TradingScheduler heartbeat and scheduler unit-test regressions exposed by CI gate (P1, bug)
 - [QuantAgent-b8r-IM-52week-high-momentum.md](./QuantAgent-b8r-IM-52week-high-momentum.md) - M1 Strategy 3: FiftyTwoWeekHighStrategy (52-week high momentum/breakout for US equities)
 - [QuantAgent-c69-IM-llm-agent-strategy.md](./QuantAgent-c69-IM-llm-agent-strategy.md) - M1 Strategy 2: LLMAgentStrategy reference pipeline (m1, strategy)
