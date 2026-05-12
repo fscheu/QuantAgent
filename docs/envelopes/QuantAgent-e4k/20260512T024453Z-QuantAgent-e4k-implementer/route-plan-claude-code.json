@@ -1,0 +1,35 @@
+{
+  "run_id": "20260512T024453Z-QuantAgent-e4k-implementer",
+  "created_at": "2026-05-12T02:45:01.154143+00:00",
+  "executor": "claude-code",
+  "phase": "implementer",
+  "issue_id": "QuantAgent-e4k",
+  "dry_run": false,
+  "adapter": {
+    "command_name": "claude",
+    "available": true,
+    "requires_pty": false,
+    "output_mode": "stream",
+    "max_turns": null
+  },
+  "paths": {
+    "envelope": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-e4k/20260512T024453Z-QuantAgent-e4k-implementer/input-envelope.md",
+    "prompt": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-e4k/20260512T024453Z-QuantAgent-e4k-implementer/executor-prompt-claude-code.md",
+    "artifacts_dir": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-e4k/20260512T024453Z-QuantAgent-e4k-implementer",
+    "workdir": "/mnt/actions-runner/autodev-runtime/worktrees/QuantAgent/QuantAgent-e4k/implementer-20260512T024453Z",
+    "run_report": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-e4k/20260512T024453Z-QuantAgent-e4k-implementer/run-report.md",
+    "result_json": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-e4k/20260512T024453Z-QuantAgent-e4k-implementer/result.json",
+    "commands_log": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-e4k/20260512T024453Z-QuantAgent-e4k-implementer/commands.log",
+    "quality_gates_log": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-e4k/20260512T024453Z-QuantAgent-e4k-implementer/quality-gates.log"
+  },
+  "environment": {
+    "shared_venv": "/mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv",
+    "shared_python": "/mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python"
+  },
+  "command_preview": "claude -p \"$(cat /home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-e4k/20260512T024453Z-QuantAgent-e4k-implementer/executor-prompt-claude-code.md)\" --output-format stream-json --verbose --include-partial-messages --allowedTools Read,Edit,Write,Bash",
+  "notes": [
+    "Dry-run does not invoke the external CLI.",
+    "Codex command is wrapped with script(1) for pseudo-tty when executed by this router.",
+    "During migration, git push / merge / deploy remain blocked by validation."
+  ]
+}

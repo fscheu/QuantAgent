@@ -1,0 +1,25 @@
+{
+  "id": "QuantAgent-e4k",
+  "title": "Refactor Backtest to depend only on OrderManager (facade pattern)",
+  "description": "Refactor the Backtest class to only depend on OrderManager instead of holding direct references to PositionSizer, RiskManager, and PaperBroker. OrderManager already acts as a facade for trading execution. This reduces coupling and improves encapsulation. The Backtest class should interact with trading components exclusively through OrderManager's interface.",
+  "status": "open",
+  "priority": 3,
+  "issue_type": "task",
+  "created_at": "2026-01-03T16:59:12.378421688Z",
+  "created_by": "baiscf",
+  "updated_at": "2026-05-12T01:31:06.886997446Z",
+  "metadata": {
+    "openclaw": {
+      "phase": "design_pending",
+      "design_branch": "feature/QuantAgent-e4k-refactor-backtest-to-depend-only-on-orde",
+      "epic_branch": null,
+      "updated_at": "2026-02-18T01:16:06.591605+00:00"
+    }
+  },
+  "labels": [
+    "architecture",
+    "encapsulation",
+    "openclaw:design_approved",
+    "refactor"
+  ]
+}

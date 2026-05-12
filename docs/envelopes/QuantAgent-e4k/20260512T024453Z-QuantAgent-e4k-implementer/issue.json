@@ -1,0 +1,34 @@
+{
+  "id": "QuantAgent-e4k",
+  "title": "Refactor Backtest to depend only on OrderManager (facade pattern)",
+  "description": "Refactor the Backtest class to only depend on OrderManager instead of holding direct references to PositionSizer, RiskManager, and PaperBroker. OrderManager already acts as a facade for trading execution. This reduces coupling and improves encapsulation. The Backtest class should interact with trading components exclusively through OrderManager's interface.",
+  "status": "open",
+  "priority": 3,
+  "issue_type": "task",
+  "created_at": "2026-01-03T16:59:12.378421688Z",
+  "created_by": "baiscf",
+  "updated_at": "2026-05-12T01:31:06.886997446Z",
+  "metadata": {
+    "openclaw": {
+      "phase": "design_pending",
+      "design_branch": "feature/QuantAgent-e4k-refactor-backtest-to-depend-only-on-orde",
+      "epic_branch": null,
+      "updated_at": "2026-02-18T01:16:06.591605+00:00"
+    }
+  },
+  "labels": [
+    "architecture",
+    "encapsulation",
+    "openclaw:design_approved",
+    "refactor"
+  ],
+  "comments": [
+    {
+      "id": 188,
+      "issue_id": "QuantAgent-e4k",
+      "author": "Federico Scheu",
+      "text": "### Skill: autodev-planner\n- **Resultado:** SUCCESS\n- **Run-ID:** 20260512T024029Z-QuantAgent-e4k-planner\n- **Executor:** auto\n\n#### Qué hice\n- Analicé el acoplamiento actual de Backtest con PositionSizer, RiskManager y PaperBroker\n- Identifiqué todos los sitios de uso directo en backtest.py\n- Detecté bug latente: close_trade() se llama en líneas 423 y 653 de backtest.py pero el método NO existe en OrderManager (AttributeError en runtime)\n- Produje 4 artefactos de documentación (RQ, PL, DS, AC)\n\n#### Evidencia\n- docs/01_requirements/QuantAgent-e4k-RQ-refactor-backtest-facade.md\n- docs/02_planning/QuantAgent-e4k-PL-refactor-backtest-facade.md\n- docs/03_design/QuantAgent-e4k-DS-refactor-backtest-facade.md\n- docs/05_acceptance_tests/QuantAgent-e4k-AC-refactor-backtest-facade.md\n\n#### Quality gates\n- git status: PASS (sin cambios de código)\n- issue ID en paths de docs: PASS\n- ACs testeables: PASS (7 criterios Given/When/Then)\n- python -m compileall backtest.py order_manager.py: PASS\n\n#### Problemas encontrados\n- close_trade() no existe en OrderManager — la función ya se llama en backtest.py pero lanza AttributeError. El implementer debe agregar este método además de reset_daily_tracker().\n\n#### Next step recomendado\n- Fase implementer: seguir docs/02_planning/QuantAgent-e4k-PL-refactor-backtest-facade.md\n- Cambios mínimos: 2 métodos nuevos en order_manager.py + 5 líneas editadas en backtest.py + 1 import\n- Branch: feature/QuantAgent-e4k-refactor-backtest-to-depend-only-on-orde",
+      "created_at": "2026-05-12T02:44:23Z"
+    }
+  ]
+}
