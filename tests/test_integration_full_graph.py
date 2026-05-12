@@ -15,14 +15,11 @@ See docs/03_technical/TESTING_PATTERNS.md for testing guidelines.
 """
 
 import pytest
-from unittest.mock import Mock
-from langchain_core.messages import BaseMessage
 
 from quantagent.agent_models import (
     IndicatorReport,
     PatternReport,
     TrendReport,
-    TradingDecision,
 )
 from quantagent.graph_setup import SetGraph
 

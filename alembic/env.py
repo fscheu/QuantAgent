@@ -13,14 +13,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Import models
 from quantagent.database import Base
-from quantagent.models import (
-    Order,
-    Fill,
-    Position,
-    Signal,
-    Trade,
-    MarketData,
-)  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

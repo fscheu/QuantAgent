@@ -25,7 +25,7 @@ from quantagent.trading.position_sizer import PositionSizer
 from quantagent.trading.risk_manager import RiskManager
 from quantagent.trading.paper_broker import PaperBroker
 from quantagent.trading.order_manager import OrderManager
-from quantagent.models import Order, OrderSide, OrderStatus, OrderType
+from quantagent.models import OrderSide
 
 
 class TestQuantAgent8vbConversionFix:

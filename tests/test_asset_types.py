@@ -1,6 +1,5 @@
 """Tests for asset type classification."""
 
-import pytest
 
 from quantagent.data.asset_types import AssetType, get_asset_type
 

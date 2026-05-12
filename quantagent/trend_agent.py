@@ -157,7 +157,7 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
                     reasoning = response_dict.get(
                         "reasoning", "Trend analysis completed"
                     )
-                except (json.JSONDecodeError, ValueError, KeyError) as parse_err:
+                except (json.JSONDecodeError, ValueError, KeyError):
                     reasoning = f"Trend analysis completed with fallback parsing: {final_response.content[:100]}"
 
         # Build structured report

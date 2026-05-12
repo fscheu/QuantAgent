@@ -8,7 +8,6 @@ from typing import Any, Dict, Optional
 
 import pandas as pd
 from flask import Flask, jsonify, render_template, request, send_file
-from openai import OpenAI
 
 import quantagent.static_util as static_util
 from quantagent import settings

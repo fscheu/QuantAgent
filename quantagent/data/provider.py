@@ -1,7 +1,7 @@
 """Data provider with caching layer for market data."""
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 import pandas as pd

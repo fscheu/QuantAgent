@@ -2,7 +2,6 @@
 
 import pytest
 from datetime import datetime, timedelta
-from decimal import Decimal
 
 from quantagent.backtesting.backtest import Backtest, BacktestMetrics
 from quantagent.models import ActivePosition, OrderSide, ExitPolicy, Environment

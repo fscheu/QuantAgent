@@ -8,7 +8,6 @@ Tests verify:
 - Error handling with fallback HOLD decision
 """
 
-import json
 import pytest
 from unittest.mock import Mock
 
@@ -330,7 +329,6 @@ class TestErrorHandling:
     ):
         """Verify malformed JSON creates HOLD fallback decision."""
         # Create llm that will fail to parse (simulate error in with_structured_output)
-        from unittest.mock import Mock
 
         llm = Mock()
         llm.with_structured_output = Mock(side_effect=ValueError("LLM parsing failed"))

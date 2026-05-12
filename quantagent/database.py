@@ -1,6 +1,6 @@
 """SQLAlchemy database configuration and engine setup."""
 
-from sqlalchemy import create_engine, Engine
+from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from sqlalchemy.pool import StaticPool
 

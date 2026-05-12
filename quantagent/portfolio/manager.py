@@ -11,7 +11,6 @@ from quantagent.models import (
     Environment,
     Order,
     OrderSide,
-    OrderStatus,
     Position,
     Trade,
 )

@@ -52,7 +52,7 @@ def test_parallel_execution():
     print("=" * 80)
 
     print(f"\n✓ Total execution time: {execution_time:.2f} seconds")
-    print(f"  (Expected: ~4-5s for parallel, ~6-9s for sequential)")
+    print("  (Expected: ~4-5s for parallel, ~6-9s for sequential)")
 
     # Check that all agent reports are present
     has_indicator = "indicator_report" in result and result["indicator_report"]

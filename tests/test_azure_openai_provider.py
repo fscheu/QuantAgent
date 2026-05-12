@@ -14,7 +14,7 @@ See docs/05_acceptance_tests/QuantAgent-7bn-AC-azure-openai-support.md for AC.
 
 import os
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from quantagent import settings
 from quantagent.trading_graph import TradingGraph

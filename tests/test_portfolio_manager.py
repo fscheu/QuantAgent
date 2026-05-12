@@ -10,7 +10,6 @@ Following TESTING_PATTERNS.md:
 
 import pytest
 from decimal import Decimal
-from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -20,14 +19,10 @@ from quantagent.models import (
     OrderType,
     OrderStatus,
     Trade,
-    Position,
-    Signal,
-    TradeSignal,
     Environment,
     Base,
 )
 from quantagent.portfolio.manager import PortfolioManager
-from quantagent.database import SessionLocal
 
 
 @pytest.fixture

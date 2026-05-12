@@ -1,13 +1,12 @@
 """Test script to verify migrations work correctly."""
 
-import os
 import sys
 from pathlib import Path
 
 # Add project to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from quantagent.database import engine, init_db, SessionLocal, Base
+from quantagent.database import init_db, SessionLocal
 from quantagent.models import Order, Fill, Position, Signal, Trade, MarketData
 
 
@@ -38,7 +37,7 @@ def test_insert_market_data():
         )
         db.add(market_data)
         db.commit()
-        print(f"✓ Market data inserted: BTC 1h candle")
+        print("✓ Market data inserted: BTC 1h candle")
         db.refresh(market_data)
         print(f"  ID: {market_data.id}, Close: {market_data.close}")
     finally:
@@ -47,7 +46,6 @@ def test_insert_market_data():
 
 def test_insert_signal():
     """Test inserting trading signal."""
-    from datetime import datetime
     from quantagent.models import TradeSignal
 
     print("\nInserting trading signal...")
@@ -80,7 +78,6 @@ def test_insert_signal():
 
 def test_insert_order():
     """Test inserting trading order."""
-    from datetime import datetime
     from decimal import Decimal
     from quantagent.models import OrderSide, OrderType, OrderStatus
 
@@ -107,7 +104,6 @@ def test_insert_order():
 
 def test_insert_fill():
     """Test inserting order fill."""
-    from datetime import datetime
     from decimal import Decimal
     from quantagent.models import OrderSide, OrderType, OrderStatus
 
@@ -145,7 +141,6 @@ def test_insert_fill():
 
 def test_insert_trade():
     """Test inserting completed trade."""
-    from datetime import datetime
     from decimal import Decimal
     from quantagent.models import OrderSide
 

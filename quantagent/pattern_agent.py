@@ -166,7 +166,7 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
                         response_dict.get("breakout_probability", 0.0)
                     )
                     reasoning = response_dict.get("reasoning", "Pattern detected")
-                except (json.JSONDecodeError, ValueError, KeyError) as parse_err:
+                except (json.JSONDecodeError, ValueError, KeyError):
                     reasoning = f"Pattern analysis completed with fallback parsing: {final_response.content[:100]}"
 
         # Build structured report

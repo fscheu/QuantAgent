@@ -2,7 +2,6 @@
 
 from datetime import datetime
 
-import pytest
 
 from quantagent.data.asset_types import AssetType
 from quantagent.data.market_calendar import MarketCalendar

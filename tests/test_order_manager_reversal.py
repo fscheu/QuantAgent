@@ -13,14 +13,14 @@ Test Strategy:
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock, call
+from unittest.mock import Mock
 from decimal import Decimal
 
 from quantagent.trading.position_sizer import PositionSizer
 from quantagent.trading.risk_manager import RiskManager
 from quantagent.trading.paper_broker import PaperBroker
 from quantagent.trading.order_manager import OrderManager
-from quantagent.models import Order, OrderSide, OrderStatus, OrderType
+from quantagent.models import OrderSide
 
 
 class TestPositionReversal:
