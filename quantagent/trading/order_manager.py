@@ -18,7 +18,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from quantagent.models import Order, OrderSide, OrderType, Signal, TradeSignal
+from quantagent.models import Order, OrderSide, OrderType, Signal, Trade, TradeSignal
 
 from .position_sizer import PositionSizer
 from .risk_manager import RiskManager
@@ -438,3 +438,72 @@ class OrderManager:
 
         logger.info(f"{symbol}: Position reversal completed successfully")
         return filled_new_order
+
+    def reset_daily_tracker(self) -> None:
+        """Delegate daily-tracker reset to RiskManager (facade method)."""
+        self.risk_manager.reset_daily_tracker()
+
+    def close_trade(
+        self,
+        trade_id: int,
+        current_price: float,
+        environment=None,
+    ) -> Optional[Order]:
+        """Close an open trade by executing an opposing order at current_price."""
+        trade = self.db.query(Trade).filter(Trade.id == trade_id).first()
+        if trade is None:
+            logger.warning(f"close_trade: trade_id={trade_id} not found")
+            return None
+
+        close_side = OrderSide.SELL if trade.side == OrderSide.BUY else OrderSide.BUY
+        qty = float(trade.quantity)
+
+        is_valid, reason = self.risk_manager.validate_trade(
+            trade.symbol, close_side, qty, current_price
+        )
+        if not is_valid:
+            logger.warning(f"{trade.symbol}: close_trade rejected - {reason}")
+            return None
+
+        order = Order(
+            symbol=trade.symbol,
+            side=close_side,
+            quantity=qty,
+            price=current_price,
+            order_type=OrderType.MARKET,
+            environment=environment,
+        )
+
+        try:
+            self.db.add(order)
+            self.db.flush()
+        except Exception as e:
+            logger.error(f"{trade.symbol}: close_trade failed to persist order - {e}")
+            self.db.rollback()
+            return None
+
+        try:
+            filled_order = self.broker.place_order(order)
+        except Exception as e:
+            logger.error(f"{trade.symbol}: close_trade broker execution failed - {e}")
+            return None
+
+        try:
+            close_trade_record = self.portfolio.execute_trade(
+                filled_order, filled_order.average_fill_price
+            )
+        except Exception as e:
+            logger.error(f"{trade.symbol}: close_trade portfolio update failed - {e}")
+            return None
+
+        self.risk_manager.on_trade_executed(close_trade_record)
+
+        try:
+            self.db.add(close_trade_record)
+            self.db.commit()
+        except Exception as e:
+            logger.error(f"{trade.symbol}: close_trade database commit failed - {e}")
+            self.db.rollback()
+            return None
+
+        return filled_order

@@ -1,14 +1,11 @@
 """Backtesting engine for strategy validation."""
 
 import logging
-import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
-from decimal import Decimal
 from typing import Dict, List, Optional
 
-import numpy as np
 import numpy as np
 import pandas as pd
 from sqlalchemy.orm import Session
@@ -18,25 +15,12 @@ from quantagent.data.asset_types import AssetType, get_asset_type
 from quantagent.data.market_calendar import get_market_calendar
 from quantagent.data.provider import DataProvider
 from quantagent.database import SessionLocal
-from quantagent.models import (ActivePosition, BacktestRun, Environment, Order,
-                               OrderSide, Signal, Trade, TradeSignal)
-from quantagent.portfolio.manager import PortfolioManager
-from quantagent.database import SessionLocal
-from quantagent.models import (BacktestRun, Environment, Order, Signal, Trade,
-                               TradeSignal)
-from quantagent.portfolio.manager import PortfolioManager
+from quantagent.models import (ActivePosition, BacktestRun, Environment, OrderSide, Signal, Trade, TradeSignal)
 from quantagent.static_util import format_ohlcv_for_agents
 from quantagent.strategy.assembler import StrategyAssembler
 from quantagent.strategy.base import TradingStrategy
 from quantagent.strategy.llm_agent_strategy import LLMAgentStrategy
-from quantagent.trading.order_manager import OrderManager
-from quantagent.trading.paper_broker import PaperBroker
 from quantagent.trading.position_monitor import PositionMonitor
-from quantagent.trading.paper_broker import PaperBroker
-from quantagent.trading.position_sizer import PositionSizer
-from quantagent.trading.risk_manager import RiskManager
-from quantagent.trading_graph import TradingGraph
-from quantagent.trading_graph import TradingGraph
 
 logger = logging.getLogger(__name__)
 
@@ -170,9 +154,6 @@ class Backtest:
 
         # Trading components
         self.portfolio = components.portfolio_manager
-        self.position_sizer = components.position_sizer
-        self.risk_manager = components.risk_manager
-        self.broker = components.broker
         self.order_manager = components.order_manager
 
         # Backtest state
@@ -255,7 +236,7 @@ class Backtest:
 
                 # Reset daily P&L tracking at start of each day
                 if i == 0 or current_date.date() != asset_dates[i - 1].date():
-                    self.risk_manager.reset_daily_tracker()
+                    self.order_manager.reset_daily_tracker()
 
                 try:
                     self._analyze_and_trade(asset, current_date)
