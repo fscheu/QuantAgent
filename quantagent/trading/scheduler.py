@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from quantagent import settings
 from quantagent.data.provider import DataProvider
-from quantagent.models import Environment, SchedulerHeartbeat, Signal, TradeSignal
+from quantagent.models import Environment, SchedulerHeartbeat, Signal, Trade, TradeSignal
 from quantagent.static_util import format_ohlcv_for_agents
 from quantagent.strategy.base import TradingSignal as StrategyTradingSignal
 from quantagent.strategy.llm_agent_strategy import LLMAgentStrategy
@@ -67,7 +67,8 @@ class TradingScheduler:
         # Initialize PositionMonitor for tracking active positions
         self.position_monitor = PositionMonitor(
             db_session=db_session,
-            backtest_run_id=None  # Paper trading doesn't use backtest_run_id
+            backtest_run_id=None,  # Paper trading doesn't use backtest_run_id
+            environment=self.environment,
         )
 
         self.scheduler = (
@@ -151,66 +152,65 @@ class TradingScheduler:
         errors = 0
 
         heartbeat = self._upsert_heartbeat_start(cycle_start)
+        try:
+            for symbol in self.config.assets:
+                try:
+                    self._process_asset(symbol)
+                    processed += 1
+                except DataFetchError as exc:
+                    errors += 1
+                    logger.warning(
+                        "Failed to fetch data for %s: %s",
+                        symbol,
+                        exc,
+                        extra={
+                            "event_type": "scheduler.data_error",
+                            "symbol": symbol,
+                            "environment": self.environment.value,
+                        },
+                    )
+                except AnalysisError as exc:
+                    errors += 1
+                    logger.error(
+                        "Analysis failed for %s: %s",
+                        symbol,
+                        exc,
+                        extra={
+                            "event_type": "scheduler.analysis_error",
+                            "symbol": symbol,
+                            "environment": self.environment.value,
+                        },
+                    )
+                except ExecutionError as exc:
+                    errors += 1
+                    logger.error(
+                        "Execution failed for %s: %s",
+                        symbol,
+                        exc,
+                        extra={
+                            "event_type": "scheduler.execution_error",
+                            "symbol": symbol,
+                            "environment": self.environment.value,
+                        },
+                    )
+                except Exception:  # pragma: no cover - defensive logging
+                    errors += 1
+                    logger.exception(
+                        "Unexpected scheduler error for %s",
+                        symbol,
+                        extra={
+                            "event_type": "scheduler.unexpected_error",
+                            "symbol": symbol,
+                            "environment": self.environment.value,
+                        },
+                    )
+        except Exception as exc:  # pragma: no cover - cycle-level safeguard
+            stats = self._build_cycle_stats(cycle_start, processed, errors)
+            self.last_run_stats = stats
+            self._upsert_heartbeat_error(heartbeat, stats, str(exc))
+            raise
 
-        for symbol in self.config.assets:
-            try:
-                self._process_asset(symbol)
-                processed += 1
-            except DataFetchError as exc:
-                errors += 1
-                logger.warning(
-                    "Failed to fetch data for %s: %s",
-                    symbol,
-                    exc,
-                    extra={
-                        "event_type": "scheduler.data_error",
-                        "symbol": symbol,
-                        "environment": self.environment.value,
-                    },
-                )
-            except AnalysisError as exc:
-                errors += 1
-                logger.error(
-                    "Analysis failed for %s: %s",
-                    symbol,
-                    exc,
-                    extra={
-                        "event_type": "scheduler.analysis_error",
-                        "symbol": symbol,
-                        "environment": self.environment.value,
-                    },
-                )
-            except ExecutionError as exc:
-                errors += 1
-                logger.error(
-                    "Execution failed for %s: %s",
-                    symbol,
-                    exc,
-                    extra={
-                        "event_type": "scheduler.execution_error",
-                        "symbol": symbol,
-                        "environment": self.environment.value,
-                    },
-                )
-            except Exception:  # pragma: no cover - defensive logging
-                errors += 1
-                logger.exception(
-                    "Unexpected scheduler error for %s",
-                    symbol,
-                    extra={
-                        "event_type": "scheduler.unexpected_error",
-                        "symbol": symbol,
-                        "environment": self.environment.value,
-                    },
-                )
-
-        duration = (datetime.utcnow() - cycle_start).total_seconds()
-        stats = {
-            "processed": processed,
-            "errors": errors,
-            "duration_seconds": duration,
-            "total": len(self.config.assets),
-        }
+        stats = self._build_cycle_stats(cycle_start, processed, errors)
         self.last_run_stats = stats
 
         self._upsert_heartbeat_complete(heartbeat, stats)
@@ -220,7 +220,7 @@ class TradingScheduler:
             processed,
             len(self.config.assets),
             errors,
-            duration,
+            stats["duration_seconds"],
             extra={
                 "event_type": "scheduler.cycle_complete",
                 "environment": self.environment.value,
@@ -339,13 +339,15 @@ class TradingScheduler:
             raise ExecutionError(str(exc)) from exc
 
         if order:
+            trade_id = self._get_trade_id_for_order(getattr(order, "id", None))
+
             # NEW: Open ActivePosition for tracking
             # Extract stop loss and take profit from signal (with fallbacks)
-            stop_loss = getattr(signal, 'stop_loss', None) or (
+            stop_loss = getattr(signal, "stop_loss", None) or (
                 current_price * 0.98 if trade_signal == TradeSignal.LONG
                 else current_price * 1.02
             )
-            take_profit = getattr(signal, 'take_profit', None) or (
+            take_profit = getattr(signal, "take_profit", None) or (
                 current_price * 1.04 if trade_signal == TradeSignal.LONG
                 else current_price * 0.96
             )
@@ -358,8 +360,10 @@ class TradingScheduler:
                 take_profit=take_profit,
                 quantity=order.quantity,
                 exit_policy="sl_tp_only",
+                trade_id=trade_id,
                 signal_id=db_signal.id if db_signal else None,
                 backtest_run_id=None,
+                environment=self.environment,
             )
 
             logger.info(
@@ -460,7 +464,20 @@ class TradingScheduler:
         timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
         return f"scheduler_{symbol}_{timestamp}"
 
-    def _upsert_heartbeat_start(self, started_at: datetime) -> Optional[SchedulerHeartbeat]:
+    def _build_cycle_stats(
+        self, cycle_start: datetime, processed: int, errors: int
+    ) -> Dict[str, float]:
+        duration = (datetime.utcnow() - cycle_start).total_seconds()
+        return {
+            "processed": processed,
+            "errors": errors,
+            "duration_seconds": duration,
+            "total": len(self.config.assets),
+        }
+
+    def _upsert_heartbeat_start(
+        self, started_at: datetime
+    ) -> Optional[SchedulerHeartbeat]:
         try:
             existing = (
                 self.db.query(SchedulerHeartbeat)
@@ -469,9 +486,23 @@ class TradingScheduler:
                 .first()
             )
             if existing is not None:
+                if existing.status == "running" and existing.completed_at is None:
+                    previous_started = (
+                        existing.timestamp.isoformat()
+                        if existing.timestamp is not None
+                        else "unknown"
+                    )
+                    existing.error_message = (
+                        "Recovered stale running heartbeat from "
+                        f"{previous_started} before starting a new cycle."
+                    )
+                else:
+                    existing.error_message = None
                 existing.timestamp = started_at
                 existing.status = "running"
+                existing.completed_at = None
                 existing.assets = list(self.config.assets)
+                existing.stats = None
                 self.db.commit()
                 self.db.refresh(existing)
                 return existing
@@ -481,6 +512,7 @@ class TradingScheduler:
                 status="running",
                 environment=self.environment,
                 assets=list(self.config.assets),
+                error_message=None,
             )
             self.db.add(hb)
             self.db.commit()
@@ -496,9 +528,12 @@ class TradingScheduler:
         if heartbeat is None:
             return
         try:
-            from quantagent.models import Trade
-
-            last_trade = self.db.query(Trade).order_by(Trade.id.desc()).first()
+            last_trade = (
+                self.db.query(Trade)
+                .filter(Trade.environment == self.environment)
+                .order_by(Trade.id.desc())
+                .first()
+            )
             heartbeat.status = "completed"
             heartbeat.completed_at = datetime.utcnow()
             heartbeat.stats = stats
@@ -506,6 +541,29 @@ class TradingScheduler:
             self.db.commit()
         except Exception:
             logger.exception("Heartbeat complete failed")
+
+    def _upsert_heartbeat_error(
+        self,
+        heartbeat: Optional[SchedulerHeartbeat],
+        stats: Dict[str, float],
+        error_message: str,
+    ) -> None:
+        if heartbeat is None:
+            return
+        try:
+            heartbeat.status = "error"
+            heartbeat.completed_at = datetime.utcnow()
+            heartbeat.stats = stats
+            heartbeat.error_message = error_message
+            self.db.commit()
+        except Exception:
+            logger.exception("Heartbeat error update failed")
+
+    def _get_trade_id_for_order(self, order_id: Optional[int]) -> Optional[int]:
+        if order_id is None or not isinstance(order_id, int):
+            return None
+        trade = self.db.query(Trade).filter(Trade.order_id == order_id).first()
+        return trade.id if trade is not None else None
 
     def _check_exit_conditions(
         self, position, current_price: float
