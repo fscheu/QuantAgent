@@ -23,6 +23,7 @@ The files listed above represent the current functional requirements for the sys
 
 ## Active Per-Change Requirements
 
+- [QuantAgent-s62-RQ-operational-observability.md](./QuantAgent-s62-RQ-operational-observability.md) - Extend minimal operational observability in dashboard and logs for paper trading (M2)
 - [QuantAgent-69d-RQ-token-time-metrics.md](./QuantAgent-69d-RQ-token-time-metrics.md) - Track LLM token usage and runtime metrics for session/backtest cost analysis
 - [QuantAgent-vna-RQ-triple-screen-strategy.md](./QuantAgent-vna-RQ-triple-screen-strategy.md) - M1 Strategy 1: Triple Screen Strategy (Alexander Elder)
 - [QuantAgent-40j-RQ-parallel-test-fix.md](./QuantAgent-40j-RQ-parallel-test-fix.md) - Fix missing benchmark fixture for parallel execution test (P1, blocks 82t)
