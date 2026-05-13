@@ -1,0 +1,35 @@
+{
+  "issue_id": "QuantAgent-sft",
+  "run_id": "20260513T180303Z-techlead-integration",
+  "phase": "tech_lead_integration",
+  "status": "SUCCESS",
+  "decision": "merge",
+  "failure_class": "NO_FAILURE",
+  "failure_subclass": "NO_FAILURE",
+  "feature_branch": "feature/QuantAgent-sft-paper-runtime-hardening-refresh-20260513T175506Z",
+  "merge_commit": "2f94af25432ec8828dbd3f311aa48e6419e2bca1",
+  "feature_tip": "0d5dfb60b4c776d42e7d7e032370d9c752099e89",
+  "main_base": "ef913a5fcd044b3d949b057118b7aefdd3fee8c9",
+  "tests": [
+    {
+      "command": "/mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m pytest tests/test_vje_paper_trading_view.py tests/test_position_monitor.py tests/test_vje_scheduler_heartbeat_backend.py -q",
+      "status": "PASS"
+    },
+    {
+      "command": "/mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m compileall -q quantagent apps tests",
+      "status": "PASS"
+    }
+  ],
+  "artifacts": [
+    "docs/envelopes/QuantAgent-sft/20260513T180303Z-techlead-integration/integration-decision-20260513T180303Z.md"
+  ],
+  "user_manual": {
+    "status": "skipped",
+    "reason": "docs/user-manual/ missing"
+  },
+  "notes": [
+    "Historical planner branch was stale and rehabilitated onto a fresh branch from origin/main before implementation.",
+    "Merge-tree preflight showed only safe main-side additions; no content conflicts occurred."
+  ],
+  "next_step": "push_main_and_close_issue"
+}
