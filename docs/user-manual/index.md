@@ -2,7 +2,7 @@
 
 **A multi-agent AI system for automated trading strategy development and validation**
 
-Last updated: May 11, 2026
+Last updated: May 13, 2026
 
 ---
 
@@ -30,7 +30,7 @@ QuantAgent uses four specialized AI agents to analyze financial markets and make
 - **[Strategy Configuration](strategy-configuration.md)** - Set up trading rules and risk limits
 - **[Analysis & Signals](analysis-and-signals.md)** - Understand AI agent decisions
 - **[Monitoring](monitoring.md)** - Track performance and system logs
-- **[Paper Trading](monitoring.md#paper-trading-tab)** - Monitor live scheduler status and recent runs
+- **[Paper Trading](monitoring.md#paper-trading-tab)** - Monitor scheduler health, positions, orders, P&L, and LLM telemetry
 - **[Paper Trading Automation](paper-trading-automation.md)** - Keep the scheduler running 24/7
 - **[Profile CLI](profile-cli.md)** - Manage strategy profiles from the terminal
 

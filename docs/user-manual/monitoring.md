@@ -32,9 +32,9 @@ Effective monitoring helps you:
 - Updates with each trade
 - Tracks growth over time
 
-**Total Trades**
-- Count of all executed trades
-- Cumulative across all assets
+**Daily P&L**
+- Realized profit/loss from trades closed today
+- Quick read on whether the current session is net positive or negative
 
 **Win Rate**
 - Percentage of profitable trades
@@ -42,13 +42,13 @@ Effective monitoring helps you:
 - **Acceptable:** 40-50%
 - **Needs work:** <40%
 
-**Active Positions**
+**Open Positions**
 - Number of currently open positions
 - Should match your risk limits (usually 1-3 open at once)
 
-**Recent P&L**
-- Last 24 hours profit/loss
-- Quick gauge of current performance
+**Open Orders**
+- Count of orders currently stored for the selected environment
+- Useful for spotting whether paper automation is still generating activity
 
 <!-- screenshot: Dashboard KPIs section with metrics -->
 
@@ -63,9 +63,9 @@ Effective monitoring helps you:
 - ⚠️ Warning if missing
 
 **Scheduler Status**
-- **Running (green):** The `apps/paper_trading.py` scheduler checked in during the last minute. Automation is healthy.
-- **Idle (yellow):** Scheduler is installed but `settings.scheduler.enabled` is `False` or the process was paused. No paper trades will execute until you start it manually.
-- **Stopped (red):** No heartbeat detected. Check the terminal where you started `python apps/paper_trading.py` or review the Logs tab (filter by `quantagent.trading.scheduler`).
+- **Active (green):** Last heartbeat is newer than 2 hours.
+- **Stale (yellow):** Last heartbeat is older than 2 hours but newer than 24 hours.
+- **Stopped (red):** No heartbeat exists or the last heartbeat is older than 24 hours.
 - Use the [Paper Trading Automation guide](paper-trading-automation.md) for startup and recovery steps.
 
 ### Recent Trades Table
@@ -142,9 +142,42 @@ Each log entry contains:
 - Track specific asset behavior
 
 **By Environment:**
-- Backtest logs
-- Paper trading logs
-- Separate test from production data
+- `all` shows every environment together
+- `paper` isolates paper-trading activity and scheduler troubleshooting
+- `backtest` isolates historical runs so they do not pollute live operations review
+
+When troubleshooting automation, start with `Environment = paper` to avoid mixing backtest noise into the same table.
+
+---
+
+## Paper Trading Tab
+
+**Location:** Dashboard → Paper Trading tab
+
+Use this tab when you want operational detail beyond the high-level dashboard summary.
+
+### Scheduler status and recent runs
+
+- The top card shows the latest scheduler heartbeat, current status, last run time, duration, and recent run history.
+- If no heartbeat is present, the page explains that the scheduler may be stopped and shows the command to start it.
+
+### Positions & Orders
+
+- **Open Positions** lists all current positions.
+- **Recent Orders** is filtered to the selected environment (for example `paper`).
+- If there is no activity yet, the page shows explicit `No open positions.` / `No recent orders.` messages instead of a blank table.
+
+### P&L Summary
+
+- **Unrealized PnL (all positions)** reflects the mark-to-market value of currently open positions.
+- **Realized PnL today** sums trades closed today for the selected environment.
+
+### LLM Cost & Latency (last 24h)
+
+- Shows call count, total tokens, average latency, and an approximate USD cost for recent `llm_call` telemetry rows.
+- If no telemetry exists yet, the page shows `No LLM telemetry data found for this environment.`
+
+<!-- screenshot: Paper Trading tab with positions, orders, pnl, and llm telemetry -->
 
 ### Understanding Common Log Messages
 

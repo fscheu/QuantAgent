@@ -66,12 +66,17 @@ Leave the terminal open; the APScheduler background thread will keep firing unti
 
 ## Monitoring Live Runs
 
-1. **Dashboard → Monitoring → Scheduler Status** now reflects the real process:
-   - `Running` (green) means the scheduler has checked in during the last minute.
-   - `Idle` (yellow) means its configured but disabled.
-   - `Stopped` (red) signals the process isnt reporting; investigate the logs.
-2. **Logs tab**: filter by `module = quantagent.trading.scheduler` to see cycle summaries, per-asset warnings, and execution outcomes.
-3. **Orders & Positions tab**: paper trades executed by the scheduler appear with `Environment = paper`, making it easy to separate them from manual tests.
+1. **Dashboard → Dashboard tab → Scheduler Status** now reflects the real process:
+   - `Active` (green) means the last heartbeat is newer than 2 hours.
+   - `Stale` (yellow) means the scheduler stopped checking in recently and may need attention.
+   - `Stopped` (red) means there is no usable heartbeat.
+2. **Dashboard → Paper Trading tab** shows the operational detail you need after the heartbeat check:
+   - recent runs,
+   - open positions,
+   - recent orders filtered to `environment="paper"`,
+   - realized/unrealized P&L,
+   - LLM cost and latency for the last 24 hours.
+3. **Logs tab**: set `Environment = paper` and optionally `module = quantagent.trading.scheduler` to isolate scheduler-specific events.
 4. **CLI output**: the terminal running `apps/paper_trading.py` streams the same structured logs if you need low-level debugging.
 
 For a deeper checklist, follow the updated [Monitoring Guide](monitoring.md#scheduler-status).
