@@ -101,6 +101,31 @@ def test_upsert_heartbeat_start_updates_existing_row_for_environment():
         assert rows[0].assets == ["BTC", "ETH"]
 
 
+def test_upsert_heartbeat_start_marks_recovered_stale_running_row():
+    SessionLocal = _make_session(
+        ["signals", "orders", "trades", "scheduler_heartbeats", "active_positions"]
+    )
+    with SessionLocal() as session:
+        stale_started = datetime.utcnow() - timedelta(hours=3)
+        session.add(
+            SchedulerHeartbeat(
+                timestamp=stale_started,
+                status="running",
+                environment=Environment.PAPER,
+                assets=["BTC"],
+            )
+        )
+        session.commit()
+
+        scheduler = _make_scheduler(session)
+        refreshed = scheduler._upsert_heartbeat_start(datetime.utcnow())
+
+        assert refreshed.status == "running"
+        assert refreshed.completed_at is None
+        assert refreshed.error_message is not None
+        assert "Recovered stale running heartbeat" in refreshed.error_message
+
+
 def test_upsert_heartbeat_complete_sets_last_trade_id():
     SessionLocal = _make_session(
         ["signals", "orders", "trades", "scheduler_heartbeats", "active_positions"]

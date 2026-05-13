@@ -11,14 +11,11 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-import pytest
-
 from apps.streamlit.views.paper_trading import (
     _calculate_duration,
     _calculate_status,
     _humanize_time,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -97,6 +94,30 @@ def test_calculate_status_iso_string_timestamp():
     emoji, text = _calculate_status(hb)
     assert emoji == "🟢"
     assert text == "Active"
+
+
+def test_calculate_status_recent_running_heartbeat():
+    """Recent running heartbeat is shown as Running instead of generic Active."""
+    hb = {**_heartbeat(minutes_ago=15), "status": "running"}
+    emoji, text = _calculate_status(hb)
+    assert emoji == "⏳"
+    assert text == "Running"
+
+
+def test_calculate_status_stale_running_heartbeat():
+    """Stale running heartbeat is surfaced as Stuck."""
+    hb = {**_heartbeat(hours_ago=3), "status": "running"}
+    emoji, text = _calculate_status(hb)
+    assert emoji == "🟠"
+    assert text == "Stuck"
+
+
+def test_calculate_status_error_heartbeat():
+    """Explicit heartbeat failure is surfaced as Error regardless of recency."""
+    hb = {**_heartbeat(minutes_ago=5), "status": "error"}
+    emoji, text = _calculate_status(hb)
+    assert emoji == "❌"
+    assert text == "Error"
 
 
 # ---------------------------------------------------------------------------
