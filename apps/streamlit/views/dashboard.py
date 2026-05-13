@@ -1,10 +1,50 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import Optional
 
 import streamlit as st
 
 from apps.streamlit.utils.ui import df_from_query
+
+
+def _calculate_status(heartbeat: Optional[dict]) -> tuple[str, str]:
+    if not heartbeat:
+        return ("🔴", "Stopped")
+    last_run = heartbeat.get("timestamp")
+    if not last_run:
+        return ("🔴", "Stopped")
+    now = datetime.utcnow()
+    if isinstance(last_run, str):
+        last_run = datetime.fromisoformat(last_run.replace("Z", "+00:00"))
+    time_since = now - last_run
+    if time_since < timedelta(hours=2):
+        return ("🟢", "Active")
+    elif time_since < timedelta(hours=24):
+        return ("🟡", "Stale")
+    return ("🔴", "Stopped")
+
+
+def _humanize_time(dt) -> str:
+    if not dt:
+        return "Never"
+    if isinstance(dt, str):
+        try:
+            dt = datetime.fromisoformat(dt.replace("Z", "+00:00"))
+        except Exception:
+            return "Unknown"
+    now = datetime.utcnow()
+    delta = now - dt
+    if delta < timedelta(minutes=1):
+        return "Just now"
+    elif delta < timedelta(hours=1):
+        m = int(delta.total_seconds() / 60)
+        return f"{m} minute{'s' if m != 1 else ''} ago"
+    elif delta < timedelta(days=1):
+        h = int(delta.total_seconds() / 3600)
+        return f"{h} hour{'s' if h != 1 else ''} ago"
+    d = int(delta.days)
+    return f"{d} day{'s' if d != 1 else ''} ago"
 
 
 def _to_float(value) -> float:
@@ -100,5 +140,14 @@ def render(db, environment: str) -> None:
 
     with colB:
         st.markdown("**Scheduler Status**")
-        st.write("Status: unknown (MVP placeholder)")
-        st.write("Next run: -  | Last run: -  | Errors: -")
+        try:
+            hb = db.get_latest_heartbeat(environment) if db.ok else None
+            emoji, status_text = _calculate_status(hb)
+            st.write(f"Status: {emoji} {status_text}")
+            last_run_str = _humanize_time(hb.get("timestamp") if hb else None)
+            errors = (hb.get("stats") or {}).get("errors", "-") if hb else "-"
+            st.write(f"Last run: {last_run_str}  |  Errors: {errors}")
+            st.caption("Full detail: Paper Trading tab")
+        except Exception:
+            st.write("Status: unknown")
+            st.write("Last run: -  |  Errors: -")

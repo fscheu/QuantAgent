@@ -11,14 +11,11 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-import pytest
-
 from apps.streamlit.views.paper_trading import (
     _calculate_duration,
     _calculate_status,
     _humanize_time,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

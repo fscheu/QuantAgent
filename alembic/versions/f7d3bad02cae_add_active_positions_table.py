@@ -11,8 +11,6 @@ import sqlalchemy as sa
 
 from alembic import op
 
-from alembic import op
-
 ENVIRONMENT_ENUM = postgresql.ENUM(
     'BACKTEST', 'PAPER', 'PROD', name='environment', create_type=False
 )
