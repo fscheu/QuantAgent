@@ -11,6 +11,9 @@ import logging
 from decimal import Decimal
 from unittest.mock import Mock
 
+import pytest
+
+from quantagent.models import OrderSide
 from quantagent.trading.order_manager import OrderManager
 from quantagent.trading.paper_broker import PaperBroker
 from quantagent.trading.position_sizer import PositionSizer
@@ -43,7 +46,7 @@ class TestReversalErrorLogging:
             portfolio_manager=self.portfolio,
             db=self.db,
         )
-
+        
         # Helper to update positions during test for state transitions
         self._update_portfolio_positions = lambda pos: setattr(self.portfolio, 'positions', pos)
 
@@ -120,12 +123,12 @@ class TestReversalErrorLogging:
                 # Second call: open LONG position
                 self.portfolio.positions = {"BTC": {"qty": 0.05, "avg_cost": 42000.0}}
                 return open_trade
-
+        
         self.portfolio.execute_trade = Mock(side_effect=lambda o, p: (
             close_trade if self.portfolio.positions.get("BTC", {}).get("qty", 0) < 0
             else (setattr(self.portfolio, 'positions', {}), close_trade)[1]
         ))
-
+        
         # Actually, let's just mock it simply
         call_count = [0]
         def track_calls(order, price):
@@ -136,7 +139,7 @@ class TestReversalErrorLogging:
             else:
                 self.portfolio.positions = {"BTC": {"qty": 0.05, "avg_cost": 42000.0}}
                 return open_trade
-
+        
         self.portfolio.execute_trade.side_effect = track_calls
 
         with caplog.at_level(logging.INFO):
