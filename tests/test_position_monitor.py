@@ -1,11 +1,13 @@
 """Tests for PositionMonitor."""
 
+from datetime import datetime
 from decimal import Decimal
 
 import pytest
 
 from quantagent.models import (
     ActivePosition,
+    Environment,
     ExitPolicy,
     OrderSide,
 )
@@ -62,6 +64,50 @@ def test_get_active_position(position_monitor):
 
     no_position = position_monitor.get_active_position("ETHUSDT")
     assert no_position is None
+
+
+def test_get_active_position_filters_by_environment(db_session):
+    """Environment-scoped monitors ignore active positions from other runtimes."""
+    paper_monitor = PositionMonitor(db_session, environment=Environment.PAPER)
+
+    db_session.add(
+        ActivePosition(
+            symbol="BTCUSDT",
+            side=OrderSide.BUY,
+            entry_price=100.0,
+            stop_loss=95.0,
+            take_profit=110.0,
+            quantity=Decimal("1.0"),
+            decision_timestamp=datetime.utcnow(),
+            candles_since_entry=0,
+            exit_policy=ExitPolicy.SL_TP_ONLY,
+            prediction_horizon=3,
+            candles_direction=[],
+            is_active=True,
+            environment=Environment.BACKTEST,
+        )
+    )
+    db_session.commit()
+
+    assert paper_monitor.get_active_position("BTCUSDT") is None
+
+
+def test_open_position_uses_monitor_environment(db_session):
+    """Open positions inherit the monitor environment when no override is provided."""
+    paper_monitor = PositionMonitor(db_session, environment=Environment.PAPER)
+
+    position = paper_monitor.open_position(
+        symbol="BTCUSDT",
+        side=OrderSide.BUY,
+        entry_price=100.0,
+        stop_loss=95.0,
+        take_profit=110.0,
+        quantity=Decimal("1.0"),
+        exit_policy=ExitPolicy.SL_TP_ONLY,
+    )
+
+    assert position.environment == Environment.PAPER
+
 
 def test_update_candle_tracking_up(position_monitor):
     """Test tracking candle direction - up."""

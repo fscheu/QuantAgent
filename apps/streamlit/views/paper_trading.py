@@ -32,6 +32,14 @@ def _calculate_status(heartbeat: Optional[dict]) -> tuple[str, str]:
 
     time_since = now - last_run
 
+    heartbeat_status = heartbeat.get("status")
+    if heartbeat_status == "error":
+        return ("❌", "Error")
+    if heartbeat_status == "running":
+        if time_since < timedelta(hours=2):
+            return ("⏳", "Running")
+        return ("🟠", "Stuck")
+
     # Status thresholds from design doc
     if time_since < timedelta(hours=2):
         return ("🟢", "Active")
@@ -227,6 +235,8 @@ def render(db, environment: str) -> None:
 
     # Render status card
     _render_status_card(heartbeat)
+    if heartbeat.get("error_message"):
+        st.warning(f"Last runtime issue: {heartbeat['error_message']}")
 
     st.divider()
 

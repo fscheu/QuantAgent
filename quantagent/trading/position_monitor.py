@@ -6,7 +6,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from ..models import ActivePosition, OrderSide
+from ..models import ActivePosition, Environment, OrderSide
 
 
 class PositionMonitor:
@@ -15,9 +15,15 @@ class PositionMonitor:
     Does NOT decide when to exit - that is TradingStrategy's responsibility.
     """
 
-    def __init__(self, db_session: Session, backtest_run_id: Optional[int] = None):
+    def __init__(
+        self,
+        db_session: Session,
+        backtest_run_id: Optional[int] = None,
+        environment: Optional[Environment] = None,
+    ):
         self.db = db_session
         self.backtest_run_id = backtest_run_id
+        self.environment = environment
 
     def set_backtest_run_id(self, backtest_run_id: Optional[int]) -> None:
         """Set or update backtest run context."""
@@ -29,6 +35,9 @@ class PositionMonitor:
             ActivePosition.symbol == symbol,
             ActivePosition.is_active.is_(True),
         )
+
+        if self.environment is not None:
+            query = query.filter(ActivePosition.environment == self.environment)
 
         if self.backtest_run_id is not None:
             query = query.filter(ActivePosition.backtest_run_id == self.backtest_run_id)
@@ -50,10 +59,14 @@ class PositionMonitor:
         max_hold_candles: Optional[int] = None,
         prediction_horizon: int = 3,
         backtest_run_id: Optional[int] = None,
+        environment: Optional[Environment] = None,
     ) -> ActivePosition:
         """Create new active position."""
         run_context = (
             backtest_run_id if backtest_run_id is not None else self.backtest_run_id
+        )
+        position_environment = (
+            environment if environment is not None else self.environment
         )
 
         position = ActivePosition(
@@ -72,6 +85,7 @@ class PositionMonitor:
             signal_id=signal_id,
             backtest_run_id=run_context,
             candles_direction=[],
+            environment=position_environment or Environment.BACKTEST,
         )
 
         self.db.add(position)
