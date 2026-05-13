@@ -32,6 +32,8 @@ Acceptance test documents define the criteria for validating that features work 
 - [QuantAgent-7bn-AC-azure-openai-support.md](./QuantAgent-7bn-AC-azure-openai-support.md) - Azure OpenAI LLM provider support
 - [QuantAgent-6t4-AC-structured-output-vision-agents.md](./QuantAgent-6t4-AC-structured-output-vision-agents.md) - Structured output refactor for pattern/trend vision agents
 - [QuantAgent-1p7-AC-stategraph-image-paths.md](./QuantAgent-1p7-AC-stategraph-image-paths.md) - Acceptance criteria for disk-backed StateGraph visualization paths
+- [QuantAgent-sft-AC-paper-runtime-hardening.md](./QuantAgent-sft-AC-paper-runtime-hardening.md) - Acceptance criteria for stable, observable paper runtime in QA
+- [QuantAgent-339-AC-qa-validator-real-runtime.md](./QuantAgent-339-AC-qa-validator-real-runtime.md) - Acceptance criteria for real-runtime post-deploy QA validation
 
 ## Acceptance Criteria Format
 

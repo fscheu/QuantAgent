@@ -47,6 +47,8 @@ These documents represent the current technical design of the system. When imple
 - [QuantAgent-nu7-DS-active-position-monitoring.md](./QuantAgent-nu7-DS-active-position-monitoring.md) - Active Position Monitoring System (Epic: QuantAgent-nu7)
 - [QuantAgent-7bn-DS-azure-openai-support.md](./QuantAgent-7bn-DS-azure-openai-support.md) - Azure OpenAI LLM provider support
 - [QuantAgent-1p7-DS-stategraph-image-paths.md](./QuantAgent-1p7-DS-stategraph-image-paths.md) - Keep StateGraph visualization export disk-backed and path-only
+- [QuantAgent-sft-DS-paper-runtime-hardening.md](./QuantAgent-sft-DS-paper-runtime-hardening.md) - Harden existing scheduler/order/position/UI seams for M2 paper runtime readiness
+- [QuantAgent-339-DS-qa-validator-real-runtime.md](./QuantAgent-339-DS-qa-validator-real-runtime.md) - Harden the deploy→validator→Hermes contract for real QA runtime validation
 
 ## Per-Change Design Documents
 

@@ -32,6 +32,8 @@ The roadmap files represent the current development phases and priorities. When 
 - [QuantAgent-lmn-deprecated-parameter.md](./QuantAgent-lmn-deprecated-parameter.md) - Deprecated wait_sec cleanup (P3)
 - [QuantAgent-6t4-PL-structured-output-vision-agents.md](./QuantAgent-6t4-PL-structured-output-vision-agents.md) - Structured output refactor for pattern/trend vision agents
 - [QuantAgent-1p7-PL-stategraph-image-paths.md](./QuantAgent-1p7-PL-stategraph-image-paths.md) - Minimal implementation plan for disk-backed StateGraph visualization artifacts
+- [QuantAgent-sft-PL-paper-runtime-hardening.md](./QuantAgent-sft-PL-paper-runtime-hardening.md) - Plan to harden paper trading runtime for stable, observable QA operation
+- [QuantAgent-339-PL-qa-validator-real-runtime.md](./QuantAgent-339-PL-qa-validator-real-runtime.md) - Plan to turn the QA validator PoC into real-runtime post-deploy validation
 
 ## Per-Change Planning Documents
 

@@ -36,6 +36,8 @@ The files listed above represent the current functional requirements for the sys
 - [QuantAgent-7bn-RQ-azure-openai-support.md](./QuantAgent-7bn-RQ-azure-openai-support.md) - Azure OpenAI LLM provider support
 - [QuantAgent-6t4-RQ-structured-output-vision-agents.md](./QuantAgent-6t4-RQ-structured-output-vision-agents.md) - Replace manual JSON parsing with LangChain structured output in pattern/trend agents
 - [QuantAgent-1p7-RQ-stategraph-image-paths.md](./QuantAgent-1p7-RQ-stategraph-image-paths.md) - Save StateGraph visualizations to disk and propagate file paths instead of in-memory image payloads
+- [QuantAgent-sft-RQ-paper-runtime-hardening.md](./QuantAgent-sft-RQ-paper-runtime-hardening.md) - Harden paper trading runtime for stable, observable QA operation in M2
+- [QuantAgent-339-RQ-qa-validator-real-runtime.md](./QuantAgent-339-RQ-qa-validator-real-runtime.md) - Formalize post-deploy QA validator against the real QA Streamlit runtime
 
 ## M1 Reference Strategies (Completed)
 
