@@ -39,6 +39,7 @@ These documents represent the current technical design of the system. When imple
 
 ## Active Per-Change Design
 
+- [QuantAgent-s62-DS-operational-observability.md](./QuantAgent-s62-DS-operational-observability.md) - UI-layer wiring of SchedulerHeartbeat and LLM telemetry into dashboard, paper trading tab, and logs (M2)
 - [QuantAgent-69d-DS-token-time-metrics.md](./QuantAgent-69d-DS-token-time-metrics.md) - Reuse `logs` + `invoke_with_retry()` for LLM telemetry with on-demand aggregation
 - [QuantAgent-b8r-DS-52week-high-momentum.md](./QuantAgent-b8r-DS-52week-high-momentum.md) - M1 Strategy 3: 52-week high momentum / breakout for US equities
 - [QuantAgent-94d-DS-backtest-isolation.md](./QuantAgent-94d-DS-backtest-isolation.md) - Backtest Run ID Isolation (P1, bug)

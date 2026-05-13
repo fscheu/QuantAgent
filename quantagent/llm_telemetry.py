@@ -202,6 +202,39 @@ def get_session_metrics(db: Any, thread_id: str) -> dict[str, Any]:
     return _aggregate_rows(rows)
 
 
+def get_environment_metrics(
+    db: Any,
+    environment: str,
+    hours_back: int = 24,
+) -> dict[str, Any]:
+    """
+    Return aggregated LLM call metrics for a given environment and time window.
+
+    Args:
+        db: SQLAlchemy session.
+        environment: Environment string (e.g. 'paper', 'backtest').
+        hours_back: How many hours back to look (default 24).
+
+    Returns:
+        Aggregate dict with calls, token sums, duration stats, by_operation.
+    """
+    from datetime import timedelta
+
+    from quantagent.models import Log
+
+    cutoff = datetime.utcnow() - timedelta(hours=hours_back)
+    rows = (
+        db.query(Log)
+        .filter(
+            Log.event_type == "llm_call",
+            Log.environment == environment,
+            Log.timestamp >= cutoff,
+        )
+        .all()
+    )
+    return _aggregate_rows(rows)
+
+
 def get_backtest_metrics(db: Any, backtest_run_id: int) -> dict[str, Any]:
     """
     Return aggregated LLM call metrics for a given backtest run.

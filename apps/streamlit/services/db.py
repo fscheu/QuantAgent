@@ -103,6 +103,28 @@ class DbHandle:
             return []
 
 
+    def get_paper_llm_metrics(self, environment: str, hours_back: int = 24) -> dict:
+        """
+        Return aggregated LLM telemetry metrics for a given environment.
+
+        Args:
+            environment: Environment string (e.g. 'paper', 'backtest').
+            hours_back: Time window in hours (default 24).
+
+        Returns:
+            Aggregate dict or empty dict on failure / no DB.
+        """
+        if not self.ok:
+            return {}
+        try:
+            from quantagent.llm_telemetry import get_environment_metrics
+
+            with self.SessionLocal() as session:
+                return get_environment_metrics(session, environment, hours_back)
+        except Exception:
+            return {}
+
+
 @st.cache_resource(show_spinner=False)
 def get_db_handle() -> DbHandle:
     """Try to import DB session and models. Return a handle or an error.

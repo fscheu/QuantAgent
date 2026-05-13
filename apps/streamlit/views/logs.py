@@ -15,6 +15,9 @@ def render(db) -> None:
         return
 
     # Filters
+    env_options = ["all", "paper", "backtest"]
+    log_env = st.selectbox("Environment", env_options, index=0)
+
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
@@ -56,6 +59,9 @@ def render(db) -> None:
                 query = query.filter(
                     db.models.Log.event_type.ilike(f"%{event_type_filter}%")
                 )
+
+            if log_env != "all":
+                query = query.filter(db.models.Log.environment == log_env)
 
             logs = (
                 query.order_by(db.models.Log.timestamp.desc())
