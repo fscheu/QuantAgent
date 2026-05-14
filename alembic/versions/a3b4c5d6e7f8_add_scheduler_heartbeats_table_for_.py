@@ -9,6 +9,7 @@ Create Date: 2026-04-27 00:00:00.000000
 from typing import Sequence, Union
 
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
@@ -21,6 +22,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
+    environment_enum = postgresql.ENUM(
+        "BACKTEST", "PAPER", "PROD", name="environment", create_type=False
+    )
+
     # Create scheduler_heartbeats table
     op.create_table(
         "scheduler_heartbeats",
@@ -30,7 +35,7 @@ def upgrade() -> None:
         sa.Column("status", sa.String(length=20), nullable=False),
         sa.Column(
             "environment",
-            sa.Enum("paper", "prod", "backtest", name="environment"),
+            environment_enum,
             nullable=False,
         ),
         sa.Column("assets", sa.JSON(), nullable=True),

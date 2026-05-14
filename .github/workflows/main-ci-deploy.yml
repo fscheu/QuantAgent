@@ -155,6 +155,20 @@ jobs:
           echo "Waiting for services to be healthy..."
           sleep 20
 
+      - name: Apply QA database migrations
+        id: migrate
+        run: |
+          cd ~/repos/projects/QuantAgent
+          sudo docker exec quantagent_qa python -m alembic upgrade head
+          sudo docker exec quantagent_qa_db psql -U qa_user -d quantagent_qa -c '\dt'
+
+      - name: Bootstrap minimal QA dataset
+        id: bootstrap
+        run: |
+          cd ~/repos/projects/QuantAgent
+          sudo docker exec quantagent_qa python scripts/bootstrap_qa_minimal.py --reset
+          sudo docker exec quantagent_qa_db psql -U qa_user -d quantagent_qa -c "select 'orders' as table, count(*) from orders union all select 'trades', count(*) from trades union all select 'logs', count(*) from logs union all select 'scheduler_heartbeats', count(*) from scheduler_heartbeats union all select 'active_positions', count(*) from active_positions;"
+
       - name: Health check
         id: health
         run: |
@@ -217,6 +231,8 @@ jobs:
           HERMES_WEBHOOK_SECRET: ${{ secrets.HERMES_WEBHOOK_SECRET }}
           JOB_STATUS: ${{ job.status }}
           DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
+          MIGRATION_OUTCOME: ${{ steps.migrate.outcome }}
+          BOOTSTRAP_OUTCOME: ${{ steps.bootstrap.outcome }}
           HEALTH_OUTCOME: ${{ steps.health.outcome }}
           QA_VALIDATOR_OUTCOME: ${{ steps.qa_validator.outcome }}
           QA_VALIDATOR_RESULT_STATUS: ${{ steps.qa_validator_result.outputs.qa_validator_result_status }}
@@ -251,6 +267,8 @@ jobs:
               "run_url": f"https://github.com/{repo}/actions/runs/{run_id}",
               "deployed_url": "https://qa.fedes.dev",
               "deploy_step_outcome": os.environ.get("DEPLOY_OUTCOME", ""),
+              "migration_step_outcome": os.environ.get("MIGRATION_OUTCOME", ""),
+              "bootstrap_step_outcome": os.environ.get("BOOTSTRAP_OUTCOME", ""),
               "health_step_outcome": os.environ.get("HEALTH_OUTCOME", ""),
               "qa_validator_step_outcome": os.environ.get("QA_VALIDATOR_OUTCOME", ""),
               "qa_validator_result_status": os.environ.get("QA_VALIDATOR_RESULT_STATUS", ""),
