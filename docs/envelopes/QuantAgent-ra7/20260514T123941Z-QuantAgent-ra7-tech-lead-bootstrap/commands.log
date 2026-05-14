@@ -1,0 +1,14 @@
+[1] Verified configured DB target exists via psycopg admin connection
+Result before fix: quantagent missing
+
+[2] CREATE DATABASE quantagent
+Result: PASS
+
+[3] /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m alembic upgrade head
+Result: PASS
+
+[4] SQLAlchemy inspector required tables check
+Result: PASS
+
+[5] Rerun pilot via scripts/run_paper_pilot.py (QuantAgent-aki branch)
+Result: PASS (cycles_completed=3, blockers_detected=[])

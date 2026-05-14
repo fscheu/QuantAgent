@@ -1,0 +1,4 @@
+db_exists: PASS
+alembic_upgrade_head: PASS
+required_tables: PASS
+pilot_rerun: PASS
