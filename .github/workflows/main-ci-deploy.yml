@@ -193,6 +193,22 @@ jobs:
             'e3b6a8a9daa88d70b014048209b03729c56c5807ba75c15e726077059de9c775' '/home/azureuser/repos/agents/qa-validator-poc/docs/local-streamlit-target.md' \
             | sha256sum -c -
 
+      - name: Verify QA validator target alignment
+        id: qa_target_alignment
+        run: |
+          CONFIG=/home/azureuser/repos/agents/qa-validator-poc/configs/local-streamlit.yaml
+          echo "=== Validator config target lines ==="
+          grep -Ei 'url|target|host|port' "$CONFIG" | head -10 || echo "(no matching lines found)"
+          echo "==="
+          if grep -q '8501' "$CONFIG"; then
+            echo "TARGET_ALIGNED=true — validator config references port 8501 (QA Streamlit runtime)"
+          else
+            echo "ERROR: Validator config does not reference port 8501."
+            echo "Deployed QA target: http://127.0.0.1:8501"
+            echo "This is a target drift condition — aborting to prevent validating the wrong runtime."
+            exit 1
+          fi
+
       - name: Run post-deploy QA validator
         id: qa_validator
         continue-on-error: true
@@ -209,7 +225,10 @@ jobs:
           import json
           from pathlib import Path
 
-          result_path = Path('/home/azureuser/repos/agents/qa-validator-poc/runs/poc-qa-validator-local-streamlit-8501/result.json')
+          run_dir = Path('/home/azureuser/repos/agents/qa-validator-poc/runs/poc-qa-validator-local-streamlit-8501')
+          result_path = run_dir / 'result.json'
+          report_path = run_dir / 'run-report.md'
+
           status = 'MISSING'
           if result_path.exists():
               try:
@@ -217,12 +236,52 @@ jobs:
               except Exception:
                   status = 'INVALID'
 
+          # Collect evidence artifacts
+          artifacts = []
+          if result_path.exists():
+              artifacts.append('result.json')
+          if report_path.exists():
+              artifacts.append('run-report.md')
+          for p in sorted(run_dir.glob('**/*')):
+              if p.is_file() and p.suffix in ('.png', '.jpg', '.html', '.log'):
+                  artifacts.append(str(p.relative_to(run_dir)))
+
+          artifacts_count = len(artifacts)
+          artifacts_list = ','.join(artifacts)
+
+          # Print run-report summary if available
+          if report_path.exists():
+              lines = report_path.read_text().splitlines()[:30]
+              print('=== run-report.md (first 30 lines) ===')
+              print('\n'.join(lines))
+              print('===')
+
+          print(f'Validator status: {status}')
+          print(f'Artifacts present ({artifacts_count}): {artifacts_list}')
+
+          # qa_verified: only SUCCESS qualifies as fully verified
+          # qa_partial:  PARTIAL means infra up but some functional coverage incomplete
+          qa_verified = str(status == 'SUCCESS').lower()
+          qa_partial = str(status == 'PARTIAL').lower()
+
           with open(Path.cwd() / '.github_output_tmp', 'w', encoding='utf-8') as f:
               f.write(f'qa_validator_result_status={status}\n')
-              f.write(f'qa_verified={str(status == "SUCCESS").lower()}\n')
+              f.write(f'qa_verified={qa_verified}\n')
+              f.write(f'qa_partial={qa_partial}\n')
+              f.write(f'validator_artifacts_count={artifacts_count}\n')
+              f.write(f'validator_artifacts_list={artifacts_list}\n')
           PY
           cat .github_output_tmp >> "$GITHUB_OUTPUT"
           rm -f .github_output_tmp
+
+      - name: Upload QA validator artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-validator-${{ github.run_id }}-${{ steps.qa_validator_result.outputs.qa_validator_result_status || 'MISSING' }}
+          path: /home/azureuser/repos/agents/qa-validator-poc/runs/poc-qa-validator-local-streamlit-8501/
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Notify Hermes Tech Lead
         if: always()
@@ -234,9 +293,13 @@ jobs:
           MIGRATION_OUTCOME: ${{ steps.migrate.outcome }}
           BOOTSTRAP_OUTCOME: ${{ steps.bootstrap.outcome }}
           HEALTH_OUTCOME: ${{ steps.health.outcome }}
+          QA_TARGET_ALIGNMENT_OUTCOME: ${{ steps.qa_target_alignment.outcome }}
           QA_VALIDATOR_OUTCOME: ${{ steps.qa_validator.outcome }}
           QA_VALIDATOR_RESULT_STATUS: ${{ steps.qa_validator_result.outputs.qa_validator_result_status }}
           QA_VERIFIED: ${{ steps.qa_validator_result.outputs.qa_verified }}
+          QA_PARTIAL: ${{ steps.qa_validator_result.outputs.qa_partial }}
+          VALIDATOR_ARTIFACTS_COUNT: ${{ steps.qa_validator_result.outputs.validator_artifacts_count }}
+          VALIDATOR_ARTIFACTS_LIST: ${{ steps.qa_validator_result.outputs.validator_artifacts_list }}
         run: |
           python3 - <<'PY'
           import json
@@ -270,9 +333,13 @@ jobs:
               "migration_step_outcome": os.environ.get("MIGRATION_OUTCOME", ""),
               "bootstrap_step_outcome": os.environ.get("BOOTSTRAP_OUTCOME", ""),
               "health_step_outcome": os.environ.get("HEALTH_OUTCOME", ""),
+              "qa_target_alignment_outcome": os.environ.get("QA_TARGET_ALIGNMENT_OUTCOME", ""),
               "qa_validator_step_outcome": os.environ.get("QA_VALIDATOR_OUTCOME", ""),
               "qa_validator_result_status": os.environ.get("QA_VALIDATOR_RESULT_STATUS", ""),
               "qa_verified": os.environ.get("QA_VERIFIED", "false"),
+              "qa_partial": os.environ.get("QA_PARTIAL", "false"),
+              "validator_artifacts_count": os.environ.get("VALIDATOR_ARTIFACTS_COUNT", "0"),
+              "validator_artifacts_list": os.environ.get("VALIDATOR_ARTIFACTS_LIST", ""),
           }
 
           body = json.dumps(payload).encode("utf-8")
