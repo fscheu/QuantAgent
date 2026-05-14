@@ -1,0 +1,12 @@
+1. /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/ruff check --fix scripts/run_paper_pilot.py docs/06_implementation/QuantAgent-aki-IM-pilot-runbook.md
+   exit_code=0
+2. /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m compileall -q scripts/run_paper_pilot.py
+   exit_code=0
+3. /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -c "import scripts.run_paper_pilot"
+   exit_code=0
+4. /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python scripts/run_paper_pilot.py --cycles 3 --tickers SPY AAPL MSFT --output-dir /home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-aki/20260514T074352Z-QuantAgent-aki-implementer
+   exit_code=1
+5. python3 validate pilot_evidence.json required keys
+   exit_code=0
+6. grep -RniE "alpaca|broker_real|live_trading|APCA" scripts/run_paper_pilot.py
+   exit_code=0

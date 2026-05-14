@@ -1,0 +1,15 @@
+[1] /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m compileall -q scripts/run_paper_pilot.py
+Result: PASS
+
+[2] /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -c 'import scripts.run_paper_pilot'
+Result: PASS
+
+[3] /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python scripts/run_paper_pilot.py --cycles 3 --tickers SPY AAPL MSFT --output-dir docs/envelopes/QuantAgent-aki/20260514T123941Z-QuantAgent-aki-tech-lead-rerun
+Result: PASS
+Key evidence: cycles_completed=3, blockers_detected=[]
+
+[4] JSON validation on docs/envelopes/QuantAgent-aki/20260514T123941Z-QuantAgent-aki-tech-lead-rerun/pilot_evidence.json
+Result: PASS
+
+[5] grep -R -n -E 'alpaca|broker_real|live_trading|APCA' scripts/run_paper_pilot.py
+Result: PASS (no matches)

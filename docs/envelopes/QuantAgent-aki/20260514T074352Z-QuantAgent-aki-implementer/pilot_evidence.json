@@ -1,0 +1,43 @@
+{
+  "pilot_id": "QuantAgent-aki-pilot-20260514T081043Z",
+  "run_date": "2026-05-14T08:10:43.462383",
+  "config": {
+    "strategies": [
+      "RSIMeanReversionStrategy",
+      "FiftyTwoWeekHighStrategy"
+    ],
+    "universe": [
+      "SPY",
+      "AAPL",
+      "MSFT"
+    ],
+    "cycles": 3,
+    "environment": "paper",
+    "timeframe": "1h",
+    "lookback_hours": 168.0
+  },
+  "cycles": [],
+  "aggregate": {
+    "cycles_completed": 0,
+    "total_signals": 0,
+    "total_orders": 0,
+    "total_fills": 0,
+    "open_positions": 0
+  },
+  "blockers_detected": [
+    {
+      "description": "Database unreachable",
+      "evidence": "(psycopg2.OperationalError) connection to server at \"localhost\" (127.0.0.1), port 5432 failed: FATAL:  database \"quantagent\" does not exist\n\n(Background on this error at: https://sqlalche.me/e/20/e3q8)",
+      "suggested_ticket_title": "Fix DATABASE_URL / DB connectivity for paper pilot"
+    },
+    {
+      "description": "Missing required DB tables",
+      "evidence": "(psycopg2.OperationalError) connection to server at \"localhost\" (127.0.0.1), port 5432 failed: FATAL:  database \"quantagent\" does not exist\n\n(Background on this error at: https://sqlalche.me/e/20/e3q8)",
+      "suggested_ticket_title": "Run alembic migrations before paper pilot"
+    }
+  ],
+  "critical_errors": [
+    "Database unreachable",
+    "Missing required DB tables"
+  ]
+}

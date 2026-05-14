@@ -1,0 +1,101 @@
+{
+  "pilot_id": "QuantAgent-aki-pilot-20260514T123953Z",
+  "run_date": "2026-05-14T12:39:56.821231",
+  "config": {
+    "strategies": [
+      "RSIMeanReversionStrategy",
+      "FiftyTwoWeekHighStrategy"
+    ],
+    "universe": [
+      "SPY",
+      "AAPL",
+      "MSFT"
+    ],
+    "cycles": 3,
+    "environment": "paper",
+    "timeframe": "1h",
+    "lookback_hours": 168.0
+  },
+  "preconditions": {
+    "db": "ok",
+    "tables": "all required tables present",
+    "yfinance": "35 bars fetched for SPY"
+  },
+  "cycles": [
+    {
+      "signal_count": 0,
+      "order_count": 0,
+      "fill_count": 0,
+      "signals_detail": [],
+      "orders_detail": [],
+      "trades_detail": [],
+      "active_position_count": 0,
+      "active_positions_detail": [],
+      "heartbeat_status": "completed",
+      "heartbeat_stats": {
+        "processed": 3,
+        "errors": 0,
+        "duration_seconds": 0.93853,
+        "total": 3
+      },
+      "error_count": 0,
+      "error_messages": [],
+      "duration_seconds": 0.93853,
+      "cycle": 1
+    },
+    {
+      "signal_count": 0,
+      "order_count": 0,
+      "fill_count": 0,
+      "signals_detail": [],
+      "orders_detail": [],
+      "trades_detail": [],
+      "active_position_count": 0,
+      "active_positions_detail": [],
+      "heartbeat_status": "completed",
+      "heartbeat_stats": {
+        "processed": 3,
+        "errors": 0,
+        "duration_seconds": 1.022774,
+        "total": 3
+      },
+      "error_count": 0,
+      "error_messages": [],
+      "duration_seconds": 1.022774,
+      "cycle": 2
+    },
+    {
+      "signal_count": 0,
+      "order_count": 0,
+      "fill_count": 0,
+      "signals_detail": [],
+      "orders_detail": [],
+      "trades_detail": [],
+      "active_position_count": 0,
+      "active_positions_detail": [],
+      "heartbeat_status": "completed",
+      "heartbeat_stats": {
+        "processed": 3,
+        "errors": 0,
+        "duration_seconds": 0.971816,
+        "total": 3
+      },
+      "error_count": 0,
+      "error_messages": [],
+      "duration_seconds": 0.971816,
+      "cycle": 3
+    }
+  ],
+  "aggregate": {
+    "cycles_completed": 3,
+    "cycles_with_errors": 0,
+    "total_signals": 0,
+    "total_orders": 0,
+    "total_fills": 0,
+    "total_errors": 0,
+    "open_positions": 0,
+    "critical_errors": 0
+  },
+  "blockers_detected": [],
+  "critical_errors": []
+}
