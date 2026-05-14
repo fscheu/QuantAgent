@@ -1,0 +1,6 @@
+PASS  ruff            scripts/run_paper_pilot.py docs/06_implementation/QuantAgent-aki-IM-pilot-runbook.md
+PASS  compileall      scripts/run_paper_pilot.py
+PASS  import          import scripts.run_paper_pilot
+BLOCK pilot_run       local PostgreSQL database 'quantagent' missing; preconditions failed before cycle 1
+PASS  evidence_json   required top-level keys present in pilot_evidence.json
+PASS  paper_only      no live broker markers in scripts/run_paper_pilot.py
