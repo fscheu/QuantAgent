@@ -59,14 +59,17 @@ if "backtest_runs" not in st.session_state:
 col0, col1 = st.columns([1, 3])
 with col0:
     environment = st.selectbox("Environment", ENVIRONMENTS, index=1)
-with col1:
-    st.caption(
-        "Set DATABASE_URL and start PostgreSQL via docker-compose for full functionality."
-    )
 
 db = get_db_handle()
-if not db.ok:
-    st.warning(db.error)
+
+with col1:
+    if db.ok:
+        st.caption("PostgreSQL connected.")
+    else:
+        st.caption(
+            "Set DATABASE_URL and start PostgreSQL via docker-compose for full functionality."
+        )
+        st.warning(db.error)
 
 
 tabs = st.tabs(
