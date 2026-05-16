@@ -159,23 +159,33 @@ Use this tab when you want operational detail beyond the high-level dashboard su
 ### Scheduler status and recent runs
 
 - The top card shows the latest scheduler heartbeat, current status, last run time, duration, and recent run history.
+- The Paper Trading tab now distinguishes four useful runtime states:
+  - **Running** — the scheduler is in the middle of a recent cycle.
+  - **Active** — the latest cycle completed recently and the runtime looks healthy.
+  - **Stuck** — a `running` heartbeat went stale and likely needs operator attention.
+  - **Error** — the latest heartbeat recorded a fatal runtime failure.
+- If the last heartbeat includes a runtime error, the page surfaces it as **Last runtime issue** so you do not have to inspect raw logs first.
 - If no heartbeat is present, the page explains that the scheduler may be stopped and shows the command to start it.
 
 ### Positions & Orders
 
-- **Open Positions** lists all current positions.
-- **Recent Orders** is filtered to the selected environment (for example `paper`).
+- **Open Positions** lists all current positions visible to the app.
+- **Recent Orders** is filtered to the selected environment (for example `paper`), which makes it easier to review paper automation without mixing in unrelated activity.
+- The page also shows **Last Trade ID** when available, which helps reconstruct the latest signal → order → trade flow during troubleshooting.
 - If there is no activity yet, the page shows explicit `No open positions.` / `No recent orders.` messages instead of a blank table.
 
 ### P&L Summary
 
 - **Unrealized PnL (all positions)** reflects the mark-to-market value of currently open positions.
 - **Realized PnL today** sums trades closed today for the selected environment.
+- If the database is reachable but P&L cannot be calculated, the UI now leaves an explicit informational message instead of silently failing.
 
 ### LLM Cost & Latency (last 24h)
 
 - Shows call count, total tokens, average latency, and an approximate USD cost for recent `llm_call` telemetry rows.
 - If no telemetry exists yet, the page shows `No LLM telemetry data found for this environment.`
+
+> Related: [QuantAgent-sft implementation](../06_implementation/QuantAgent-sft-IM-paper-runtime-hardening.md) · [Acceptance criteria](../05_acceptance_tests/QuantAgent-sft-AC-paper-runtime-hardening.md)
 
 <!-- screenshot: Paper Trading tab with positions, orders, pnl, and llm telemetry -->
 

@@ -66,20 +66,26 @@ Leave the terminal open; the APScheduler background thread will keep firing unti
 
 ## Monitoring Live Runs
 
-1. **Dashboard → Dashboard tab → Scheduler Status** now reflects the real process:
-   - `Active` (green) means the last heartbeat is newer than 2 hours.
+1. **Dashboard → Dashboard tab → Scheduler Status** gives you a quick health signal:
+   - `Active` (green) means the last completed heartbeat is newer than 2 hours.
    - `Stale` (yellow) means the scheduler stopped checking in recently and may need attention.
    - `Stopped` (red) means there is no usable heartbeat.
-2. **Dashboard → Paper Trading tab** shows the operational detail you need after the heartbeat check:
-   - recent runs,
-   - open positions,
+2. **Dashboard → Paper Trading tab** gives the operator-facing runtime view introduced in `QuantAgent-sft`:
+   - `Running` means a cycle is currently in progress.
+   - `Active` means the latest cycle completed recently and looks healthy.
+   - `Stuck` means a `running` heartbeat went stale and the scheduler likely needs intervention.
+   - `Error` means the latest heartbeat recorded a fatal cycle failure.
+3. **Paper Trading tab details** now include:
+   - recent run history,
+   - a `Last runtime issue` warning when the heartbeat captured an error,
+   - `Last Trade ID` when the latest cycle can be linked back to a trade,
    - recent orders filtered to `environment="paper"`,
    - realized/unrealized P&L,
    - LLM cost and latency for the last 24 hours.
-3. **Logs tab**: set `Environment = paper` and optionally `module = quantagent.trading.scheduler` to isolate scheduler-specific events.
-4. **CLI output**: the terminal running `apps/paper_trading.py` streams the same structured logs if you need low-level debugging.
+4. **Logs tab**: set `Environment = paper` and optionally `module = quantagent.trading.scheduler` to isolate scheduler-specific events.
+5. **CLI output**: the terminal running `apps/paper_trading.py` streams the same structured logs if you need low-level debugging.
 
-For a deeper checklist, follow the updated [Monitoring Guide](monitoring.md#scheduler-status).
+For a deeper checklist, follow the updated [Monitoring Guide](monitoring.md#paper-trading-tab).
 
 ---
 
@@ -106,6 +112,8 @@ For a deeper checklist, follow the updated [Monitoring Guide](monitoring.md#sche
 | `ValueError: interval_hours must be > 0` | Config typo | Update `settings.scheduler.interval_hours` or CLI value to a positive float |
 | `ValueError: assets list cannot be empty` | Assets not set after CLI override | Provide at least one supported symbol (BTC, SPX, CL, DAX, ES, NQ, QQQ, GC, VIX, DXY) |
 | Scheduler indicator shows **Stopped** | Process crashed or was never started | Check terminal logs, restart `python apps/paper_trading.py` |
+| Paper Trading status shows **Stuck** | A `running` heartbeat was never completed | Inspect recent runs and logs, then restart the scheduler if the process is no longer advancing |
+| Paper Trading status shows **Error** | The last cycle failed fatally | Read the `Last runtime issue` warning first, then use the Logs tab filtered to `paper` for root cause details |
 | Orders missing from dashboard | Environment filtering | Confirm the Orders tab filter includes `paper`, and that the scheduler log shows successful executions |
 | Repeated API warnings | Rate limits or network issues | Increase interval, reduce asset count, or investigate API credentials |
 
@@ -116,6 +124,7 @@ For a deeper checklist, follow the updated [Monitoring Guide](monitoring.md#sche
 - Requirements: [QuantAgent-3o4-RQ-trading-scheduler.md](../01_requirements/QuantAgent-3o4-RQ-trading-scheduler.md)
 - Design: [QuantAgent-3o4-DS-trading-scheduler.md](../03_design/QuantAgent-3o4-DS-trading-scheduler.md)
 - Acceptance Tests: [QuantAgent-3o4-AC-trading-scheduler.md](../05_acceptance_tests/QuantAgent-3o4-AC-trading-scheduler.md)
+- User-facing runtime hardening: [QuantAgent-sft implementation](../06_implementation/QuantAgent-sft-IM-paper-runtime-hardening.md)
 - Test Suite: [`tests/trading/test_scheduler.py`](../../tests/trading/test_scheduler.py)
 
 Use this guide as the operational companion to keep your paper trading environment running continuously.

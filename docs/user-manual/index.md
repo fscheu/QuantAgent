@@ -2,7 +2,7 @@
 
 **A multi-agent AI system for automated trading strategy development and validation**
 
-Last updated: May 13, 2026
+Last updated: May 16, 2026
 
 ---
 
