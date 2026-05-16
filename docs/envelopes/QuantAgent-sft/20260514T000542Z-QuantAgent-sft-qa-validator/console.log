@@ -1,0 +1,42 @@
+[healthcheck]
+HTTP/1.1 200 OK
+url=http://127.0.0.1:8501/_stcore/health
+body=ok
+
+[git]
+head=76dfa0bc84cc02938984190e1bc783d32abe488f
+head_subject=chore(QuantAgent-sft): record integration evidence and close issue
+contains_required_merge_commit=yes
+required_merge_commit=2f94af25432ec8828dbd3f311aa48e6419e2bca1
+required_merge_subject=Merge remote-tracking branch 'origin/feature/QuantAgent-sft-paper-runtime-hardening-refresh-20260513T175506Z' into HEAD
+
+[browser_console]
+console_messages=[]
+js_errors=[]
+
+[browser_navigation]
+initial_browser_navigate_to_loopback=blocked_by_tool_policy
+fallback=CDP Page.navigate on existing tab
+final_url=http://127.0.0.1:8501/
+
+[browser_snapshot_dashboard]
+- heading: QuantAgent – Streamlit MVP
+- environment: paper
+- global_message: Set DATABASE_URL and start PostgreSQL via docker-compose for full functionality.
+- dashboard_status: 🔴 Stopped
+- dashboard_last_run: Never
+- dashboard_error: relation "trades" does not exist
+
+[browser_snapshot_paper_trading]
+- heading: 📊 Paper Trading Scheduler
+- alert: No scheduler heartbeat found
+- detail: The scheduler may not be running, or no cycles have completed yet for environment: paper
+- command_hint: python apps/paper_trading.py
+
+[browser_snapshot_orders_positions]
+- heading: Orders & Positions (paper)
+- error: relation "orders" does not exist
+
+[browser_snapshot_logs]
+- heading: Logs
+- error: relation "logs" does not exist

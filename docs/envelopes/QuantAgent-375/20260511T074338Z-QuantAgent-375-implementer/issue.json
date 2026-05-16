@@ -1,0 +1,41 @@
+{
+  "id": "QuantAgent-375",
+  "title": "Scope replay signal lookup to selected source run",
+  "description": "Integration review of QuantAgent-3o8 found that `Backtest.run_replay()` loads signals only by symbol/timeframe/date/environment and does not reliably scope them to the selected source BacktestRun.\n\nEvidence:\n- Feature branch: `feature/QuantAgent-3o8-implement-replay-execution-mode-reuse-an`\n- Replay proof run on 2026-05-10 showed source run 1 consuming signal ID 2 from a different overlapping run because `signal_map[(symbol, generated_at)]` was overwritten.\n- Acceptance criteria TC5/TC11 require the replay to use the same source-run signals and keep the provenance chain traceable.\n\nRequired change:\n1. Add or derive a robust signal-to-source-run linkage (explicit `backtest_run_id` on `Signal` or another deterministic provenance key already persisted).\n2. Update replay signal loading to query only the selected source run.\n3. Add tests covering overlapping runs with identical symbol/timeframe/timestamp to prevent cross-run signal contamination.\n4. Revalidate replay provenance and no-LLM behavior before re-routing integration.\n\nOut of scope:\n- New replay UI features\n- Parallel replay execution\n- Broader backtest refactors",
+  "status": "open",
+  "priority": 1,
+  "issue_type": "bug",
+  "owner": "fscheu@gmail.com",
+  "created_at": "2026-05-10T21:43:21.793527211Z",
+  "created_by": "Federico Scheu",
+  "updated_at": "2026-05-10T21:43:21.793527211Z",
+  "dependencies": [
+    {
+      "id": "QuantAgent-3o8",
+      "title": "Implement Replay execution mode (reuse analyses without LLM calls)",
+      "description": "## Context\nRequirement D in trading_system_requirements.md specifies that backtests should support 'replay execution' - reusing stored analyses with different Portfolio/Risk profiles without re-calling LLMs.\n\n## Current State\n- BacktestRun stores config_snapshot and analyses with checkpoints\n- Signal model has thread_id, checkpoint_id, state_snapshot fields\n- No replay execution mode implemented\n- UI Replay tab exists but execution is not functional\n\n## Acceptance Criteria\n- Can select a completed backtest_run with stored analyses\n- Can select one or multiple different portfolio/risk profiles\n- Replay executes using stored analyses (no new LLM calls)\n- Two executions over same analysis set but different profiles yield distinct P&L/metrics\n- Comparison view shows side-by-side metrics and equity curves\n\n## Technical Notes\n- Implement in Backtest class or separate ReplayExecutor\n- Sequential execution for multiple profiles (MVP decision)\n- Reference: docs/03_design/strategy_assembler_architecture.md",
+      "status": "blocked",
+      "priority": 2,
+      "issue_type": "feature",
+      "created_at": "2026-02-19T19:24:13.22456169Z",
+      "created_by": "baiscf",
+      "updated_at": "2026-05-10T21:43:41.550890492Z",
+      "labels": [
+        "backtesting",
+        "mvp",
+        "openclaw:design_approved",
+        "replay"
+      ],
+      "dependency_type": "discovered-from"
+    }
+  ],
+  "comments": [
+    {
+      "id": 183,
+      "issue_id": "QuantAgent-375",
+      "author": "Federico Scheu",
+      "text": "### Skill: autodev-planner\n- **Resultado:** SUCCESS\n- **Run-ID:** 20260511T073839Z-QuantAgent-375-planner\n- **Executor:** auto\n\n#### Qué hice\n- Analicé el bug de contaminación de señales en `run_replay()` confirmado en la revisión de QuantAgent-3o8 (2026-05-10)\n- Identifiqué la causa raíz: `Signal` no tiene FK a `BacktestRun`, por lo que el `signal_map` se construye con filtros date+asset que no son únicos entre runs superpuestos\n- Produje 4 documentos de planificación: RQ, PL, DS, AC\n- Actualicé README.md en las 4 carpetas de docs\n\n#### Evidencia\n- `docs/01_requirements/QuantAgent-375-RQ-scope-replay-signal-lookup.md`\n- `docs/02_planning/QuantAgent-375-PL-scope-replay-signal-lookup.md`\n- `docs/03_design/QuantAgent-375-DS-scope-replay-signal-lookup.md`\n- `docs/05_acceptance_tests/QuantAgent-375-AC-scope-replay-signal-lookup.md` (7 TCs)\n\n#### Quality gates\n- git status --short: PASS\n- issue ID en paths: PASS\n- acceptance criteria testables: PASS\n- compileall: PASS\n\n#### Problemas encontrados\n- Ninguno. El diseño es minimal: una columna nullable `backtest_run_id` en `Signal`, una migración, dos touch points en creación de señales, y una query simplificada en `run_replay()`.\n- Riesgo conocido: branch QuantAgent-3o8 está 207 commits detrás de main; necesita rebase después de que 375 mergee.\n\n#### Next step recomendado\n- Fase implementer en branch fresco desde `main` (`feature/QuantAgent-375-scope-replay-signal-lookup`)\n- Steps 1–4 del PL en orden; Step 4 (update `run_replay()`) aplica cuando 3o8 se rebase",
+      "created_at": "2026-05-11T07:43:06Z"
+    }
+  ]
+}

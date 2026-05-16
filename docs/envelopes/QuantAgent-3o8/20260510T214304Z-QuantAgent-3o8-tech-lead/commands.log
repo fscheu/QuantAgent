@@ -1,0 +1,12 @@
+1. git status --short && git status -sb && git rev-parse --abbrev-ref HEAD
+2. /home/azureuser/repos/agents/openclaw/scripts/bd_safe.sh ready --json
+3. /home/azureuser/repos/agents/openclaw/scripts/bd_safe.sh show QuantAgent-3o8 --json
+4. bd comments QuantAgent-3o8 --json
+5. git worktree list --porcelain
+6. git show --stat --summary 7886ad2b29f82603d5727ca624f9639f15c369f7
+7. git merge-base / git rev-list / git diff preflight against origin/main
+8. python3 -m compileall -q quantagent apps alembic
+9. Direct replay provenance proof run via shared venv Python
+10. /home/azureuser/repos/agents/openclaw/scripts/bd_safe.sh create "Scope replay signal lookup to selected source run" ...
+11. /home/azureuser/repos/agents/openclaw/scripts/bd_safe.sh update QuantAgent-3o8 --status blocked --json
+12. Final Beads comment for QuantAgent-3o8

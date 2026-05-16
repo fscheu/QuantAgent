@@ -1,0 +1,19 @@
+{
+  "run_id": "20260511T074338Z-QuantAgent-375-implementer",
+  "phase": "implementer",
+  "issue": "QuantAgent-375",
+  "result": "SUCCESS",
+  "branch": "feature/QuantAgent-375-scope-replay-signal-lookup-to-selected-s",
+  "files_changed": [
+    "quantagent/models.py",
+    "quantagent/backtesting/backtest.py",
+    "alembic/versions/d1e2f3a4b5c6_add_backtest_run_id_to_signals_and_replay_source_to_runs.py"
+  ],
+  "quality_gates": {
+    "git_status": "PASS",
+    "ruff_check_fix": "PASS (5 pre-existing errors in unrelated files)",
+    "pytest_backtest": "PASS (32/32)",
+    "compileall": "PASS"
+  },
+  "timestamp": "2026-05-11T07:43:38Z"
+}

@@ -1,0 +1,64 @@
+{
+  "run_id": "20260514T000542Z-QuantAgent-sft-qa-validator",
+  "issue": "QuantAgent-sft",
+  "status": "PARTIAL",
+  "target": "http://127.0.0.1:8501",
+  "timestamp_utc": "2026-05-14T00:05:42Z",
+  "repo": "/home/azureuser/repos/projects/QuantAgent",
+  "head_commit": "76dfa0bc84cc02938984190e1bc783d32abe488f",
+  "contains_required_merge_commit": true,
+  "required_merge_commit": "2f94af25432ec8828dbd3f311aa48e6419e2bca1",
+  "healthcheck": {
+    "url": "http://127.0.0.1:8501/_stcore/health",
+    "http_status": 200,
+    "body": "ok"
+  },
+  "browser": {
+    "ui_loaded": true,
+    "javascript_console_errors": 0,
+    "javascript_console_messages": 0,
+    "tabs_observed": [
+      "Dashboard",
+      "Paper Trading",
+      "Orders & Positions",
+      "Logs"
+    ]
+  },
+  "findings": {
+    "environment_selector": "paper",
+    "global_warning": "Set DATABASE_URL and start PostgreSQL via docker-compose for full functionality.",
+    "scheduler_heartbeat": "missing",
+    "dashboard_status": "Stopped",
+    "sql_errors": [
+      "relation \"trades\" does not exist",
+      "relation \"orders\" does not exist",
+      "relation \"logs\" does not exist"
+    ]
+  },
+  "acceptance": {
+    "AC1_scheduler_observable": "FAIL",
+    "AC2_minimal_operational_flow": "BLOCKED",
+    "AC3_hold_does_not_contaminate_state": "BLOCKED",
+    "AC4_ui_visibility_empty_but_healthy": "PARTIAL",
+    "AC5_detectable_runtime_drop": "PASS",
+    "AC6_repeatable_evidence": "PASS"
+  },
+  "artifacts": {
+    "input_envelope": "input-envelope.md",
+    "docs_check": "docs-check.md",
+    "browser_findings": "browser-findings.md",
+    "run_report": "run-report.md",
+    "console_log": "console.log",
+    "screenshots": [
+      "screenshots/dashboard.png",
+      "screenshots/paper-trading.png"
+    ]
+  },
+  "blocking_reasons": [
+    "No scheduler heartbeat found in UI",
+    "UndefinedTable on trades",
+    "UndefinedTable on orders",
+    "UndefinedTable on logs"
+  ],
+  "summary": "Deploy Streamlit observable y sin errores JS, pero validación funcional de paper runtime incompleta por heartbeat ausente y persistencia/esquema no listos en QA."
+}

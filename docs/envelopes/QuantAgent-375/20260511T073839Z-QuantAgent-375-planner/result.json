@@ -1,0 +1,92 @@
+{
+  "run_id": "20260511T073839Z-QuantAgent-375-planner",
+  "phase": "planner",
+  "skill": "autodev-planner",
+  "executor": "claude-code",
+  "status": "SUCCESS",
+  "dry_run": false,
+  "execution_performed": true,
+  "repo_path": "/home/azureuser/repos/projects/QuantAgent",
+  "beads_issue_id": "QuantAgent-375",
+  "branch": "feature/QuantAgent-375-scope-replay-signal-lookup-to-selected-s",
+  "worktree_path": "/mnt/actions-runner/autodev-runtime/worktrees/QuantAgent/QuantAgent-375/planner-20260511T073839Z",
+  "started_at": "2026-05-11T07:38:39.693957+00:00",
+  "finished_at": "2026-05-11T08:00:00.000000+00:00",
+  "files_changed": [],
+  "docs_changed": [
+    "docs/01_requirements/QuantAgent-375-RQ-scope-replay-signal-lookup.md",
+    "docs/02_planning/QuantAgent-375-PL-scope-replay-signal-lookup.md",
+    "docs/03_design/QuantAgent-375-DS-scope-replay-signal-lookup.md",
+    "docs/05_acceptance_tests/QuantAgent-375-AC-scope-replay-signal-lookup.md",
+    "docs/01_requirements/README.md",
+    "docs/02_planning/README.md",
+    "docs/03_design/README.md",
+    "docs/05_acceptance_tests/README.md"
+  ],
+  "tests_changed": [],
+  "commits": [],
+  "quality_gates": [
+    {
+      "name": "router validation",
+      "command": "validate envelope + capabilities",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "Envelope parsed and dangerous capabilities rejected."
+    },
+    {
+      "name": "git status --short",
+      "command": "git status --short",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "4 new doc files, 4 README.md updates. No code changes. No unexpected dirty files."
+    },
+    {
+      "name": "issue ID in docs paths",
+      "command": "ls docs/**/*375*",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "4 files confirmed under docs/01_requirements/, docs/02_planning/, docs/03_design/, docs/05_acceptance_tests/"
+    },
+    {
+      "name": "acceptance criteria testable",
+      "command": "manual review",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "7 test cases (TC-375-1 through TC-375-7) defined with Given/When/Then and explicit testability notes"
+    },
+    {
+      "name": "python -m compileall -q",
+      "command": "python -m compileall -q quantagent apps",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "No compilation errors (no code changes made in planner phase)"
+    }
+  ],
+  "beads_comment_added": true,
+  "beads_labels_changed": [],
+  "artifacts": [
+    "input-envelope.md",
+    "executor-prompt-claude-code.md",
+    "route-plan-claude-code.json",
+    "commands.log",
+    "quality-gates.log",
+    "result.json",
+    "run-report.md",
+    "docs/01_requirements/QuantAgent-375-RQ-scope-replay-signal-lookup.md",
+    "docs/02_planning/QuantAgent-375-PL-scope-replay-signal-lookup.md",
+    "docs/03_design/QuantAgent-375-DS-scope-replay-signal-lookup.md",
+    "docs/05_acceptance_tests/QuantAgent-375-AC-scope-replay-signal-lookup.md"
+  ],
+  "risks": [
+    "3o8 feature branch is 207 commits behind main; rebasing after 375 lands will require careful conflict resolution in backtest.py and replay.py",
+    "Pre-migration signals (backtest_run_id=NULL) will silently return no results in run_replay(); implementer must add the ValueError guard"
+  ],
+  "open_questions": [],
+  "next_step": "implementer",
+  "planning_readiness": {
+    "context_clear": true,
+    "acceptance_verifiable": true,
+    "scope_out_defined": true,
+    "implementation_ready": true
+  }
+}

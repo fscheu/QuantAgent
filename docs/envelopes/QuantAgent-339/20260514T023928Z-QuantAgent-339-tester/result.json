@@ -1,0 +1,33 @@
+{
+  "run_id": "20260514T023928Z-QuantAgent-339-tester",
+  "phase": "tester",
+  "issue_id": "QuantAgent-339",
+  "status": "BLOCKED",
+  "summary": "Added workflow contract tests for the QA Streamlit validator deploy flow, but required pytest gates were blocked by executor environment access issues.",
+  "repo_path": "/home/azureuser/repos/projects/QuantAgent",
+  "worktree_used": "/tmp/autodev-worktrees/QuantAgent/QuantAgent-339/tester-20260514T023928Z",
+  "branch": "feature/QuantAgent-339-qa-validator-runtime-real-tester-20260514",
+  "commit": "7cc971e6977e0208f8b469bdfd4f39169f445f93",
+  "files_changed": [
+    "tests/test_main_ci_deploy_workflow.py"
+  ],
+  "quality_gates": {
+    "git_status_short": "PASS",
+    "branch_not_main": "PASS",
+    "pytest_new_or_changed_tests": "BLOCKED",
+    "pytest_relevant_subset": "BLOCKED",
+    "compileall_optional": "PASS_PARTIAL",
+    "supplemental_smoke_check": "PASS"
+  },
+  "blockers": [
+    "Declared shared venv unreadable: PermissionError on /mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/pyvenv.cfg",
+    "System python lacks pytest, pip, ensurepip, and python3-venv"
+  ],
+  "artifacts": [
+    "commands.log",
+    "quality-gates.log",
+    "run-report.md",
+    "result.json"
+  ],
+  "beads_comment_added": false
+}

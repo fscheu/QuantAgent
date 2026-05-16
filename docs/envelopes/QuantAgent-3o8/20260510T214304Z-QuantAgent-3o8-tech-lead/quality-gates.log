@@ -1,0 +1,26 @@
+[PASS] compileall
+command: python3 -m compileall -q quantagent apps alembic
+workdir: /mnt/actions-runner/autodev-runtime/worktrees/QuantAgent/QuantAgent-3o8/implementer-20260510T073737Z
+result: COMPILE_PASS
+
+[FAIL] replay_provenance_verification
+command: ad-hoc Python verification using shared venv and patched dummy components
+result: source run 1 consumed signal 2 from another overlapping run
+proof: {'source_run_id': 1, 'source_signal_id': 1, 'other_signal_id': 2, 'used': [('BTC', '2024-01-01T00:00:00', 2, 'other-run-b'), ('BTC', '2024-01-01T01:00:00', None, None)]}
+classification: IMPLEMENTATION_INCOMPLETE / replay_signal_provenance_collision
+
+[FAIL] integration_preflight_stale_branch
+command: git rev-list --count feature/QuantAgent-3o8-implement-replay-execution-mode-reuse-an..origin/main
+result: 207 commits behind
+classification: GIT_PREFLIGHT_DIRTY_OR_DIVERGED / stale_feature_branch
+
+[WARN] merge_tree_preview
+command: git merge-tree $(git merge-base origin/main feature/QuantAgent-3o8-implement-replay-execution-mode-reuse-an) origin/main feature/QuantAgent-3o8-implement-replay-execution-mode-reuse-an | grep -E '^(changed in both|added in remote|removed in)'
+result:
+  added in remote
+  added in remote
+  added in remote
+  added in remote
+  added in remote
+  changed in both
+  changed in both

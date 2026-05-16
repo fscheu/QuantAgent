@@ -1,0 +1,26 @@
+{
+  "id": "QuantAgent-3o8",
+  "title": "Implement Replay execution mode (reuse analyses without LLM calls)",
+  "description": "## Context\nRequirement D in trading_system_requirements.md specifies that backtests should support 'replay execution' - reusing stored analyses with different Portfolio/Risk profiles without re-calling LLMs.\n\n## Current State\n- BacktestRun stores config_snapshot and analyses with checkpoints\n- Signal model has thread_id, checkpoint_id, state_snapshot fields\n- No replay execution mode implemented\n- UI Replay tab exists but execution is not functional\n\n## Acceptance Criteria\n- Can select a completed backtest_run with stored analyses\n- Can select one or multiple different portfolio/risk profiles\n- Replay executes using stored analyses (no new LLM calls)\n- Two executions over same analysis set but different profiles yield distinct P&L/metrics\n- Comparison view shows side-by-side metrics and equity curves\n\n## Technical Notes\n- Implement in Backtest class or separate ReplayExecutor\n- Sequential execution for multiple profiles (MVP decision)\n- Reference: docs/03_design/strategy_assembler_architecture.md",
+  "status": "open",
+  "priority": 2,
+  "issue_type": "feature",
+  "created_at": "2026-02-19T19:24:13.22456169Z",
+  "created_by": "baiscf",
+  "updated_at": "2026-05-05T16:41:20.902151663Z",
+  "labels": [
+    "backtesting",
+    "mvp",
+    "openclaw:design_approved",
+    "replay"
+  ],
+  "comments": [
+    {
+      "id": 124,
+      "issue_id": "QuantAgent-3o8",
+      "author": "Federico Scheu",
+      "text": "### Skill: autodev-implementer (via tech-lead-autodev)\n- **Resultado:** PARTIAL\n- **Run-ID:** 20260506T214156Z-QuantAgent-3o8-implementer\n- **Executor:** claude-code\n- **Modo:** Tech Lead integration / completion\n\n#### Qué se logró (despite timeout)\n- **replay_executor.py** creado (351 líneas): ReplayExecutor con ReplayResult, validación de source run, carga de señales, ejecución via OrderManager\n- **models.py** modificado: campo `backtest_run_id` agregado a Signal con FK + índice + relationship bidireccional\n- **backtest.py** modificado: signals ahora se linkean a backtest_run_id durante generación\n- **apps/streamlit/views/replay.py** actualizado (263 líneas modificadas) — UI funcional\n\n#### Quality gates parciales\n- `python -m compileall -q` → PASS en archivos nuevos/modificados (replay_executor.py, models.py, backtest.py)\n- Archivos staged para commit: 3 archivos principales\n\n#### Problemas encontrados\n1. **Timeout del executor**: el implementer claude-code excedió 300s durante lint/global fix\n2. **Scope potencialmente excesivo**: el diff incluyó +30 archivos adicionales con cambios de lint masivo (alembic/, tests/, etc.)\n3. **Falta completar**: tests específicos para ReplayExecutor, migración alembic para backtest_run_id en Signal, verificación end-to-end\n\n#### Decisión Tech Lead\n- Tomo solo los 3 archivos mínimos funcionales (replay_executor.py, models.py, backtest.py) \n- Descarto los cambios de lint masivo en otros archivos para mantener diff reviewable\n- Recomiendo: (1) crear migración alembic, (2) tests de replay, (3) validar en worktree antes de merge\n\n#### Next step recomendado\n- **Tester phase** sobre los 3 archivos validados, o\n- **Tech Lead manual** para: crear migración alembic, cherry-pick del worktree a la feature branch, y luego merge controlado\n",
+      "created_at": "2026-05-06T21:49:20Z"
+    }
+  ]
+}

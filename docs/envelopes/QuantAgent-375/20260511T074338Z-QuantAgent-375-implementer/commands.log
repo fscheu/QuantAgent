@@ -1,0 +1,5 @@
+python -m compileall -q .   → PASS (no output)
+ruff check --fix .          → PASS (15 auto-fixed; 5 pre-existing unrelated errors remain)
+pytest tests/test_backtest.py tests/test_backtest_run_isolation.py -v --tb=short
+                            → PASS (32 passed, 0 failed)
+git status --short          → 3 modified + 1 new file (d1e2f3a4b5c6 migration)

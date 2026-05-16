@@ -1,0 +1,30 @@
+[2026-05-14T00:06Z] browser_console initial
+console_messages=[]
+js_errors=[]
+
+[2026-05-14T00:06Z] browser_console after Dashboard open
+console_messages=[]
+js_errors=[]
+
+[2026-05-14T00:06Z] browser_console after Paper Trading open
+console_messages=[]
+js_errors=[]
+
+[2026-05-14T00:07Z] browser_console after Logs open
+console_messages=[]
+js_errors=[]
+
+[2026-05-14T00:07Z] browser_console DOM extraction (Dashboard)
+title=QuantAgent UI (MVP)
+url=http://127.0.0.1:8501/
+body_excerpt="Dashboard ... Recent Trades ... relation \"trades\" does not exist ... Scheduler Status ... Status: 🔴 Stopped ..."
+
+[2026-05-14T00:07Z] browser_console DOM extraction (Paper Trading)
+body_excerpt="📊 Paper Trading Scheduler ... No scheduler heartbeat found ... python apps/paper_trading.py"
+
+[2026-05-14T00:08Z] browser_console DOM extraction (Logs, environment=paper)
+body_excerpt="Logs ... Environment paper ... Error querying logs: relation \"logs\" does not exist ... AND logs.environment = %(environment_1)s ..."
+
+Conclusión:
+- Sin errores JS/frontend capturados.
+- Los errores observables provienen de consultas backend/DB reflejadas en el render.

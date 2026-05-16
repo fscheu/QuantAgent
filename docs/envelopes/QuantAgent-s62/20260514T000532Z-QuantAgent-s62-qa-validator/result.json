@@ -1,0 +1,64 @@
+{
+  "run_id": "20260514T000532Z-QuantAgent-s62-qa-validator",
+  "issue": "QuantAgent-s62",
+  "phase": "qa-validator",
+  "status": "PARTIAL",
+  "acceptance_decision": "NO-GO",
+  "repo_path": "/home/azureuser/repos/projects/QuantAgent",
+  "target_url": "http://127.0.0.1:8501/",
+  "branch": "main",
+  "head_commit": "76dfa0bc84cc02938984190e1bc783d32abe488f",
+  "required_merge_ancestor": "089a1c559ce77312022ab89072f31ffbbbb54b81",
+  "required_merge_present_in_head": true,
+  "healthcheck": {
+    "endpoint": "http://127.0.0.1:8501/_stcore/health",
+    "result": "ok"
+  },
+  "browser_console": {
+    "console_messages": 0,
+    "js_errors": 0
+  },
+  "environment_observed": {
+    "ui_environment": "paper",
+    "ui_banner": "Set DATABASE_URL and start PostgreSQL via docker-compose for full functionality.",
+    "shell_db_probe": "DATABASE_URL from .env points to a PostgreSQL database that does not exist",
+    "sql_errors_seen": [
+      "relation \"trades\" does not exist",
+      "relation \"logs\" does not exist",
+      "relation \"orders\" does not exist"
+    ]
+  },
+  "ac_results": {
+    "AC1": {
+      "status": "PARTIAL",
+      "summary": "Dashboard muestra Scheduler Status real (`🔴 Stopped`, `Last run: Never`) y no el placeholder MVP, pero no hubo heartbeat real para validar escenario positivo."
+    },
+    "AC2": {
+      "status": "FAIL",
+      "summary": "En Paper Trading no se observaron secciones visibles de posiciones, órdenes ni PnL en estado vacío; por lo tanto no cumple degradación explícita por sección."
+    },
+    "AC3": {
+      "status": "FAIL",
+      "summary": "No se observó la sección LLM Cost & Latency ni el mensaje esperado de ausencia de telemetry."
+    },
+    "AC4": {
+      "status": "PASS",
+      "summary": "El filtro de environment en Logs existe con opciones all/paper/backtest y modifica el query visible agregando `AND logs.environment = ...` al seleccionar paper."
+    },
+    "AC5": {
+      "status": "FAIL",
+      "summary": "La UI no crashea y no hay errores JS, pero expone errores SQL crudos y no degrada todas las nuevas secciones con mensajes amigables."
+    }
+  },
+  "artifacts": [
+    "input-envelope.md",
+    "docs-check.md",
+    "browser-findings.md",
+    "console.log",
+    "run-report.md",
+    "screenshots/dashboard.png",
+    "screenshots/paper-trading.png",
+    "screenshots/logs.png"
+  ],
+  "next_action_recommended": "Corregir degradación vacía/DB rota en Paper Trading, Dashboard/Logs y re-ejecutar QA manual con DB + schema + seed mínimos para validar escenarios positivos."
+}

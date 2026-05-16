@@ -1,0 +1,33 @@
+{
+  "run_id": "20260510T214304Z-QuantAgent-3o8-tech-lead",
+  "phase": "tech_lead",
+  "skill": "tech-lead-autodev",
+  "executor": "hermes-internal",
+  "status": "FAIL",
+  "repo_path": "/home/azureuser/repos/projects/QuantAgent",
+  "beads_issue_id": "QuantAgent-3o8",
+  "branch": "feature/QuantAgent-3o8-implement-replay-execution-mode-reuse-an",
+  "started_at": "2026-05-10T21:36:01Z",
+  "finished_at": "2026-05-10T21:43:04Z",
+  "files_changed": [
+    "docs/envelopes/QuantAgent-3o8/20260510T214304Z-QuantAgent-3o8-tech-lead/run-report.md",
+    "docs/envelopes/QuantAgent-3o8/20260510T214304Z-QuantAgent-3o8-tech-lead/integration-decision-20260510T214304Z.md",
+    "docs/envelopes/QuantAgent-3o8/20260510T214304Z-QuantAgent-3o8-tech-lead/quality-gates.log",
+    "docs/envelopes/QuantAgent-3o8/20260510T214304Z-QuantAgent-3o8-tech-lead/commands.log"
+  ],
+  "docs_changed": [
+    "docs/envelopes/QuantAgent-3o8/20260510T214304Z-QuantAgent-3o8-tech-lead/run-report.md",
+    "docs/envelopes/QuantAgent-3o8/20260510T214304Z-QuantAgent-3o8-tech-lead/integration-decision-20260510T214304Z.md"
+  ],
+  "tests_changed": [],
+  "commits": [],
+  "decision": "do_not_merge",
+  "failure_class": "IMPLEMENTATION_INCOMPLETE",
+  "failure_subclass": "replay_signal_provenance_collision",
+  "secondary_failure_classes": [
+    "GIT_PREFLIGHT_DIRTY_OR_DIVERGED/stale_feature_branch"
+  ],
+  "blocker_issue": "QuantAgent-375",
+  "deploy_status": "not_applicable",
+  "next_step": "implement-blocker-on-fresh-branch"
+}

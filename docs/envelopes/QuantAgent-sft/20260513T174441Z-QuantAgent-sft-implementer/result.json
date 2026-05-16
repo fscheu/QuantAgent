@@ -1,0 +1,46 @@
+{
+  "run_id": "20260513T174441Z-QuantAgent-sft-implementer",
+  "issue_id": "QuantAgent-sft",
+  "phase": "implementer",
+  "status": "PARTIAL",
+  "summary": "Hardened the paper trading runtime by scoping ActivePosition rows to the paper environment, persisting trade linkage when scheduler-created positions open, and making stale/error heartbeat states observable in the Streamlit paper runtime view.",
+  "files_changed": [
+    "apps/streamlit/views/paper_trading.py",
+    "quantagent/trading/position_monitor.py",
+    "quantagent/trading/scheduler.py",
+    "docs/06_implementation/QuantAgent-sft-IM-paper-runtime-hardening.md"
+  ],
+  "quality_gates": {
+    "git_status__short": {
+      "status": "passed_with_preexisting_dirty_state",
+      "details": "Repo already had unrelated untracked files; the intended files for this run are modified in place."
+    },
+    "ruff_check_fix": {
+      "status": "failed_environment",
+      "details": "/usr/bin/python3: No module named ruff"
+    },
+    "pytest_relevant_subset": {
+      "status": "failed_environment",
+      "details": "/usr/bin/python3: No module named pytest"
+    },
+    "compileall": {
+      "status": "passed",
+      "details": "python3 -m compileall -q quantagent apps"
+    },
+    "py_compile_changed_files": {
+      "status": "passed",
+      "details": "python3 -m py_compile quantagent/trading/position_monitor.py quantagent/trading/scheduler.py apps/streamlit/views/paper_trading.py"
+    }
+  },
+  "artifacts": [
+    "docs/envelopes/QuantAgent-sft/20260513T174441Z-QuantAgent-sft-implementer/run-report.md",
+    "docs/envelopes/QuantAgent-sft/20260513T174441Z-QuantAgent-sft-implementer/commands.log",
+    "docs/envelopes/QuantAgent-sft/20260513T174441Z-QuantAgent-sft-implementer/quality-gates.log"
+  ],
+  "risks": [
+    "Relevant pytest coverage could not be executed because project test dependencies are not installed in the accessible Python environment.",
+    "No test files were updated because this phase explicitly disabled write_tests.",
+    "The declared worktree and shared venv are not readable from this executor, so changes were applied from the main repo checkout without creating a feature-branch commit."
+  ],
+  "next_step": "Run the tester phase in an environment with working project dependencies, add the missing multi-cycle paper runtime tests if the contract allows it, and verify the Streamlit paper runtime view against a real paper DB."
+}

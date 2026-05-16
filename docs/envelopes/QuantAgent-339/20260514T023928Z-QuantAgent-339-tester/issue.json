@@ -1,0 +1,69 @@
+{
+  "id": "QuantAgent-339",
+  "title": "Consolidar QA Streamlit y validator post-deploy sobre runtime real",
+  "description": "## Contexto\nQA ya fue movido hacia Streamlit en puerto 8501 y existe documentación/infra de validator local post-deploy. M2 necesita convertir ese avance en una verificación funcional confiable del runtime real, no sólo en healthchecks o evidencia manual parcial.\n\nEl objetivo no es rediseñar el deploy, sino consolidar que `Main CI + Deploy QA` y el validator apunten al target correcto, validen las vistas críticas del MVP y produzcan evidencia durable cuando algo falla.\n\n## Cambio requerido\nConsolidar la validación post-deploy de QA sobre la UI Streamlit real.\n\nEsto implica, como mínimo:\n- alinear workflow, healthcheck y validator al runtime Streamlit servido en 8501;\n- verificar funcionalmente las vistas clave del MVP desde el target local soportado por el validator;\n- dejar el contrato `deploy_finished` / `qa_verified` consistente con la evidencia del validator;\n- capturar artifacts útiles cuando la validación sea PARTIAL/BLOCKED/FAIL.\n\n## Criterio de aceptación\n- [ ] El workflow principal de deploy QA verifica el runtime Streamlit correcto y ejecuta el validator contra el target local soportado.\n- [ ] El validator cubre al menos Dashboard, Backtesting/Replay, Orders & Positions y Logs/Paper Trading status con evidencia explícita.\n- [ ] La salida del validator diferencia claramente `SUCCESS`, `PARTIAL`, `BLOCKED` y `FAIL` usando artifacts durables.\n- [ ] Un deploy exitoso de QA deja evidencia verificable de que la UI correcta está sirviendo datos útiles en el runtime real.\n\n## Archivos relevantes\n- `.github/workflows/main-ci-deploy.yml`\n- `Dockerfile.qa`\n- `docker-compose.qa.yml`\n- `apps/streamlit/`\n- `docs/06_implementation/QuantAgent-app-IM-qa-streamlit-cutover.md`\n- `docs/envelopes/`\n\n## Fuera de scope\n- Automatizar Cloudflare Access\n- Prod deploy\n- Rediseño visual del dashboard\n\n## Notas técnicas\n- Reusar el cutover ya mergeado a 8501 y el enfoque de validator local como baseline.\n- No volver a un target legacy de Flask/8001 salvo evidencia fuerte de regresión real.\n",
+  "status": "blocked",
+  "priority": 1,
+  "issue_type": "feature",
+  "owner": "fscheu@gmail.com",
+  "created_at": "2026-05-13T01:11:01.107781657Z",
+  "created_by": "Federico Scheu",
+  "updated_at": "2026-05-13T12:25:47.988654872Z",
+  "metadata": {
+    "openclaw": {
+      "phase": "design_pending",
+      "design_branch": "feature/QuantAgent-339-qa-validator-runtime-real",
+      "epic_branch": null
+    }
+  },
+  "labels": [
+    "openclaw:design_pending"
+  ],
+  "dependencies": [
+    {
+      "id": "QuantAgent-kkj",
+      "title": "M2 Milestone Tracking — Paper Trading Operativo y Validado",
+      "description": "## Contexto\nM1 ya quedó efectivamente completado y QuantAgent necesita un milestone intermedio antes de broker real / Alpaca. El objetivo correcto es consolidar el sistema como plataforma de **paper trading operable, observable y verificable end-to-end**.\n\nEstado de base ya disponible:\n- `QuantAgent-3o4` implementó TradingScheduler para paper trading automático.\n- `QuantAgent-0b5` integró PositionMonitor al scheduler y cubrió exits / tracking.\n- `QuantAgent-vje` agregó heartbeat y visibilidad básica del scheduler en Streamlit.\n- `QuantAgent-69d` agregó telemetry de tokens/tiempo para costos.\n- `docs/06_implementation/QuantAgent-app-IM-qa-streamlit-cutover.md` documenta que QA ya sirve Streamlit en 8501 y que existe validator local post-deploy.\n\nEl milestone M2 NO debe saltar todavía a broker real. Primero hay que demostrar que el sistema de paper trading puede operar con continuidad, visibilidad y evidencia suficiente para decidir el siguiente salto.\n\n## Cambio requerido\nEste ticket es un **epic de tracking**. No se implementa directamente. Su propósito es:\n1. Mantener la definición oficial de M2.\n2. Trackear los tickets hijos necesarios para runtime, QA, observabilidad y piloto.\n3. Dejar explícito que broker real / live capital siguen fuera de scope hasta cerrar este milestone con evidencia.\n\n## Criterio de aceptación — M2 COMPLETO\n\n### AC1 — Runtime paper estable\n- [ ] El scheduler de paper trading corre múltiples ciclos consecutivos sin fallas críticas ni estados zombie.\n- [ ] La cadena señal → orden → trade → posición queda auditable en environment `paper`.\n\n### AC2 — QA / UI Streamlit verificada\n- [ ] El entorno QA sirve la UI Streamlit correcta en el runtime real.\n- [ ] El validator post-deploy verifica funcionalmente las vistas críticas del MVP con evidencia durable.\n\n### AC3 — Observabilidad operativa suficiente\n- [ ] El operador puede ver desde la UI/logs: scheduler status, última/próxima corrida, órdenes, posiciones, PnL / portfolio value.\n- [ ] El operador puede inspeccionar al menos una métrica de costo/latencia derivada de la telemetry ya incorporada.\n\n### AC4 — Piloto controlado ejecutado\n- [ ] Se corre un piloto paper acotado con 1–3 estrategias M1 y universo controlado.\n- [ ] El piloto produce un resumen operativo con trades, fallas, métricas base, costo/latencia aproximados y recomendación explícita sobre readiness para broker real.\n\n## Archivos y módulos relevantes\n- `quantagent/trading/scheduler.py`\n- `quantagent/trading/order_manager.py`\n- `quantagent/trading/position_monitor.py`\n- `quantagent/models.py`\n- `apps/streamlit/`\n- `.github/workflows/main-ci-deploy.yml`\n- `Dockerfile.qa`\n- `docker-compose.qa.yml`\n- `docs/01_requirements/`\n- `docs/02_planning/`\n- `docs/05_acceptance_tests/`\n- `docs/06_implementation/`\n\n## Fuera de scope\n- Integración con broker real / Alpaca\n- Capital real\n- WebSockets / real-time infra\n- Macro layer\n- Batch processing como driver del milestone (`QuantAgent-um8` solo si emerge como blocker real)\n\n## Notas técnicas\n- Reusar tickets ya mergeados (`3o4`, `0b5`, `vje`, `69d`) como baseline, no reimplementarlos.\n- Mantener la descomposición en tickets chicos y verificables.\n- El ticket `QuantAgent-um8` queda fuera del milestone por ahora; solo se reabsorbe si el piloto demuestra que hoy es cuello de botella real.\n",
+      "status": "open",
+      "priority": 1,
+      "issue_type": "epic",
+      "owner": "fscheu@gmail.com",
+      "created_at": "2026-05-13T01:06:36.335635607Z",
+      "created_by": "Federico Scheu",
+      "updated_at": "2026-05-13T01:10:58.814146288Z",
+      "dependency_type": "parent-child"
+    }
+  ],
+  "dependents": [
+    {
+      "id": "QuantAgent-aki",
+      "title": "Ejecutar piloto controlado de paper trading y emitir readiness report",
+      "description": "## Contexto\nM2 no se cierra con features mergeadas: requiere evidencia operativa real. Una vez estabilizados runtime, QA y observabilidad, QuantAgent necesita un piloto controlado de paper trading que permita decidir honestamente si el próximo paso es broker real o si todavía faltan bloqueadores.\n\n## Cambio requerido\nDiseñar y ejecutar un piloto controlado de paper trading, acotado y repetible.\n\nEsto implica, como mínimo:\n- definir runbook del piloto (universo, estrategias, duración o cantidad de ciclos, criterios de éxito/falla);\n- limitarlo a 1–3 estrategias M1 ya mergeadas;\n- correr el piloto con el runtime actual y capturar evidencia operativa real;\n- emitir un readiness report con recomendación explícita sobre el siguiente milestone.\n\n## Criterio de aceptación\n- [ ] Existe un runbook/pilot plan versionado en `docs/` con alcance, precondiciones y criterios de salida.\n- [ ] El piloto se ejecuta durante un período o cantidad de ciclos definida y deja evidencia real (trades, posiciones, errores, telemetry/costo, timings).\n- [ ] Se genera un resumen operativo con trades ejecutados, métricas base, fallas detectadas, costo/latencia aproximados y recomendación clara de go/no-go para broker real.\n- [ ] Si el piloto no es apto para avanzar, el reporte lista bloqueadores concretos que puedan volver al backlog como tickets separados.\n\n## Archivos relevantes\n- `docs/02_planning/`\n- `docs/05_acceptance_tests/`\n- `docs/06_implementation/`\n- `docs/envelopes/`\n- `apps/streamlit/`\n- `quantagent/trading/scheduler.py`\n\n## Fuera de scope\n- Capital real\n- Operación continua sin límite temporal\n- Estrategias nuevas fuera del set M1\n\n## Notas técnicas\n- Este ticket debe ejecutarse después de que runtime, QA y observabilidad estén en estado suficientemente estable.\n- Si se detecta que `QuantAgent-um8` o cualquier otra optimización es blocker real del piloto, documentarlo con evidencia antes de reabsorber scope.\n",
+      "status": "open",
+      "priority": 1,
+      "issue_type": "task",
+      "owner": "fscheu@gmail.com",
+      "created_at": "2026-05-13T01:11:03.439211677Z",
+      "created_by": "Federico Scheu",
+      "updated_at": "2026-05-13T01:11:03.439211677Z",
+      "dependency_type": "blocks"
+    }
+  ],
+  "comments": [
+    {
+      "id": 196,
+      "issue_id": "QuantAgent-339",
+      "author": "Federico Scheu",
+      "text": "### Skill: autodev-planner\n- **Resultado:** SUCCESS\n- **Run-ID:** 20260513T023641Z\n\n#### Qué hice\n- Docs creados/editados:\n  - `docs/01_requirements/QuantAgent-339-RQ-qa-validator-real-runtime.md`\n  - `docs/02_planning/QuantAgent-339-PL-qa-validator-real-runtime.md`\n  - `docs/03_design/QuantAgent-339-DS-qa-validator-real-runtime.md`\n  - `docs/05_acceptance_tests/QuantAgent-339-AC-qa-validator-real-runtime.md`\n  - índices `README.md` de requirements/planning/design/acceptance\n- Artefactos durables:\n  - `docs/envelopes/QuantAgent-339/20260513T023641Z-techlead-planner/run-report.md`\n  - `docs/envelopes/QuantAgent-339/20260513T023641Z-techlead-planner/result.json`\n- Branch publicada: `feature/QuantAgent-339-qa-validator-runtime-real` (`8ff6b79d`)\n\n#### Cambios en el ticket\n- Sin cambios de labels/estado en esta corrida.\n\n#### Problemas encontrados\n- El repo root principal sigue dirty por trabajo previo no atribuible a esta corrida; se aisló todo en worktree.\n- Parte del comportamiento depende de `qa-validator-poc`, fuera del repo principal.\n\n#### Dudas / decisiones pendientes\n1) El implementer debe mantener explícita la semántica de `PARTIAL` para empty state sano.\n2) Si el contrato del validator requiere cambios cross-repo, deben mantenerse mínimos y auditablemente ligados al workflow de QuantAgent.\n\n#### Next step recomendado\n- Siguiente skill sugerido: autodev-implementer\n",
+      "created_at": "2026-05-13T02:49:30Z"
+    },
+    {
+      "id": 197,
+      "issue_id": "QuantAgent-339",
+      "author": "Federico Scheu",
+      "text": "### Skill: autodev-implementer\n- **Resultado:** SUCCESS\n- **Run-ID:** 20260513T074107Z-QuantAgent-339-implementer\n- **Executor:** auto\n\n#### Qué hice\n- Implementé los tres seams del diseño en `.github/workflows/main-ci-deploy.yml` (+69/-2 líneas):\n  - **Target seam (AC6):** nuevo step `Verify QA validator target alignment` — detecta drift entre runtime desplegado (8501) y config del validator antes de ejecutar. Falla con evidencia explícita si el config no referencia 8501.\n  - **Artifact seam (AC2):** `Read QA validator verdict` ahora lista `result.json`, `run-report.md`, screenshots y logs; nuevo step `Upload QA validator artifacts` persiste todo en GitHub Actions (retención 30 días) en cada run.\n  - **Verdict seam (AC4, AC5):** `PARTIAL` es estado propio (`qa_partial` en outputs y payload); `qa_verified` exclusivo de `SUCCESS`; webhook Hermes expone `qa_partial`, `qa_target_alignment_outcome`, `validator_artifacts_count` y `validator_artifacts_list`.\n- Commit: `b438945b` en `feature/QuantAgent-339-qa-validator-runtime-real`\n\n#### Evidencia\n- `git status --short`: sólo `.github/workflows/main-ci-deploy.yml` modificado\n- `ruff check --fix .`: 5 errores pre-existentes no relacionados; sin errores nuevos\n- `python -m compileall -q .`: sin errores\n- Artefactos: `result.json` y `run-report.md` actualizados en `docs/envelopes/QuantAgent-339/20260513T074107Z-QuantAgent-339-implementer/`\n\n#### Quality gates\n- git status: PASS\n- ruff: PASS (5 errores pre-existentes fuera de scope)\n- compileall: PASS\n- pytest: SKIP (sin cambios Python)\n\n#### Problemas encontrados\n- AC3 (cobertura de vistas Dashboard/Backtesting/Orders/Logs) depende del config externo `qa-validator-poc`. QuantAgent sólo puede documentar el contrato esperado, no hacer cumplir la cobertura dentro de este repo.\n\n#### Next step recomendado\n- Tech Lead review del commit `b438945b`\n- Próximo deploy a QA ejercerá los nuevos steps end-to-end y producirá evidencia verificable\n- Si se requiere enforcement de AC3, ticket separado para que `qa-validator-poc` incluya metadatos de cobertura por vista en `result.json`",
+      "created_at": "2026-05-13T07:48:26Z"
+    }
+  ],
+  "parent": "QuantAgent-kkj"
+}

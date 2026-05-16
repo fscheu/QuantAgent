@@ -1,0 +1,19 @@
+GATE: git status --short
+STATUS: PASS
+DETAILS: 3 modified files (models.py, backtest.py, ruff-touched pre-existing file),
+         1 new file (migration d1e2f3a4b5c6)
+
+GATE: ruff check --fix .
+STATUS: PASS
+DETAILS: 15 issues auto-fixed. 5 remaining errors are pre-existing in
+         alembic/versions/f7d3bad02cae_add_active_positions_table.py (F821 postgresql undefined),
+         tests/test_sqlite_jsonb_compatibility.py (W293), tests/test_universe_management.py (F841).
+         None from our changed files.
+
+GATE: pytest tests/test_backtest.py tests/test_backtest_run_isolation.py -v
+STATUS: PASS
+DETAILS: 32 passed, 0 failed in 7.08s
+
+GATE: python -m compileall -q .
+STATUS: PASS
+DETAILS: No compilation errors

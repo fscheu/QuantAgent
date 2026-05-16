@@ -1,0 +1,46 @@
+{
+  "run_id": "20260513T142703Z-QuantAgent-339-implementer",
+  "created_at": "2026-05-13T14:27:04.167253+00:00",
+  "executor": "codex",
+  "phase": "implementer",
+  "issue_id": "QuantAgent-339",
+  "dry_run": true,
+  "adapter": {
+    "command_name": "codex",
+    "available": true,
+    "requires_pty": true,
+    "output_mode": "json",
+    "max_turns": null
+  },
+  "paths": {
+    "envelope": "/tmp/autodev-phase-routing-smoke/quantagent-QuantAgent-339-implementer/input-envelope.md",
+    "prompt": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-339/20260513T142703Z-QuantAgent-339-implementer/executor-prompt-codex.md",
+    "artifacts_dir": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-339/20260513T142703Z-QuantAgent-339-implementer",
+    "workdir": "/home/azureuser/repos/projects/QuantAgent",
+    "run_report": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-339/20260513T142703Z-QuantAgent-339-implementer/run-report.md",
+    "result_json": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-339/20260513T142703Z-QuantAgent-339-implementer/result.json",
+    "commands_log": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-339/20260513T142703Z-QuantAgent-339-implementer/commands.log",
+    "quality_gates_log": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-339/20260513T142703Z-QuantAgent-339-implementer/quality-gates.log"
+  },
+  "environment": {
+    "shared_venv": "/mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv",
+    "shared_python": "/mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python"
+  },
+  "selection_policy": {
+    "auto": true,
+    "phase": "implementer",
+    "priority": [
+      "codex",
+      "opencode",
+      "claude-code"
+    ],
+    "source": "default:phase:implementer",
+    "env_var": null
+  },
+  "command_preview": "script -qfec 'codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check \"$(cat /home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-339/20260513T142703Z-QuantAgent-339-implementer/executor-prompt-codex.md)\"' /dev/null",
+  "notes": [
+    "Dry-run does not invoke the external CLI.",
+    "Codex command is wrapped with script(1) for pseudo-tty when executed by this router.",
+    "During migration, git push / merge / deploy remain blocked by validation."
+  ]
+}

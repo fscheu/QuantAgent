@@ -1,0 +1,3 @@
+- router validation: PASS | command=validate envelope + capabilities | exit_code=0 | evidence=Envelope parsed and dangerous capabilities rejected.
+- executor availability: PASS | command=which codex | exit_code=0 | evidence=available=True
+- executor run: SUCCESS | command=script -qfec 'codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check "$(cat /home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-sft/20260513T174441Z-QuantAgent-sft-implementer/executor-prompt-codex.md)"' /dev/null | exit_code=0 | evidence=exit_code=0

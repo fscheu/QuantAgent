@@ -1,0 +1,33 @@
+run_id: 20260514T023928Z-QuantAgent-339-tester
+      phase: tester
+      executor: codex
+      dry_run: False
+      workdir: /tmp/autodev-worktrees/QuantAgent/QuantAgent-339/planner-20260513T023641Z
+      command_preview: script -qfec 'codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json "$(cat /home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-339/20260514T023928Z-QuantAgent-339-tester/executor-prompt-codex.md)"' /dev/null
+      exit_code: 0
+      error: none
+      selection_policy: |
+{
+  "auto": true,
+  "phase": "tester",
+  "priority": [
+    "codex",
+    "opencode",
+    "claude-code"
+  ],
+  "source": "default:phase:tester",
+  "env_var": null
+}
+      execution_attempts: |
+[
+  {
+    "executor": "codex",
+    "available": true,
+    "phase": "tester",
+    "selection_source": "default:phase:tester",
+    "reason": "selected first available candidate",
+    "status": "SUCCESS",
+    "exit_code": 0,
+    "error": null
+  }
+]
