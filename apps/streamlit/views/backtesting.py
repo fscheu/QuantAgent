@@ -175,7 +175,10 @@ def render(db, environment: str) -> None:
         except Exception as e:
             st.info(f"Could not load DB runs: {e}")
     if rows:
-        st.dataframe(pd.DataFrame(rows), width='stretch')
+        deduped_rows = {}
+        for row in rows:
+            deduped_rows[row["id"]] = row
+        st.dataframe(pd.DataFrame(deduped_rows.values()), width="stretch")
     else:
         st.info("No runs yet.")
 
