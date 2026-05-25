@@ -1,0 +1,3 @@
+ruff check --fix tests/apps/streamlit/views/test_manual.py apps/streamlit/app.py apps/streamlit/views/manual.py docs/user-manual/getting-started.md
+/mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m pytest tests/apps/streamlit/views/test_manual.py -v
+/mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m compileall -q apps/streamlit/app.py apps/streamlit/views/manual.py tests/apps/streamlit/views/test_manual.py

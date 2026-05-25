@@ -1,0 +1,29 @@
+{
+  "run_id": "20260525T203300Z-QuantAgent-19f-tester",
+  "phase": "tester",
+  "executor": "hermes-internal",
+  "status": "SUCCESS",
+  "repo_path": "/home/azureuser/repos/projects/QuantAgent",
+  "beads_issue_id": "QuantAgent-19f",
+  "branch": "feature/QuantAgent-19f-manual-viewer-salvage",
+  "worktree_path": "/tmp/autodev-worktrees/QuantAgent/QuantAgent-19f/verify-20260525T203300Z",
+  "started_at": "2026-05-25T20:33:00Z",
+  "finished_at": "2026-05-25T20:35:30Z",
+  "tests": {
+    "passed": 5,
+    "failed": 0,
+    "commands": [
+      "ruff check --fix tests/apps/streamlit/views/test_manual.py apps/streamlit/app.py apps/streamlit/views/manual.py docs/user-manual/getting-started.md",
+      "/mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m pytest tests/apps/streamlit/views/test_manual.py -v",
+      "/mnt/actions-runner/autodev-runtime/venvs/QuantAgent/.venv/bin/python -m compileall -q apps/streamlit/app.py apps/streamlit/views/manual.py tests/apps/streamlit/views/test_manual.py"
+    ]
+  },
+  "files_changed": [
+    "tests/apps/streamlit/views/test_manual.py",
+    "docs/envelopes/QuantAgent-19f/20260525T203300Z-QuantAgent-19f-tester/commands.log",
+    "docs/envelopes/QuantAgent-19f/20260525T203300Z-QuantAgent-19f-tester/quality-gates.log",
+    "docs/envelopes/QuantAgent-19f/20260525T203300Z-QuantAgent-19f-tester/run-report.md",
+    "docs/envelopes/QuantAgent-19f/20260525T203300Z-QuantAgent-19f-tester/result.json"
+  ],
+  "next_step": "integrate"
+}
