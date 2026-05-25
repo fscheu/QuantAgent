@@ -1,0 +1,53 @@
+{
+  "run_id": "20260525T194101Z-techlead",
+  "phase": "tech_lead",
+  "skill": "tech-lead-autodev",
+  "mode": "correction",
+  "repo_path": "/home/azureuser/repos/projects/QuantAgent",
+  "beads_issue_id": "QuantAgent-kkj.1",
+  "status": "SUCCESS",
+  "failure_class": "NO_FAILURE",
+  "failure_subclass": "NO_FAILURE",
+  "executor": "tech_lead_direct",
+  "primary_branch": "feature/QuantAgent-kkj.1-fix-backtest-run-dup-20260525T173935Z",
+  "integration_branch": "integration/QuantAgent-kkj.1-20260525T194101Z",
+  "feature_commit": "f3c40717",
+  "merge_commit": "e0468149",
+  "tests": [
+    {
+      "command": "ruff check --fix apps/streamlit/views/backtesting.py tests/apps/streamlit/views/test_backtesting.py",
+      "status": "PASS"
+    },
+    {
+      "command": "python3 -m pytest tests/apps/streamlit/views/test_backtesting.py -v",
+      "status": "PASS",
+      "summary": "2 passed"
+    },
+    {
+      "command": "python3 -m compileall -q apps/streamlit/views/backtesting.py tests/apps/streamlit/views/test_backtesting.py",
+      "status": "PASS"
+    }
+  ],
+  "files_changed": [
+    "apps/streamlit/views/backtesting.py",
+    "tests/apps/streamlit/views/test_backtesting.py",
+    ".beads/issues.jsonl"
+  ],
+  "artifacts": [
+    "docs/envelopes/QuantAgent-kkj.1/20260525T194101Z-techlead/run-report.md",
+    "docs/envelopes/QuantAgent-kkj.1/20260525T194101Z-techlead/integration-decision-20260525T194101Z.md",
+    "docs/envelopes/QuantAgent-kkj.1/20260525T194101Z-techlead/commands.log"
+  ],
+  "beads": {
+    "comment_added": true,
+    "issue_closed": true
+  },
+  "user_manual": {
+    "status": "skipped",
+    "reason": "Bug fix removes duplicate rows in an existing grid; no user-facing workflow or manual content changed."
+  },
+  "deploy": {
+    "status": "not_observed"
+  },
+  "next_step": "push_main_and_observe_ci"
+}

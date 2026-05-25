@@ -1,0 +1,4 @@
+PASS ruff check --fix apps/streamlit/views/backtesting.py tests/apps/streamlit/views/test_backtesting.py
+PASS python3 -m pytest tests/apps/streamlit/views/test_backtesting.py -v (2 passed)
+PASS python3 -m compileall -q apps/streamlit/views/backtesting.py tests/apps/streamlit/views/test_backtesting.py
+PASS git merge-tree preflight against origin/main

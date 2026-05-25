@@ -1,0 +1,7 @@
+ruff check --fix apps/streamlit/views/backtesting.py tests/apps/streamlit/views/test_backtesting.py
+python3 -m pytest tests/apps/streamlit/views/test_backtesting.py -v
+python3 -m compileall -q apps/streamlit/views/backtesting.py tests/apps/streamlit/views/test_backtesting.py
+bd comments add QuantAgent-kkj.1 -f /tmp/QuantAgent-kkj.1-techlead-comment.md
+bd close QuantAgent-kkj.1 --reason "Fixed duplicate backtest run rows and integrated to main candidate"
+bd export -o .beads/issues.jsonl
+bd sync --import-only --no-daemon
