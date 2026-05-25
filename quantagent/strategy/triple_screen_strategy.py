@@ -20,6 +20,15 @@ class TripleScreenStrategy(TradingStrategy):
       Screen 3 — breakout above/below prior candle's high/low triggers entry.
     """
 
+    @classmethod
+    def describe(cls) -> Dict[str, str]:
+        return {
+            "name": cls.__name__,
+            "display_name": "Triple Screen",
+            "type": "deterministic",
+            "description": "Elder triple screen using trend, oscillator, and breakout filters.",
+        }
+
     def __init__(
         self,
         weekly_bars: int = 5,
