@@ -1,0 +1,90 @@
+{
+  "run_id": "20260525T205529Z-QuantAgent-kkj.8-planner",
+  "phase": "planner",
+  "skill": "autodev-planner",
+  "executor": "claude-code",
+  "status": "SUCCESS",
+  "dry_run": false,
+  "execution_performed": true,
+  "repo_path": "/home/azureuser/repos/projects/QuantAgent",
+  "beads_issue_id": "QuantAgent-kkj.8",
+  "branch": "main",
+  "publication_branch": "main",
+  "worktree_path": "/home/azureuser/repos/projects/QuantAgent",
+  "started_at": "2026-05-25T20:55:29.502311+00:00",
+  "finished_at": "2026-05-25T20:59:46.267247+00:00",
+  "files_changed": [],
+  "docs_changed": [],
+  "tests_changed": [],
+  "commits": [],
+  "quality_gates": [
+    {
+      "name": "router validation",
+      "command": "validate envelope + capabilities",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "Envelope parsed and dangerous capabilities rejected."
+    },
+    {
+      "name": "executor availability",
+      "command": "which claude",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "available=True"
+    },
+    {
+      "name": "executor run",
+      "command": "claude -p \"$(cat /home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-kkj.8/20260525T205529Z-QuantAgent-kkj.8-planner/executor-prompt-claude-code.md)\" --output-format json --allowedTools Read,Edit,Write,Bash",
+      "status": "SUCCESS",
+      "exit_code": 0,
+      "evidence": "exit_code=0"
+    }
+  ],
+  "selection_policy": {
+    "auto": true,
+    "phase": "planner",
+    "priority": [
+      "claude-code",
+      "codex",
+      "opencode"
+    ],
+    "source": "default:phase:planner",
+    "env_var": null
+  },
+  "execution_attempts": [
+    {
+      "executor": "claude-code",
+      "available": true,
+      "phase": "planner",
+      "selection_source": "default:phase:planner",
+      "reason": "selected first available candidate",
+      "result_json_source": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-kkj.8/20260525T205529Z-QuantAgent-kkj.8-planner/result.json",
+      "status": "SUCCESS",
+      "exit_code": 0,
+      "error": null
+    }
+  ],
+  "beads_comment_added": false,
+  "beads_labels_changed": [],
+  "artifacts": [
+    "input-envelope.md",
+    "executor-prompt-claude-code.md",
+    "route-plan-claude-code.json",
+    "commands.log",
+    "quality-gates.log",
+    "result.json",
+    "run-report.md",
+    "executor-stdout-claude-code.log"
+  ],
+  "executor_result_json_source": "/home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-kkj.8/20260525T205529Z-QuantAgent-kkj.8-planner/result.json",
+  "risks": [],
+  "open_questions": [],
+  "next_step": "implementer",
+  "router_output_legacy": "router-output-claude-code.md",
+  "planning_readiness": {
+    "context_clear": true,
+    "acceptance_verifiable": true,
+    "scope_out_defined": true,
+    "implementation_ready": true
+  }
+}
