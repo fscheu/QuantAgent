@@ -1,7 +1,3 @@
 - router validation: PASS | command=validate envelope + capabilities | exit_code=0 | evidence=Envelope parsed and dangerous capabilities rejected.
 - executor availability: PASS | command=which claude | exit_code=0 | evidence=available=True
-- git status --short (pre-run): PASS | exit_code=0 | evidence=Only docs/envelopes/QuantAgent-kkj.2/ untracked (run-owned)
-- branch == canonical publication branch: PASS | command=git branch --show-current | exit_code=0 | evidence=main
-- issue ID appears in docs paths: PASS | evidence=QuantAgent-kkj.2-RQ, QuantAgent-kkj.2-PL, QuantAgent-kkj.2-AC created
-- acceptance criteria testable: PASS | evidence=7 ACs + AT-01..AT-05 automated specs + MV-01..MV-07 manual checklist
-- --run-once CLI flag: PASS | command=grep run-once apps/paper_trading.py | exit_code=0 | evidence=flag exists at lines 86-90
+- executor run: SUCCESS | command=claude -p "$(cat /home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-kkj.2/20260525T204955Z-QuantAgent-kkj.2-planner/executor-prompt-claude-code.md)" --output-format json --allowedTools Read,Edit,Write,Bash | exit_code=0 | evidence=exit_code=0

@@ -12,7 +12,7 @@ output_mode: "json"
 max_turns: null
 ---
 
-# Router Output — 20260525T204955Z-QuantAgent-kkj.2-planner
+# Run Report — 20260525T204955Z-QuantAgent-kkj.2-planner
 
 ## Summary
 
