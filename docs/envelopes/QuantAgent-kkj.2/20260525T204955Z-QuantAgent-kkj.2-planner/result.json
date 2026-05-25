@@ -1,0 +1,119 @@
+{
+  "run_id": "20260525T204955Z-QuantAgent-kkj.2-planner",
+  "phase": "planner",
+  "skill": "autodev-planner",
+  "executor": "claude-code",
+  "status": "SUCCESS",
+  "dry_run": false,
+  "execution_performed": true,
+  "repo_path": "/home/azureuser/repos/projects/QuantAgent",
+  "beads_issue_id": "QuantAgent-kkj.2",
+  "branch": "main",
+  "publication_branch": "main",
+  "worktree_path": "/home/azureuser/repos/projects/QuantAgent",
+  "started_at": "2026-05-25T20:49:55.790432+00:00",
+  "finished_at": "2026-05-25T21:10:00.000000+00:00",
+  "files_changed": [],
+  "docs_changed": [
+    "docs/01_requirements/QuantAgent-kkj.2-RQ-scheduler-ui-controls.md",
+    "docs/02_planning/QuantAgent-kkj.2-PL-scheduler-ui-controls.md",
+    "docs/05_acceptance_tests/QuantAgent-kkj.2-AC-scheduler-ui-controls.md"
+  ],
+  "tests_changed": [],
+  "commits": [],
+  "quality_gates": [
+    {
+      "name": "router validation",
+      "command": "validate envelope + capabilities",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "Envelope parsed and dangerous capabilities rejected."
+    },
+    {
+      "name": "executor availability",
+      "command": "which claude",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "available=True"
+    },
+    {
+      "name": "git status --short (pre-run)",
+      "command": "git status --short",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "Only docs/envelopes/QuantAgent-kkj.2/ untracked (run-owned)"
+    },
+    {
+      "name": "branch == canonical publication branch",
+      "command": "git branch --show-current",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "main"
+    },
+    {
+      "name": "issue ID appears in docs paths",
+      "command": "ls docs/01_requirements/ docs/02_planning/ docs/05_acceptance_tests/",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "QuantAgent-kkj.2-RQ, QuantAgent-kkj.2-PL, QuantAgent-kkj.2-AC files created"
+    },
+    {
+      "name": "acceptance criteria are testable",
+      "command": "review AC doc",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "7 ACs defined + automated test specs (AT-01 through AT-05) + manual verification checklist (MV-01 through MV-07)"
+    },
+    {
+      "name": "--run-once flag in CLI",
+      "command": "grep -n run-once apps/paper_trading.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "Flag exists at lines 86-90 and used at lines 155-157. No CLI change needed."
+    }
+  ],
+  "selection_policy": {
+    "auto": true,
+    "phase": "planner",
+    "priority": [
+      "claude-code",
+      "codex",
+      "opencode"
+    ],
+    "source": "default:phase:planner",
+    "env_var": null
+  },
+  "execution_attempts": [
+    {
+      "executor": "claude-code",
+      "available": true,
+      "phase": "planner",
+      "selection_source": "default:phase:planner",
+      "reason": "selected first available candidate"
+    }
+  ],
+  "beads_comment_added": true,
+  "beads_labels_changed": [],
+  "artifacts": [
+    "input-envelope.md",
+    "executor-prompt-claude-code.md",
+    "route-plan-claude-code.json",
+    "commands.log",
+    "quality-gates.log",
+    "result.json",
+    "run-report.md"
+  ],
+  "executor_result_json_source": "claude-code direct",
+  "risks": [
+    "Stale PID file if scheduler crashes — mitigated by always validating PID liveness via os.kill(pid,0)"
+  ],
+  "open_questions": [],
+  "next_step": "implementer",
+  "router_output_legacy": "router-output-claude-code.md",
+  "planning_readiness": {
+    "context_clear": true,
+    "acceptance_verifiable": true,
+    "scope_out_defined": true,
+    "implementation_ready": true
+  }
+}

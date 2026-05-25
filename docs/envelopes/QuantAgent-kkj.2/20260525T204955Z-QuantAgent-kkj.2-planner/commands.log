@@ -1,0 +1,30 @@
+run_id: 20260525T204955Z-QuantAgent-kkj.2-planner
+      phase: planner
+      executor: claude-code
+      dry_run: True
+      workdir: /home/azureuser/repos/projects/QuantAgent
+      command_preview: claude -p "$(cat /home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-kkj.2/20260525T204955Z-QuantAgent-kkj.2-planner/executor-prompt-claude-code.md)" --output-format json --allowedTools Read,Edit,Write,Bash
+      exit_code: not executed
+      error: none
+      selection_policy: |
+{
+  "auto": true,
+  "phase": "planner",
+  "priority": [
+    "claude-code",
+    "codex",
+    "opencode"
+  ],
+  "source": "default:phase:planner",
+  "env_var": null
+}
+      execution_attempts: |
+[
+  {
+    "executor": "claude-code",
+    "available": true,
+    "phase": "planner",
+    "selection_source": "default:phase:planner",
+    "reason": "selected first available candidate"
+  }
+]
