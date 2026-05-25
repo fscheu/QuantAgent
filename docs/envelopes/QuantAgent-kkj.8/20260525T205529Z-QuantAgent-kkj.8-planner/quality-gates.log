@@ -1,0 +1,12 @@
+Quality Gates — QuantAgent-kkj.8-planner — 20260525T205529Z
+
+REQUIRED GATES:
+[PASS] git status --short: repo on main, only new docs + .beads/issues.jsonl as expected
+[PASS] issue ID appears in docs paths: QuantAgent-kkj.8-RQ/PL/AC files created under correct dirs
+[PASS] acceptance criteria are testable: 10 ACs with concrete pytest examples
+[PASS] repo clean before canonical planner publication: only run-owned and beads files dirty (expected)
+[PASS] current branch matches canonical publication branch: main == main
+
+OPTIONAL GATES:
+[PASS] python3 -m py_compile quantagent/strategy/base.py quantagent/strategy/rsi_strategy.py quantagent/strategy/fifty_two_week_high_strategy.py quantagent/strategy/triple_screen_strategy.py quantagent/trading/scheduler.py — exit code 0
+[NOTE] .venv declared in envelope (/home/azureuser/repos/projects/QuantAgent/.venv) not found on main branch — used system python3 for compile check (acceptable for planner phase)
