@@ -1,0 +1,3 @@
+ruff check --fix ... => PASS
+pytest tests/apps/streamlit/views/test_manual.py -v => PASS (5 passed)
+python -m compileall -q ... => PASS
