@@ -170,14 +170,16 @@ streamlit run apps/streamlit/app.py
 **Access the dashboard:**
 Open your browser to http://localhost:8501
 
-You should see 7 tabs:
+You should see 8 main navigation sections:
 - **Dashboard** - Overview and metrics
+- **Paper Trading** - Scheduler health, positions, orders, and P&L
 - **Configuration** - Strategy settings
 - **Analyses** - View AI decisions
 - **Backtesting** - Run historical tests
 - **Replay** - Re-test with different settings
 - **Orders & Positions** - Track trades
 - **Logs** - System events
+- **User Manual** - Browse this documentation inside the app
 
 <!-- screenshot: Streamlit dashboard home page showing all tabs -->
 

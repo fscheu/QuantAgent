@@ -2,7 +2,7 @@
 Streamlit MVP UI for QuantAgent
 
 Focus: functionality over aesthetics. Reads from database if available.
-Tabs: Dashboard, Configuration, Analyses, Backtesting, Replay, Orders & Positions, Logs.
+Views: Dashboard, Configuration, Analyses, Backtesting, Replay, Orders & Positions, Logs, User Manual.
 
 Run: streamlit run apps/streamlit/app.py
 """
@@ -17,6 +17,7 @@ from apps.streamlit.views.backtesting import render as render_backtesting
 from apps.streamlit.views.configuration import render as render_configuration
 from apps.streamlit.views.dashboard import render as render_dashboard
 from apps.streamlit.views.logs import render as render_logs
+from apps.streamlit.views.manual import render as render_manual
 from apps.streamlit.views.orders_positions import render as render_orders_positions
 from apps.streamlit.views.paper_trading import render as render_paper_trading
 from apps.streamlit.views.replay import render as render_replay
@@ -31,6 +32,24 @@ setup_logging(log_to_console=False, log_to_db=True)
 
 
 ENVIRONMENTS = ["backtest", "paper"]  # prod out of MVP scope for UI
+NAVIGATION_VIEWS = [
+    "Dashboard",
+    "Paper Trading",
+    "Configuration",
+    "Analyses",
+    "Backtesting",
+    "Replay",
+    "Orders & Positions",
+    "Logs",
+    "User Manual",
+]
+
+
+def _get_current_view() -> str:
+    current_view = st.query_params.get("view", NAVIGATION_VIEWS[0])
+    if current_view not in NAVIGATION_VIEWS:
+        return NAVIGATION_VIEWS[0]
+    return current_view
 
 st.set_page_config(page_title="QuantAgent UI (MVP)", layout="wide")
 st.title("QuantAgent – Streamlit MVP")
@@ -71,40 +90,31 @@ with col1:
         )
         st.warning(db.error)
 
-
-tabs = st.tabs(
-    [
-        "Dashboard",
-        "Paper Trading",
-        "Configuration",
-        "Analyses",
-        "Backtesting",
-        "Replay",
-        "Orders & Positions",
-        "Logs",
-    ]
+selected_view = st.radio(
+    "Navigation",
+    NAVIGATION_VIEWS,
+    index=NAVIGATION_VIEWS.index(_get_current_view()),
+    horizontal=True,
+    label_visibility="collapsed",
 )
+if st.query_params.get("view") != selected_view:
+    st.query_params["view"] = selected_view
 
-with tabs[0]:
+if selected_view == "Dashboard":
     render_dashboard(db, environment)
-
-with tabs[1]:
+elif selected_view == "Paper Trading":
     render_paper_trading(db, environment)
-
-with tabs[2]:
+elif selected_view == "Configuration":
     render_configuration(db, environment)
-
-with tabs[3]:
+elif selected_view == "Analyses":
     render_analyses(db, environment)
-
-with tabs[4]:
+elif selected_view == "Backtesting":
     render_backtesting(db, environment)
-
-with tabs[5]:
+elif selected_view == "Replay":
     render_replay(db, environment)
-
-with tabs[6]:
+elif selected_view == "Orders & Positions":
     render_orders_positions(db, environment)
-
-with tabs[7]:
+elif selected_view == "Logs":
     render_logs(db)
+else:
+    render_manual()
