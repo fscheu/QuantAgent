@@ -38,12 +38,12 @@ Cloudflare was cut over so `qa.fedes.dev` now routes to `localhost:8501`, and th
     - `http://127.0.0.1:8501/_stcore/health`
   - Health retry window expanded to 18 attempts with 10-second pauses.
   - Added a pinned post-deploy QA validator step using:
-    - `/home/azureuser/repos/agents/qa-validator-poc/configs/local-streamlit.yaml`
-  - Added integrity checks for the external validator inputs before execution:
-    - `runner.py`
-    - `configs/local-streamlit.yaml`
-    - `prompt_template.md`
-    - `docs/local-streamlit-target.md`
+    - `/home/azureuser/.hermes/skills/autodev/autodev-qa-validator/templates/local-streamlit.yaml`
+  - Added integrity checks for the skill-local validator inputs before execution:
+    - `scripts/runner.py`
+    - `templates/local-streamlit.yaml`
+    - `templates/prompt_template.md`
+    - `references/poc-docs/local-streamlit-target.md`
   - After the validator runs, the workflow reads `result.json` and derives the verification verdict from `status` instead of trusting only the step exit status.
   - Webhook payload to Hermes now includes:
     - `deploy_step_outcome`
@@ -113,9 +113,12 @@ This confirms the old 8001 path is no longer serving QA and the active runtime i
 ### Validator
 
 Validated successfully with:
-- `python3 /home/azureuser/repos/agents/qa-validator-poc/runner.py --config /home/azureuser/repos/agents/qa-validator-poc/configs/local-streamlit.yaml`
+- `python3 /home/azureuser/.hermes/skills/autodev/autodev-qa-validator/scripts/runner.py --config /home/azureuser/.hermes/skills/autodev/autodev-qa-validator/templates/local-streamlit.yaml`
 
-Evidence directory:
+Evidence directory (current location):
+- `/home/azureuser/.hermes/runs/autodev-qa-validator/poc-qa-validator-local-streamlit-8501/`
+
+Historical PoC evidence remains archived under:
 - `/home/azureuser/repos/agents/qa-validator-poc/runs/poc-qa-validator-local-streamlit-8501/`
 
 Observed result:

@@ -138,7 +138,7 @@ jobs:
 
       - name: Reset QA validator run artifacts
         run: |
-          rm -rf /home/azureuser/repos/agents/qa-validator-poc/runs/poc-qa-validator-local-streamlit-8501
+          rm -rf /home/azureuser/.hermes/runs/autodev-qa-validator/poc-qa-validator-local-streamlit-8501
 
       - name: Deploy to QA locally
         id: deploy
@@ -187,16 +187,16 @@ jobs:
         id: qa_validator_integrity
         run: |
           printf '%s  %s\n' \
-            'dfeb61fef2ed354dd014a777131e5d44e1fd866db44ee43736f2fe7e82c6cf6c' '/home/azureuser/repos/agents/qa-validator-poc/runner.py' \
-            '43c15205cd6e3d586e740a212b817bf419d793080eb6a3699432e5082a7b06ce' '/home/azureuser/repos/agents/qa-validator-poc/configs/local-streamlit.yaml' \
-            '870b469879d53314bdd8e824f6bc3584fd14d1859646f1b82aa07c14ab49f47b' '/home/azureuser/repos/agents/qa-validator-poc/prompt_template.md' \
-            'e3b6a8a9daa88d70b014048209b03729c56c5807ba75c15e726077059de9c775' '/home/azureuser/repos/agents/qa-validator-poc/docs/local-streamlit-target.md' \
+            '1f08a837b16e35f77108c3a557fde706e6574721ff07c59677644a1d90edd689' '/home/azureuser/.hermes/skills/autodev/autodev-qa-validator/scripts/runner.py' \
+            'b7386381ca56052f2d63e2a938099a0a8e373110b72dc9793bbfe8bb8ec52db7' '/home/azureuser/.hermes/skills/autodev/autodev-qa-validator/templates/local-streamlit.yaml' \
+            'baa64d7647d15c51b87198648a4e115f5dd6b9e502d7709bdc0a53d5374f58ae' '/home/azureuser/.hermes/skills/autodev/autodev-qa-validator/templates/prompt_template.md' \
+            'e3b6a8a9daa88d70b014048209b03729c56c5807ba75c15e726077059de9c775' '/home/azureuser/.hermes/skills/autodev/autodev-qa-validator/references/poc-docs/local-streamlit-target.md' \
             | sha256sum -c -
 
       - name: Verify QA validator target alignment
         id: qa_target_alignment
         run: |
-          CONFIG=/home/azureuser/repos/agents/qa-validator-poc/configs/local-streamlit.yaml
+          CONFIG=/home/azureuser/.hermes/skills/autodev/autodev-qa-validator/templates/local-streamlit.yaml
           echo "=== Validator config target lines ==="
           grep -Ei 'url|target|host|port' "$CONFIG" | head -10 || echo "(no matching lines found)"
           echo "==="
@@ -214,8 +214,8 @@ jobs:
         continue-on-error: true
         run: |
           cd ~/repos/projects/QuantAgent
-          python3 /home/azureuser/repos/agents/qa-validator-poc/runner.py \
-            --config /home/azureuser/repos/agents/qa-validator-poc/configs/local-streamlit.yaml
+          python3 /home/azureuser/.hermes/skills/autodev/autodev-qa-validator/scripts/runner.py \
+            --config /home/azureuser/.hermes/skills/autodev/autodev-qa-validator/templates/local-streamlit.yaml
 
       - name: Read QA validator verdict
         id: qa_validator_result
@@ -225,7 +225,7 @@ jobs:
           import json
           from pathlib import Path
 
-          run_dir = Path('/home/azureuser/repos/agents/qa-validator-poc/runs/poc-qa-validator-local-streamlit-8501')
+          run_dir = Path('/home/azureuser/.hermes/runs/autodev-qa-validator/poc-qa-validator-local-streamlit-8501')
           result_path = run_dir / 'result.json'
           report_path = run_dir / 'run-report.md'
 
@@ -279,7 +279,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: qa-validator-${{ github.run_id }}-${{ steps.qa_validator_result.outputs.qa_validator_result_status || 'MISSING' }}
-          path: /home/azureuser/repos/agents/qa-validator-poc/runs/poc-qa-validator-local-streamlit-8501/
+          path: /home/azureuser/.hermes/runs/autodev-qa-validator/poc-qa-validator-local-streamlit-8501/
           if-no-files-found: warn
           retention-days: 30
 

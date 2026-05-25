@@ -6,7 +6,7 @@ Convertir el post-deploy QA validator actual en una validación útil contra el 
 ## Context
 El workflow `main-ci-deploy.yml` ya:
 - despliega Streamlit QA en `127.0.0.1:8501` / `qa.fedes.dev`
-- ejecuta `qa-validator-poc`
+- ejecuta el runner interno del skill `autodev-qa-validator`
 - lee `result.json`
 - envía webhook a Hermes
 
@@ -27,7 +27,7 @@ La validación actual existe, pero todavía opera como PoC y su cobertura funcio
 - QA de todas las pantallas de Streamlit.
 - Reemplazar CI o health checks existentes.
 - Validación contra producción.
-- Rediseñar el repo externo `qa-validator-poc` más allá de lo necesario para este contrato.
+- Rediseñar el runner del skill más allá de lo necesario para este contrato.
 
 ## Constraints
 - Mantener el deploy target de QA en Streamlit sobre puerto 8501.

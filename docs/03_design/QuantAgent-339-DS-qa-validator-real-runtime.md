@@ -7,7 +7,7 @@ STANDARD
 El repo ya tiene un pipeline útil:
 - deploy QA a Streamlit en puerto 8501
 - healthcheck `_stcore/health`
-- ejecución de `qa-validator-poc`
+- ejecución del runner interno del skill `autodev-qa-validator`
 - lectura de `result.json`
 - webhook `deploy_finished` hacia Hermes
 
@@ -32,7 +32,7 @@ Fortalecer tres seams:
 ## Affected components
 - `.github/workflows/main-ci-deploy.yml`
 - documentación de aceptación/reporte dentro de `docs/envelopes/` cuando corresponda
-- configuración de integración con `qa-validator-poc`
+- runner/configs/templates dentro de `~/.hermes/skills/autodev/autodev-qa-validator/`
 - opcionalmente tests o validaciones ligeras sobre parsing del resultado
 
 ## Technical decisions
@@ -41,5 +41,5 @@ Fortalecer tres seams:
 - Considerar “sin datos de trading” como estado funcional posible, no como FAIL por defecto.
 - Tratar la integridad de artefactos como parte del contrato del validator, no como detalle opcional.
 
-## External dependency boundary
-`qa-validator-poc` sigue siendo dependencia externa. Este ticket debe dejar en QuantAgent el contrato de entrada/salida y la interpretación operativa del resultado; cualquier cambio externo debe ser el mínimo necesario para cumplir ese contrato.
+## Dependency boundary
+El contrato operativo de QuantAgent depende del skill `autodev-qa-validator`, no de un repo PoC separado. Este ticket debe dejar en QuantAgent el contrato de entrada/salida y la interpretación operativa del resultado; cualquier cambio del runner debe ser el mínimo necesario para cumplir ese contrato.

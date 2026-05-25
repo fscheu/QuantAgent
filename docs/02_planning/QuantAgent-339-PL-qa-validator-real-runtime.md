@@ -31,7 +31,7 @@ Pasar de un PoC post-deploy a una validación QA funcional y operativamente úti
 - Ejecución post-deploy en QA con revisión manual de artefactos.
 
 ## Risks
-- Dependencia externa en `qa-validator-poc` deja parte del cambio fuera del repo.
+- El runner sigue fuera del repo de QuantAgent, pero ahora vive dentro del skill `autodev-qa-validator` y debe mantenerse alineado con el workflow.
 - El target público puede introducir auth/network noise no atribuible al código.
 - Un veredicto `PARTIAL` mal interpretado puede bloquear integración sin necesidad.
 
