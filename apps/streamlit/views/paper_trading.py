@@ -2,10 +2,126 @@
 
 from __future__ import annotations
 
+import os
+import signal
+import subprocess
+import sys
+import time
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Optional
 
 import streamlit as st
+
+# PID file shared between Streamlit reruns (survives brief server restarts)
+_PID_FILE = Path("/tmp/quantagent_scheduler.pid")
+# Repo root: views/ → streamlit/ → apps/ → repo root
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+# ── PID helpers ──────────────────────────────────────────────────────────────
+
+
+def _read_pid() -> Optional[int]:
+    try:
+        return int(_PID_FILE.read_text().strip())
+    except Exception:
+        return None
+
+
+def _pid_is_alive(pid: Optional[int]) -> bool:
+    if pid is None:
+        return False
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
+def _write_pid(pid: int) -> None:
+    _PID_FILE.write_text(str(pid))
+
+
+def _clear_pid() -> None:
+    try:
+        _PID_FILE.unlink()
+    except FileNotFoundError:
+        pass
+
+
+def _launch_subprocess(assets_str: str, mode: str, interval_hours: float, environment: str) -> None:
+    cmd = [
+        sys.executable,
+        str(_REPO_ROOT / "apps" / "paper_trading.py"),
+        "--environment", environment,
+        "--assets", assets_str,
+        "--enable",
+    ]
+    if mode == "Single cycle":
+        cmd.append("--run-once")
+    else:
+        cmd += ["--interval-hours", str(interval_hours)]
+
+    proc = subprocess.Popen(
+        cmd,
+        cwd=str(_REPO_ROOT),
+        start_new_session=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    _write_pid(proc.pid)
+
+
+def _stop_subprocess(pid: int) -> None:
+    try:
+        os.kill(pid, signal.SIGTERM)
+        time.sleep(2)
+        if _pid_is_alive(pid):
+            os.kill(pid, signal.SIGKILL)
+    except OSError:
+        pass
+    _clear_pid()
+
+
+# ── Controls section ─────────────────────────────────────────────────────────
+
+
+def _render_scheduler_controls(db, environment: str) -> None:
+    pid = _read_pid()
+    is_alive = _pid_is_alive(pid)
+    hb = db.get_latest_heartbeat(environment)
+    hb_running = bool(hb and hb.get("status") == "running")
+    scheduler_running = is_alive and hb_running
+
+    st.subheader("Scheduler Controls")
+
+    with st.expander("▶ Start Scheduler", expanded=not scheduler_running):
+        assets_input = st.text_input(
+            "Assets (comma-separated)", value="BTC,SPX", key="sc_assets"
+        )
+        mode = st.radio("Mode", ["Single cycle", "Continuous"], key="sc_mode")
+        interval_hours = 1.0
+        if mode == "Continuous":
+            interval_hours = st.number_input(
+                "Interval (hours)", min_value=0.25, value=1.0, step=0.25, key="sc_interval"
+            )
+
+        if scheduler_running:
+            st.warning("Scheduler is already running. Stop it before starting a new cycle.")
+
+        if st.button("▶ Start", disabled=scheduler_running, key="sc_start"):
+            _launch_subprocess(assets_input, mode, interval_hours, environment)
+            time.sleep(2)
+            st.rerun()
+
+    col_stop, _ = st.columns([1, 3])
+    with col_stop:
+        if st.button("■ Stop", disabled=not is_alive, key="sc_stop"):
+            if pid is not None:
+                _stop_subprocess(pid)
+            time.sleep(1)
+            st.rerun()
 
 
 def _calculate_status(heartbeat: Optional[dict]) -> tuple[str, str]:
@@ -220,6 +336,11 @@ def render(db, environment: str) -> None:
         st.info("Please check database connection and try again.")
         return
 
+    # Lifecycle controls — always visible regardless of heartbeat state
+    _render_scheduler_controls(db, environment)
+
+    st.divider()
+
     # Get latest heartbeat
     heartbeat = db.get_latest_heartbeat(environment)
 
@@ -228,9 +349,6 @@ def render(db, environment: str) -> None:
         st.info(
             f"The scheduler may not be running, or no cycles have completed yet for environment: **{environment}**"
         )
-        st.markdown("---")
-        st.markdown("**How to start the scheduler:**")
-        st.code("python apps/paper_trading.py", language="bash")
         return
 
     # Render status card

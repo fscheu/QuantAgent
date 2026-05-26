@@ -78,6 +78,12 @@ def _parse_args() -> argparse.Namespace:
         help="Lookback window (hours) override for data pulls",
     )
     parser.add_argument(
+        "--environment",
+        type=str,
+        default=None,
+        help="Trading environment override: paper, backtest, prod (default: from env/settings)",
+    )
+    parser.add_argument(
         "--enable",
         action="store_true",
         help="Force-enable scheduler even if env flag is off",
@@ -109,6 +115,8 @@ def _apply_overrides(args: argparse.Namespace) -> settings.SchedulerSettings:
         overrides["lookback_hours"] = args.lookback_hours
     if args.enable:
         overrides["enabled"] = True
+    if args.environment is not None:
+        overrides["environment"] = args.environment
 
     config = settings.scheduler
     if overrides:
