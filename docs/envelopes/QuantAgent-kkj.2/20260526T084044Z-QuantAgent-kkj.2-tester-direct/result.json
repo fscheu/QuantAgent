@@ -1,0 +1,49 @@
+{
+  "run_id": "20260526T084044Z-QuantAgent-kkj.2-tester-direct",
+  "phase": "tester",
+  "skill": "autodev-tester",
+  "executor": "tech-lead-direct-salvage",
+  "status": "SUCCESS",
+  "repo_path": "/tmp/autodev-worktrees/quantagent-main-clean-20260526T080519Z/QuantAgent-kkj.2/implementer-20260526T081415Z",
+  "beads_issue_id": "QuantAgent-kkj.2",
+  "branch": "feature/QuantAgent-kkj.2-agregar-controles-de-scheduler-paper-tra",
+  "worktree_path": "/tmp/autodev-worktrees/quantagent-main-clean-20260526T080519Z/QuantAgent-kkj.2/implementer-20260526T081415Z",
+  "started_at": "2026-05-26T08:40:44Z",
+  "finished_at": "2026-05-26T08:40:44Z",
+  "tests_changed": [
+    "tests/test_paper_trading_controls.py",
+    "tests/test_paper_trading_cli.py"
+  ],
+  "quality_gates": [
+    {
+      "name": "ruff",
+      "status": "PASS"
+    },
+    {
+      "name": "compileall",
+      "status": "PASS"
+    },
+    {
+      "name": "pytest",
+      "status": "PASS",
+      "evidence": "40 passed"
+    }
+  ],
+  "acs_covered": [
+    "AT-01",
+    "AT-02",
+    "AT-03",
+    "AT-04"
+  ],
+  "acs_manual_only": [
+    "MV-01",
+    "MV-02",
+    "MV-03",
+    "MV-04",
+    "MV-05",
+    "MV-06",
+    "MV-07"
+  ],
+  "issues": [],
+  "next_step": "integrate-with-gaps"
+}
