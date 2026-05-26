@@ -36,7 +36,26 @@ scheduler = SchedulerSettings(
 
 ---
 
-## Starting the Scheduler
+## Starting and Stopping from the UI
+
+> **Added in QuantAgent-kkj.2.** This is the recommended way to operate the scheduler.
+
+Open the **Paper Trading** tab in the Streamlit dashboard. The **Scheduler Controls** section appears at the top of the page:
+
+1. **Start Scheduler** — expand the panel and configure:
+   - **Assets**: comma-separated symbols to trade (e.g., `BTC,SPX,QQQ`).
+   - **Mode**: *Single cycle* runs one analysis pass and exits; *Continuous* keeps the APScheduler loop running on the chosen interval.
+   - **Interval** (continuous only): how often to repeat, in hours (minimum 0.25 h = 15 min).
+   - Click **▶ Start**. The button is disabled while a scheduler process is already running.
+2. **Stop** — click **■ Stop** to send SIGTERM to the running process. The UI waits up to 2 seconds for a graceful shutdown, then sends SIGKILL if needed. The button is disabled when no process is running.
+
+The dashboard refreshes automatically (via `st.rerun()`) 1–2 seconds after each action so the status indicators update without a manual browser reload.
+
+> **How it works:** the UI launches `apps/paper_trading.py` as a detached subprocess and persists its PID in `/tmp/quantagent_scheduler.pid`. The PID file survives Streamlit server restarts; a stale PID (process gone) is detected before any action is taken.
+
+---
+
+## Starting the Scheduler (CLI — alternative)
 
 Run the dedicated entry point once your virtual environment is active:
 
@@ -47,11 +66,14 @@ python apps/paper_trading.py
 Optional CLI overrides:
 
 ```bash
-python apps/paper_trading.py --interval 2 --assets BTC,SPX,CL
+python apps/paper_trading.py --interval-hours 2 --assets BTC,SPX,CL --environment paper --enable
 ```
 
-- `--interval` overrides `interval_hours` on the fly (value is in hours; `0.5` = every 30 minutes).
+- `--interval-hours` overrides the scheduler interval (value is in hours; `0.5` = every 30 minutes).
 - `--assets` accepts a comma-separated list. Whitespace is ignored and duplicates are removed before the run begins.
+- `--environment` sets the trading environment (default: `paper`).
+- `--enable` force-enables the scheduler even if the `TRADING_SCHEDULER_ENABLED` env flag is off.
+- `--run-once` runs a single analysis cycle and exits immediately.
 
 When the process starts youll see logs similar to:
 
@@ -111,7 +133,7 @@ For a deeper checklist, follow the updated [Monitoring Guide](monitoring.md#pape
 |---------|--------------|-----|
 | `ValueError: interval_hours must be > 0` | Config typo | Update `settings.scheduler.interval_hours` or CLI value to a positive float |
 | `ValueError: assets list cannot be empty` | Assets not set after CLI override | Provide at least one supported symbol (BTC, SPX, CL, DAX, ES, NQ, QQQ, GC, VIX, DXY) |
-| Scheduler indicator shows **Stopped** | Process crashed or was never started | Check terminal logs, restart `python apps/paper_trading.py` |
+| Scheduler indicator shows **Stopped** | Process crashed or was never started | Use the **▶ Start** button in the Paper Trading tab, or restart via `python apps/paper_trading.py --enable` |
 | Paper Trading status shows **Stuck** | A `running` heartbeat was never completed | Inspect recent runs and logs, then restart the scheduler if the process is no longer advancing |
 | Paper Trading status shows **Error** | The last cycle failed fatally | Read the `Last runtime issue` warning first, then use the Logs tab filtered to `paper` for root cause details |
 | Orders missing from dashboard | Environment filtering | Confirm the Orders tab filter includes `paper`, and that the scheduler log shows successful executions |

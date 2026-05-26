@@ -1,0 +1,3 @@
+ruff check --fix tests/test_paper_trading_controls.py tests/test_paper_trading_cli.py
+python -m compileall -q tests/test_paper_trading_controls.py tests/test_paper_trading_cli.py
+pytest tests/test_vje_paper_trading_view.py tests/test_paper_trading_controls.py tests/test_paper_trading_cli.py -q
