@@ -7,6 +7,14 @@ def read_workflow() -> str:
     return WORKFLOW_PATH.read_text(encoding="utf-8")
 
 
+def test_push_trigger_ignores_docs_and_beads_only_commits():
+    workflow = read_workflow()
+
+    assert "paths-ignore:" in workflow
+    assert "- 'docs/**'" in workflow
+    assert "- '.beads/**'" in workflow
+
+
 def test_healthcheck_and_validator_target_use_streamlit_runtime_8501():
     workflow = read_workflow()
 

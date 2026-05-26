@@ -3,6 +3,9 @@ name: Main CI + Deploy QA
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '.beads/**'
   workflow_dispatch:
 
 env:
