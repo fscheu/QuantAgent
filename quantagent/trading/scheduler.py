@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import inspect
 import logging
 from datetime import datetime, timedelta
-import inspect
 from typing import Callable, Dict, Optional
 
 import pandas as pd
