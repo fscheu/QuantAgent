@@ -1,0 +1,18 @@
+{
+  "run_id": "20260526T074618Z-QuantAgent-kkj.8-techlead-integration",
+  "issue_id": "QuantAgent-kkj.8",
+  "phase": "tech_lead_integration",
+  "decision": "MERGE_TO_MAIN",
+  "status": "SUCCESS",
+  "feature_branch": "feature/QuantAgent-kkj.8-crear-strategy-registry-y-parametrizar-s",
+  "integration_branch": "integration/QuantAgent-kkj.8-20260526T074618Z",
+  "merge_strategy": "--no-ff",
+  "conflict_status": "clean",
+  "tests": [
+    "python3 -m ruff check quantagent/strategy/__init__.py quantagent/strategy/base.py quantagent/strategy/registry.py quantagent/strategy/rsi_strategy.py quantagent/strategy/fifty_two_week_high_strategy.py quantagent/strategy/triple_screen_strategy.py quantagent/strategy/llm_agent_strategy.py quantagent/trading/scheduler.py tests/test_strategy_registry.py",
+    "python3 -m pytest tests/test_strategy_registry.py -v",
+    "python3 -m compileall -q quantagent/strategy quantagent/trading/scheduler.py tests/test_strategy_registry.py"
+  ],
+  "user_manual": "skipped_internal_only",
+  "recommended_next_step": "push_and_observe_ci"
+}

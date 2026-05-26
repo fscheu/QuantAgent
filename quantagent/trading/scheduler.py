@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import logging
 from datetime import datetime, timedelta
 from typing import Callable, Dict, Optional
@@ -16,6 +17,7 @@ from quantagent.data.provider import DataProvider
 from quantagent.models import Environment, SchedulerHeartbeat, Signal, Trade, TradeSignal
 from quantagent.static_util import format_ohlcv_for_agents
 from quantagent.strategy.base import TradingSignal as StrategyTradingSignal
+from quantagent.strategy.base import TradingStrategy
 from quantagent.strategy.llm_agent_strategy import LLMAgentStrategy
 from quantagent.trading.order_manager import OrderManager
 from quantagent.trading.position_monitor import PositionMonitor
@@ -54,7 +56,7 @@ class TradingScheduler:
         db_session: Session,
         scheduler_settings: Optional[settings.SchedulerSettings] = None,
         scheduler_factory: Optional[Callable[[], BackgroundScheduler]] = None,
-        strategy: Optional[LLMAgentStrategy] = None,
+        strategy: Optional[TradingStrategy] = None,
     ) -> None:
         self.trading_graph = trading_graph
         self.order_manager = order_manager
@@ -62,7 +64,9 @@ class TradingScheduler:
         self.db = db_session
         self.config = scheduler_settings or settings.scheduler
         self.environment = Environment(self.config.environment)
-        self.strategy = strategy or LLMAgentStrategy(self.trading_graph)
+        self.strategy = strategy if strategy is not None else LLMAgentStrategy(
+            self.trading_graph
+        )
 
         # Initialize PositionMonitor for tracking active positions
         self.position_monitor = PositionMonitor(
@@ -288,13 +292,24 @@ class TradingScheduler:
         thread_id = self._make_thread_id(symbol)
 
         try:
-            signal = self.strategy.generate_signal(
-                kline_data,
-                symbol,
-                self.config.timeframe,
-                current_price,
-                thread_id=thread_id,
-            )
+            generate_signal_params = inspect.signature(
+                self.strategy.generate_signal
+            ).parameters
+            if "thread_id" in generate_signal_params:
+                signal = self.strategy.generate_signal(
+                    kline_data,
+                    symbol,
+                    self.config.timeframe,
+                    current_price,
+                    thread_id=thread_id,
+                )
+            else:
+                signal = self.strategy.generate_signal(
+                    kline_data,
+                    symbol,
+                    self.config.timeframe,
+                    current_price,
+                )
         except Exception as exc:  # pragma: no cover - strategy errors
             raise AnalysisError(str(exc)) from exc
 

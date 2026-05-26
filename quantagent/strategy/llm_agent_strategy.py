@@ -15,6 +15,15 @@ class LLMAgentStrategy(TradingStrategy):
     Does not re-evaluate positions once opened.
     """
 
+    @classmethod
+    def describe(cls) -> Dict[str, str]:
+        return {
+            "name": cls.__name__,
+            "display_name": "LLM Agent",
+            "type": "llm",
+            "description": "Multi-agent LangGraph strategy backed by an LLM pipeline.",
+        }
+
     def __init__(self, trading_graph):
         """
         Initialize LLM Agent Strategy.

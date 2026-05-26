@@ -18,6 +18,15 @@ class FiftyTwoWeekHighStrategy(TradingStrategy):
     All parameters are for daily OHLCV data.
     """
 
+    @classmethod
+    def describe(cls) -> Dict[str, str]:
+        return {
+            "name": cls.__name__,
+            "display_name": "52-Week High Momentum",
+            "type": "deterministic",
+            "description": "Long-only breakout strategy with trend and volume confirmation.",
+        }
+
     def __init__(
         self,
         lookback_days: int = 252,

@@ -68,6 +68,16 @@ class TradingStrategy(ABC):
         """
         pass
 
+    @classmethod
+    def describe(cls) -> Dict[str, str]:
+        """Return basic strategy metadata for registries and UIs."""
+        return {
+            "name": cls.__name__,
+            "display_name": cls.__name__,
+            "type": "unknown",
+            "description": "",
+        }
+
     def should_exit(
         self,
         position: ActivePosition,

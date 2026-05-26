@@ -18,6 +18,15 @@ class RSIMeanReversionStrategy(TradingStrategy):
     - HOLD otherwise
     """
 
+    @classmethod
+    def describe(cls) -> Dict[str, str]:
+        return {
+            "name": cls.__name__,
+            "display_name": "RSI Mean Reversion",
+            "type": "deterministic",
+            "description": "Buys oversold RSI and sells overbought RSI extremes.",
+        }
+
     def __init__(
         self,
         rsi_period: int = 14,
