@@ -23,6 +23,7 @@ The files listed above represent the current functional requirements for the sys
 
 ## Active Per-Change Requirements
 
+- [QuantAgent-kkj.11-RQ-multi-provider-routing.md](./QuantAgent-kkj.11-RQ-multi-provider-routing.md) - Multi-provider routing by role for cost-efficient strategies (configuration, cost, llm)
 - [QuantAgent-s62-RQ-operational-observability.md](./QuantAgent-s62-RQ-operational-observability.md) - Extend minimal operational observability in dashboard and logs for paper trading (M2)
 - [QuantAgent-69d-RQ-token-time-metrics.md](./QuantAgent-69d-RQ-token-time-metrics.md) - Track LLM token usage and runtime metrics for session/backtest cost analysis
 - [QuantAgent-vna-RQ-triple-screen-strategy.md](./QuantAgent-vna-RQ-triple-screen-strategy.md) - M1 Strategy 1: Triple Screen Strategy (Alexander Elder)

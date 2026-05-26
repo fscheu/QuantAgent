@@ -20,6 +20,7 @@ The roadmap files represent the current development phases and priorities. When 
 
 ## Active Per-Change Planning
 
+- [QuantAgent-kkj.11-PL-multi-provider-routing.md](./QuantAgent-kkj.11-PL-multi-provider-routing.md) - Multi-provider routing by role: 5-phase implementation plan (configuration, cost, llm)
 - [QuantAgent-s62-PL-operational-observability.md](./QuantAgent-s62-PL-operational-observability.md) - Wire existing heartbeat + telemetry primitives into Streamlit dashboard and logs for paper trading observability (M2)
 - [QuantAgent-69d-PL-token-time-metrics.md](./QuantAgent-69d-PL-token-time-metrics.md) - Minimal implementation plan for LLM token/runtime telemetry using existing logs
 - [QuantAgent-40j-PL-parallel-test-fix.md](./QuantAgent-40j-PL-parallel-test-fix.md) - Fix missing benchmark fixture for parallel execution test (P1, blocks 82t)

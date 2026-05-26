@@ -20,6 +20,7 @@ Acceptance test documents define the criteria for validating that features work 
 
 ## Active Per-Change Acceptance Criteria
 
+- [QuantAgent-kkj.11-AC-multi-provider-routing.md](./QuantAgent-kkj.11-AC-multi-provider-routing.md) - 13 acceptance criteria for multi-provider routing: registry, role resolution, fallback, backward compat, persistence, traceability (configuration, cost, llm)
 - [QuantAgent-s62-AC-operational-observability.md](./QuantAgent-s62-AC-operational-observability.md) - Acceptance criteria for paper trading observability: scheduler status, positions/PnL, LLM telemetry, env filter in logs
 - [QuantAgent-69d-AC-token-time-metrics.md](./QuantAgent-69d-AC-token-time-metrics.md) - Acceptance criteria for LLM token/runtime telemetry persistence and isolation
 - [QuantAgent-uzq-AC-fix-scheduler-heartbeat.md](./QuantAgent-uzq-AC-fix-scheduler-heartbeat.md) - Fix TradingScheduler heartbeat and scheduler unit-test regressions exposed by CI gate (P1, blocks 82t)
