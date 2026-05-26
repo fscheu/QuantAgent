@@ -1,0 +1,68 @@
+## commands.log — QuantAgent-kkj.9 planner run
+
+Run-ID: 20260526T150428Z-QuantAgent-kkj.9-planner
+Date: 2026-05-26
+
+---
+
+### Preflight
+
+```
+git status --short
+# output: ?? docs/envelopes/QuantAgent-kkj.9/  (run-owned, allowed)
+git branch --show-current
+# output: main
+```
+
+### Source reads
+
+- Read /tmp/quantagent-techlead-20260526T150148Z/AGENTS.md
+- Read /tmp/quantagent-techlead-20260526T150148Z/CLAUDE.md
+- Read docs/envelopes/QuantAgent-kkj.9/.../issue.json
+- Read docs/01_requirements/README.md
+- Read docs/02_planning/README.md
+- Read docs/05_acceptance_tests/README.md
+- Read apps/streamlit/views/backtesting.py
+- Read apps/streamlit/views/paper_trading.py
+- Read apps/streamlit/views/configuration.py
+- Glob quantagent/strategy/*.py
+- Read quantagent/strategy/registry.py
+- Read quantagent/strategy/base.py
+- Glob apps/paper_trading.py
+- Read quantagent/trading/scheduler.py (lines 1–80)
+- Read apps/paper_trading.py (full)
+
+### Artifacts written
+
+- docs/01_requirements/QuantAgent-kkj.9-RQ-strategy-selector-ui.md (new)
+- docs/02_planning/QuantAgent-kkj.9-PL-strategy-selector-ui.md (new)
+- docs/05_acceptance_tests/QuantAgent-kkj.9-AC-strategy-selector-ui.md (new)
+- docs/01_requirements/README.md (updated — added kkj.9 entry)
+- docs/02_planning/README.md (updated — added kkj.9 entry)
+- docs/05_acceptance_tests/README.md (updated — added kkj.9 entry)
+
+### Quality gates
+
+```
+git status --short
+# output shows only expected modified/untracked files
+
+python -m compileall -q .
+# (optional gate — skipped; no code files changed)
+```
+
+### Beads comment
+
+Added via /usr/bin/bd comment QuantAgent-kkj.9 "..."
+
+### Commit
+
+git add docs/01_requirements/README.md docs/01_requirements/QuantAgent-kkj.9-RQ-strategy-selector-ui.md \
+        docs/02_planning/README.md docs/02_planning/QuantAgent-kkj.9-PL-strategy-selector-ui.md \
+        docs/05_acceptance_tests/README.md docs/05_acceptance_tests/QuantAgent-kkj.9-AC-strategy-selector-ui.md \
+        docs/envelopes/QuantAgent-kkj.9/ .beads/issues.jsonl
+
+git commit -m "feat(QuantAgent-kkj.9): planner — strategy selector UI planning docs"
+
+git push origin main
+```

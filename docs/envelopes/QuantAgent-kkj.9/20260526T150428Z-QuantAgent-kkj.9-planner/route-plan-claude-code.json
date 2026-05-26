@@ -1,0 +1,47 @@
+{
+  "run_id": "20260526T150428Z-QuantAgent-kkj.9-planner",
+  "created_at": "2026-05-26T15:04:28.663390+00:00",
+  "executor": "claude-code",
+  "phase": "planner",
+  "issue_id": "QuantAgent-kkj.9",
+  "dry_run": false,
+  "adapter": {
+    "command_name": "claude",
+    "available": true,
+    "requires_pty": false,
+    "output_mode": "json",
+    "max_turns": null
+  },
+  "paths": {
+    "envelope": "/tmp/quantagent-techlead-20260526T150148Z/docs/envelopes/QuantAgent-kkj.9/20260526T150428Z-QuantAgent-kkj.9-planner/input-envelope.md",
+    "prompt": "/tmp/quantagent-techlead-20260526T150148Z/docs/envelopes/QuantAgent-kkj.9/20260526T150428Z-QuantAgent-kkj.9-planner/executor-prompt-claude-code.md",
+    "artifacts_dir": "/tmp/quantagent-techlead-20260526T150148Z/docs/envelopes/QuantAgent-kkj.9/20260526T150428Z-QuantAgent-kkj.9-planner",
+    "workdir": "/tmp/quantagent-techlead-20260526T150148Z",
+    "run_report": "/tmp/quantagent-techlead-20260526T150148Z/docs/envelopes/QuantAgent-kkj.9/20260526T150428Z-QuantAgent-kkj.9-planner/run-report.md",
+    "result_json": "/tmp/quantagent-techlead-20260526T150148Z/docs/envelopes/QuantAgent-kkj.9/20260526T150428Z-QuantAgent-kkj.9-planner/result.json",
+    "commands_log": "/tmp/quantagent-techlead-20260526T150148Z/docs/envelopes/QuantAgent-kkj.9/20260526T150428Z-QuantAgent-kkj.9-planner/commands.log",
+    "quality_gates_log": "/tmp/quantagent-techlead-20260526T150148Z/docs/envelopes/QuantAgent-kkj.9/20260526T150428Z-QuantAgent-kkj.9-planner/quality-gates.log"
+  },
+  "environment": {
+    "shared_venv": "",
+    "shared_python": "/home/azureuser/.local/share/uv/python/cpython-3.11.14-linux-x86_64-gnu/bin/python3.11"
+  },
+  "selection_policy": {
+    "auto": true,
+    "phase": "planner",
+    "priority": [
+      "claude-code",
+      "codex",
+      "opencode"
+    ],
+    "source": "default:phase:planner",
+    "env_var": null
+  },
+  "command_preview": "claude -p \"$(cat /tmp/quantagent-techlead-20260526T150148Z/docs/envelopes/QuantAgent-kkj.9/20260526T150428Z-QuantAgent-kkj.9-planner/executor-prompt-claude-code.md)\" --output-format json --allowedTools Read,Edit,Write,Bash",
+  "notes": [
+    "Execution mode invokes the external CLI in the resolved execution workspace.",
+    "Codex command is wrapped with script(1) for pseudo-tty when executed by this router.",
+    "During migration, merge/deploy/external messaging remain blocked by validation.",
+    "Planner git push is allowed only when the envelope explicitly enables canonical publication on the declared publication branch."
+  ]
+}
