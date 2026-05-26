@@ -1,0 +1,90 @@
+{
+  "run_id": "20260526T150428Z-QuantAgent-kkj.9-planner",
+  "phase": "planner",
+  "skill": "autodev-planner",
+  "executor": "claude-code",
+  "status": "SUCCESS",
+  "dry_run": false,
+  "execution_performed": true,
+  "repo_path": "/tmp/quantagent-techlead-20260526T150148Z",
+  "beads_issue_id": "QuantAgent-kkj.9",
+  "branch": "main",
+  "publication_branch": "main",
+  "worktree_path": "/tmp/quantagent-techlead-20260526T150148Z",
+  "started_at": "2026-05-26T15:04:28.565092+00:00",
+  "finished_at": "2026-05-26T15:10:16.820295+00:00",
+  "files_changed": [],
+  "docs_changed": [],
+  "tests_changed": [],
+  "commits": [],
+  "quality_gates": [
+    {
+      "name": "router validation",
+      "command": "validate envelope + capabilities",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "Envelope parsed and dangerous capabilities rejected."
+    },
+    {
+      "name": "executor availability",
+      "command": "which claude",
+      "status": "PASS",
+      "exit_code": 0,
+      "evidence": "available=True"
+    },
+    {
+      "name": "executor run",
+      "command": "claude -p \"$(cat /tmp/quantagent-techlead-20260526T150148Z/docs/envelopes/QuantAgent-kkj.9/20260526T150428Z-QuantAgent-kkj.9-planner/executor-prompt-claude-code.md)\" --output-format json --allowedTools Read,Edit,Write,Bash",
+      "status": "SUCCESS",
+      "exit_code": 0,
+      "evidence": "exit_code=0"
+    }
+  ],
+  "selection_policy": {
+    "auto": true,
+    "phase": "planner",
+    "priority": [
+      "claude-code",
+      "codex",
+      "opencode"
+    ],
+    "source": "default:phase:planner",
+    "env_var": null
+  },
+  "execution_attempts": [
+    {
+      "executor": "claude-code",
+      "available": true,
+      "phase": "planner",
+      "selection_source": "default:phase:planner",
+      "reason": "selected first available candidate",
+      "result_json_source": "/tmp/quantagent-techlead-20260526T150148Z/docs/envelopes/QuantAgent-kkj.9/20260526T150428Z-QuantAgent-kkj.9-planner/result.json",
+      "status": "SUCCESS",
+      "exit_code": 0,
+      "error": null
+    }
+  ],
+  "beads_comment_added": false,
+  "beads_labels_changed": [],
+  "artifacts": [
+    "input-envelope.md",
+    "executor-prompt-claude-code.md",
+    "route-plan-claude-code.json",
+    "commands.log",
+    "quality-gates.log",
+    "result.json",
+    "run-report.md",
+    "executor-stdout-claude-code.log"
+  ],
+  "executor_result_json_source": "/tmp/quantagent-techlead-20260526T150148Z/docs/envelopes/QuantAgent-kkj.9/20260526T150428Z-QuantAgent-kkj.9-planner/result.json",
+  "risks": [],
+  "open_questions": [],
+  "next_step": "implementer",
+  "router_output_legacy": "router-output-claude-code.md",
+  "planning_readiness": {
+    "context_clear": true,
+    "acceptance_verifiable": true,
+    "scope_out_defined": true,
+    "implementation_ready": true
+  }
+}

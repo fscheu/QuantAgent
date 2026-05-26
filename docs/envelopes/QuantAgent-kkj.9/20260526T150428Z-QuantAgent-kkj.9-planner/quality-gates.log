@@ -1,28 +1,3 @@
-## quality-gates.log — QuantAgent-kkj.9 planner run
-
-Run-ID: 20260526T150428Z-QuantAgent-kkj.9-planner
-
----
-
-### REQUIRED GATES
-
-| Gate | Status | Evidence |
-|---|---|---|
-| `git status --short` | PASS | Only run-owned and new docs files dirty; no unrelated changes |
-| verify issue ID appears in docs paths | PASS | All artifact filenames contain `QuantAgent-kkj.9` |
-| verify acceptance criteria are testable | PASS | 11 AC items in Given/When/Then format with test function stubs |
-| confirm repo is clean before canonical planner publication | PASS | Only expected files staged for commit |
-| confirm current branch matches canonical publication branch | PASS | Branch = `main`; publication_branch = `main` |
-
-### OPTIONAL GATES
-
-| Gate | Status | Evidence |
-|---|---|---|
-| `python -m compileall -q .` | SKIPPED | No Python code files modified in this planner phase |
-
-### Notes
-
-- `QuantAgent-kkj.8` (strategy registry) is confirmed closed; `quantagent/strategy/registry.py` exists and is importable.
-- `apps/paper_trading.py` confirmed to NOT yet have `--strategy` / `--strategy-params` args — this is a required implementation step (FR-4).
-- `TradingScheduler.__init__` already accepts `strategy: Optional[TradingStrategy]` — no scheduler changes needed.
-- Session state key `default_strategy` does not yet exist in any view — implementer must add `setdefault` calls to all three views.
+- router validation: PASS | command=validate envelope + capabilities | exit_code=0 | evidence=Envelope parsed and dangerous capabilities rejected.
+- executor availability: PASS | command=which claude | exit_code=0 | evidence=available=True
+- executor run: SUCCESS | command=claude -p "$(cat /tmp/quantagent-techlead-20260526T150148Z/docs/envelopes/QuantAgent-kkj.9/20260526T150428Z-QuantAgent-kkj.9-planner/executor-prompt-claude-code.md)" --output-format json --allowedTools Read,Edit,Write,Bash | exit_code=0 | evidence=exit_code=0
