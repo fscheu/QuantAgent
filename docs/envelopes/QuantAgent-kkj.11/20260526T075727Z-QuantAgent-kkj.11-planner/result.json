@@ -1,0 +1,17 @@
+{
+  "run_id": "20260526T075727Z-QuantAgent-kkj.11-planner",
+  "issue_id": "QuantAgent-kkj.11",
+  "phase": "planner",
+  "status": "BLOCKED",
+  "failure_class": "GIT_PREFLIGHT_DIRTY_OR_DIVERGED",
+  "failure_subclass": "publication_branch_not_checked_out",
+  "executor": "auto",
+  "selection_policy": "planner => claude-code -> codex -> opencode",
+  "execution_performed": false,
+  "summary": [
+    "Planner publication requires generation from branch 'main'.",
+    "Current clean worktree was on integration/QuantAgent-kkj.8-20260526T074618Z, so router refused execute mode.",
+    "Root main checkout remains dirty from older untracked artifacts, so planner publication was not safe to reroute there inside this cron."
+  ],
+  "recommended_next_step": "rerun_planner_from_clean_main_checkout"
+}
