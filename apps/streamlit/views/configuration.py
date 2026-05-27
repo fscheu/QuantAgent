@@ -7,6 +7,7 @@ import pandas as pd
 import streamlit as st
 
 from quantagent.data.provider import DataProvider
+from quantagent.strategy.registry import get_strategy_names
 
 SUPPORTED_UNIVERSE_SYMBOLS: List[str] = list(DataProvider.SYMBOL_MAPPING.keys())
 
@@ -58,6 +59,7 @@ def render(db, environment: str) -> None:
         },
     )
     st.session_state.setdefault("default_profiles", {"paper": None, "backtest": None})
+    st.session_state.setdefault("default_strategy", {"paper": None, "backtest": None})
 
     # Profile editor
     colL, colR = st.columns([2, 1])
@@ -210,6 +212,32 @@ def render(db, environment: str) -> None:
                 )
                 st.success(
                     f"Default for {env_key} set to {st.session_state.default_profiles[env_key]}"
+                )
+
+        st.markdown("**Strategy Defaults**")
+        strategy_names = ["(none)"] + get_strategy_names()
+        for env_key in ("paper", "backtest"):
+            current_strategy = st.session_state.default_strategy.get(env_key) or "(none)"
+            chosen_strategy = st.selectbox(
+                f"{env_key.title()} default strategy",
+                strategy_names,
+                index=(
+                    strategy_names.index(current_strategy)
+                    if current_strategy in strategy_names
+                    else 0
+                ),
+                key=f"default_strategy_{env_key}",
+            )
+            if st.button(
+                f"Set {env_key} strategy default",
+                key=f"btn_default_strategy_{env_key}",
+            ):
+                st.session_state.default_strategy[env_key] = (
+                    None if chosen_strategy == "(none)" else chosen_strategy
+                )
+                st.success(
+                    "Strategy default for "
+                    f"{env_key} set to {st.session_state.default_strategy[env_key]}"
                 )
 
         st.markdown("**Model presets**")

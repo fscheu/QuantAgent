@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import signal
 import subprocess
@@ -12,6 +13,8 @@ from pathlib import Path
 from typing import Optional
 
 import streamlit as st
+
+from quantagent.strategy.registry import STRATEGY_REGISTRY, get_strategy_names
 
 # PID file shared between Streamlit reruns (survives brief server restarts)
 _PID_FILE = Path("/tmp/quantagent_scheduler.pid")
@@ -50,12 +53,21 @@ def _clear_pid() -> None:
         pass
 
 
-def _launch_subprocess(assets_str: str, mode: str, interval_hours: float, environment: str) -> None:
+def _launch_subprocess(
+    assets_str: str,
+    mode: str,
+    interval_hours: float,
+    environment: str,
+    strategy: str,
+    strategy_params: dict,
+) -> None:
     cmd = [
         sys.executable,
         str(_REPO_ROOT / "apps" / "paper_trading.py"),
         "--environment", environment,
         "--assets", assets_str,
+        "--strategy", strategy,
+        "--strategy-params", json.dumps(strategy_params),
         "--enable",
     ]
     if mode == "Single cycle":
@@ -93,6 +105,17 @@ def _render_scheduler_controls(db, environment: str) -> None:
     hb = db.get_latest_heartbeat(environment)
     hb_running = bool(hb and hb.get("status") == "running")
     scheduler_running = is_alive and hb_running
+    st.session_state.setdefault("default_strategy", {"paper": None, "backtest": None})
+
+    strategy_names = get_strategy_names()
+    default_strategy = st.session_state.default_strategy.get("paper")
+    if (
+        "sc_strategy_key" not in st.session_state
+        or st.session_state.sc_strategy_key not in strategy_names
+    ):
+        st.session_state.sc_strategy_key = (
+            default_strategy if default_strategy in strategy_names else "LLMAgentStrategy"
+        )
 
     st.subheader("Scheduler Controls")
 
@@ -107,11 +130,48 @@ def _render_scheduler_controls(db, environment: str) -> None:
                 "Interval (hours)", min_value=0.25, value=1.0, step=0.25, key="sc_interval"
             )
 
+        strategy_key = st.selectbox(
+            "Estrategia",
+            strategy_names,
+            index=(
+                strategy_names.index(st.session_state.sc_strategy_key)
+                if st.session_state.sc_strategy_key in strategy_names
+                else 0
+            ),
+            key="sc_strategy_selector",
+        )
+        st.session_state.sc_strategy_key = strategy_key
+
+        strategy_info = STRATEGY_REGISTRY[strategy_key]
+        strategy_params = {}
+        for param_key, param_spec in strategy_info.get("params", {}).items():
+            default_value = param_spec.get("default")
+            value = st.number_input(
+                param_key.replace("_", " ").title(),
+                value=default_value,
+                key=f"sc_param_{param_key}",
+                help=param_spec.get("description", ""),
+            )
+            strategy_params[param_key] = (
+                int(value) if param_spec.get("type") is int else value
+            )
+
+        if strategy_info["type"] == "llm":
+            st.info("Estrategia LLM — requiere modelo LLM y consume tokens.")
+
         if scheduler_running:
             st.warning("Scheduler is already running. Stop it before starting a new cycle.")
 
         if st.button("▶ Start", disabled=scheduler_running, key="sc_start"):
-            _launch_subprocess(assets_input, mode, interval_hours, environment)
+            st.session_state["sc_active_strategy"] = strategy_key
+            _launch_subprocess(
+                assets_input,
+                mode,
+                interval_hours,
+                environment,
+                strategy_key,
+                strategy_params,
+            )
             time.sleep(2)
             st.rerun()
 
@@ -345,6 +405,9 @@ def render(db, environment: str) -> None:
     heartbeat = db.get_latest_heartbeat(environment)
 
     if not heartbeat:
+        active_strategy = st.session_state.get("sc_active_strategy")
+        if active_strategy:
+            st.caption(f"Running strategy: **{active_strategy}**")
         st.warning("⚠️ No scheduler heartbeat found")
         st.info(
             f"The scheduler may not be running, or no cycles have completed yet for environment: **{environment}**"
@@ -353,6 +416,9 @@ def render(db, environment: str) -> None:
 
     # Render status card
     _render_status_card(heartbeat)
+    active_strategy = st.session_state.get("sc_active_strategy")
+    if active_strategy:
+        st.caption(f"Running strategy: **{active_strategy}**")
     if heartbeat.get("error_message"):
         st.warning(f"Last runtime issue: {heartbeat['error_message']}")
 

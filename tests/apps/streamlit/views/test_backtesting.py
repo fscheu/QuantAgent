@@ -125,6 +125,7 @@ render(FakeDB([FakeRun(run_id) for run_id in {db_run_ids!r}]), "backtest")
     at.session_state["model_presets"] = {
         "default": {"provider": "openai", "model_name": "gpt-4o-mini", "temperature": 0.1}
     }
+    at.session_state["default_strategy"] = {"paper": None, "backtest": None}
     return at
 
 
@@ -144,3 +145,16 @@ def test_render_keeps_distinct_session_and_db_runs(tmp_path: Path):
 
     df = at.dataframe[0].value
     assert df["id"].tolist() == [1, 2]
+
+
+def test_backtesting_strategy_selector_uses_default_from_session(tmp_path: Path):
+    at = _build_app_test(tmp_path, [])
+    at.session_state["default_strategy"] = {
+        "paper": None,
+        "backtest": "TripleScreenStrategy",
+    }
+
+    at.run()
+
+    strategy_selector = next(widget for widget in at.selectbox if widget.label == "Estrategia")
+    assert strategy_selector.value == "TripleScreenStrategy"

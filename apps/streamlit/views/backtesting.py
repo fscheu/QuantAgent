@@ -54,6 +54,7 @@ def render(db, environment: str) -> None:
             }
         },
     )
+    st.session_state.setdefault("default_strategy", {"paper": None, "backtest": None})
 
     autorefresh_fn = getattr(st, "autorefresh", None)
     if callable(autorefresh_fn):
@@ -63,7 +64,14 @@ def render(db, environment: str) -> None:
     model_presets = list(st.session_state.model_presets.keys())
     strategy_names = get_strategy_names()
 
-    st.session_state.setdefault("bt_strategy_key", "LLMAgentStrategy")
+    default_strategy = st.session_state.default_strategy.get("backtest")
+    if (
+        "bt_strategy_key" not in st.session_state
+        or st.session_state.bt_strategy_key not in strategy_names
+    ):
+        st.session_state.bt_strategy_key = (
+            default_strategy if default_strategy in strategy_names else "LLMAgentStrategy"
+        )
     st.session_state.setdefault("bt_strategy_params", {})
 
     with st.form("create_backtest"):

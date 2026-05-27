@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import signal
 import sys
@@ -17,6 +18,7 @@ from quantagent.database import SessionLocal
 from quantagent.logging_config import setup_logging
 from quantagent.models import Environment
 from quantagent.strategy.assembler import StrategyAssembler
+from quantagent.strategy.registry import build_strategy
 from quantagent.trading.scheduler import TradingScheduler
 
 logger = logging.getLogger("quantagent.paper_trading")
@@ -31,6 +33,8 @@ def _parse_assets(value: Optional[str]) -> Optional[List[str]]:
 
 def _build_scheduler(
     config: settings.SchedulerSettings,
+    strategy_name: str = "LLMAgentStrategy",
+    strategy_params: Optional[dict] = None,
 ) -> tuple[TradingScheduler, Session]:
     session = SessionLocal()
     try:
@@ -46,6 +50,7 @@ def _build_scheduler(
             data_provider=data_provider,
             db_session=session,
             scheduler_settings=config,
+            strategy=build_strategy(strategy_name, **(strategy_params or {})),
         )
         return scheduler, session
     except Exception:
@@ -89,6 +94,18 @@ def _parse_args() -> argparse.Namespace:
         help="Force-enable scheduler even if env flag is off",
     )
     parser.add_argument(
+        "--strategy",
+        type=str,
+        default="LLMAgentStrategy",
+        help="Strategy name from registry (default: LLMAgentStrategy)",
+    )
+    parser.add_argument(
+        "--strategy-params",
+        type=str,
+        default="{}",
+        help="JSON-encoded dict of strategy constructor params",
+    )
+    parser.add_argument(
         "--run-once",
         action="store_true",
         help="Run a single analysis cycle and exit",
@@ -127,6 +144,7 @@ def _apply_overrides(args: argparse.Namespace) -> settings.SchedulerSettings:
 def main() -> int:
     args = _parse_args()
     config = _apply_overrides(args)
+    strategy_params = json.loads(args.strategy_params or "{}")
 
     setup_logging(environment=config.environment)
     logger.info(
@@ -144,7 +162,11 @@ def main() -> int:
         },
     )
 
-    scheduler, session = _build_scheduler(config)
+    scheduler, session = _build_scheduler(
+        config,
+        strategy_name=args.strategy,
+        strategy_params=strategy_params,
+    )
 
     def _shutdown(sig=None, _frame=None):
         logger.info(

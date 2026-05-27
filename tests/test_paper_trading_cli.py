@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 
 from apps import paper_trading
 
@@ -53,6 +54,27 @@ def test_parse_assets_normalizes_values():
     assert paper_trading._parse_assets(" btc , spx ,, qqq ") == ["BTC", "SPX", "QQQ"]
 
 
+def test_paper_trading_cli_parses_strategy_args(monkeypatch):
+    monkeypatch.setattr(
+        paper_trading.sys,
+        "argv",
+        [
+            "paper_trading.py",
+            "--strategy",
+            "RSIMeanReversionStrategy",
+            "--strategy-params",
+            '{"rsi_period": 10}',
+            "--enable",
+        ],
+    )
+
+    args = paper_trading._parse_args()
+
+    assert args.strategy == "RSIMeanReversionStrategy"
+    assert json.loads(args.strategy_params) == {"rsi_period": 10}
+    assert args.enable is True
+
+
 def test_apply_overrides_includes_environment(monkeypatch):
     fake_scheduler = _FakeConfig()
     monkeypatch.setattr(paper_trading.settings, "scheduler", fake_scheduler)
@@ -92,13 +114,19 @@ def test_main_run_once_executes_single_cycle_and_closes_session(monkeypatch):
             lookback_hours=None,
             environment=None,
             enable=False,
+            strategy="LLMAgentStrategy",
+            strategy_params="{}",
             run_once=True,
             no_immediate=False,
         ),
     )
     monkeypatch.setattr(paper_trading, "_apply_overrides", lambda _args: config)
     monkeypatch.setattr(paper_trading, "setup_logging", lambda **_kwargs: None)
-    monkeypatch.setattr(paper_trading, "_build_scheduler", lambda _config: (scheduler, session))
+    monkeypatch.setattr(
+        paper_trading,
+        "_build_scheduler",
+        lambda _config, strategy_name=None, strategy_params=None: (scheduler, session),
+    )
     monkeypatch.setattr(paper_trading.signal, "signal", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(paper_trading.logger, "info", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(paper_trading.sys, "exit", lambda code=0: (_ for _ in ()).throw(SystemExit(code)))
