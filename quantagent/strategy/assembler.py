@@ -13,6 +13,7 @@ from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
+from quantagent.llm.routing import ProviderRoutingPolicy
 from quantagent.models import Environment
 from quantagent.portfolio.manager import PortfolioManager
 from quantagent.trading.order_manager import OrderManager
@@ -35,6 +36,7 @@ class ResolvedConfig:
     model_name: str
     temperature: float
     use_checkpointing: bool
+    routing_policy: Optional[ProviderRoutingPolicy] = None
     extras: Optional[Dict] = None
 
 
@@ -185,7 +187,10 @@ class StrategyAssembler:
         # }
 
         # graph = TradingGraph(config=graph_cfg, use_checkpointing=resolved.use_checkpointing)
-        graph = TradingGraph(use_checkpointing=resolved.use_checkpointing)
+        graph = TradingGraph(
+            use_checkpointing=resolved.use_checkpointing,
+            routing_policy=resolved.routing_policy,
+        )
 
         return TradingComponents(
             portfolio_manager=pm,
@@ -278,6 +283,9 @@ class StrategyAssembler:
                 "use_checkpointing", StrategyAssembler.DEFAULTS()["use_checkpointing"]
             )
         )
+        routing_policy = merged.get("routing_policy")
+        if isinstance(routing_policy, dict):
+            routing_policy = ProviderRoutingPolicy.from_dict(routing_policy)
 
         return ResolvedConfig(
             environment=environment,
@@ -297,5 +305,6 @@ class StrategyAssembler:
             ),
             temperature=temp,
             use_checkpointing=use_ckpt,
+            routing_policy=routing_policy,
             extras=None,
         )

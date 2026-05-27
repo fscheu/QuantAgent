@@ -1,0 +1,26 @@
+{
+  "run_id": "20260527T180802Z-techlead-direct-fallback",
+  "issue_id": "QuantAgent-kkj.11",
+  "phase": "implementer",
+  "status": "PARTIAL",
+  "failure_class": "EXECUTOR_RUNTIME_ERROR",
+  "failure_subclass": "workspace_path_not_visible_to_executor",
+  "primary_executor": "auto -> codex",
+  "fallback_mode": "tech_lead_direct_execution",
+  "worktree_path": "/tmp/autodev-worktrees/preflight-20260527T174909Z/QuantAgent-kkj.11/implementer",
+  "files_changed": [
+    "quantagent/llm/__init__.py",
+    "quantagent/llm/registry.py",
+    "quantagent/llm/roles.py",
+    "quantagent/llm/routing.py",
+    "quantagent/trading_graph.py",
+    "quantagent/strategy/assembler.py",
+    "tests/test_provider_routing.py"
+  ],
+  "tests": [
+    "/home/azureuser/.hermes/hermes-agent/venv/bin/python -m pytest tests/test_provider_routing.py -v",
+    "/home/azureuser/.hermes/hermes-agent/venv/bin/python -m pytest tests/test_strategy_assembler.py -q",
+    "/home/azureuser/.hermes/hermes-agent/venv/bin/python -m compileall -q quantagent tests"
+  ],
+  "next_step": "continue QuantAgent-kkj.11 on same feature branch with snapshot persistence and UI wiring before tester/integration"
+}
