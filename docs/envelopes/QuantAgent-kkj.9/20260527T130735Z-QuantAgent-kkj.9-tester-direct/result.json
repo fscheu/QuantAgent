@@ -1,0 +1,35 @@
+{
+  "run_id": "20260527T130735Z-QuantAgent-kkj.9-tester-direct",
+  "phase": "tester",
+  "issue_id": "QuantAgent-kkj.9",
+  "status": "SUCCESS",
+  "executor": "tech-lead-direct",
+  "branch": "feature/QuantAgent-kkj.9-agregar-selector-de-estrategia-en-ui-bac",
+  "tests": [
+    {
+      "command": "/home/azureuser/.hermes/hermes-agent/venv/bin/python -m pytest tests/test_paper_trading_controls.py tests/test_paper_trading_cli.py tests/apps/streamlit/views/test_backtesting.py tests/apps/streamlit/views/test_configuration.py -q",
+      "status": "PASS"
+    }
+  ],
+  "quality_gates": [
+    {
+      "command": "/home/azureuser/.hermes/hermes-agent/venv/bin/python -m ruff check --fix apps/paper_trading.py apps/streamlit/views/backtesting.py apps/streamlit/views/paper_trading.py apps/streamlit/views/configuration.py tests/test_paper_trading_cli.py tests/test_paper_trading_controls.py tests/apps/streamlit/views/test_backtesting.py tests/apps/streamlit/views/test_configuration.py",
+      "status": "PASS"
+    },
+    {
+      "command": "/home/azureuser/.hermes/hermes-agent/venv/bin/python -m compileall -q apps/paper_trading.py apps/streamlit/views/backtesting.py apps/streamlit/views/paper_trading.py apps/streamlit/views/configuration.py tests/test_paper_trading_cli.py tests/test_paper_trading_controls.py tests/apps/streamlit/views/test_backtesting.py tests/apps/streamlit/views/test_configuration.py",
+      "status": "PASS"
+    }
+  ],
+  "acs_covered": [
+    "Backtesting expone selector de estrategia con opciones del registry",
+    "Paper Trading envía strategy y strategy_params al scheduler CLI",
+    "Configuration guarda defaults de estrategia en session_state",
+    "Backtesting preselecciona la estrategia default configurada"
+  ],
+  "acs_manual_only": [
+    "Render visual exacto del status card en Streamlit real"
+  ],
+  "issues": [],
+  "recommended_next_step": "integrate"
+}
