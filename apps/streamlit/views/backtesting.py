@@ -6,6 +6,8 @@ from typing import List, Optional
 import pandas as pd
 import streamlit as st
 
+from quantagent.strategy.registry import STRATEGY_REGISTRY, get_strategy_names
+
 
 def _get_universe_from_profile(db, profile_name: Optional[str]) -> List[str]:
     if not profile_name:
@@ -52,6 +54,7 @@ def render(db, environment: str) -> None:
             }
         },
     )
+    st.session_state.setdefault("default_strategy", {"paper": None, "backtest": None})
 
     autorefresh_fn = getattr(st, "autorefresh", None)
     if callable(autorefresh_fn):
@@ -59,6 +62,17 @@ def render(db, environment: str) -> None:
 
     portfolio_options = _collect_portfolio_options(db)
     model_presets = list(st.session_state.model_presets.keys())
+    strategy_names = get_strategy_names()
+
+    default_strategy = st.session_state.default_strategy.get("backtest")
+    if (
+        "bt_strategy_key" not in st.session_state
+        or st.session_state.bt_strategy_key not in strategy_names
+    ):
+        st.session_state.bt_strategy_key = (
+            default_strategy if default_strategy in strategy_names else "LLMAgentStrategy"
+        )
+    st.session_state.setdefault("bt_strategy_params", {})
 
     with st.form("create_backtest"):
         assets_raw = st.text_input(
@@ -67,9 +81,44 @@ def render(db, environment: str) -> None:
         timeframe = st.text_input("Timeframe", value="1h")
         start_date = st.date_input("Start date")
         end_date = st.date_input("End date")
-        model_preset = st.selectbox(
-            "Model preset", model_presets, index=model_presets.index("default")
+
+        strategy_key = st.selectbox(
+            "Estrategia",
+            strategy_names,
+            index=strategy_names.index(st.session_state.bt_strategy_key)
+            if st.session_state.bt_strategy_key in strategy_names
+            else 0,
+            key="bt_strategy_selector",
         )
+        st.session_state.bt_strategy_key = strategy_key
+
+        strategy_info = STRATEGY_REGISTRY[strategy_key]
+        if strategy_info["type"] == "llm":
+            st.warning("⚠️ Esta estrategia requiere LLM y tiene costo de tokens.")
+            model_preset = st.selectbox(
+                "Model preset", model_presets, index=model_presets.index("default")
+            )
+        else:
+            model_preset = None
+
+        strategy_params = {}
+        if "params" in strategy_info and strategy_info["params"]:
+            st.caption("**Parámetros de la estrategia:**")
+            for param_key, param_spec in strategy_info["params"].items():
+                default_val = param_spec.get("default")
+                if param_spec["type"] in (int, float):
+                    val = st.number_input(
+                        param_key.replace("_", " ").title(),
+                        value=float(default_val) if default_val else 0.0,
+                        key=f"bt_param_{param_key}",
+                        help=param_spec.get("description", ""),
+                    )
+                    strategy_params[param_key] = (
+                        int(val) if param_spec["type"] is int else val
+                    )
+                else:
+                    strategy_params[param_key] = default_val
+
         profile_name = st.selectbox(
             "Portfolio profile (for sizing/universe)", [""] + portfolio_options, index=0
         )
@@ -92,6 +141,8 @@ def render(db, environment: str) -> None:
             snapshot = {
                 "environment": environment,
                 "profile": profile_name or None,
+                "strategy": strategy_key,
+                "strategy_params": strategy_params,
                 "model_preset": model_preset,
                 "mode": mode,
                 "artifacts": artifacts_policy,
@@ -129,6 +180,8 @@ def render(db, environment: str) -> None:
                     "timeframe": timeframe,
                     "range_start": str(start_date),
                     "range_end": str(end_date),
+                    "strategy": strategy_key,
+                    "strategy_params": strategy_params,
                     "model_preset": model_preset,
                     "profile": profile_name or None,
                     "mode": mode,

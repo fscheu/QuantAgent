@@ -1,0 +1,13 @@
+{
+  "run_id": "20260527T130957Z-QuantAgent-kkj.9-integration",
+  "phase": "integration",
+  "issue_id": "QuantAgent-kkj.9",
+  "status": "SUCCESS",
+  "decision": "merge",
+  "merge_strategy": "--no-ff",
+  "conflict_status": "clean",
+  "tester_run_id": "20260527T130735Z-QuantAgent-kkj.9-tester-direct",
+  "feature_branch": "feature/QuantAgent-kkj.9-agregar-selector-de-estrategia-en-ui-bac",
+  "deploy": "not_observed",
+  "user_manual": "skipped"
+}
