@@ -7,6 +7,9 @@ import pandas as pd
 import streamlit as st
 
 from quantagent.data.provider import DataProvider
+from quantagent.llm.registry import supported_providers
+from quantagent.llm.roles import ProviderRoleConfig
+from quantagent.llm.routing import ProviderRoutingPolicy
 from quantagent.strategy.registry import get_strategy_names
 
 SUPPORTED_UNIVERSE_SYMBOLS: List[str] = list(DataProvider.SYMBOL_MAPPING.keys())
@@ -55,6 +58,24 @@ def render(db, environment: str) -> None:
                 "provider": "openai",
                 "model_name": "gpt-4o-mini",
                 "temperature": 0.1,
+            }
+        },
+    )
+    st.session_state.setdefault(
+        "provider_routing_presets",
+        {
+            "default": {
+                "deep_reasoning": {
+                    "provider": "openai",
+                    "model_name": "gpt-4o",
+                    "temperature": 0.1,
+                },
+                "lite": {
+                    "provider": "openai",
+                    "model_name": "gpt-4o-mini",
+                    "temperature": 0.1,
+                },
+                "image": None,
             }
         },
     )
@@ -248,7 +269,7 @@ def render(db, environment: str) -> None:
             index=preset_names.index("default") if "default" in preset_names else 0,
         )
         preset = st.session_state.model_presets.get(preset_name, {})
-        provider_options = ["openai", "anthropic", "qwen"]
+        provider_options = supported_providers()
         provider_default = preset.get("provider", "openai")
         provider_index = (
             provider_options.index(provider_default)
@@ -287,3 +308,113 @@ def render(db, environment: str) -> None:
             pd.DataFrame.from_dict(st.session_state.model_presets, orient="index"),
             width='stretch',
         )
+
+        st.markdown("**Provider routing presets**")
+        routing_preset_names = _collect_profiles_from_db(db, "provider_routing") or list(
+            st.session_state.provider_routing_presets.keys()
+        )
+        routing_preset_name = st.selectbox(
+            "Routing preset",
+            routing_preset_names,
+            index=(
+                routing_preset_names.index("default")
+                if "default" in routing_preset_names
+                else 0
+            ),
+            key="routing_preset_name",
+        )
+        routing_payload = _get_profile_json_from_db(db, routing_preset_name) or st.session_state.provider_routing_presets.get(
+            routing_preset_name, {}
+        )
+        routing_policy = ProviderRoutingPolicy.from_dict(routing_payload or {})
+
+        resolved_roles = {}
+        for role_name, role_cfg in {
+            "deep_reasoning": routing_policy.deep_reasoning,
+            "lite": routing_policy.lite,
+            "image": routing_policy.image,
+        }.items():
+            st.caption(role_name.replace("_", " ").title())
+            resolved_roles[role_name] = ProviderRoleConfig(
+                provider=st.selectbox(
+                    f"Provider ({role_name})",
+                    provider_options,
+                    index=(
+                        provider_options.index(role_cfg.provider)
+                        if role_cfg and role_cfg.provider in provider_options
+                        else 0
+                    ),
+                    key=f"routing_provider_{role_name}",
+                ),
+                model_name=st.text_input(
+                    f"Model name ({role_name})",
+                    value=(role_cfg.model_name if role_cfg else ""),
+                    key=f"routing_model_{role_name}",
+                ),
+                temperature=st.slider(
+                    f"Temperature ({role_name})",
+                    0.0,
+                    1.0,
+                    float(role_cfg.temperature if role_cfg else 0.1),
+                    key=f"routing_temp_{role_name}",
+                ),
+            )
+
+        routing_save_name = st.text_input(
+            "Routing save as (name)",
+            value=routing_preset_name,
+            key="routing_preset_save_name",
+        )
+        if st.button("Save routing preset", key="save_provider_routing_preset"):
+            payload = ProviderRoutingPolicy(
+                deep_reasoning=resolved_roles["deep_reasoning"],
+                lite=resolved_roles["lite"],
+                image=resolved_roles["image"] if resolved_roles["image"].model_name else None,
+            ).to_dict()
+            if db.ok:
+                with db.SessionLocal() as s:
+                    existing = (
+                        s.query(db.models.StrategyConfig)
+                        .filter_by(name=routing_save_name)
+                        .one_or_none()
+                    )
+                    if existing:
+                        existing.kind = "provider_routing"
+                        existing.json_config = payload
+                        existing.version = (existing.version or 1) + 1
+                    else:
+                        s.add(
+                            db.models.StrategyConfig(
+                                name=routing_save_name,
+                                kind="provider_routing",
+                                json_config=payload,
+                            )
+                        )
+                    s.commit()
+                st.success(f"Saved routing preset '{routing_save_name}' to database.")
+            else:
+                st.session_state.provider_routing_presets[routing_save_name] = payload
+                st.success(f"Saved routing preset '{routing_save_name}' to session.")
+
+        preview_policy = ProviderRoutingPolicy(
+            deep_reasoning=resolved_roles["deep_reasoning"],
+            lite=resolved_roles["lite"],
+            image=resolved_roles["image"] if resolved_roles["image"].model_name else None,
+        )
+        preview_rows = []
+        for role_name in ("deep_reasoning", "lite", "image"):
+            try:
+                role_cfg = preview_policy.resolve(role_name)
+            except Exception:
+                continue
+            row = {
+                "role": role_name,
+                "provider": role_cfg.provider,
+                "model_name": role_cfg.model_name,
+                "temperature": role_cfg.temperature,
+            }
+            if role_name == "image" and preview_policy.image is None:
+                row["resolved_from"] = "deep_reasoning"
+            preview_rows.append(row)
+        if preview_rows:
+            st.dataframe(pd.DataFrame(preview_rows), width='stretch')
