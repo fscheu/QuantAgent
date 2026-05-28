@@ -1,0 +1,9 @@
+REQUIRED QUALITY GATES:
+[PASS] git status --short: only run-owned files dirty (docs/envelopes/QuantAgent-kkj.4/, .beads/issues.jsonl after comment)
+[PASS] issue ID appears in docs paths: QuantAgent-kkj.4 in RQ, PL, AC filenames
+[PASS] acceptance criteria are testable: 6 ACs with Given/When/Then + shell verification commands
+[PASS] repo clean before canonical planner publication: no unrelated dirty files
+[PASS] current branch matches canonical publication branch: main == main
+
+OPTIONAL QUALITY GATES:
+[PASS] python -m compileall -q apps/streamlit/views/configuration.py: exit 0
