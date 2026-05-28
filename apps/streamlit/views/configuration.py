@@ -61,185 +61,10 @@ def render(db, environment: str) -> None:
     st.session_state.setdefault("default_profiles", {"paper": None, "backtest": None})
     st.session_state.setdefault("default_strategy", {"paper": None, "backtest": None})
 
-    # Profile editor
-    colL, colR = st.columns([2, 1])
-    with colL:
-        kind = st.selectbox("Profile kind", ["portfolio", "risk", "combined"], index=2)
-        name = st.text_input("Profile name", value="default")
+    # Split configuration into two tabs: LLM Settings and Portfolio & Universe
+    tab_llm, tab_portfolio = st.tabs(["LLM Settings", "Portfolio & Universe"])
 
-        existing_json = _get_profile_json_from_db(
-            db, name
-        ) or st.session_state.ui_profiles.get(kind, {}).get(name)
-        raw_default = json.dumps(
-            existing_json
-            or {
-                "universe": ["BTC", "SPX"],
-                "base_position_pct": 0.05,
-                "max_position_pct": 0.1,
-                "max_daily_loss_pct": 0.05,
-            },
-            indent=2,
-        )
-        raw = st.text_area(
-            "Profile JSON", value=raw_default, height=260, key=f"profile_json_{kind}"
-        )
-
-        universe_default: List[str] = []
-        parsed = None
-        try:
-            parsed = json.loads(raw)
-            if isinstance(parsed, dict):
-                universe_default = parsed.get("universe", []) or []
-        except Exception:
-            parsed = None
-        allowed_universe_default = [
-            u for u in universe_default if u in SUPPORTED_UNIVERSE_SYMBOLS
-        ]
-        unsupported_universe = [
-            u for u in universe_default if u not in SUPPORTED_UNIVERSE_SYMBOLS
-        ]
-
-        universe: List[str] = allowed_universe_default
-        if kind == "portfolio":
-            universe = st.multiselect(
-                "Universe (portfolio profiles only)",
-                SUPPORTED_UNIVERSE_SYMBOLS,
-                default=allowed_universe_default,
-            )
-        else:
-            st.caption("Universe editing is available for portfolio profiles only.")
-
-        resolved_universe = (
-            universe if kind == "portfolio" else allowed_universe_default
-        )
-        st.markdown("**Universe preview**")
-        if resolved_universe:
-            st.dataframe(
-                pd.DataFrame({"symbol": resolved_universe}),
-                width='stretch',
-            )
-        else:
-            st.info("No symbols selected for this profile.")
-        if unsupported_universe:
-            st.warning(
-                "Unsupported symbols were ignored: "
-                + ", ".join(sorted(set(unsupported_universe)))
-            )
-
-        if st.button("Save profile"):
-            try:
-                data = json.loads(raw)
-                if kind == "portfolio":
-                    data["universe"] = universe
-                if db.ok:
-                    with db.SessionLocal() as s:
-                        existing = (
-                            s.query(db.models.StrategyConfig)
-                            .filter_by(name=name)
-                            .one_or_none()
-                        )
-                        if existing:
-                            existing.kind = kind
-                            existing.json_config = data
-                            existing.version = (existing.version or 1) + 1
-                        else:
-                            s.add(
-                                db.models.StrategyConfig(
-                                    name=name, kind=kind, json_config=data
-                                )
-                            )
-                        s.commit()
-                    st.success(f"Saved {kind} profile '{name}' to database.")
-                else:
-                    st.session_state.ui_profiles.setdefault(kind, {})[name] = data
-                    st.success(f"Saved {kind} profile '{name}' to session.")
-            except Exception as e:
-                st.error(f"Invalid JSON: {e}")
-
-        st.markdown("**Profiles**")
-        profiles_rows: List[Dict] = []
-        if db.ok:
-            with db.SessionLocal() as s:
-                try:
-                    for cfg in (
-                        s.query(db.models.StrategyConfig)
-                        .order_by(db.models.StrategyConfig.created_at.desc())
-                        .all()
-                    ):
-                        profiles_rows.append(
-                            {
-                                "source": "db",
-                                "kind": cfg.kind,
-                                "name": cfg.name,
-                                "version": cfg.version,
-                                "updated_at": cfg.updated_at,
-                            }
-                        )
-                except Exception as e:  # pragma: no cover - display only
-                    st.info(f"Could not load DB profiles: {e}")
-        for k, d in st.session_state.ui_profiles.items():
-            for n, v in d.items():
-                profiles_rows.append(
-                    {
-                        "source": "session",
-                        "kind": k,
-                        "name": n,
-                        "version": "-",
-                        "updated_at": "-",
-                    }
-                )
-        st.dataframe(pd.DataFrame(profiles_rows), width='stretch')
-
-    with colR:
-        st.markdown("**Defaults per environment**")
-        portfolio_names = _collect_profiles_from_db(db, "portfolio") or list(
-            st.session_state.ui_profiles.get("portfolio", {}).keys()
-        )
-        for env_key in ("paper", "backtest"):
-            options = ["(none)"] + portfolio_names
-            current_default = st.session_state.default_profiles.get(env_key) or "(none)"
-            chosen = st.selectbox(
-                f"{env_key.title()} default portfolio",
-                options,
-                index=(
-                    options.index(current_default) if current_default in options else 0
-                ),
-                key=f"default_{env_key}",
-            )
-            if st.button(f"Set {env_key} default", key=f"btn_default_{env_key}"):
-                st.session_state.default_profiles[env_key] = (
-                    None if chosen == "(none)" else chosen
-                )
-                st.success(
-                    f"Default for {env_key} set to {st.session_state.default_profiles[env_key]}"
-                )
-
-        st.markdown("**Strategy Defaults**")
-        strategy_names = ["(none)"] + get_strategy_names()
-        for env_key in ("paper", "backtest"):
-            current_strategy = st.session_state.default_strategy.get(env_key) or "(none)"
-            chosen_strategy = st.selectbox(
-                f"{env_key.title()} default strategy",
-                strategy_names,
-                index=(
-                    strategy_names.index(current_strategy)
-                    if current_strategy in strategy_names
-                    else 0
-                ),
-                key=f"default_strategy_{env_key}",
-            )
-            if st.button(
-                f"Set {env_key} strategy default",
-                key=f"btn_default_strategy_{env_key}",
-            ):
-                st.session_state.default_strategy[env_key] = (
-                    None if chosen_strategy == "(none)" else chosen_strategy
-                )
-                st.success(
-                    "Strategy default for "
-                    f"{env_key} set to {st.session_state.default_strategy[env_key]}"
-                )
-
+    with tab_llm:
         st.markdown("**Model presets**")
         preset_names = list(st.session_state.model_presets.keys())
         preset_name = st.selectbox(
@@ -287,3 +112,189 @@ def render(db, environment: str) -> None:
             pd.DataFrame.from_dict(st.session_state.model_presets, orient="index"),
             width='stretch',
         )
+
+    with tab_portfolio:
+        st.caption(
+            "Manage portfolio profiles, risk profiles, asset universes, and environment defaults."
+        )
+        # Profile editor
+        colL, colR = st.columns([2, 1])
+        with colL:
+            kind = st.selectbox("Profile kind", ["portfolio", "risk", "combined"], index=2)
+            name = st.text_input("Profile name", value="default")
+
+            existing_json = _get_profile_json_from_db(
+                db, name
+            ) or st.session_state.ui_profiles.get(kind, {}).get(name)
+            raw_default = json.dumps(
+                existing_json
+                or {
+                    "universe": ["BTC", "SPX"],
+                    "base_position_pct": 0.05,
+                    "max_position_pct": 0.1,
+                    "max_daily_loss_pct": 0.05,
+                },
+                indent=2,
+            )
+            raw = st.text_area(
+                "Profile JSON", value=raw_default, height=260, key=f"profile_json_{kind}"
+            )
+
+            universe_default: List[str] = []
+            parsed = None
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, dict):
+                    universe_default = parsed.get("universe", []) or []
+            except Exception:
+                parsed = None
+            allowed_universe_default = [
+                u for u in universe_default if u in SUPPORTED_UNIVERSE_SYMBOLS
+            ]
+            unsupported_universe = [
+                u for u in universe_default if u not in SUPPORTED_UNIVERSE_SYMBOLS
+            ]
+
+            universe: List[str] = allowed_universe_default
+            if kind == "portfolio":
+                universe = st.multiselect(
+                    "Universe (portfolio profiles only)",
+                    SUPPORTED_UNIVERSE_SYMBOLS,
+                    default=allowed_universe_default,
+                )
+            else:
+                st.caption("Universe editing is available for portfolio profiles only.")
+
+            resolved_universe = (
+                universe if kind == "portfolio" else allowed_universe_default
+            )
+            st.markdown("**Universe preview**")
+            if resolved_universe:
+                st.dataframe(
+                    pd.DataFrame({"symbol": resolved_universe}),
+                    width='stretch',
+                )
+            else:
+                st.info("No symbols selected for this profile.")
+            if unsupported_universe:
+                st.warning(
+                    "Unsupported symbols were ignored: "
+                    + ", ".join(sorted(set(unsupported_universe)))
+                )
+
+            if st.button("Save profile"):
+                try:
+                    data = json.loads(raw)
+                    if kind == "portfolio":
+                        data["universe"] = universe
+                    if db.ok:
+                        with db.SessionLocal() as s:
+                            existing = (
+                                s.query(db.models.StrategyConfig)
+                                .filter_by(name=name)
+                                .one_or_none()
+                            )
+                            if existing:
+                                existing.kind = kind
+                                existing.json_config = data
+                                existing.version = (existing.version or 1) + 1
+                            else:
+                                s.add(
+                                    db.models.StrategyConfig(
+                                        name=name, kind=kind, json_config=data
+                                    )
+                                )
+                            s.commit()
+                        st.success(f"Saved {kind} profile '{name}' to database.")
+                    else:
+                        st.session_state.ui_profiles.setdefault(kind, {})[name] = data
+                        st.success(f"Saved {kind} profile '{name}' to session.")
+                except Exception as e:
+                    st.error(f"Invalid JSON: {e}")
+
+            st.markdown("**Profiles**")
+            profiles_rows: List[Dict] = []
+            if db.ok:
+                with db.SessionLocal() as s:
+                    try:
+                        for cfg in (
+                            s.query(db.models.StrategyConfig)
+                            .order_by(db.models.StrategyConfig.created_at.desc())
+                            .all()
+                        ):
+                            profiles_rows.append(
+                                {
+                                    "source": "db",
+                                    "kind": cfg.kind,
+                                    "name": cfg.name,
+                                    "version": cfg.version,
+                                    "updated_at": cfg.updated_at,
+                                }
+                            )
+                    except Exception as e:  # pragma: no cover - display only
+                        st.info(f"Could not load DB profiles: {e}")
+            for k, d in st.session_state.ui_profiles.items():
+                for n, v in d.items():
+                    profiles_rows.append(
+                        {
+                            "source": "session",
+                            "kind": k,
+                            "name": n,
+                            "version": "-",
+                            "updated_at": "-",
+                        }
+                    )
+            st.dataframe(pd.DataFrame(profiles_rows), width='stretch')
+
+        with colR:
+            st.markdown("**Defaults per environment**")
+            portfolio_names = _collect_profiles_from_db(db, "portfolio") or list(
+                st.session_state.ui_profiles.get("portfolio", {}).keys()
+            )
+            for env_key in ("paper", "backtest"):
+                options = ["(none)"] + portfolio_names
+                current_default = st.session_state.default_profiles.get(env_key) or "(none)"
+                chosen = st.selectbox(
+                    f"{env_key.title()} default portfolio",
+                    options,
+                    index=(
+                        options.index(current_default) if current_default in options else 0
+                    ),
+                    key=f"default_{env_key}",
+                )
+                st.caption(
+                    "Select a saved portfolio profile. Create profiles using the Profile editor on the left."
+                )
+                if st.button(f"Set {env_key} default", key=f"btn_default_{env_key}"):
+                    st.session_state.default_profiles[env_key] = (
+                        None if chosen == "(none)" else chosen
+                    )
+                    st.success(
+                        f"Default for {env_key} set to {st.session_state.default_profiles[env_key]}"
+                    )
+
+            st.markdown("**Strategy Defaults**")
+            strategy_names = ["(none)"] + get_strategy_names()
+            for env_key in ("paper", "backtest"):
+                current_strategy = st.session_state.default_strategy.get(env_key) or "(none)"
+                chosen_strategy = st.selectbox(
+                    f"{env_key.title()} default strategy",
+                    strategy_names,
+                    index=(
+                        strategy_names.index(current_strategy)
+                        if current_strategy in strategy_names
+                        else 0
+                    ),
+                    key=f"default_strategy_{env_key}",
+                )
+                if st.button(
+                    f"Set {env_key} strategy default",
+                    key=f"btn_default_strategy_{env_key}",
+                ):
+                    st.session_state.default_strategy[env_key] = (
+                        None if chosen_strategy == "(none)" else chosen_strategy
+                    )
+                    st.success(
+                        "Strategy default for "
+                        f"{env_key} set to {st.session_state.default_strategy[env_key]}"
+                    )
