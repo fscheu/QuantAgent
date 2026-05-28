@@ -1,0 +1,25 @@
+{
+  "run_id": "20260528T174344Z-techlead-integration-refresh",
+  "issue_id": "QuantAgent-kkj.11",
+  "phase": "tech_lead",
+  "status": "PARTIAL",
+  "failure_class": "BLOCKED",
+  "failure_subclass": "main_pipeline_already_queued",
+  "executor": "tech_lead_direct",
+  "fresh_branch": "feature/QuantAgent-kkj.11-routing-refresh-20260528",
+  "fresh_commit": "838bf61b5b753e14f06d25deb23626d83f6066a0",
+  "tests": [
+    "/home/azureuser/.hermes/hermes-agent/venv/bin/python -m pytest tests/apps/streamlit/views/test_configuration.py tests/test_trading_graph_routing.py tests/test_provider_routing.py tests/test_backtest.py -q"
+  ],
+  "quality_gates": {
+    "ruff": "pass",
+    "pytest": "pass",
+    "compileall": "pass"
+  },
+  "observed_main_workflow": {
+    "run_id": 26575899910,
+    "workflow": "Main CI + Deploy QA",
+    "status": "queued"
+  },
+  "next_step": "merge_refresh_branch_after_main_workflow_clears"
+}
