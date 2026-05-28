@@ -38,6 +38,7 @@ The roadmap files represent the current development phases and priorities. When 
 - [QuantAgent-1p7-PL-stategraph-image-paths.md](./QuantAgent-1p7-PL-stategraph-image-paths.md) - Minimal implementation plan for disk-backed StateGraph visualization artifacts
 - [QuantAgent-sft-PL-paper-runtime-hardening.md](./QuantAgent-sft-PL-paper-runtime-hardening.md) - Plan to harden paper trading runtime for stable, observable QA operation
 - [QuantAgent-339-PL-qa-validator-real-runtime.md](./QuantAgent-339-PL-qa-validator-real-runtime.md) - Plan to turn the QA validator PoC into real-runtime post-deploy validation
+- [QuantAgent-kkj.3-PL-dashboard-environment-aware.md](./QuantAgent-kkj.3-PL-dashboard-environment-aware.md) - Implementation plan: restructure dashboard.py into paper mode (scheduler indicator + run grid + selector) and backtest mode (run grid + selector + metrics)
 
 ## Per-Change Planning Documents
 
