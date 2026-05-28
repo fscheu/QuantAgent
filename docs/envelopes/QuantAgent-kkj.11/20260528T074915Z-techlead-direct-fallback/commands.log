@@ -1,0 +1,3 @@
+python -m pytest tests/apps/streamlit/views/test_configuration.py tests/test_trading_graph_routing.py tests/test_provider_routing.py tests/test_backtest.py -q
+ruff check --fix apps/streamlit/views/configuration.py quantagent/strategy/assembler.py quantagent/backtesting/backtest.py tests/apps/streamlit/views/test_configuration.py tests/test_trading_graph_routing.py tests/test_provider_routing.py
+python -m compileall -q apps quantagent tests

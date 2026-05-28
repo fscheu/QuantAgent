@@ -1,0 +1,22 @@
+{
+  "run_id": "20260528T074915Z-techlead-direct-fallback",
+  "issue_id": "QuantAgent-kkj.11",
+  "phase": "tech_lead",
+  "status": "PARTIAL",
+  "failure_class": "IMPLEMENTATION_INCOMPLETE",
+  "failure_subclass": "remaining_integration_and_runtime_wiring",
+  "executor": "tech_lead_direct",
+  "worktree": "/tmp/autodev-worktrees/QuantAgent/QuantAgent-kkj.11/implementer-20260528T073800Z",
+  "artifacts": [
+    "docs/envelopes/QuantAgent-kkj.11/20260528T074915Z-techlead-direct-fallback/run-report.md"
+  ],
+  "quality_gates": {
+    "pytest": "pass",
+    "ruff": "pass",
+    "compileall": "pass"
+  },
+  "tests": [
+    "python -m pytest tests/apps/streamlit/views/test_configuration.py tests/test_trading_graph_routing.py tests/test_provider_routing.py tests/test_backtest.py -q"
+  ],
+  "next_step": "integration_review_or_followup_after_kkj10_coordination"
+}

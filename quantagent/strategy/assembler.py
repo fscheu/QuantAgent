@@ -13,6 +13,7 @@ from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
+from quantagent.llm.routing import ProviderRoutingPolicy
 from quantagent.models import Environment
 from quantagent.portfolio.manager import PortfolioManager
 from quantagent.trading.order_manager import OrderManager
@@ -35,6 +36,7 @@ class ResolvedConfig:
     model_name: str
     temperature: float
     use_checkpointing: bool
+    routing_policy: Optional[ProviderRoutingPolicy] = None
     extras: Optional[Dict] = None
 
 
@@ -185,7 +187,10 @@ class StrategyAssembler:
         # }
 
         # graph = TradingGraph(config=graph_cfg, use_checkpointing=resolved.use_checkpointing)
-        graph = TradingGraph(use_checkpointing=resolved.use_checkpointing)
+        graph = TradingGraph(
+            use_checkpointing=resolved.use_checkpointing,
+            routing_policy=resolved.routing_policy,
+        )
 
         return TradingComponents(
             portfolio_manager=pm,
@@ -199,7 +204,7 @@ class StrategyAssembler:
     @staticmethod
     def config_snapshot(resolved: ResolvedConfig) -> Dict:
         """Create a serializable snapshot for persistence (BacktestRun)."""
-        return {
+        snapshot = {
             "initial_capital": resolved.initial_cash,
             "base_position_pct": resolved.base_position_pct,
             "max_daily_loss_pct": resolved.max_daily_loss_pct,
@@ -213,12 +218,37 @@ class StrategyAssembler:
             # Include universe for reproducibility (even if caller overrides)
             "universe": list(resolved.universe),
         }
+        if resolved.routing_policy is not None:
+            snapshot["routing_policy"] = resolved.routing_policy.to_dict()
+            snapshot["provider_roles_used"] = StrategyAssembler._provider_roles_used_snapshot(
+                resolved.routing_policy
+            )
+        return snapshot
 
     @staticmethod
     def make_thread_id(run_id: int, symbol: str, ts: datetime) -> str:
         return f"backtest_{run_id}_{symbol}_{ts.isoformat()}"
 
     # ---- Helpers ----
+    @staticmethod
+    def _provider_roles_used_snapshot(policy: ProviderRoutingPolicy) -> Dict:
+        provider_roles_used = {}
+        for role_name in ("deep_reasoning", "lite", "image"):
+            role_cfg = policy.resolve_or_none(role_name)
+            if role_cfg is None:
+                continue
+            provider_roles_used[role_name] = {
+                "role": role_name,
+                "provider": role_cfg.provider,
+                "model": role_cfg.model_name,
+                "temperature": role_cfg.temperature,
+            }
+            if role_name == "image" and policy.image is None:
+                provider_roles_used[role_name]["resolved_from"] = (
+                    "deep_reasoning" if policy.deep_reasoning is not None else "lite"
+                )
+        return provider_roles_used
+
     @staticmethod
     def _normalize_model_profile(model_profile: Dict) -> Dict:
         out = {}
@@ -239,9 +269,9 @@ class StrategyAssembler:
             out["temperature"] = temp
 
         # Runtime flags (non-secret)
-        for k in ("use_checkpointing",):
+        for k in ("use_checkpointing", "routing_policy", "provider_routing"):
             if k in model_profile:
-                out[k] = model_profile[k]
+                out["routing_policy" if k == "provider_routing" else k] = model_profile[k]
 
         return out
 
@@ -278,6 +308,9 @@ class StrategyAssembler:
                 "use_checkpointing", StrategyAssembler.DEFAULTS()["use_checkpointing"]
             )
         )
+        routing_policy = merged.get("routing_policy")
+        if isinstance(routing_policy, dict):
+            routing_policy = ProviderRoutingPolicy.from_dict(routing_policy)
 
         return ResolvedConfig(
             environment=environment,
@@ -297,5 +330,6 @@ class StrategyAssembler:
             ),
             temperature=temp,
             use_checkpointing=use_ckpt,
+            routing_policy=routing_policy,
             extras=None,
         )

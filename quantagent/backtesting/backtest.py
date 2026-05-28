@@ -147,11 +147,15 @@ class Backtest:
                 "temperature": self.config.get(
                     "agent_llm_temperature", self.config.get("temperature", settings.AGENT_LLM_TEMPERATURE)
                 ),
+                "routing_policy": self.config.get(
+                    "routing_policy", self.config.get("provider_routing")
+                ),
                 "use_checkpointing": use_checkpointing,
                 "universe": self.config.get("universe", settings.get_trading_universe()),
             },
             environment=Environment.BACKTEST,
         )
+        self.resolved_config = resolved
         components = StrategyAssembler.build_components(resolved, db_session=self.db)
 
         # Trading graph (analysis engine)
@@ -517,9 +521,11 @@ class Backtest:
 
     def _build_config_snapshot(self) -> Dict:
         """Build immutable config snapshot for reproducibility."""
+        if hasattr(self, "resolved_config"):
+            return StrategyAssembler.config_snapshot(self.resolved_config)
+
         from quantagent import settings
 
-        # Re-generate snapshot via assembler to keep alignment
         resolved = StrategyAssembler.from_snapshot(
             {
                 "initial_cash": self.initial_capital,
@@ -536,12 +542,35 @@ class Backtest:
                 "temperature": self.config.get(
                     "agent_llm_temperature", self.config.get("temperature", settings.AGENT_LLM_TEMPERATURE)
                 ),
+                "routing_policy": self.config.get(
+                    "routing_policy", self.config.get("provider_routing")
+                ),
                 "use_checkpointing": self.use_checkpointing,
                 "universe": self.config.get("universe", settings.get_trading_universe()),
             },
             environment=Environment.BACKTEST,
         )
         return StrategyAssembler.config_snapshot(resolved)
+
+    def _signal_model_metadata(self) -> Dict[str, object]:
+        from quantagent import settings
+        from quantagent.llm.routing import ROLE_LITE
+
+        routing_policy = getattr(self.resolved_config, "routing_policy", None)
+        if routing_policy is not None:
+            role_cfg = routing_policy.resolve_or_none(ROLE_LITE)
+            if role_cfg is not None:
+                return {
+                    "provider": role_cfg.provider,
+                    "model_name": role_cfg.model_name,
+                    "temperature": role_cfg.temperature,
+                }
+
+        return {
+            "provider": self.config.get("agent_llm_provider", settings.AGENT_LLM_PROVIDER),
+            "model_name": self.config.get("agent_llm_model", settings.AGENT_LLM_MODEL),
+            "temperature": self.config.get("agent_llm_temperature", settings.AGENT_LLM_TEMPERATURE),
+        }
 
     def _get_date_range(self) -> List[datetime]:
         """
@@ -797,9 +826,9 @@ class Backtest:
         current_date: datetime,
     ) -> Optional[Signal]:
         """Create Signal record from strategy output (simplified)."""
-        from quantagent import settings
 
         try:
+            model_metadata = self._signal_model_metadata()
             signal = Signal(
                 symbol=asset,
                 signal=decision,
@@ -809,9 +838,9 @@ class Backtest:
                 generated_at=current_date,
                 environment=Environment.BACKTEST,
                 backtest_run_id=self.backtest_run_id,
-                model_provider=self.config.get("agent_llm_provider", settings.AGENT_LLM_PROVIDER),
-                model_name=self.config.get("agent_llm_model", settings.AGENT_LLM_MODEL),
-                temperature=self.config.get("agent_llm_temperature", settings.AGENT_LLM_TEMPERATURE),
+                model_provider=model_metadata["provider"],
+                model_name=model_metadata["model_name"],
+                temperature=model_metadata["temperature"],
             )
 
             self.db.add(signal)
@@ -878,7 +907,7 @@ class Backtest:
                 trend = trend_report.trend_direction
 
             # Create signal
-            from quantagent import settings
+            model_metadata = self._signal_model_metadata()
 
             signal = Signal(
                 symbol=asset,
@@ -897,9 +926,9 @@ class Backtest:
                 environment=Environment.BACKTEST,
                 backtest_run_id=self.backtest_run_id,
                 thread_id=thread_id,
-                model_provider=self.config.get("agent_llm_provider", settings.AGENT_LLM_PROVIDER),
-                model_name=self.config.get("agent_llm_model", settings.AGENT_LLM_MODEL),
-                temperature=self.config.get("agent_llm_temperature", settings.AGENT_LLM_TEMPERATURE),
+                model_provider=model_metadata["provider"],
+                model_name=model_metadata["model_name"],
+                temperature=model_metadata["temperature"],
             )
 
             self.db.add(signal)

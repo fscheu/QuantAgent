@@ -7,6 +7,7 @@ Supports PostgreSQL checkpointing for resilient backtest execution.
 import logging
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
@@ -16,6 +17,12 @@ from langchain_qwq import ChatQwen
 from quantagent import settings
 from quantagent.graph_setup import SetGraph
 from quantagent.graph_util import TechnicalTools
+from quantagent.llm.roles import ProviderRoleConfig
+from quantagent.llm.routing import (
+    ROLE_DEEP_REASONING,
+    ROLE_LITE,
+    ProviderRoutingPolicy,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +38,11 @@ class TradingGraph:
     Sets up LLMs, toolkits, and agent nodes for indicator, pattern, and trend analysis.
     """
 
-    def __init__(self, use_checkpointing: bool = False):
+    def __init__(
+        self,
+        use_checkpointing: bool = False,
+        routing_policy: Optional[ProviderRoutingPolicy] = None,
+    ):
         """
         Initialize TradingGraph with configuration from environment variables.
 
@@ -40,30 +51,30 @@ class TradingGraph:
         """
         logger.info("Initializing TradingGraph", extra={"event_type": "graph_init"})
 
-        # All configuration now comes from settings module (loaded from .env)
-        self.agent_llm = self._create_llm(
-            provider=settings.AGENT_LLM_PROVIDER,
-            model=settings.AGENT_LLM_MODEL,
-            temperature=settings.AGENT_LLM_TEMPERATURE,
-        )
-        self.graph_llm = self._create_llm(
-            provider=settings.GRAPH_LLM_PROVIDER,
-            model=settings.GRAPH_LLM_MODEL,
-            temperature=settings.GRAPH_LLM_TEMPERATURE,
-        )
+        self._routing_policy = routing_policy or ProviderRoutingPolicy.from_legacy_settings()
+        agent_config = self._routing_policy.resolve(ROLE_LITE)
+        graph_config = self._routing_policy.resolve(ROLE_DEEP_REASONING)
+        self.agent_llm = self._create_llm_from_config(agent_config)
+        self.graph_llm = self._create_llm_from_config(graph_config)
 
         logger.info(
-            f"LLM configuration: agent={settings.AGENT_LLM_PROVIDER}/{settings.AGENT_LLM_MODEL}, "
-            f"graph={settings.GRAPH_LLM_PROVIDER}/{settings.GRAPH_LLM_MODEL}",
+            f"LLM configuration: agent={agent_config.provider}/{agent_config.model_name}, "
+            f"graph={graph_config.provider}/{graph_config.model_name}",
             extra={
                 "event_type": "llm_config",
                 "extra_data": {
-                    "agent_provider": settings.AGENT_LLM_PROVIDER,
-                    "agent_model": settings.AGENT_LLM_MODEL,
-                    "agent_temperature": settings.AGENT_LLM_TEMPERATURE,
-                    "graph_provider": settings.GRAPH_LLM_PROVIDER,
-                    "graph_model": settings.GRAPH_LLM_MODEL,
-                    "graph_temperature": settings.GRAPH_LLM_TEMPERATURE,
+                    "agent": {
+                        "provider": agent_config.provider,
+                        "model": agent_config.model_name,
+                        "temperature": agent_config.temperature,
+                        "role": ROLE_LITE,
+                    },
+                    "graph": {
+                        "provider": graph_config.provider,
+                        "model": graph_config.model_name,
+                        "temperature": graph_config.temperature,
+                        "role": ROLE_DEEP_REASONING,
+                    },
                 },
             },
         )
@@ -223,6 +234,13 @@ class TradingGraph:
         except Exception as e:
             raise ValueError(f"Failed to connect to PostgreSQL at {db_url}: {str(e)}")
 
+    def _create_llm_from_config(self, config: ProviderRoleConfig) -> BaseChatModel:
+        return self._create_llm(
+            provider=config.provider,
+            model=config.model_name,
+            temperature=config.temperature,
+        )
+
     def _create_llm(
         self, provider: str, model: str, temperature: float
     ) -> BaseChatModel:
@@ -319,16 +337,11 @@ class TradingGraph:
         Refresh the LLM objects with the current API key from environment.
         This is called when the API key is updated.
         """
-        # Recreate LLM objects with current config values from settings module
-        self.agent_llm = self._create_llm(
-            provider=settings.AGENT_LLM_PROVIDER,
-            model=settings.AGENT_LLM_MODEL,
-            temperature=settings.AGENT_LLM_TEMPERATURE,
+        self.agent_llm = self._create_llm_from_config(
+            self._routing_policy.resolve(ROLE_LITE)
         )
-        self.graph_llm = self._create_llm(
-            provider=settings.GRAPH_LLM_PROVIDER,
-            model=settings.GRAPH_LLM_MODEL,
-            temperature=settings.GRAPH_LLM_TEMPERATURE,
+        self.graph_llm = self._create_llm_from_config(
+            self._routing_policy.resolve(ROLE_DEEP_REASONING)
         )
 
         # Recreate the graph setup with new LLMs
