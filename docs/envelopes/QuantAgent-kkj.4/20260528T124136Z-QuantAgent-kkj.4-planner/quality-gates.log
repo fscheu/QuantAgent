@@ -1,9 +1,3 @@
-REQUIRED QUALITY GATES:
-[PASS] git status --short: only run-owned files dirty (docs/envelopes/QuantAgent-kkj.4/, .beads/issues.jsonl after comment)
-[PASS] issue ID appears in docs paths: QuantAgent-kkj.4 in RQ, PL, AC filenames
-[PASS] acceptance criteria are testable: 6 ACs with Given/When/Then + shell verification commands
-[PASS] repo clean before canonical planner publication: no unrelated dirty files
-[PASS] current branch matches canonical publication branch: main == main
-
-OPTIONAL QUALITY GATES:
-[PASS] python -m compileall -q apps/streamlit/views/configuration.py: exit 0
+- router validation: PASS | command=validate envelope + capabilities | exit_code=0 | evidence=Envelope parsed and dangerous capabilities rejected.
+- executor availability: PASS | command=which claude | exit_code=0 | evidence=available=True
+- executor run: SUCCESS | command=claude -p "$(cat /home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-kkj.4/20260528T124136Z-QuantAgent-kkj.4-planner/executor-prompt-claude-code.md)" --output-format json --allowedTools Read,Edit,Write,Bash | exit_code=0 | evidence=exit_code=0
