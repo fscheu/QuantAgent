@@ -23,6 +23,7 @@ The files listed above represent the current functional requirements for the sys
 
 ## Active Per-Change Requirements
 
+- [QuantAgent-kkj.5-RQ-configuration-contextual-help.md](./QuantAgent-kkj.5-RQ-configuration-contextual-help.md) - Add contextual help (tooltips + captions) to Configuration view fields: provider, model, universe, portfolio defaults, Profile JSON
 - [QuantAgent-kkj.9-RQ-strategy-selector-ui.md](./QuantAgent-kkj.9-RQ-strategy-selector-ui.md) - Strategy selector in Backtesting, Paper Trading, and Configuration views (depends on kkj.8 registry)
 
 - [QuantAgent-kkj.11-RQ-multi-provider-routing.md](./QuantAgent-kkj.11-RQ-multi-provider-routing.md) - Multi-provider routing by role for cost-efficient strategies (configuration, cost, llm)

@@ -20,6 +20,7 @@ Acceptance test documents define the criteria for validating that features work 
 
 ## Active Per-Change Acceptance Criteria
 
+- [QuantAgent-kkj.5-AC-configuration-contextual-help.md](./QuantAgent-kkj.5-AC-configuration-contextual-help.md) - 8 acceptance criteria for contextual help in Configuration: LLM caption, provider/model/universe/portfolio tooltips, Profile JSON caption, no-regression
 - [QuantAgent-kkj.9-AC-strategy-selector-ui.md](./QuantAgent-kkj.9-AC-strategy-selector-ui.md) - 11 acceptance criteria for strategy selector UI across backtesting, paper trading, and configuration views
 
 - [QuantAgent-kkj.11-AC-multi-provider-routing.md](./QuantAgent-kkj.11-AC-multi-provider-routing.md) - 13 acceptance criteria for multi-provider routing: registry, role resolution, fallback, backward compat, persistence, traceability (configuration, cost, llm)
