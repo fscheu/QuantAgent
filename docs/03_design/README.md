@@ -39,6 +39,8 @@ These documents represent the current technical design of the system. When imple
 
 ## Active Per-Change Design
 
+- [QuantAgent-um8-DS-batch-processing.md](./QuantAgent-um8-DS-batch-processing.md) - Batch processing design: concurrent (LangGraph .batch()) and provider_batch (Anthropic/OpenAI async APIs) modes, BatchSignalCollector, BatchProvider protocol, error handling
+
 - [QuantAgent-kkj.11-DS-multi-provider-routing.md](./QuantAgent-kkj.11-DS-multi-provider-routing.md) - Provider registry, role config, routing policy, TradingGraph wiring, persistence (configuration, cost, llm)
 - [QuantAgent-s62-DS-operational-observability.md](./QuantAgent-s62-DS-operational-observability.md) - UI-layer wiring of SchedulerHeartbeat and LLM telemetry into dashboard, paper trading tab, and logs (M2)
 - [QuantAgent-69d-DS-token-time-metrics.md](./QuantAgent-69d-DS-token-time-metrics.md) - Reuse `logs` + `invoke_with_retry()` for LLM telemetry with on-demand aggregation

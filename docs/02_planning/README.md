@@ -20,6 +20,8 @@ The roadmap files represent the current development phases and priorities. When 
 
 ## Active Per-Change Planning
 
+- [QuantAgent-um8-PL-batch-processing.md](./QuantAgent-um8-PL-batch-processing.md) - 8-step implementation plan for concurrent + provider batch modes in backtesting (ESTÁNDAR)
+
 - [QuantAgent-kkj.9-PL-strategy-selector-ui.md](./QuantAgent-kkj.9-PL-strategy-selector-ui.md) - 5-step implementation plan: CLI args, backtesting selector, paper trading selector, configuration defaults, tests
 
 - [QuantAgent-kkj.11-PL-multi-provider-routing.md](./QuantAgent-kkj.11-PL-multi-provider-routing.md) - Multi-provider routing by role: 5-phase implementation plan (configuration, cost, llm)

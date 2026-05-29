@@ -1,0 +1,25 @@
+{
+  "id": "QuantAgent-um8",
+  "title": "Implementar batch processing para llamadas de backtesting",
+  "description": "Optimizar costos usando APIs de invocaciones batch para backtesting:\n\n- Investigar soporte de batch en OpenAI API, Anthropic API y otros providers\n- Identificar llamadas de backtesting que pueden agruparse\n- Implementar lógica de batch processing para:\n  - Agrupar múltiples evaluaciones de estrategia\n  - Procesar en paralelo cuando sea posible\n  - Mantener trazabilidad de resultados\n- Configurar parámetros de batching (tamaño, timeout, etc.)\n- Manejar errores parciales en batches\n\nBeneficios esperados:\n- Reducción significativa de costos (batch pricing típicamente 50% más barato)\n- Mejor throughput en backtests grandes\n- Uso más eficiente de rate limits\n\nNivel: ESTÁNDAR",
+  "status": "open",
+  "priority": 3,
+  "issue_type": "task",
+  "created_at": "2026-01-06T01:14:55.110104261Z",
+  "created_by": "baiscf",
+  "updated_at": "2026-04-27T14:38:07.601171052Z",
+  "metadata": {
+    "openclaw": {
+      "phase": "design_pending",
+      "design_branch": "feature/QuantAgent-um8-implementar-batch-processing-para-llamad",
+      "epic_branch": null,
+      "updated_at": "2026-02-18T01:33:18.294997+00:00"
+    }
+  },
+  "labels": [
+    "backtesting",
+    "enhancement",
+    "openclaw:design_pending",
+    "optimization"
+  ]
+}

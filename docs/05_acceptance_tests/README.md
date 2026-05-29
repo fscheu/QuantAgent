@@ -20,6 +20,8 @@ Acceptance test documents define the criteria for validating that features work 
 
 ## Active Per-Change Acceptance Criteria
 
+- [QuantAgent-um8-AC-batch-processing.md](./QuantAgent-um8-AC-batch-processing.md) - 10 acceptance criteria for batch processing: sequential regression, concurrent parallelism, non-LLM bypass, custom_id traceability, partial failure, timeout, unsupported provider, snapshot, signal traceability, chunking
+
 - [QuantAgent-kkj.5-AC-configuration-contextual-help.md](./QuantAgent-kkj.5-AC-configuration-contextual-help.md) - 8 acceptance criteria for contextual help in Configuration: LLM caption, provider/model/universe/portfolio tooltips, Profile JSON caption, no-regression
 - [QuantAgent-kkj.9-AC-strategy-selector-ui.md](./QuantAgent-kkj.9-AC-strategy-selector-ui.md) - 11 acceptance criteria for strategy selector UI across backtesting, paper trading, and configuration views
 
