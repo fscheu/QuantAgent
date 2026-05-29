@@ -1,34 +1,3 @@
-# Quality Gates — QuantAgent-kkj.10 planner
-# Run ID: 20260529T173709Z-QuantAgent-kkj.10-planner
-
-## Required Gates
-
-[PASS] git status --short
-  Result: ?? docs/envelopes/QuantAgent-kkj.10/ (run-owned path; not unrelated drift)
-
-[PASS] verify issue ID appears in docs paths
-  - docs/01_requirements/QuantAgent-kkj.10-RQ-config-catalog-seed.md ✓
-  - docs/03_design/QuantAgent-kkj.10-DS-config-catalog-seed.md ✓
-  - docs/envelopes/QuantAgent-kkj.10/20260529T173709Z-QuantAgent-kkj.10-planner/ ✓
-
-[PASS] verify acceptance criteria are testable
-  - AC1: ls config/seed/base_catalog.yaml → file exists
-  - AC2: python scripts/seed_config_catalog.py --reset → exit 0, count ≥ 5 in strategy_configs
-  - AC3: UI shows portfolios after seed (manual/functional check)
-  - AC4: grep universe in catalog → ≥ 4 symbols per portfolio profile
-  - AC5: read presets from DB on view load → covered by smoke test + manual check
-  - AC6: UI imports SUPPORTED_PROVIDERS from provider_registry → code review
-  - AC7: no ghost providers → smoke test test_no_ghost_providers()
-  - AC8: pytest tests/test_smoke_kkj10_config_catalog.py → passes without DB
-  - AC9: user manual has bootstrap section → grep docs
-
-[PASS] confirm repo is clean before canonical planner publication
-  Status checked pre-commit: only run-owned envelope paths untracked; no unrelated staged/modified files.
-
-[PASS] confirm current branch matches canonical publication branch
-  Branch: main == publication_branch: main
-
-## Optional Gates
-
-[SKIP] python -m compileall -q .
-  Reason: planner writes docs only; no Python code authored in this phase. Will be run by implementer.
+- router validation: PASS | command=validate envelope + capabilities | exit_code=0 | evidence=Envelope parsed and dangerous capabilities rejected.
+- executor availability: PASS | command=which claude | exit_code=0 | evidence=available=True
+- executor run: SUCCESS | command=claude -p "$(cat /home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-kkj.10/20260529T173709Z-QuantAgent-kkj.10-planner/executor-prompt-claude-code.md)" --output-format json --allowedTools Read,Edit,Write,Bash | exit_code=0 | evidence=exit_code=0
