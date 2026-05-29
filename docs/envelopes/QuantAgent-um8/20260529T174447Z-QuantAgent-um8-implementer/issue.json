@@ -1,0 +1,41 @@
+{
+  "id": "QuantAgent-um8",
+  "title": "Implementar batch processing para llamadas de backtesting",
+  "description": "Optimizar costos usando APIs de invocaciones batch para backtesting:\n\n- Investigar soporte de batch en OpenAI API, Anthropic API y otros providers\n- Identificar llamadas de backtesting que pueden agruparse\n- Implementar lógica de batch processing para:\n  - Agrupar múltiples evaluaciones de estrategia\n  - Procesar en paralelo cuando sea posible\n  - Mantener trazabilidad de resultados\n- Configurar parámetros de batching (tamaño, timeout, etc.)\n- Manejar errores parciales en batches\n\nBeneficios esperados:\n- Reducción significativa de costos (batch pricing típicamente 50% más barato)\n- Mejor throughput en backtests grandes\n- Uso más eficiente de rate limits\n\nNivel: ESTÁNDAR",
+  "status": "open",
+  "priority": 3,
+  "issue_type": "task",
+  "created_at": "2026-01-06T01:14:55.110104261Z",
+  "created_by": "baiscf",
+  "updated_at": "2026-04-27T14:38:07.601171052Z",
+  "metadata": {
+    "openclaw": {
+      "phase": "design_pending",
+      "design_branch": "feature/QuantAgent-um8-implementar-batch-processing-para-llamad",
+      "epic_branch": null,
+      "updated_at": "2026-02-18T01:33:18.294997+00:00"
+    }
+  },
+  "labels": [
+    "backtesting",
+    "enhancement",
+    "openclaw:design_approved",
+    "optimization"
+  ],
+  "comments": [
+    {
+      "id": 246,
+      "issue_id": "QuantAgent-um8",
+      "author": "Federico Scheu",
+      "text": "### Skill: autodev-planner\n- **Resultado:** SUCCESS\n- **Run-ID:** 20260529T123620Z-QuantAgent-um8-planner\n- **Executor:** auto\n\n#### Qué hice\n- Analicé la arquitectura actual del backtesting (Backtest.run() → LLMAgentStrategy.generate_signal() → graph.invoke(), secuencial)\n- Identifiqué la constraint clave: el loop temporal debe ser secuencial (estado de portfolio), pero las llamadas LLM dentro de un mismo timestamp pueden paralelizarse\n- Diseñé dos modos de batch: concurrent (LangGraph .batch() con ThreadPool) y provider_batch (APIs async de Anthropic/OpenAI, 50% descuento)\n- Creé los 4 artifacts de planificación:\n  - docs/01_requirements/QuantAgent-um8-RQ-batch-processing.md (5 requisitos funcionales)\n  - docs/03_design/QuantAgent-um8-DS-batch-processing.md (diseño completo: BatchSignalCollector, BatchProvider protocol, AnthropicBatchProvider, OpenAIBatchProvider)\n  - docs/05_acceptance_tests/QuantAgent-um8-AC-batch-processing.md (10 criterios testables)\n  - docs/02_planning/QuantAgent-um8-PL-batch-processing.md (8 pasos de implementación)\n- Actualicé los 4 README de docs/ con entradas para um8\n\n#### Evidencia\n- 4 nuevos archivos docs/ con prefijo QuantAgent-um8\n- 4 README actualizados\n- python -m compileall -q quantagent/ → sin errores\n- git status: solo cambios esperados en docs/, branch main\n\n#### Quality gates\n- [PASS] git status --short — limpio (solo archivos del run)\n- [PASS] issue ID en todos los paths de docs\n- [PASS] 10 ACs testables con Given/When/Then\n- [PASS] repo limpio antes de publish\n- [PASS] branch main = publication branch\n- [PASS] python -m compileall -q\n\n#### Problemas encontrados\n- Ninguno. El diseño es directo: el único punto sutil es la constraint de secuencialidad temporal del portfolio, que limita el full-batching pero no el batching cross-asset dentro de un timestamp.\n\n#### Next step recomendado\n- Implementer: crear quantagent/backtesting/batch.py (BatchRequest, BatchSignalCollector, AnthropicBatchProvider, OpenAIBatchProvider) y modificar backtest.py según el plan de 8 pasos. Empezar por el Step 3 (extraer _run_sequential) para tener regression tests verdes antes de agregar los nuevos modos.",
+      "created_at": "2026-05-29T12:40:39Z"
+    },
+    {
+      "id": 247,
+      "issue_id": "QuantAgent-um8",
+      "author": "Federico Scheu",
+      "text": "### Tech Lead autodev cron\n**Run:** 2026-05-29 12:35 ART\n**Resultado:** PARTIAL\n\n#### Progreso\n- [OK] Planner: SUCCESS con claude-code\n  - Docs canónicos: RQ/PL/DS/AC creados y pushed a main\n  - Commit: ae02103b, c6574829 (planner + router sync)\n  - Run artifacts: docs/envelopes/QuantAgent-um8/20260529T123620Z-QuantAgent-um8-planner/\n  \n- [FAIL] Implementer intento 1: FAIL (codex)\n  - Executor: codex (default phase priority)\n  - Falla: workspace path not visible (Codex snap /tmp/autodev-worktrees/... no accesible)\n  - Classification: EXECUTOR_RUNTIME_GAP / workspace_path_not_visible_to_executor\n  - Artifacts: docs/envelopes/QuantAgent-um8/20260529T124418Z-QuantAgent-um8-implementer/\n\n- [TIMEOUT] Implementer intento 2: TIMEOUT/HUNG (claude-code fallback)\n  - Executor: claude-code (manual reroute después de codex fail)\n  - Estado: running >10 min sin artifacts ni progreso observable\n  - Acción: proceso matado por budget cron constraint\n  - Worktree: reutilizó /tmp/autodev-worktrees/.../implementer del primer intento\n\n#### Clasificación final\n- Status: BLOCKED\n- Failure class: EXECUTOR_ROUTING_AND_RUNTIME\n- Failure subclass: mixed (codex_workspace_visibility + claude_timeout_no_progress)\n\n#### Próximos pasos recomendados\n1. Para próxima corrida cron:\n   - Forzar implementer con AUTODEV_EXECUTOR_PRIORITY_IMPLEMENTER=claude-code,opencode para evitar codex snap visibility issue, O\n   - Parchar envelope generator para usar worktree Codex-visible (/home/azureuser/repos/autodev-worktrees/...) cuando executor es codex\n\n2. Para manual intervention si se desea avanzar hoy:\n   - Generar envelope implementer fresh\n   - Ejecutar con claude-code o opencode explícitamente\n   - Verificar que worktree no tenga drift del primer intento codex\n\n3. Alternativa: esperar a próxima corrida cron con routing fix aplicado\n\n#### Budget consumido\n- ~50% del budget de 200K tokens\n- ~13 min elapsed (de ~30 min esperados por cron cada 5h)\n- Planner: ~6 min\n- Implementer intentos: ~7 min (ambos sin resultado útil)\n\n#### Evidencia\n- Planner canonical docs: docs/01_requirements/QuantAgent-um8-RQ-batch-processing.md, etc.\n- Implementer codex artifacts: docs/envelopes/QuantAgent-um8/20260529T124418Z-QuantAgent-um8-implementer/result.json\n- Design approval: commit d643ab27\n",
+      "created_at": "2026-05-29T12:58:40Z"
+    }
+  ]
+}
