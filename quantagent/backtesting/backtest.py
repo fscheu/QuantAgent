@@ -1,42 +1,39 @@
 """Backtesting engine for strategy validation."""
 
 import logging
-import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
-from decimal import Decimal
 from typing import Dict, List, Optional
 
-import numpy as np
 import numpy as np
 import pandas as pd
 from sqlalchemy.orm import Session
 
 from quantagent.agent_models import TradingDecision
+from quantagent.backtesting.batch import (
+    BacktestLLMRequest,
+    BatchConfig,
+    BatchExecutorFactory,
+    BatchSignalCollector,
+    TraceMetadata,
+    _build_single_prompt_messages,
+)
 from quantagent.data.asset_types import AssetType, get_asset_type
 from quantagent.data.market_calendar import get_market_calendar
 from quantagent.data.provider import DataProvider
 from quantagent.database import SessionLocal
-from quantagent.models import (ActivePosition, BacktestRun, Environment, Order,
-                               OrderSide, Signal, Trade, TradeSignal)
-from quantagent.portfolio.manager import PortfolioManager
-from quantagent.database import SessionLocal
-from quantagent.models import (BacktestRun, Environment, Order, Signal, Trade,
-                               TradeSignal)
-from quantagent.portfolio.manager import PortfolioManager
+from quantagent.models import (ActivePosition, BacktestRun, Environment, OrderSide, Signal, Trade, TradeSignal)
 from quantagent.static_util import format_ohlcv_for_agents
 from quantagent.strategy.assembler import StrategyAssembler
 from quantagent.strategy.base import TradingStrategy
 from quantagent.strategy.llm_agent_strategy import LLMAgentStrategy
-from quantagent.trading.order_manager import OrderManager
-from quantagent.trading.paper_broker import PaperBroker
+from quantagent.trading.order_manager import OrderManager  # noqa: F401 (used via components)
+from quantagent.trading.paper_broker import PaperBroker  # noqa: F401 (used via components)
 from quantagent.trading.position_monitor import PositionMonitor
-from quantagent.trading.paper_broker import PaperBroker
-from quantagent.trading.position_sizer import PositionSizer
-from quantagent.trading.risk_manager import RiskManager
-from quantagent.trading_graph import TradingGraph
-from quantagent.trading_graph import TradingGraph
+from quantagent.trading.position_sizer import PositionSizer  # noqa: F401 (used via components)
+from quantagent.trading.risk_manager import RiskManager  # noqa: F401 (used via components)
+from quantagent.trading_graph import TradingGraph  # noqa: F401 (patched in tests)
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +63,12 @@ class BacktestMetrics:
     mean_directional_accuracy: float = 0.0
     accuracy_by_candle: Dict[int, float] = None
     close_reasons: Dict[str, int] = None
+
+    # QuantAgent-um8: Batch processing metrics
+    batch_enabled: bool = False
+    invocations_total: int = 0
+    batched_total: int = 0
+    failed_total: int = 0
 
     def __post_init__(self):
         if self.accuracy_by_candle is None:
@@ -104,6 +107,7 @@ class Backtest:
         db_session: Optional[Session] = None,
         use_checkpointing: bool = False,
         strategy: Optional[TradingStrategy] = None,
+        batch_config: Optional[BatchConfig] = None,
     ):
         """
         Initialize Backtest.
@@ -118,6 +122,7 @@ class Backtest:
             db_session: Database session (creates new if None)
             use_checkpointing: Enable LangGraph checkpointing for state persistence
             strategy: Optional TradingStrategy. If None, uses LLMAgentStrategy with TradingGraph
+            batch_config: Optional BatchConfig for batch LLM processing
         """
         self.start_date = start_date
         self.end_date = end_date
@@ -185,6 +190,12 @@ class Backtest:
         self.agent_invocations = 0
         self.total_candles_processed = 0
 
+        # QuantAgent-um8: Batch processing
+        self.batch_config = batch_config or BatchConfig()
+        self._batch_collector: Optional[BatchSignalCollector] = None
+        if self.batch_config.batch_enabled:
+            self._setup_batch_collector()
+
         # Market hours filtering
         self.market_hours_filter = self.config.get("market_hours_filter", True)
         self._market_calendar = (
@@ -195,6 +206,38 @@ class Backtest:
         self._asset_types: Dict[str, AssetType] = {
             asset: get_asset_type(asset) for asset in assets
         }
+
+    def _setup_batch_collector(self) -> None:
+        """Initialize the BatchSignalCollector based on batch_config and LLM provider."""
+        provider_name = self.config.get(
+            "agent_llm_provider", self.config.get("model_provider", "openai")
+        )
+        model_name = self.config.get(
+            "agent_llm_model", self.config.get("model_name", "gpt-4o-mini")
+        )
+        batch_mode = self.config.get("batch_mode", "concurrent")
+
+        from quantagent import settings as _settings
+
+        api_key = ""
+        if provider_name == "openai":
+            api_key = _settings.OPENAI_API_KEY
+        elif provider_name == "anthropic":
+            api_key = _settings.ANTHROPIC_API_KEY
+
+        executor = BatchExecutorFactory.create(
+            provider=batch_mode,
+            model=model_name,
+            trading_graph=self.trading_graph,
+            api_key=api_key,
+            batch_config=self.batch_config,
+            concurrent_workers=self.config.get("batch_concurrent_workers", 4),
+        )
+        self._batch_collector = BatchSignalCollector(executor, self.batch_config)
+        logger.info(
+            f"Batch collector initialized (mode={batch_mode}, size={self.batch_config.batch_size})",
+            extra={"event_type": "batch_init", "batch_mode": batch_mode},
+        )
 
     def run(self, name: Optional[str] = None) -> BacktestMetrics:
         """
@@ -282,6 +325,15 @@ class Backtest:
                         extra={"event_type": "backtest_progress"},
                     )
 
+        # Flush any pending batch requests before calculating metrics
+        if self._batch_collector:
+            self._batch_collector.flush()
+            batch_summary = self._batch_collector.summary()
+            logger.info(
+                "Batch processing summary",
+                extra={"event_type": "batch_summary", **batch_summary},
+            )
+
         # Calculate metrics
         metrics = self._calculate_metrics()
 
@@ -343,7 +395,12 @@ class Backtest:
             },
             environment=Environment.BACKTEST,
         )
-        return StrategyAssembler.config_snapshot(resolved)
+        snapshot = StrategyAssembler.config_snapshot(resolved)
+        # QuantAgent-um8: persist batch config in snapshot for reproducibility
+        if self.batch_config.batch_enabled:
+            from dataclasses import asdict
+            snapshot["batch_config"] = asdict(self.batch_config)
+        return snapshot
 
     def _get_date_range(self) -> List[datetime]:
         """
@@ -477,9 +534,15 @@ class Backtest:
                 self.backtest_run_id, asset, current_date
             )
 
-        signal = self.strategy.generate_signal(
-            kline_data, asset, self.timeframe, current_price, thread_id=thread_id
-        )
+        # QuantAgent-um8: Use batch executor if enabled, else direct strategy call
+        if self._batch_collector is not None:
+            signal = self._generate_signal_via_batch(
+                kline_data, asset, current_price, current_date
+            )
+        else:
+            signal = self.strategy.generate_signal(
+                kline_data, asset, self.timeframe, current_price, thread_id=thread_id
+            )
 
         if signal is None or signal.decision == "HOLD":
             return
@@ -550,6 +613,89 @@ class Backtest:
                     f"@ "
                 f"${current_price:.2f}, qty: {order.filled_quantity}"
             )
+
+    def _generate_signal_via_batch(
+        self,
+        kline_data,
+        asset: str,
+        current_price: float,
+        current_date: datetime,
+    ):
+        """
+        Generate signal using the batch executor.
+
+        Builds a BacktestLLMRequest, submits to BatchSignalCollector,
+        flushes immediately (batch_size=1 for inline use), and returns
+        a TradingSignal parsed from the batch result.
+        """
+        from quantagent.strategy.base import TradingSignal
+
+        candle_index = int(current_date.timestamp())
+        trace = TraceMetadata(
+            backtest_run_id=self.backtest_run_id,
+            symbol=asset,
+            timeframe=self.timeframe,
+            candle_index=candle_index,
+        )
+        messages = _build_single_prompt_messages(kline_data, asset, self.timeframe)
+        req = BacktestLLMRequest(
+            custom_id=trace.to_custom_id(),
+            provider=self.config.get("agent_llm_provider", "openai"),
+            model=self.config.get("agent_llm_model", "gpt-4o-mini"),
+            payload=messages,
+            trace=trace,
+            kline_data=kline_data,
+            current_price=current_price,
+        )
+
+        self._batch_collector.add(req)
+        # For inline use (sync/concurrent): force immediate flush if batch_size not reached
+        # so we have the result available now.
+        self._batch_collector.flush()
+
+        result = self._batch_collector.get_result(req.custom_id)
+        if result is None or not result.is_success():
+            if self.batch_config.fail_fast:
+                raise RuntimeError(
+                    f"Batch signal failed for {req.custom_id}: {result.error if result else 'no result'}"
+                )
+            if self.batch_config.batch_allow_fallback_to_sync:
+                logger.warning(
+                    f"Batch failed for {asset}@{current_date}, falling back to sync",
+                    extra={"event_type": "batch_fallback", "custom_id": req.custom_id},
+                )
+                return self.strategy.generate_signal(
+                    kline_data, asset, self.timeframe, current_price
+                )
+            return None
+
+        decision_dict = result.parse_decision()
+        if decision_dict is None:
+            return None
+
+        decision = str(decision_dict.get("decision", "HOLD")).upper()
+        if decision not in ("LONG", "SHORT"):
+            return None
+
+        confidence = float(decision_dict.get("confidence", 0.5))
+        reasoning = str(decision_dict.get("reasoning", ""))
+
+        if decision == "LONG":
+            stop_loss = current_price * 0.98
+            take_profit = current_price * 1.03
+        else:
+            stop_loss = current_price * 1.02
+            take_profit = current_price * 0.97
+
+        return TradingSignal(
+            decision=decision,
+            confidence=confidence,
+            entry_price=current_price,
+            stop_loss=stop_loss,
+            take_profit=take_profit,
+            reasoning=reasoning,
+            trailing_stop_pct=0.05,
+        )
 
     def _parse_decision(self, decision: TradingDecision) -> (TradeSignal, float):
         """Parse decision text to extract LONG/SHORT/HOLD and confidence."""
@@ -740,6 +886,9 @@ class Backtest:
                 else 0.0
             )
 
+            batch_summary = (
+                self._batch_collector.summary() if self._batch_collector else {}
+            )
             return BacktestMetrics(
                 total_trades=0,
                 winning_trades=0,
@@ -760,6 +909,10 @@ class Backtest:
                 mean_directional_accuracy=mda,
                 accuracy_by_candle=accuracy_by_candle,
                 close_reasons=close_reasons,
+                batch_enabled=self.batch_config.batch_enabled,
+                invocations_total=batch_summary.get("invocations_total", 0),
+                batched_total=batch_summary.get("batched_total", 0),
+                failed_total=batch_summary.get("failed_total", 0),
             )
 
         # Calculate basic metrics
@@ -818,6 +971,11 @@ class Backtest:
             else 0.0
         )
 
+        # QuantAgent-um8: Batch counters
+        batch_summary = (
+            self._batch_collector.summary() if self._batch_collector else {}
+        )
+
         return BacktestMetrics(
             total_trades=total_trades,
             winning_trades=len(winning_trades),
@@ -838,6 +996,10 @@ class Backtest:
             mean_directional_accuracy=mda,
             accuracy_by_candle=accuracy_by_candle,
             close_reasons=close_reasons,
+            batch_enabled=self.batch_config.batch_enabled,
+            invocations_total=batch_summary.get("invocations_total", 0),
+            batched_total=batch_summary.get("batched_total", 0),
+            failed_total=batch_summary.get("failed_total", 0),
         )
 
     def _calculate_sharpe_ratio(self, risk_free_rate: float = 0.02) -> float:
