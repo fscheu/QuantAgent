@@ -65,6 +65,13 @@ def render(db, environment: str) -> None:
     tab_llm, tab_portfolio = st.tabs(["LLM Settings", "Portfolio & Universe"])
 
     with tab_llm:
+        # AC1 — Caption explaining LLM settings affect only LLM-based strategies
+        st.caption(
+            "These LLM provider and model settings apply only to LLM-based strategies "
+            "(e.g., pattern recognition, sentiment analysis). Deterministic strategies "
+            "(e.g., RSI, 52-week high momentum) do not use these settings."
+        )
+
         st.markdown("**Model presets**")
         preset_names = list(st.session_state.model_presets.keys())
         preset_name = st.selectbox(
@@ -80,13 +87,22 @@ def render(db, environment: str) -> None:
             if provider_default in provider_options
             else 0
         )
+        # AC2 — Tooltip for Provider selector
         provider = st.selectbox(
-            "Provider", provider_options, index=provider_index, key="model_provider"
+            "Provider",
+            provider_options,
+            index=provider_index,
+            key="model_provider",
+            help="Select the LLM API provider. 'openai' uses OpenAI GPT models, "
+                 "'anthropic' uses Claude models, 'qwen' uses Qwen models."
         )
+        # AC3 — Tooltip for Model name input
         model_name = st.text_input(
             "Model name",
             value=preset.get("model_name", "gpt-4o-mini"),
             key="model_name",
+            help="Enter the specific model name. Examples: 'gpt-4o-mini' (OpenAI), "
+                 "'claude-3-5-sonnet-20241022' (Anthropic), 'qwen2.5-72b-instruct' (Qwen)."
         )
         temperature = st.slider(
             "Temperature",
@@ -136,6 +152,13 @@ def render(db, environment: str) -> None:
                 },
                 indent=2,
             )
+            # AC6 — Caption explaining Profile JSON is source of truth
+            st.caption(
+                "The Profile JSON below is the source of truth for this profile. "
+                "Changes made in the Universe multiselect (when available) are merged "
+                "into this JSON when you save the profile. The form complements the JSON, "
+                "it does not replace it."
+            )
             raw = st.text_area(
                 "Profile JSON", value=raw_default, height=260, key=f"profile_json_{kind}"
             )
@@ -148,6 +171,7 @@ def render(db, environment: str) -> None:
                     universe_default = parsed.get("universe", []) or []
             except Exception:
                 parsed = None
+
             allowed_universe_default = [
                 u for u in universe_default if u in SUPPORTED_UNIVERSE_SYMBOLS
             ]
@@ -157,10 +181,15 @@ def render(db, environment: str) -> None:
 
             universe: List[str] = allowed_universe_default
             if kind == "portfolio":
+                # AC5 — Tooltip for Universe multiselect
                 universe = st.multiselect(
                     "Universe (portfolio profiles only)",
                     SUPPORTED_UNIVERSE_SYMBOLS,
                     default=allowed_universe_default,
+                    help="Select the asset symbols for this portfolio profile. "
+                         "This setting is only active when kind = 'portfolio'. "
+                         "It affects which symbols are included in backtesting and paper trading "
+                         "runs that use this profile."
                 )
             else:
                 st.caption("Universe editing is available for portfolio profiles only.")
@@ -254,6 +283,7 @@ def render(db, environment: str) -> None:
             for env_key in ("paper", "backtest"):
                 options = ["(none)"] + portfolio_names
                 current_default = st.session_state.default_profiles.get(env_key) or "(none)"
+                # AC4 — Tooltip for default portfolio selectors
                 chosen = st.selectbox(
                     f"{env_key.title()} default portfolio",
                     options,
@@ -261,6 +291,9 @@ def render(db, environment: str) -> None:
                         options.index(current_default) if current_default in options else 0
                     ),
                     key=f"default_{env_key}",
+                    help=f"Select the default portfolio profile for {env_key} runs. "
+                         "This profile will be preselected when you start a new run in this environment. "
+                         "To add options here, create and save a portfolio profile using the Profile editor on the left."
                 )
                 st.caption(
                     "Select a saved portfolio profile. Create profiles using the Profile editor on the left."
