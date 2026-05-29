@@ -1,29 +1,3 @@
-## Quality Gates — 20260529T123620Z-QuantAgent-um8-planner
-
-### Required
-
-[PASS] git status --short
-  → Only untracked docs/envelopes/QuantAgent-um8/ (run-owned, allowed); repo otherwise clean.
-
-[PASS] verify issue ID appears in docs paths
-  → QuantAgent-um8 prefix present in:
-     docs/01_requirements/QuantAgent-um8-RQ-batch-processing.md
-     docs/02_planning/QuantAgent-um8-PL-batch-processing.md
-     docs/03_design/QuantAgent-um8-DS-batch-processing.md
-     docs/05_acceptance_tests/QuantAgent-um8-AC-batch-processing.md
-
-[PASS] verify acceptance criteria are testable
-  → AC-1 through AC-10 all use Given/When/Then with concrete conditions and test commands.
-     All criteria map to code paths defined in the design document.
-
-[PASS] confirm repo is clean before canonical planner publication
-  → Only expected doc changes (4 new files + 4 modified READMEs + envelope dir).
-     No code files modified. No unrelated drift.
-
-[PASS] confirm current branch matches canonical publication branch
-  → Current branch: main. Publication branch: main. Match.
-
-### Optional
-
-[PASS] python -m compileall -q .
-  → No compilation errors in quantagent/ package.
+- router validation: PASS | command=validate envelope + capabilities | exit_code=0 | evidence=Envelope parsed and dangerous capabilities rejected.
+- executor availability: PASS | command=which claude | exit_code=0 | evidence=available=True
+- executor run: SUCCESS | command=claude -p "$(cat /home/azureuser/repos/projects/QuantAgent/docs/envelopes/QuantAgent-um8/20260529T123620Z-QuantAgent-um8-planner/executor-prompt-claude-code.md)" --output-format json --allowedTools Read,Edit,Write,Bash | exit_code=0 | evidence=exit_code=0
