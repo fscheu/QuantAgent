@@ -23,37 +23,11 @@ The files listed above represent the current functional requirements for the sys
 
 ## Active Per-Change Requirements
 
-- [QuantAgent-um8-RQ-batch-processing.md](./QuantAgent-um8-RQ-batch-processing.md) - Batch processing for backtesting LLM calls: concurrent + provider batch API modes (Anthropic/OpenAI), 50% cost reduction, configurable parameters
-
-- [QuantAgent-kkj.5-RQ-configuration-contextual-help.md](./QuantAgent-kkj.5-RQ-configuration-contextual-help.md) - Add contextual help (tooltips + captions) to Configuration view fields: provider, model, universe, portfolio defaults, Profile JSON
-- [QuantAgent-kkj.9-RQ-strategy-selector-ui.md](./QuantAgent-kkj.9-RQ-strategy-selector-ui.md) - Strategy selector in Backtesting, Paper Trading, and Configuration views (depends on kkj.8 registry)
-
-- [QuantAgent-kkj.11-RQ-multi-provider-routing.md](./QuantAgent-kkj.11-RQ-multi-provider-routing.md) - Multi-provider routing by role for cost-efficient strategies (configuration, cost, llm)
-- [QuantAgent-s62-RQ-operational-observability.md](./QuantAgent-s62-RQ-operational-observability.md) - Extend minimal operational observability in dashboard and logs for paper trading (M2)
-- [QuantAgent-69d-RQ-token-time-metrics.md](./QuantAgent-69d-RQ-token-time-metrics.md) - Track LLM token usage and runtime metrics for session/backtest cost analysis
-- [QuantAgent-vna-RQ-triple-screen-strategy.md](./QuantAgent-vna-RQ-triple-screen-strategy.md) - M1 Strategy 1: Triple Screen Strategy (Alexander Elder)
-- [QuantAgent-40j-RQ-parallel-test-fix.md](./QuantAgent-40j-RQ-parallel-test-fix.md) - Fix missing benchmark fixture for parallel execution test (P1, blocks 82t)
-- [QuantAgent-4w4-RQ-lookback-windows.md](./QuantAgent-4w4-RQ-lookback-windows.md) - Backtest must honor strategy-specific lookback windows (P1, blocks b8r)
-- [QuantAgent-b8r-RQ-52week-high-momentum.md](./QuantAgent-b8r-RQ-52week-high-momentum.md) - M1 Strategy 3: 52-week high momentum / breakout for US equities
-- [QuantAgent-c69-RQ-llm-agent-strategy-m1.md](./QuantAgent-c69-RQ-llm-agent-strategy-m1.md) - M1 Strategy 2: LLMAgentStrategy as explicit reference pipeline
+- [QuantAgent-um8-RQ-backtest-batch-processing.md](./QuantAgent-um8-RQ-backtest-batch-processing.md) - Batch processing para llamadas de backtesting (cost/throughput)
 - [QuantAgent-94d-RQ-backtest-isolation.md](./QuantAgent-94d-RQ-backtest-isolation.md) - Backtest Run ID Isolation (P1, bug)
 - [QuantAgent-r78-RQ-trade-pnl-calculation.md](./QuantAgent-r78-RQ-trade-pnl-calculation.md) - Trade P&L calculation bug fix (P1)
-- [QuantAgent-les-RQ-commissions-pnl.md](./QuantAgent-les-RQ-commissions-pnl.md) - Support commissions in P&L calculation (P3, feature)
 - [QuantAgent-nu7-RQ-active-position-monitoring.md](./QuantAgent-nu7-RQ-active-position-monitoring.md) - Active Position Monitoring System (Epic: QuantAgent-nu7)
 - [QuantAgent-7bn-RQ-azure-openai-support.md](./QuantAgent-7bn-RQ-azure-openai-support.md) - Azure OpenAI LLM provider support
-- [QuantAgent-6t4-RQ-structured-output-vision-agents.md](./QuantAgent-6t4-RQ-structured-output-vision-agents.md) - Replace manual JSON parsing with LangChain structured output in pattern/trend agents
-- [QuantAgent-1p7-RQ-stategraph-image-paths.md](./QuantAgent-1p7-RQ-stategraph-image-paths.md) - Save StateGraph visualizations to disk and propagate file paths instead of in-memory image payloads
-- [QuantAgent-sft-RQ-paper-runtime-hardening.md](./QuantAgent-sft-RQ-paper-runtime-hardening.md) - Harden paper trading runtime for stable, observable QA operation in M2
-- [QuantAgent-339-RQ-qa-validator-real-runtime.md](./QuantAgent-339-RQ-qa-validator-real-runtime.md) - Formalize post-deploy QA validator against the real QA Streamlit runtime
-- [QuantAgent-kkj.3-RQ-dashboard-environment-aware.md](./QuantAgent-kkj.3-RQ-dashboard-environment-aware.md) - Dashboard environment-aware redesign: paper mode (scheduler status + run grid + selector) and backtest mode (run grid + selector + metrics)
-
-## M1 Reference Strategies (Completed)
-
-- `QuantAgent-l0h` milestone tracking is technically complete and should now be treated as closed tracking state.
-- Strategy docs now validated in `main`:
-  - `QuantAgent-vna` — Triple Screen Strategy
-  - `QuantAgent-c69` — LLMAgentStrategy reference pipeline
-  - `QuantAgent-b8r` — 52-week high momentum / breakout
 
 ## Per-Change Requirements
 

@@ -20,27 +20,11 @@ Acceptance test documents define the criteria for validating that features work 
 
 ## Active Per-Change Acceptance Criteria
 
-- [QuantAgent-um8-AC-batch-processing.md](./QuantAgent-um8-AC-batch-processing.md) - 10 acceptance criteria for batch processing: sequential regression, concurrent parallelism, non-LLM bypass, custom_id traceability, partial failure, timeout, unsupported provider, snapshot, signal traceability, chunking
-
-- [QuantAgent-kkj.5-AC-configuration-contextual-help.md](./QuantAgent-kkj.5-AC-configuration-contextual-help.md) - 8 acceptance criteria for contextual help in Configuration: LLM caption, provider/model/universe/portfolio tooltips, Profile JSON caption, no-regression
-- [QuantAgent-kkj.9-AC-strategy-selector-ui.md](./QuantAgent-kkj.9-AC-strategy-selector-ui.md) - 11 acceptance criteria for strategy selector UI across backtesting, paper trading, and configuration views
-
-- [QuantAgent-kkj.11-AC-multi-provider-routing.md](./QuantAgent-kkj.11-AC-multi-provider-routing.md) - 13 acceptance criteria for multi-provider routing: registry, role resolution, fallback, backward compat, persistence, traceability (configuration, cost, llm)
-- [QuantAgent-s62-AC-operational-observability.md](./QuantAgent-s62-AC-operational-observability.md) - Acceptance criteria for paper trading observability: scheduler status, positions/PnL, LLM telemetry, env filter in logs
-- [QuantAgent-69d-AC-token-time-metrics.md](./QuantAgent-69d-AC-token-time-metrics.md) - Acceptance criteria for LLM token/runtime telemetry persistence and isolation
-- [QuantAgent-uzq-AC-fix-scheduler-heartbeat.md](./QuantAgent-uzq-AC-fix-scheduler-heartbeat.md) - Fix TradingScheduler heartbeat and scheduler unit-test regressions exposed by CI gate (P1, blocks 82t)
-- [QuantAgent-40j-AC-parallel-test-fix.md](./QuantAgent-40j-AC-parallel-test-fix.md) - Fix missing benchmark fixture for parallel execution test (P1, blocks 82t)
-- [QuantAgent-b8r-AC-52week-high-momentum.md](./QuantAgent-b8r-AC-52week-high-momentum.md) - M1 Strategy 3: 52-week high momentum / breakout for US equities (m1, strategy)
-- [QuantAgent-c69-AC-llm-agent-strategy.md](./QuantAgent-c69-AC-llm-agent-strategy.md) - M1 Strategy 2: LLMAgentStrategy reference pipeline (m1, strategy)
+- [QuantAgent-um8-AC-backtest-batch-processing.md](./QuantAgent-um8-AC-backtest-batch-processing.md) - Batch processing para llamadas de backtesting (cost/throughput)
 - [QuantAgent-94d-AC-backtest-isolation.md](./QuantAgent-94d-AC-backtest-isolation.md) - Backtest Run ID Isolation (P1, bug)
 - [QuantAgent-r78-AC-trade-pnl-calculation.md](./QuantAgent-r78-AC-trade-pnl-calculation.md) - Trade P&L calculation bug fix (P1)
-- [QuantAgent-les-AC-commissions-pnl.md](./QuantAgent-les-AC-commissions-pnl.md) - Support commissions in P&L calculation (P3, feature)
 - [QuantAgent-nu7-AC-active-position-monitoring.md](./QuantAgent-nu7-AC-active-position-monitoring.md) - Active Position Monitoring System (Epic: QuantAgent-nu7)
 - [QuantAgent-7bn-AC-azure-openai-support.md](./QuantAgent-7bn-AC-azure-openai-support.md) - Azure OpenAI LLM provider support
-- [QuantAgent-6t4-AC-structured-output-vision-agents.md](./QuantAgent-6t4-AC-structured-output-vision-agents.md) - Structured output refactor for pattern/trend vision agents
-- [QuantAgent-1p7-AC-stategraph-image-paths.md](./QuantAgent-1p7-AC-stategraph-image-paths.md) - Acceptance criteria for disk-backed StateGraph visualization paths
-- [QuantAgent-sft-AC-paper-runtime-hardening.md](./QuantAgent-sft-AC-paper-runtime-hardening.md) - Acceptance criteria for stable, observable paper runtime in QA
-- [QuantAgent-339-AC-qa-validator-real-runtime.md](./QuantAgent-339-AC-qa-validator-real-runtime.md) - Acceptance criteria for real-runtime post-deploy QA validation
 
 ## Acceptance Criteria Format
 
