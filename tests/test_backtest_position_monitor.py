@@ -37,7 +37,7 @@ class MockSimpleStrategy(TradingStrategy):
         self.signal_sequence = signal_sequence or ["HOLD"]
         self.call_count = 0
 
-    def generate_signal(self, kline_data, symbol, timeframe, current_price):
+    def generate_signal(self, kline_data, symbol, timeframe, current_price, **kwargs):
         decision = self.signal_sequence[
             min(self.call_count, len(self.signal_sequence) - 1)
         ]
@@ -307,7 +307,7 @@ class TestBacktestPositionMonitorIntegration:
 
         # Custom strategy with known SL/TP values
         class KnownSLTPStrategy(TradingStrategy):
-            def generate_signal(self, kline_data, symbol, timeframe, current_price):
+            def generate_signal(self, kline_data, symbol, timeframe, current_price, **kwargs):
                 return TradingSignal(
                     decision="LONG",
                     confidence=0.9,
