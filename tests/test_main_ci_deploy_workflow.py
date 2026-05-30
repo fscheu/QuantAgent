@@ -49,3 +49,15 @@ def test_workflow_uploads_validator_artifacts_and_reports_metadata_to_hermes():
     assert '\"qa_partial\": os.environ.get(\"QA_PARTIAL\", \"false\")' in workflow
     assert '\"validator_artifacts_count\": os.environ.get(\"VALIDATOR_ARTIFACTS_COUNT\", \"0\")' in workflow
     assert '\"validator_artifacts_list\": os.environ.get(\"VALIDATOR_ARTIFACTS_LIST\", \"\")' in workflow
+
+
+def test_workflow_notifies_hermes_even_when_ci_fails_before_deploy():
+    workflow = read_workflow()
+
+    assert "name: Notify Hermes on CI failure before deploy" in workflow
+    assert "if: ${{ always() && needs.ci.result != 'success' }}" in workflow
+    assert "SOURCE_JOB_NAME: CI (Lint + Tests)" in workflow
+    assert '\"notification_job\": os.environ.get(\"GITHUB_JOB\", \"\")' in workflow
+    assert '\"deploy_reached\": \"false\"' in workflow
+    assert '\"qa_validator_result_status\": \"NOT_RUN\"' in workflow
+    assert 'github-actions-{run_id}-{run_attempt}-ci-failure' in workflow

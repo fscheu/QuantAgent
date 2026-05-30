@@ -156,6 +156,76 @@ jobs:
               \"disable_web_page_preview\": true
             }"
   
+  notify-hermes-ci-failure:
+    name: Notify Hermes on CI failure before deploy
+    needs: ci
+    runs-on: [self-hosted, Linux, X64, quantagent-vm]
+    if: ${{ always() && needs.ci.result != 'success' }}
+
+    steps:
+      - name: Notify Hermes Tech Lead
+        env:
+          HERMES_WEBHOOK_URL: http://localhost:8644/webhooks/github-deploy-finished
+          HERMES_WEBHOOK_SECRET: ${{ secrets.HERMES_WEBHOOK_SECRET }}
+          CI_RESULT: ${{ needs.ci.result }}
+          SOURCE_JOB_NAME: CI (Lint + Tests)
+        run: |
+          python3 - <<'PY'
+          import json
+          import hashlib
+          import hmac
+          import os
+          import urllib.request
+
+          url = os.environ["HERMES_WEBHOOK_URL"]
+          secret = os.environ["HERMES_WEBHOOK_SECRET"]
+          run_id = os.environ.get("GITHUB_RUN_ID", "")
+          run_attempt = os.environ.get("GITHUB_RUN_ATTEMPT", "")
+          repo = os.environ.get("GITHUB_REPOSITORY", "")
+
+          payload = {
+              "event_type": "deploy_finished",
+              "repo": repo,
+              "workflow": os.environ.get("GITHUB_WORKFLOW", ""),
+              "job": os.environ.get("SOURCE_JOB_NAME", "CI (Lint + Tests)"),
+              "notification_job": os.environ.get("GITHUB_JOB", ""),
+              "environment": "qa",
+              "ref": os.environ.get("GITHUB_REF", ""),
+              "branch": os.environ.get("GITHUB_REF_NAME", ""),
+              "sha": os.environ.get("GITHUB_SHA", ""),
+              "actor": os.environ.get("GITHUB_ACTOR", ""),
+              "conclusion": os.environ.get("CI_RESULT", ""),
+              "run_id": run_id,
+              "run_attempt": run_attempt,
+              "run_url": f"https://github.com/{repo}/actions/runs/{run_id}",
+              "deployed_url": "",
+              "deploy_reached": "false",
+              "deploy_step_outcome": "skipped",
+              "migration_step_outcome": "skipped",
+              "bootstrap_step_outcome": "skipped",
+              "health_step_outcome": "skipped",
+              "qa_target_alignment_outcome": "skipped",
+              "qa_validator_step_outcome": "skipped",
+              "qa_validator_result_status": "NOT_RUN",
+              "qa_verified": "false",
+              "qa_partial": "false",
+              "validator_artifacts_count": "0",
+              "validator_artifacts_list": "",
+          }
+
+          body = json.dumps(payload).encode("utf-8")
+          signature = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
+
+          request = urllib.request.Request(url, data=body, method="POST")
+          request.add_header("Content-Type", "application/json")
+          request.add_header("X-Webhook-Signature", signature)
+          request.add_header("X-Request-ID", f"github-actions-{run_id}-{run_attempt}-ci-failure")
+
+          with urllib.request.urlopen(request, timeout=30) as response:
+              print(response.status)
+              print(response.read().decode())
+          PY
+
   deploy-qa:
     name: Deploy to QA
     needs: ci
