@@ -39,11 +39,20 @@ These documents represent the current technical design of the system. When imple
 
 ## Active Per-Change Design
 
-- [QuantAgent-um8-DS-backtest-batch-processing.md](./QuantAgent-um8-DS-backtest-batch-processing.md) - Batch processing para llamadas de backtesting (cost/throughput)
+- [QuantAgent-um8-DS-batch-processing.md](./QuantAgent-um8-DS-batch-processing.md) - Batch processing design: concurrent (LangGraph .batch()) and provider_batch (Anthropic/OpenAI async APIs) modes, BatchSignalCollector, BatchProvider protocol, error handling
+
+- [QuantAgent-kkj.11-DS-multi-provider-routing.md](./QuantAgent-kkj.11-DS-multi-provider-routing.md) - Provider registry, role config, routing policy, TradingGraph wiring, persistence (configuration, cost, llm)
+- [QuantAgent-s62-DS-operational-observability.md](./QuantAgent-s62-DS-operational-observability.md) - UI-layer wiring of SchedulerHeartbeat and LLM telemetry into dashboard, paper trading tab, and logs (M2)
+- [QuantAgent-69d-DS-token-time-metrics.md](./QuantAgent-69d-DS-token-time-metrics.md) - Reuse `logs` + `invoke_with_retry()` for LLM telemetry with on-demand aggregation
+- [QuantAgent-b8r-DS-52week-high-momentum.md](./QuantAgent-b8r-DS-52week-high-momentum.md) - M1 Strategy 3: 52-week high momentum / breakout for US equities
 - [QuantAgent-94d-DS-backtest-isolation.md](./QuantAgent-94d-DS-backtest-isolation.md) - Backtest Run ID Isolation (P1, bug)
 - [QuantAgent-r78-DS-trade-pnl-calculation.md](./QuantAgent-r78-DS-trade-pnl-calculation.md) - Trade P&L calculation bug fix (P1)
+- [QuantAgent-les-DS-commissions-pnl.md](./QuantAgent-les-DS-commissions-pnl.md) - Support commissions in P&L calculation (P3, feature)
 - [QuantAgent-nu7-DS-active-position-monitoring.md](./QuantAgent-nu7-DS-active-position-monitoring.md) - Active Position Monitoring System (Epic: QuantAgent-nu7)
 - [QuantAgent-7bn-DS-azure-openai-support.md](./QuantAgent-7bn-DS-azure-openai-support.md) - Azure OpenAI LLM provider support
+- [QuantAgent-1p7-DS-stategraph-image-paths.md](./QuantAgent-1p7-DS-stategraph-image-paths.md) - Keep StateGraph visualization export disk-backed and path-only
+- [QuantAgent-sft-DS-paper-runtime-hardening.md](./QuantAgent-sft-DS-paper-runtime-hardening.md) - Harden existing scheduler/order/position/UI seams for M2 paper runtime readiness
+- [QuantAgent-339-DS-qa-validator-real-runtime.md](./QuantAgent-339-DS-qa-validator-real-runtime.md) - Harden the deploy→validator→Hermes contract for real QA runtime validation
 
 ## Per-Change Design Documents
 
