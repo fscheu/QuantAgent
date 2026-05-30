@@ -60,6 +60,12 @@ jobs:
           pip install -e .
           pip install pytest pytest-cov ruff
       
+      - name: Apply database migrations
+        env:
+          DATABASE_URL: postgresql://test:***@localhost:5432/quantagent_test
+        run: |
+          python -m alembic upgrade head
+      
       - name: Lint with ruff (autofix + check)
         id: lint
         run: |
