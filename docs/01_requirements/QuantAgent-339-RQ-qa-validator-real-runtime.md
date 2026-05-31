@@ -5,7 +5,7 @@ Convertir el post-deploy QA validator actual en una validación útil contra el 
 
 ## Context
 El workflow `main-ci-deploy.yml` ya:
-- despliega Streamlit QA en `127.0.0.1:8501` / `qa.fedes.dev`
+- despliega Streamlit QA en `127.0.0.1:8501` y lo expone públicamente en `QuantAgent.fedes.dev` (Cloudflare Access)
 - ejecuta el runner interno del skill `autodev-qa-validator`
 - lee `result.json`
 - envía webhook a Hermes

@@ -428,7 +428,7 @@ jobs:
               "run_id": run_id,
               "run_attempt": run_attempt,
               "run_url": f"https://github.com/{repo}/actions/runs/{run_id}",
-              "deployed_url": "https://qa.fedes.dev",
+              "deployed_url": "https://QuantAgent.fedes.dev",
               "deploy_step_outcome": os.environ.get("DEPLOY_OUTCOME", ""),
               "migration_step_outcome": os.environ.get("MIGRATION_OUTCOME", ""),
               "bootstrap_step_outcome": os.environ.get("BOOTSTRAP_OUTCOME", ""),

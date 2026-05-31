@@ -10,7 +10,7 @@ The QA environment now serves the Streamlit UI on port 8501 instead of the legac
 
 The deployment contract was updated so `deploy_finished` remains the end-of-job webhook carrying deploy and health metadata for the 8501 runtime, while `qa_verified` is a derived post-deploy validation state inferred from the validator outcome attached to that deploy event.
 
-Cloudflare was cut over so `qa.fedes.dev` now routes to `localhost:8501`, and the temporary `qa-ui.fedes.dev` hostname was removed from the published application routes.
+Cloudflare was cut over so `QuantAgent.fedes.dev` now routes to `localhost:8501`; the old `qa.fedes.dev` route was superseded, and the temporary `qa-ui.fedes.dev` hostname was removed from the published application routes.
 
 ## Change made
 
@@ -54,10 +54,10 @@ Cloudflare was cut over so `qa.fedes.dev` now routes to `localhost:8501`, and th
 
 ### Cloudflare / tunnel
 
-- Local cloudflared config was aligned to `service: http://localhost:8501` for `qa.fedes.dev`.
+- Local cloudflared config was aligned to `service: http://localhost:8501` for `QuantAgent.fedes.dev`.
 - The effective remote tunnel configuration was later updated from Cloudflare Dashboard.
 - Final observed tunnel config in `journalctl -u cloudflared`:
-  - `qa.fedes.dev -> http://localhost:8501`
+  - `QuantAgent.fedes.dev -> http://localhost:8501`
   - `qa-ui.fedes.dev` removed
 
 ## Operational contract
@@ -91,7 +91,7 @@ This is the correct signal for: "the deployed QA UI was functionally verified be
 
 ### 3. Why validation stays local
 
-`qa.fedes.dev` is protected by Cloudflare Access, so unattended browser automation should validate against `127.0.0.1:8501`, not against the public hostname.
+`QuantAgent.fedes.dev` is protected by Cloudflare Access, so unattended browser automation should validate against `127.0.0.1:8501`, not against the public hostname.
 
 Public hostname purpose:
 - human access through Cloudflare Access
@@ -129,8 +129,8 @@ Observed result:
 ### Public hostname / Access
 
 Verified externally from the VM:
-- `curl -I https://qa.fedes.dev` -> `HTTP/2 302`
-- redirect target: Cloudflare Access login for `qa.fedes.dev`
+- `curl -I https://QuantAgent.fedes.dev` -> `HTTP/2 302`
+- redirect target: Cloudflare Access login for `QuantAgent.fedes.dev`
 
 Verified with browser navigation:
 - URL resolved to Cloudflare Access login
@@ -141,14 +141,14 @@ This is expected and confirms the public hostname is live behind Access.
 ### Tunnel routing evidence
 
 Observed in `journalctl -u cloudflared` after the dashboard change:
-- configuration version 3 updated `qa.fedes.dev` to `http://localhost:8501`
+- configuration version 3 updated `QuantAgent.fedes.dev` to `http://localhost:8501`
 - configuration version 4 removed `qa-ui.fedes.dev`
 
 That is the strongest direct evidence that the active tunnel route now targets port 8501.
 
 ## Known limitations / notes
 
-- Cloudflare Access prevents using `qa.fedes.dev` as the primary automated validation target without an authenticated access flow.
+- Cloudflare Access prevents using `QuantAgent.fedes.dev` as the primary automated validation target without an authenticated access flow.
 - The Cloudflare Dashboard public-hostname configuration can change the effective tunnel routing independently of the local file, so tunnel logs should be checked when diagnosing route drift.
 - Disk pressure on the VM is still a real constraint; the prune steps are intentional, not cosmetic.
 
