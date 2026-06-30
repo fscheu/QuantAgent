@@ -161,7 +161,7 @@ class Backtest:
         self.strategy = strategy or LLMAgentStrategy(self.trading_graph)
 
         # Position monitor for active position tracking
-        self.position_monitor = PositionMonitor(self.db)
+        self.position_monitor = PositionMonitor(self.db, environment=Environment.BACKTEST)
 
         # Trading components
         self.portfolio = components.portfolio_manager
@@ -217,6 +217,10 @@ class Backtest:
         )
 
         self._replay_trade_order_ids = None
+
+        # NEW: Clean up any stale active positions BEFORE creating backtest run
+        # This prevents contamination from previous incomplete runs
+        self._cleanup_stale_positions()
 
         # Create backtest run record
         self._create_backtest_run(name)
@@ -275,7 +279,11 @@ class Backtest:
                         extra={"event_type": "backtest_progress"},
                     )
 
-        # Calculate metrics
+        # Close any remaining active positions to prevent stale position contamination
+        self._close_remaining_positions()
+
+        # Calculate metrics after forcing final exits so linked trades carry
+        # realized P&L from backtest-end closures as well.
         metrics = self._calculate_metrics()
 
         # Update backtest run with results
@@ -349,6 +357,8 @@ class Backtest:
         self.total_candles_processed = 0
         self._replay_trade_order_ids = set()
 
+        self._cleanup_stale_positions()
+
         # Override date/asset/timeframe from source run so replay matches it exactly
         self.start_date = source_run.start_date
         self.end_date = source_run.end_date
@@ -381,6 +391,7 @@ class Backtest:
 
                 self._record_equity(current_date)
 
+        self._close_remaining_positions()
         metrics = self._calculate_metrics()
         self._update_backtest_run(metrics)
 
@@ -415,16 +426,12 @@ class Backtest:
                 active_pos, current_price, df
             )
             if should_exit:
-                self.position_monitor.close_position(active_pos, reason, current_price)
-                if active_pos.trade_id:
-                    self.order_manager.close_trade(
-                        active_pos.trade_id,
-                        current_price,
-                        environment=Environment.BACKTEST,
-                    )
-                    logger.debug(
-                        f"[REPLAY] {asset}: Closed position ({reason}) @ ${current_price:.2f}"
-                    )
+                self._close_position_with_trade_sync(
+                    active_pos, reason, current_price
+                )
+                logger.debug(
+                    f"[REPLAY] {asset}: Closed position ({reason}) @ ${current_price:.2f}"
+                )
             else:
                 prev_close = float(df.iloc[-2]["close"])
                 self.position_monitor.update_candle_tracking(
@@ -642,19 +649,12 @@ class Backtest:
             )
 
             if should_exit:
-                # Close position
-                self.position_monitor.close_position(active_pos, reason, current_price)
-
-                # Execute close via OrderManager
-                if active_pos.trade_id:
-                    self.order_manager.close_trade(
-                        active_pos.trade_id,
-                        current_price,
-                        environment=Environment.BACKTEST,
-                    )
-                    logger.info(
-                        f"{asset}: Closed position - {reason} @ ${current_price:.2f}"
-                    )
+                self._close_position_with_trade_sync(
+                    active_pos, reason, current_price
+                )
+                logger.info(
+                    f"{asset}: Closed position - {reason} @ ${current_price:.2f}"
+                )
                 # Continue to potentially open new position below
             else:
                 # Position still active: update tracking only (NO INVOKE)
@@ -928,6 +928,172 @@ class Backtest:
             }
         )
 
+    def _close_remaining_positions(self) -> None:
+        """Close any remaining active positions at the end of backtest to prevent stale position contamination."""
+        for asset in self.assets:
+            active_pos = self.position_monitor.get_active_position(asset)
+            if active_pos:
+                # Get final price for closing
+                df = self.data_provider.get_ohlc(
+                    symbol=asset,
+                    timeframe=self.timeframe,
+                    start_date=self.end_date - timedelta(days=1),
+                    end_date=self.end_date,
+                )
+                if not df.empty:
+                    final_price = float(df.iloc[-1]["close"])
+                    self._close_position_with_trade_sync(
+                        active_pos, "backtest_end", final_price
+                    )
+                    logger.info(
+                        f"Closed remaining position for {asset} at backtest end @ ${final_price:.2f}",
+                        extra={"event_type": "backtest_position_cleanup", "symbol": asset},
+                    )
+
+    def _cleanup_stale_positions(self) -> None:
+        """
+        Close ALL stale active positions for assets in this backtest.
+
+        Called at backtest START to prevent contamination from previous incomplete runs.
+        Unlike _close_remaining_positions() which only closes positions for CURRENT
+        backtest_run_id, this closes ALL active positions regardless of run_id.
+        """
+        if not self.assets:
+            return
+
+        logger.info(
+            "Checking for stale active positions before backtest start",
+            extra={"event_type": "stale_position_check"},
+        )
+
+        total_cleaned = 0
+
+        for asset in self.assets:
+            # Query ALL active positions for this asset + environment
+            stale_positions = (
+                self.db.query(ActivePosition)
+                .filter(
+                    ActivePosition.symbol == asset,
+                    ActivePosition.is_active.is_(True),
+                    ActivePosition.environment == Environment.BACKTEST,
+                )
+                .all()
+            )
+
+            if not stale_positions:
+                continue
+
+            logger.warning(
+                f"Found {len(stale_positions)} stale active positions for {asset}",
+                extra={
+                    "event_type": "stale_positions_found",
+                    "symbol": asset,
+                    "count": len(stale_positions),
+                    "run_ids": [p.backtest_run_id for p in stale_positions],
+                },
+            )
+
+            for pos in stale_positions:
+                # Get price data for closing
+                df = self.data_provider.get_ohlc(
+                    symbol=asset,
+                    timeframe=self.timeframe,
+                    start_date=self.start_date - timedelta(days=1),
+                    end_date=self.start_date,
+                )
+
+                # Fallback: try position's timestamp if no data at start_date
+                if df.empty:
+                    df = self.data_provider.get_ohlc(
+                        symbol=asset,
+                        timeframe=self.timeframe,
+                        start_date=pos.decision_timestamp - timedelta(days=1),
+                        end_date=pos.decision_timestamp + timedelta(days=1),
+                    )
+
+                if not df.empty:
+                    final_price = float(df.iloc[-1]["close"])
+
+                    self._close_position_with_trade_sync(
+                        pos,
+                        "stale_cleanup",
+                        final_price,
+                    )
+
+                    logger.info(
+                        f"Closed stale position ID {pos.id} from run {pos.backtest_run_id} @ ${final_price:.2f}",
+                        extra={
+                            "event_type": "stale_position_closed",
+                            "position_id": pos.id,
+                            "backtest_run_id": pos.backtest_run_id,
+                        },
+                    )
+                    total_cleaned += 1
+                else:
+                    # No price data, force close
+                    logger.warning(
+                        f"No price data for stale position {pos.id}, force closing",
+                        extra={"event_type": "stale_position_force_close", "position_id": pos.id},
+                    )
+                    pos.is_active = False
+                    pos.closed_at = datetime.utcnow()
+                    pos.close_reason = "stale_cleanup_no_price"
+                    self.db.commit()
+                    total_cleaned += 1
+
+        if total_cleaned > 0:
+            logger.warning(
+                f"Cleaned up {total_cleaned} stale positions before backtest start",
+                extra={"event_type": "stale_cleanup_complete", "count": total_cleaned},
+            )
+
+    def _close_position_with_trade_sync(
+        self,
+        position: ActivePosition,
+        reason: str,
+        exit_price: float,
+    ) -> None:
+        """Close the tracked position and sync realized exit data onto its linked opening trade."""
+        self.position_monitor.close_position(position, reason, exit_price)
+
+        close_order = None
+        if position.trade_id:
+            close_order = self.order_manager.close_trade(
+                position.trade_id,
+                exit_price,
+                environment=Environment.BACKTEST,
+            )
+
+        self._sync_linked_trade_exit(position, reason, exit_price, close_order)
+
+    def _sync_linked_trade_exit(
+        self,
+        position: ActivePosition,
+        reason: str,
+        exit_price: float,
+        close_order,
+    ) -> None:
+        """Copy exit metadata onto the opening trade used to scope this backtest run."""
+        if not position.trade_id:
+            return
+
+        opening_trade = self.db.query(Trade).filter(Trade.id == position.trade_id).first()
+        if opening_trade is None:
+            return
+
+        opening_trade.exit_price = Decimal(str(exit_price))
+        opening_trade.closed_at = position.closed_at
+        opening_trade.exit_signal = reason
+
+        close_order_id = getattr(close_order, "id", None)
+        if close_order_id is not None:
+            close_trade = self.db.query(Trade).filter(Trade.order_id == close_order_id).first()
+            if close_trade is not None:
+                opening_trade.pnl = close_trade.pnl
+                opening_trade.pnl_pct = close_trade.pnl_pct
+
+        self.db.commit()
+
     def _calculate_metrics(self) -> BacktestMetrics:
         """
         Calculate backtest performance metrics.
@@ -939,16 +1105,23 @@ class Backtest:
         - Max drawdown: worst peak-to-trough decline
         - Total P&L: sum of all trade P&L
         """
-        # Get all trades from database for this backtest
-        trades = (
-            self.db.query(Trade)
-            .filter(
-                Trade.environment == Environment.BACKTEST,
-                Trade.opened_at >= self.start_date,
-                Trade.opened_at <= self.end_date,
-            )
-            .all()
+        # Get all trades scoped to this backtest run.
+        # Time-window-only filtering bleeds trades from previous runs that used the
+        # same date range, which is exactly how you get the clown show of 4H reusing
+        # 1H metrics.
+        trades_query = self.db.query(Trade).filter(
+            Trade.environment == Environment.BACKTEST,
+            Trade.opened_at >= self.start_date,
+            Trade.opened_at <= self.end_date,
         )
+
+        if self.backtest_run_id is not None:
+            trades_query = trades_query.join(
+                ActivePosition,
+                ActivePosition.trade_id == Trade.id,
+            ).filter(ActivePosition.backtest_run_id == self.backtest_run_id)
+
+        trades = trades_query.all()
 
         if self._replay_trade_order_ids is not None:
             trades = [

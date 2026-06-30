@@ -30,10 +30,12 @@ class PositionMonitor:
         self.backtest_run_id = backtest_run_id
 
     def get_active_position(self, symbol: str) -> Optional[ActivePosition]:
-        """Get active position for a symbol."""
+        """Get active position for a symbol (ignores zero-quantity positions)."""
+        from decimal import Decimal
         query = self.db.query(ActivePosition).filter(
             ActivePosition.symbol == symbol,
             ActivePosition.is_active.is_(True),
+            ActivePosition.quantity > Decimal("0"),  # Ignore zero-quantity positions
         )
 
         if self.environment is not None:
@@ -42,7 +44,7 @@ class PositionMonitor:
         if self.backtest_run_id is not None:
             query = query.filter(ActivePosition.backtest_run_id == self.backtest_run_id)
 
-        return query.order_by(ActivePosition.id).first()
+        return query.order_by(ActivePosition.decision_timestamp.desc()).first()
 
     def open_position(
         self,
