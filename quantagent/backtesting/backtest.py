@@ -1085,6 +1085,20 @@ class Backtest:
         opening_trade.closed_at = position.closed_at
         opening_trade.exit_signal = reason
 
+        if opening_trade.entry_price is not None:
+            qty = Decimal(str(opening_trade.quantity))
+            entry_price = Decimal(str(opening_trade.entry_price))
+            exit_price_decimal = Decimal(str(exit_price))
+
+            if opening_trade.side == OrderSide.BUY:
+                opening_trade.pnl = (exit_price_decimal - entry_price) * qty
+            else:
+                opening_trade.pnl = (entry_price - exit_price_decimal) * qty
+
+            entry_notional = entry_price * qty
+            if entry_notional > 0:
+                opening_trade.pnl_pct = float((opening_trade.pnl / entry_notional) * 100)
+
         close_order_id = getattr(close_order, "id", None)
         if close_order_id is not None:
             close_trade = self.db.query(Trade).filter(Trade.order_id == close_order_id).first()
@@ -1111,15 +1125,22 @@ class Backtest:
         # 1H metrics.
         trades_query = self.db.query(Trade).filter(
             Trade.environment == Environment.BACKTEST,
-            Trade.opened_at >= self.start_date,
-            Trade.opened_at <= self.end_date,
         )
 
         if self.backtest_run_id is not None:
-            trades_query = trades_query.join(
-                ActivePosition,
-                ActivePosition.trade_id == Trade.id,
-            ).filter(ActivePosition.backtest_run_id == self.backtest_run_id)
+            trade_ids_subquery = (
+                self.db.query(ActivePosition.trade_id)
+                .filter(
+                    ActivePosition.backtest_run_id == self.backtest_run_id,
+                    ActivePosition.trade_id.is_not(None),
+                )
+                .subquery()
+            )
+            trades_query = trades_query.filter(Trade.id.in_(trade_ids_subquery))
+            trades_query = trades_query.filter(
+                Trade.closed_at.is_not(None),
+                Trade.exit_price.is_not(None),
+            )
 
         trades = trades_query.all()
 

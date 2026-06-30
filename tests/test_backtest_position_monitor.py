@@ -286,6 +286,7 @@ class TestBacktestPositionMonitorIntegration:
                 "TAKE_PROFIT",
                 "TRAILING_STOP",
                 "TIME_EXPIRED",
+                "backtest_end",
             ], f"Invalid close_reason: {pos.close_reason}"
             assert (
                 pos.closed_at is not None

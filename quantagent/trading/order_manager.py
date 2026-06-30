@@ -478,7 +478,14 @@ class OrderManager:
             return None
 
         close_side = OrderSide.SELL if trade.side == OrderSide.BUY else OrderSide.BUY
-        qty = float(trade.quantity)
+
+        current_position = self.portfolio.positions.get(trade.symbol, {})
+        current_qty = abs(float(current_position.get("qty", 0.0)))
+        if current_qty <= 0:
+            logger.warning(f"{trade.symbol}: close_trade skipped - no portfolio position to close")
+            return None
+
+        qty = min(float(trade.quantity), current_qty)
 
         is_valid, reason = self.risk_manager.validate_trade(
             trade.symbol, close_side, qty, current_price
