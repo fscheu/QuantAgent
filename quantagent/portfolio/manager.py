@@ -46,7 +46,7 @@ class PortfolioManager:
         self.positions: Dict[str, Dict] = (
             {}
         )  # symbol → {qty, avg_cost, current_price, pnl}
-        self._qty_epsilon = 1e-9
+        self._qty_epsilon = 1e-8
 
     def _normalize_position_quantity(self, pos: Dict) -> None:
         """Collapse float dust to flat so risk/order logic doesn't keep zombie positions alive."""

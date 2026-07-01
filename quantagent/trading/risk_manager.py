@@ -49,7 +49,7 @@ class RiskManager:
         self.db = db
         self.circuit_breaker_triggered = False
         self.daily_pnl_tracker: Dict[date, float] = {}  # Reset daily
-        self._position_epsilon = 1e-9
+        self._position_epsilon = 1e-8
 
     def validate_trade(
         self,
