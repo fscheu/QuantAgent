@@ -17,10 +17,11 @@ from unittest.mock import Mock
 
 import pytest
 
-from quantagent.models import OrderSide
+from quantagent.models import Environment, Order, OrderSide
 from quantagent.trading.order_manager import OrderManager
 from quantagent.trading.paper_broker import PaperBroker
 from quantagent.trading.position_sizer import PositionSizer
+from quantagent.portfolio.manager import PortfolioManager
 from quantagent.trading.risk_manager import RiskManager
 
 
@@ -88,6 +89,51 @@ class TestPositionReversal:
         # Orders are flushed, trades are added
         add_calls = [call for call in self.db.add.call_args_list]
         assert len(add_calls) >= 2, "Should persist at least close order and open order"
+
+
+def test_validate_trade_treats_tiny_negative_qty_as_flat():
+    portfolio = Mock()
+    portfolio.positions = {"BTC": {"qty": -1e-12, "avg_cost": 42000.0}}
+    portfolio.cash = 100000.0
+    portfolio.get_total_value.return_value = 100000.0
+    portfolio.get_unrealized_pnl.return_value = 0.0
+
+    risk_manager = RiskManager(portfolio, db=None)
+
+    is_valid, reason = risk_manager.validate_trade("BTC", OrderSide.SELL, 1.0, 100.0)
+
+    assert is_valid is True
+    assert reason is None
+
+
+def test_portfolio_normalizes_short_close_float_residual(db_session):
+    portfolio = PortfolioManager(
+        initial_cash=100000.0,
+        environment=Environment.BACKTEST,
+        db=db_session,
+    )
+
+    portfolio.positions["BTC"] = {
+        "qty": -43.67551354,
+        "avg_cost": 113.11,
+        "current_price": 113.11,
+        "pnl": 0.0,
+        "pnl_pct": 0.0,
+    }
+
+    order = Order(
+        symbol="BTC",
+        side=OrderSide.BUY,
+        quantity=43.675513539999,
+        price=117.72,
+        environment=Environment.BACKTEST,
+    )
+    order.filled_quantity = Decimal("43.675513539999")
+
+    portfolio.execute_trade(order, 117.72)
+
+    assert portfolio.positions["BTC"]["qty"] == 0.0
+    assert portfolio.positions["BTC"]["avg_cost"] == 0.0
 
     def test_reversal_long_to_short_structure(self):
         """

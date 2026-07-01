@@ -49,6 +49,7 @@ class RiskManager:
         self.db = db
         self.circuit_breaker_triggered = False
         self.daily_pnl_tracker: Dict[date, float] = {}  # Reset daily
+        self._position_epsilon = 1e-9
 
     def validate_trade(
         self,
@@ -148,6 +149,9 @@ class RiskManager:
         if symbol in self.portfolio.positions:
             existing_pos = self.portfolio.positions[symbol]
             existing_qty = existing_pos["qty"]
+
+            if abs(existing_qty) < self._position_epsilon:
+                existing_qty = 0.0
 
             if existing_qty != 0:
                 is_long_position = existing_qty > 0
