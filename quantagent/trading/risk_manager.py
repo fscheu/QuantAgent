@@ -212,12 +212,16 @@ class RiskManager:
         if not self.db:
             return self.daily_pnl_tracker.get(today, 0.0)
 
-        # Query realized trades from today
-        trades_today = (
-            self.db.query(Trade)
-            .filter(Trade.closed_at >= datetime.combine(today, datetime.min.time()))
-            .all()
+        # Query realized trades from today, scoped to the current backtest run
+        # (if any) so a prior run's trades don't count against this one's
+        # daily loss limit -- see QuantAgent-plan30-D09.
+        query = self.db.query(Trade).filter(
+            Trade.closed_at >= datetime.combine(today, datetime.min.time())
         )
+        backtest_run_id = getattr(self.portfolio, "backtest_run_id", None)
+        if backtest_run_id is not None:
+            query = query.filter(Trade.backtest_run_id == backtest_run_id)
+        trades_today = query.all()
 
         realized_pnl = sum(float(t.pnl) if t.pnl else 0.0 for t in trades_today)
 

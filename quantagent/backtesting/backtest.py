@@ -515,7 +515,10 @@ class Backtest:
         self.backtest_run_id = run.id
 
         if self.position_monitor is not None:
-            self.position_monitor.set_backtest_run_id(self.backtest_run_id)
+            self.position_monitor.backtest_run_id = self.backtest_run_id
+
+        if self.portfolio is not None:
+            self.portfolio.backtest_run_id = self.backtest_run_id
 
         logger.info(
             f"Created backtest run #{self.backtest_run_id}: {run.name}",

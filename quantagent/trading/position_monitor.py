@@ -25,10 +25,6 @@ class PositionMonitor:
         self.backtest_run_id = backtest_run_id
         self.environment = environment
 
-    def set_backtest_run_id(self, backtest_run_id: Optional[int]) -> None:
-        """Set or update backtest run context."""
-        self.backtest_run_id = backtest_run_id
-
     def get_active_position(self, symbol: str) -> Optional[ActivePosition]:
         """Get active position for a symbol (ignores zero-quantity positions)."""
         from decimal import Decimal

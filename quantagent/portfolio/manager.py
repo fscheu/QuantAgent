@@ -31,6 +31,7 @@ class PortfolioManager:
         initial_cash: float,
         environment: Environment = Environment.PAPER,
         db: Optional[Session] = None,
+        backtest_run_id: Optional[int] = None,
     ):
         """Initialize portfolio manager.
 
@@ -38,11 +39,14 @@ class PortfolioManager:
             initial_cash: Starting capital (e.g., 100000.0)
             environment: Execution environment tag
             db: SQLAlchemy session (uses SessionLocal if not provided)
+            backtest_run_id: BacktestRun to stamp on trades created by this
+                manager. NULL for live/paper trading.
         """
         self.initial_cash = float(initial_cash)
         self.cash = float(initial_cash)
         self.environment = environment
         self.db = db or SessionLocal()
+        self.backtest_run_id = backtest_run_id
         self.positions: Dict[str, Dict] = (
             {}
         )  # symbol → {qty, avg_cost, current_price, pnl}
@@ -193,6 +197,7 @@ class PortfolioManager:
             environment=self.environment,
             opened_at=opened_at or datetime.utcnow(),  # Ensure opened_at is never None
             closed_at=closed_at,
+            backtest_run_id=self.backtest_run_id,
         )
 
         # Persist to database
