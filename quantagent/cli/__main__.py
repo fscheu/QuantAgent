@@ -2,6 +2,7 @@
 
 import click
 
+from .backtest import backtest_group
 from .profile import profile_group
 
 
@@ -12,6 +13,7 @@ def cli() -> None:
 
 # Register subcommands
 cli.add_command(profile_group, name="profile")
+cli.add_command(backtest_group, name="backtest")
 
 
 if __name__ == "__main__":
