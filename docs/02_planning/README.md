@@ -10,6 +10,10 @@ Agents working in this repository should read planning documents in this order:
    - [phase1_roadmap.md](./phase1_roadmap.md) - Phase 1 development plan and milestones
    - [phase2_roadmap.md](./phase2_roadmap.md) - Phase 2 development plan and milestones
 
+2. **Current operating plan (2026-09)**
+   - [2026-09-16_retrospectiva_autodev_y_plan_oficina_inversion.md](./2026-09-16_retrospectiva_autodev_y_plan_oficina_inversion.md) - Retrospectiva del loop autodev, loop propuesto (1 ticket → 1 PR → 1 revisión), capas de la "oficina de inversión" y plan de 4 semanas
+   - [../../PLAN-30-DIAS.md](../../PLAN-30-DIAS.md) - Plan diario vigente y checklist
+
 ## Current Truth
 
 The roadmap files represent the current development phases and priorities. When planning work:
