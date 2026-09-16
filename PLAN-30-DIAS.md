@@ -348,7 +348,7 @@ La versión de 10 minutos **no** cuenta como Sí; se marca No y se recupera en D
 D01  15/09 mar  [x]
 D02  16/09 mié  [x]
 D03  17/09 jue  [x]
-D04  18/09 vie  [ ]
+D04  18/09 vie  [x]
 D05  21/09 lun  [ ]
 D06  22/09 mar  [ ]
 D07  23/09 mié  [ ]
