@@ -345,8 +345,8 @@ Una marca por día. Sí = el criterio de "hecho" de la fila se cumplió. No = no
 La versión de 10 minutos **no** cuenta como Sí; se marca No y se recupera en D21/D22.
 
 ```
-D01  15/09 mar  [ ]
-D02  16/09 mié  [ ]
+D01  15/09 mar  [x]
+D02  16/09 mié  [x]
 D03  17/09 jue  [ ]
 D04  18/09 vie  [ ]
 D05  21/09 lun  [ ]
