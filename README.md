@@ -41,16 +41,17 @@ This fork extends the [original QuantAgent research](https://arxiv.org/abs/2509.
 # 1. Clone and setup
 git clone https://github.com/fscheu/QuantAgent.git
 cd QuantAgent
-conda create -n quantagent python=3.11 && conda activate quantagent
-pip install -r requirements.txt
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
 
 # 2. Start database
 docker-compose up -d db
 
-# 3. Configure API key
-export OPENAI_API_KEY="sk-..."  # or ANTHROPIC_API_KEY
+# 3. Run the test suite (no API key or network needed)
+pytest -q -m "not slow and not api"
 
-# 4. Run a backtest
+# 4. Run a backtest (requires OPENAI_API_KEY or ANTHROPIC_API_KEY, and network)
+export OPENAI_API_KEY="sk-..."  # or ANTHROPIC_API_KEY
 python examples/run_backtest.py
 ```
 
