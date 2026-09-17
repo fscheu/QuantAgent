@@ -58,8 +58,14 @@ class PositionMonitor:
         prediction_horizon: int = 3,
         backtest_run_id: Optional[int] = None,
         environment: Optional[Environment] = None,
+        timestamp: Optional[datetime] = None,
     ) -> ActivePosition:
-        """Create new active position."""
+        """Create new active position.
+
+        Args:
+            timestamp: Simulated candle time for backtests; None (wall-clock) for
+                live/paper trading
+        """
         run_context = (
             backtest_run_id if backtest_run_id is not None else self.backtest_run_id
         )
@@ -74,7 +80,7 @@ class PositionMonitor:
             stop_loss=stop_loss,
             take_profit=take_profit,
             quantity=quantity,
-            decision_timestamp=datetime.utcnow(),
+            decision_timestamp=timestamp or datetime.utcnow(),
             exit_policy=exit_policy,
             max_hold_candles=max_hold_candles,
             trailing_stop_pct=trailing_stop_pct,
@@ -117,10 +123,16 @@ class PositionMonitor:
         position: ActivePosition,
         reason: str,
         exit_price: float,
+        timestamp: Optional[datetime] = None,
     ) -> None:
-        """Close position and calculate accuracy."""
+        """Close position and calculate accuracy.
+
+        Args:
+            timestamp: Simulated candle time for backtests; None (wall-clock) for
+                live/paper trading
+        """
         position.is_active = False
-        position.closed_at = datetime.utcnow()
+        position.closed_at = timestamp or datetime.utcnow()
         position.close_reason = reason
 
         if position.candles_direction:

@@ -14,6 +14,7 @@ Flow:
 """
 
 import logging
+from datetime import datetime
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -61,6 +62,7 @@ class OrderManager:
         current_price: float,
         environment=None,
         trigger_signal_id: Optional[int] = None,
+        timestamp: Optional[datetime] = None,
     ) -> Optional[Order]:
         """
         Execute a trading decision end-to-end.
@@ -81,6 +83,8 @@ class OrderManager:
             current_price: Current market price
             environment: Environment enum (BACKTEST, PAPER, PROD) - optional
             trigger_signal_id: ID of signal that triggered this order - optional
+            timestamp: Simulated candle time for backtests; None (wall-clock) for
+                live/paper trading
 
         Returns:
             Filled Order if executed, None if rejected
@@ -128,6 +132,7 @@ class OrderManager:
                 current_price=current_price,
                 environment=environment,
                 trigger_signal_id=trigger_signal_id,
+                timestamp=timestamp,
             )
 
         # Step 3: Validate trade (now includes position management check)
@@ -175,7 +180,7 @@ class OrderManager:
         # Step 6: Update portfolio
         try:
             trade = self.portfolio.execute_trade(
-                filled_order, filled_order.average_fill_price
+                filled_order, filled_order.average_fill_price, timestamp=timestamp
             )
             logger.info(f"{symbol}: Portfolio updated - {side} {qty:.6f} executed")
         except Exception as e:
@@ -269,6 +274,7 @@ class OrderManager:
         current_price: float,
         environment=None,
         trigger_signal_id: Optional[int] = None,
+        timestamp: Optional[datetime] = None,
     ) -> Optional[Order]:
         """
         Execute position reversal as two orders: close existing position, then open new.
@@ -281,6 +287,8 @@ class OrderManager:
             current_price: Current market price
             environment: Environment enum
             trigger_signal_id: ID of signal that triggered this order
+            timestamp: Simulated candle time for backtests; None (wall-clock) for
+                live/paper trading
 
         Returns:
             Filled Order for the new position if successful, None if failed
@@ -344,7 +352,9 @@ class OrderManager:
         # Update portfolio for close
         try:
             close_trade = self.portfolio.execute_trade(
-                filled_close_order, filled_close_order.average_fill_price
+                filled_close_order,
+                filled_close_order.average_fill_price,
+                timestamp=timestamp,
             )
             logger.info(
                 f"{symbol}: Portfolio updated - close {close_side} {close_qty:.6f} executed"
@@ -428,7 +438,9 @@ class OrderManager:
         # Update portfolio for new position
         try:
             new_trade = self.portfolio.execute_trade(
-                filled_new_order, filled_new_order.average_fill_price
+                filled_new_order,
+                filled_new_order.average_fill_price,
+                timestamp=timestamp,
             )
             logger.info(
                 f"{symbol}: Portfolio updated - new {new_side} {new_qty:.6f} executed"
@@ -470,8 +482,14 @@ class OrderManager:
         trade_id: int,
         current_price: float,
         environment=None,
+        timestamp: Optional[datetime] = None,
     ) -> Optional[Order]:
-        """Close an open trade by executing an opposing order at current_price."""
+        """Close an open trade by executing an opposing order at current_price.
+
+        Args:
+            timestamp: Simulated candle time for backtests; None (wall-clock) for
+                live/paper trading
+        """
         trade = self.db.query(Trade).filter(Trade.id == trade_id).first()
         if trade is None:
             logger.warning(f"close_trade: trade_id={trade_id} not found")
@@ -519,7 +537,7 @@ class OrderManager:
 
         try:
             close_trade_record = self.portfolio.execute_trade(
-                filled_order, filled_order.average_fill_price
+                filled_order, filled_order.average_fill_price, timestamp=timestamp
             )
         except Exception as e:
             logger.error(f"{trade.symbol}: close_trade portfolio update failed - {e}")

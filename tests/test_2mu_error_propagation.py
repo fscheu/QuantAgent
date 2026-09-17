@@ -113,7 +113,7 @@ class TestReversalErrorPropagation:
         close_trade.pnl = Decimal("100.00")
 
         call_count = [0]
-        def track_calls(order, price):
+        def track_calls(order, price, **kwargs):
             call_count[0] += 1
             if call_count[0] == 1:
                 # First call (close): Set position to empty
