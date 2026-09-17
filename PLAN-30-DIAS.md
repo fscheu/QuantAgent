@@ -385,8 +385,8 @@ D16  06/10 mar  [x]
 D17  07/10 mié  [x]
 D18  08/10 jue  [x]
 D19  09/10 vie  [ ]  -- deferred: Streamlit download button, feature for later
-D20  12/10 lun  [ ]
-D21  13/10 mar  [ ]
+D20  12/10 lun  [x]
+D21  13/10 mar  [x]
 D22  14/10 mié  [ ]
 ```
 
