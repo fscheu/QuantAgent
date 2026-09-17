@@ -55,6 +55,10 @@ export OPENAI_API_KEY="sk-..."  # or ANTHROPIC_API_KEY
 python examples/run_backtest.py
 ```
 
+No API key handy? `python -m quantagent.cli backtest run --strategy rsi --fixture spy-90d`
+runs a deterministic strategy against a checked-in fixture instead — see
+[Run a Deterministic Backtest (CLI)](#run-a-deterministic-backtest-cli) below.
+
 **First time?** See the [detailed setup guide](docs/03_design/docker_deployment.md).
 
 ---
@@ -125,6 +129,43 @@ See the [full audit report](docs/2026-02-19_repository_audit.md) for details.
 ---
 
 ## Usage Examples
+
+### Run a Deterministic Backtest (CLI)
+
+No API key, no network, no LLM calls — runs a strategy against a versioned,
+checked-in fixture (`tests/fixtures/spy-90d.csv`) and prints the resulting
+metrics. This is the fastest way to sanity-check a strategy change.
+
+```bash
+python -m quantagent.cli backtest run --strategy rsi --fixture spy-90d --out run.csv
+```
+
+Expected output (exact numbers depend on the strategy/fixture combination, but
+the shape is always these 5 lines):
+
+```
+Trades: 227
+Win rate: 49.78%
+Profit factor: 0.61
+Sharpe ratio: 0.40
+Total PnL: -4717.33
+Trade log written to run.csv
+```
+
+`--strategy` accepts `rsi`, `fifty-two-week-high`, or `triple-screen` (all
+deterministic — no LLM in the loop). `--out` is optional; when given, it writes
+`run.csv` with one row per trade and these columns:
+
+| Column | Meaning |
+|--------|---------|
+| `entry_time` / `exit_time` | Simulated candle timestamps (ISO 8601) — not wall-clock, so a trade can be checked against the fixture's own chart |
+| `symbol` | Traded asset |
+| `side` | `buy` or `sell` |
+| `qty` | Position size |
+| `entry_price` / `exit_price` | Fill prices (`exit_price` empty if the position never closed) |
+| `stop_loss` | Stop-loss level set at entry |
+| `pnl` | Realized P&L for the trade (empty if still open) |
+| `exit_reason` | Why the position closed (`TAKE_PROFIT`, `STOP_LOSS`, `backtest_end`, etc.) |
 
 ### Run a Backtest
 

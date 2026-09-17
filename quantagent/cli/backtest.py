@@ -1,4 +1,4 @@
-"""CLI commands for running deterministic backtests (D13-D17 of PLAN-30-DIAS)."""
+"""CLI commands for running deterministic backtests (D13-D18 of PLAN-30-DIAS)."""
 
 from __future__ import annotations
 
@@ -108,6 +108,10 @@ def run_backtest(strategy_name: str, fixture_name: str, out_path: Optional[str])
             ]
 
     click.echo(f"Trades: {metrics.total_trades}")
+    click.echo(f"Win rate: {metrics.win_rate:.2%}")
+    click.echo(f"Profit factor: {metrics.profit_factor:.2f}")
+    click.echo(f"Sharpe ratio: {metrics.sharpe_ratio:.2f}")
+    click.echo(f"Total PnL: {metrics.total_pnl:.2f}")
 
     if out_path:
         with open(out_path, "w", newline="") as f:
