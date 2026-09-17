@@ -124,8 +124,13 @@ class Backtest:
         self.db = db_session or SessionLocal()
         self._own_session = db_session is None
 
-        # Data provider (caching layer)
-        self.data_provider = DataProvider(self.db)
+        # Data provider (caching layer). offline_data=True (e.g. from the fixture-based
+        # CLI) skips live yfinance fallback entirely -- needed for reproducibility and
+        # because the naive gap-detection otherwise re-fetches the pre-fixture lookback
+        # window on nearly every candle.
+        self.data_provider = DataProvider(
+            self.db, offline=self.config.get("offline_data", False)
+        )
 
         # Resolve config via StrategyAssembler and build components (unify DB session)
         from quantagent import settings

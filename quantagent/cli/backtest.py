@@ -65,7 +65,10 @@ def run_backtest(strategy_name: str, fixture_name: str, out_path: Optional[str])
             timeframe=meta.timeframe,
             # Fixtures are versioned as continuous candles (every hour, no market-hours
             # gaps), so filtering to real trading hours would misalign against them.
-            config={"market_hours_filter": False},
+            # offline_data avoids live yfinance calls for the lookback window before the
+            # fixture's first row -- the whole point of a fixture-based run is to be
+            # deterministic and network-free.
+            config={"market_hours_filter": False, "offline_data": True},
             db_session=session,
             strategy=build_strategy(STRATEGY_ALIASES[strategy_name]),
         )
