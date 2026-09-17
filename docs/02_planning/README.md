@@ -13,6 +13,9 @@ Agents working in this repository should read planning documents in this order:
 2. **Current operating plan (2026-09)**
    - [2026-09-16_retrospectiva_autodev_y_plan_oficina_inversion.md](./2026-09-16_retrospectiva_autodev_y_plan_oficina_inversion.md) - Retrospectiva del loop autodev, loop propuesto (1 ticket → 1 PR → 1 revisión), capas de la "oficina de inversión" y plan de 4 semanas
    - [../../PLAN-30-DIAS.md](../../PLAN-30-DIAS.md) - Plan diario vigente y checklist
+   - [2026-09-17_plan_mes_2_loop_ai.md](./2026-09-17_plan_mes_2_loop_ai.md) - Mes 2 (21/09–16/10): calendario noche a noche de tickets `plan-20260921`, cadena crítica, checklist
+   - [2026-09-17_borrador_routine_nocturna.md](./2026-09-17_borrador_routine_nocturna.md) - Borrador de la routine nocturna del loop AI (prompt, entorno, JSON, checklist de Fede)
+   - [2026-09-17_borrador_skill_revision_macro_semanal.md](./2026-09-17_borrador_skill_revision_macro_semanal.md) - Borrador del skill Hermes de revisión macro semanal (capa L1)
 
 ## Current Truth
 
