@@ -390,5 +390,5 @@ D21  13/10 mar  [x]
 D22  14/10 mié  [ ]  -- ready: merges cleanly (0 conflicts vs origin/main), demo timed at 1m40s < 2min; merge itself needs Fede (CLAUDE.md: "Claude must not commit to main")
 ```
 
-Total de Sí: ____ / 22
-Entregable demostrable desde `main` al 14/10: [ ] Sí  [ ] No
+Total de Sí: 20 / 22 (D19 diferido; D22 se cumple al mergear `feature/plan30` a `main`)
+Entregable demostrable desde `main`: [ ] Sí  [ ] No  -- se marca con la línea de revisión del PR de cierre (ver `CHANGELOG.md` y `PLAN-CONTINUACION.md` §1)
