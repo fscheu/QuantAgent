@@ -48,7 +48,7 @@ celular, en dos bloques de ~15 minutos. Sin entorno local, con poco tipeo.
 | # | Tarea | Quién | Dónde | Hecho cuando |
 |---|---|---|---|---|
 | C1 | `CHANGELOG.md` de cierre, totales del checklist, tracker apuntando a este plan | Claude | repo | Commit `e8132343` en `feature/plan30` ✅ |
-| C2 | Abrir PR `feature/plan30` → `main` con resumen de 3 líneas | Claude | GitHub | PR abierto |
+| C2 | Abrir PR `feature/plan30` → `main` con resumen de 3 líneas | Claude | GitHub | PR #1 abierto ✅ |
 | C3 | Correr la demo desde la rama del PR en la VM | Fede | celular + VM | Salida con `Trades: 227` |
 | C4 | Escribir la línea de revisión (§5) en el PR y mergear | Fede | GitHub mobile | PR mergeado con línea `R:` válida |
 
