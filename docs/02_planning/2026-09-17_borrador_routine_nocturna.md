@@ -1,5 +1,7 @@
 # Borrador: routine nocturna del loop de desarrollo AI
 
+> **Reemplazado el 2026-09-26 por [`PLAN-CONTINUACION.md`](../../PLAN-CONTINUACION.md).** Se conserva como antecedente.
+
 Fecha: 2026-09-17 · Estado: **borrador, no creada** · Dueño de la decisión: Fede
 Contexto: `2026-09-16_retrospectiva_autodev_y_plan_oficina_inversion.md` §2
 

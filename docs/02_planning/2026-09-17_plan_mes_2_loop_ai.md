@@ -1,5 +1,7 @@
 # Plan mes 2 (2026-09-21 → 2026-10-16): loop AI + auditoría de métricas + 3 estrategias
 
+> **Reemplazado el 2026-09-26 por [`PLAN-CONTINUACION.md`](../../PLAN-CONTINUACION.md).** Se conserva como antecedente.
+
 Generado: 2026-09-17 · Label BEADS: `plan-20260921` · Modo: **IA implementa, Fede revisa ≤20 min/día**
 Antecedentes: `2026-09-16_retrospectiva_autodev_y_plan_oficina_inversion.md` (loop y capas), `PLAN-30-DIAS.md` (semana 1)
 Borradores asociados: `2026-09-17_borrador_routine_nocturna.md`, `2026-09-17_borrador_skill_revision_macro_semanal.md`
