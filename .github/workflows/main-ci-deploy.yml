@@ -156,75 +156,76 @@ jobs:
               \"disable_web_page_preview\": true
             }"
   
-  notify-hermes-ci-failure:
-    name: Notify Hermes on CI failure before deploy
-    needs: ci
-    runs-on: [self-hosted, Linux, X64, quantagent-vm]
-    if: ${{ always() && needs.ci.result != 'success' }}
+  # DISABLED 2026-09-29: el validador funcional de QA (skill autodev-qa-validator) fue archivado en
+#   notify-hermes-ci-failure:
+#     name: Notify Hermes on CI failure before deploy
+#     needs: ci
+#     runs-on: [self-hosted, Linux, X64, quantagent-vm]
+#     if: ${{ always() && needs.ci.result != 'success' }}
 
-    steps:
-      - name: Notify Hermes Tech Lead
-        env:
-          HERMES_WEBHOOK_URL: http://localhost:8644/webhooks/github-deploy-finished
-          HERMES_WEBHOOK_SECRET: ${{ secrets.HERMES_WEBHOOK_SECRET }}
-          CI_RESULT: ${{ needs.ci.result }}
-          SOURCE_JOB_NAME: CI (Lint + Tests)
-        run: |
-          python3 - <<'PY'
-          import json
-          import hashlib
-          import hmac
-          import os
-          import urllib.request
+#     steps:
+#       - name: Notify Hermes Tech Lead
+#         env:
+#           HERMES_WEBHOOK_URL: http://localhost:8644/webhooks/github-deploy-finished
+#           HERMES_WEBHOOK_SECRET: ${{ secrets.HERMES_WEBHOOK_SECRET }}
+#           CI_RESULT: ${{ needs.ci.result }}
+#           SOURCE_JOB_NAME: CI (Lint + Tests)
+#         run: |
+#           python3 - <<'PY'
+#           import json
+#           import hashlib
+#           import hmac
+#           import os
+#           import urllib.request
 
-          url = os.environ["HERMES_WEBHOOK_URL"]
-          secret = os.environ["HERMES_WEBHOOK_SECRET"]
-          run_id = os.environ.get("GITHUB_RUN_ID", "")
-          run_attempt = os.environ.get("GITHUB_RUN_ATTEMPT", "")
-          repo = os.environ.get("GITHUB_REPOSITORY", "")
+#           url = os.environ["HERMES_WEBHOOK_URL"]
+#           secret = os.environ["HERMES_WEBHOOK_SECRET"]
+#           run_id = os.environ.get("GITHUB_RUN_ID", "")
+#           run_attempt = os.environ.get("GITHUB_RUN_ATTEMPT", "")
+#           repo = os.environ.get("GITHUB_REPOSITORY", "")
 
-          payload = {
-              "event_type": "deploy_finished",
-              "repo": repo,
-              "workflow": os.environ.get("GITHUB_WORKFLOW", ""),
-              "job": os.environ.get("SOURCE_JOB_NAME", "CI (Lint + Tests)"),
-              "notification_job": os.environ.get("GITHUB_JOB", ""),
-              "environment": "qa",
-              "ref": os.environ.get("GITHUB_REF", ""),
-              "branch": os.environ.get("GITHUB_REF_NAME", ""),
-              "sha": os.environ.get("GITHUB_SHA", ""),
-              "actor": os.environ.get("GITHUB_ACTOR", ""),
-              "conclusion": os.environ.get("CI_RESULT", ""),
-              "run_id": run_id,
-              "run_attempt": run_attempt,
-              "run_url": f"https://github.com/{repo}/actions/runs/{run_id}",
-              "deployed_url": "",
-              "deploy_reached": "false",
-              "deploy_step_outcome": "skipped",
-              "migration_step_outcome": "skipped",
-              "bootstrap_step_outcome": "skipped",
-              "health_step_outcome": "skipped",
-              "qa_target_alignment_outcome": "skipped",
-              "qa_validator_step_outcome": "skipped",
-              "qa_validator_result_status": "NOT_RUN",
-              "qa_verified": "false",
-              "qa_partial": "false",
-              "validator_artifacts_count": "0",
-              "validator_artifacts_list": "",
-          }
+#           payload = {
+#               "event_type": "deploy_finished",
+#               "repo": repo,
+#               "workflow": os.environ.get("GITHUB_WORKFLOW", ""),
+#               "job": os.environ.get("SOURCE_JOB_NAME", "CI (Lint + Tests)"),
+#               "notification_job": os.environ.get("GITHUB_JOB", ""),
+#               "environment": "qa",
+#               "ref": os.environ.get("GITHUB_REF", ""),
+#               "branch": os.environ.get("GITHUB_REF_NAME", ""),
+#               "sha": os.environ.get("GITHUB_SHA", ""),
+#               "actor": os.environ.get("GITHUB_ACTOR", ""),
+#               "conclusion": os.environ.get("CI_RESULT", ""),
+#               "run_id": run_id,
+#               "run_attempt": run_attempt,
+#               "run_url": f"https://github.com/{repo}/actions/runs/{run_id}",
+#               "deployed_url": "",
+#               "deploy_reached": "false",
+#               "deploy_step_outcome": "skipped",
+#               "migration_step_outcome": "skipped",
+#               "bootstrap_step_outcome": "skipped",
+#               "health_step_outcome": "skipped",
+#               "qa_target_alignment_outcome": "skipped",
+#               "qa_validator_step_outcome": "skipped",
+#               "qa_validator_result_status": "NOT_RUN",
+#               "qa_verified": "false",
+#               "qa_partial": "false",
+#               "validator_artifacts_count": "0",
+#               "validator_artifacts_list": "",
+#           }
 
-          body = json.dumps(payload).encode("utf-8")
-          signature = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
+#           body = json.dumps(payload).encode("utf-8")
+#           signature = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
 
-          request = urllib.request.Request(url, data=body, method="POST")
-          request.add_header("Content-Type", "application/json")
-          request.add_header("X-Webhook-Signature", signature)
-          request.add_header("X-Request-ID", f"github-actions-{run_id}-{run_attempt}-ci-failure")
+#           request = urllib.request.Request(url, data=body, method="POST")
+#           request.add_header("Content-Type", "application/json")
+#           request.add_header("X-Webhook-Signature", signature)
+#           request.add_header("X-Request-ID", f"github-actions-{run_id}-{run_attempt}-ci-failure")
 
-          with urllib.request.urlopen(request, timeout=30) as response:
-              print(response.status)
-              print(response.read().decode())
-          PY
+#           with urllib.request.urlopen(request, timeout=30) as response:
+#               print(response.status)
+#               print(response.read().decode())
+#           PY
 
   deploy-qa:
     name: Deploy to QA
@@ -236,9 +237,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Reset QA validator run artifacts
-        run: |
-          rm -rf /home/azureuser/.hermes/runs/autodev-qa-validator/poc-qa-validator-local-streamlit-8501
+      # DISABLED 2026-09-29: el validador funcional de QA (skill autodev-qa-validator) fue archivado en
+#       - name: Reset QA validator run artifacts
+#         run: |
+#           rm -rf /home/azureuser/.hermes/runs/autodev-qa-validator/poc-qa-validator-local-streamlit-8501
 
       - name: Deploy to QA locally
         id: deploy
@@ -283,174 +285,177 @@ jobs:
           echo "Health check failed after 18 attempts"
           exit 1
 
-      - name: Verify pinned QA validator artifacts
-        id: qa_validator_integrity
-        run: |
-          printf '%s  %s\n' \
-            '1f08a837b16e35f77108c3a557fde706e6574721ff07c59677644a1d90edd689' '/home/azureuser/.hermes/skills/autodev/autodev-qa-validator/scripts/runner.py' \
-            'b7386381ca56052f2d63e2a938099a0a8e373110b72dc9793bbfe8bb8ec52db7' '/home/azureuser/.hermes/skills/autodev/autodev-qa-validator/templates/local-streamlit.yaml' \
-            'baa64d7647d15c51b87198648a4e115f5dd6b9e502d7709bdc0a53d5374f58ae' '/home/azureuser/.hermes/skills/autodev/autodev-qa-validator/templates/prompt_template.md' \
-            'e3b6a8a9daa88d70b014048209b03729c56c5807ba75c15e726077059de9c775' '/home/azureuser/.hermes/skills/autodev/autodev-qa-validator/references/poc-docs/local-streamlit-target.md' \
-            | sha256sum -c -
+      # DISABLED 2026-09-29: el validador funcional de QA (skill autodev-qa-validator) fue archivado en
+      # ~/.hermes/skills/.archive/ el 2026-05-31 y este paso hacía fallar cada deploy. Se comentan el validador,
+      # sus artefactos y los avisos a Hermes Tech Lead. Retomar con QuantAgent-hyt.
+#       - name: Verify pinned QA validator artifacts
+#         id: qa_validator_integrity
+#         run: |
+#           printf '%s  %s\n' \
+#             '1f08a837b16e35f77108c3a557fde706e6574721ff07c59677644a1d90edd689' '/home/azureuser/.hermes/skills/autodev/autodev-qa-validator/scripts/runner.py' \
+#             'b7386381ca56052f2d63e2a938099a0a8e373110b72dc9793bbfe8bb8ec52db7' '/home/azureuser/.hermes/skills/autodev/autodev-qa-validator/templates/local-streamlit.yaml' \
+#             'baa64d7647d15c51b87198648a4e115f5dd6b9e502d7709bdc0a53d5374f58ae' '/home/azureuser/.hermes/skills/autodev/autodev-qa-validator/templates/prompt_template.md' \
+#             'e3b6a8a9daa88d70b014048209b03729c56c5807ba75c15e726077059de9c775' '/home/azureuser/.hermes/skills/autodev/autodev-qa-validator/references/poc-docs/local-streamlit-target.md' \
+#             | sha256sum -c -
 
-      - name: Verify QA validator target alignment
-        id: qa_target_alignment
-        run: |
-          CONFIG=/home/azureuser/.hermes/skills/autodev/autodev-qa-validator/templates/local-streamlit.yaml
-          echo "=== Validator config target lines ==="
-          grep -Ei 'url|target|host|port' "$CONFIG" | head -10 || echo "(no matching lines found)"
-          echo "==="
-          if grep -q '8501' "$CONFIG"; then
-            echo "TARGET_ALIGNED=true — validator config references port 8501 (QA Streamlit runtime)"
-          else
-            echo "ERROR: Validator config does not reference port 8501."
-            echo "Deployed QA target: http://127.0.0.1:8501"
-            echo "This is a target drift condition — aborting to prevent validating the wrong runtime."
-            exit 1
-          fi
+#       - name: Verify QA validator target alignment
+#         id: qa_target_alignment
+#         run: |
+#           CONFIG=/home/azureuser/.hermes/skills/autodev/autodev-qa-validator/templates/local-streamlit.yaml
+#           echo "=== Validator config target lines ==="
+#           grep -Ei 'url|target|host|port' "$CONFIG" | head -10 || echo "(no matching lines found)"
+#           echo "==="
+#           if grep -q '8501' "$CONFIG"; then
+#             echo "TARGET_ALIGNED=true — validator config references port 8501 (QA Streamlit runtime)"
+#           else
+#             echo "ERROR: Validator config does not reference port 8501."
+#             echo "Deployed QA target: http://127.0.0.1:8501"
+#             echo "This is a target drift condition — aborting to prevent validating the wrong runtime."
+#             exit 1
+#           fi
 
-      - name: Run post-deploy QA validator
-        id: qa_validator
-        continue-on-error: true
-        run: |
-          cd ~/repos/projects/QuantAgent
-          python3 /home/azureuser/.hermes/skills/autodev/autodev-qa-validator/scripts/runner.py \
-            --config /home/azureuser/.hermes/skills/autodev/autodev-qa-validator/templates/local-streamlit.yaml
+#       - name: Run post-deploy QA validator
+#         id: qa_validator
+#         continue-on-error: true
+#         run: |
+#           cd ~/repos/projects/QuantAgent
+#           python3 /home/azureuser/.hermes/skills/autodev/autodev-qa-validator/scripts/runner.py \
+#             --config /home/azureuser/.hermes/skills/autodev/autodev-qa-validator/templates/local-streamlit.yaml
 
-      - name: Read QA validator verdict
-        id: qa_validator_result
-        if: always()
-        run: |
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
+#       - name: Read QA validator verdict
+#         id: qa_validator_result
+#         if: always()
+#         run: |
+#           python3 - <<'PY'
+#           import json
+#           from pathlib import Path
 
-          run_dir = Path('/home/azureuser/.hermes/runs/autodev-qa-validator/poc-qa-validator-local-streamlit-8501')
-          result_path = run_dir / 'result.json'
-          report_path = run_dir / 'run-report.md'
+#           run_dir = Path('/home/azureuser/.hermes/runs/autodev-qa-validator/poc-qa-validator-local-streamlit-8501')
+#           result_path = run_dir / 'result.json'
+#           report_path = run_dir / 'run-report.md'
 
-          status = 'MISSING'
-          if result_path.exists():
-              try:
-                  status = json.loads(result_path.read_text()).get('status', 'MISSING')
-              except Exception:
-                  status = 'INVALID'
+#           status = 'MISSING'
+#           if result_path.exists():
+#               try:
+#                   status = json.loads(result_path.read_text()).get('status', 'MISSING')
+#               except Exception:
+#                   status = 'INVALID'
 
-          # Collect evidence artifacts
-          artifacts = []
-          if result_path.exists():
-              artifacts.append('result.json')
-          if report_path.exists():
-              artifacts.append('run-report.md')
-          for p in sorted(run_dir.glob('**/*')):
-              if p.is_file() and p.suffix in ('.png', '.jpg', '.html', '.log'):
-                  artifacts.append(str(p.relative_to(run_dir)))
+#           # Collect evidence artifacts
+#           artifacts = []
+#           if result_path.exists():
+#               artifacts.append('result.json')
+#           if report_path.exists():
+#               artifacts.append('run-report.md')
+#           for p in sorted(run_dir.glob('**/*')):
+#               if p.is_file() and p.suffix in ('.png', '.jpg', '.html', '.log'):
+#                   artifacts.append(str(p.relative_to(run_dir)))
 
-          artifacts_count = len(artifacts)
-          artifacts_list = ','.join(artifacts)
+#           artifacts_count = len(artifacts)
+#           artifacts_list = ','.join(artifacts)
 
-          # Print run-report summary if available
-          if report_path.exists():
-              lines = report_path.read_text().splitlines()[:30]
-              print('=== run-report.md (first 30 lines) ===')
-              print('\n'.join(lines))
-              print('===')
+#           # Print run-report summary if available
+#           if report_path.exists():
+#               lines = report_path.read_text().splitlines()[:30]
+#               print('=== run-report.md (first 30 lines) ===')
+#               print('\n'.join(lines))
+#               print('===')
 
-          print(f'Validator status: {status}')
-          print(f'Artifacts present ({artifacts_count}): {artifacts_list}')
+#           print(f'Validator status: {status}')
+#           print(f'Artifacts present ({artifacts_count}): {artifacts_list}')
 
-          # qa_verified: only SUCCESS qualifies as fully verified
-          # qa_partial:  PARTIAL means infra up but some functional coverage incomplete
-          qa_verified = str(status == 'SUCCESS').lower()
-          qa_partial = str(status == 'PARTIAL').lower()
+#           # qa_verified: only SUCCESS qualifies as fully verified
+#           # qa_partial:  PARTIAL means infra up but some functional coverage incomplete
+#           qa_verified = str(status == 'SUCCESS').lower()
+#           qa_partial = str(status == 'PARTIAL').lower()
 
-          with open(Path.cwd() / '.github_output_tmp', 'w', encoding='utf-8') as f:
-              f.write(f'qa_validator_result_status={status}\n')
-              f.write(f'qa_verified={qa_verified}\n')
-              f.write(f'qa_partial={qa_partial}\n')
-              f.write(f'validator_artifacts_count={artifacts_count}\n')
-              f.write(f'validator_artifacts_list={artifacts_list}\n')
-          PY
-          cat .github_output_tmp >> "$GITHUB_OUTPUT"
-          rm -f .github_output_tmp
+#           with open(Path.cwd() / '.github_output_tmp', 'w', encoding='utf-8') as f:
+#               f.write(f'qa_validator_result_status={status}\n')
+#               f.write(f'qa_verified={qa_verified}\n')
+#               f.write(f'qa_partial={qa_partial}\n')
+#               f.write(f'validator_artifacts_count={artifacts_count}\n')
+#               f.write(f'validator_artifacts_list={artifacts_list}\n')
+#           PY
+#           cat .github_output_tmp >> "$GITHUB_OUTPUT"
+#           rm -f .github_output_tmp
 
-      - name: Upload QA validator artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: qa-validator-${{ github.run_id }}-${{ steps.qa_validator_result.outputs.qa_validator_result_status || 'MISSING' }}
-          path: /home/azureuser/.hermes/runs/autodev-qa-validator/poc-qa-validator-local-streamlit-8501/
-          if-no-files-found: warn
-          retention-days: 30
+#       - name: Upload QA validator artifacts
+#         if: always()
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: qa-validator-${{ github.run_id }}-${{ steps.qa_validator_result.outputs.qa_validator_result_status || 'MISSING' }}
+#           path: /home/azureuser/.hermes/runs/autodev-qa-validator/poc-qa-validator-local-streamlit-8501/
+#           if-no-files-found: warn
+#           retention-days: 30
 
-      - name: Notify Hermes Tech Lead
-        if: always()
-        env:
-          HERMES_WEBHOOK_URL: http://localhost:8644/webhooks/github-deploy-finished
-          HERMES_WEBHOOK_SECRET: ${{ secrets.HERMES_WEBHOOK_SECRET }}
-          JOB_STATUS: ${{ job.status }}
-          DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
-          MIGRATION_OUTCOME: ${{ steps.migrate.outcome }}
-          BOOTSTRAP_OUTCOME: ${{ steps.bootstrap.outcome }}
-          HEALTH_OUTCOME: ${{ steps.health.outcome }}
-          QA_TARGET_ALIGNMENT_OUTCOME: ${{ steps.qa_target_alignment.outcome }}
-          QA_VALIDATOR_OUTCOME: ${{ steps.qa_validator.outcome }}
-          QA_VALIDATOR_RESULT_STATUS: ${{ steps.qa_validator_result.outputs.qa_validator_result_status }}
-          QA_VERIFIED: ${{ steps.qa_validator_result.outputs.qa_verified }}
-          QA_PARTIAL: ${{ steps.qa_validator_result.outputs.qa_partial }}
-          VALIDATOR_ARTIFACTS_COUNT: ${{ steps.qa_validator_result.outputs.validator_artifacts_count }}
-          VALIDATOR_ARTIFACTS_LIST: ${{ steps.qa_validator_result.outputs.validator_artifacts_list }}
-        run: |
-          python3 - <<'PY'
-          import json
-          import hashlib
-          import hmac
-          import os
-          import urllib.request
+#       - name: Notify Hermes Tech Lead
+#         if: always()
+#         env:
+#           HERMES_WEBHOOK_URL: http://localhost:8644/webhooks/github-deploy-finished
+#           HERMES_WEBHOOK_SECRET: ${{ secrets.HERMES_WEBHOOK_SECRET }}
+#           JOB_STATUS: ${{ job.status }}
+#           DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
+#           MIGRATION_OUTCOME: ${{ steps.migrate.outcome }}
+#           BOOTSTRAP_OUTCOME: ${{ steps.bootstrap.outcome }}
+#           HEALTH_OUTCOME: ${{ steps.health.outcome }}
+#           QA_TARGET_ALIGNMENT_OUTCOME: ${{ steps.qa_target_alignment.outcome }}
+#           QA_VALIDATOR_OUTCOME: ${{ steps.qa_validator.outcome }}
+#           QA_VALIDATOR_RESULT_STATUS: ${{ steps.qa_validator_result.outputs.qa_validator_result_status }}
+#           QA_VERIFIED: ${{ steps.qa_validator_result.outputs.qa_verified }}
+#           QA_PARTIAL: ${{ steps.qa_validator_result.outputs.qa_partial }}
+#           VALIDATOR_ARTIFACTS_COUNT: ${{ steps.qa_validator_result.outputs.validator_artifacts_count }}
+#           VALIDATOR_ARTIFACTS_LIST: ${{ steps.qa_validator_result.outputs.validator_artifacts_list }}
+#         run: |
+#           python3 - <<'PY'
+#           import json
+#           import hashlib
+#           import hmac
+#           import os
+#           import urllib.request
 
-          url = os.environ["HERMES_WEBHOOK_URL"]
-          secret = os.environ["HERMES_WEBHOOK_SECRET"]
-          run_id = os.environ.get("GITHUB_RUN_ID", "")
-          run_attempt = os.environ.get("GITHUB_RUN_ATTEMPT", "")
-          repo = os.environ.get("GITHUB_REPOSITORY", "")
+#           url = os.environ["HERMES_WEBHOOK_URL"]
+#           secret = os.environ["HERMES_WEBHOOK_SECRET"]
+#           run_id = os.environ.get("GITHUB_RUN_ID", "")
+#           run_attempt = os.environ.get("GITHUB_RUN_ATTEMPT", "")
+#           repo = os.environ.get("GITHUB_REPOSITORY", "")
 
-          payload = {
-              "event_type": "deploy_finished",
-              "repo": repo,
-              "workflow": os.environ.get("GITHUB_WORKFLOW", ""),
-              "job": os.environ.get("GITHUB_JOB", ""),
-              "environment": "qa",
-              "ref": os.environ.get("GITHUB_REF", ""),
-              "branch": os.environ.get("GITHUB_REF_NAME", ""),
-              "sha": os.environ.get("GITHUB_SHA", ""),
-              "actor": os.environ.get("GITHUB_ACTOR", ""),
-              "conclusion": os.environ.get("JOB_STATUS", ""),
-              "run_id": run_id,
-              "run_attempt": run_attempt,
-              "run_url": f"https://github.com/{repo}/actions/runs/{run_id}",
-              "deployed_url": "https://QuantAgent.fedes.dev",
-              "deploy_step_outcome": os.environ.get("DEPLOY_OUTCOME", ""),
-              "migration_step_outcome": os.environ.get("MIGRATION_OUTCOME", ""),
-              "bootstrap_step_outcome": os.environ.get("BOOTSTRAP_OUTCOME", ""),
-              "health_step_outcome": os.environ.get("HEALTH_OUTCOME", ""),
-              "qa_target_alignment_outcome": os.environ.get("QA_TARGET_ALIGNMENT_OUTCOME", ""),
-              "qa_validator_step_outcome": os.environ.get("QA_VALIDATOR_OUTCOME", ""),
-              "qa_validator_result_status": os.environ.get("QA_VALIDATOR_RESULT_STATUS", ""),
-              "qa_verified": os.environ.get("QA_VERIFIED", "false"),
-              "qa_partial": os.environ.get("QA_PARTIAL", "false"),
-              "validator_artifacts_count": os.environ.get("VALIDATOR_ARTIFACTS_COUNT", "0"),
-              "validator_artifacts_list": os.environ.get("VALIDATOR_ARTIFACTS_LIST", ""),
-          }
+#           payload = {
+#               "event_type": "deploy_finished",
+#               "repo": repo,
+#               "workflow": os.environ.get("GITHUB_WORKFLOW", ""),
+#               "job": os.environ.get("GITHUB_JOB", ""),
+#               "environment": "qa",
+#               "ref": os.environ.get("GITHUB_REF", ""),
+#               "branch": os.environ.get("GITHUB_REF_NAME", ""),
+#               "sha": os.environ.get("GITHUB_SHA", ""),
+#               "actor": os.environ.get("GITHUB_ACTOR", ""),
+#               "conclusion": os.environ.get("JOB_STATUS", ""),
+#               "run_id": run_id,
+#               "run_attempt": run_attempt,
+#               "run_url": f"https://github.com/{repo}/actions/runs/{run_id}",
+#               "deployed_url": "https://QuantAgent.fedes.dev",
+#               "deploy_step_outcome": os.environ.get("DEPLOY_OUTCOME", ""),
+#               "migration_step_outcome": os.environ.get("MIGRATION_OUTCOME", ""),
+#               "bootstrap_step_outcome": os.environ.get("BOOTSTRAP_OUTCOME", ""),
+#               "health_step_outcome": os.environ.get("HEALTH_OUTCOME", ""),
+#               "qa_target_alignment_outcome": os.environ.get("QA_TARGET_ALIGNMENT_OUTCOME", ""),
+#               "qa_validator_step_outcome": os.environ.get("QA_VALIDATOR_OUTCOME", ""),
+#               "qa_validator_result_status": os.environ.get("QA_VALIDATOR_RESULT_STATUS", ""),
+#               "qa_verified": os.environ.get("QA_VERIFIED", "false"),
+#               "qa_partial": os.environ.get("QA_PARTIAL", "false"),
+#               "validator_artifacts_count": os.environ.get("VALIDATOR_ARTIFACTS_COUNT", "0"),
+#               "validator_artifacts_list": os.environ.get("VALIDATOR_ARTIFACTS_LIST", ""),
+#           }
 
-          body = json.dumps(payload).encode("utf-8")
-          signature = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
+#           body = json.dumps(payload).encode("utf-8")
+#           signature = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
 
-          request = urllib.request.Request(url, data=body, method="POST")
-          request.add_header("Content-Type", "application/json")
-          request.add_header("X-Webhook-Signature", signature)
-          request.add_header("X-Request-ID", f"github-actions-{run_id}-{run_attempt}")
+#           request = urllib.request.Request(url, data=body, method="POST")
+#           request.add_header("Content-Type", "application/json")
+#           request.add_header("X-Webhook-Signature", signature)
+#           request.add_header("X-Request-ID", f"github-actions-{run_id}-{run_attempt}")
 
-          with urllib.request.urlopen(request, timeout=30) as response:
-              print(response.status)
-              print(response.read().decode())
-          PY
+#           with urllib.request.urlopen(request, timeout=30) as response:
+#               print(response.status)
+#               print(response.read().decode())
+#           PY
