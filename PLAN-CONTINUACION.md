@@ -49,10 +49,10 @@ celular, en dos bloques de ~15 minutos. Sin entorno local, con poco tipeo.
 |---|---|---|---|---|
 | C1 | `CHANGELOG.md` de cierre, totales del checklist, tracker apuntando a este plan | Claude | repo | Commit `e8132343` en `feature/plan30` ✅ |
 | C2 | Abrir PR `feature/plan30` → `main` con resumen de 3 líneas | Claude | GitHub | PR #1 abierto ✅ |
-| C3 | Correr la demo desde la rama del PR en la VM | Fede | celular + VM | Salida con `Trades: 227` |
-| C4 | Escribir la línea de revisión (§5) en el PR y mergear | Fede | GitHub mobile | PR mergeado con línea `R:` válida |
+| C3 | Correr la demo desde la rama del PR en la VM | Fede | celular + VM | Salida con `Trades: 227` ✅ 2026-09-29 |
+| C4 | Escribir la línea de revisión (§5) en el PR y mergear | Fede | GitHub mobile | PR #1 mergeado 2026-09-29 ✅ (la línea `R:` quedó con `vi:` vacío) |
 
-El ciclo queda **CERRADO** cuando se cumple C4. No se agrega ningún cambio de código al PR de cierre.
+El ciclo quedó **CERRADO** el 2026-09-29 con el merge del PR #1. No se agrega ningún cambio de código al PR de cierre.
 
 El diff del PR de cierre supera el límite de §3.2. Es la única excepción: el código ya se revisó en las
 sesiones del 15 al 17/09. La revisión de C3 es **probar**, no leer el diff.
@@ -98,7 +98,7 @@ Hermes funciona solo como reloj y canal de Telegram. No orquesta ni usa Kimi en 
 | 0.3 | `scripts/loop/gate.py` según §3.1 | 45 min | Tres escenarios manuales dan el resultado esperado: sin PR previo, PR sin `R:`, PR mergeado con `R:` válida |
 | 0.4 | `scripts/loop/diff_size.sh` según §3.2 y `scripts/loop/try.sh <rama> -- <cmd>` (worktree temporal, corre, borra) | 20 min | `diff_size.sh` sobre `feature/plan30` sale con código 1; `try.sh` corre la demo sin tocar el checkout principal |
 | 0.5 | Verificar que `bd show`, `bd update` y `bd export` funcionan dentro de un worktree limpio | 15 min | `bd export` escribe `.beads/issues.jsonl` dentro del worktree |
-| 0.6 | Wrapper `~/.hermes/scripts/quantagent_loop.sh` según §3.5 | 25 min | Primera corrida manual abre el PR de T01 con el formato de §3.3 |
+| 0.6 | Wrapper `scripts/loop/run_nightly.sh` según §3.5, y `scripts/loop/smoke.sh` | 25 min | Primera corrida manual abre el PR de T01 con el formato de §3.3 |
 
 **Criterio de listo de la sesión 1:** una corrida manual del wrapper abre el PR de T01. Una segunda
 corrida inmediata imprime `⏸ esperando revisión` en menos de 30 segundos y no invoca a Claude.
@@ -110,7 +110,7 @@ corrida inmediata imprime `⏸ esperando revisión` en menos de 30 segundos y no
 | 0.7 | Revisar el PR de T01 desde el celular, como ensayo. Escribir `R:` y mergear | 15 min | PR mergeado con `R:` válida |
 | 0.8 | Probar una `R:` inválida en un PR de prueba (`R: x vi: ok decido: merge`) | 5 min | El gate la rechaza con el motivo |
 | 0.9 | Tercera corrida manual del wrapper | 40 min | Cierra `e35` en BEADS, toma T02, el PR incluye la línea de T01 en `docs/loop/REVIEW-LOG.md` |
-| 0.10 | Crear el cron de Hermes (confirmación explícita de Fede) y probar `loop/PAUSE` | 20 min | `hermes cron list` muestra el job; con `loop/PAUSE` en `main` el wrapper imprime `⏸ pausado` |
+| 0.10 | Instalar el shim `~/.hermes/scripts/quantagent_loop.sh` y crear el cron de Hermes (confirmación explícita de Fede); probar `loop/PAUSE` | 20 min | `hermes cron list` muestra el job; con `loop/PAUSE` en `main` el wrapper imprime `⏸ pausado` |
 
 **Criterio de listo de la fase 0:** job visible en `hermes cron list`, un ciclo completo cerrado
 (PR → `R:` → merge → siguiente PR), y el gate rechazó al menos una vez por falta de `R:` y una vez por `R:` inválida.
@@ -171,7 +171,6 @@ LOOP_TARGET_LINES=100
 LOOP_MAX_FILES=6
 LOOP_EXCLUDE=".beads/** tests/fixtures/** docs/loop/REVIEW-LOG.md"
 LOOP_TIMEOUT_MIN=120
-LOOP_SMOKE="python -m quantagent.cli backtest run --strategy rsi --fixture spy-smoke"
 ```
 
 - Un archivo borrado completo no suma líneas, pero se lista en el resumen.
@@ -199,7 +198,7 @@ Leé en este orden:
 
 ── Bloque 2 · probar y decidir ──
 Probar (copiar en la VM):
-scripts/loop/try.sh loop/<ID> -- <comando>
+~/repos/projects/QuantAgent/scripts/loop/try.sh loop/<ID> -- '<comando>'
 Esperado: <salida en ≤5 líneas>
 Obtenido por el loop: <salida real, ≤15 líneas>
 Verificador independiente: PASS | FAIL por criterio
@@ -217,7 +216,7 @@ decidir está en el cuerpo del PR.
 Todo PR `loop` cumple, antes de abrirse:
 
 1. `pytest -q -m "not slow and not api"` → 0 failed.
-2. `LOOP_SMOKE` → exit 0.
+2. `scripts/loop/smoke.sh` → exit 0 (SQLite temporal, sin tocar la base de desarrollo).
 3. CI verde en el PR (lo verifica Fede en el bloque 1; el agente espera el check hasta 15 min).
 4. Si cambia un comportamiento documentado, el README o el doc afectado se actualiza en el mismo PR.
 
@@ -231,7 +230,10 @@ estos dos tipos, que solo tocan documentación y dejan `main` funcionando:
 
 El código incompleto se pushea a `loop-wip/<ID>` sin PR, para no perderlo.
 
-### 3.5 Wrapper `~/.hermes/scripts/quantagent_loop.sh`
+### 3.5 Wrapper `scripts/loop/run_nightly.sh`
+
+Hermes ejecuta un shim de 3 líneas en `~/.hermes/scripts/quantagent_loop.sh` que corre la versión de
+`scripts/loop/run_nightly.sh` que está en `origin/main`.
 
 1. `git fetch origin`. Si existe `loop/PAUSE` en `origin/main`: imprimir y salir.
 2. `scripts/loop/gate.py` desde `origin/main`. WAIT: imprimir la línea y salir.
@@ -257,7 +259,7 @@ REGLAS DURAS
 - Una sola entrega. Si terminás antes, no tomes otro ticket.
 - Límite duro: 150 líneas agregadas+borradas y 6 archivos, excluyendo .beads/**, tests/fixtures/**
   y docs/loop/REVIEW-LOG.md. Medí con scripts/loop/diff_size.sh.
-- Cada entrega deja el proyecto funcionando: suite en 0 failed y LOOP_SMOKE con exit 0.
+- Cada entrega deja el proyecto funcionando: suite en 0 failed y `scripts/loop/smoke.sh` con exit 0.
 - Respetá AGENTS.md y CLAUDE.md del repo.
 
 PASO 1 — Registro y BEADS (solo si el modo trae una R: nueva)
@@ -281,7 +283,7 @@ PASO 3 — Estimar antes de escribir código
 PASO 4 — Implementar
 - Solo lo que pide "Cambio requerido". Nada fuera de "Archivos relevantes".
 - Tests que fallan si la lógica real se rompe. Sin mocks excesivos ni asserts triviales.
-- Suite y LOOP_SMOKE en verde. Corré el comando de verificación del ticket y guardá la salida real.
+- Suite y `scripts/loop/smoke.sh` en verde. Corré el comando de verificación del ticket y guardá la salida real.
 - Si el diff supera 150 líneas: descartá y hacé una entrega de partición.
 - Si no llegás a verde: pusheá a loop-wip/<ID> y hacé una entrega de bloqueo.
 
@@ -315,6 +317,7 @@ Los primeros 5 son los más fáciles de revisar.
 |---:|---|---|---|---|
 | T01 | `QuantAgent-e35` | Borrar `tests/test_backtest_apscheduler_9wz.py`, que no prueba código propio | El archivo no existe y CI está verde | leer |
 | T02 | `QuantAgent-bv8` | Salida del CLI limpia: solo las 5 líneas de métricas | `backtest run ... 2>&1 \| wc -l` devuelve 5 | probar |
+| T02b | `QuantAgent-fdi` | El backtest determinista deja de exigir `OPENAI_API_KEY` | `env -u OPENAI_API_KEY scripts/loop/smoke.sh` termina con exit 0 | probar |
 | T03 | `QuantAgent-fiu` | `test_parallel_execution` sobre `spy-smoke.csv`, sin skip | El test pasa sin `@pytest.mark.skip` | leer |
 | T04 | `QuantAgent-3km` | Guardrail de 730 días para 1h/4h en el provider Yahoo | Test de rango fuera de ventana da error explícito o recorte con log | leer |
 | T05 | `QuantAgent-11v` | `--equity-out` exporta la equity curve a CSV | Mínimo de `drawdown_pct` del CSV = drawdown impreso | probar |
@@ -343,7 +346,8 @@ A un ticket por día hábil, T01–T25 son 5 semanas. M1 se cumple al cerrar T23
 
 **Fuera del loop** (sesión de escritorio, no entran en la cola):
 - `QuantAgent-wwi`, skill de revisión macro semanal: instala en `~/.hermes`.
-- `QuantAgent-zui` y `QuantAgent-hak`: son parte de la fase 0.
+- `QuantAgent-zui` y `QuantAgent-hak`: son parte de la fase 0 (PR de la sesión 1).
+- `QuantAgent-hyt`: reevaluar el validador funcional de QA, comentado en el workflow el 2026-09-29.
 - `QuantAgent-u0w`, todo M2, la UI de Streamlit.
 
 ---
