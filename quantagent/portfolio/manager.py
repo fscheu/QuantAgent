@@ -31,6 +31,7 @@ class PortfolioManager:
         initial_cash: float,
         environment: Environment = Environment.PAPER,
         db: Optional[Session] = None,
+        backtest_run_id: Optional[int] = None,
     ):
         """Initialize portfolio manager.
 
@@ -38,11 +39,14 @@ class PortfolioManager:
             initial_cash: Starting capital (e.g., 100000.0)
             environment: Execution environment tag
             db: SQLAlchemy session (uses SessionLocal if not provided)
+            backtest_run_id: BacktestRun to stamp on trades created by this
+                manager. NULL for live/paper trading.
         """
         self.initial_cash = float(initial_cash)
         self.cash = float(initial_cash)
         self.environment = environment
         self.db = db or SessionLocal()
+        self.backtest_run_id = backtest_run_id
         self.positions: Dict[str, Dict] = (
             {}
         )  # symbol → {qty, avg_cost, current_price, pnl}
@@ -54,12 +58,18 @@ class PortfolioManager:
             pos["qty"] = 0.0
             pos["avg_cost"] = 0.0
 
-    def execute_trade(self, order: Order, fill_price: float) -> Trade:
+    def execute_trade(
+        self, order: Order, fill_price: float, timestamp: Optional[datetime] = None
+    ) -> Trade:
         """Execute a trade, update positions, persist to database.
 
         Args:
             order: Order object with symbol, side, quantity
             fill_price: Actual fill price from broker
+            timestamp: When the trade happened. Defaults to wall-clock now, which is
+                correct for live/paper trading; backtests must pass the simulated
+                candle's timestamp so Trade.opened_at/closed_at reflect sim time
+                instead of whenever the backtest happened to run.
 
         Returns:
             Trade object with updated portfolio state
@@ -71,6 +81,7 @@ class PortfolioManager:
             Pre-trade validation (capital, position size, daily loss) is handled by RiskManager
             BEFORE this method is called. This method only updates state.
         """
+        effective_timestamp = timestamp or datetime.utcnow()
         symbol = order.symbol
         qty = float(order.quantity)
         fill_qty = float(order.filled_quantity) if order.filled_quantity else qty
@@ -124,7 +135,7 @@ class PortfolioManager:
             # Opening new position (LONG or SHORT)
             entry_price = Decimal(str(fill_price))
             exit_price = None
-            opened_at = datetime.utcnow()
+            opened_at = effective_timestamp
             closed_at = None
         elif is_closing_long or is_closing_short:
             # Closing existing position
@@ -133,12 +144,12 @@ class PortfolioManager:
             opened_at = (
                 None  # Should reference original trade, but we don't track that yet
             )
-            closed_at = datetime.utcnow()
+            closed_at = effective_timestamp
         else:
             # Increasing existing position (LONG or SHORT)
             entry_price = Decimal(str(fill_price))
             exit_price = None
-            opened_at = datetime.utcnow()
+            opened_at = effective_timestamp
             closed_at = None
 
         # Extract commission from order fills
@@ -191,8 +202,9 @@ class PortfolioManager:
             pnl_pct=pnl_pct,
             commission=commission,
             environment=self.environment,
-            opened_at=opened_at or datetime.utcnow(),  # Ensure opened_at is never None
+            opened_at=opened_at or effective_timestamp,  # Ensure opened_at is never None
             closed_at=closed_at,
+            backtest_run_id=self.backtest_run_id,
         )
 
         # Persist to database

@@ -131,7 +131,7 @@ class TestReversalErrorLogging:
         
         # Actually, let's just mock it simply
         call_count = [0]
-        def track_calls(order, price):
+        def track_calls(order, price, **kwargs):
             call_count[0] += 1
             if call_count[0] == 1:
                 self.portfolio.positions = {}  # FLAT

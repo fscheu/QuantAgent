@@ -1,5 +1,6 @@
 """Tests for backtest run isolation logic."""
 
+import math
 from datetime import datetime, timedelta
 from decimal import Decimal
 
@@ -11,8 +12,11 @@ from quantagent.models import (
     BacktestRun,
     Environment,
     ExitPolicy,
+    MarketData,
     OrderSide,
+    Trade,
 )
+from quantagent.strategy.rsi_strategy import RSIMeanReversionStrategy
 from quantagent.trading.position_monitor import PositionMonitor
 
 
@@ -65,7 +69,7 @@ def test_position_monitor_isolates_by_backtest_run_id(db_session):
     assert pos_b.backtest_run_id == run_b.id
 
     # Cross-check: monitor A should not see run B's position
-    monitor_a.set_backtest_run_id(run_a.id)
+    monitor_a.backtest_run_id = run_a.id
     isolated = monitor_a.get_active_position("BTC")
     assert isolated.id == pos_a.id
 
@@ -310,7 +314,7 @@ def test_position_monitor_run_id_change(db_session):
     )
 
     # Switch context to run_b
-    monitor.set_backtest_run_id(run_b.id)
+    monitor.backtest_run_id = run_b.id
 
     # Open position in run_b context
     monitor.open_position(
@@ -324,13 +328,13 @@ def test_position_monitor_run_id_change(db_session):
     )
 
     # Switch back to run_a and verify we see the run_a position
-    monitor.set_backtest_run_id(run_a.id)
+    monitor.backtest_run_id = run_a.id
     pos_a = monitor.get_active_position("BTC")
     assert pos_a.backtest_run_id == run_a.id
     assert pos_a.side == OrderSide.BUY
 
     # Switch to run_b and verify we see the run_b position
-    monitor.set_backtest_run_id(run_b.id)
+    monitor.backtest_run_id = run_b.id
     pos_b = monitor.get_active_position("BTC")
     assert pos_b.backtest_run_id == run_b.id
     assert pos_b.side == OrderSide.SELL
@@ -364,3 +368,100 @@ def test_backtest_run_id_fk_constraint(db_session):
     # Important: rollback the session to clean up the bad state
     # so the fixture teardown can complete cleanly
     db_session.rollback()
+
+
+def _seed_rsi_market_data(session, symbol: str, start: datetime, end: datetime) -> int:
+    """Deterministic sine-wave OHLCV so RSI actually swings overbought/oversold.
+
+    Same pattern as scripts/repro_iip_timeframe.py, kept local to this test so
+    it stays self-contained.
+    """
+    rows = []
+    current = start - timedelta(days=10)
+    idx = 0
+    while current <= end:
+        close = 100.0 + 15.0 * math.sin(idx / 6.0) + (idx * 0.01)
+        rows.append(
+            MarketData(
+                symbol=symbol,
+                timeframe="1h",
+                timestamp=current,
+                open=Decimal(str(round(close - 0.5, 4))),
+                high=Decimal(str(round(close + 1.0, 4))),
+                low=Decimal(str(round(close - 1.0, 4))),
+                close=Decimal(str(round(close, 4))),
+                volume=Decimal("1000"),
+            )
+        )
+        idx += 1
+        current += timedelta(hours=1)
+    session.bulk_save_objects(rows)
+    session.commit()
+    return len(rows)
+
+
+def test_trades_isolated_across_consecutive_backtest_runs(db_session):
+    """Two backtests run back-to-back over the same data must not mix trades.
+
+    Regression test for D08 of PLAN-30-DIAS: PortfolioManager.execute_trade()
+    must stamp the *current* backtest_run_id on every Trade it creates. Before
+    that change, Trade.backtest_run_id was never set, so this test fails
+    (trades come back with backtest_run_id=None and neither per-run query
+    finds them).
+    """
+    symbol = "BTC"
+    end = datetime(2026, 6, 30)
+    start = end - timedelta(days=90)
+    _seed_rsi_market_data(db_session, symbol, start, end)
+
+    config = {
+        "base_position_pct": 0.05,
+        "max_daily_loss_pct": 0.05,
+        "max_position_pct": 0.10,
+        "slippage_pct": 0.01,
+        "market_hours_filter": False,
+    }
+
+    def _run(name: str):
+        backtest = Backtest(
+            start_date=start,
+            end_date=end,
+            assets=[symbol],
+            timeframe="1h",
+            initial_capital=100000.0,
+            config=config,
+            db_session=db_session,
+            strategy=RSIMeanReversionStrategy(),
+        )
+        metrics = backtest.run(name=name)
+        assert metrics.total_trades > 0, "fixture must actually produce trades"
+        return backtest, metrics
+
+    backtest_a, metrics_a = _run("isolation-run-a")
+    backtest_b, metrics_b = _run("isolation-run-b")
+
+    assert backtest_a.backtest_run_id != backtest_b.backtest_run_id
+
+    trades_a = (
+        db_session.query(Trade)
+        .filter(Trade.backtest_run_id == backtest_a.backtest_run_id)
+        .all()
+    )
+    trades_b = (
+        db_session.query(Trade)
+        .filter(Trade.backtest_run_id == backtest_b.backtest_run_id)
+        .all()
+    )
+
+    # Every row created by execute_trade() (open leg + close leg) must carry
+    # its own run's backtest_run_id -- none should be left unstamped (None).
+    assert len(trades_a) > 0
+    assert len(trades_b) > 0
+
+    ids_a = {t.id for t in trades_a}
+    ids_b = {t.id for t in trades_b}
+    assert ids_a.isdisjoint(ids_b)
+
+    all_trades = db_session.query(Trade).filter(Trade.symbol == symbol).all()
+    assert len(all_trades) == len(trades_a) + len(trades_b)
+    assert all(t.backtest_run_id is not None for t in all_trades)

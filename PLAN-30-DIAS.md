@@ -276,6 +276,27 @@ en BEADS y se sigue con la tarea del día. No se persigue.
 
 ## 3. Plan diario
 
+### Recalibración 2026-09-16: lotes de revisión en vez de cadencia diaria
+
+El plan original está calibrado para trabajo manual (45 min/día). Trabajando con Claude Code
+la unidad real que limita el ritmo no es "tiempo de implementación" sino **capacidad de
+revisión** — leer el diff, correr tests, entender qué cambió antes de seguir. D07-D09 se
+hicieron en una sola sesión con una sola tanda de revisión, lo que confirma que el "día" del
+plan original equivale más o menos a una tarea chica, y que agrupar 3-5 tareas relacionadas
+por checkpoint es razonable.
+
+De D10 en adelante, los días se ejecutan agrupados en **lotes**. Dentro de un lote no se para
+a revisar entre tareas (se avanza igual que D07-D09); entre lotes sí hay un checkpoint
+explícito antes de seguir. El criterio de "hecho" por día (tabla de abajo) no cambia — sigue
+siendo binario por fila — solo cambia cuándo se para a revisar.
+
+| Lote | Días | Qué entrega | Checkpoint al cerrar el lote |
+|---|---|---|---|
+| A — Datos y export | D10–D12 | Fixture versionado (`spy-90d.csv` + loader) y serializador `trades_to_csv` con su test | Revisar diff de `tests/fixtures/` + `export.py`, correr suite completa |
+| B — CLI end-to-end | D13–D17 | Grupo `backtest run` con flags, wiring real, `--out`, métricas en stdout, test E2E vía `CliRunner` | Correr el comando a mano contra `spy-90d`, ver la demo real funcionando |
+| C — Cierre y documentación | D18–D20 | README del comando, botón de descarga en Streamlit, cierre de `gg6` + `milestone-tracker.md` | Revisar README y UI en el navegador, confirmar `bd show QuantAgent-gg6` = `CLOSED` |
+| D — Colchón y merge | D21–D22 | Tickets de lo que quedó afuera, merge a `main`, demo de punta a punta | Demo corrida desde `main` limpio, decisión sobre próximo plan de 30 días |
+
 Convenciones:
 - `bd` = `~/repos/agents/autodev-runner/scripts/bd_safe.sh`
 - Todo día termina con **commit en rama** (`feature/plan30-<tema>`) y `git status` limpio.
@@ -345,29 +366,29 @@ Una marca por día. Sí = el criterio de "hecho" de la fila se cumplió. No = no
 La versión de 10 minutos **no** cuenta como Sí; se marca No y se recupera en D21/D22.
 
 ```
-D01  15/09 mar  [ ]
-D02  16/09 mié  [ ]
-D03  17/09 jue  [ ]
-D04  18/09 vie  [ ]
-D05  21/09 lun  [ ]
-D06  22/09 mar  [ ]
-D07  23/09 mié  [ ]
-D08  24/09 jue  [ ]
-D09  25/09 vie  [ ]
-D10  28/09 lun  [ ]
-D11  29/09 mar  [ ]
-D12  30/09 mié  [ ]
-D13  01/10 jue  [ ]
-D14  02/10 vie  [ ]
-D15  05/10 lun  [ ]
-D16  06/10 mar  [ ]
-D17  07/10 mié  [ ]
-D18  08/10 jue  [ ]
-D19  09/10 vie  [ ]
-D20  12/10 lun  [ ]
-D21  13/10 mar  [ ]
-D22  14/10 mié  [ ]
+D01  15/09 mar  [x]
+D02  16/09 mié  [x]
+D03  17/09 jue  [x]
+D04  18/09 vie  [x]
+D05  21/09 lun  [x]
+D06  22/09 mar  [x]
+D07  23/09 mié  [x]
+D08  24/09 jue  [x]
+D09  25/09 vie  [x]
+D10  28/09 lun  [x]
+D11  29/09 mar  [x]
+D12  30/09 mié  [x]
+D13  01/10 jue  [x]
+D14  02/10 vie  [x]
+D15  05/10 lun  [x]
+D16  06/10 mar  [x]
+D17  07/10 mié  [x]
+D18  08/10 jue  [x]
+D19  09/10 vie  [ ]  -- deferred: Streamlit download button, feature for later
+D20  12/10 lun  [x]
+D21  13/10 mar  [x]
+D22  14/10 mié  [ ]  -- ready: merges cleanly (0 conflicts vs origin/main), demo timed at 1m40s < 2min; merge itself needs Fede (CLAUDE.md: "Claude must not commit to main")
 ```
 
-Total de Sí: ____ / 22
-Entregable demostrable desde `main` al 14/10: [ ] Sí  [ ] No
+Total de Sí: 20 / 22 (D19 diferido; D22 se cumple al mergear `feature/plan30` a `main`)
+Entregable demostrable desde `main`: [ ] Sí  [ ] No  -- se marca con la línea de revisión del PR de cierre (ver `CHANGELOG.md` y `PLAN-CONTINUACION.md` §1)

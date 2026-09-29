@@ -237,13 +237,23 @@ class Trade(Base):
         Enum(Environment), nullable=False, default=Environment.PAPER, index=True
     )
 
+    # Backtest provenance: scopes trade to the BacktestRun that produced it.
+    # NULL means the trade was not produced by a backtest run (live/paper).
+    backtest_run_id = Column(Integer, ForeignKey("backtest_runs.id"), nullable=True)
+
     # Relationships
     order = relationship("Order", back_populates="trades")
+    backtest_run = relationship(
+        "BacktestRun",
+        foreign_keys=[backtest_run_id],
+        back_populates="trades",
+    )
 
     __table_args__ = (
         Index("idx_symbol_opened_at", "symbol", "opened_at"),
         Index("idx_symbol_closed_at", "symbol", "closed_at"),
         Index("idx_trades_environment", "environment"),
+        Index("idx_trades_backtest_run_id", "backtest_run_id"),
     )
 
 
@@ -326,6 +336,11 @@ class BacktestRun(Base):
     signals = relationship(
         "Signal",
         foreign_keys="Signal.backtest_run_id",
+        back_populates="backtest_run",
+    )
+    trades = relationship(
+        "Trade",
+        foreign_keys="Trade.backtest_run_id",
         back_populates="backtest_run",
     )
     replay_source_run = relationship(

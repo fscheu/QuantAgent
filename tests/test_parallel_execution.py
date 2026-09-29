@@ -13,6 +13,7 @@ from quantagent.trading_graph import TradingGraph
 
 
 @pytest.mark.integration
+@pytest.mark.skip(reason="Missing fixture benchmark/btc/BTC_4h_1.csv, not present in repo (see QuantAgent-fiu)")
 def test_parallel_execution():
     """Test that all three agents execute in parallel."""
 

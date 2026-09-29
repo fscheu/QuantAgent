@@ -124,8 +124,13 @@ class Backtest:
         self.db = db_session or SessionLocal()
         self._own_session = db_session is None
 
-        # Data provider (caching layer)
-        self.data_provider = DataProvider(self.db)
+        # Data provider (caching layer). offline_data=True (e.g. from the fixture-based
+        # CLI) skips live yfinance fallback entirely -- needed for reproducibility and
+        # because the naive gap-detection otherwise re-fetches the pre-fixture lookback
+        # window on nearly every candle.
+        self.data_provider = DataProvider(
+            self.db, offline=self.config.get("offline_data", False)
+        )
 
         # Resolve config via StrategyAssembler and build components (unify DB session)
         from quantagent import settings
@@ -427,7 +432,7 @@ class Backtest:
             )
             if should_exit:
                 self._close_position_with_trade_sync(
-                    active_pos, reason, current_price
+                    active_pos, reason, current_price, timestamp=current_date
                 )
                 logger.debug(
                     f"[REPLAY] {asset}: Closed position ({reason}) @ ${current_price:.2f}"
@@ -455,6 +460,7 @@ class Backtest:
             current_price=current_price,
             environment=Environment.BACKTEST,
             trigger_signal_id=stored_signal.id,
+            timestamp=current_date,
         )
 
         if order and order.filled_quantity and order.filled_quantity > 0:
@@ -488,6 +494,7 @@ class Backtest:
                 exit_policy="sl_tp_only",
                 trade_id=trade_id,
                 signal_id=stored_signal.id,
+                timestamp=current_date,
             )
 
             logger.info(
@@ -515,7 +522,10 @@ class Backtest:
         self.backtest_run_id = run.id
 
         if self.position_monitor is not None:
-            self.position_monitor.set_backtest_run_id(self.backtest_run_id)
+            self.position_monitor.backtest_run_id = self.backtest_run_id
+
+        if self.portfolio is not None:
+            self.portfolio.backtest_run_id = self.backtest_run_id
 
         logger.info(
             f"Created backtest run #{self.backtest_run_id}: {run.name}",
@@ -650,7 +660,7 @@ class Backtest:
 
             if should_exit:
                 self._close_position_with_trade_sync(
-                    active_pos, reason, current_price
+                    active_pos, reason, current_price, timestamp=current_date
                 )
                 logger.info(
                     f"{asset}: Closed position - {reason} @ ${current_price:.2f}"
@@ -717,6 +727,7 @@ class Backtest:
             current_price=current_price,
             environment=Environment.BACKTEST,
             trigger_signal_id=db_signal.id if db_signal else None,
+            timestamp=current_date,
         )
 
         if order and order.filled_quantity and order.filled_quantity > 0:
@@ -754,6 +765,7 @@ class Backtest:
                 signal_id=db_signal.id if db_signal else None,
                 trailing_stop_pct=signal.trailing_stop_pct,
                 max_hold_candles=signal.max_hold_candles,
+                timestamp=current_date,
             )
 
             logger.info(
@@ -943,7 +955,7 @@ class Backtest:
                 if not df.empty:
                     final_price = float(df.iloc[-1]["close"])
                     self._close_position_with_trade_sync(
-                        active_pos, "backtest_end", final_price
+                        active_pos, "backtest_end", final_price, timestamp=self.end_date
                     )
                     logger.info(
                         f"Closed remaining position for {asset} at backtest end @ ${final_price:.2f}",
@@ -1018,6 +1030,7 @@ class Backtest:
                         pos,
                         "stale_cleanup",
                         final_price,
+                        timestamp=self.start_date,
                     )
 
                     logger.info(
@@ -1036,7 +1049,7 @@ class Backtest:
                         extra={"event_type": "stale_position_force_close", "position_id": pos.id},
                     )
                     pos.is_active = False
-                    pos.closed_at = datetime.utcnow()
+                    pos.closed_at = self.start_date
                     pos.close_reason = "stale_cleanup_no_price"
                     self.db.commit()
                     total_cleaned += 1
@@ -1052,9 +1065,16 @@ class Backtest:
         position: ActivePosition,
         reason: str,
         exit_price: float,
+        timestamp: Optional[datetime] = None,
     ) -> None:
-        """Close the tracked position and sync realized exit data onto its linked opening trade."""
-        self.position_monitor.close_position(position, reason, exit_price)
+        """Close the tracked position and sync realized exit data onto its linked opening trade.
+
+        Args:
+            timestamp: Simulated candle time this close happened at, so
+                ActivePosition.closed_at / Trade.closed_at reflect sim time instead
+                of whenever the backtest happened to run.
+        """
+        self.position_monitor.close_position(position, reason, exit_price, timestamp=timestamp)
 
         close_order = None
         if position.trade_id:
@@ -1062,6 +1082,7 @@ class Backtest:
                 position.trade_id,
                 exit_price,
                 environment=Environment.BACKTEST,
+                timestamp=timestamp,
             )
 
         self._sync_linked_trade_exit(position, reason, exit_price, close_order)

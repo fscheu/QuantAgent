@@ -72,14 +72,21 @@ class DataProvider:
         "1mo": "1mo",
     }
 
-    def __init__(self, db_session: Session):
+    def __init__(self, db_session: Session, offline: bool = False):
         """
         Initialize DataProvider.
 
         Args:
             db_session: SQLAlchemy database session
+            offline: If True, never call out to yfinance for gaps -- only ever
+                return what's already cached. For deterministic, fixture-based
+                backtests (e.g. the `backtest run` CLI), hitting a live API
+                defeats the point (reproducibility, no network dependency) and,
+                worse, the naive gap-detection below re-triggers a request for
+                any pre-fixture lookback window on nearly every candle.
         """
         self.db = db_session
+        self.offline = offline
 
     def get_ohlc(
         self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
@@ -124,7 +131,11 @@ class DataProvider:
         missing_ranges = self._find_gaps(cached_df, start_date, end_date, timeframe)
 
         # 4. Fetch missing data from API
-        if missing_ranges:
+        if missing_ranges and self.offline:
+            logger.debug(
+                f"Offline mode: skipping {len(missing_ranges)} gap(s) for {symbol} ({timeframe})"
+            )
+        elif missing_ranges:
             logger.info(
                 f"Found {len(missing_ranges)} gap(s) in cached data, fetching from API"
             )

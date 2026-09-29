@@ -11,3 +11,4 @@ quantagent.egg-info/
 .worktrees/
 .openclaw/
 .venv/
+tmp/

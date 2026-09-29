@@ -730,7 +730,7 @@ class TestFullEndToEndIntegration:
 
         call_count = [0]
 
-        def mock_execute_trade(order, fill_price):
+        def mock_execute_trade(order, fill_price, **kwargs):
             call_count[0] += 1
             if call_count[0] == 1:
                 # First call: close SHORT position
@@ -779,7 +779,7 @@ class TestFullEndToEndIntegration:
 
         call_count = [0]
 
-        def mock_execute_trade(order, fill_price):
+        def mock_execute_trade(order, fill_price, **kwargs):
             call_count[0] += 1
             if call_count[0] == 1:
                 # First call: close LONG position
@@ -827,7 +827,7 @@ class TestFullEndToEndIntegration:
 
         call_count = [0]
 
-        def mock_execute_trade(order, fill_price):
+        def mock_execute_trade(order, fill_price, **kwargs):
             call_count[0] += 1
             if call_count[0] == 1:
                 # Close: BUY 0.01
@@ -929,7 +929,7 @@ class TestFullEndToEndIntegration:
 
         call_count = [0]
 
-        def mock_execute_trade(order, fill_price):
+        def mock_execute_trade(order, fill_price, **kwargs):
             call_count[0] += 1
             if call_count[0] == 1:
                 self.portfolio.positions["BTC"]["qty"] = 0.0
@@ -1011,7 +1011,7 @@ class TestFullEndToEndIntegration:
         # Mock portfolio.execute_trade
         call_count = [0]
 
-        def mock_execute_trade(order, fill_price):
+        def mock_execute_trade(order, fill_price, **kwargs):
             call_count[0] += 1
             if call_count[0] == 1:
                 self.portfolio.positions["ETH"]["qty"] = 0.0
@@ -1070,7 +1070,7 @@ class TestFullEndToEndIntegration:
         # Mock portfolio.execute_trade
         call_count = [0]
 
-        def mock_execute_trade(order, fill_price):
+        def mock_execute_trade(order, fill_price, **kwargs):
             call_count[0] += 1
             if call_count[0] == 1:
                 self.portfolio.positions["BTC"]["qty"] = 0.0
