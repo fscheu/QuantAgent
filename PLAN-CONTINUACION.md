@@ -110,22 +110,20 @@ corrida inmediata imprime `⏸ esperando revisión` en menos de 30 segundos y no
 | 0.7 | Revisar el PR de T01 desde el celular, como ensayo. Escribir `R:` y mergear | 15 min | PR mergeado con `R:` válida |
 | 0.8 | Probar una `R:` inválida en un PR de prueba (`R: x vi: ok decido: merge`) | 5 min | El gate la rechaza con el motivo |
 | 0.9 | Tercera corrida manual del wrapper | 40 min | Cierra `e35` en BEADS, toma T02, el PR incluye la línea de T01 en `docs/loop/REVIEW-LOG.md` |
-| 0.10 | Instalar el shim `~/.hermes/scripts/quantagent_loop.sh` y crear el cron de Hermes (confirmación explícita de Fede); probar `loop/PAUSE` | 20 min | `hermes cron list` muestra el job; con `loop/PAUSE` en `main` el wrapper imprime `⏸ pausado` |
+| 0.10 | Instalar los dos shims y crear los dos jobs de Hermes siguiendo `docs/loop/SETUP-HERMES.md` (confirmación explícita de Fede); probar `loop/PAUSE` | 20 min | `hermes cron list` muestra el job; con `loop/PAUSE` en `main` el wrapper imprime `⏸ pausado` |
 
 **Criterio de listo de la fase 0:** job visible en `hermes cron list`, un ciclo completo cerrado
 (PR → `R:` → merge → siguiente PR), y el gate rechazó al menos una vez por falta de `R:` y una vez por `R:` inválida.
 
-Comando del cron (0.10):
+Instalación (0.10): `docs/loop/SETUP-HERMES.md`. Son dos jobs porque Hermes corta los scripts de cron
+a los 120 segundos y una corrida dura hasta 2 horas:
 
-```bash
-hermes cron create "0 23 * * 0-4" --name "QuantAgent — loop nocturno" \
-  --script quantagent_loop.sh --no-agent \
-  --workdir /home/azureuser/repos/projects/QuantAgent \
-  --deliver telegram:-1003401012237:43
-```
+- **Lanzador**, domingo a jueves 23:00 ART: corre el gate en segundos. Si toca esperar, avisa por Telegram
+  sin invocar al modelo. Si pasa, lanza el loop desacoplado.
+- **Reporte**, lunes a viernes 02:30 ART: manda las 3 líneas de la entrega y la URL del PR.
 
-Domingo a jueves a las 23:00 ART, entrega lista a la mañana. El timeout de 2 h termina antes del
-housekeeping de worktrees de las 03:20. Confirmar en `hermes cron list` que el horario es ART.
+Ninguno de los dos cambia la config de Hermes. El timeout de 2 h del loop termina antes del housekeeping de
+worktrees de las 03:20.
 
 ---
 
@@ -232,8 +230,9 @@ El código incompleto se pushea a `loop-wip/<ID>` sin PR, para no perderlo.
 
 ### 3.5 Wrapper `scripts/loop/run_nightly.sh`
 
-Hermes ejecuta un shim de 3 líneas en `~/.hermes/scripts/quantagent_loop.sh` que corre la versión de
-`scripts/loop/run_nightly.sh` que está en `origin/main`.
+Hermes ejecuta dos shims en `~/.hermes/scripts/` que corren `scripts/loop/hermes_launch.sh` y
+`scripts/loop/hermes_report.sh` tal como están en `origin/main`. El lanzador copia el wrapper a un
+directorio temporal antes de ejecutarlo, porque el deploy resetea el checkout principal en cada merge.
 
 1. `git fetch origin`. Si existe `loop/PAUSE` en `origin/main`: imprimir y salir.
 2. `scripts/loop/gate.py` desde `origin/main`. WAIT: imprimir la línea y salir.

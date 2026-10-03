@@ -112,11 +112,13 @@ def main() -> int:
     try:
         cfg = _load_config()
         fields = "number,state,createdAt,headRefName,url,title"
-        prs = json.loads(_gh("pr", "list", "--label", cfg["LOOP_LABEL"], "--state", "all", "--limit", "30", "--json", fields))
+        repo = ("-R", cfg["LOOP_GITHUB_REPO"])  # explicit: the launcher runs the gate outside any git checkout
+        prs = json.loads(_gh("pr", "list", *repo, "--label", cfg["LOOP_LABEL"], "--state", "all", "--limit", "30",
+                             "--json", fields))
 
         def get_detail(number: int) -> dict:
-            d = json.loads(_gh("pr", "view", str(number), "--json", "commits,comments,reviews,body"))
-            d["diff"] = _gh("pr", "diff", str(number))
+            d = json.loads(_gh("pr", "view", str(number), *repo, "--json", "commits,comments,reviews,body"))
+            d["diff"] = _gh("pr", "diff", str(number), *repo)
             return d
 
         code, result = evaluate(prs, cfg["LOOP_REVIEWER"], get_detail)
