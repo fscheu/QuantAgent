@@ -387,8 +387,8 @@ D18  08/10 jue  [x]
 D19  09/10 vie  [ ]  -- deferred: Streamlit download button, feature for later
 D20  12/10 lun  [x]
 D21  13/10 mar  [x]
-D22  14/10 mié  [ ]  -- ready: merges cleanly (0 conflicts vs origin/main), demo timed at 1m40s < 2min; merge itself needs Fede (CLAUDE.md: "Claude must not commit to main")
+D22  14/10 mié  [x]  -- mergeado a main el 2026-09-29 (PR #1)
 ```
 
-Total de Sí: 20 / 22 (D19 diferido; D22 se cumple al mergear `feature/plan30` a `main`)
-Entregable demostrable desde `main`: [ ] Sí  [ ] No  -- se marca con la línea de revisión del PR de cierre (ver `CHANGELOG.md` y `PLAN-CONTINUACION.md` §1)
+Total de Sí: 21 / 22 (D19 diferido)
+Entregable demostrable desde `main`: [x] Sí  [ ] No  -- demo corrida por Fede en la VM el 2026-09-29 antes del merge del PR #1

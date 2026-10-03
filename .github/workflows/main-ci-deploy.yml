@@ -6,6 +6,12 @@ on:
     paths-ignore:
       - 'docs/**'
       - '.beads/**'
+  # PRs toward main run lint + tests only; deploy and Telegram notices stay push-only.
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '.beads/**'
   workflow_dispatch:
 
 env:
@@ -121,7 +127,7 @@ jobs:
           echo "All checks passed"
       
       - name: Notify Telegram on failure
-        if: failure()
+        if: failure() && github.event_name != 'pull_request'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
@@ -140,7 +146,7 @@ jobs:
             }"
       
       - name: Notify Telegram on success
-        if: success()
+        if: success() && github.event_name != 'pull_request'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
@@ -231,7 +237,7 @@ jobs:
     name: Deploy to QA
     needs: ci
     runs-on: [self-hosted, Linux, X64, quantagent-vm]
-    if: success()
+    if: success() && github.event_name != 'pull_request'
 
     steps:
       - name: Checkout code
