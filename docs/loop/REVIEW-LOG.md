@@ -7,4 +7,5 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-09-29 · #1 · R: cierre vi: decido: merge   (previa al loop; vi: vacío, no pasaría el gate)
 2026-09-29 · #2 · R: hyt vi: líneas comentadas ok decido: merge
 2026-10-04 · #4 · R: e35 vi:ok Al borrado del archivo decido: merge
+2026-10-04 · #6 · R: bv8 vi: de acuerdo con el cambio decido: merge
 ```

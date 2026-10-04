@@ -98,6 +98,10 @@ def test_backtest_run_unknown_fixture_fails_cleanly(cli_runner):
     assert "Fixture not found" in result.output
 
 
+# Blank (not unset) so a developer's .env cannot put the key back via load_dotenv.
+NO_OPENAI_KEY_ENV = {"OPENAI_API_KEY": "", "AGENT_LLM_PROVIDER": "openai", "GRAPH_LLM_PROVIDER": "openai"}
+
+
 def _run_cli_process(tmp_path, *extra_args):
     """Run the CLI as a real process so stderr noise (logging, warnings) is counted too."""
     env_db = f"sqlite:///{tmp_path / 'proc.db'}"
@@ -106,7 +110,7 @@ def _run_cli_process(tmp_path, *extra_args):
     return subprocess.run(
         [sys.executable, "-m", "quantagent.cli", "backtest", "run", "--strategy", "rsi",
          "--fixture", "spy-smoke", "--out", str(out_path), *extra_args],
-        env={**os.environ, "DATABASE_URL": env_db, "OPENAI_API_KEY": "dummy-not-used"},
+        env={**os.environ, "DATABASE_URL": env_db, **NO_OPENAI_KEY_ENV},
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -132,3 +136,33 @@ def test_backtest_run_verbose_shows_insufficient_data_messages(tmp_path):
     assert proc.returncode == 0, proc.stdout
     assert "Insufficient data for SPY" in proc.stdout
     assert "Trades: " in proc.stdout
+
+
+def test_backtest_run_deterministic_strategy_needs_no_openai_key(tmp_path):
+    """Without OPENAI_API_KEY the rsi backtest still runs: it must not build the LLM client."""
+    proc = _run_cli_process(tmp_path)
+
+    assert proc.returncode == 0, proc.stdout
+    assert "OPENAI_API_KEY" not in proc.stdout
+    assert proc.stdout.startswith("Trades: ")
+
+
+def test_backtest_default_llm_strategy_still_requires_openai_key(tmp_path):
+    """Without a strategy the engine defaults to LLMAgentStrategy, which must still demand the key."""
+    env_db = f"sqlite:///{tmp_path / 'llm.db'}"
+    Base.metadata.create_all(create_engine(env_db))
+    code = (
+        "from datetime import datetime\n"
+        "from quantagent.backtesting.backtest import Backtest\n"
+        "Backtest(datetime(2024, 1, 1), datetime(2024, 1, 2), ['SPY'], timeframe='1h')\n"
+    )
+    proc = subprocess.run(
+        [sys.executable, "-c", code],
+        env={**os.environ, "DATABASE_URL": env_db, **NO_OPENAI_KEY_ENV},
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+
+    assert proc.returncode != 0
+    assert "OPENAI_API_KEY not found" in proc.stdout

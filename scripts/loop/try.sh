@@ -15,7 +15,6 @@ cd "$WT"
 # shellcheck disable=SC1091
 source "$REPO/.venv/bin/activate"
 export DATABASE_URL="sqlite:///$WT/try.db"
-export OPENAI_API_KEY="${OPENAI_API_KEY:-dummy-not-used}"
 python -c "from quantagent.database import init_db; init_db()"
 echo "── $branch @ $(git rev-parse --short HEAD) ──"
 bash -c "$*"

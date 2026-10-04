@@ -158,9 +158,13 @@ class Backtest:
             },
             environment=Environment.BACKTEST,
         )
-        components = StrategyAssembler.build_components(resolved, db_session=self.db)
+        # Deterministic strategies never call the LLM: skip the graph so no API key is needed.
+        needs_graph = strategy is None or isinstance(strategy, LLMAgentStrategy)
+        components = StrategyAssembler.build_components(
+            resolved, db_session=self.db, build_graph=needs_graph
+        )
 
-        # Trading graph (analysis engine)
+        # Trading graph (analysis engine); None for deterministic strategies
         self.trading_graph = components.graph
 
         # Trading strategy (use provided or default to LLMAgentStrategy)

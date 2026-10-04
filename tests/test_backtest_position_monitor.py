@@ -152,9 +152,8 @@ class TestBacktestPositionMonitorIntegration:
         assert isinstance(backtest.strategy, MockSimpleStrategy)
         assert not isinstance(backtest.strategy, LLMAgentStrategy)
 
-        # TradingGraph should still exist (created by StrategyAssembler)
-        # but strategy should NOT be LLMAgentStrategy
-        assert backtest.trading_graph is not None
+        # Deterministic strategy: no TradingGraph / LLM client is built (QuantAgent-fdi)
+        assert backtest.trading_graph is None
 
     # ==================== AC3.2: Default strategy is LLMAgentStrategy ====================
 
