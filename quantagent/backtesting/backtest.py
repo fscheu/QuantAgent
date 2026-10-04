@@ -9,6 +9,7 @@ from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from quantagent.agent_models import TradingDecision
@@ -1149,13 +1150,9 @@ class Backtest:
         )
 
         if self.backtest_run_id is not None:
-            trade_ids_subquery = (
-                self.db.query(ActivePosition.trade_id)
-                .filter(
-                    ActivePosition.backtest_run_id == self.backtest_run_id,
-                    ActivePosition.trade_id.is_not(None),
-                )
-                .subquery()
+            trade_ids_subquery = select(ActivePosition.trade_id).where(
+                ActivePosition.backtest_run_id == self.backtest_run_id,
+                ActivePosition.trade_id.is_not(None),
             )
             trades_query = trades_query.filter(Trade.id.in_(trade_ids_subquery))
             trades_query = trades_query.filter(
