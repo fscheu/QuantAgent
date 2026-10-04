@@ -153,7 +153,8 @@ Trade log written to run.csv
 ```
 
 `--strategy` accepts `rsi`, `fifty-two-week-high`, or `triple-screen` (all
-deterministic — no LLM in the loop). `--out` is optional; when given, it writes
+deterministic — no LLM in the loop). `--verbose` also shows the engine's
+per-candle "Insufficient data" messages on stderr. `--out` is optional; when given, it writes
 `run.csv` with one row per trade and these columns:
 
 | Column | Meaning |

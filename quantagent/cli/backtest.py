@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 import click
+from sqlalchemy import select
 
 from quantagent.backtesting.backtest import Backtest
 from quantagent.backtesting.export import TradeRow, trades_to_csv
@@ -22,6 +24,10 @@ STRATEGY_ALIASES = {
     "fifty-two-week-high": "FiftyTwoWeekHighStrategy",
     "triple-screen": "TripleScreenStrategy",
 }
+
+
+def _hide_data_warnings(record: logging.LogRecord) -> bool:
+    return getattr(record, "event_type", None) != "backtest_data_warning"
 
 
 @click.group(help="Run deterministic backtests against versioned fixtures.")
@@ -49,7 +55,14 @@ def backtest_group() -> None:
     type=click.Path(dir_okay=False, writable=True),
     help="Write the trade log CSV to this path.",
 )
-def run_backtest(strategy_name: str, fixture_name: str, out_path: Optional[str]) -> None:
+@click.option(
+    "--verbose",
+    is_flag=True,
+    help="Also show the engine's per-candle 'Insufficient data' messages on stderr.",
+)
+def run_backtest(
+    strategy_name: str, fixture_name: str, out_path: Optional[str], verbose: bool
+) -> None:
     try:
         meta = fixture_metadata(fixture_name)
     except FileNotFoundError as exc:
@@ -72,17 +85,21 @@ def run_backtest(strategy_name: str, fixture_name: str, out_path: Optional[str])
             db_session=session,
             strategy=build_strategy(STRATEGY_ALIASES[strategy_name]),
         )
-        metrics = bt.run(name=f"cli-{strategy_name}-{fixture_name}")
+        # The lookback warm-up logs one "Insufficient data" warning per candle; keep the
+        # output to the metric lines unless --verbose asks for them.
+        engine_logger = logging.getLogger("quantagent.backtesting.backtest")
+        if not verbose:
+            engine_logger.addFilter(_hide_data_warnings)
+        try:
+            metrics = bt.run(name=f"cli-{strategy_name}-{fixture_name}")
+        finally:
+            engine_logger.removeFilter(_hide_data_warnings)
 
         rows = []
         if out_path:
-            trade_ids = (
-                session.query(ActivePosition.trade_id)
-                .filter(
-                    ActivePosition.backtest_run_id == bt.backtest_run_id,
-                    ActivePosition.trade_id.is_not(None),
-                )
-                .subquery()
+            trade_ids = select(ActivePosition.trade_id).where(
+                ActivePosition.backtest_run_id == bt.backtest_run_id,
+                ActivePosition.trade_id.is_not(None),
             )
             trades = (
                 session.query(Trade, ActivePosition.stop_loss)

@@ -7,6 +7,9 @@ in a fraction of a second while still producing real trades through the full eng
 """
 
 import csv
+import os
+import subprocess
+import sys
 
 import pytest
 from click.testing import CliRunner
@@ -93,3 +96,39 @@ def test_backtest_run_unknown_fixture_fails_cleanly(cli_runner):
 
     assert result.exit_code != 0
     assert "Fixture not found" in result.output
+
+
+def _run_cli_process(tmp_path, *extra_args):
+    """Run the CLI as a real process so stderr noise (logging, warnings) is counted too."""
+    env_db = f"sqlite:///{tmp_path / 'proc.db'}"
+    Base.metadata.create_all(create_engine(env_db))
+    out_path = tmp_path / "trades.csv"
+    return subprocess.run(
+        [sys.executable, "-m", "quantagent.cli", "backtest", "run", "--strategy", "rsi",
+         "--fixture", "spy-smoke", "--out", str(out_path), *extra_args],
+        env={**os.environ, "DATABASE_URL": env_db, "OPENAI_API_KEY": "dummy-not-used"},
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+
+
+def test_backtest_run_output_is_only_metrics_lines(tmp_path):
+    """stdout+stderr is exactly the 5 metric lines plus the --out line: no log or SAWarning noise."""
+    proc = _run_cli_process(tmp_path)
+
+    assert proc.returncode == 0, proc.stdout
+    prefixes = [line.split(":")[0] for line in proc.stdout.splitlines()]
+    assert prefixes == [
+        "Trades", "Win rate", "Profit factor", "Sharpe ratio", "Total PnL",
+        f"Trade log written to {tmp_path / 'trades.csv'}",
+    ]
+
+
+def test_backtest_run_verbose_shows_insufficient_data_messages(tmp_path):
+    """--verbose brings back the engine's per-candle 'Insufficient data' messages."""
+    proc = _run_cli_process(tmp_path, "--verbose")
+
+    assert proc.returncode == 0, proc.stdout
+    assert "Insufficient data for SPY" in proc.stdout
+    assert "Trades: " in proc.stdout
