@@ -12,7 +12,8 @@ REGLAS DURAS
 - Límite duro: 150 líneas agregadas+borradas y 6 archivos, excluyendo .beads/**, tests/fixtures/** y
   docs/loop/REVIEW-LOG.md. Medí con `scripts/loop/diff_size.sh` (exit 1 = excede).
 - Cada entrega deja el proyecto funcionando: `python -m pytest -q -m "not slow and not api"` en 0 failed
-  y `scripts/loop/smoke.sh` con exit 0.
+  y `scripts/loop/smoke.sh` con exit 0. DATABASE_URL ya apunta a la base de tests del loop (migrada); no la
+  cambies. Si un test falla por la base, es un bloqueo, no algo a ignorar.
 - Respetá AGENTS.md y CLAUDE.md del repo, salvo la regla de pedir confirmación: acá no hay humano, así que
   ante una duda real hacés una entrega de bloqueo en vez de preguntar.
 - BEADS: usá `bd` directo (BEADS_NO_DAEMON=1 ya está exportado). Después de escribir en BEADS corré

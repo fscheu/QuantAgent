@@ -39,6 +39,9 @@ fi
 
 # shellcheck disable=SC1091
 source "$REPO/.venv/bin/activate"
+# Tests that need Postgres run against the loop's own DB, never the dev DB (same layout as CI).
+export DATABASE_URL="$LOOP_TEST_DATABASE_URL"
+python -m alembic upgrade head >>"$LOG" 2>&1 || { echo "⚠ QuantAgent loop: alembic upgrade falló sobre la base de tests. Log: $LOG"; exit 0; }
 PROMPT="$(cat loop/PROMPT.md)
 
 CONTEXTO DEL GATE (JSON):
@@ -54,7 +57,7 @@ timeout "${LOOP_TIMEOUT_MIN}m" claude -p "$PROMPT" \
   >"$LOG" 2>&1
 crc=$?
 
-PR_JSON="$(gh pr list --label "$LOOP_LABEL" --state all --limit 1 --json number,url,body,createdAt,updatedAt,headRefName 2>/dev/null)"
+PR_JSON="$(gh pr list -R "$LOOP_GITHUB_REPO" --label "$LOOP_LABEL" --state all --limit 1 --json number,url,body,createdAt,updatedAt,headRefName 2>/dev/null)"
 NEW="$(python3 -c '
 import json,sys
 prs=json.loads(sys.argv[1] or "[]"); started=sys.argv[2]
@@ -67,7 +70,7 @@ if [ -z "$NEW" ]; then
 fi
 
 git fetch -q origin "$NEW" && git checkout -q --detach "origin/$NEW"
-SIZE="$(scripts/loop/diff_size.sh origin/main)" || gh pr edit "$NEW" --add-label excede-limite >/dev/null 2>&1
+SIZE="$(scripts/loop/diff_size.sh origin/main)" || gh pr edit -R "$LOOP_GITHUB_REPO" "$NEW" --add-label excede-limite >/dev/null 2>&1
 python3 -c '
 import json,sys
 p=json.loads(sys.argv[1])[0]
