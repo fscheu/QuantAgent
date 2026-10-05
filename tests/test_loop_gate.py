@@ -94,6 +94,19 @@ def test_real_line_from_pr2_is_valid_against_its_own_delivery():
     assert reason is None and review["decision"] == "merge"
 
 
+def test_real_multiline_line_from_pr7_with_pasted_output_is_valid():
+    body = ("R: fdi vi: testeado en la VM, resultado ok: \u2500\u2500 loop/QuantAgent-fdi @ 5965aa1c \u2500\u2500\r\n"
+            "Trades: 7\r\nWin rate: 71.43%\r\nProfit factor: 1.44\r\nSharpe ratio: 2.10\r\nTotal PnL: 94.02 decido: merge")
+    review, reason = gate.parse_review(body, "QuantAgent-fdi", "Obtenido por el loop: Trades: 7 Win rate: 71.43%")
+    assert reason is None
+    assert review["decision"] == "merge" and "71.43" in review["vi"]
+
+
+def test_multiline_comment_without_decision_is_still_rejected():
+    review, reason = gate.parse_review("R: fdi vi: salieron 7 trades\nTotal PnL: 94.02", "fdi", "Trades: 7")
+    assert review is None and "formato" in reason
+
+
 def test_merge_decision_on_open_pr_waits_for_the_merge():
     r = _comment("R: bv8 vi: salieron 5 lineas decido: merge")
     code, out = gate.evaluate([_pr("OPEN")], REVIEWER, _detail([r]))

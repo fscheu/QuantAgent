@@ -36,7 +36,8 @@ def _bare_ticket(ticket: str) -> str:
 
 def parse_review(body: str, ticket: str, evidence: str) -> tuple[dict | None, str | None]:
     """Validate an `R:` line against the delivery it reviews. Returns (review, None) or (None, reason)."""
-    first = next((line.strip() for line in body.splitlines() if line.strip()), "")
+    # Read the whole comment as one line: reviewers paste command output in the middle of `vi:`.
+    first = " ".join(body.split())
     match = R_LINE.match(first)
     if not match:
         return None, "no cumple el formato 'R: <ticket> vi: <...> decido: merge|cambio|descarto'"
