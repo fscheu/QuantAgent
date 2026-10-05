@@ -9,7 +9,7 @@ import click
 from sqlalchemy import select
 
 from quantagent.backtesting.backtest import Backtest
-from quantagent.backtesting.export import TradeRow, trades_to_csv
+from quantagent.backtesting.export import TradeRow, equity_to_csv, trades_to_csv
 from quantagent.backtesting.fixtures import fixture_metadata, load_fixture
 from quantagent.models import ActivePosition, Trade
 from quantagent.strategy.registry import build_strategy
@@ -56,12 +56,22 @@ def backtest_group() -> None:
     help="Write the trade log CSV to this path.",
 )
 @click.option(
+    "--equity-out",
+    "equity_out_path",
+    type=click.Path(dir_okay=False, writable=True),
+    help="Write the equity curve CSV (one row per candle) to this path.",
+)
+@click.option(
     "--verbose",
     is_flag=True,
     help="Also show the engine's per-candle 'Insufficient data' messages on stderr.",
 )
 def run_backtest(
-    strategy_name: str, fixture_name: str, out_path: Optional[str], verbose: bool
+    strategy_name: str,
+    fixture_name: str,
+    out_path: Optional[str],
+    equity_out_path: Optional[str],
+    verbose: bool,
 ) -> None:
     try:
         meta = fixture_metadata(fixture_name)
@@ -134,3 +144,11 @@ def run_backtest(
         with open(out_path, "w", newline="") as f:
             f.write(trades_to_csv(rows))
         click.echo(f"Trade log written to {out_path}")
+
+    if equity_out_path:
+        with open(equity_out_path, "w", newline="") as f:
+            f.write(equity_to_csv(bt.equity_curve))
+        click.echo(
+            f"Equity curve written to {equity_out_path} "
+            f"(max drawdown: {metrics.max_drawdown:.6f})"
+        )

@@ -4,7 +4,7 @@ import csv
 import io
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 COLUMNS = [
     "entry_time",
@@ -18,6 +18,8 @@ COLUMNS = [
     "pnl",
     "exit_reason",
 ]
+
+EQUITY_COLUMNS = ["timestamp", "equity", "cash", "positions_value", "drawdown_pct"]
 
 
 @dataclass
@@ -55,6 +57,33 @@ def trades_to_csv(trades: List[TradeRow]) -> str:
                 trade.stop_loss if trade.stop_loss is not None else "",
                 trade.pnl if trade.pnl is not None else "",
                 trade.exit_reason or "",
+            ]
+        )
+
+    return buffer.getvalue()
+
+
+def equity_to_csv(equity_curve: List[Dict]) -> str:
+    """Serialize the engine's equity curve, one row per point.
+
+    drawdown_pct is the fall from the running peak as a positive fraction (0.15 = 15%),
+    the same unit as BacktestMetrics.max_drawdown, so max(drawdown_pct) equals it.
+    """
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(EQUITY_COLUMNS)
+
+    peak = None
+    for point in equity_curve:
+        equity = point["equity"]
+        peak = equity if peak is None else max(peak, equity)
+        writer.writerow(
+            [
+                point["date"].isoformat(),
+                equity,
+                point["cash"],
+                point["positions_value"],
+                (peak - equity) / peak if peak else 0.0,
             ]
         )
 

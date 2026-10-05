@@ -168,6 +168,16 @@ per-candle "Insufficient data" messages on stderr. `--out` is optional; when giv
 | `pnl` | Realized P&L for the trade (empty if still open) |
 | `exit_reason` | Why the position closed (`TAKE_PROFIT`, `STOP_LOSS`, `backtest_end`, etc.) |
 
+`--equity-out eq.csv` is also optional: it writes the equity curve, one row per
+candle, and adds a line `Equity curve written to eq.csv (max drawdown: 0.012345)`.
+
+| Column | Meaning |
+|--------|---------|
+| `timestamp` | Candle timestamp (ISO 8601) |
+| `equity` | Total portfolio value (`cash` + `positions_value`) |
+| `cash` / `positions_value` | The two parts of `equity` |
+| `drawdown_pct` | Fall from the highest `equity` so far, as a positive fraction (`0.15` = 15%). Its maximum is the max drawdown printed by the command |
+
 ### Run a Backtest
 
 ```python

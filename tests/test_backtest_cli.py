@@ -17,7 +17,7 @@ from sqlalchemy import create_engine
 
 import quantagent.database as database
 from quantagent import settings
-from quantagent.backtesting.export import COLUMNS
+from quantagent.backtesting.export import COLUMNS, EQUITY_COLUMNS
 from quantagent.cli.backtest import backtest_group
 from quantagent.models import Base
 
@@ -96,6 +96,38 @@ def test_backtest_run_unknown_fixture_fails_cleanly(cli_runner):
 
     assert result.exit_code != 0
     assert "Fixture not found" in result.output
+
+
+def test_backtest_run_equity_out_max_drawdown_matches_engine(cli_runner, tmp_path, monkeypatch):
+    """--equity-out writes one row per equity point; its max drawdown_pct is the engine's max_drawdown."""
+    from quantagent.backtesting.backtest import Backtest
+
+    captured = {}
+    original_run = Backtest.run
+
+    def spy_run(self, *args, **kwargs):
+        captured["metrics"] = original_run(self, *args, **kwargs)
+        captured["points"] = len(self.equity_curve)
+        return captured["metrics"]
+
+    monkeypatch.setattr(Backtest, "run", spy_run)
+    eq_path = tmp_path / "eq.csv"
+
+    result = cli_runner.invoke(
+        backtest_group,
+        ["run", "--strategy", "rsi", "--fixture", "spy-smoke", "--equity-out", str(eq_path)],
+    )
+
+    assert result.exit_code == 0, result.output
+    with eq_path.open(newline="") as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+    assert reader.fieldnames == EQUITY_COLUMNS
+    assert len(rows) == captured["points"] > 1
+    engine_dd = captured["metrics"].max_drawdown
+    assert engine_dd > 0  # spy-smoke trades, so the curve must dip at least once
+    assert max(float(r["drawdown_pct"]) for r in rows) == pytest.approx(engine_dd, abs=1e-9)
+    assert f"(max drawdown: {engine_dd:.6f})" in result.output
 
 
 # Blank (not unset) so a developer's .env cannot put the key back via load_dotenv.
