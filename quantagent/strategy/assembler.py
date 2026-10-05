@@ -45,7 +45,7 @@ class TradingComponents:
     risk_manager: RiskManager
     broker: PaperBroker
     order_manager: OrderManager
-    graph: TradingGraph
+    graph: Optional[TradingGraph]  # None when built with build_graph=False
 
 
 class StrategyAssembler:
@@ -154,8 +154,13 @@ class StrategyAssembler:
         resolved: ResolvedConfig,
         *,
         db_session: Session,
+        build_graph: bool = True,
     ) -> TradingComponents:
-        """Construct trading components wired with the resolved config."""
+        """Construct trading components wired with the resolved config.
+
+        build_graph=False skips TradingGraph (and its LLM clients, which need an API key);
+        used by deterministic backtests.
+        """
         pm = PortfolioManager(
             initial_cash=resolved.initial_cash,
             environment=resolved.environment,
@@ -185,7 +190,7 @@ class StrategyAssembler:
         # }
 
         # graph = TradingGraph(config=graph_cfg, use_checkpointing=resolved.use_checkpointing)
-        graph = TradingGraph(use_checkpointing=resolved.use_checkpointing)
+        graph = TradingGraph(use_checkpointing=resolved.use_checkpointing) if build_graph else None
 
         return TradingComponents(
             portfolio_manager=pm,
