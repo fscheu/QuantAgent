@@ -130,12 +130,11 @@ def test_backtest_run_equity_out_max_drawdown_matches_engine(cli_runner, tmp_pat
     assert f"(max drawdown: {engine_dd:.6f})" in result.output
 
 
-@pytest.mark.xfail(strict=True, reason="QuantAgent-89e: each close also stores its closing leg as a closed Trade")
 def test_backtest_run_stores_one_closed_trade_row_per_round_trip(cli_runner, tmp_path):
     """Closed Trade rows of a run must equal its round-trips, and their pnl must add up to Total PnL.
 
-    Today every close (take-profit, stop-loss, end of backtest) leaves two closed rows with
-    the same pnl: the opening trade and its closing leg. So the count and the pnl sum are doubled.
+    Regression for QuantAgent-89e: every close (take-profit, stop-loss, end of backtest) used to
+    leave two closed rows with the same pnl, the opening trade and its closing leg.
     """
     result = cli_runner.invoke(
         backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
