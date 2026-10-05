@@ -1,99 +1,64 @@
 """
-Test script to verify parallel execution of agents in the trading graph.
-Measures execution time and confirms all three agents run simultaneously.
+Verify that the trading graph runs the three analysis agents in parallel.
+Data comes from the versioned fixture tests/fixtures/spy-smoke.csv; LLMs are the
+conftest mocks, so the test needs no network or API keys.
 """
-
-import time
 
 import pandas as pd
 import pytest
 
+from quantagent.backtesting.fixtures import load_fixture
+from quantagent.models import MarketData
 from quantagent.static_util import read_and_format_ohlcv
 from quantagent.trading_graph import TradingGraph
 
+ANALYSIS_AGENTS = {"Indicator Agent", "Pattern Agent", "Trend Agent"}
+
 
 @pytest.mark.integration
-@pytest.mark.skip(reason="Missing fixture benchmark/btc/BTC_4h_1.csv, not present in repo (see QuantAgent-fiu)")
-def test_parallel_execution():
-    """Test that all three agents execute in parallel."""
+def test_parallel_execution(db_session):
+    """
+    Validates the graph topology on real fixture candles: Indicator, Pattern and
+    Trend agents run in the same LangGraph superstep (fan-out from START), the
+    Decision Maker runs in the next one (fan-in), and every agent leaves its report.
+    Fails if the agents are chained sequentially or one is dropped from the graph.
+    """
+    row_count = load_fixture(db_session, "spy-smoke")
+    candles = db_session.query(MarketData).order_by(MarketData.timestamp).all()
+    assert len(candles) == row_count
 
-    print("=" * 80)
-    print("TESTING PARALLEL EXECUTION OF AGENTS")
-    print("=" * 80)
-
-    # Load sample data
-    print("\n1. Loading sample OHLCV data...")
-    df = pd.read_csv("benchmark/btc/BTC_4h_1.csv")
-    df_dict = read_and_format_ohlcv(df)
-    print(f"   ✓ Loaded {len(df)} candlesticks")
-
-    # Initialize trading graph
-    print("\n2. Initializing TradingGraph...")
-    tg = TradingGraph()
-    print("   ✓ Graph initialized")
-
-    # Prepare initial state
+    df = pd.DataFrame(
+        {
+            "Datetime": [c.timestamp for c in candles],
+            "Open": [float(c.open) for c in candles],
+            "High": [float(c.high) for c in candles],
+            "Low": [float(c.low) for c in candles],
+            "Close": [float(c.close) for c in candles],
+        }
+    )
     initial_state = {
-        "kline_data": df_dict,
-        "time_frame": "4hour",
-        "stock_name": "BTC",
+        "kline_data": read_and_format_ohlcv(df),
+        "time_frame": candles[0].timeframe,
+        "stock_name": candles[0].symbol,
         "messages": [],
     }
 
-    # Execute graph and measure time
-    print("\n3. Executing graph with parallel agents...")
-    print("   Expected: Indicator, Pattern, and Trend agents run simultaneously")
-    print("   Measuring execution time...")
+    tg = TradingGraph()
+    step_by_node = {}
+    result = {}
+    for event in tg.graph.stream(initial_state, stream_mode="debug"):
+        if event["type"] != "task_result":
+            continue
+        payload = event["payload"]
+        assert not payload.get("error"), f"{payload['name']} failed: {payload['error']}"
+        step_by_node[payload["name"]] = event["step"]
+        result.update(dict(payload["result"]))
 
-    start_time = time.time()
-    result = tg.graph.invoke(initial_state)
-    end_time = time.time()
+    assert ANALYSIS_AGENTS <= set(step_by_node), f"Agents that ran: {step_by_node}"
+    agent_steps = {step_by_node[name] for name in ANALYSIS_AGENTS}
+    assert len(agent_steps) == 1, f"Agents ran in different supersteps: {step_by_node}"
+    assert step_by_node["Decision Maker"] == agent_steps.pop() + 1
 
-    execution_time = end_time - start_time
-
-    # Verify results
-    print("\n" + "=" * 80)
-    print("RESULTS")
-    print("=" * 80)
-
-    print(f"\n✓ Total execution time: {execution_time:.2f} seconds")
-    print("  (Expected: ~4-5s for parallel, ~6-9s for sequential)")
-
-    # Check that all agent reports are present
-    has_indicator = "indicator_report" in result and result["indicator_report"]
-    has_pattern = "pattern_report" in result and result["pattern_report"]
-    has_trend = "trend_report" in result and result["trend_report"]
-    has_decision = "final_trade_decision" in result and result["final_trade_decision"]
-
-    print(f"\n✓ Indicator Report: {'✓ Present' if has_indicator else '✗ Missing'}")
-    print(f"✓ Pattern Report:   {'✓ Present' if has_pattern else '✗ Missing'}")
-    print(f"✓ Trend Report:     {'✓ Present' if has_trend else '✗ Missing'}")
-    print(f"✓ Decision Output:  {'✓ Present' if has_decision else '✗ Missing'}")
-
-    if has_decision:
-        decision = result["final_trade_decision"]
-        print(f"\nFinal Decision: {decision}")
-
-    # Performance analysis
-    print("\n" + "=" * 80)
-    print("PERFORMANCE ANALYSIS")
-    print("=" * 80)
-
-    if execution_time < 6:
-        print("\n✓ EXCELLENT: Execution time < 6s indicates parallel execution!")
-        print("  All three agents (Indicator, Pattern, Trend) ran simultaneously.")
-    elif execution_time < 7:
-        print("\n✓ GOOD: Execution time suggests partial parallelization.")
-    else:
-        print("\n⚠ WARNING: Execution time suggests sequential execution.")
-        print("  Check that graph edges are configured correctly for parallelization.")
-
-    print("\n" + "=" * 80)
-    print("TEST COMPLETE")
-    print("=" * 80)
-
-    return result
-
-
-if __name__ == "__main__":
-    result = test_parallel_execution()
+    for key in ("indicator_report", "pattern_report", "trend_report"):
+        assert result.get(key), f"Missing {key}"
+    assert result["final_trade_decision"]

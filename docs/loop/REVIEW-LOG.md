@@ -8,4 +8,5 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-09-29 · #2 · R: hyt vi: líneas comentadas ok decido: merge
 2026-10-04 · #4 · R: e35 vi:ok Al borrado del archivo decido: merge
 2026-10-04 · #6 · R: bv8 vi: de acuerdo con el cambio decido: merge
+2026-10-05 · #7 · R: fdi vi: testeado en la VM, resultado ok: ── loop/QuantAgent-fdi @ 5965aa1c ── Trades: 7 Win rate: 71.43% Profit factor: 1.44 Sharpe ratio: 2.10 Total PnL: 94.02 decido: merge
 ```
