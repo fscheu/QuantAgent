@@ -1,7 +1,7 @@
 """Data provider with caching layer for market data."""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 import pandas as pd
@@ -71,6 +71,11 @@ class DataProvider:
         "1w": "1w",
         "1mo": "1mo",
     }
+
+    # Yahoo rejects intraday requests whose start is older than 730 days
+    # ("The requested range must be within the last 730 days") and returns an
+    # empty frame. One day of margin keeps a clamped start inside the window.
+    INTRADAY_WINDOW_DAYS = {"1h": 729, "4h": 729}
 
     def __init__(self, db_session: Session, offline: bool = False):
         """
@@ -198,6 +203,25 @@ class DataProvider:
         """
         yf_symbol = self._to_yfinance_symbol(symbol)
         yf_interval = self._to_yfinance_interval(timeframe)
+
+        window_days = self.INTRADAY_WINDOW_DAYS.get(timeframe)
+        if window_days is not None:
+            earliest = datetime.now() - timedelta(days=window_days)
+            if end_date <= earliest:
+                logger.warning(
+                    f"{symbol} ({timeframe}): requested range {start_date} to {end_date} "
+                    f"is entirely older than Yahoo's 730-day intraday window "
+                    f"(earliest available: {earliest}); not calling the API"
+                )
+                return pd.DataFrame(
+                    columns=["timestamp", "open", "high", "low", "close", "volume"]
+                )
+            if start_date < earliest:
+                logger.warning(
+                    f"{symbol} ({timeframe}): requested start {start_date} is older than "
+                    f"Yahoo's 730-day intraday window; truncating start to {earliest}"
+                )
+                start_date = earliest
 
         logger.debug(f"Fetching {yf_symbol} with interval {yf_interval}")
 
