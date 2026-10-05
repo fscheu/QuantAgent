@@ -4,7 +4,13 @@ import csv
 import io
 from datetime import datetime
 
-from quantagent.backtesting.export import COLUMNS, TradeRow, trades_to_csv
+from quantagent.backtesting.export import (
+    COLUMNS,
+    EQUITY_COLUMNS,
+    TradeRow,
+    equity_to_csv,
+    trades_to_csv,
+)
 
 
 def _row(**overrides):
@@ -93,3 +99,26 @@ def test_csv_text_is_valid_utf8():
     csv_text = trades_to_csv([_row(exit_reason="stöp_löss")])
     encoded = csv_text.encode("utf-8")
     assert encoded.decode("utf-8") == csv_text
+
+
+def test_equity_csv_empty_curve_is_header_only():
+    assert equity_to_csv([]) == "timestamp,equity,cash,positions_value,drawdown_pct\r\n"
+
+
+def test_equity_csv_drawdown_is_measured_from_running_peak():
+    """100 -> 120 -> 90 -> 108: the peak moves to 120, so drawdowns are 0, 0, 25%, 10%."""
+    curve = [
+        {"date": datetime(2026, 4, 2, 14 + i), "equity": eq, "cash": 50.0, "positions_value": eq - 50.0}
+        for i, eq in enumerate([100.0, 120.0, 90.0, 108.0])
+    ]
+    rows = list(csv.DictReader(io.StringIO(equity_to_csv(curve))))
+
+    assert list(rows[0]) == EQUITY_COLUMNS
+    assert [float(r["drawdown_pct"]) for r in rows] == [0.0, 0.0, 0.25, 0.1]
+    assert rows[2] == {
+        "timestamp": "2026-04-02T16:00:00",
+        "equity": "90.0",
+        "cash": "50.0",
+        "positions_value": "40.0",
+        "drawdown_pct": "0.25",
+    }

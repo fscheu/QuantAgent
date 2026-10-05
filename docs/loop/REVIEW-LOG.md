@@ -10,4 +10,5 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-04 · #6 · R: bv8 vi: de acuerdo con el cambio decido: merge
 2026-10-05 · #7 · R: fdi vi: testeado en la VM, resultado ok: ── loop/QuantAgent-fdi @ 5965aa1c ── Trades: 7 Win rate: 71.43% Profit factor: 1.44 Sharpe ratio: 2.10 Total PnL: 94.02 decido: merge
 2026-10-05 · #9 · R: fiu vi: revise el código del test y ejecute en la vm, test pass ok decido: merge
+2026-10-05 · #10 · R: 3km vi: ~/repos/projects/QuantAgent/scripts/loop/try.sh loop/QuantAgent-3km -- 'python -m pytest -q tests/test_data_provider.py -k YahooIntradayWindow 2>&1 | tail -3' ── loop/QuantAgent-3km @ 4bf01bbf ── tests/test_data_provider.py ...... [100%] ================= 6 passed, 18 deselected, 6 warnings in 1.17s ================= decido: merge
 ```
