@@ -13,7 +13,7 @@ import sys
 
 import pytest
 from click.testing import CliRunner
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 import quantagent.database as database
 from quantagent import settings
@@ -128,6 +128,32 @@ def test_backtest_run_equity_out_max_drawdown_matches_engine(cli_runner, tmp_pat
     assert engine_dd > 0  # spy-smoke trades, so the curve must dip at least once
     assert max(float(r["drawdown_pct"]) for r in rows) == pytest.approx(engine_dd, abs=1e-9)
     assert f"(max drawdown: {engine_dd:.6f})" in result.output
+
+
+@pytest.mark.xfail(strict=True, reason="QuantAgent-89e: each close also stores its closing leg as a closed Trade")
+def test_backtest_run_stores_one_closed_trade_row_per_round_trip(cli_runner, tmp_path):
+    """Closed Trade rows of a run must equal its round-trips, and their pnl must add up to Total PnL.
+
+    Today every close (take-profit, stop-loss, end of backtest) leaves two closed rows with
+    the same pnl: the opening trade and its closing leg. So the count and the pnl sum are doubled.
+    """
+    result = cli_runner.invoke(
+        backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
+    )
+    assert result.exit_code == 0, result.output
+    reported = dict(line.split(": ") for line in result.output.splitlines() if ": " in line)
+
+    with create_engine(f"sqlite:///{tmp_path / 'test.db'}").connect() as conn:
+        round_trips = conn.execute(
+            text("SELECT COUNT(*) FROM active_positions WHERE is_active = 0")
+        ).scalar()
+        closed_rows, pnl_sum = conn.execute(
+            text("SELECT COUNT(*), SUM(pnl) FROM trades WHERE closed_at IS NOT NULL")
+        ).one()
+
+    assert round_trips == int(reported["Trades"]) > 0
+    assert closed_rows == round_trips
+    assert float(pnl_sum) == pytest.approx(float(reported["Total PnL"]), abs=0.01)
 
 
 # Blank (not unset) so a developer's .env cannot put the key back via load_dotenv.
