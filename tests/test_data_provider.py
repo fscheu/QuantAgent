@@ -402,3 +402,68 @@ class TestDataProvider:
         )
 
         assert count == 1
+
+
+class TestYahooIntradayWindow:
+    """QuantAgent-3km: 1h/4h requests must respect Yahoo's 730-day intraday window.
+
+    Only `yf.Ticker` (the network boundary) is patched, so the real range
+    validation in `_fetch_yfinance` runs.
+    """
+
+    @pytest.fixture
+    def provider(self, db_session):
+        return DataProvider(db_session)
+
+    @pytest.mark.parametrize("timeframe", ["1h", "4h"])
+    def test_start_older_than_window_is_truncated_with_warning(
+        self, provider, caplog, timeframe
+    ):
+        """SPY intraday from 800 days ago: Yahoo is asked only for the valid recent part."""
+        now = datetime.now()
+        requested_start = now - timedelta(days=800)
+
+        with patch("quantagent.data.provider.yf.Ticker") as ticker:
+            ticker.return_value.history.return_value = pd.DataFrame()
+            with caplog.at_level("WARNING", logger="quantagent.data.provider"):
+                provider._fetch_yfinance("SPX", timeframe, requested_start, now)
+
+        sent = ticker.return_value.history.call_args.kwargs
+        assert now - timedelta(days=730) < sent["start"] <= now - timedelta(days=728)
+        assert sent["end"] == now
+        assert "730-day" in caplog.text and "truncating" in caplog.text
+        assert str(requested_start) in caplog.text
+
+    def test_range_entirely_outside_window_skips_api_with_warning(
+        self, provider, caplog
+    ):
+        """SPY 1h for a range that ended 800 days ago: no API call, explicit reason logged."""
+        now = datetime.now()
+
+        with patch("quantagent.data.provider.yf.Ticker") as ticker:
+            with caplog.at_level("WARNING", logger="quantagent.data.provider"):
+                result = provider._fetch_yfinance(
+                    "SPX", "1h", now - timedelta(days=900), now - timedelta(days=800)
+                )
+
+        ticker.assert_not_called()
+        assert result.empty
+        assert "730-day" in caplog.text and "not calling the API" in caplog.text
+
+    @pytest.mark.parametrize(
+        "timeframe,days_back", [("1d", 800), ("1h", 700), ("4h", 700)]
+    )
+    def test_ranges_yahoo_accepts_are_sent_unchanged(
+        self, provider, caplog, timeframe, days_back
+    ):
+        """Daily data has no 730-day limit, and intraday inside the window is untouched."""
+        now = datetime.now()
+        start = now - timedelta(days=days_back)
+
+        with patch("quantagent.data.provider.yf.Ticker") as ticker:
+            ticker.return_value.history.return_value = pd.DataFrame()
+            with caplog.at_level("WARNING", logger="quantagent.data.provider"):
+                provider._fetch_yfinance("SPX", timeframe, start, now)
+
+        assert ticker.return_value.history.call_args.kwargs["start"] == start
+        assert "730-day" not in caplog.text
