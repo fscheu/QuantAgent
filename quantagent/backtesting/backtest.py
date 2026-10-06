@@ -1462,7 +1462,10 @@ class Backtest:
         if run:
             run.total_trades = metrics.total_trades
             run.win_rate = metrics.win_rate
-            run.profit_factor = metrics.profit_factor
+            pf = metrics.profit_factor
+            run.profit_factor = (
+                pf if pf is not None and not (math.isinf(pf) or math.isnan(pf)) else None
+            )
             run.sharpe_ratio = metrics.sharpe_ratio
             run.max_drawdown = metrics.max_drawdown
             run.total_pnl = Decimal(str(metrics.total_pnl))
