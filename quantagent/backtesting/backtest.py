@@ -1131,6 +1131,9 @@ class Backtest:
             if close_trade is not None:
                 opening_trade.pnl = close_trade.pnl
                 opening_trade.pnl_pct = close_trade.pnl_pct
+                # The opening trade now carries the realized exit; keeping the closing leg
+                # as a second closed row doubles counts and pnl (QuantAgent-89e).
+                self.db.delete(close_trade)
 
         self.db.commit()
 
