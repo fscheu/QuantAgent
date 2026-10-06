@@ -18,5 +18,6 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-06 · #18 · R: hx0.8 vi: try.sh en la VM da PnL por trade 227/227 y métricas sin cambio (227 / -4717.33) decido: merge
 2026-10-06 · #23 · PM: hx0.9 vi: corrí en base limpia las tres variantes: 0.05% da 227 / 12120.98, TRADING_SLIPPAGE_PCT=0.01 vuelve a 227 / -4717.33 y slippage 0 da 13084.98 (monótono, 113 ganadores en las tres); recalc_metrics 227/227; suite 818 passed decido: merge
 2026-10-06 · #24 · PM: hx0.7 vi: tabla corregida y recalculada por mi lado desde la equity curve en base limpia: 0.57 / 1.37 / 1.13 con 0.05% y 0.40 / 0.99 / 0.82 con 1.00%; el fixture spy-90d tiene 2160 velas = 90 días × 24 h, fines de semana incluidos decido: escalo ¿qué anualización para 1h: A 252×6.5 (Sharpe 0.57), B 365×24 (1.37) o C 252×24 (1.13)? Recomiendo B condicional: 8760 cuando el backtest corre sin filtro de horario (fixtures 24/7) y 1638 cuando market_hours_filter está activo. Contestá con R: hx0.7 vi: ... decido: merge (acepta B condicional) o cambio <opción>.
+2026-10-06 · #24 · R: hx0.7 vi: tabla 0.57 / 1.37 / 1.13, el fixture spy-90d es 24/7 decido: cambio agregar opción D: periodos por año derivados de los datos (velas observadas / años cubiertos) y adoptarla   (Fede mergeó el doc tal cual; la opción D se implementa en hx0.4)
+2026-10-06 · #25 · PM: hx0.1 vi: rompí la fórmula del short en manager.py y la de total_return_pct y el test nuevo falla en los dos casos; equity_final recalculada desde el CSV de equity da inicial + 12120.98; suite 819 passed decido: merge
 ```
-
