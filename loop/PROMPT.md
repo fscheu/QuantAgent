@@ -19,6 +19,12 @@ REGLAS DURAS
   cambies. Si un test falla por la base, es un bloqueo, no algo a ignorar.
 - Respetá AGENTS.md y CLAUDE.md del repo, salvo la regla de pedir confirmación: acá no hay humano, así que
   ante una duda real hacés una entrega de bloqueo en vez de preguntar.
+- Corré todos los comandos en primer plano y esperá su salida: la suite, el smoke, los backtests y `try.sh`.
+  No lances nada en segundo plano ni delegues comandos largos a una tarea aparte: si te quedás esperando una
+  tarea de fondo, la corrida termina sola y se pierde la entrega (pasó dos veces el 2026-10-06 con hx0.2).
+  La suite tarda unos 4 minutos; es esperable.
+- Abrí el PR apenas el commit esté pusheado y las verificaciones propias hayan pasado. Una rama pusheada sin PR
+  no es una entrega.
 - BEADS: usá `bd` directo (BEADS_NO_DAEMON=1 ya está exportado). Después de escribir en BEADS corré
   `bd export -o .beads/issues.jsonl` y commiteá ese archivo en tu rama.
 
