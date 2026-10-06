@@ -48,8 +48,7 @@ Corte de ejemplo (lo decide V21): ajuste 2007–2018 (con 2008), prueba 2019–2
 
 - **SPY** opera 9:30–16:00 de Nueva York, días hábiles: 2 velas por día (9:30–13:30 y 13:30–16:00, más corta).
   Huecos de noche, fin de semana y feriados; los días de cierre a las 13:00 tienen 1 vela. ~504 velas al año.
-- **BTC** opera 24/7: 6 velas iguales por día, sin huecos. ~2.190 velas al año.
-- Por eso el Sharpe anualizado usa factores distintos (V34), y SPY puede saltar de cierre a apertura sin velas.
+- **BTC** opera 24/7: 6 velas iguales por día, sin huecos (~2.190 al año). El Sharpe anualizado usa otro factor (V34).
 
 ## D4. Fuente de datos por horizonte
 
@@ -62,6 +61,7 @@ Corte de ejemplo (lo decide V21): ajuste 2007–2018 (con 2008), prueba 2019–2
 | Stooq | Diario largo | Desde 2026 pide clave (captcha) y tiene cuota diaria | Sí | No verificado | No (fuente secundaria) |
 | Tiingo | Diario largo; intradía IEX | Gratis: 50 pedidos/h, 1000/día, 500 símbolos/mes | Sí | No verificado | No (fuente secundaria) |
 | Polygon (Massive) | Gratis: 2 años, solo cierre diario | Gratis: 5 llamadas/min | Sí | No verificado | No (fuente secundaria) |
+| OpenBB | No es fuente: envuelve Yahoo, Polygon, Tiingo, FMP, Alpha Vantage y otros. No suma historia propia: da la del proveedor que envuelve | Gratis (código AGPL-3.0) | La del proveedor | La del proveedor | Parcial (buscador). Lo estudia `QuantAgent-6ie` |
 
 | Opción para 4h | Cuesta |
 |---|---|
@@ -117,4 +117,4 @@ Diario: queda Yahoo (ya integrado, gratis, sin clave, historia desde antes de 20
 - Alpaca: [planes y feeds](https://docs.alpaca.markets/docs/about-market-data-api), [cripto sin clave](https://alpaca.markets/sdks/python/market_data.html)
 - Binance: [velas](https://developers.binance.com/docs/binance-spot-api-docs/rest-api/market-data-endpoints), [términos Vision](https://data.binance.vision/Binance_Vision-Terms_of_Use.pdf)
 - Yahoo: [términos](https://legal.yahoo.com/us/en/yahoo/terms/otos/index.html), [aviso de `yfinance`](https://pypi.org/project/yfinance/)
-- Secundarias: [Stooq](https://github.com/pydata/pandas-datareader/issues/1012), [Tiingo](https://www.quantstart.com/articles/evaluating-data-coverage-with-tiingo/), [Polygon/Massive](https://qveris.ai/guides/stock-api-free-comparison/?lang=en)
+- OpenBB: [extensiones de datos](https://docs.openbb.co/platform/usage/extensions/data_extensions). Secundarias: [Stooq](https://github.com/pydata/pandas-datareader/issues/1012), [Tiingo](https://www.quantstart.com/articles/evaluating-data-coverage-with-tiingo/), [Polygon/Massive](https://qveris.ai/guides/stock-api-free-comparison/?lang=en)
