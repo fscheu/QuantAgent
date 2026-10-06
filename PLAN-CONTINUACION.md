@@ -304,6 +304,7 @@ es señal de que los tickets están mal definidos, no de que falte velocidad.
 4. Buscar el hueco con al menos una comprobación que el PR no trae: otro fixture u otra estrategia, un caso
    borde, un valor recalculado por otro camino, un test que debería fallar si se rompe la lógica y no falla.
 5. Decidir y comentar la línea `PM:`. En `vi:` va el dato de la comprobación propia del paso 4.
+6. Al cerrar la revisión, agregar la línea a `docs/loop/REVIEW-LOG.md` en la rama del lote (§5.4).
 
 **Qué no aprueba el PM (siempre `decido: escalo`)**
 
@@ -459,10 +460,13 @@ revisado
 ### 5.4 Dónde queda
 
 - El comentario del PR es la señal que lee el gate.
-- En la siguiente entrega, el loop copia la línea a `docs/loop/REVIEW-LOG.md` con fecha y URL:
+- Cuando una revisión queda cerrada (merge al lote, descarte, o la `R:` de Fede sobre una escalada), el PM agrega
+  la línea a `docs/loop/REVIEW-LOG.md` con un commit directo en la rama del lote, con fecha y número de PR:
 
 ```text
 2026-10-01 · #57 · R: bv8 vi: en la VM salieron 5 lineas, sharpe 0.40 decido: merge
 ```
 
 - `docs/loop/REVIEW-LOG.md` es el historial: una línea por entrega revisada, con su prefijo `PM:` o `R:`.
+- Hasta el 2026-10-06 la copiaba el agente en la entrega siguiente. Con un PR escalado abierto y otro en curso,
+  los dos agregaban una línea en el mismo lugar y el segundo merge chocaba (#24 y #25). Ahora escribe uno solo.
