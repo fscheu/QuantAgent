@@ -65,10 +65,50 @@ docker exec quantagent-dev-db psql -U postgres -c "CREATE ROLE loop_test LOGIN P
 docker exec quantagent-dev-db psql -U postgres -c "CREATE DATABASE quantagent_loop_test OWNER loop_test"
 ```
 
+## Elegir el agente (QuantAgent-l4n)
+
+El wrapper lanza el agente que diga `LOOP_AGENT` en `loop/config.env`: `claude` (Claude Code, default) o
+`agy` (Antigravity, con el modelo de `LOOP_AGY_MODEL`). Cada PR entregado lleva el label `agent:claude` o
+`agent:agy`, y la última línea del resumen de Telegram dice `agent=...`.
+
+Barrera común a los dos agentes: el wrapper instala un hook `pre-push` (`scripts/loop/push_guard.sh`) que
+solo ve el proceso del agente. Rechaza push a `main`, borrado de ramas remotas y push forzado. Hace falta
+porque `main` no tiene branch protection. No cubre `gh pr merge`: eso se cierra con branch protection en
+GitHub o con una regla deny del agente.
+
+### Permisos de `agy` (lo instala Fede, una sola vez)
+
+`agy` en modo headless niega todo comando que no esté permitido, y el wrapper no usa
+`--dangerously-skip-permissions`. Los permisos viven en `~/.gemini/antigravity-cli/settings.json`, que es
+global: valen también para las sesiones interactivas de `agy` en la VM. Agregar la clave `permissions`:
+
+```json
+"permissions": {
+  "allow": [
+    "command(git)", "command(gh)", "command(bd)", "command(python)", "command(pytest)", "command(ruff)",
+    "command(scripts/loop/)", "command(timeout)", "command(ls)", "command(cat)", "command(grep)",
+    "command(rg)", "command(find)", "command(sed)", "command(head)", "command(tail)", "command(wc)",
+    "command(mkdir)", "command(env)", "command(sha256sum)", "command(diff)",
+    "write_file(/tmp/ai-loop/)"
+  ],
+  "deny": [
+    "command(git push origin main)", "command(git push --force)", "command(git push -f)",
+    "command(git branch -D)", "command(gh pr merge)", "command(rm -rf)",
+    "write_file(/home/azureuser/.hermes/)", "write_file(/home/azureuser/secrets/)"
+  ]
+}
+```
+
+Deny gana sobre allow. Si una corrida con `agy` termina sin entrega y el log dice
+`a tool required the "command" permission`, falta un prefijo en `allow`: el log nombra cuál.
+
 ## Operación
 
 | Quiero | Cómo |
 |---|---|
+| Usar otro agente en la próxima corrida (una sola vez) | `echo agy > ~/.local/state/quantagent-loop/next-agent` |
+| Cambiar el agente por defecto | PR que cambia `LOOP_AGENT` en `loop/config.env` |
+| Cambiar el modelo de `agy` | PR que cambia `LOOP_AGY_MODEL` (lista: `agy models`) |
 | Pausar el loop | Crear `loop/PAUSE` en `main` desde GitHub mobile (cualquier contenido) |
 | Reanudar | Borrar `loop/PAUSE` |
 | Ver logs de una corrida | `ls -t ~/.local/state/quantagent-loop/` |

@@ -237,9 +237,13 @@ directorio temporal antes de ejecutarlo, porque el deploy resetea el checkout pr
 1. `git fetch origin`. Si existe `loop/PAUSE` en `origin/main`: imprimir y salir.
 2. `scripts/loop/gate.py` desde `origin/main`. WAIT: imprimir la línea y salir.
 3. Crear worktree `/tmp/ai-loop/<RUN>` desde `origin/main`, o desde la rama del PR en modo `cambio`.
-4. `claude -p` con `loop/PROMPT.md` más el contexto del gate (modo, PR previo, texto de la `R:`),
-   `--permission-mode acceptEdits`, `--disallowedTools "Bash(git push origin main*)" "Bash(git push -f*)" "Bash(git push --force*)"`,
-   timeout `LOOP_TIMEOUT_MIN`.
+4. Agente según `LOOP_AGENT` (`claude` | `agy`; el archivo `next-agent` del directorio de estado lo cambia
+   por una corrida), con `loop/PROMPT.md` más el contexto del gate (modo, PR previo, texto de la `R:`) y
+   timeout `LOOP_TIMEOUT_MIN`. `claude -p` usa `--permission-mode acceptEdits` y
+   `--disallowedTools "Bash(git push origin main*)" "Bash(git push -f*)" "Bash(git push --force*)"`;
+   `agy -p` usa `--mode accept-edits` y sus reglas allow/deny (`docs/loop/SETUP-HERMES.md`). Para los dos,
+   el hook `scripts/loop/push_guard.sh` rechaza push a main, borrado de ramas y push forzado.
+   El PR entregado recibe el label `agent:<agente>`.
 5. `scripts/loop/diff_size.sh` sobre la rama entregada. Si excede, label `excede-limite`.
 6. Borrar el worktree.
 7. Imprimir para Telegram: las 3 líneas del resumen y la URL del PR.
