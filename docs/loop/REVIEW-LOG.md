@@ -15,4 +15,6 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-05 · #13 · R: 89e.1 vi: registros duplicados en la base para la misma operación no quiero, es un bug decido: merge
 2026-10-06 · #14 · R: 89e vi: revise la tabla de tardes después de ejecutar el loop y lo veo ok decido: merge
 2026-10-06 · #15 · R: hx0.5 vi: el PNL no sé recalcula. Encontramos que El slippage estaba sobredimensionado. Agregamos otros tickets a la cola. decido: merge
+2026-10-06 · #18 · R: hx0.8 vi: try.sh en la VM da PnL por trade 227/227 y métricas sin cambio (227 / -4717.33) decido: merge
 ```
+
