@@ -6,9 +6,9 @@ on:
     paths-ignore:
       - 'docs/**'
       - '.beads/**'
-  # PRs toward main run lint + tests only; deploy and Telegram notices stay push-only.
+  # PRs toward main or a lot branch run lint + tests only; deploy and Telegram notices stay push-only.
   pull_request:
-    branches: [main]
+    branches: [main, 'lote/**']
     paths-ignore:
       - 'docs/**'
       - '.beads/**'

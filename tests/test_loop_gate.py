@@ -20,8 +20,8 @@ BODY = "Cambió: la salida del CLI queda en 5 líneas\nObtenido: Trades: 227 Sha
 DIFF = "+    logger.debug('Insufficient data')\n"
 
 
-def _pr(state="MERGED", number=7, created="2026-10-01T02:00:00Z", branch="loop/QuantAgent-bv8"):
-    return {"number": number, "state": state, "createdAt": created, "headRefName": branch,
+def _pr(state="MERGED", number=7, created="2026-10-01T02:00:00Z", branch="loop/QuantAgent-bv8", base="main"):
+    return {"number": number, "state": state, "createdAt": created, "headRefName": branch, "baseRefName": base,
             "url": f"https://github.com/x/y/pull/{number}", "title": "QuantAgent-bv8: stdout limpio"}
 
 
@@ -132,3 +132,66 @@ def test_only_the_most_recent_loop_pr_is_gated():
     r = _comment("R: bv8 vi: salieron 5 lineas decido: merge")
     code, out = gate.evaluate([old, new], REVIEWER, _detail([r]))
     assert (code, out["pr"]) == (gate.EXIT_PASS, 7)
+
+
+LOT = "lote/metricas-auditadas"
+
+
+def test_pm_line_passes_on_a_pr_into_a_lot_branch():
+    r = _comment("PM: bv8 vi: corrí el comando y salieron 5 lineas decido: merge")
+    code, out = gate.evaluate([_pr("MERGED", base=LOT)], REVIEWER, _detail([r]))
+    assert (code, out["previous"], out["review"]["by"]) == (gate.EXIT_PASS, "cerrar", "PM")
+
+
+def test_pm_line_never_counts_on_a_pr_into_main():
+    r = _comment("PM: bv8 vi: corrí el comando y salieron 5 lineas decido: merge")
+    code, out = gate.evaluate([_pr("MERGED", base="main")], REVIEWER, _detail([r]))
+    assert code == gate.EXIT_WAIT and "hace falta la R: de Fede" in out["message"]
+
+
+def test_pm_line_is_held_to_the_same_evidence_rule():
+    r = _comment("PM: bv8 vi: todo bien ok decido: merge")
+    code, out = gate.evaluate([_pr("MERGED", base=LOT)], REVIEWER, _detail([r]))
+    assert code == gate.EXIT_WAIT and "no menciona nada" in out["message"]
+
+
+def test_pm_escalation_leaves_the_pr_open_and_lets_the_lot_continue():
+    r = _comment("PM: bv8 vi: salieron 5 lineas decido: escalo Fede elige entre 252 y 365 periodos")
+    code, out = gate.evaluate([_pr("OPEN", base=LOT)], REVIEWER, _detail([r]))
+    assert (code, out["mode"], out["previous"]) == (gate.EXIT_PASS, "nuevo", "escalar")
+
+
+@pytest.mark.parametrize("line, reason", [
+    ("R: bv8 vi: salieron 5 lineas decido: escalo que decida otro", "solo para la línea PM:"),
+    ("PM: bv8 vi: salieron 5 lineas decido: escalo", "necesita decir"),
+])
+def test_invalid_escalations_wait(line, reason):
+    code, out = gate.evaluate([_pr("OPEN", base=LOT)], REVIEWER, _detail([_comment(line)]))
+    assert code == gate.EXIT_WAIT and reason in out["message"]
+
+
+def test_fede_r_line_still_decides_on_a_pr_into_a_lot_branch():
+    r = _comment("R: bv8 vi: salieron 5 lineas decido: cambio dejar el warning")
+    code, out = gate.evaluate([_pr("OPEN", base=LOT)], REVIEWER, _detail([r]))
+    assert (code, out["mode"]) == (gate.EXIT_PASS, "cambio")
+
+
+def test_without_an_open_lot_the_loop_waits():
+    lot, wait = gate.active_lot([])
+    assert lot is None and "sin lote abierto" in wait
+
+
+def test_a_lot_marked_ready_waits_for_fede_merge():
+    lot, wait = gate.active_lot([{"number": 30, "headRefName": LOT, "isDraft": False, "url": "u"}])
+    assert lot is None and "falta que Fede lo mergee" in wait
+
+
+def test_two_open_lots_wait():
+    prs = [{"number": 30, "headRefName": LOT, "isDraft": True}, {"number": 31, "headRefName": "lote/b", "isDraft": True}]
+    lot, wait = gate.active_lot(prs)
+    assert lot is None and "más de un lote" in wait
+
+
+def test_a_draft_lot_is_the_base_of_the_next_delivery():
+    lot, wait = gate.active_lot([{"number": 30, "headRefName": LOT, "isDraft": True}])
+    assert wait is None and lot["headRefName"] == LOT

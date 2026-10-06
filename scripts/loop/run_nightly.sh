@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Nightly loop wrapper (PLAN-CONTINUACION.md §3.5). Launched by a Hermes cron in --no-agent mode;
 # its stdout is delivered to Telegram verbatim, so it prints only short status lines.
-# Order: pause flag -> review gate -> fresh worktree -> headless agent (claude | agy) -> size check -> cleanup.
+# Order: pause flag -> review gate (open lot + reviewed delivery) -> fresh worktree on the lot branch ->
+# headless agent (claude | agy) -> size check -> cleanup.
 set -uo pipefail
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="${LOOP_REPO:-/home/azureuser/repos/projects/QuantAgent}"
@@ -47,9 +48,17 @@ case "$AGENT" in
 esac
 
 MODE="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("mode",""))' "$GATE")"
+# Deliveries start from the lot branch and their PRs target it (§3.7); only Fede's lot merge reaches main.
+BASE="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["base"])' "$GATE")"
+case "$BASE" in
+  "$LOOP_LOT_PREFIX"?*) ;;
+  *) echo "⚠ QuantAgent loop: la base '$BASE' no es una rama de lote ($LOOP_LOT_PREFIX*). No se lanzó nada."; exit 0 ;;
+esac
 if [ "$MODE" = "cambio" ]; then
   BRANCH="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["branch"])' "$GATE")"
   git fetch -q origin "$BRANCH" && git checkout -q -B "$BRANCH" "origin/$BRANCH" || { echo "⚠ QuantAgent loop: no pude abrir $BRANCH"; exit 0; }
+else
+  git fetch -q origin "$BASE" && git checkout -q --detach "origin/$BASE" || { echo "⚠ QuantAgent loop: no pude abrir $BASE"; exit 0; }
 fi
 
 # shellcheck disable=SC1091
@@ -62,7 +71,8 @@ PROMPT="$(cat loop/PROMPT.md)
 CONTEXTO DEL GATE (JSON):
 $GATE
 
-Worktree de esta corrida: $WT (ya estás parado acá, rama base origin/main o la rama del PR en modo cambio)."
+Rama base de esta corrida (el lote): $BASE
+Worktree de esta corrida: $WT (ya estás parado acá, sobre origin/$BASE o sobre la rama del PR en modo cambio)."
 
 # Push guard for whichever agent runs: a pre-push hook that only this process tree sees (git reads
 # core.hooksPath from the GIT_CONFIG_* env). The repo's other hooks stay active through symlinks.
@@ -110,7 +120,7 @@ gh label create "agent:$AGENT" -R "$LOOP_GITHUB_REPO" --color ededed >/dev/null 
 gh pr edit -R "$LOOP_GITHUB_REPO" "$NEW" --add-label "agent:$AGENT" >/dev/null 2>&1
 
 git fetch -q origin "$NEW" && git checkout -q --detach "origin/$NEW"
-SIZE="$(scripts/loop/diff_size.sh origin/main)" || gh pr edit -R "$LOOP_GITHUB_REPO" "$NEW" --add-label excede-limite >/dev/null 2>&1
+SIZE="$(scripts/loop/diff_size.sh "origin/$BASE")" || gh pr edit -R "$LOOP_GITHUB_REPO" "$NEW" --add-label excede-limite >/dev/null 2>&1
 python3 -c '
 import json,sys
 p=json.loads(sys.argv[1])[0]
