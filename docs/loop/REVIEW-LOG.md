@@ -16,5 +16,6 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-06 · #14 · R: 89e vi: revise la tabla de tardes después de ejecutar el loop y lo veo ok decido: merge
 2026-10-06 · #15 · R: hx0.5 vi: el PNL no sé recalcula. Encontramos que El slippage estaba sobredimensionado. Agregamos otros tickets a la cola. decido: merge
 2026-10-06 · #18 · R: hx0.8 vi: try.sh en la VM da PnL por trade 227/227 y métricas sin cambio (227 / -4717.33) decido: merge
+2026-10-06 · #23 · PM: hx0.9 vi: corrí en base limpia las tres variantes: 0.05% da 227 / 12120.98, TRADING_SLIPPAGE_PCT=0.01 vuelve a 227 / -4717.33 y slippage 0 da 13084.98 (monótono, 113 ganadores en las tres); recalc_metrics 227/227; suite 818 passed decido: merge
 ```
 

@@ -30,6 +30,7 @@ Decision documents should include:
 ## Active Per-Change Decisions
 
 - [QuantAgent-69d-DC-reuse-logs-for-llm-telemetry.md](./QuantAgent-69d-DC-reuse-logs-for-llm-telemetry.md) - Choose existing `logs` over new metrics tables for this P3 feature
+- [QuantAgent-hx0.7-DC-sharpe-annualization.md](./QuantAgent-hx0.7-DC-sharpe-annualization.md) - Sharpe ratio annualization periods for 24/7 fixtures
 
 ## Per-Change Decision Documents
 
