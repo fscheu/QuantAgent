@@ -86,8 +86,8 @@ Ticket: `QuantAgent-6ie`. Fecha: 2026-10-06. Estado: **propuesta, falta decisió
 |---|---|
 | `pip install openbb openbb-mcp-server` | OK en 111 s. El entorno pesa **1,1 GB** |
 | Primer `import` | 44 s (arma el índice de comandos la primera vez) |
-| SPY diario (CBOE, Nasdaq, TMX) | Falló. La red de la prueba bloquea esas fuentes (`curl` tampoco llega). Casi seguro es la red, no la librería: no verificado |
-| Serie 10Y de FRED | Pidió clave: `Missing credential 'fred_api_key'`. FRED no funciona sin clave |
+| SPY diario (CBOE, Nasdaq, TMX) | Falló: la red de la prueba no llega a `cdn.cboe.com`, `api.nasdaq.com` ni `www.tmx.com` (`curl` tampoco). Para repetirlo en la VM: `python -c "from openbb import obb; print(obb.cboe.equity.historical(symbol='SPY', start_date='2024-01-01').to_dataframe().tail())"` |
+| Serie 10Y de FRED | Pidió clave: `Missing credential 'fred_api_key'`. FRED no funciona sin clave. En la VM, con la clave: `obb.user.credentials.fred_api_key = '<clave>'; obb.fred.economy.fred_series(symbol='DGS10')` |
 | Servidor MCP (`openbb-mcp`) | Arrancó sin configurar nada, solo en la máquina local. Listó **1.056 herramientas** |
 | Llamar una herramienta por MCP | Funciona. Devolvió el mismo error de clave de FRED, bien explicado |
 | Ojo | La v5 no instala `obb.equity` ni `obb.economy` por defecto: los comandos van por fuente (`obb.cboe…`) |
