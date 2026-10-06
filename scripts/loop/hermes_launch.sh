@@ -38,6 +38,7 @@ WHAT="$(python3 -c '
 import json,sys
 d=json.loads(sys.argv[1]); t=d.get("ticket","")
 if d.get("mode")=="cambio": print(f"aplica el cambio pedido en {t}")
-elif t: print(f"cierra {t} y toma el siguiente ticket de la cola")
+elif d.get("previous")=="escalar": print(f"{t} queda escalado a Fede y toma el siguiente ticket del lote")
+elif t: print(f"cierra {t} y toma el siguiente ticket del lote")
 else: print("toma el primer ticket de la cola")' "$GATE")"
-echo "▶ QuantAgent loop: arrancó la corrida ($WHAT). Resumen en el reporte de las 02:30."
+echo "▶ QuantAgent loop: arrancó la corrida ($WHAT)."

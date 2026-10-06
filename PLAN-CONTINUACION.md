@@ -4,8 +4,12 @@ Generado: 2026-09-26. Reemplaza a `docs/02_planning/2026-09-17_plan_mes_2_loop_a
 `docs/02_planning/2026-09-17_borrador_routine_nocturna.md`.
 Tickets en BEADS con label `plan-continuacion`.
 
-Modo de trabajo: un loop corre de noche y hace **una** entrega. Fede revisa al día siguiente desde el
-celular, en dos bloques de ~15 minutos. Sin entorno local, con poco tipeo.
+Modo de trabajo (desde 2026-10-06, `QuantAgent-9vn`): el loop hace entregas chicas, de a una. La sesión
+`pm-revisor` revisa cada entrega y la integra en un **lote** de 5-10 tickets relacionados. Fede revisa y mergea
+a `main` un PR por lote, y decide lo que el PM le escala. Detalle en §3.7.
+
+Modo anterior (2026-09-26 a 2026-10-06): una entrega por noche y Fede revisaba cada PR. Las secciones §1 y §2
+describen ese período y quedan como registro.
 
 ---
 
@@ -137,8 +141,18 @@ El prompt las **repite** para que el agente no intente violarlas.
 Entrega = el PR más reciente con label `loop`, sin importar su estado.
 Evento de entrega = el commit más reciente de ese PR.
 
+Antes de mirar la entrega, el gate busca el lote activo: el único PR abierto con label `lote` (§3.7).
+
+| Lote | Resultado |
+|---|---|
+| Ningún PR `lote` abierto | WAIT `⏸ sin lote abierto` |
+| El PR del lote ya no es borrador (está entregado a Fede) | WAIT `⏸ lote entregado, falta que Fede lo mergee` |
+| Más de un PR `lote` abierto | WAIT |
+| Un PR `lote` abierto y en borrador | Sigue con la tabla de abajo; la rama del lote es la base de la entrega |
+
 `scripts/loop/gate.py` busca el último comentario de `fscheu` posterior al evento de entrega que cumpla
-el formato de §5. Resultado:
+el formato de §5. La línea puede ser `R:` (Fede) o `PM:` (sesión `pm-revisor`). **Una `PM:` solo vale si la
+base del PR es una rama de lote**: en un PR hacia `main` el gate la rechaza. Resultado:
 
 | Situación | Resultado | El loop |
 |---|---|---|
@@ -149,9 +163,11 @@ el formato de §5. Resultado:
 | `decido: merge` y PR abierto | WAIT | Imprime `⏸ R dice merge, falta mergear` |
 | `decido: descarto` y PR cerrado sin merge | PASS `nuevo` | Pone label `loop-descartado` al ticket y toma el siguiente |
 | `decido: cambio` y PR abierto | PASS `cambio` | Aplica el pedido sobre la misma rama y hace una nueva entrega |
+| `PM: ... decido: escalo` y PR abierto | PASS `nuevo` | Deja el ticket `in_progress` y el PR abierto para Fede; toma el siguiente del lote |
 | Cualquier otra combinación | WAIT | Imprime la combinación encontrada |
 
-WAIT no invoca al modelo. No hay excepciones, no hay acumulación: nunca existen dos entregas sin revisar.
+WAIT no invoca al modelo. No hay excepciones, no hay acumulación: nunca existen dos entregas sin revisar
+por el PM. Las escaladas a Fede sí pueden quedar abiertas mientras el lote sigue con otros tickets.
 
 Pausa manual: si existe `loop/PAUSE` en `origin/main`, el wrapper imprime `⏸ pausado` y termina.
 Se crea o borra desde GitHub mobile.
@@ -164,16 +180,21 @@ Se crea o borra desde GitHub mobile.
 LOOP_LABEL=loop
 LOOP_REVIEWER=fscheu
 LOOP_QUEUE_FILE=PLAN-CONTINUACION.md
-LOOP_MAX_LINES=150          # agregadas + borradas, límite duro
-LOOP_TARGET_LINES=100
-LOOP_MAX_FILES=6
+LOOP_LOT_LABEL=lote
+LOOP_LOT_PREFIX=lote/
+LOOP_MAX_LINES=400          # agregadas + borradas, límite duro
+LOOP_TARGET_LINES=100       # objetivo por entrega: no cambió
+LOOP_MAX_FILES=10
 LOOP_EXCLUDE=".beads/** tests/fixtures/** docs/loop/REVIEW-LOG.md"
 LOOP_TIMEOUT_MIN=120
 ```
 
 - Un archivo borrado completo no suma líneas, pero se lista en el resumen.
-- `scripts/loop/diff_size.sh` cuenta con `git diff --numstat origin/main...HEAD` aplicando las exclusiones.
-- Si el ticket no entra, el agente **no escribe código**: la entrega es una partición (§3.4).
+- `scripts/loop/diff_size.sh <base>` cuenta con `git diff --numstat <base>...HEAD` aplicando las exclusiones.
+  La base es la rama del lote.
+- El límite duro subió de 150 a 400 el 2026-10-06 para no tirar una entrega que salió algo más grande que lo
+  estimado. **El tamaño de los tickets no cambia**: si el agente estima más de 100 líneas, no escribe código
+  y entrega una partición (§3.4). Las entregas chicas son lo que le permite al PM revisar de verdad.
 - Si al terminar el diff excede el límite, el agente descarta la implementación y entrega la partición.
   El wrapper vuelve a medir y, si excede, pone label `excede-limite` al PR.
 
@@ -189,7 +210,7 @@ Riesgo: <qué se puede romper y cómo se notaría, o "nada fuera de <archivo>">
 
 ── Bloque 1 · leer ──
 Ticket: QuantAgent-xxx · T0N · Revisión: leer | decidir | probar
-Tamaño: <N> líneas / <M> archivos (límite 150 / 6)
+Tamaño: <N> líneas / <M> archivos (objetivo 100, límite 400 / 10) · Lote: <rama base>
 Leé en este orden:
 1. <archivo>:<función> — <qué mirar, en una línea>
 2. ...
@@ -202,8 +223,8 @@ Obtenido por el loop: <salida real, ≤15 líneas>
 Verificador independiente: PASS | FAIL por criterio
 Qué NO se hizo: <lista corta>
 
-Registro — comentá:
-R: <ID> vi: <dato concreto de esta entrega> decido: merge | cambio <qué> | descarto <por qué>
+Registro — lo comenta quien revisa (PM: la sesión pm-revisor, R: Fede):
+PM: <ID> vi: <dato concreto de esta entrega> decido: merge | cambio <qué> | descarto <por qué> | escalo <pregunta>
 ```
 
 Reglas de redacción: frases cortas, sin jerga interna, sin enlaces obligatorios. Todo lo necesario para
@@ -215,10 +236,10 @@ Todo PR `loop` cumple, antes de abrirse:
 
 1. `pytest -q -m "not slow and not api"` → 0 failed.
 2. `scripts/loop/smoke.sh` → exit 0 (SQLite temporal, sin tocar la base de desarrollo).
-3. CI verde en el PR (lo verifica Fede en el bloque 1; el agente espera el check hasta 15 min).
+3. CI verde en el PR (el workflow corre en PRs hacia `main` y hacia `lote/**`; lo verifica el PM).
 4. Si cambia un comportamiento documentado, el README o el doc afectado se actualiza en el mismo PR.
 
-`main` solo cambia por merges de Fede. Si el agente no llega a un estado verde, la entrega es de uno de
+`main` solo cambia por merges de Fede: el PM integra entregas en la rama del lote, nunca en `main`. Si el agente no llega a un estado verde, la entrega es de uno de
 estos dos tipos, que solo tocan documentación y dejan `main` funcionando:
 
 | Tipo | Label | Diff | "Decidir:" |
@@ -236,7 +257,8 @@ directorio temporal antes de ejecutarlo, porque el deploy resetea el checkout pr
 
 1. `git fetch origin`. Si existe `loop/PAUSE` en `origin/main`: imprimir y salir.
 2. `scripts/loop/gate.py` desde `origin/main`. WAIT: imprimir la línea y salir.
-3. Crear worktree `/tmp/ai-loop/<RUN>` desde `origin/main`, o desde la rama del PR en modo `cambio`.
+3. Crear worktree `/tmp/ai-loop/<RUN>` desde la rama del lote que informa el gate (`base`), o desde la rama del
+   PR en modo `cambio`. Si `base` no empieza con `lote/`, no se lanza nada.
 4. Agente según `LOOP_AGENT` (`claude` | `agy`; el archivo `next-agent` del directorio de estado lo cambia
    por una corrida), con `loop/PROMPT.md` más el contexto del gate (modo, PR previo, texto de la `R:`) y
    timeout `LOOP_TIMEOUT_MIN`. `claude -p` usa `--permission-mode acceptEdits` y
@@ -244,71 +266,98 @@ directorio temporal antes de ejecutarlo, porque el deploy resetea el checkout pr
    `agy -p` usa `--mode accept-edits` y sus reglas allow/deny (`docs/loop/SETUP-HERMES.md`). Para los dos,
    el hook `scripts/loop/push_guard.sh` rechaza push a main, borrado de ramas y push forzado.
    El PR entregado recibe el label `agent:<agente>`.
-5. `scripts/loop/diff_size.sh` sobre la rama entregada. Si excede, label `excede-limite`.
+5. `scripts/loop/diff_size.sh origin/<base>` sobre la rama entregada. Si excede, label `excede-limite`.
 6. Borrar el worktree.
 7. Imprimir para Telegram: las 3 líneas del resumen y la URL del PR.
 
-### 3.6 Prompt del agente (`loop/PROMPT.md`)
+### 3.6 Prompt del agente
+
+El texto vigente es `loop/PROMPT.md`. Hasta el 2026-10-06 esta sección tenía una copia, que quedaba vieja en
+cada ajuste. El prompt repite las reglas de §3; si choca con este archivo, manda este archivo.
+
+### 3.7 Lotes y revisión del PM
+
+**Qué es un lote.** Entre 5 y 10 tickets relacionados que juntos dejan un punto de control: algo que el sistema
+hace y que se comprueba con un comando. El PM decide la agrupación y la escribe en §4. Un lote no tiene fecha:
+termina cuando cierra su punto de control.
+
+**Mecánica**
+
+1. El PM crea la rama `lote/<nombre>` desde `origin/main` y abre un PR **borrador** hacia `main` con label `lote`.
+2. El loop toma solo filas de ese lote, parte de esa rama y abre cada PR `loop` contra ella.
+3. El PM revisa cada entrega (protocolo abajo), comenta la línea `PM:` y, si decide merge, mergea el PR en la
+   rama del lote. Después lanza la siguiente corrida. Tope: 10 entregas por día.
+4. Cuando no quedan filas elegibles, el PM corre el punto de control sobre la rama del lote, completa el cuerpo
+   del PR del lote y lo marca listo para revisión. Desde ahí el gate espera.
+5. Fede prueba el punto de control, comenta `R: lote-<nombre> vi: <...> decido: merge` y mergea a `main`.
+6. El PM abre el lote siguiente.
+
+Si dos entregas seguidas terminan en `cambio`, `bloqueo` o `descarto`, el PM frena el lote y avisa a Fede:
+es señal de que los tickets están mal definidos, no de que falte velocidad.
+
+**Protocolo de revisión del PM, por entrega**
+
+1. Leer el ticket (`bd show`) antes que el cuerpo del PR: el criterio de aceptación es del ticket, no del
+   resumen del implementador.
+2. Leer el diff completo. Marcar todo lo que esté fuera de "Archivos relevantes" o del cambio pedido.
+3. Correr él mismo el comando de "Probar" con `scripts/loop/try.sh` y la suite. No vale la salida pegada en el PR.
+4. Buscar el hueco con al menos una comprobación que el PR no trae: otro fixture u otra estrategia, un caso
+   borde, un valor recalculado por otro camino, un test que debería fallar si se rompe la lógica y no falla.
+5. Decidir y comentar la línea `PM:`. En `vi:` va el dato de la comprobación propia del paso 4.
+
+**Qué no aprueba el PM (siempre `decido: escalo`)**
+
+- Entregas de tipo "decidir".
+- Un número de referencia que cambia de una forma que el ticket no anticipaba.
+- Cambios en la semántica de plata o riesgo (PnL, comisiones, slippage, tamaño de posición, límites) que el
+  ticket no traiga ya decididos por Fede.
+- Cambios de alcance, tickets nuevos que alteran el plan, o algo fuera del repo.
+- Un segundo `cambio` sobre el mismo ticket.
+
+Una escalada no frena el lote: el ticket queda `in_progress`, el PR abierto, y el loop sigue con las filas que
+no dependen de esa decisión. Cuando Fede contesta con su `R:`, el PM la aplica (merge al lote, descarte, o
+relanzar el loop en modo `cambio`).
+
+**Cuerpo del PR del lote** (lo que lee Fede):
 
 ```text
-Sos el agente nocturno de QuantAgent. Trabajás sin humano disponible. Hacés UNA entrega por corrida.
-El revisor lee tu entrega desde un celular, en 15 minutos, sin entorno local.
+Punto de control: <qué hace ahora el sistema, en una frase>
+Probar (copiar en la VM): ~/repos/projects/QuantAgent/scripts/loop/try.sh lote/<nombre> -- '<comando>'
+Esperado: <salida en ≤5 líneas>      Obtenido por el PM: <salida real>
+Decidir: <preguntas abiertas con recomendación, o "nada">
 
-CONTEXTO DEL GATE (lo agrega el wrapper): modo = nuevo | cambio; PR previo; línea R: de Fede.
-
-REGLAS DURAS
-- Nunca pushees a main. Nunca uses --force. Nunca borres ramas ni worktrees ajenos.
-- No toques ~/.hermes, ~/secrets, systemd, crons ni nada fuera del worktree.
-- Una sola entrega. Si terminás antes, no tomes otro ticket.
-- Límite duro: 150 líneas agregadas+borradas y 6 archivos, excluyendo .beads/**, tests/fixtures/**
-  y docs/loop/REVIEW-LOG.md. Medí con scripts/loop/diff_size.sh.
-- Cada entrega deja el proyecto funcionando: suite en 0 failed y `scripts/loop/smoke.sh` con exit 0.
-- Respetá AGENTS.md y CLAUDE.md del repo.
-
-PASO 1 — Registro y BEADS (solo si el modo trae una R: nueva)
-- Agregá la línea R: a docs/loop/REVIEW-LOG.md con fecha y URL del PR previo.
-- decido merge → bd close <ID> con la R: como motivo. Si todos los hijos de su epic están cerrados, cerrá el epic.
-- decido descarto → bd label add <ID> loop-descartado y bd comments add <ID> con la R:.
-
-PASO 2 — Elegir trabajo
-- Modo cambio: trabajá sobre la rama del PR abierto. Aplicá SOLO lo que pide la R:.
-- Modo nuevo: recorré la tabla de §4 de PLAN-CONTINUACION.md en orden. Tomá la primera fila cuyo
-  ticket esté open en BEADS, sin blockers abiertos y sin label loop-descartado ni fuera-loop.
-  Si no hay ninguna: entrega de bloqueo con "Decidir: la cola está vacía, ¿qué sigue?".
-- Leé el ticket completo (bd show) incluidos los comentarios: el último comentario manda.
-- bd update <ID> --status in_progress. Rama: loop/<ID>.
-
-PASO 3 — Estimar antes de escribir código
-- Si estimás que el cambio supera 100 líneas, no escribas código: hacé una entrega de partición
-  (docs/loop/particiones/<ID>.md + hijos en BEADS, cada uno ≤100 líneas, con objetivo, criterio
-  binario y tipo de revisión).
-
-PASO 4 — Implementar
-- Solo lo que pide "Cambio requerido". Nada fuera de "Archivos relevantes".
-- Tests que fallan si la lógica real se rompe. Sin mocks excesivos ni asserts triviales.
-- Suite y `scripts/loop/smoke.sh` en verde. Corré el comando de verificación del ticket y guardá la salida real.
-- Si el diff supera 150 líneas: descartá y hacé una entrega de partición.
-- Si no llegás a verde: pusheá a loop-wip/<ID> y hacé una entrega de bloqueo.
-
-PASO 5 — Verificación independiente
-- Lanzá un subagente sin tu historial. Pasale solo el ticket y el diff. Pedile PASS/FAIL por cada
-  criterio de aceptación con evidencia, y que marque cambios fuera de alcance.
-- FAIL: corregí una vez y repetí. Si sigue FAIL: entrega de bloqueo.
-
-PASO 6 — Entregar
-- Commit, push de loop/<ID>, gh pr create --label loop con el cuerpo de .github/pull_request_template.md.
-- Las 3 primeras líneas (Cambió / Decidir / Riesgo) se entienden sin abrir el repo.
-- El comando de "Probar" es una sola línea que usa scripts/loop/try.sh.
-- Esperá el check de CI hasta 15 minutos y anotá el resultado en el cuerpo.
-- Terminá imprimiendo solo las 3 líneas del resumen y la URL.
+Entregas: <ticket> · #<pr> · <una línea: qué cambió y qué comprobó el PM>
+Encontrado en revisión: <lo que el PM rechazó, pidió cambiar o descubrió>
+Qué NO se hizo: <lista corta>
 ```
+
+**Reporte diario a Fede** (Telegram o la sesión, ≤10 líneas): qué sabe hacer el sistema que ayer no, avance del
+lote (n de m) y de M1, lo encontrado en revisión, y las decisiones pendientes con recomendación.
+
+**Límite conocido.** El PM comenta con la misma cuenta de GitHub que Fede, así que el gate distingue `PM:` de
+`R:` por el prefijo y no por el autor. La barrera real es que una `PM:` no vale en PRs hacia `main` y que el
+PM no mergea a `main`.
+
+**El primer lote es la prueba del modo.** Fede anota en la `R:` del lote lo que encontró y el PM había dejado
+pasar. Con cero o un escape, se sigue. Con más, las entregas del tipo donde falló el PM vuelven a la `R:` por PR.
 
 ---
 
 ## 4. Backlog de tickets ordenado
 
-Esta tabla es la **cola** del loop: toma la primera fila elegible. El estado vive en BEADS.
+Esta tabla es la **cola** del loop: toma la primera fila elegible **del lote activo**. El estado vive en BEADS.
 Reordenar la cola = mover filas en este archivo.
+
+Lotes (definidos por el PM el 2026-10-06; cada uno se abre cuando Fede mergea el anterior):
+
+| Lote | Rama | Filas | Punto de control | Decisiones de Fede previstas |
+|---|---|---|---|---|
+| L1 | `lote/metricas-auditadas` | T08c, T13, T09–T12, T14, T15, T20 | Las 5 métricas de rsi/spy-90d coinciden con un recálculo que no importa `quantagent`, la corrida es reproducible (`backtest verify`) y un test golden las congela | T13 (anualización del Sharpe), T10 (trades con pnl = 0) |
+| L2 | `lote/tres-estrategias` | T16–T19, T19b | RSI, 52-week-high y Triple Screen operan (≥5 trades cada una) sobre fixtures versionados y deterministas | ninguna prevista |
+| L3 | `lote/engine-y-cierre-m1` | T21–T25 | Comparación trade por trade contra `backtesting.py`, ADR del engine decidido (cierra M1), inventario de ramas y borrador del plan siguiente | T22, T23, T24, T25 |
+
+T13 se adelantó dentro de L1: es un documento de decisión que no depende del resto, así la respuesta de Fede
+llega mientras el lote avanza. T20 pasó a L1 porque congela los números que ese lote audita.
 
 Tipos de revisión: **leer** (el diff alcanza), **decidir** (hay una pregunta cerrada en "Decidir:"),
 **probar** (un comando en la VM con `scripts/loop/try.sh`). Ningún ticket toca la UI, así que ninguno
@@ -316,38 +365,40 @@ requiere el deploy de QA.
 
 Los primeros 5 son los más fáciles de revisar.
 
-| # | Ticket | Objetivo | Aceptación binaria | Revisión |
-|---:|---|---|---|---|
-| T01 | `QuantAgent-e35` | Borrar `tests/test_backtest_apscheduler_9wz.py`, que no prueba código propio | El archivo no existe y CI está verde | leer |
-| T02 | `QuantAgent-bv8` | Salida del CLI limpia: solo las 5 líneas de métricas | `backtest run ... 2>&1 \| wc -l` devuelve 5 | probar |
-| T02b | `QuantAgent-fdi` | El backtest determinista deja de exigir `OPENAI_API_KEY` | `env -u OPENAI_API_KEY scripts/loop/smoke.sh` termina con exit 0 | probar |
-| T03 | `QuantAgent-fiu` | `test_parallel_execution` sobre `spy-smoke.csv`, sin skip | El test pasa sin `@pytest.mark.skip` | leer |
-| T04 | `QuantAgent-3km` | Guardrail de 730 días para 1h/4h en el provider Yahoo | Test de rango fuera de ventana da error explícito o recorte con log | leer |
-| T05 | `QuantAgent-11v` | `--equity-out` exporta la equity curve a CSV | Mínimo de `drawdown_pct` del CSV = drawdown impreso | probar |
-| T06 | `QuantAgent-89e.1` | Test `xfail` que reproduce la fila duplicada en reversiones + diagnóstico | Test `xfail(strict=True)` presente; resumen responde "¿round-trip real o error?" | decidir |
-| T07 | `QuantAgent-89e` | Corregir la duplicación | `Trades: N` = filas de datos del CSV; el `xfail` pasa a test normal | probar |
-| T08 | `QuantAgent-hx0.5` | Script de recálculo independiente: trades, PnL, win rate, PF | No importa `quantagent`; test con 5 trades a mano | leer |
-| T08b | `QuantAgent-hx0.8` | CSV con `exit_price` ejecutado; `recalc_metrics.py` verifica el PnL de cada trade | Imprime `PnL por trade: 227/227 filas coinciden`; métricas sin cambio | probar |
-| T08c | `QuantAgent-hx0.9` | Slippage por defecto 0,05% por lado; el CLI imprime el slippage usado | 6 líneas, la última `Slippage: 0.05% por lado`; con `TRADING_SLIPPAGE_PCT=0.01` vuelve a −4717.33 | probar |
-| T09 | `QuantAgent-hx0.1` | Auditar PnL y total return; documentar fórmula | `recalc_metrics.py` = CLI en trades y PnL | probar |
-| T10 | `QuantAgent-hx0.2` | Auditar win rate y profit factor; sin `inf` en DB | `recalc_metrics.py` = CLI en win rate y PF | decidir |
-| T11 | `QuantAgent-hx0.6` | Recálculo de max drawdown y Sharpe desde la equity | Test con curva conocida (max DD 25%) | leer |
-| T12 | `QuantAgent-hx0.3` | Auditar max drawdown; documentar la equity curve | `recalc_metrics.py --equity` = CLI en drawdown | probar |
-| T13 | `QuantAgent-hx0.7` | Decisión: periodos por año para Sharpe en fixtures 24/7 | Doc ≤40 líneas con Sharpe por opción | decidir |
-| T14 | `QuantAgent-hx0.4` | Implementar la anualización elegida | `recalc_metrics.py --equity` = CLI en Sharpe (±0.01) | probar |
-| T15 | `QuantAgent-y8z` | `backtest verify`: doble corrida y diff | Imprime `OK reproducible` con exit 0 para RSI | probar |
-| T16 | `QuantAgent-46h.1` | Generador determinista del fixture diario de 2 años | Dos corridas dan el mismo `sha256sum` | leer |
-| T17 | `QuantAgent-46h` | 52-week-high corre sobre ese fixture | `Trades:` ≥ 5 | probar |
-| T18 | `QuantAgent-8u8.1` | Generador determinista del fixture 4h de 1 año | Dos corridas dan el mismo `sha256sum` | leer |
-| T19 | `QuantAgent-8u8` | Triple Screen corre sobre ese fixture | `Trades:` ≥ 5 | probar |
-| T20 | `QuantAgent-piv` | Test golden RSI/spy-90d con los valores ya verificados | El test falla si cambia un trade o una métrica | leer |
-| T21 | `QuantAgent-832.1` | RSI portado a `backtesting.py` | Script exit 0; parámetros iguales lado a lado | leer |
-| T22 | `QuantAgent-832` | Comparar ambos engines trade por trade | Doc con cada diff explicado o ticket de bug abierto | decidir |
-| T23 | `QuantAgent-lcv` | ADR: engine propio vs `backtesting.py` | ADR con 3 opciones; decisión en la `R:` | decidir |
-| T24 | `QuantAgent-cv1` | Inventario de worktrees y ramas muertas | Tabla + comando exacto; el loop no borra nada | decidir |
-| T25 | `QuantAgent-lp1` | Borrador del plan siguiente con la evidencia de T01–T24 | Doc con cola nueva en el mismo formato | decidir |
+| # | Ticket | Objetivo | Aceptación binaria | Revisión | Lote |
+|---:|---|---|---|---|---|
+| T01 | `QuantAgent-e35` | Borrar `tests/test_backtest_apscheduler_9wz.py`, que no prueba código propio | El archivo no existe y CI está verde | leer | — |
+| T02 | `QuantAgent-bv8` | Salida del CLI limpia: solo las 5 líneas de métricas | `backtest run ... 2>&1 \| wc -l` devuelve 5 | probar | — |
+| T02b | `QuantAgent-fdi` | El backtest determinista deja de exigir `OPENAI_API_KEY` | `env -u OPENAI_API_KEY scripts/loop/smoke.sh` termina con exit 0 | probar | — |
+| T03 | `QuantAgent-fiu` | `test_parallel_execution` sobre `spy-smoke.csv`, sin skip | El test pasa sin `@pytest.mark.skip` | leer | — |
+| T04 | `QuantAgent-3km` | Guardrail de 730 días para 1h/4h en el provider Yahoo | Test de rango fuera de ventana da error explícito o recorte con log | leer | — |
+| T05 | `QuantAgent-11v` | `--equity-out` exporta la equity curve a CSV | Mínimo de `drawdown_pct` del CSV = drawdown impreso | probar | — |
+| T06 | `QuantAgent-89e.1` | Test `xfail` que reproduce la fila duplicada en reversiones + diagnóstico | Test `xfail(strict=True)` presente; resumen responde "¿round-trip real o error?" | decidir | — |
+| T07 | `QuantAgent-89e` | Corregir la duplicación | `Trades: N` = filas de datos del CSV; el `xfail` pasa a test normal | probar | — |
+| T08 | `QuantAgent-hx0.5` | Script de recálculo independiente: trades, PnL, win rate, PF | No importa `quantagent`; test con 5 trades a mano | leer | — |
+| T08b | `QuantAgent-hx0.8` | CSV con `exit_price` ejecutado; `recalc_metrics.py` verifica el PnL de cada trade | Imprime `PnL por trade: 227/227 filas coinciden`; métricas sin cambio | probar | — |
+| T08c | `QuantAgent-hx0.9` | Slippage por defecto 0,05% por lado; el CLI imprime el slippage usado | 6 líneas, la última `Slippage: 0.05% por lado`; con `TRADING_SLIPPAGE_PCT=0.01` vuelve a −4717.33 | probar | L1 |
+| T13 | `QuantAgent-hx0.7` | Decisión: periodos por año para Sharpe en fixtures 24/7 | Doc ≤40 líneas con Sharpe por opción | decidir | L1 |
+| T09 | `QuantAgent-hx0.1` | Auditar PnL y total return; documentar fórmula | `recalc_metrics.py` = CLI en trades y PnL | probar | L1 |
+| T10 | `QuantAgent-hx0.2` | Auditar win rate y profit factor; sin `inf` en DB | `recalc_metrics.py` = CLI en win rate y PF | decidir | L1 |
+| T11 | `QuantAgent-hx0.6` | Recálculo de max drawdown y Sharpe desde la equity | Test con curva conocida (max DD 25%) | leer | L1 |
+| T12 | `QuantAgent-hx0.3` | Auditar max drawdown; documentar la equity curve | `recalc_metrics.py --equity` = CLI en drawdown | probar | L1 |
+| T14 | `QuantAgent-hx0.4` | Implementar la anualización elegida | `recalc_metrics.py --equity` = CLI en Sharpe (±0.01) | probar | L1 |
+| T15 | `QuantAgent-y8z` | `backtest verify`: doble corrida y diff | Imprime `OK reproducible` con exit 0 para RSI | probar | L1 |
+| T20 | `QuantAgent-piv` | Test golden RSI/spy-90d con los valores ya verificados | El test falla si cambia un trade o una métrica | leer | L1 |
+| T16 | `QuantAgent-46h.1` | Generador determinista del fixture diario de 2 años | Dos corridas dan el mismo `sha256sum` | leer | L2 |
+| T17 | `QuantAgent-46h` | 52-week-high corre sobre ese fixture | `Trades:` ≥ 5 | probar | L2 |
+| T18 | `QuantAgent-8u8.1` | Generador determinista del fixture 4h de 1 año | Dos corridas dan el mismo `sha256sum` | leer | L2 |
+| T19 | `QuantAgent-8u8` | Triple Screen corre sobre ese fixture | `Trades:` ≥ 5 | probar | L2 |
+| T19b | `QuantAgent-7c6` | CSV de equity redondeado a 4 decimales como máximo | Ningún valor del CSV tiene más de 4 decimales; el golden de T20 sigue verde | leer | L2 |
+| T21 | `QuantAgent-832.1` | RSI portado a `backtesting.py` | Script exit 0; parámetros iguales lado a lado | leer | L3 |
+| T22 | `QuantAgent-832` | Comparar ambos engines trade por trade | Doc con cada diff explicado o ticket de bug abierto | decidir | L3 |
+| T23 | `QuantAgent-lcv` | ADR: engine propio vs `backtesting.py` | ADR con 3 opciones; decisión en la `R:` | decidir | L3 |
+| T24 | `QuantAgent-cv1` | Inventario de worktrees y ramas muertas | Tabla + comando exacto; el loop no borra nada | decidir | L3 |
+| T25 | `QuantAgent-lp1` | Borrador del plan siguiente con la evidencia de T01–T24 | Doc con cola nueva en el mismo formato | decidir | L3 |
 
-A un ticket por día hábil, T01–T25 son 5 semanas. M1 se cumple al cerrar T23.
+Con el modo por lotes, el ritmo lo marcan las decisiones de Fede (T13, T10, T22, T23) y no la implementación.
+M1 se cumple al cerrar T23.
 
 T08b y T08c se agregaron el 2026-10-06: al revisar T08, Fede detectó que el script daba por bueno el `pnl` del CSV.
 El diagnóstico mostró 1% de slippage por lado y un CSV que mezcla precio ejecutado y teórico. Cambian los números
@@ -364,6 +415,10 @@ de referencia de rsi/spy-90d (227 / −4717.33), que T09 y T20 tienen que tomar 
 ## 5. Formato de log de revisión
 
 ### 5.1 La línea
+
+Desde el 2026-10-06 hay dos líneas con el mismo formato y la misma validación. `PM:` la escribe la sesión
+`pm-revisor` en cada entrega del loop; admite además `decido: escalo <pregunta>` y solo vale en PRs hacia una
+rama de lote. `R:` la escribe Fede en el PR del lote y en lo que el PM le escala.
 
 Un comentario en el PR, escrito desde GitHub mobile:
 
@@ -410,4 +465,4 @@ revisado
 2026-10-01 · #57 · R: bv8 vi: en la VM salieron 5 lineas, sharpe 0.40 decido: merge
 ```
 
-- `docs/loop/REVIEW-LOG.md` es el historial de la racha: una línea por día hábil revisado.
+- `docs/loop/REVIEW-LOG.md` es el historial: una línea por entrega revisada, con su prefijo `PM:` o `R:`.

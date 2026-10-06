@@ -4,7 +4,7 @@ Riesgo: <qué se puede romper y cómo se notaría, o "nada fuera de <archivo>">
 
 ── Bloque 1 · leer ──
 Ticket: QuantAgent-xxx · T0N · Revisión: leer | decidir | probar
-Tamaño: <N> líneas / <M> archivos (límite 150 / 6)
+Tamaño: <N> líneas / <M> archivos (objetivo 100, límite 400 / 10) · Lote: <rama base>
 Leé en este orden:
 1. <archivo>:<función> — <qué mirar, en una línea>
 
@@ -17,5 +17,5 @@ Verificador independiente: PASS | FAIL por criterio
 CI: <verde | rojo | pendiente>
 Qué NO se hizo: <lista corta>
 
-Registro — comentá:
-R: <ID> vi: <dato concreto de esta entrega> decido: merge | cambio <qué> | descarto <por qué>
+Registro — lo comenta quien revisa (PM: la sesión pm-revisor, R: Fede):
+PM: <ID> vi: <dato concreto de esta entrega> decido: merge | cambio <qué> | descarto <por qué> | escalo <pregunta>
