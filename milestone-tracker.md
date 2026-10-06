@@ -11,10 +11,10 @@
 | Milestone | Nombre | Criterio de completitud | Fecha objetivo | Estado |
 |---|---|---|---|---|
 | M1 | Backtesting estable | Suite de backtesting corre sin bugs para 3 estrategias distintas, resultados reproducibles | 2026-10-16 | on track |
-| M2 | Arquitectura multi-estrategia | Sistema puede cargar, testear y comparar N estrategias sin cambio de código | TBD | TBD |
-| M3 | Paper trading robusto | La estrategia actual corre en paper trading 2 semanas sin intervención manual | TBD | TBD |
-| M4 | Conexión a broker | Integración con broker elegido (Alpaca o IB) funcionando en paper trading | TBD | TBD |
-| M5 | Primera semana real | Primera semana con dinero real, sin errores críticos, P&L registrado | TBD | TBD |
+| M2 | Validación con datos reales | Comparación de N estrategias sobre datos reales con costos, contra comprar y mantener, con veredicto fuera de muestra (`docs/02_planning/QuantAgent-lp1-PL-m2-validacion-datos-reales.md`) | TBD | TBD |
+| M3 | Broker Alpaca en paper | Integración con Alpaca funcionando contra la cuenta paper | TBD | TBD |
+| M4 | Paper trading estable | La estrategia validada corre en paper trading 2 semanas sin intervención manual | TBD | TBD |
+| M5 | Live con capital mínimo | Primera semana con dinero real, sin errores críticos, P&L registrado | TBD | TBD |
 
 ## Notas
 - Editar “Milestone actual” cuando se cambie de foco.

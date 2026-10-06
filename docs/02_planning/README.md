@@ -13,6 +13,7 @@ Agents working in this repository should read planning documents in this order:
 2. **Current operating plan (2026-09)**
    - [../../PLAN-CONTINUACION.md](../../PLAN-CONTINUACION.md) - **Plan vigente desde 2026-09-26**: cierre de PLAN-30-DIAS, fase 0 del loop nocturno, contrato del loop, cola T01–T25, formato del log de revisión
    - [2026-09-16_retrospectiva_autodev_y_plan_oficina_inversion.md](./2026-09-16_retrospectiva_autodev_y_plan_oficina_inversion.md) - Retrospectiva del loop autodev, loop propuesto (1 ticket → 1 PR → 1 revisión), capas de la "oficina de inversión" y plan de 4 semanas
+   - [QuantAgent-lp1-PL-m2-validacion-datos-reales.md](./QuantAgent-lp1-PL-m2-validacion-datos-reales.md) - **Borrador del plan posterior a M1** (2026-10-06): M2 = validación con datos reales, 7 lotes, cola V01–V41, numeración nueva de milestones
    - [../../PLAN-30-DIAS.md](../../PLAN-30-DIAS.md) - Plan diario vigente y checklist
    - [2026-09-17_plan_mes_2_loop_ai.md](./2026-09-17_plan_mes_2_loop_ai.md) - Mes 2 (21/09–16/10): calendario noche a noche de tickets `plan-20260921`, cadena crítica, checklist
    - [2026-09-17_borrador_routine_nocturna.md](./2026-09-17_borrador_routine_nocturna.md) - Borrador de la routine nocturna del loop AI (prompt, entorno, JSON, checklist de Fede)
