@@ -67,8 +67,8 @@ docker exec quantagent-dev-db psql -U postgres -c "CREATE DATABASE quantagent_lo
 
 ## Elegir el agente (QuantAgent-l4n)
 
-El wrapper lanza el agente que diga `LOOP_AGENT` en `loop/config.env`: `claude` (Claude Code, default) o
-`agy` (Antigravity, con el modelo de `LOOP_AGY_MODEL`). Cada PR entregado lleva el label `agent:claude` o
+El wrapper lanza el agente que diga `LOOP_AGENT` en `loop/config.env`: `claude` (Claude Code) o
+`agy` (Antigravity, con el modelo de `LOOP_AGY_MODEL`; default desde el 2026-10-06). Cada PR entregado lleva el label `agent:claude` o
 `agent:agy`, y la última línea del resumen de Telegram dice `agent=...`.
 
 Barrera común a los dos agentes: el wrapper instala un hook `pre-push` (`scripts/loop/push_guard.sh`) que
