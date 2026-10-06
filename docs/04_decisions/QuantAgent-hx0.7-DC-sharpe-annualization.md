@@ -10,9 +10,9 @@ Los fixtures actuales (`spy-90d`) son continuos 24/7 (`market_hours_filter=False
 
 | Opción | Base $N$ (1h) | $N$ | Sharpe (0.05% slip) | Sharpe (1.00% slip) |
 |---|---|---:|---:|---:|
-| **A (Actual)** | Rueda NYSE ($252 \times 6.5$) | 1.638 | **0.57** | 0.35 |
-| **B (Continuo 24/7)** | Calendario anual ($365 \times 24$) | 8.760 | **1.37** | 0.85 |
-| **C (Hábil 24h)** | Días hábiles 24h ($252 \times 24$) | 6.048 | **1.13** | 0.70 |
+| **A (Actual)** | Rueda NYSE ($252 \times 6.5$) | 1.638 | **0.57** | 0.40 |
+| **B (Continuo 24/7)** | Calendario anual ($365 \times 24$) | 8.760 | **1.37** | 0.99 |
+| **C (Hábil 24h)** | Días hábiles 24h ($252 \times 24$) | 6.048 | **1.13** | 0.82 |
 
 - **Opción A (NYSE):** Asume 6.5 h/día, 252 días/año. Válido solo si se activa filtro de horario bursátil.
 - **Opción B (24/7):** Asume 24 h/día, 365 días/año. Fiel a la frecuencia horaria continua de los fixtures actuales.
