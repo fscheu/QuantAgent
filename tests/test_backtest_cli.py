@@ -56,11 +56,14 @@ def test_backtest_run_exits_zero_and_prints_metrics(cli_runner):
     )
 
     assert result.exit_code == 0, result.output
-    assert "Trades:" in result.output
-    assert "Win rate:" in result.output
-    assert "Profit factor:" in result.output
-    assert "Sharpe ratio:" in result.output
-    assert "Total PnL:" in result.output
+    lines = result.output.strip().splitlines()
+    assert len(lines) == 6
+    assert lines[0].startswith("Trades:")
+    assert lines[1].startswith("Win rate:")
+    assert lines[2].startswith("Profit factor:")
+    assert lines[3].startswith("Sharpe ratio:")
+    assert lines[4].startswith("Total PnL:")
+    assert lines[5] == "Slippage: 0.05% por lado"
 
 
 def test_backtest_run_writes_csv_matching_reported_trade_count(cli_runner, tmp_path):
@@ -180,12 +183,12 @@ def test_backtest_run_trade_exit_price_is_executed_not_theoretical(cli_runner, t
         calc_pnl = (exit_ - entry) * qty if r["side"] == "buy" else (entry - exit_) * qty
         assert abs(calc_pnl - pnl) <= 0.01
 
-        # With 1% default slippage, executed exit diverges significantly from theoretical.
-        # If exit_price reverted to theoretical, (theoretical - entry) * qty would diverge from pnl by > 1.0.
-        slippage = 0.01
+        # With default slippage, executed exit diverges from theoretical candle price.
+        # If exit_price reverted to theoretical, (theoretical - entry) * qty would diverge from pnl.
+        slippage = settings.TRADING_SLIPPAGE_PCT
         theoretical = exit_ / (1 - slippage) if r["side"] == "buy" else exit_ / (1 + slippage)
         theoretical_calc = (theoretical - entry) * qty if r["side"] == "buy" else (entry - theoretical) * qty
-        assert abs(theoretical_calc - pnl) > 1.0
+        assert abs(theoretical_calc - pnl) > 0.1
 
 
 # Blank (not unset) so a developer's .env cannot put the key back via load_dotenv.
@@ -208,15 +211,34 @@ def _run_cli_process(tmp_path, *extra_args):
 
 
 def test_backtest_run_output_is_only_metrics_lines(tmp_path):
-    """stdout+stderr is exactly the 5 metric lines plus the --out line: no log or SAWarning noise."""
+    """stdout+stderr is exactly the 6 metric lines plus the --out line: no log or SAWarning noise."""
     proc = _run_cli_process(tmp_path)
 
     assert proc.returncode == 0, proc.stdout
     prefixes = [line.split(":")[0] for line in proc.stdout.splitlines()]
     assert prefixes == [
-        "Trades", "Win rate", "Profit factor", "Sharpe ratio", "Total PnL",
+        "Trades", "Win rate", "Profit factor", "Sharpe ratio", "Total PnL", "Slippage",
         f"Trade log written to {tmp_path / 'trades.csv'}",
     ]
+    assert proc.stdout.splitlines()[5] == "Slippage: 0.05% por lado"
+
+
+def test_backtest_run_output_with_custom_slippage_env(tmp_path):
+    """Setting TRADING_SLIPPAGE_PCT changes the effective slippage line."""
+    env_db = f"sqlite:///{tmp_path / 'proc.db'}"
+    Base.metadata.create_all(create_engine(env_db))
+    proc = subprocess.run(
+        [sys.executable, "-m", "quantagent.cli", "backtest", "run", "--strategy", "rsi",
+         "--fixture", "spy-smoke"],
+        env={**os.environ, "DATABASE_URL": env_db, "TRADING_SLIPPAGE_PCT": "0.01", **NO_OPENAI_KEY_ENV},
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    assert proc.returncode == 0, proc.stdout
+    lines = proc.stdout.strip().splitlines()
+    assert len(lines) == 6
+    assert lines[-1] == "Slippage: 1.00% por lado"
 
 
 def test_backtest_run_verbose_shows_insufficient_data_messages(tmp_path):

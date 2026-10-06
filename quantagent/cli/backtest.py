@@ -105,6 +105,8 @@ def run_backtest(
         finally:
             engine_logger.removeFilter(_hide_data_warnings)
 
+        slippage_pct = bt.order_manager.broker.slippage_pct
+
         rows = []
         if out_path:
             trade_ids = select(ActivePosition.trade_id).where(
@@ -139,6 +141,7 @@ def run_backtest(
     click.echo(f"Profit factor: {metrics.profit_factor:.2f}")
     click.echo(f"Sharpe ratio: {metrics.sharpe_ratio:.2f}")
     click.echo(f"Total PnL: {metrics.total_pnl:.2f}")
+    click.echo(f"Slippage: {slippage_pct * 100:.2f}% por lado")
 
     if out_path:
         with open(out_path, "w", newline="") as f:
