@@ -323,6 +323,8 @@ Los primeros 5 son los más fáciles de revisar.
 | T06 | `QuantAgent-89e.1` | Test `xfail` que reproduce la fila duplicada en reversiones + diagnóstico | Test `xfail(strict=True)` presente; resumen responde "¿round-trip real o error?" | decidir |
 | T07 | `QuantAgent-89e` | Corregir la duplicación | `Trades: N` = filas de datos del CSV; el `xfail` pasa a test normal | probar |
 | T08 | `QuantAgent-hx0.5` | Script de recálculo independiente: trades, PnL, win rate, PF | No importa `quantagent`; test con 5 trades a mano | leer |
+| T08b | `QuantAgent-hx0.8` | CSV con `exit_price` ejecutado; `recalc_metrics.py` verifica el PnL de cada trade | Imprime `PnL por trade: 227/227 filas coinciden`; métricas sin cambio | probar |
+| T08c | `QuantAgent-hx0.9` | Slippage por defecto 0,05% por lado; el CLI imprime el slippage usado | 6 líneas, la última `Slippage: 0.05% por lado`; con `TRADING_SLIPPAGE_PCT=0.01` vuelve a −4717.33 | probar |
 | T09 | `QuantAgent-hx0.1` | Auditar PnL y total return; documentar fórmula | `recalc_metrics.py` = CLI en trades y PnL | probar |
 | T10 | `QuantAgent-hx0.2` | Auditar win rate y profit factor; sin `inf` en DB | `recalc_metrics.py` = CLI en win rate y PF | decidir |
 | T11 | `QuantAgent-hx0.6` | Recálculo de max drawdown y Sharpe desde la equity | Test con curva conocida (max DD 25%) | leer |
@@ -342,6 +344,10 @@ Los primeros 5 son los más fáciles de revisar.
 | T25 | `QuantAgent-lp1` | Borrador del plan siguiente con la evidencia de T01–T24 | Doc con cola nueva en el mismo formato | decidir |
 
 A un ticket por día hábil, T01–T25 son 5 semanas. M1 se cumple al cerrar T23.
+
+T08b y T08c se agregaron el 2026-10-06: al revisar T08, Fede detectó que el script daba por bueno el `pnl` del CSV.
+El diagnóstico mostró 1% de slippage por lado y un CSV que mezcla precio ejecutado y teórico. Cambian los números
+de referencia de rsi/spy-90d (227 / −4717.33), que T09 y T20 tienen que tomar de T08c.
 
 **Fuera del loop** (sesión de escritorio, no entran en la cola):
 - `QuantAgent-wwi`, skill de revisión macro semanal: instala en `~/.hermes`.
