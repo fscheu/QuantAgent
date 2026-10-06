@@ -1129,11 +1129,15 @@ class Backtest:
         if close_order_id is not None:
             close_trade = self.db.query(Trade).filter(Trade.order_id == close_order_id).first()
             if close_trade is not None:
+                if close_trade.exit_price is not None:
+                    opening_trade.exit_price = close_trade.exit_price
                 opening_trade.pnl = close_trade.pnl
                 opening_trade.pnl_pct = close_trade.pnl_pct
                 # The opening trade now carries the realized exit; keeping the closing leg
                 # as a second closed row doubles counts and pnl (QuantAgent-89e).
                 self.db.delete(close_trade)
+            elif getattr(close_order, "average_fill_price", None) is not None:
+                opening_trade.exit_price = Decimal(str(close_order.average_fill_price))
 
         self.db.commit()
 
