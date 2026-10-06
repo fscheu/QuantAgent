@@ -76,21 +76,15 @@ solo ve el proceso del agente. Rechaza push a `main`, borrado de ramas remotas y
 porque `main` no tiene branch protection. No cubre `gh pr merge`: eso se cierra con branch protection en
 GitHub o con una regla deny del agente.
 
-### Permisos de `agy` (lo instala Fede, una sola vez)
+### Permisos de `agy` (instalados por Fede el 2026-10-06)
 
 `agy` en modo headless niega todo comando que no esté permitido, y el wrapper no usa
 `--dangerously-skip-permissions`. Los permisos viven en `~/.gemini/antigravity-cli/settings.json`, que es
-global: valen también para las sesiones interactivas de `agy` en la VM. Agregar la clave `permissions`:
+global: valen también para las sesiones interactivas de `agy` en la VM. La clave `permissions` es:
 
 ```json
 "permissions": {
-  "allow": [
-    "command(git)", "command(gh)", "command(bd)", "command(python)", "command(pytest)", "command(ruff)",
-    "command(scripts/loop/)", "command(timeout)", "command(ls)", "command(cat)", "command(grep)",
-    "command(rg)", "command(find)", "command(sed)", "command(head)", "command(tail)", "command(wc)",
-    "command(mkdir)", "command(env)", "command(sha256sum)", "command(diff)",
-    "write_file(/tmp/ai-loop/)"
-  ],
+  "allow": ["command(regex:.*)", "write_file(/tmp/ai-loop/)"],
   "deny": [
     "command(git push origin main)", "command(git push --force)", "command(git push -f)",
     "command(git branch -D)", "command(gh pr merge)", "command(rm -rf)",
@@ -99,8 +93,16 @@ global: valen también para las sesiones interactivas de `agy` en la VM. Agregar
 }
 ```
 
-Deny gana sobre allow. Si una corrida con `agy` termina sin entrega y el log dice
-`a tool required the "command" permission`, falta un prefijo en `allow`: el log nombra cuál.
+Es el mismo criterio que usa Claude Code en el loop: todo comando permitido salvo los denegados. Deny gana
+sobre allow, también cuando el comando viene encadenado (`cd . && git push origin main` se niega).
+
+Por qué no una lista de prefijos: la primera versión permitía solo `git`, `gh`, `bd`, `python`, etc. En modo
+headless un solo comando negado cierra toda la sesión; la primera corrida de prueba murió en el paso 109 por
+un `echo` y perdió el trabajo. Si una corrida con `agy` termina sin entrega, buscar `soft-denying` en el log
+más nuevo de `~/.gemini/antigravity-cli/log/`.
+
+Consumo medido (2026-10-06, `gemini-3.8-flash-high`, una entrega de 39 min): cerca de 1% del límite semanal
+y 10% del de 5 horas del grupo Gemini. Se ve con `/usage` en una sesión interactiva de `agy`.
 
 ## Operación
 
