@@ -22,8 +22,9 @@ REGLAS DURAS
 - BEADS: usá `bd` directo (BEADS_NO_DAEMON=1 ya está exportado). Después de escribir en BEADS corré
   `bd export -o .beads/issues.jsonl` y commiteá ese archivo en tu rama.
 
-PASO 1 — Registro y cierre del ticket anterior (solo si el gate trae "review")
-- Agregá al final del bloque de docs/loop/REVIEW-LOG.md: `<fecha de la R:> · #<pr> · <review.line>`.
+PASO 1 — Cierre del ticket anterior (solo si el gate trae "review")
+- No toques docs/loop/REVIEW-LOG.md: lo escribe el PM al cerrar cada revisión. Si tu rama lo modifica, el PR
+  choca con cualquier otro PR abierto del lote.
 - previous = cerrar    → `bd close <ticket> --reason "<review.line>"`. Si todos los hijos de su epic
   quedaron cerrados, cerrá también el epic.
 - previous = descartar → `bd label add <ticket> loop-descartado` y `bd comments add <ticket> "<review.line>"`.
