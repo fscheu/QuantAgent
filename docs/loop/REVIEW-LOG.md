@@ -14,4 +14,5 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-05 · #12 · R: 11v vi:ejecute y revise el csv. creo que para futuro hay que redondear los valores a 4 decimales maximo porque mas de eso no tiene sentido, inclusive cuando son valores en % como 0,13. Generar un ticket para hacerlo despues con menor prioridad, ahora merge decido: merge
 2026-10-05 · #13 · R: 89e.1 vi: registros duplicados en la base para la misma operación no quiero, es un bug decido: merge
 2026-10-06 · #14 · R: 89e vi: revise la tabla de tardes después de ejecutar el loop y lo veo ok decido: merge
+2026-10-06 · #15 · R: hx0.5 vi: el PNL no sé recalcula. Encontramos que El slippage estaba sobredimensionado. Agregamos otros tickets a la cola. decido: merge
 ```

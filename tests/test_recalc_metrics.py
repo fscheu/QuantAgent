@@ -37,6 +37,7 @@ def test_five_handmade_trades_give_the_hand_computed_metrics(tmp_path):
         "Win rate: 40.00%",  # 2 winners / 5 trades; the breakeven is not a win
         "Profit factor: 1.86",  # (100 + 30) / (50 + 20) = 1.857...
         "Total PnL: 60.00",  # 100 - 50 + 30 - 20 + 0
+        "PnL por trade: 5/5 filas coinciden",
     ]
 
 
@@ -48,7 +49,18 @@ def test_profit_factor_without_losing_trades_is_inf(tmp_path):
         "Win rate: 100.00%",
         "Profit factor: inf",
         "Total PnL: 130.00",
+        "PnL por trade: 2/2 filas coinciden",
     ]
+
+
+def test_mismatched_pnl_exits_with_code_1(tmp_path):
+    """Validates that a row whose pnl != (exit - entry) * qty triggers exit 1."""
+    bad_csv = HEADER + "2026-01-02T05:00:00,2026-01-02T13:00:00,SPY,buy,10,100,110,95,999,TAKE_PROFIT\n"
+    csv_path = tmp_path / "bad.csv"
+    csv_path.write_text(bad_csv)
+    proc = subprocess.run([sys.executable, str(SCRIPT), str(csv_path)], capture_output=True, text=True)
+    assert proc.returncode == 1
+    assert "PnL por trade: 0/1 filas coinciden" in proc.stdout
 
 
 def test_script_does_not_import_the_engine():

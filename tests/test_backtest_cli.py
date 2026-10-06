@@ -155,6 +155,39 @@ def test_backtest_run_stores_one_closed_trade_row_per_round_trip(cli_runner, tmp
     assert float(pnl_sum) == pytest.approx(float(reported["Total PnL"]), abs=0.01)
 
 
+def test_backtest_run_trade_exit_price_is_executed_not_theoretical(cli_runner, tmp_path):
+    """The CSV exit_price is the executed fill price with slippage, not the theoretical candle price.
+
+    Regression for QuantAgent-hx0.8: previously exit_price had no slippage while entry_price did,
+    so (exit - entry) * qty diverged from the realized pnl on both long and short trades.
+    """
+    out_path = tmp_path / "trades.csv"
+    result = cli_runner.invoke(
+        backtest_group,
+        ["run", "--strategy", "rsi", "--fixture", "spy-smoke", "--out", str(out_path)],
+    )
+    assert result.exit_code == 0, result.output
+
+    with out_path.open(newline="") as f:
+        rows = [row for row in csv.DictReader(f) if row["pnl"]]
+
+    long_rows = [r for r in rows if r["side"] == "buy"]
+    short_rows = [r for r in rows if r["side"] == "sell"]
+    assert len(long_rows) > 0 and len(short_rows) > 0
+
+    for r in rows:
+        entry, exit_, qty, pnl = float(r["entry_price"]), float(r["exit_price"]), float(r["qty"]), float(r["pnl"])
+        calc_pnl = (exit_ - entry) * qty if r["side"] == "buy" else (entry - exit_) * qty
+        assert abs(calc_pnl - pnl) <= 0.01
+
+        # With 1% default slippage, executed exit diverges significantly from theoretical.
+        # If exit_price reverted to theoretical, (theoretical - entry) * qty would diverge from pnl by > 1.0.
+        slippage = 0.01
+        theoretical = exit_ / (1 - slippage) if r["side"] == "buy" else exit_ / (1 + slippage)
+        theoretical_calc = (theoretical - entry) * qty if r["side"] == "buy" else (entry - theoretical) * qty
+        assert abs(theoretical_calc - pnl) > 1.0
+
+
 # Blank (not unset) so a developer's .env cannot put the key back via load_dotenv.
 NO_OPENAI_KEY_ENV = {"OPENAI_API_KEY": "", "AGENT_LLM_PROVIDER": "openai", "GRAPH_LLM_PROVIDER": "openai"}
 
