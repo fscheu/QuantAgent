@@ -26,4 +26,6 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-07 · #34 · R: hx0.3 vi: Sharpe 8.74 y drawdown 0.001204, trades y PnL sin cambio decido: merge
 2026-10-07 · #37 · PM: hx0.4 vi: el CLI y recalc_metrics coinciden en Sharpe 25.14 con N=8766, pero con el engine vuelto a la tabla fija la suite sigue en 832 passed; con 1.00% slip el CLI da -7.98, no 18.06 decido: cambio test del engine en dos calendarios y corregir la fila D del doc
 2026-10-07 · #37 · PM: hx0.4 vi: con _get_periods_per_year vuelto a la tabla fija ahora falla test_engine_synthetic_equity_same_sharpe_in_both_calendars; el doc dice -7.98; CLI y recalc coinciden en 25.14 con N=8766 decido: merge
+2026-10-07 · #39 · PM: hx0.11 vi: con 5 velas propias de SPY 1h en el rango, después de un backtest run quedaron 0; y con manager.py vuelto atrás las corridas siguen dando idéntico (modelo: gemini-3.8-flash-high) decido: cambio no borrar market_data, abortar con error; revertir manager.py
+2026-10-07 · #39 · PM: hx0.11 vi: repetí mi prueba sobre el commit ff2e344f: con 5 velas ajenas de SPY 1h en el rango, backtest run aborta con exit 1 y quedan las 5 en la base (total 5, antes quedaban 0); dos corridas seguidas dan 227 / 12120.98 / Sharpe 25.14; manager.py sin diferencias contra el lote; suite 835 passed (modelo: claude-sonnet-5-5-high) decido: merge
 ```
