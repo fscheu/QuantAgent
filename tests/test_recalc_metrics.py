@@ -67,3 +67,60 @@ def test_script_does_not_import_the_engine():
     """Validates the independence claim: loading the script must not pull in `quantagent`."""
     code = f"import runpy, sys; runpy.run_path({str(SCRIPT)!r}); sys.exit('quantagent' in sys.modules)"
     assert subprocess.run([sys.executable, "-c", code]).returncode == 0
+
+
+# Synthetic curve (100 -> 120 -> 90 -> 130 -> 100 -> 140) yields peak 120 -> trough 90 = 25% max DD.
+SIX_POINT_CURVE = "equity\n100\n120\n90\n130\n100\n140\n"
+
+# Returns of 1%, 2%, 3% (mean 2%, std 1%) with rf=2% and N=4 yield (0.02 - 0.005)/0.01 * 2 = Sharpe 3.00.
+KNOWN_SHARPE_CURVE = "equity\n1000\n1010\n1030.2\n1061.106\n"
+
+
+def test_synthetic_curve_max_drawdown_is_25_percent(tmp_path):
+    """Synthetic 6-point curve (100, 120, 90, 130, 100, 140) yields exactly 25% max drawdown."""
+    eq_path = tmp_path / "eq.csv"
+    eq_path.write_text(SIX_POINT_CURVE)
+    lines = subprocess.run(
+        [sys.executable, str(SCRIPT), "--equity", str(eq_path)],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.splitlines()
+    assert "Max drawdown: 0.250000" in lines
+
+
+def test_known_sharpe_series_gives_hand_computed_sharpe(tmp_path):
+    """Returns of 1%, 2%, 3% (mean 2%, std 1%) with rf=2% annualized and N=4 yield Sharpe 3.00."""
+    eq_path = tmp_path / "eq.csv"
+    eq_path.write_text(KNOWN_SHARPE_CURVE)
+    lines = subprocess.run(
+        [sys.executable, str(SCRIPT), "--equity", str(eq_path), "--periods-per-year", "4"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.splitlines()
+    assert "Sharpe ratio: 3.00" in lines
+    assert "Max drawdown: 0.000000" in lines
+
+
+def test_recalc_with_both_trades_and_equity_prints_all_metrics(tmp_path):
+    """Combining trades and equity outputs trade metrics and equity metrics."""
+    trades_path = tmp_path / "run.csv"
+    trades_path.write_text(FIVE_TRADES)
+    eq_path = tmp_path / "eq.csv"
+    eq_path.write_text(SIX_POINT_CURVE)
+    lines = subprocess.run(
+        [sys.executable, str(SCRIPT), str(trades_path), "--equity", str(eq_path)],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.splitlines()
+    assert lines == [
+        "Trades: 5",
+        "Win rate: 40.00%",
+        "Profit factor: 1.86",
+        "Sharpe ratio: 13.61",
+        "Total PnL: 60.00",
+        "PnL por trade: 5/5 filas coinciden",
+        "Max drawdown: 0.250000",
+    ]
