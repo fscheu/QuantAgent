@@ -360,7 +360,7 @@ Lotes (definidos por el PM el 2026-10-06; cada uno se abre cuando Fede mergea el
 
 | Lote | Rama | Filas | Punto de control | Decisiones de Fede previstas |
 |---|---|---|---|---|
-| L1 | `lote/metricas-auditadas` | T08c, T13, T09–T12, T14, T15, T20 | Las 5 métricas de rsi/spy-90d coinciden con un recálculo que no importa `quantagent`, la corrida es reproducible (`backtest verify`) y un test golden las congela | T13 (anualización del Sharpe), T10 (trades con pnl = 0) |
+| L1 | `lote/metricas-auditadas` | T08c, T13, T09–T12, T14, T15, T15b, T10b, T20 | Las 5 métricas de rsi/spy-90d coinciden con un recálculo que no importa `quantagent`, la corrida es reproducible (`backtest verify`) y un test golden las congela | T13 (anualización del Sharpe), T10 (trades con pnl = 0) |
 | L2 | `lote/tres-estrategias` | T16–T19, T19b | RSI, 52-week-high y Triple Screen operan (≥5 trades cada una) sobre fixtures versionados y deterministas | ninguna prevista |
 | L3 | `lote/engine-y-cierre-m1` | T21–T25 | Comparación trade por trade contra `backtesting.py`, ADR del engine decidido (cierra M1), inventario de ramas y borrador del plan siguiente | T22, T23, T24, T25 |
 
@@ -393,6 +393,8 @@ Los primeros 5 son los más fáciles de revisar.
 | T12 | `QuantAgent-hx0.3` | Auditar max drawdown; documentar la equity curve | `recalc_metrics.py --equity` = CLI en drawdown | probar | L1 |
 | T14 | `QuantAgent-hx0.4` | Implementar la anualización elegida | `recalc_metrics.py --equity` = CLI en Sharpe (±0.01) | probar | L1 |
 | T15 | `QuantAgent-y8z` | `backtest verify`: doble corrida y diff | Imprime `OK reproducible` con exit 0 para RSI | probar | L1 |
+| T15b | `QuantAgent-hx0.11` | `backtest run` no depende de corridas anteriores en la misma base | Dos `backtest run` seguidos sobre la misma base SQLite imprimen las mismas 6 líneas | probar | L1 |
+| T10b | `QuantAgent-hx0.10` | El CLI imprime `Profit factor: n/a` cuando no hay trades perdedores | Test del CLI y de `recalc_metrics.py` con solo ganadores: la línea es `Profit factor: n/a` | leer | L1 |
 | T20 | `QuantAgent-piv` | Test golden RSI/spy-90d con los valores ya verificados | El test falla si cambia un trade o una métrica | leer | L1 |
 | T16 | `QuantAgent-46h.1` | Generador determinista del fixture diario de 2 años | Dos corridas dan el mismo `sha256sum` | leer | L2 |
 | T17 | `QuantAgent-46h` | 52-week-high corre sobre ese fixture | `Trades:` ≥ 5 | probar | L2 |
@@ -411,6 +413,11 @@ M1 se cumple al cerrar T23.
 T08b y T08c se agregaron el 2026-10-06: al revisar T08, Fede detectó que el script daba por bueno el `pnl` del CSV.
 El diagnóstico mostró 1% de slippage por lado y un CSV que mezcla precio ejecutado y teórico. Cambian los números
 de referencia de rsi/spy-90d (227 / −4717.33), que T09 y T20 tienen que tomar de T08c.
+
+T15b y T10b se agregaron el 2026-10-07 por decisión de Fede. T15b salió de la revisión: dos corridas sobre la misma
+base dan 227 y 229 trades, y `backtest verify` no lo cubre porque usa una base limpia en cada pasada. T10b es la
+`R:` de Fede en el PR #30. Los dos van antes de T20 para que el test golden congele números que ya no dependan
+del estado de la base.
 
 **Fuera del loop** (sesión de escritorio, no entran en la cola):
 - `QuantAgent-wwi`, skill de revisión macro semanal: instala en `~/.hermes`.
