@@ -22,4 +22,5 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-06 · #25 · PM: hx0.1 vi: rompí la fórmula del short en manager.py y la de total_return_pct y el test nuevo falla en los dos casos; equity_final recalculada desde el CSV de equity da inicial + 12120.98; suite 819 passed decido: merge
 2026-10-06 · #30 · R: hx0.2 vi: 113 ganadores, 114 perdedores, 0 neutros. Además mostrar n/a en lugar de inf decido: merge
 2026-10-07 · #32 · PM: hx0.6 vi: corrí el recálculo sobre la salida real de rsi/spy-90d en base limpia y coincide con el engine: Sharpe 0.57 y max drawdown 0.090128; con --periods-per-year 8760 da 1.37, igual que mi cálculo de ayer; suite 825 passed decido: merge
+2026-10-07 · #35 · PM: y8z vi: metí un random real en el precio de ejecución del broker y verify falla con Metric mismatch en total_pnl, sharpe_ratio y max_drawdown; la base del entorno queda intacta (mismo md5 antes y después); rsi/spy-90d da OK reproducible; suite 830 passed; ojo: fifty-two-week-high y triple-screen hacen 0 trades en spy-smoke decido: merge
 ```
