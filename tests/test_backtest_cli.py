@@ -131,6 +131,9 @@ def test_backtest_run_equity_out_max_drawdown_matches_engine(cli_runner, tmp_pat
     assert engine_dd > 0  # spy-smoke trades, so the curve must dip at least once
     assert max(float(r["drawdown_pct"]) for r in rows) == pytest.approx(engine_dd, abs=1e-9)
     assert f"(max drawdown: {engine_dd:.6f})" in result.output
+    equities = [float(r["equity"]) for r in rows]
+    assert equities[-1] - 100000.0 == pytest.approx(captured["metrics"].total_pnl, abs=0.01)
+    assert all(abs(b - a) / a <= 0.02 for a, b in zip(equities, equities[1:]))
 
 
 def test_backtest_run_stores_one_closed_trade_row_per_round_trip(cli_runner, tmp_path):

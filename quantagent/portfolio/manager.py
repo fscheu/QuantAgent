@@ -318,13 +318,9 @@ class PortfolioManager:
             if pos["qty"] > 0:
                 # LONG: value = shares × price
                 position_value += pos["qty"] * pos["current_price"]
-            else:
-                # SHORT: value = initial proceeds - current buyback cost
-                # = qty × avg_cost (proceeds) - qty × current_price (liability)
-                # = qty × (2 × avg_cost - current_price)
-                position_value += abs(pos["qty"]) * (
-                    2 * pos["avg_cost"] - pos["current_price"]
-                )
+            elif pos["qty"] < 0:
+                # SHORT: liability to buy back at current market price
+                position_value -= abs(pos["qty"]) * pos["current_price"]
 
         return self.cash + position_value
 

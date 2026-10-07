@@ -80,6 +80,25 @@ $$\text{profit\_factor} = \frac{\sum_{t \in W} t.pnl}{|\sum_{t \in L} t.pnl|} = 
 | Total PnL (`SUM(pnl)`) | 12120.98 | 12120.98 | Sí |
 | Capital identity (`equity_final - initial`) | 12120.98 | 12120.98 | Sí |
 | PnL por trade (recalc vs trade log) | 227/227 | 227/227 | Sí |
+| Max drawdown (antes 0.090128) | 0.001204 | 0.001204 | Sí |
+| Sharpe ratio (antes 0.57) | 8.74 | 8.74 | Sí |
 
-### Nota sobre `equity_curve` intradía (`--equity-out`)
-La serie registrada en `bt.equity_curve` por vela durante el backtest acumula estados previos al cierre final y sobrevalúa temporalmente posiciones cortas en `get_total_value()` (duplicación de nocional al sumar cash y liability). Esto afecta Sharpe y Max Drawdown intradía, cuyo recálculo y auditoría corresponden a los tickets T11/T12 (`QuantAgent-hx0.6` / `QuantAgent-hx0.3`).
+---
+
+## 4. Equity Curve y Max Drawdown (QuantAgent-hx0.3)
+
+### 4.1 Construcción de la Curva de Equity
+- **Frecuencia:** Un punto por vela (al final de cada período analizado).
+- **Punto inicial:** La curva inicia con `equity = initial_capital` (`positions_value = 0.0`, `cash = initial_capital`).
+- **Valuación a Mercado (Mark-to-Market):**
+  En cada vela $t$, con precio de cierre $P_t$:
+  $$\text{equity}_t = \text{cash}_t + \sum_{\text{longs}} \text{qty} \times P_t - \sum_{\text{shorts}} |\text{qty}| \times P_t$$
+  Abrir una posición (long o short) preserva la equity salvo por el slippage de ejecución ($0,05\%$ por lado).
+  Al finalizar el backtest (`_close_remaining_positions()`), las posiciones abiertas remanentes se cierran al precio final y el último punto de la curva refleja el capital neto liquidado, cumpliendo:
+  $$\text{equity\_final} - \text{initial\_capital} = \text{total\_pnl} \quad (\pm 0.01)$$
+
+### 4.2 Drawdown y Max Drawdown
+Para la serie temporal de equity $\{\text{equity}_t\}_{t=0}^{T}$:
+- **Running peak:** $\text{peak}_t = \max_{0 \le i \le t} \text{equity}_i$
+- **Drawdown porcentual:** $\text{dd}_t = \frac{\text{peak}_t - \text{equity}_t}{\text{peak}_t}$
+- **Maximum Drawdown:** $\text{max\_drawdown} = \max_{0 \le t \le T} \text{dd}_t$
