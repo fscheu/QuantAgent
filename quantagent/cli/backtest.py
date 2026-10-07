@@ -120,16 +120,14 @@ def run_backtest(
             )
             .count()
         )
-        if existing_count != meta.row_count:
-            if existing_count > 0:
-                session.query(MarketData).filter(
-                    MarketData.symbol == meta.symbol,
-                    MarketData.timeframe == meta.timeframe,
-                    MarketData.timestamp >= meta.start_date,
-                    MarketData.timestamp <= meta.end_date,
-                ).delete()
-                session.commit()
+        if existing_count == 0:
             load_fixture(session, fixture_name)
+        elif existing_count != meta.row_count:
+            raise click.ClickException(
+                f"La base tiene otros datos para {meta.symbol} {meta.timeframe} en el rango "
+                f"del fixture ({existing_count} filas, se esperaban {meta.row_count}): "
+                "usá una base limpia."
+            )
 
         bt = Backtest(
             start_date=meta.start_date,

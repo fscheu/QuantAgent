@@ -343,13 +343,14 @@ class PortfolioManager:
         today = date.today()
 
         # Query trades from today
-        query = self.db.query(Trade).filter(
-            Trade.closed_at >= datetime.combine(today, datetime.min.time()),
-            Trade.environment == self.environment,
+        trades_today = (
+            self.db.query(Trade)
+            .filter(
+                Trade.closed_at >= datetime.combine(today, datetime.min.time()),
+                Trade.environment == self.environment,
+            )
+            .all()
         )
-        if self.backtest_run_id is not None:
-            query = query.filter(Trade.backtest_run_id == self.backtest_run_id)
-        trades_today = query.all()
 
         realized_pnl = sum(float(t.pnl) if t.pnl else 0.0 for t in trades_today)
         unrealized_pnl = self.get_unrealized_pnl()
@@ -362,14 +363,15 @@ class PortfolioManager:
         Returns:
             Sum of realized P&L from Trade records
         """
-        query = self.db.query(Trade).filter(
-            Trade.environment == self.environment,
-            Trade.pnl.isnot(None),
-            Trade.closed_at.isnot(None),
+        trades = (
+            self.db.query(Trade)
+            .filter(
+                Trade.environment == self.environment,
+                Trade.pnl.isnot(None),
+                Trade.closed_at.isnot(None),
+            )
+            .all()
         )
-        if self.backtest_run_id is not None:
-            query = query.filter(Trade.backtest_run_id == self.backtest_run_id)
-        trades = query.all()
 
         return float(sum(float(t.pnl) for t in trades))
 
