@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from quantagent.backtesting.backtest import Backtest
 from quantagent.backtesting.export import TradeRow, equity_to_csv, trades_to_csv
 from quantagent.backtesting.fixtures import fixture_metadata, load_fixture
-from quantagent.models import ActivePosition, Trade
+from quantagent.models import ActivePosition, MarketData, Trade
 from quantagent.strategy.registry import build_strategy
 
 from . import utils
@@ -110,7 +110,26 @@ def run_backtest(
         raise click.ClickException(f"Fixture not found: {fixture_name}") from exc
 
     with utils.session_scope() as session:
-        load_fixture(session, fixture_name)
+        existing_count = (
+            session.query(MarketData)
+            .filter(
+                MarketData.symbol == meta.symbol,
+                MarketData.timeframe == meta.timeframe,
+                MarketData.timestamp >= meta.start_date,
+                MarketData.timestamp <= meta.end_date,
+            )
+            .count()
+        )
+        if existing_count != meta.row_count:
+            if existing_count > 0:
+                session.query(MarketData).filter(
+                    MarketData.symbol == meta.symbol,
+                    MarketData.timeframe == meta.timeframe,
+                    MarketData.timestamp >= meta.start_date,
+                    MarketData.timestamp <= meta.end_date,
+                ).delete()
+                session.commit()
+            load_fixture(session, fixture_name)
 
         bt = Backtest(
             start_date=meta.start_date,

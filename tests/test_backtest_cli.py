@@ -347,3 +347,25 @@ def test_backtest_verify_process_output_is_only_ok_reproducible():
     )
     assert proc.returncode == 0, proc.stdout
     assert proc.stdout.strip() == "OK reproducible"
+
+
+def test_backtest_run_consecutive_runs_on_same_database_produce_identical_output(
+    cli_runner,
+):
+    """Two consecutive `backtest run` on the same database must produce identical 6 lines (QuantAgent-hx0.11)."""
+    res1 = cli_runner.invoke(
+        backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
+    )
+    assert res1.exit_code == 0, res1.output
+    lines1 = res1.output.strip().splitlines()
+    assert len(lines1) == 6
+
+    res2 = cli_runner.invoke(
+        backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
+    )
+    assert res2.exit_code == 0, res2.output
+    lines2 = res2.output.strip().splitlines()
+    assert len(lines2) == 6
+
+    assert lines1 == lines2
+
