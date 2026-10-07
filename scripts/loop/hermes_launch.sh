@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Hermes cron entry 1/2 (--no-agent): must finish in < 120 s (Hermes cron script timeout).
-# Checks pause flag and review gate synchronously; if the loop may work, starts the long-running
-# wrapper detached and returns. Stdout is delivered to Telegram verbatim.
+# Without arguments (the cron): wakes the PM session (tmux LOOP_PM_TMUX), which reviews what is pending
+# and launches the runs itself. If that session does not exist, falls back to launching one run.
+# With --run (the PM): checks pause flag and review gate synchronously; if the loop may work, starts the
+# long-running wrapper detached and returns. Stdout is delivered to Telegram verbatim.
 # Runs the wrapper as committed on origin/main, copied to a temp file, so a deploy that resets the
 # main checkout mid-run cannot change the script under bash's feet.
 set -uo pipefail
@@ -22,6 +24,17 @@ fi
 
 TMP="$(mktemp -d)"
 git -C "$REPO" archive origin/main loop scripts/loop | tar -x -C "$TMP"
+# shellcheck disable=SC1091
+source "$TMP/loop/config.env"
+if [ "${1:-}" != "--run" ] && [ -n "${LOOP_PM_TMUX:-}" ] && tmux has-session -t "$LOOP_PM_TMUX" 2>/dev/null; then
+  # The text lands in the PM session as if typed, so it says who sent it and that it approves nothing.
+  tmux send-keys -t "$LOOP_PM_TMUX" -l "[Aviso automático del cron del loop; no lo escribió Fede y no aprueba nada] Arrancá la tanda del lote: armá el estado real, revisá lo pendiente y lanzá corridas con hermes_launch.sh --run, con los frenos de PLAN-CONTINUACION.md §3.7."
+  sleep 1
+  tmux send-keys -t "$LOOP_PM_TMUX" Enter
+  echo "▶ QuantAgent loop: avisé al PM (tmux $LOOP_PM_TMUX). Él revisa lo pendiente y lanza las corridas."
+  rm -rf "$TMP"
+  exit 0
+fi
 GATE="$(cd "$TMP" && python3 scripts/loop/gate.py)"
 rc=$?
 if [ "$rc" -ne 0 ]; then

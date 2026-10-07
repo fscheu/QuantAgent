@@ -281,3 +281,69 @@ def test_backtest_default_llm_strategy_still_requires_openai_key(tmp_path):
 
     assert proc.returncode != 0
     assert "OPENAI_API_KEY not found" in proc.stdout
+
+
+def test_backtest_verify_success_exits_zero_and_prints_ok_reproducible(cli_runner):
+    """Verify RSI strategy against spy-smoke fixture passes and prints OK reproducible."""
+    result = cli_runner.invoke(
+        backtest_group, ["verify", "--strategy", "rsi", "--fixture", "spy-smoke"]
+    )
+    assert result.exit_code == 0, result.output
+    assert result.output.strip() == "OK reproducible"
+
+
+def test_backtest_verify_all_three_strategies(cli_runner):
+    """Verify accepts all 3 deterministic strategies (RSI, Fifty-Two-Week-High, Triple Screen)."""
+    for strat in ["rsi", "fifty-two-week-high", "triple-screen"]:
+        result = cli_runner.invoke(
+            backtest_group, ["verify", "--strategy", strat, "--fixture", "spy-smoke"]
+        )
+        assert result.exit_code == 0, f"Strategy {strat} failed: {result.output}"
+        assert "OK reproducible" in result.output
+
+
+def test_backtest_verify_detects_difference_and_exits_nonzero(cli_runner, monkeypatch):
+    """When two runs produce different metrics, verify outputs the mismatch and exits non-zero."""
+    from quantagent.cli import backtest as bt_cli
+    real_execute = bt_cli._run_verify_pass
+    call_count = 0
+
+    def patched_execute(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        metrics, slippage, csv_str = real_execute(*args, **kwargs)
+        if call_count == 2:
+            metrics.total_trades += 1
+        return metrics, slippage, csv_str
+
+    monkeypatch.setattr(bt_cli, "_run_verify_pass", patched_execute)
+
+    result = cli_runner.invoke(
+        backtest_group, ["verify", "--strategy", "rsi", "--fixture", "spy-smoke"]
+    )
+    assert result.exit_code != 0
+    assert "Metric mismatch 'total_trades'" in result.output
+    assert "OK reproducible" not in result.output
+
+
+def test_backtest_verify_unknown_fixture_fails_cleanly(cli_runner):
+    """Verify reports fixture not found cleanly."""
+    result = cli_runner.invoke(
+        backtest_group, ["verify", "--strategy", "rsi", "--fixture", "nonexistent"]
+    )
+    assert result.exit_code != 0
+    assert "Fixture not found" in result.output
+
+
+def test_backtest_verify_process_output_is_only_ok_reproducible():
+    """Real process invocation prints only 'OK reproducible' with zero exit code."""
+    proc = subprocess.run(
+        [sys.executable, "-m", "quantagent.cli", "backtest", "verify", "--strategy", "rsi",
+         "--fixture", "spy-smoke"],
+        env={**os.environ, **NO_OPENAI_KEY_ENV},
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    assert proc.returncode == 0, proc.stdout
+    assert proc.stdout.strip() == "OK reproducible"
