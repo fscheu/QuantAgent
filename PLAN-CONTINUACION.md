@@ -255,6 +255,12 @@ Hermes ejecuta dos shims en `~/.hermes/scripts/` que corren `scripts/loop/hermes
 `scripts/loop/hermes_report.sh` tal como están en `origin/main`. El lanzador copia el wrapper a un
 directorio temporal antes de ejecutarlo, porque el deploy resetea el checkout principal en cada merge.
 
+Desde el 2026-10-07 el cron no lanza la corrida: le escribe un aviso a la sesión del PM (tmux `LOOP_PM_TMUX`) y
+es el PM quien revisa lo pendiente y lanza con `hermes_launch.sh --run`, una corrida tras otra. Antes el cron
+lanzaba una sola corrida por noche y el lote quedaba esperando al PM hasta que Fede le escribía. Si la sesión
+del PM no existe, el cron lanza una corrida como antes. El aviso dice que es automático: no es una aprobación
+de Fede ni una `R:`.
+
 1. `git fetch origin`. Si existe `loop/PAUSE` en `origin/main`: imprimir y salir.
 2. `scripts/loop/gate.py` desde `origin/main`. WAIT: imprimir la línea y salir.
 3. Crear worktree `/tmp/ai-loop/<RUN>` desde la rama del lote que informa el gate (`base`), o desde la rama del
@@ -286,7 +292,8 @@ termina cuando cierra su punto de control.
 1. El PM crea la rama `lote/<nombre>` desde `origin/main` y abre un PR **borrador** hacia `main` con label `lote`.
 2. El loop toma solo filas de ese lote, parte de esa rama y abre cada PR `loop` contra ella.
 3. El PM revisa cada entrega (protocolo abajo), comenta la línea `PM:` y, si decide merge, mergea el PR en la
-   rama del lote. Después lanza la siguiente corrida. Tope: 10 entregas por día.
+   rama del lote. Después lanza la siguiente corrida. Tope: 10 entregas por día. La tanda la arranca el aviso del
+   cron (§3.5) o un pedido de Fede; el PM frena si la cuota del agente baja del 20% de la ventana de 5 horas.
 4. Cuando no quedan filas elegibles, el PM corre el punto de control sobre la rama del lote, completa el cuerpo
    del PR del lote y lo marca listo para revisión. Desde ahí el gate espera.
 5. Fede prueba el punto de control, comenta `R: lote-<nombre> vi: <...> decido: merge` y mergea a `main`.
