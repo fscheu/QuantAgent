@@ -178,6 +178,21 @@ candle, and adds a line `Equity curve written to eq.csv (max drawdown: 0.012345)
 | `cash` / `positions_value` | The two parts of `equity` |
 | `drawdown_pct` | Fall from the highest `equity` so far, as a positive fraction (`0.15` = 15%). Its maximum is the max drawdown printed by the command |
 
+### Verify Backtest Reproducibility (CLI)
+
+Verify that running a backtest twice with the same configuration produces identical trades and metrics (deterministic execution). Runs each iteration on an isolated temporary SQLite database and compares the trades CSV and summary metrics:
+
+```bash
+python -m quantagent.cli backtest verify --strategy rsi --fixture spy-90d
+```
+
+Output on success:
+```
+OK reproducible
+```
+
+If any trade or metric differs between the two runs, the command prints a unified diff and exits with non-zero exit code.
+
 ### Run a Backtest
 
 ```python
