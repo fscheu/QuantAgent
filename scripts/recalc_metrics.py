@@ -11,6 +11,7 @@ Reads CSVs written by `backtest run` (--out and/or --equity-out). Imports nothin
 """
 
 import csv
+import datetime
 import itertools
 import math
 import statistics
@@ -48,10 +49,11 @@ def recalc(path):
     }
 
 
-def recalc_equity(path, periods_per_year=252 * 6.5, risk_free_rate=0.02):
+def recalc_equity(path, periods_per_year=None, risk_free_rate=0.02):
     with open(path, newline="") as f:
-        equities = [float(r["equity"]) for r in csv.DictReader(f) if r.get("equity")]
+        rows = [r for r in csv.DictReader(f) if r.get("equity")]
 
+    equities = [float(r["equity"]) for r in rows]
     if len(equities) < 2:
         return {"max_drawdown": 0.0, "sharpe": 0.0}
 
@@ -61,9 +63,27 @@ def recalc_equity(path, periods_per_year=252 * 6.5, risk_free_rate=0.02):
     # Sharpe formula: annualized excess return over sample standard deviation
     returns = [(b - a) / a for a, b in zip(equities, equities[1:])]
     std = statistics.stdev(returns) if len(returns) > 1 else 0.0
-    sharpe = ((statistics.mean(returns) - risk_free_rate / periods_per_year) / std) * math.sqrt(periods_per_year) if std else 0.0
+    if not std:
+        return {"max_drawdown": max_drawdown, "sharpe": 0.0}
 
-    return {"max_drawdown": max_drawdown, "sharpe": sharpe}
+    if periods_per_year is None:
+        timestamps = [r.get("timestamp") or r.get("date") for r in rows]
+        if len(timestamps) < 2 or not timestamps[0] or not timestamps[-1]:
+            return {"max_drawdown": max_drawdown, "sharpe": 0.0}
+        t0 = datetime.datetime.fromisoformat(timestamps[0])
+        t1 = datetime.datetime.fromisoformat(timestamps[-1])
+        elapsed_seconds = (t1 - t0).total_seconds()
+        elapsed_years = elapsed_seconds / (365.25 * 86400.0)
+        if elapsed_years <= 0:
+            return {"max_drawdown": max_drawdown, "sharpe": 0.0}
+        periods_per_year = len(returns) / elapsed_years
+
+    if periods_per_year <= 0:
+        return {"max_drawdown": max_drawdown, "sharpe": 0.0}
+
+    sharpe = ((statistics.mean(returns) - risk_free_rate / periods_per_year) / std) * math.sqrt(periods_per_year)
+
+    return {"max_drawdown": max_drawdown, "sharpe": sharpe, "periods_per_year": periods_per_year}
 
 
 if __name__ == "__main__":
@@ -72,7 +92,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("trades_csv", nargs="?")
     parser.add_argument("--equity")
-    parser.add_argument("--periods-per-year", type=float, default=252 * 6.5)
+    parser.add_argument("--periods-per-year", type=float, default=None)
     parser.add_argument("--risk-free-rate", type=float, default=0.02)
     args = parser.parse_args()
 

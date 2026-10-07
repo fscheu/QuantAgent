@@ -81,7 +81,7 @@ $$\text{profit\_factor} = \frac{\sum_{t \in W} t.pnl}{|\sum_{t \in L} t.pnl|} = 
 | Capital identity (`equity_final - initial`) | 12120.98 | 12120.98 | Sí |
 | PnL por trade (recalc vs trade log) | 227/227 | 227/227 | Sí |
 | Max drawdown (antes 0.090128) | 0.001204 | 0.001204 | Sí |
-| Sharpe ratio (antes 0.57) | 8.74 | 8.74 | Sí |
+| Sharpe ratio (antes 8.74, original 0.57) | 25.14 | 25.14 | Sí |
 
 ---
 
@@ -102,3 +102,26 @@ Para la serie temporal de equity $\{\text{equity}_t\}_{t=0}^{T}$:
 - **Running peak:** $\text{peak}_t = \max_{0 \le i \le t} \text{equity}_i$
 - **Drawdown porcentual:** $\text{dd}_t = \frac{\text{peak}_t - \text{equity}_t}{\text{peak}_t}$
 - **Maximum Drawdown:** $\text{max\_drawdown} = \max_{0 \le t \le T} \text{dd}_t$
+
+---
+
+## 5. Sharpe Ratio y Anualización (QuantAgent-hx0.4)
+
+### 5.1 Fórmula y Fuente de Retornos
+El ratio de Sharpe anualizado mide el retorno excedente sobre la tasa libre de riesgo normalizado por la volatilidad muestral:
+$$\text{Sharpe} = \left(\frac{\overline{r} - \frac{r_f}{N}}{\sigma_r}\right) \times \sqrt{N}$$
+
+- **Fuente de retornos:** Retornos porcentuales por vela calculados a partir de la serie temporal de equity $\{\text{equity}_t\}_{t=0}^{T}$:
+  $$r_t = \frac{\text{equity}_t - \text{equity}_{t-1}}{\text{equity}_{t-1}}, \quad t = 1, \dots, T$$
+  $\overline{r} = \text{mean}(r)$, $\sigma_r = \text{stdev}(r)$ (desviación estándar muestral).
+- **Tasa libre de riesgo ($r_f$):** Anual, default $0.02$ (2%).
+
+### 5.2 Regla de Periodos por Año ($N$ - Opción D)
+En lugar de una tabla fija por timeframe que presupone horario bursátil NYSE, $N$ se deriva de las observaciones de la corrida:
+$$N = \frac{\text{len}(r)}{\text{años transcurridos}}$$
+donde:
+$$\text{años transcurridos} = \frac{(t_T - t_0)\text{ en segundos}}{365.25 \times 86400}$$
+- Si la curva tiene menos de 2 puntos o cubre un lapso nulo ($\text{años transcurridos} \le 0$), $\text{Sharpe} = 0.0$.
+- Para `spy-90d` (2159 retornos horarios entre 2026-01-01T00:00:00 y 2026-03-31T23:00:00):
+  $\text{días} = 89.9583$, $\text{años} = 0.24629$, $N = 2159 / 0.24629 = 8766.0$.
+  Sharpe pasa de 8.74 (con la tabla fija $N=1638$) a **25.14** (con $N=8766.0$).

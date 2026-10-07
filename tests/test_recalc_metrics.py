@@ -70,7 +70,15 @@ def test_script_does_not_import_the_engine():
 
 
 # Synthetic curve (100 -> 120 -> 90 -> 130 -> 100 -> 140) yields peak 120 -> trough 90 = 25% max DD.
-SIX_POINT_CURVE = "equity\n100\n120\n90\n130\n100\n140\n"
+SIX_POINT_CURVE = (
+    "timestamp,equity\n"
+    "2026-01-01T00:00:00,100\n"
+    "2026-01-01T01:00:00,120\n"
+    "2026-01-01T02:00:00,90\n"
+    "2026-01-01T03:00:00,130\n"
+    "2026-01-01T04:00:00,100\n"
+    "2026-01-01T05:00:00,140\n"
+)
 
 # Returns of 1%, 2%, 3% (mean 2%, std 1%) with rf=2% and N=4 yield (0.02 - 0.005)/0.01 * 2 = Sharpe 3.00.
 KNOWN_SHARPE_CURVE = "equity\n1000\n1010\n1030.2\n1061.106\n"
@@ -119,8 +127,65 @@ def test_recalc_with_both_trades_and_equity_prints_all_metrics(tmp_path):
         "Trades: 5",
         "Win rate: 40.00%",
         "Profit factor: 1.86",
-        "Sharpe ratio: 13.61",
+        "Sharpe ratio: 31.48",
         "Total PnL: 60.00",
         "PnL por trade: 5/5 filas coinciden",
         "Max drawdown: 0.250000",
     ]
+
+
+def test_synthetic_equity_same_sharpe_in_both_calendars_without_calendar_param(tmp_path):
+    """Equity with known Sharpe in two calendars (24/7 and market hours) gives expected Sharpe."""
+    import datetime
+    import math
+
+    def make_csv(n_periods, target_sharpe=2.0, target_vol=0.20, rf=0.02):
+        target_mean = (target_sharpe * target_vol + rf) / n_periods
+        target_std = target_vol / math.sqrt(n_periods)
+        d = target_std * math.sqrt((n_periods - 1) / n_periods)
+        rets = [target_mean + d if i % 2 == 0 else target_mean - d for i in range(n_periods)]
+
+        t0 = datetime.datetime(2026, 1, 1, 0, 0, 0)
+        t1 = datetime.datetime(2027, 1, 1, 6, 0, 0)  # 365.25 days
+        dt = (t1 - t0) / n_periods
+
+        lines = ["timestamp,equity\n", f"{t0.isoformat()},100000.0\n"]
+        curr = t0
+        eq = 100000.0
+        for r in rets:
+            curr += dt
+            eq *= (1.0 + r)
+            lines.append(f"{curr.isoformat()},{eq:.6f}\n")
+        return "".join(lines)
+
+    cal_24_7 = tmp_path / "cal_24_7.csv"
+    cal_24_7.write_text(make_csv(8766))
+
+    cal_mkt = tmp_path / "cal_mkt.csv"
+    cal_mkt.write_text(make_csv(1638))
+
+    # Both yield Sharpe 2.00 without any calendar parameter passed
+    out_24_7 = subprocess.run(
+        [sys.executable, str(SCRIPT), "--equity", str(cal_24_7)],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.splitlines()
+    assert "Sharpe ratio: 2.00" in out_24_7
+
+    out_mkt = subprocess.run(
+        [sys.executable, str(SCRIPT), "--equity", str(cal_mkt)],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.splitlines()
+    assert "Sharpe ratio: 2.00" in out_mkt
+
+    # Fixed table (N=1638 for 1h) fails for 24/7 (yields 0.68 instead of 2.00)
+    out_fixed = subprocess.run(
+        [sys.executable, str(SCRIPT), "--equity", str(cal_24_7), "--periods-per-year", "1638"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.splitlines()
+    assert "Sharpe ratio: 0.68" in out_fixed
