@@ -23,6 +23,11 @@ REGLAS DURAS
   No lances nada en segundo plano ni delegues comandos largos a una tarea aparte: si te quedás esperando una
   tarea de fondo, la corrida termina sola y se pierde la entrega (pasó dos veces el 2026-10-06 con hx0.2).
   La suite tarda unos 4 minutos; es esperable.
+- Cada comando de terminal va en UNA sola línea. Nada de heredocs (`<<'EOF'`), ni `python - <<...`, ni
+  `cat > archivo <<...`: un comando con saltos de línea no pasa la regla de permisos del modo desatendido, se
+  rechaza y la corrida termina sin entrega (pasó dos veces el 2026-10-07 con hx0.11). Para crear o modificar
+  archivos usá tu herramienta de edición de archivos, no la terminal. Si necesitás un script, escribilo con la
+  herramienta de edición dentro del worktree, corrélo y borrá el archivo antes del commit.
 - Abrí el PR apenas el commit esté pusheado y las verificaciones propias hayan pasado. Una rama pusheada sin PR
   no es una entrega.
 - BEADS: usá `bd` directo (BEADS_NO_DAEMON=1 ya está exportado). Después de escribir en BEADS corré
