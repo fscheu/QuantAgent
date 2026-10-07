@@ -268,6 +268,40 @@ class TestPortfolioManagerCalculations:
         expected = 100000.0 - 21000.0 + 22000.0
         assert portfolio.get_total_value() == pytest.approx(expected)
 
+    def test_equity_lifecycle_short_and_long_positions(self, portfolio, test_db):
+        """Equity en apertura, vela intermedia con precio +1% (cambio 1% nocional) y al cierre."""
+        # 1. SHORT: 10 @ 500 (nocional 5000)
+        s_open = Order(symbol="SPY", side=OrderSide.SELL, order_type=OrderType.MARKET, quantity=Decimal("10.0"), filled_quantity=Decimal("10.0"), status=OrderStatus.PENDING, environment=Environment.PAPER)
+        test_db.add(s_open); test_db.commit()
+        portfolio.execute_trade(s_open, fill_price=500.0)
+        assert portfolio.get_total_value() == pytest.approx(100000.0)  # apertura sin slippage: igual a previa
+
+        # Intermedia: precio sube 1% a 505 -> equity baja 1% del nocional ($50)
+        portfolio.update_prices({"SPY": 505.0})
+        assert portfolio.get_total_value() == pytest.approx(99950.0)
+
+        # Cierre: recompra a 505 -> PnL realizado -50, equity en 99,950
+        s_close = Order(symbol="SPY", side=OrderSide.BUY, order_type=OrderType.MARKET, quantity=Decimal("10.0"), filled_quantity=Decimal("10.0"), status=OrderStatus.PENDING, environment=Environment.PAPER)
+        test_db.add(s_close); test_db.commit()
+        portfolio.execute_trade(s_close, fill_price=505.0)
+        assert portfolio.get_total_value() == pytest.approx(99950.0)
+
+        # 2. LONG: 10 @ 500 (nocional 5000)
+        l_open = Order(symbol="SPY", side=OrderSide.BUY, order_type=OrderType.MARKET, quantity=Decimal("10.0"), filled_quantity=Decimal("10.0"), status=OrderStatus.PENDING, environment=Environment.PAPER)
+        test_db.add(l_open); test_db.commit()
+        portfolio.execute_trade(l_open, fill_price=500.0)
+        assert portfolio.get_total_value() == pytest.approx(99950.0)  # apertura sin slippage: igual a previa
+
+        # Intermedia: precio sube 1% a 505 -> equity sube 1% del nocional ($50)
+        portfolio.update_prices({"SPY": 505.0})
+        assert portfolio.get_total_value() == pytest.approx(100000.0)
+
+        # Cierre: venta a 505 -> PnL realizado +50, equity en 100,000
+        l_close = Order(symbol="SPY", side=OrderSide.SELL, order_type=OrderType.MARKET, quantity=Decimal("10.0"), filled_quantity=Decimal("10.0"), status=OrderStatus.PENDING, environment=Environment.PAPER)
+        test_db.add(l_close); test_db.commit()
+        portfolio.execute_trade(l_close, fill_price=505.0)
+        assert portfolio.get_total_value() == pytest.approx(100000.0)
+
     def test_get_unrealized_pnl_profit(self, portfolio, test_db):
         """Verify unrealized P&L calculation with profit."""
         # Buy 0.5 BTC @ 42000

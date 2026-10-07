@@ -291,6 +291,14 @@ class Backtest:
 
         # Close any remaining active positions to prevent stale position contamination
         self._close_remaining_positions()
+        if self.equity_curve:
+            total_val = self.portfolio.get_total_value()
+            self.equity_curve[-1] = {
+                "date": self.equity_curve[-1]["date"],
+                "equity": total_val,
+                "cash": self.portfolio.cash,
+                "positions_value": total_val - self.portfolio.cash,
+            }
 
         # Calculate metrics after forcing final exits so linked trades carry
         # realized P&L from backtest-end closures as well.
@@ -402,6 +410,14 @@ class Backtest:
                 self._record_equity(current_date)
 
         self._close_remaining_positions()
+        if self.equity_curve:
+            total_val = self.portfolio.get_total_value()
+            self.equity_curve[-1] = {
+                "date": self.equity_curve[-1]["date"],
+                "equity": total_val,
+                "cash": self.portfolio.cash,
+                "positions_value": total_val - self.portfolio.cash,
+            }
         metrics = self._calculate_metrics()
         self._update_backtest_run(metrics)
 
@@ -428,6 +444,7 @@ class Backtest:
             return
 
         current_price = float(df.iloc[-1]["close"])
+        self.portfolio.update_prices({asset: current_price})
         active_pos = self.position_monitor.get_active_position(asset)
         self.total_candles_processed += 1
 
@@ -469,6 +486,7 @@ class Backtest:
         )
 
         if order and order.filled_quantity and order.filled_quantity > 0:
+            self.portfolio.update_prices({asset: current_price})
             if order.id is not None and self._replay_trade_order_ids is not None:
                 self._replay_trade_order_ids.add(order.id)
 
@@ -650,6 +668,7 @@ class Backtest:
             return
 
         current_price = float(df.iloc[-1]["close"])
+        self.portfolio.update_prices({asset: current_price})
 
         # Check for active position
         active_pos = self.position_monitor.get_active_position(asset)
@@ -736,6 +755,7 @@ class Backtest:
         )
 
         if order and order.filled_quantity and order.filled_quantity > 0:
+            self.portfolio.update_prices({asset: current_price})
             # Create ActivePosition
             side = (
                 OrderSide.BUY if trading_signal == TradeSignal.LONG else OrderSide.SELL
