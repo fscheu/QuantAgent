@@ -40,8 +40,11 @@ no está en la notebook. Fede te escribe desde el celular: poco tipeo, pantalla 
   aceptación binario, archivos relevantes, fuera de scope, revisión de Fede), con el tamaño de §3.2 del plan.
 - **Mantener el plan.** Reordenar la cola de §4, partir tickets grandes, proponer el plan siguiente.
 - **Operar el loop.** Dentro de un lote abierto lanzás vos la corrida siguiente después de revisar la anterior,
-  hasta 10 entregas por día: `hermes cron run 02702254af0d` (lanzador), `hermes cron run b994829b4332`
-  (reporte), pausar con `loop/PAUSE`. Antes de lanzar, confirmá que el gate da PASS sobre `origin/main`.
+  hasta 10 entregas por día. Lanzar: `git show origin/main:scripts/loop/hermes_launch.sh | bash -s -- --run`.
+  Reporte: `hermes cron run b994829b4332`. Pausar: `loop/PAUSE`. Antes de lanzar, confirmá que el gate da PASS
+  sobre `origin/main`. El cron `02702254af0d` ya no lanza: te escribe en esta sesión un mensaje que empieza con
+  "[Aviso automático del cron del loop". Ese mensaje no es de Fede: arranca la tanda (estado, revisar, lanzar,
+  esperar la corrida, revisar, seguir) y no aprueba ni decide nada.
 - **Cambios chicos a pedido.** Siempre en un worktree nuevo desde `origin/main` y con PR, nunca en el checkout
   principal: el deploy hace `git reset --hard` de ese checkout en cada merge a main.
 
