@@ -10,16 +10,19 @@ import csv
 import os
 import subprocess
 import sys
+from datetime import timedelta
 
 import pytest
 from click.testing import CliRunner
 from sqlalchemy import create_engine, text
+from sqlalchemy.orm import Session
 
 import quantagent.database as database
 from quantagent import settings
 from quantagent.backtesting.export import COLUMNS, EQUITY_COLUMNS
+from quantagent.backtesting.fixtures import fixture_metadata
 from quantagent.cli.backtest import backtest_group
-from quantagent.models import Base
+from quantagent.models import Base, MarketData
 
 
 @pytest.fixture
@@ -347,3 +350,54 @@ def test_backtest_verify_process_output_is_only_ok_reproducible():
     )
     assert proc.returncode == 0, proc.stdout
     assert proc.stdout.strip() == "OK reproducible"
+
+
+def test_backtest_run_consecutive_runs_on_same_database_produce_identical_output(
+    cli_runner,
+):
+    """Two consecutive `backtest run` on the same database must produce identical 6 lines (QuantAgent-hx0.11)."""
+    res1 = cli_runner.invoke(
+        backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
+    )
+    assert res1.exit_code == 0, res1.output
+    lines1 = res1.output.strip().splitlines()
+    assert len(lines1) == 6
+
+    res2 = cli_runner.invoke(
+        backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
+    )
+    assert res2.exit_code == 0, res2.output
+    lines2 = res2.output.strip().splitlines()
+    assert len(lines2) == 6
+
+    assert lines1 == lines2
+
+
+def test_backtest_run_aborts_without_deleting_foreign_market_data(cli_runner):
+    """Si la base ya tiene otras velas en el rango, aborta y no las borra (QuantAgent-hx0.11)."""
+    meta = fixture_metadata("spy-smoke")
+    engine = create_engine(os.environ["DATABASE_URL"])
+    with Session(engine) as s:
+        s.add_all(
+            MarketData(
+                symbol=meta.symbol,
+                timeframe=meta.timeframe,
+                timestamp=meta.start_date + timedelta(hours=i),
+                open=1,
+                high=1,
+                low=1,
+                close=1,
+                volume=1,
+            )
+            for i in range(5)
+        )
+        s.commit()
+
+    result = cli_runner.invoke(
+        backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
+    )
+
+    assert result.exit_code != 0
+    assert "base limpia" in result.output
+    with Session(engine) as s:
+        assert s.query(MarketData).count() == 5

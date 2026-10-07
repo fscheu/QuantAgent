@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from quantagent.backtesting.backtest import Backtest
 from quantagent.backtesting.export import TradeRow, equity_to_csv, trades_to_csv
 from quantagent.backtesting.fixtures import fixture_metadata, load_fixture
-from quantagent.models import ActivePosition, Trade
+from quantagent.models import ActivePosition, MarketData, Trade
 from quantagent.strategy.registry import build_strategy
 
 from . import utils
@@ -110,7 +110,24 @@ def run_backtest(
         raise click.ClickException(f"Fixture not found: {fixture_name}") from exc
 
     with utils.session_scope() as session:
-        load_fixture(session, fixture_name)
+        existing_count = (
+            session.query(MarketData)
+            .filter(
+                MarketData.symbol == meta.symbol,
+                MarketData.timeframe == meta.timeframe,
+                MarketData.timestamp >= meta.start_date,
+                MarketData.timestamp <= meta.end_date,
+            )
+            .count()
+        )
+        if existing_count == 0:
+            load_fixture(session, fixture_name)
+        elif existing_count != meta.row_count:
+            raise click.ClickException(
+                f"La base tiene otros datos para {meta.symbol} {meta.timeframe} en el rango "
+                f"del fixture ({existing_count} filas, se esperaban {meta.row_count}): "
+                "usá una base limpia."
+            )
 
         bt = Backtest(
             start_date=meta.start_date,
