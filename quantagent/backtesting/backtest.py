@@ -1339,8 +1339,9 @@ class Backtest:
         if len(returns) == 0 or returns.std() == 0:
             return 0.0
 
-        # Annualize based on timeframe
         periods_per_year = self._get_periods_per_year()
+        if periods_per_year <= 0:
+            return 0.0
 
         # Calculate Sharpe
         excess_return = returns.mean() - (risk_free_rate / periods_per_year)
@@ -1455,8 +1456,21 @@ class Backtest:
 
         return close_reasons
 
-    def _get_periods_per_year(self) -> int:
-        """Get number of periods per year based on timeframe."""
+    def _get_periods_per_year(self) -> float:
+        """Get number of periods per year derived from observed equity curve data."""
+        if len(self.equity_curve) >= 2:
+            first_date = self.equity_curve[0]["date"]
+            last_date = self.equity_curve[-1]["date"]
+            if isinstance(first_date, str):
+                first_date = datetime.fromisoformat(first_date)
+            if isinstance(last_date, str):
+                last_date = datetime.fromisoformat(last_date)
+            elapsed_seconds = (last_date - first_date).total_seconds()
+            elapsed_years = elapsed_seconds / (365.25 * 86400.0)
+            if elapsed_years > 0:
+                return (len(self.equity_curve) - 1) / elapsed_years
+            return 0.0
+
         if self.timeframe == "1h":
             return 252 * 6.5  # Trading days * hours per day
         elif self.timeframe == "4h":
