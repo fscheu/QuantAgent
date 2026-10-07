@@ -24,4 +24,6 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-07 · #32 · PM: hx0.6 vi: corrí el recálculo sobre la salida real de rsi/spy-90d en base limpia y coincide con el engine: Sharpe 0.57 y max drawdown 0.090128; con --periods-per-year 8760 da 1.37, igual que mi cálculo de ayer; suite 825 passed decido: merge
 2026-10-07 · #35 · PM: y8z vi: metí un random real en el precio de ejecución del broker y verify falla con Metric mismatch en total_pnl, sharpe_ratio y max_drawdown; la base del entorno queda intacta (mismo md5 antes y después); rsi/spy-90d da OK reproducible; suite 830 passed; ojo: fifty-two-week-high y triple-screen hacen 0 trades en spy-smoke decido: merge
 2026-10-07 · #34 · R: hx0.3 vi: Sharpe 8.74 y drawdown 0.001204, trades y PnL sin cambio decido: merge
+2026-10-07 · #37 · PM: hx0.4 vi: el CLI y recalc_metrics coinciden en Sharpe 25.14 con N=8766, pero con el engine vuelto a la tabla fija la suite sigue en 832 passed; con 1.00% slip el CLI da -7.98, no 18.06 decido: cambio test del engine en dos calendarios y corregir la fila D del doc
+2026-10-07 · #37 · PM: hx0.4 vi: con _get_periods_per_year vuelto a la tabla fija ahora falla test_engine_synthetic_equity_same_sharpe_in_both_calendars; el doc dice -7.98; CLI y recalc coinciden en 25.14 con N=8766 decido: merge
 ```
