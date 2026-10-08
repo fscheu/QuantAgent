@@ -27,6 +27,7 @@ def generate_candles(seed: int = 42) -> list[dict]:
     candles = []
     breakout_indices = {320, 355, 390, 425, 460, 495}
     current_price, highest_seen = 400.0, 400.0
+    last_breakout = anchor = None
 
     for i in range(NUM_CANDLES):
         timestamp = (START_DATE + timedelta(days=i)).isoformat()
@@ -37,10 +38,19 @@ def generate_candles(seed: int = 42) -> list[dict]:
             low_p = min(open_p, current_price) - rng.uniform(0.5, 1.5)
             close_p, volume = current_price, BREAKOUT_VOLUME
             highest_seen = high_p
+            last_breakout, anchor = i, current_price
         else:
             max_allowed = highest_seen - 2.0
             drift = rng.uniform(-1.0, 1.0)
-            current_price = max(350.0, min(max_allowed, current_price + drift))
+            if last_breakout is None:
+                current_price = max(350.0, min(max_allowed, current_price + drift))
+            else:
+                # Fall 12% in 12 days (triggers the stop), then recover to just under the high.
+                d, bottom = i - last_breakout, anchor * 0.88
+                target = anchor - (anchor - bottom) * d / 12 if d <= 12 else (
+                    bottom + (highest_seen - 3.0 - bottom) * (d - 12) / 22
+                )
+                current_price = min(max_allowed, target + drift / 2)
             open_p = max(350.0, min(max_allowed, current_price + rng.uniform(-0.5, 0.5)))
             high_p = max(open_p, current_price) + rng.uniform(0.2, 0.8)
             low_p = min(open_p, current_price) - rng.uniform(0.2, 0.8)
@@ -74,7 +84,7 @@ def write_fixture(candles: list[dict], path: Path) -> str:
     path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = ["symbol", "timeframe", "timestamp", "open", "high", "low", "close", "volume"]
     with open(path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(f, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         writer.writerows(candles)
     return hashlib.sha256(path.read_bytes()).hexdigest()
