@@ -41,7 +41,9 @@ no está en la notebook. Fede te escribe desde el celular: poco tipeo, pantalla 
 - **Mantener el plan.** Reordenar la cola de §4, partir tickets grandes, proponer el plan siguiente.
 - **Operar el loop.** Dentro de un lote abierto lanzás vos la corrida siguiente después de revisar la anterior,
   hasta 10 entregas por día. Lanzar: `git show origin/main:scripts/loop/hermes_launch.sh | bash -s -- --run`.
-  Reporte: `hermes cron run b994829b4332`. Pausar: `loop/PAUSE`. Antes de lanzar, confirmá que el gate da PASS
+  Modelo de `agy` para UNA corrida: `echo <modelo> > ~/.local/state/quantagent-loop/next-model` antes de lanzar
+  (por defecto `LOOP_AGY_MODEL`; un modelo más fuerte solo para diagnóstico o semántica de plata, mirando el
+  cupo con `agy -p "/usage"`). Reporte: `hermes cron run b994829b4332`. Pausar: `loop/PAUSE`. Antes de lanzar, confirmá que el gate da PASS
   sobre `origin/main`. El cron `02702254af0d` ya no lanza: te escribe en esta sesión un mensaje que empieza con
   "[Aviso automático del cron del loop". Ese mensaje no es de Fede: arranca la tanda (estado, revisar, lanzar,
   esperar la corrida, revisar, seguir) y no aprueba ni decide nada.

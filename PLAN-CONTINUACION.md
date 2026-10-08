@@ -271,7 +271,11 @@ de Fede ni una `R:`.
    `--disallowedTools "Bash(git push origin main*)" "Bash(git push -f*)" "Bash(git push --force*)"`;
    `agy -p` usa `--mode accept-edits` y sus reglas allow/deny (`docs/loop/SETUP-HERMES.md`). Para los dos,
    el hook `scripts/loop/push_guard.sh` rechaza push a main, borrado de ramas y push forzado.
-   El PR entregado recibe el label `agent:<agente>`.
+   El PR entregado recibe el label `agent:<agente>` y, con `agy`, `model:<modelo>`.
+   El modelo de `agy` es `LOOP_AGY_MODEL`; el archivo `next-model` del directorio de estado lo cambia por una
+   corrida. Lo escribe el PM según la tarea: el modelo por defecto para tickets acotados, uno más fuerte para
+   diagnóstico o cambios en semántica de plata, mirando el cupo (medido el 2026-10-07: Sonnet 5.5 alto gasta
+   cerca de 15% del cupo semanal por corrida; Gemini 3.8 Flash alto, cerca de 3%).
 5. `scripts/loop/diff_size.sh origin/<base>` sobre la rama entregada. Si excede, label `excede-limite`.
 6. Borrar el worktree.
 7. Imprimir para Telegram: las 3 líneas del resumen y la URL del PR.
