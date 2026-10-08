@@ -67,7 +67,8 @@ def equity_to_csv(equity_curve: List[Dict]) -> str:
     """Serialize the engine's equity curve, one row per point.
 
     drawdown_pct is the fall from the running peak as a positive fraction (0.15 = 15%),
-    the same unit as BacktestMetrics.max_drawdown, so max(drawdown_pct) equals it.
+    the same unit as BacktestMetrics.max_drawdown, so max(drawdown_pct) equals it up to
+    the rounding: the four numeric columns are written with at most 4 decimal places.
     """
     buffer = io.StringIO()
     writer = csv.writer(buffer)
@@ -80,10 +81,10 @@ def equity_to_csv(equity_curve: List[Dict]) -> str:
         writer.writerow(
             [
                 point["date"].isoformat(),
-                equity,
-                point["cash"],
-                point["positions_value"],
-                (peak - equity) / peak if peak else 0.0,
+                round(equity, 4),
+                round(point["cash"], 4),
+                round(point["positions_value"], 4),
+                round((peak - equity) / peak if peak else 0.0, 4),
             ]
         )
 

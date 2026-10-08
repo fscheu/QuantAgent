@@ -155,7 +155,8 @@ def test_backtest_run_equity_out_max_drawdown_matches_engine(cli_runner, tmp_pat
     assert len(rows) == captured["points"] > 1
     engine_dd = captured["metrics"].max_drawdown
     assert engine_dd > 0  # spy-smoke trades, so the curve must dip at least once
-    assert max(float(r["drawdown_pct"]) for r in rows) == pytest.approx(engine_dd, abs=1e-9)
+    # The equity CSV is rounded to 4 decimals, so the match is only that precise.
+    assert max(float(r["drawdown_pct"]) for r in rows) == pytest.approx(engine_dd, abs=1e-4)
     assert f"(max drawdown: {engine_dd:.6f})" in result.output
     equities = [float(r["equity"]) for r in rows]
     assert equities[-1] - 100000.0 == pytest.approx(captured["metrics"].total_pnl, abs=0.01)
