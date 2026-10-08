@@ -110,6 +110,24 @@ class TestClassIsValidStrategy:
         assert strategy.weekly_bars == 3
         assert strategy.stoch_oversold == 25.0
 
+    def test_required_history_bars_default(self):
+        strategy = TripleScreenStrategy()
+        assert strategy.required_history_bars == 78
+        # Overrides TradingStrategy default of 30 bars
+        assert super(TripleScreenStrategy, strategy).required_history_bars == 30
+        assert strategy.required_history_bars > 30
+
+    def test_required_history_bars_adapts_to_parameters(self):
+        strategy = TripleScreenStrategy(
+            weekly_bars=3,
+            trend_ema_period=10,
+            stoch_k_period=4,
+            stoch_d_period=2,
+        )
+        # 3 * (10 + 1) + 4 + 2 = 33 + 6 = 39
+        assert strategy.required_history_bars == 39
+        assert strategy.required_history_bars == strategy._min_candles
+
 
 # ---------------------------------------------------------------------------
 # AC2 — Screen 1: EMA slope

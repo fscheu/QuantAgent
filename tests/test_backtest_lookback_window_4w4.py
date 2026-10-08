@@ -10,7 +10,7 @@ import pytest
 from quantagent.backtesting.backtest import Backtest
 from quantagent.models import ActivePosition
 from quantagent.strategy.base import TradingStrategy
-from quantagent.strategy.triple_screen_strategy import TripleScreenStrategy
+from quantagent.strategy.rsi_strategy import RSIMeanReversionStrategy
 
 
 class DummyStrategy(TradingStrategy):
@@ -88,7 +88,7 @@ def _make_dataframe(rows: int) -> pd.DataFrame:
 
 
 def test_4w4_required_history_bars_default():
-    strategy = TripleScreenStrategy()
+    strategy = RSIMeanReversionStrategy()
 
     assert strategy.required_history_bars == 30
 
