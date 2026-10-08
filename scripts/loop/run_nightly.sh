@@ -41,9 +41,20 @@ if [ -s "$LOOP_LOG_DIR/next-agent" ]; then
   AGENT="$(tr -d '[:space:]' <"$LOOP_LOG_DIR/next-agent")"
   rm -f "$LOOP_LOG_DIR/next-agent"
 fi
+# Model for this run (agy only): the one-shot override file wins over LOOP_AGY_MODEL and is consumed here.
+# The PM writes it to pick a stronger model for one ticket without a commit; the next run uses the default.
+AGY_MODEL="$LOOP_AGY_MODEL"
+if [ -s "$LOOP_LOG_DIR/next-model" ]; then
+  AGY_MODEL="$(tr -d '[:space:]' <"$LOOP_LOG_DIR/next-model")"
+  rm -f "$LOOP_LOG_DIR/next-model"
+  if [ "$AGENT" = "agy" ] && ! agy models 2>/dev/null | cut -f1 | grep -qxF -- "$AGY_MODEL"; then
+    echo "⚠ QuantAgent loop: modelo desconocido '$AGY_MODEL' (ver \`agy models\`). No se lanzó nada."
+    exit 0
+  fi
+fi
 case "$AGENT" in
   claude) AGENT_DESC="claude" ;;
-  agy) AGENT_DESC="agy/$LOOP_AGY_MODEL" ;;
+  agy) AGENT_DESC="agy/$AGY_MODEL" ;;
   *) echo "⚠ QuantAgent loop: agente desconocido '$AGENT' (válidos: claude, agy). No se lanzó nada."; exit 0 ;;
 esac
 
@@ -98,7 +109,7 @@ case "$AGENT" in
     # No --dangerously-skip-permissions: what agy may run comes from the allow/deny rules in
     # ~/.gemini/antigravity-cli/settings.json (docs/loop/SETUP-HERMES.md). A command outside them is
     # auto-denied in headless mode and the run ends without a delivery.
-    timeout "${LOOP_TIMEOUT_MIN}m" agy -p "$PROMPT" --model "$LOOP_AGY_MODEL" --mode accept-edits \
+    timeout "${LOOP_TIMEOUT_MIN}m" agy -p "$PROMPT" --model "$AGY_MODEL" --mode accept-edits \
       --print-timeout "${LOOP_TIMEOUT_MIN}m" >"$LOG" 2>&1 ;;
 esac
 crc=$?
@@ -118,6 +129,10 @@ fi
 # Label the delivery with the agent that produced it, to compare agents across PRs.
 gh label create "agent:$AGENT" -R "$LOOP_GITHUB_REPO" --color ededed >/dev/null 2>&1
 gh pr edit -R "$LOOP_GITHUB_REPO" "$NEW" --add-label "agent:$AGENT" >/dev/null 2>&1
+if [ "$AGENT" = "agy" ]; then
+  gh label create "model:$AGY_MODEL" -R "$LOOP_GITHUB_REPO" --color ededed >/dev/null 2>&1
+  gh pr edit -R "$LOOP_GITHUB_REPO" "$NEW" --add-label "model:$AGY_MODEL" >/dev/null 2>&1
+fi
 
 git fetch -q origin "$NEW" && git checkout -q --detach "origin/$NEW"
 SIZE="$(scripts/loop/diff_size.sh "origin/$BASE")" || gh pr edit -R "$LOOP_GITHUB_REPO" "$NEW" --add-label excede-limite >/dev/null 2>&1
