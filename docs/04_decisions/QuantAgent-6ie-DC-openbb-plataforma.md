@@ -66,7 +66,7 @@ Ticket: `QuantAgent-6ie`. Fecha: 2026-10-06. Estado: **propuesta, falta decisió
 | Brent, oro, cobre, soja | Petróleo sí (EIA, FRED). Soja en parte (USDA). Oro y cobre: no verificado | EIA, FRED, USDA | EIA y FRED sí |
 | Spreads high yield | Sí | FRED | Sí |
 | Calendario económico | Sí | Nasdaq, FRED, BCE, BLS | Nasdaq no |
-| Noticias | Solo de bancos centrales y gobierno | `openbb-news` | No |
+| Noticias | Sí. Más de 500 fuentes por RSS (Benzinga, PR Newswire, Yahoo Finance, Google News por región y tema, BBC, Axios). Sin fuentes argentinas verificadas | `openbb-news` | No |
 
 **B3. Espacio compartido entre Fede y agentes** (código del Workspace, 2026-09-30)
 
@@ -148,3 +148,7 @@ Ticket: `QuantAgent-6ie`. Fecha: 2026-10-06. Estado: **propuesta, falta decisió
 10. PyPI: `openbb` 5.0.0 (2026-09-29), `openbb-mcp-server` 2.0.1 (2026-09-28), `openbb-yfinance` 2.0.0 (AGPL, repo `deeleeramone/openbb-danglewood`): https://pypi.org/project/openbb/
 
 Nota de método: los sitios `openbb.co`, `didierlopes.com` y X estaban bloqueados para lectura directa. Las fechas de los posts salen del identificador del post. Su contenido sale de los resúmenes del buscador. El código, la licencia y los commits se leyeron directo de GitHub y PyPI.
+
+## Correcciones
+
+- 2026-10-08: la fila "Noticias" de B2 decía "Solo de bancos centrales y gobierno". Estaba mal. Fuente: `openbb_platform/extensions/news/README.md` del repo ODP, commit `ae02687` (2026-10-02).
