@@ -1,13 +1,20 @@
 #!/usr/bin/env python
-"""Recalculate backtest metrics from a trade log CSV, independently of the engine (QuantAgent-hx0.5).
+"""Recalculate backtest metrics independently of the engine (QuantAgent-hx0.5, QuantAgent-hx0.6).
 
-Usage: python scripts/recalc_metrics.py run.csv
-Reads the CSV written by `backtest run --out` and only uses its `pnl` column. Imports nothing
-from `quantagent`, so a matching number is a second opinion and not the engine checking itself.
+Usage:
+  python scripts/recalc_metrics.py run.csv
+  python scripts/recalc_metrics.py --equity eq.csv [--periods-per-year N]
+  python scripts/recalc_metrics.py run.csv --equity eq.csv [--periods-per-year N]
+
+Reads CSVs written by `backtest run` (--out and/or --equity-out). Imports nothing from
+`quantagent`, so matching numbers are a second opinion and not the engine checking itself.
 """
 
 import csv
+import datetime
+import itertools
 import math
+import statistics
 import sys
 
 
@@ -42,13 +49,70 @@ def recalc(path):
     }
 
 
+def recalc_equity(path, periods_per_year=None, risk_free_rate=0.02):
+    with open(path, newline="") as f:
+        rows = [r for r in csv.DictReader(f) if r.get("equity")]
+
+    equities = [float(r["equity"]) for r in rows]
+    if len(equities) < 2:
+        return {"max_drawdown": 0.0, "sharpe": 0.0}
+
+    # Drawdown formula: peak-to-trough decline from running maximum
+    max_drawdown = max((p - e) / p for p, e in zip(itertools.accumulate(equities, max), equities))
+
+    # Sharpe formula: annualized excess return over sample standard deviation
+    returns = [(b - a) / a for a, b in zip(equities, equities[1:])]
+    std = statistics.stdev(returns) if len(returns) > 1 else 0.0
+    if not std:
+        return {"max_drawdown": max_drawdown, "sharpe": 0.0}
+
+    if periods_per_year is None:
+        timestamps = [r.get("timestamp") or r.get("date") for r in rows]
+        if len(timestamps) < 2 or not timestamps[0] or not timestamps[-1]:
+            return {"max_drawdown": max_drawdown, "sharpe": 0.0}
+        t0 = datetime.datetime.fromisoformat(timestamps[0])
+        t1 = datetime.datetime.fromisoformat(timestamps[-1])
+        elapsed_seconds = (t1 - t0).total_seconds()
+        elapsed_years = elapsed_seconds / (365.25 * 86400.0)
+        if elapsed_years <= 0:
+            return {"max_drawdown": max_drawdown, "sharpe": 0.0}
+        periods_per_year = len(returns) / elapsed_years
+
+    if periods_per_year <= 0:
+        return {"max_drawdown": max_drawdown, "sharpe": 0.0}
+
+    sharpe = ((statistics.mean(returns) - risk_free_rate / periods_per_year) / std) * math.sqrt(periods_per_year)
+
+    return {"max_drawdown": max_drawdown, "sharpe": sharpe, "periods_per_year": periods_per_year}
+
+
 if __name__ == "__main__":
-    m = recalc(sys.argv[1])
-    # Same labels and rounding as `backtest run`, so both outputs can be compared line by line.
-    print(f"Trades: {m['trades']}")
-    print(f"Win rate: {m['win_rate']:.2%}")
-    print(f"Profit factor: {m['profit_factor']:.2f}")
-    print(f"Total PnL: {m['total_pnl']:.2f}")
-    print(f"PnL por trade: {m['matched']}/{m['trades']} filas coinciden")
-    if m["matched"] != m["trades"]:
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("trades_csv", nargs="?")
+    parser.add_argument("--equity")
+    parser.add_argument("--periods-per-year", type=float, default=None)
+    parser.add_argument("--risk-free-rate", type=float, default=0.02)
+    args = parser.parse_args()
+
+    m = recalc(args.trades_csv) if args.trades_csv else None
+    eq = recalc_equity(args.equity, args.periods_per_year, args.risk_free_rate) if args.equity else None
+
+    if m:
+        print(f"Trades: {m['trades']}")
+        print(f"Win rate: {m['win_rate']:.2%}")
+        pf = m["profit_factor"]
+        if pf is None or math.isinf(pf):
+            print("Profit factor: n/a")
+        else:
+            print(f"Profit factor: {pf:.2f}")
+    if eq:
+        print(f"Sharpe ratio: {eq['sharpe']:.2f}")
+    if m:
+        print(f"Total PnL: {m['total_pnl']:.2f}")
+        print(f"PnL por trade: {m['matched']}/{m['trades']} filas coinciden")
+    if eq:
+        print(f"Max drawdown: {eq['max_drawdown']:.6f}")
+    if m and m["matched"] != m["trades"]:
         sys.exit(1)

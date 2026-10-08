@@ -1,10 +1,11 @@
 """SQLAlchemy models for QuantAgent trading system."""
 
 import enum
+import math
 from datetime import datetime
 
 from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, Numeric, String, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, validates
 
 from .database import Base
 
@@ -328,6 +329,13 @@ class BacktestRun(Base):
     replay_source_run_id = Column(
         Integer, ForeignKey("backtest_runs.id"), nullable=True, index=True
     )
+
+    @validates("profit_factor")
+    def validate_profit_factor(self, key, value):
+        """Ensure profit_factor never stores inf or nan in DB; store None instead."""
+        if value is not None and (math.isinf(value) or math.isnan(value)):
+            return None
+        return value
 
     __table_args__ = (Index("idx_start_end_date", "start_date", "end_date"),)
 

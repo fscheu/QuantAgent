@@ -291,6 +291,14 @@ class Backtest:
 
         # Close any remaining active positions to prevent stale position contamination
         self._close_remaining_positions()
+        if self.equity_curve:
+            total_val = self.portfolio.get_total_value()
+            self.equity_curve[-1] = {
+                "date": self.equity_curve[-1]["date"],
+                "equity": total_val,
+                "cash": self.portfolio.cash,
+                "positions_value": total_val - self.portfolio.cash,
+            }
 
         # Calculate metrics after forcing final exits so linked trades carry
         # realized P&L from backtest-end closures as well.
@@ -402,6 +410,14 @@ class Backtest:
                 self._record_equity(current_date)
 
         self._close_remaining_positions()
+        if self.equity_curve:
+            total_val = self.portfolio.get_total_value()
+            self.equity_curve[-1] = {
+                "date": self.equity_curve[-1]["date"],
+                "equity": total_val,
+                "cash": self.portfolio.cash,
+                "positions_value": total_val - self.portfolio.cash,
+            }
         metrics = self._calculate_metrics()
         self._update_backtest_run(metrics)
 
@@ -428,6 +444,7 @@ class Backtest:
             return
 
         current_price = float(df.iloc[-1]["close"])
+        self.portfolio.update_prices({asset: current_price})
         active_pos = self.position_monitor.get_active_position(asset)
         self.total_candles_processed += 1
 
@@ -469,6 +486,7 @@ class Backtest:
         )
 
         if order and order.filled_quantity and order.filled_quantity > 0:
+            self.portfolio.update_prices({asset: current_price})
             if order.id is not None and self._replay_trade_order_ids is not None:
                 self._replay_trade_order_ids.add(order.id)
 
@@ -650,6 +668,7 @@ class Backtest:
             return
 
         current_price = float(df.iloc[-1]["close"])
+        self.portfolio.update_prices({asset: current_price})
 
         # Check for active position
         active_pos = self.position_monitor.get_active_position(asset)
@@ -736,6 +755,7 @@ class Backtest:
         )
 
         if order and order.filled_quantity and order.filled_quantity > 0:
+            self.portfolio.update_prices({asset: current_price})
             # Create ActivePosition
             side = (
                 OrderSide.BUY if trading_signal == TradeSignal.LONG else OrderSide.SELL
@@ -1319,8 +1339,9 @@ class Backtest:
         if len(returns) == 0 or returns.std() == 0:
             return 0.0
 
-        # Annualize based on timeframe
         periods_per_year = self._get_periods_per_year()
+        if periods_per_year <= 0:
+            return 0.0
 
         # Calculate Sharpe
         excess_return = returns.mean() - (risk_free_rate / periods_per_year)
@@ -1435,8 +1456,21 @@ class Backtest:
 
         return close_reasons
 
-    def _get_periods_per_year(self) -> int:
-        """Get number of periods per year based on timeframe."""
+    def _get_periods_per_year(self) -> float:
+        """Get number of periods per year derived from observed equity curve data."""
+        if len(self.equity_curve) >= 2:
+            first_date = self.equity_curve[0]["date"]
+            last_date = self.equity_curve[-1]["date"]
+            if isinstance(first_date, str):
+                first_date = datetime.fromisoformat(first_date)
+            if isinstance(last_date, str):
+                last_date = datetime.fromisoformat(last_date)
+            elapsed_seconds = (last_date - first_date).total_seconds()
+            elapsed_years = elapsed_seconds / (365.25 * 86400.0)
+            if elapsed_years > 0:
+                return (len(self.equity_curve) - 1) / elapsed_years
+            return 0.0
+
         if self.timeframe == "1h":
             return 252 * 6.5  # Trading days * hours per day
         elif self.timeframe == "4h":
@@ -1462,7 +1496,10 @@ class Backtest:
         if run:
             run.total_trades = metrics.total_trades
             run.win_rate = metrics.win_rate
-            run.profit_factor = metrics.profit_factor
+            pf = metrics.profit_factor
+            run.profit_factor = (
+                pf if pf is not None and not (math.isinf(pf) or math.isnan(pf)) else None
+            )
             run.sharpe_ratio = metrics.sharpe_ratio
             run.max_drawdown = metrics.max_drawdown
             run.total_pnl = Decimal(str(metrics.total_pnl))

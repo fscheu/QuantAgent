@@ -72,7 +72,7 @@ TRADING_INITIAL_CASH: float = float(os.getenv("TRADING_INITIAL_CASH", "100000.0"
 TRADING_BASE_POSITION_PCT: float = float(os.getenv("TRADING_BASE_POSITION_PCT", "0.05"))
 TRADING_MAX_DAILY_LOSS_PCT: float = float(os.getenv("TRADING_MAX_DAILY_LOSS_PCT", "0.05"))
 TRADING_MAX_POSITION_PCT: float = float(os.getenv("TRADING_MAX_POSITION_PCT", "0.10"))
-TRADING_SLIPPAGE_PCT: float = float(os.getenv("TRADING_SLIPPAGE_PCT", "0.01"))
+TRADING_SLIPPAGE_PCT: float = float(os.getenv("TRADING_SLIPPAGE_PCT", "0.0005"))
 TRADING_USE_CHECKPOINTING: bool = os.getenv("TRADING_USE_CHECKPOINTING", "false").lower() in {"true", "1", "yes"}
 TRADING_UNIVERSE: str = os.getenv("TRADING_UNIVERSE", "")
 
