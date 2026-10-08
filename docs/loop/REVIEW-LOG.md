@@ -32,4 +32,5 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-07 · #43 · PM: piv vi: cambié un dígito de qty en la fila 100 del golden y el test falla con Trade mismatch at row 100; con TRADING_SLIPPAGE_PCT=0.01 falla con Profit factor 0.61 != 2.69; el CSV versionado es idéntico fila por fila a mi corrida de referencia; suite 838 passed decido: merge
 2026-10-08 · #22 · R: lote-metricas-auditadas vi: ejecute el script en vm y vi OK reproducible decido: merge
 2026-10-08 · #46 · PM: 46h.1 vi: dos corridas del generador dan sha256 162e16e8c4cb y las 520 velas tienen OHLC coherente; pero probé la estrategia sobre el fixture en el CLI y da Trades: 0 (queda para 46h), y regenerar deja el CSV como modificado en git solo por fin de línea; suite 838 passed decido: merge
+2026-10-08 · #47 · PM: 46h vi: comprobé por mi cuenta contra el fixture que las 6 entradas son rupturas del máximo de las 252 velas previas (ej. 2024-11-16 close 406.91 sobre 398.79) con volumen 2.5 veces la media; recalc_metrics coincide 6/6 y -276.32; verify da OK reproducible; sin required_history_bars el test nuevo falla; suite 839 passed (modelo: claude-sonnet-5-5-high) decido: merge
 ```
