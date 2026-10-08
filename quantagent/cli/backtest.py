@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from contextlib import contextmanager
 from typing import Optional
 
@@ -158,7 +159,10 @@ def run_backtest(
 
     click.echo(f"Trades: {metrics.total_trades}")
     click.echo(f"Win rate: {metrics.win_rate:.2%}")
-    click.echo(f"Profit factor: {metrics.profit_factor:.2f}")
+    if metrics.profit_factor is None or math.isinf(metrics.profit_factor):
+        click.echo("Profit factor: n/a")
+    else:
+        click.echo(f"Profit factor: {metrics.profit_factor:.2f}")
     click.echo(f"Sharpe ratio: {metrics.sharpe_ratio:.2f}")
     click.echo(f"Total PnL: {metrics.total_pnl:.2f}")
     click.echo(f"Slippage: {slippage_pct * 100:.2f}% por lado")

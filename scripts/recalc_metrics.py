@@ -102,7 +102,11 @@ if __name__ == "__main__":
     if m:
         print(f"Trades: {m['trades']}")
         print(f"Win rate: {m['win_rate']:.2%}")
-        print(f"Profit factor: {m['profit_factor']:.2f}")
+        pf = m["profit_factor"]
+        if pf is None or math.isinf(pf):
+            print("Profit factor: n/a")
+        else:
+            print(f"Profit factor: {pf:.2f}")
     if eq:
         print(f"Sharpe ratio: {eq['sharpe']:.2f}")
     if m:

@@ -401,3 +401,34 @@ def test_backtest_run_aborts_without_deleting_foreign_market_data(cli_runner):
     assert "base limpia" in result.output
     with Session(engine) as s:
         assert s.query(MarketData).count() == 5
+
+
+@pytest.mark.parametrize("pf_val", [float("inf"), None])
+def test_backtest_run_prints_na_profit_factor_when_no_losses(cli_runner, monkeypatch, pf_val):
+    """When a run has no losing trades (profit factor inf or None), CLI prints 'Profit factor: n/a'."""
+    from quantagent.backtesting.backtest import Backtest, BacktestMetrics
+
+    def mock_run(self, *args, **kwargs):
+        return BacktestMetrics(
+            total_trades=2,
+            winning_trades=2,
+            losing_trades=0,
+            win_rate=1.0,
+            profit_factor=pf_val,
+            sharpe_ratio=1.5,
+            max_drawdown=0.05,
+            total_pnl=500.0,
+            avg_win=250.0,
+            avg_loss=0.0,
+            largest_win=300.0,
+            largest_loss=0.0,
+            total_return_pct=5.0,
+        )
+
+    monkeypatch.setattr(Backtest, "run", mock_run)
+    result = cli_runner.invoke(
+        backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
+    )
+    assert result.exit_code == 0, result.output
+    lines = result.output.strip().splitlines()
+    assert lines[2] == "Profit factor: n/a"
