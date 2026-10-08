@@ -50,6 +50,7 @@ dev = [
     "ruff",
     "mypy>=1.5",
     "types-requests>=2.31",
+    "backtesting>=0.6.6,<0.7",  # solo scripts/crossval_rsi.py (oraculo de cross-validation)
 ]
 
 [tool.setuptools]
