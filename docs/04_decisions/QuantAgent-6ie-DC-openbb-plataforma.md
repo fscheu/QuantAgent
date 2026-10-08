@@ -66,7 +66,7 @@ Ticket: `QuantAgent-6ie`. Fecha: 2026-10-06. Estado: **propuesta, falta decisió
 | Brent, oro, cobre, soja | Petróleo sí (EIA, FRED). Soja en parte (USDA). Oro y cobre: no verificado | EIA, FRED, USDA | EIA y FRED sí |
 | Spreads high yield | Sí | FRED | Sí |
 | Calendario económico | Sí | Nasdaq, FRED, BCE, BLS | Nasdaq no |
-| Noticias | Solo de bancos centrales y gobierno | `openbb-news` | No |
+| Noticias | Sí. Más de 500 fuentes por RSS (Benzinga, PR Newswire, Yahoo Finance, Google News por región y tema, BBC, Axios). Sin fuentes argentinas verificadas | `openbb-news` | No |
 
 **B3. Espacio compartido entre Fede y agentes** (código del Workspace, 2026-09-30)
 
@@ -148,3 +148,59 @@ Ticket: `QuantAgent-6ie`. Fecha: 2026-10-06. Estado: **propuesta, falta decisió
 10. PyPI: `openbb` 5.0.0 (2026-09-29), `openbb-mcp-server` 2.0.1 (2026-09-28), `openbb-yfinance` 2.0.0 (AGPL, repo `deeleeramone/openbb-danglewood`): https://pypi.org/project/openbb/
 
 Nota de método: los sitios `openbb.co`, `didierlopes.com` y X estaban bloqueados para lectura directa. Las fechas de los posts salen del identificador del post. Su contenido sale de los resúmenes del buscador. El código, la licencia y los commits se leyeron directo de GitHub y PyPI.
+
+## Análisis posterior (2026-10-08): `openbb-cli` y OpenBB como módulo de QuantAgent
+
+Contexto: preguntas de Fede después del merge. **No cambia el plan actual.** Queda registrado para cuando la capa L1 (macro) pase a ser software.
+
+### `openbb-cli` como interfaz
+
+En la v5, `openbb-cli` no es la terminal vieja. Es un programa de consola que corre los ~855 comandos de ODP en tres modos:
+
+| Modo | Uso | Para quién |
+|---|---|---|
+| Una consulta | `openbb cboe.index.historical --symbol VIX` → una línea de JSON | Agente o script |
+| Por lotes | `openbb --batch`: muchas consultas en paralelo | Agente que junta datos |
+| Interactivo | `openbb -i`: menús en la terminal | Persona frente a una consola |
+
+Probado el 2026-10-08: la consulta respondió en JSON. No trajo datos porque la red de la prueba bloquea las fuentes.
+
+| Necesidad | ¿Lo cubre? |
+|---|---|
+| Noticias | Sí: `openbb-news`, más de 500 fuentes por RSS. Solo trae lo último, no historia |
+| Indicadores macro | Sí, igual que el MCP. Argentina no |
+| Indicadores técnicos | Existe un módulo (osciladores, tendencia, volatilidad, medias) que no viene por defecto (`openbb[routers]`). Necesita precios, y Yahoo ya no viene |
+| Gráficos | Arma una página HTML y la abre con el navegador de la misma máquina. En la VM sin escritorio no se ve (leído en el código, no probado) |
+
+**Conclusión:** no sirve como interfaz principal de Fede: es de consola, los gráficos no llegan al celular y no deja nada compartido con el agente. Sí sirve como herramienta del agente, igual que el MCP. Se elige uno de los dos: el CLI si el agente ejecuta comandos de consola, el MCP si habla MCP.
+
+### OpenBB como módulo de datos y noticias dentro de QuantAgent (a futuro)
+
+Idea: usar ODP en vez de programar de cero un módulo que levante noticias y fuentes macro.
+
+| Programarlo de cero | Con ODP |
+|---|---|
+| Lector de RSS, lista de fuentes, extracción del texto | `openbb-news` ya lo trae |
+| Un cliente por fuente (FRED, Fed, BCE, CBOE), con sus formatos y límites | Una sola forma de llamar a todas |
+| Validar respuestas | Modelos de datos y tests por fuente |
+| Exponerlo al agente | MCP o CLI ya hechos |
+
+Medido el 2026-10-08, instalación chica (núcleo + noticias + FRED + Fed + BCE + CBOE): **348 MB**, 39 s de instalación y 8 s la primera importación. La completa pesa 1,1 GB y no hace falta.
+
+Riesgos y cómo cubrirlos:
+
+- **Una sola persona lo mantiene.** Cubrirlo con un adaptador chico en QuantAgent (por ejemplo `quantagent/data/news.py`) que es el único archivo que importa `openbb`. Si el proyecto muere, se cambia ese archivo.
+- **No sirve para precios del backtest.** Eso sigue con `yfinance` y el snapshot de V02.
+- **Argentina no está:** BCRA, CCL y brecha van por otra fuente.
+- **Noticias como señal de una estrategia:** el backtest necesitaría noticias históricas con fecha exacta. El RSS solo trae las últimas, así que no alcanza. Como contexto de un informe (V28) sí alcanza.
+- **Versiones de `pandas`:** convivencia con QuantAgent no probada.
+
+**Cuándo:** no ahora. La retrospectiva del 2026-09-16 dice que L1 no es software todavía y que nada arriba de L4 se programa hasta que L4 sea confiable. Camino propuesto:
+
+1. Usarlo por fuera, desde el skill de la nota macro (CLI o MCP). Es el experimento de la sección E.
+2. Cuando las notas muestren qué datos se piden siempre, abrir un ticket para el adaptador con esas funciones concretas.
+
+## Correcciones
+
+- 2026-10-08: la fila "Noticias" de B2 decía "Solo de bancos centrales y gobierno". Estaba mal. Fuente: `openbb_platform/extensions/news/README.md` del repo ODP, commit `ae02687` (2026-10-02).
+- 2026-10-08: se agregó la sección "Análisis posterior" (`openbb-cli` y uso futuro dentro de QuantAgent).
