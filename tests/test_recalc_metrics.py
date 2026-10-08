@@ -41,13 +41,13 @@ def test_five_handmade_trades_give_the_hand_computed_metrics(tmp_path):
     ]
 
 
-def test_profit_factor_without_losing_trades_is_inf(tmp_path):
-    """Validates the division-by-zero edge: with wins and no losses the profit factor is infinite."""
+def test_profit_factor_without_losing_trades_is_na(tmp_path):
+    """Validates the division-by-zero edge: with wins and no losses the profit factor is printed as n/a."""
     only_winners = HEADER + "".join(FIVE_TRADES.splitlines(keepends=True)[i] for i in (1, 3))
     assert _run(tmp_path, only_winners) == [
         "Trades: 2",
         "Win rate: 100.00%",
-        "Profit factor: inf",
+        "Profit factor: n/a",
         "Total PnL: 130.00",
         "PnL por trade: 2/2 filas coinciden",
     ]
