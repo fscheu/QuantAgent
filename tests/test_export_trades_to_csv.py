@@ -122,3 +122,38 @@ def test_equity_csv_drawdown_is_measured_from_running_peak():
         "positions_value": "40.0",
         "drawdown_pct": "0.25",
     }
+
+
+def test_equity_csv_numeric_columns_have_at_most_four_decimals():
+    """Long floats in, at most 4 decimals out, in each of the four numeric columns.
+
+    Fails if equity_to_csv writes any of them unrounded. The peak is the first point, so the
+    drawdowns are 0, then (100000.123456789 - 99876.987654321) / 100000.123456789 = 0.0012313...
+    """
+    curve = [
+        {
+            "date": datetime(2026, 4, 2, 14),
+            "equity": 100000.123456789,
+            "cash": 60000.111111111,
+            "positions_value": 40000.012345678,
+        },
+        {
+            "date": datetime(2026, 4, 2, 15),
+            "equity": 99876.987654321,
+            "cash": 60000.111111111,
+            "positions_value": 39876.876543210,
+        },
+    ]
+    rows = list(csv.DictReader(io.StringIO(equity_to_csv(curve))))
+
+    for row in rows:
+        for column in EQUITY_COLUMNS[1:]:
+            decimals = row[column].partition(".")[2]
+            assert decimals.isdigit() and len(decimals) <= 4, f"{column}={row[column]}"
+    assert rows[1] == {
+        "timestamp": "2026-04-02T15:00:00",
+        "equity": "99876.9877",
+        "cash": "60000.1111",
+        "positions_value": "39876.8765",
+        "drawdown_pct": "0.0012",
+    }
