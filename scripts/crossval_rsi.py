@@ -40,25 +40,28 @@ DIFERENCIAS DE SEMÁNTICA CONOCIDAS (motor del proyecto vs port; ninguna se corr
 1. Cantidad: el motor opera qty float (guardada con 8 decimales, Numeric(18,8)); backtesting.py solo
    unidades enteras, asi que el port la cuantiza a 2**-27 (~7.5e-9) por redondeo. Efecto: ruido ~1e-8
    relativo en qty y pnl; sin sesgo.
-2. Rechazos de riesgo: el motor valida cada orden en trading/risk_manager.py::validate_trade (caja,
-   tope 10 % del portfolio, perdida diaria 5 %, circuit breaker); el port no valida nada. Con
-   posiciones de <=5 % y SL 2 % por lo leido no deberian disparar, pero no lo confirme (sin confirmar).
-   Si el motor rechaza ordenes, el port tendria mas trades.
-3. Perdida diaria del motor: RiskManager.get_daily_pnl usa date.today() del reloj real, no la fecha
-   simulada. Solo importa si hay rechazos (punto 2); el port no lo replica (sin confirmar).
-4. Valor de portfolio para el tamano: motor = PortfolioManager.get_total_value() (caja + posiciones a
-   mercado); port = Strategy.equity de backtesting.py (caja + PnL de trades abiertos, sin comision).
-   Deberian coincidir con costos cero; diferencias de punto flotante ~1e-12 (sin confirmar).
-5. Redondeo de DB: el motor persiste precios/cantidades/pnl en Numeric(18,8) y ejecuta sus
-   comparaciones con el valor releido (SQLite y Postgres podrian redondear distinto en empates
-   exactos). El port redondea SL/TP a 8 decimales pero no qty/pnl (sin confirmar el empate).
+2. Rechazos de riesgo: el motor valida cada orden en trading/risk_manager.py::validate_trade; el port no
+   valida nada. CONFIRMADO que no hay rechazos en esta corrida: scripts/crossval_compare.py corre el
+   mismo CLI envolviendo validate_trade con un contador (los rechazos no se persisten ni se loguean en el
+   CLI): 454 llamadas (2 por trade), 0 rechazos, y el CSV de trades es identico al de la corrida normal.
+3. Perdida diaria del motor: RiskManager.get_daily_pnl usa date.today() del reloj real. CONFIRMADO que
+   no dispara aca: el termino realizado (Trade.closed_at >= hoy 00:00) es 0 porque el fixture es de
+   ene-mar 2026 y hoy es posterior; solo cuenta el no realizado de la posicion abierta (<=5 % del
+   portfolio con SL 2 %). Margen minimo al limite: 4918.53 USD sobre ~5000; breaker activo: 0 veces.
+4. Valor de portfolio para el tamano: motor = PortfolioManager.get_total_value(); port = Strategy.equity.
+   CONFIRMADO: qty (que depende de ese valor) coincide en los 227 trades (max |dif| 8.5e-9) y la
+   equity en las 2160 velas (max |dif| 5.8e-5, redondeo a 4 decimales del CSV).
+5. Redondeo de DB: el motor persiste en Numeric(18,8) y compara con el valor releido; el port redondea
+   SL/TP a 8 decimales pero no qty/pnl. SIN CONFIRMAR en general (solo se corrio SQLite; Postgres podria
+   redondear distinto en empates exactos): en SQLite no hubo efecto, los 227 exit_time coinciden.
 6. PnL de salida: el motor lo calcula en Decimal con qty a 8 decimales y lo copia de la orden de cierre
    (_sync_linked_trade_exit); el port usa el PnL de backtesting.py (size * (exit - entry) en float).
    Ruido ~1e-8; sin sesgo.
 7. Ultima vela: el motor evalua la senal tambien en la ultima vela y despues cierra todo con
-   'backtest_end' al ultimo close (_close_remaining_positions); el port reproduce el mismo orden con la
-   vela centinela, pero depende de comportamiento interno de backtesting.py 0.6.x (sin confirmar si
-   una apertura en la ultima vela, con pnl 0, se comporta igual; el fixture actual no la ejercita).
+   'backtest_end' al ultimo close (_close_remaining_positions); el port lo reproduce con la vela
+   centinela. CONFIRMADO el cierre forzado (el trade 227 sale 'backtest_end' en la ultima vela con el
+   mismo exit_time y precio en ambos). SIN CONFIRMAR la apertura en la ultima vela: el fixture no la
+   ejercita (ultima entrada 2026-03-31T17:00) y probarla exigiria otro fixture.
 8. Ventana de datos: el motor pasa a la estrategia las velas de los ultimos 7 dias (ventana por
    calendario), el port el historial completo; con RSI de 14 periodos el valor es el mismo salvo que la
    ventana tuviera huecos (el fixture es continuo 24/7).
@@ -71,9 +74,10 @@ DIFERENCIAS DE SEMÁNTICA CONOCIDAS (motor del proyecto vs port; ninguna se corr
 11. Capital inicial: el CLI del motor no pasa initial_capital, rige el default de Backtest.__init__
    (100000.0), no settings.TRADING_INITIAL_CASH (que solo usa StrategyAssembler.DEFAULTS); la tabla lee
    el default de Backtest. Hoy ambos valen 100000.0; si divergieran, la tabla seguiria al CLI.
-12. Trailing stop: implementado igual que TradingStrategy._check_trailing_stop (extremo = primer close
-   evaluado, no el de entrada). Por la aritmetica (SL 2 %, TP 3 %, trailing 5 %) sale siempre despues
-   que SL/TP, asi que no deberia aportar salidas; no probado por separado (sin confirmar).
+12. Trailing stop: igual que TradingStrategy._check_trailing_stop (extremo = primer close evaluado).
+   CONFIRMADO que no dispara: 0 salidas TRAILING_STOP en el motor (113 SL, 113 TP, 1 backtest_end) y es
+   inalcanzable: con TP en 1.03E el extremo es < 1.03E, el nivel de trailing < 0.9785E < 0.98E (el SL, que
+   se evalua antes); en short es simetrico. El port no se instrumento: sus 227 salidas coinciden en hora.
 """
 
 from __future__ import annotations
@@ -166,6 +170,7 @@ def rsi(close, period: int):
 class RsiPort(Strategy):
     n_real_bars = 0  # sin la vela centinela
     min_history = 30
+    intrabar = False  # True (solo QuantAgent-832, experimento): SL/TP nativos de backtesting.py (high/low)
 
     def init(self):
         self.rsi = self.I(rsi, self.data.Close * SCALE, PORT_PARAMS["rsi_period"])
@@ -174,8 +179,8 @@ class RsiPort(Strategy):
     def _real(self, scaled: float) -> float:
         return float(scaled) * SCALE
 
-    def _order(self, units: int):
-        (self.buy if units > 0 else self.sell)(size=abs(units))
+    def _order(self, units: int, **sl_tp):
+        (self.buy if units > 0 else self.sell)(size=abs(units), **sl_tp)
 
     def _exit_triggered(self, price: float) -> bool:
         p, long = self.pos, self.pos["units"] > 0
@@ -194,6 +199,8 @@ class RsiPort(Strategy):
         n = len(self.data)
         if n > self.n_real_bars:  # vela centinela: solo procesa las ordenes de la ultima vela real
             return
+        if self.intrabar and self.pos and self.position.size == 0:
+            self.pos = None  # la libreria cerro el trade dentro de la vela por sl=/tp=
         held = self.position.size
         assert held == (self.pos["units"] if self.pos else 0), "el broker cancelo o altero una orden"
         if n >= self.min_history:
@@ -220,13 +227,9 @@ class RsiPort(Strategy):
         units = int(round(qty * SCALE))
         if units < 1:
             return
-        self._order(sign * units)
-        self.pos = {
-            "units": sign * units,
-            "stop": round(price * (1 - sl * sign), 8),
-            "tp": round(price * (1 + tp * sign), 8),
-            "extreme": None,
-        }
+        stop, take = round(price * (1 - sl * sign), 8), round(price * (1 + tp * sign), 8)
+        self._order(sign * units, **({"sl": stop / SCALE, "tp": take / SCALE} if self.intrabar else {}))
+        self.pos = {"units": sign * units, "stop": stop, "tp": take, "extreme": None}
 
 
 def load_fixture(path: Path) -> pd.DataFrame:
@@ -245,12 +248,15 @@ def load_fixture(path: Path) -> pd.DataFrame:
     return df
 
 
-def run_port(history_bars: int) -> pd.DataFrame:
+def run_port_stats(history_bars: int, intrabar: bool = False):
     df = load_fixture(FIXTURE)
     bt = Backtest(df, RsiPort, cash=PORT_PARAMS["initial_cash"], commission=0.0, margin=1.0,
                   trade_on_close=True, hedging=False, exclusive_orders=False, finalize_trades=False)
-    stats = bt.run(n_real_bars=len(df) - 1, min_history=history_bars)
-    return stats["_trades"].sort_values("EntryTime")
+    return bt.run(n_real_bars=len(df) - 1, min_history=history_bars, intrabar=intrabar)
+
+
+def run_port(history_bars: int) -> pd.DataFrame:
+    return run_port_stats(history_bars)["_trades"].sort_values("EntryTime")
 
 
 def write_csv(trades: pd.DataFrame, out: Path) -> None:
