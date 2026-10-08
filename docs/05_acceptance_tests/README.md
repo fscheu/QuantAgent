@@ -41,6 +41,7 @@ Acceptance test documents define the criteria for validating that features work 
 - [QuantAgent-1p7-AC-stategraph-image-paths.md](./QuantAgent-1p7-AC-stategraph-image-paths.md) - Acceptance criteria for disk-backed StateGraph visualization paths
 - [QuantAgent-sft-AC-paper-runtime-hardening.md](./QuantAgent-sft-AC-paper-runtime-hardening.md) - Acceptance criteria for stable, observable paper runtime in QA
 - [QuantAgent-339-AC-qa-validator-real-runtime.md](./QuantAgent-339-AC-qa-validator-real-runtime.md) - Acceptance criteria for real-runtime post-deploy QA validation
+- [QuantAgent-832-AC-crossval-trade-por-trade.md](./QuantAgent-832-AC-crossval-trade-por-trade.md) - Comparación trade por trade del motor contra el port a backtesting.py (RSI, spy-90d): resultado, alcance, divergencias, 12 diferencias de semántica, experimento intravela
 
 ## Acceptance Criteria Format
 
