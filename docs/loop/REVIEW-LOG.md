@@ -39,4 +39,5 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-08 · #45 · R: lote-tres-estrategias vi: rsi: Trades: 227 · OK reproducible; fifty-two-week-high: Trades: 6 · OK reproducible; triple-screen: Trades: 6 · OK reproducible decido: merge
 2026-10-08 · #53 · PM: 832.1 vi: corrí el port en la VM: tabla con SI en los 10 parámetros, Trades: 227 y dos corridas con CSV idéntico; cruzado contra el engine propio con TRADING_SLIPPAGE_PCT=0: 227 de 227 trades con la misma entrada, salida y lado, diferencia máxima 8.5e-09 en qty y 1.4e-07 en pnl, PnL 13084.98 en los dos; suite 847 passed (modelo: claude-sonnet-5-5 en cloud) decido: merge
 2026-10-08 · #55 · R: 832 vi: 227 trades iguales en los dos engines; intravela 340 / 5803 decido: merge
+2026-10-08 · #56 · R: lcv vi: opción B, motor propio con stops dentro de la vela; 3 entregas ya en cola decido: merge
 ```

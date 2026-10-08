@@ -1,6 +1,6 @@
 # ADR: Engine de backtesting propio vs. alternativas de terceros
 
-**Issue:** QuantAgent-lcv · **Estado:** Propuesta (decisión de Fede) · **Fecha:** 2026-10-08
+**Issue:** QuantAgent-lcv · **Estado:** Aceptada (opción B) · **Fecha:** 2026-10-08
 
 ## Contexto y Evidencia
 
@@ -45,4 +45,8 @@ Se recomienda la **Opción B** (alineada con la posición preliminar de Fede en 
 
 ## Decisión
 
-*Campo a completar por Fede en la revisión de este PR (posición preliminar: Opción B).*
+**Opción B.** Decidido por Fede el 2026-10-08 en la revisión del PR #56, con esta línea:
+
+> R: lcv vi: opción B, motor propio con stops dentro de la vela; 3 entregas ya en cola decido: merge
+
+(Transcripta por el PM desde el comentario del PR.)
