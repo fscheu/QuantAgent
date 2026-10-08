@@ -98,12 +98,19 @@ def backtest_group() -> None:
     is_flag=True,
     help="Also show the engine's per-candle 'Insufficient data' messages on stderr.",
 )
+@click.option(
+    "--intrabar-stops",
+    is_flag=True,
+    default=False,
+    help="Evaluate stop loss and take profit against intrabar high/low prices.",
+)
 def run_backtest(
     strategy_name: str,
     fixture_name: str,
     out_path: Optional[str],
     equity_out_path: Optional[str],
     verbose: bool,
+    intrabar_stops: bool,
 ) -> None:
     try:
         meta = fixture_metadata(fixture_name)
@@ -143,6 +150,7 @@ def run_backtest(
             config={"market_hours_filter": False, "offline_data": True},
             db_session=session,
             strategy=build_strategy(STRATEGY_ALIASES[strategy_name]),
+            intrabar_stops=intrabar_stops,
         )
         # The lookback warm-up logs one "Insufficient data" warning per candle; keep the
         # output to the metric lines unless --verbose asks for them.
