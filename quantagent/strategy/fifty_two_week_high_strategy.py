@@ -47,6 +47,10 @@ class FiftyTwoWeekHighStrategy(TradingStrategy):
         self.take_profit_pct = take_profit_pct
         self.trailing_stop_pct = trailing_stop_pct
 
+    @property
+    def required_history_bars(self) -> int:
+        return self.lookback_days + max(self.trend_ma_period, self.volume_ma_period) + 1
+
     def generate_signal(
         self,
         kline_data: List[Dict],
@@ -54,8 +58,7 @@ class FiftyTwoWeekHighStrategy(TradingStrategy):
         timeframe: str,
         current_price: float,
     ) -> Optional[TradingSignal]:
-        min_candles = self.lookback_days + max(self.trend_ma_period, self.volume_ma_period) + 1
-        if len(kline_data) < min_candles:
+        if len(kline_data) < self.required_history_bars:
             return None
 
         df = pd.DataFrame(kline_data)

@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 import quantagent.database as database
 from quantagent import settings
 from quantagent.backtesting.export import COLUMNS, EQUITY_COLUMNS
-from quantagent.backtesting.fixtures import fixture_metadata
+from quantagent.backtesting.fixtures import FIXTURES_DIR, fixture_metadata
 from quantagent.cli.backtest import backtest_group
 from quantagent.models import Base, MarketData
 
@@ -93,6 +93,29 @@ def test_backtest_run_writes_csv_matching_reported_trade_count(cli_runner, tmp_p
 
     assert header == COLUMNS
     assert len(data_rows) == reported_trades
+
+
+def test_backtest_run_fifty_two_week_high_trades_on_daily_fixture(cli_runner, tmp_path):
+    out_path = tmp_path / "trades.csv"
+
+    result = cli_runner.invoke(
+        backtest_group,
+        ["run", "--strategy", "fifty-two-week-high", "--fixture", "spy-2y-1d", "--out", str(out_path)],
+    )
+
+    assert result.exit_code == 0, result.output
+    reported_trades = int(result.output.splitlines()[0].split(":")[1])
+    assert reported_trades >= 5
+
+    with out_path.open(newline="") as f:
+        rows = list(csv.DictReader(f))
+    with (FIXTURES_DIR / "spy-2y-1d.csv").open(newline="") as f:
+        fixture_close = {r["timestamp"]: float(r["close"]) for r in csv.DictReader(f)}
+
+    assert len(rows) == reported_trades
+    for row in rows:
+        assert row["entry_time"] in fixture_close
+        assert float(row["entry_price"]) == pytest.approx(fixture_close[row["entry_time"]], rel=0.001)
 
 
 def test_backtest_run_unknown_fixture_fails_cleanly(cli_runner):
