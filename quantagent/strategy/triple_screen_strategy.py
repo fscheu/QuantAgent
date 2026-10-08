@@ -52,12 +52,16 @@ class TripleScreenStrategy(TradingStrategy):
         self.trailing_stop_pct = trailing_stop_pct
 
     @property
-    def _min_candles(self) -> int:
+    def required_history_bars(self) -> int:
         return (
             self.weekly_bars * (self.trend_ema_period + 1)
             + self.stoch_k_period
             + self.stoch_d_period
         )
+
+    @property
+    def _min_candles(self) -> int:
+        return self.required_history_bars
 
     def generate_signal(
         self,
@@ -66,7 +70,7 @@ class TripleScreenStrategy(TradingStrategy):
         timeframe: str,
         current_price: float,
     ) -> Optional[TradingSignal]:
-        if len(kline_data) < self._min_candles:
+        if len(kline_data) < self.required_history_bars:
             return None
 
         df = pd.DataFrame(kline_data)

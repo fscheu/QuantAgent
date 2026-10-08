@@ -118,6 +118,29 @@ def test_backtest_run_fifty_two_week_high_trades_on_daily_fixture(cli_runner, tm
         assert float(row["entry_price"]) == pytest.approx(fixture_close[row["entry_time"]], rel=0.001)
 
 
+def test_backtest_run_triple_screen_trades_on_4h_fixture(cli_runner, tmp_path):
+    out_path = tmp_path / "trades.csv"
+
+    result = cli_runner.invoke(
+        backtest_group,
+        ["run", "--strategy", "triple-screen", "--fixture", "spy-1y-4h", "--out", str(out_path)],
+    )
+
+    assert result.exit_code == 0, result.output
+    reported_trades = int(result.output.splitlines()[0].split(":")[1])
+    assert reported_trades >= 5
+
+    with out_path.open(newline="") as f:
+        rows = list(csv.DictReader(f))
+    with (FIXTURES_DIR / "spy-1y-4h.csv").open(newline="") as f:
+        fixture_close = {r["timestamp"]: float(r["close"]) for r in csv.DictReader(f)}
+
+    assert len(rows) == reported_trades
+    for row in rows:
+        assert row["entry_time"] in fixture_close
+        assert float(row["entry_price"]) == pytest.approx(fixture_close[row["entry_time"]], rel=0.001)
+
+
 def test_backtest_run_unknown_fixture_fails_cleanly(cli_runner):
     result = cli_runner.invoke(
         backtest_group, ["run", "--strategy", "rsi", "--fixture", "does-not-exist"]
