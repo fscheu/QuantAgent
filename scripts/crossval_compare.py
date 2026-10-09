@@ -5,7 +5,8 @@ Uso:  python scripts/crossval_compare.py [--intrabar]
 
 Corre ambos sobre tests/fixtures/spy-90d.csv sin slippage ni comision: el CLI del motor como subproceso
 (TRADING_SLIPPAGE_PCT=0, SQLite nueva y vacia, --out y --equity-out) y el port (scripts/crossval_rsi.py,
-importado). Sale con 0 solo si todo cae dentro de tolerancia; un "NO COMPARADO" tambien da distinto de 0.
+importado). Con --intrabar corre ambos con stops evaluados intravela (--intrabar-stops en el motor).
+Sale con 0 solo si todo cae dentro de tolerancia; un "NO COMPARADO" tambien da distinto de 0.
 
 Tolerancias (el motor guarda Numeric(18,8): redondeo de hasta 5e-9 por valor):
 - entry_time, exit_time, symbol, side: exactos. Nº de trades y win rate: exactos. Profit factor: 1e-6 relativo.
@@ -81,9 +82,9 @@ _TMP = tempfile.TemporaryDirectory(prefix="crossval_")  # se borra al salir el p
 
 
 @functools.cache
-def run_engine(probe: bool = False) -> dict:
+def run_engine(probe: bool = False, intrabar: bool = False) -> dict:
     """Corre el CLI del motor sobre una base SQLite nueva. Cacheado por proceso (los tests lo reusan)."""
-    d = Path(_TMP.name) / ("probe" if probe else "plain")
+    d = Path(_TMP.name) / f"{'probe' if probe else 'plain'}{'_intra' if intrabar else ''}"
     d.mkdir()
     db = d / "engine.db"
     db.touch()
@@ -93,6 +94,8 @@ def run_engine(probe: bool = False) -> dict:
                    cwd=ROOT, env=env, check=True, capture_output=True, text=True)
     args = ["backtest", "run", "--strategy", "rsi", "--fixture", "spy-90d",
             "--out", str(d / "trades.csv"), "--equity-out", str(d / "equity.csv")]
+    if intrabar:
+        args.append("--intrabar-stops")
     cmd = [sys.executable, "-c", PROBE, *args] if probe else [sys.executable, "-m", "quantagent.cli", *args]
     p = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True)
     if p.returncode:
@@ -179,18 +182,24 @@ def drawdown(timestamps: list[str], equities: list[float]) -> float:
 
 def compare_all(args) -> tuple[list[str], bool]:
     lines, ok = [], True
-    eng, proj = run_engine(), port.project_params()
+    intrabar = bool(args.intrabar)
+    eng, proj = run_engine(intrabar=intrabar), port.project_params()
     eng_rows = read_rows(eng["trades"])
-    prt_rows, stats = run_port_rows(proj["_required_history_bars"], "main")
+    tag = "intrabar" if intrabar else "main"
+    prt_rows, stats = run_port_rows(proj["_required_history_bars"], tag, intrabar=intrabar)
     if args.port_pnl_delta:  # costura para el test "la comparacion puede fallar"
         idx, delta = args.port_pnl_delta.split(":")
         prt_rows[int(idx)]["pnl"] = str(float(prt_rows[int(idx)]["pnl"]) + float(delta))
+    if getattr(args, "engine_pnl_delta", None):
+        idx, delta = args.engine_pnl_delta.split(":")
+        eng_rows[int(idx)]["pnl"] = str(float(eng_rows[int(idx)]["pnl"]) + float(delta))
 
     tl, t_ok = compare_trades(eng_rows, prt_rows)
     lines += ["== Trades ==", *tl]
     ok &= t_ok
 
-    me, mp = recalc_metrics.recalc(eng["trades"]), metrics_of(prt_rows, "main")
+    me = metrics_of(eng_rows, f"eng_{tag}") if getattr(args, "engine_pnl_delta", None) else recalc_metrics.recalc(eng["trades"])
+    mp = metrics_of(prt_rows, tag)
 
     n_real = len(stats["_equity_curve"]) - 1  # sin la vela centinela
     eq_rows = read_rows(eng["equity"])
@@ -234,7 +243,7 @@ def compare_all(args) -> tuple[list[str], bool]:
                  + ("coincide" if not mism else f"DIFIERE en {mism} (CLI={pr})"))
     ok &= not mism
 
-    probe = run_engine(probe=True)
+    probe = run_engine(probe=True, intrabar=intrabar)
     same_probe = Path(probe["trades"]).read_bytes() == Path(eng["trades"]).read_bytes()
     pb = probe["probe"]
     lines += ["== Informativo: riesgo del motor (corrida instrumentada del mismo CLI) ==",
@@ -248,30 +257,14 @@ def compare_all(args) -> tuple[list[str], bool]:
     reasons = collections.Counter(r["exit_reason"] for r in eng_rows)
     lines.append(f"exit_reason del motor: {dict(reasons)} (TRAILING_STOP: {reasons['TRAILING_STOP']})")
 
-    if args.intrabar:
-        lines += intrabar_report(prt_rows, proj["_required_history_bars"])
     return lines, bool(ok)
-
-
-def intrabar_report(close_rows: list[dict], history_bars: int) -> list[str]:
-    rows, _ = run_port_rows(history_bars, "intrabar", intrabar=True)
-    summary = [f"  {label:<22} trades={m['trades']} total_pnl={m['total_pnl']:.2f} win_rate={m['win_rate']:.2%}"
-               for label, rs in (("solo al close", close_rows), ("intravela (sl=/tp=)", rows))
-               for m in [metrics_of(rs, label[:4])]]
-    intra = {r["entry_time"]: r for r in rows}
-    shared = [r for r in close_rows if r["entry_time"] in intra]
-    differ = sum(r["exit_time"] != intra[r["entry_time"]]["exit_time"] for r in shared)
-    return ["== EXPERIMENTO INFORMATIVO (NO forma parte del pass/fail): stops dentro de la vela ==",
-            *summary,
-            f"  trades 'solo al close' con la misma entrada en la variante intravela: {len(shared)} de "
-            f"{len(close_rows)}; de esos salen en OTRO instante: {differ}",
-            "  (tras la primera divergencia las secuencias de entradas dejan de coincidir)"]
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--intrabar", action="store_true", help="agrega el experimento informativo intravela")
+    ap.add_argument("--intrabar", action="store_true", help="evalua stop loss y take profit dentro de la vela")
     ap.add_argument("--port-pnl-delta", metavar="IDX:DELTA", help=argparse.SUPPRESS)  # solo para tests
+    ap.add_argument("--engine-pnl-delta", metavar="IDX:DELTA", help=argparse.SUPPRESS)  # solo para tests
     args = ap.parse_args(argv)
     lines, ok = compare_all(args)
     print("\n".join(lines))

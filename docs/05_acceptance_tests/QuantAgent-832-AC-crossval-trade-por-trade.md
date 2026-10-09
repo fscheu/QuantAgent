@@ -108,3 +108,26 @@ De los 227 trades del esquema "solo al close", solo 25 tienen una entrada que ta
 intravela, y los 25 salen en otro instante (el primer trade ya difiere; después las secuencias de entradas
 divergen, por lo que ese conteo no mide efecto trade a trade). Conclusión acotada: evaluar los stops solo al close
 cambia mucho el resultado en este fixture; el motor del proyecto no se tocó y no se afirma cuál modelo es "correcto".
+
+## Comparación trade por trade en modo intravela (QuantAgent-al2.2)
+
+Implementado el soporte de stops intravela (`intrabar_stops`) en el motor propio (`QuantAgent-al2.1`), `scripts/crossval_compare.py --intrabar` corre ambos motores evaluando stop loss y take profit dentro de la vela contra high y low.
+
+### Resultado en modo intravela
+
+Comando: `python scripts/crossval_compare.py --intrabar` (exit code 0).
+
+| Métrica | Motor del proyecto (`--intrabar-stops`) | Port (`intrabar=True`) | Dentro de tolerancia |
+|---|---|---|---|
+| Nº de trades | 340 | 340 | SI (exacto) |
+| PnL total | 5803.0169 | 5803.0169 | SI |
+| Win rate | 33.53 % (0.33529412) | 33.53 % (0.33529412) | SI (exacto) |
+| Profit factor | 1.46548 | 1.46548 | SI |
+| Max drawdown | 0.0013257202 | 0.0013257206 | SI |
+
+Diferencia máxima por columna (340 trades): qty 9.03e-09, entry_price 0, exit_price 0, pnl 1.28e-07.
+Equity punto a punto: 7.08e-05 USD de máxima diferencia en 2160 instantes.
+Motivos de salida del motor propio: 113 TAKE_PROFIT, 226 STOP_LOSS, 1 backtest_end (0 TRAILING_STOP).
+
+No se registraron diferencias de desempate ni discrepancias: los 340 trades coinciden en entrada, salida, símbolo y lado dentro de tolerancia.
+
