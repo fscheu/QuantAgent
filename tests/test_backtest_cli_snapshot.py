@@ -1,7 +1,7 @@
 """`backtest run --snapshot` (V07). Usa un snapshot armado en tmp_path a partir de un fixture; sin red ni snapshot real."""
 
 import csv
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pandas as pd
 import pytest
@@ -43,6 +43,7 @@ def snap_env(monkeypatch, tmp_path):
     db_url = f"sqlite:///{tmp_path / 'test.db'}"
     monkeypatch.setenv("DATABASE_URL", db_url)
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path / "snaps"))
+    monkeypatch.setenv("QUANTAGENT_RESERVA_DESDE", "2030-01-01")  # los datos del fixture son de 2024-2025
     engine = create_engine(db_url, connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
     original_database_url = settings.DATABASE_URL
@@ -119,3 +120,65 @@ def test_base_con_otros_datos_en_el_rango_aborta_como_con_fixtures(snap_env):
     result = _run(runner, "--snapshot", "t", "--symbol", "SPY")
     assert result.exit_code == 1
     assert "otros datos" in result.output and "snapshot" in result.output
+
+
+RESERVA = "2024-07-01"
+LOG = "reserva-accesos.log"
+
+
+def _con_reserva(snap_env, monkeypatch, tmp_path, desde=RESERVA):
+    monkeypatch.setenv("QUANTAGENT_RESERVA_DESDE", desde)
+    write_snapshot("t", {"SPY": _daily_frame()})
+    return snap_env[0], snap_env[1], tmp_path / "snaps" / LOG
+
+
+def test_sin_to_el_rango_termina_el_dia_antes_de_la_reserva(snap_env, monkeypatch, tmp_path):
+    runner, engine, log = _con_reserva(snap_env, monkeypatch, tmp_path)
+    result = _run(runner, "--snapshot", "t", "--symbol", "SPY")
+    assert result.exit_code == 0, result.output
+    with Session(engine) as session:
+        last = max(row.timestamp for row in session.query(MarketData))
+    assert last == _daily_frame().loc[:"2024-06-30"].index.max().to_pydatetime()
+    assert not log.exists()
+
+
+def test_to_en_la_reserva_sin_el_flag_sale_con_1_y_no_toca_el_log(snap_env, monkeypatch, tmp_path):
+    runner, engine, log = _con_reserva(snap_env, monkeypatch, tmp_path)
+    log.write_text("antes\n")
+    result = _run(runner, "--snapshot", "t", "--symbol", "SPY", "--to", "2024-09-30")
+    assert result.exit_code == 1
+    assert "2024-09-30" in result.output and RESERVA in result.output
+    assert log.read_text() == "antes\n"
+    with Session(engine) as session:
+        assert session.query(MarketData).count() == 0
+
+
+def test_candado_usa_2023_01_01_si_no_hay_variable(snap_env, monkeypatch, tmp_path):
+    runner, _, log = _con_reserva(snap_env, monkeypatch, tmp_path)
+    monkeypatch.delenv("QUANTAGENT_RESERVA_DESDE")
+    result = _run(runner, "--snapshot", "t", "--symbol", "SPY", "--to", "2023-06-30")
+    assert result.exit_code == 1 and "2023-01-01" in result.output
+    assert not log.exists()
+
+
+def test_abrir_reserva_corre_y_suma_una_linea_al_log(snap_env, monkeypatch, tmp_path):
+    runner, _, log = _con_reserva(snap_env, monkeypatch, tmp_path)
+    log.write_text("antes\n")
+    result = _run(runner, "--snapshot", "t", "--symbol", "SPY", "--to", "2024-09-30", "--abrir-reserva")
+    assert result.exit_code == 0, result.output
+    lines = log.read_text().splitlines()
+    assert len(lines) == 2 and lines[0] == "antes"
+    fecha, comando = lines[1].split("\t")
+    assert abs((datetime.now(timezone.utc) - datetime.fromisoformat(fecha)).total_seconds()) < 300
+    assert "--snapshot t --symbol SPY --to 2024-09-30 --abrir-reserva" in comando
+
+
+def test_abrir_reserva_con_to_anterior_no_es_una_apertura(snap_env, monkeypatch, tmp_path):
+    runner, _, log = _con_reserva(snap_env, monkeypatch, tmp_path)
+    result = _run(runner, "--snapshot", "t", "--symbol", "SPY", "--to", "2024-06-28", "--abrir-reserva")
+    assert result.exit_code == 0, result.output
+    assert not log.exists()
+
+
+def test_abrir_reserva_con_fixture_es_error_de_uso(snap_env):
+    assert _run(snap_env[0], "--fixture", DAILY, "--abrir-reserva").exit_code == 2

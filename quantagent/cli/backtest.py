@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import logging
 import math
+import os
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import click
@@ -15,7 +16,7 @@ from sqlalchemy.orm import Session
 from quantagent.backtesting.backtest import Backtest
 from quantagent.backtesting.export import TradeRow, equity_to_csv, trades_to_csv
 from quantagent.backtesting.fixtures import fixture_metadata, load_fixture, load_snapshot, snapshot_metadata
-from quantagent.data.snapshot import SnapshotError
+from quantagent.data.snapshot import SnapshotError, snapshot_root
 from quantagent.models import ActivePosition, MarketData, Trade
 from quantagent.strategy.registry import build_strategy
 
@@ -29,6 +30,26 @@ STRATEGY_ALIASES = {
     "fifty-two-week-high": "FiftyTwoWeekHighStrategy",
     "triple-screen": "TripleScreenStrategy",
 }
+
+
+RESERVA_ENV = "QUANTAGENT_RESERVA_DESDE"
+RESERVA_DEFAULT = "2023-01-01"
+RESERVA_LOG = "reserva-accesos.log"
+
+
+def _reserva_desde() -> datetime:
+    value = os.environ.get(RESERVA_ENV, RESERVA_DEFAULT)
+    try:
+        return datetime.strptime(value, "%Y-%m-%d")
+    except ValueError:
+        raise click.ClickException(f"{RESERVA_ENV}={value!r} no es una fecha YYYY-MM-DD")
+
+
+def _registrar_apertura(comando: str) -> None:
+    """Agrega fecha y comando a `$QUANTAGENT_SNAPSHOT_DIR/reserva-accesos.log`."""
+    ahora = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    with (snapshot_root() / RESERVA_LOG).open("a") as f:
+        f.write(f"{ahora}\t{comando}\n")
 
 
 def _hide_data_warnings(record: logging.LogRecord) -> bool:
@@ -87,6 +108,12 @@ def backtest_group() -> None:
 @click.option("--from", "from_date", type=click.DateTime(formats=["%Y-%m-%d"]), help="Primera sesión, YYYY-MM-DD (default: la primera del snapshot).")
 @click.option("--to", "to_date", type=click.DateTime(formats=["%Y-%m-%d"]), help="Última sesión, YYYY-MM-DD (default: la última del snapshot).")
 @click.option(
+    "--abrir-reserva",
+    "abrir_reserva",
+    is_flag=True,
+    help="Permite que --to llegue a la reserva (desde $QUANTAGENT_RESERVA_DESDE, default 2023-01-01). Queda registrado.",
+)
+@click.option(
     "--out",
     "out_path",
     type=click.Path(dir_okay=False, writable=True),
@@ -115,6 +142,7 @@ def run_backtest(
     symbol: Optional[str],
     from_date: Optional[datetime],
     to_date: Optional[datetime],
+    abrir_reserva: bool,
     out_path: Optional[str],
     equity_out_path: Optional[str],
     verbose: bool,
@@ -124,8 +152,20 @@ def run_backtest(
         raise click.UsageError("Indicá exactamente uno: --fixture o --snapshot.")
     if snapshot_name and not symbol:
         raise click.UsageError("--snapshot requiere --symbol.")
-    if fixture_name and (symbol or from_date or to_date):
-        raise click.UsageError("--symbol, --from y --to solo se usan con --snapshot.")
+    if fixture_name and (symbol or from_date or to_date or abrir_reserva):
+        raise click.UsageError("--symbol, --from, --to y --abrir-reserva solo se usan con --snapshot.")
+    abriendo = False
+    if snapshot_name:
+        reserva = _reserva_desde()
+        if to_date is None:
+            to_date = reserva - timedelta(days=1)
+        elif to_date >= reserva:
+            if not abrir_reserva:
+                raise click.ClickException(
+                    f"--to {to_date:%Y-%m-%d} cae en la reserva, que empieza el {reserva:%Y-%m-%d}: "
+                    "ninguna corrida la lee. Para abrirla, --abrir-reserva (queda registrado)."
+                )
+            abriendo = True
     try:
         if snapshot_name:
             symbol = symbol.upper()
@@ -136,6 +176,12 @@ def run_backtest(
         raise click.ClickException(f"Fixture not found: {fixture_name}") from exc
     except (SnapshotError, ValueError) as exc:
         raise click.ClickException(str(exc)) from exc
+
+    if abriendo:
+        partes = [f"backtest run --strategy {strategy_name} --snapshot {snapshot_name} --symbol {symbol}"]
+        partes += [f"--from {from_date:%Y-%m-%d}"] if from_date else []
+        partes += [f"--to {to_date:%Y-%m-%d} --abrir-reserva"]
+        _registrar_apertura(" ".join(partes))
 
     with utils.session_scope() as session:
         existing_count = (
