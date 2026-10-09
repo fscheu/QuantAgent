@@ -55,6 +55,9 @@ def write_snapshot(
     """Escribe un Parquet por símbolo y `manifest.json`. Falla si `name` ya existe."""
     if not frames:
         raise SnapshotError("no hay símbolos para guardar")
+    empty = [symbol for symbol, df in frames.items() if df.empty]
+    if empty:
+        raise SnapshotError(f"sin filas: {', '.join(sorted(empty))}")
     folder = snapshot_root(base_dir) / name
     if folder.exists():
         raise SnapshotError(f"el snapshot '{name}' ya existe: {folder}")
@@ -67,8 +70,6 @@ def write_snapshot(
 
     symbols = {}
     for symbol, df in sorted(frames.items()):
-        if df.empty:
-            raise SnapshotError(f"{symbol}: sin filas")
         path = folder / f"{symbol}.parquet"
         df.to_parquet(path)
         symbols[symbol] = {
