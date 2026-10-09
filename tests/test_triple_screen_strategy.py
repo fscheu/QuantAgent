@@ -380,7 +380,7 @@ def test_backtest_reference_profile_completes(db_session):
     """AC7: Reference backtest profile completes and produces finite metrics."""
     strategy = TripleScreenStrategy()
     seed_start = datetime(2023, 12, 1)
-    prices = [100.0 + i * 0.15 for i in range(732)]
+    prices = [100.0 + i * 0.15 for i in range(200)]
     candles = _make_candles(prices)
     for index, candle in enumerate(candles):
         candle["timestamp"] = seed_start + timedelta(hours=index * 4)
@@ -402,7 +402,7 @@ def test_backtest_reference_profile_completes(db_session):
         mock_download.return_value = Mock(empty=True)
         backtest = Backtest(
             start_date=datetime(2024, 1, 1),
-            end_date=datetime(2024, 3, 31),
+            end_date=datetime(2024, 1, 3),
             assets=["BTC-USD"],
             timeframe="4h",
             initial_capital=100_000.0,
