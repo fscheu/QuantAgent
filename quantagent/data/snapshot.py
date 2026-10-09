@@ -147,3 +147,31 @@ def verify_snapshot(name: str, base_dir: Optional[Path] = None, versioned_dir: O
     if problems:
         raise SnapshotError("; ".join(problems))
     return manifest
+
+
+def check_snapshot(name: str, base_dir: Optional[Path] = None) -> Dict[str, dict]:
+    """Reporte de calidad por símbolo (iuf D6): sesiones NYSE que faltan o sobran y filas sospechosas.
+
+    - `faltan` / `de_mas`: fechas contra el calendario NYSE entre la primera y la última fila.
+    - `ohlc_incoherente`: high < low, o high/low que no contienen a open y close (sobre lo guardado).
+    - `volumen_cero`: filas con volumen 0.
+    - `saltos`: fechas donde el cierre ajustado varía más de 20% en un día (los splits no cuentan: el ajuste los quita).
+    """
+    import pandas_market_calendars as mcal
+
+    nyse = mcal.get_calendar("NYSE")
+    report = {}
+    for symbol in load_manifest(name, base_dir)["symbols"]:
+        df = read_snapshot(name, symbol, base_dir, adjusted=False)
+        sessions = nyse.schedule(df.index.min(), df.index.max()).index.normalize()
+        days = df.index.normalize()
+        incoherent = (df["high"] < df["low"]) | (df["high"] < df[["open", "close"]].max(axis=1))
+        incoherent |= df["low"] > df[["open", "close"]].min(axis=1)
+        report[symbol] = {
+            "faltan": [d.date().isoformat() for d in sessions.difference(days)],
+            "de_mas": [d.date().isoformat() for d in days.difference(sessions)],
+            "ohlc_incoherente": int(incoherent.sum()),
+            "volumen_cero": int((df["volume"] == 0).sum()),
+            "saltos": [d.date().isoformat() for d in df.index[df["adj_close"].pct_change().abs() > 0.20]],
+        }
+    return report
