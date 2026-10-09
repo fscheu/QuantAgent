@@ -65,23 +65,27 @@ $$\text{profit\_factor} = \frac{\sum_{t \in W} t.pnl}{|\sum_{t \in L} t.pnl|} = 
 
 ---
 
-## 3. Auditoría sobre `spy-90d` / RSI (slippage 0,05%, base limpia)
+## 3. Auditoría sobre `spy-90d` / RSI (slippage 0,05%, base limpia, intrabar_stops por defecto)
+
+Con `intrabar_stops` encendido por defecto (QuantAgent-al2.3):
 
 | Métrica / Fórmula | Valor CSV (`recalc_metrics.py`) | Valor Engine (`_calculate_metrics`) | Coincide |
 |---|---|---|---|
-| Total trades (`COUNT(pnl)`) | 227 | 227 | Sí |
+| Total trades (`COUNT(pnl)`) | 340 | 340 | Sí |
 | Ganadores (`COUNTIF(pnl > 0)`) | 113 | 113 | Sí |
-| Perdedores (`COUNTIF(pnl < 0)`) | 114 | 114 | Sí |
+| Perdedores (`COUNTIF(pnl < 0)`) | 227 | 227 | Sí |
 | Neutros (`COUNTIF(pnl = 0)`) | 0 | 0 | Sí |
-| Win rate (`COUNTIF(pnl > 0) / COUNT(pnl)`) | 49.78% | 49.78% | Sí |
-| Gross profit (`SUMIF(pnl > 0)`) | 19307.91 | 19307.91 | Sí |
-| Gross loss (`ABS(SUMIF(pnl < 0))`) | 7186.94 | 7186.94 | Sí |
-| Profit factor (`Gross profit / Gross loss`) | 2.69 | 2.69 | Sí |
-| Total PnL (`SUM(pnl)`) | 12120.98 | 12120.98 | Sí |
-| Capital identity (`equity_final - initial`) | 12120.98 | 12120.98 | Sí |
-| PnL por trade (recalc vs trade log) | 227/227 | 227/227 | Sí |
-| Max drawdown (antes 0.090128) | 0.001204 | 0.001204 | Sí |
-| Sharpe ratio (antes 8.74, original 0.57) | 25.14 | 25.14 | Sí |
+| Win rate (`COUNTIF(pnl > 0) / COUNT(pnl)`) | 33.24% | 33.24% | Sí |
+| Gross profit (`SUMIF(pnl > 0)`) | 17584.82 | 17584.82 | Sí |
+| Gross loss (`ABS(SUMIF(pnl < 0))`) | 13013.55 | 13013.55 | Sí |
+| Profit factor (`Gross profit / Gross loss`) | 1.35 | 1.35 | Sí |
+| Total PnL (`SUM(pnl)`) | 4571.27 | 4571.27 | Sí |
+| Capital identity (`equity_final - initial`) | 4571.27 | 4571.27 | Sí |
+| PnL por trade (recalc vs trade log) | 340/340 | 340/340 | Sí |
+| Max drawdown | 0.001414 | 0.001414 | Sí |
+| Sharpe ratio | 9.46 | 9.46 | Sí |
+
+*(Referencia histórica previa con evaluación al close / `--no-intrabar-stops`: 227 trades, win rate 49.78%, PF 2.69, Total PnL 12120.98, max drawdown 0.001204, Sharpe 25.14).*
 
 ---
 
@@ -124,4 +128,4 @@ $$\text{años transcurridos} = \frac{(t_T - t_0)\text{ en segundos}}{365.25 \tim
 - Si la curva tiene menos de 2 puntos o cubre un lapso nulo ($\text{años transcurridos} \le 0$), $\text{Sharpe} = 0.0$.
 - Para `spy-90d` (2159 retornos horarios entre 2026-01-01T00:00:00 y 2026-03-31T23:00:00):
   $\text{días} = 89.9583$, $\text{años} = 0.24629$, $N = 2159 / 0.24629 = 8766.0$.
-  Sharpe pasa de 8.74 (con la tabla fija $N=1638$) a **25.14** (con $N=8766.0$).
+  Sharpe pasa de 8.74 (con la tabla fija $N=1638$) a **25.14** (con $N=8766.0$ al close; **9.46** con intrabar stops).

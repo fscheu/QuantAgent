@@ -57,3 +57,50 @@ def test_is_candle_after_entry():
     assert not _is_candle_after_entry(datetime(2026, 1, 2, 4, 0), entry_time)
     assert _is_candle_after_entry(datetime(2026, 1, 2, 6, 0), entry_time)
     assert _is_candle_after_entry(datetime(2026, 1, 2, 6, 0), None)
+
+
+def test_backtest_engine_intrabar_stops_defaults():
+    from unittest.mock import MagicMock
+    from quantagent.backtesting.backtest import Backtest
+
+    # Default should be True
+    bt_default = Backtest(
+        start_date=datetime(2026, 1, 1),
+        end_date=datetime(2026, 1, 2),
+        assets=["SPY"],
+        timeframe="1h",
+        db_session=MagicMock(),
+    )
+    assert bt_default.intrabar_stops is True
+
+    # Explicit False should be False
+    bt_disabled = Backtest(
+        start_date=datetime(2026, 1, 1),
+        end_date=datetime(2026, 1, 2),
+        assets=["SPY"],
+        timeframe="1h",
+        db_session=MagicMock(),
+        intrabar_stops=False,
+    )
+    assert bt_disabled.intrabar_stops is False
+
+    # Config False should be False
+    bt_config = Backtest(
+        start_date=datetime(2026, 1, 1),
+        end_date=datetime(2026, 1, 2),
+        assets=["SPY"],
+        timeframe="1h",
+        db_session=MagicMock(),
+        config={"intrabar_stops": False},
+    )
+    assert bt_config.intrabar_stops is False
+
+
+def test_cli_intrabar_stops_options():
+    from click.testing import CliRunner
+    from quantagent.cli.backtest import backtest_group
+
+    runner = CliRunner()
+    res = runner.invoke(backtest_group, ["run", "--help"])
+    assert res.exit_code == 0
+    assert "--intrabar-stops / --no-intrabar-stops" in res.output

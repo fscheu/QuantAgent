@@ -1,9 +1,9 @@
-"""Golden regression test for deterministic RSI strategy on spy-90d fixture (QuantAgent-piv).
+"""Golden regression test for deterministic RSI strategy on spy-90d fixture (QuantAgent-piv, QuantAgent-al2.3).
 
-Freezes trades and audited metrics from M1:
-- 227 closed trades matching tests/fixtures/golden/rsi-spy-90d-trades.csv row-by-row
-- Reference metrics: Win rate 49.78%, Profit factor 2.69, Sharpe ratio 25.14,
-  Total PnL 12120.98, Slippage 0.05% por lado, max drawdown 0.001204
+Freezes trades and audited metrics from M1 (with intrabar stops enabled by default):
+- 340 closed trades matching tests/fixtures/golden/rsi-spy-90d-trades.csv row-by-row
+- Reference metrics: Win rate 33.24%, Profit factor 1.35, Sharpe ratio 9.46,
+  Total PnL 4571.27, Slippage 0.05% por lado, max drawdown 0.001414
 """
 
 import csv
@@ -22,13 +22,13 @@ GOLDEN_CSV_PATH = (
 )
 
 EXPECTED_METRICS = {
-    "Trades": "227",
-    "Win rate": "49.78%",
-    "Profit factor": "2.69",
-    "Sharpe ratio": "25.14",
-    "Total PnL": "12120.98",
+    "Trades": "340",
+    "Win rate": "33.24%",
+    "Profit factor": "1.35",
+    "Sharpe ratio": "9.46",
+    "Total PnL": "4571.27",
     "Slippage": "0.05% por lado",
-    "max drawdown": "0.001204",
+    "max drawdown": "0.001414",
 }
 
 

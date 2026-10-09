@@ -200,7 +200,7 @@ class Backtest:
         db_session: Optional[Session] = None,
         use_checkpointing: bool = False,
         strategy: Optional[TradingStrategy] = None,
-        intrabar_stops: bool = False,
+        intrabar_stops: bool = True,
     ):
         """
         Initialize Backtest.
@@ -224,7 +224,7 @@ class Backtest:
         self.initial_capital = initial_capital
         self.config = config or {}
         self.use_checkpointing = use_checkpointing
-        self.intrabar_stops = intrabar_stops or bool(self.config.get("intrabar_stops", False))
+        self.intrabar_stops = bool(self.config.get("intrabar_stops", intrabar_stops))
 
         # Database
         self.db = db_session or SessionLocal()
