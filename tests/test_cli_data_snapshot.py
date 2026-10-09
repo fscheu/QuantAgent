@@ -1,11 +1,14 @@
 """`data snapshot create` y `verify` (V02). La descarga de Yahoo se reemplaza por un DataFrame fijo; sin red."""
 
+from datetime import date, timedelta
+
 import pandas as pd
 import pytest
 from click.testing import CliRunner
 
 from quantagent.cli import data as cli_data
 from quantagent.cli.data import data_group
+from quantagent.data.snapshot import load_manifest, read_snapshot
 
 
 def _fixed(symbol: str, start: str) -> pd.DataFrame:
@@ -31,8 +34,9 @@ def runner(tmp_path, monkeypatch):
     return CliRunner()
 
 
-def _create(runner, name="t"):
-    return runner.invoke(data_group, ["snapshot", "create", "--name", name, "--symbols", "SPY,TLT", "--start", "2020-01-01"])
+def _create(runner, name="t", end="2020-12-31"):
+    args = ["snapshot", "create", "--name", name, "--symbols", "SPY,TLT", "--start", "2020-01-01", "--end", end]
+    return runner.invoke(data_group, args)
 
 
 def test_crea_y_verify_da_ok(runner):
@@ -68,3 +72,24 @@ def test_simbolo_sin_filas_no_crea_nada(runner, tmp_path, monkeypatch):
     result = _create(runner)
     assert result.exit_code == 1
     assert not (tmp_path / "t").exists()
+
+
+def test_end_de_hoy_sale_con_1_y_no_crea_nada(runner, tmp_path):
+    result = _create(runner, end=date.today().isoformat())
+    assert result.exit_code == 1
+    assert "hoy o futuro" in result.output
+    assert not (tmp_path / "t").exists()
+
+
+def test_end_futuro_sale_con_1(runner, tmp_path):
+    assert _create(runner, end=(date.today() + timedelta(days=30)).isoformat()).exit_code == 1
+    assert not (tmp_path / "t").exists()
+
+
+def test_end_pasado_descarta_las_filas_posteriores(runner, tmp_path):
+    result = _create(runner, end="2020-01-03")
+    assert result.exit_code == 0, result.output
+    df = read_snapshot("t", "SPY", tmp_path, adjusted=False)
+    assert df.index.max() <= pd.Timestamp("2020-01-03")
+    assert len(df) == 2  # el fijo trae 3 filas (02, 03 y 06 de enero): la del 06 se descarta
+    assert load_manifest("t", tmp_path)["symbols"]["SPY"]["end"] == "2020-01-03"

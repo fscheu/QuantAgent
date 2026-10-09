@@ -69,38 +69,45 @@ def test_verify_compara_contra_el_manifiesto_versionado(tmp_path):
 
 
 def _split_y_dividendo() -> pd.DataFrame:
-    """Cierre sin ajustar: split 2:1 el 2020-01-08 y dividendo de 1.0 con ex-date el 2020-01-07.
+    """Serie como la entrega Yahoo con `auto_adjust=False`: `close` y volumen ya ajustados por splits.
 
-    Factor de ajuste calculado a mano: 0.5 antes del split y, antes del ex-date, además (1 - 1/102).
+    Split 2:1 el 2020-01-08: el cierre no salta (51 -> 51) y el volumen está expresado en acciones post-split.
+    Dividendo de 1.0 con ex-date el 2020-01-07: `adj_close` lo descuenta antes de esa fecha con el factor
+    1 - 1.0 / 51 = 50/51 (51 es el cierre del 2020-01-06, el día previo al ex-date).
     """
     idx = pd.DatetimeIndex(["2020-01-02", "2020-01-03", "2020-01-06", "2020-01-07", "2020-01-08", "2020-01-09"])
-    close = pd.Series([100.0, 102.0, 102.0, 101.0, 51.0, 52.0], index=idx)
-    factor = pd.Series([0.5 * (1 - 1 / 102)] * 3 + [0.5, 1.0, 1.0], index=idx)
+    close = pd.Series([50.0, 51.0, 51.0, 50.5, 51.0, 52.0], index=idx)
+    adj_close = pd.Series([50.0 * 50 / 51, 50.0, 50.0, 50.5, 51.0, 52.0], index=idx)
     return pd.DataFrame(
         {
             "open": close - 0.5,
             "high": close + 1.0,
             "low": close - 1.0,
             "close": close,
-            "adj_close": close * factor,
-            "volume": [10, 20, 30, 40, 80, 90],
+            "adj_close": adj_close,
+            "volume": [20, 40, 60, 80, 80, 90],
         },
         index=idx.rename("timestamp"),
     )
 
 
-def test_ajuste_por_split_y_dividendo_no_deja_saltos(tmp_path):
+def test_ajuste_por_dividendo_sin_salto_en_el_split(tmp_path):
     raw = _split_y_dividendo()
     write_snapshot("t", {"SPY": raw}, base_dir=tmp_path)
     df = read_snapshot("t", "SPY", tmp_path)
 
-    # El cierre sin ajustar salta -50% en la fecha del split; el ajustado no.
-    assert df["close_sin_ajustar"].pct_change().loc["2020-01-08"] == pytest.approx(51 / 101 - 1)
-    assert df["close"].pct_change().abs().max() < 0.03
-    # Todo el OHLC se mueve con el mismo factor y el volumen queda como viene.
-    factor = raw["adj_close"] / raw["close"]
-    for column in ("open", "high", "low", "close"):
-        pd.testing.assert_series_equal(df[column], raw[column] * factor, check_names=False)
+    # Lo guardado no salta en la fecha del split; el dividendo es lo único que separa close de adj_close.
+    assert df["close_sin_dividendos"].pct_change().abs().max() < 0.03  # un split mal ajustado daría -50%
+    assert df["close_sin_dividendos"].tolist() == raw["close"].tolist()
+    # Cierre ajustado calculado a mano: 51 * 50/51 = 50 antes del ex-date, igual después.
+    assert df["close"].tolist() == pytest.approx([2500 / 51, 50.0, 50.0, 50.5, 51.0, 52.0])
+    # Con el ajuste, el retorno del ex-date es +1% (50 -> 50.5); sin él sería -0.98% (51 -> 50.5).
+    assert df["close"].pct_change().loc["2020-01-07"] == pytest.approx(0.01)
+    assert df["close_sin_dividendos"].pct_change().loc["2020-01-07"] == pytest.approx(50.5 / 51 - 1)
+    # Todo el OHLC se mueve con el mismo factor, calculado a mano en la primera fila (50/51).
+    assert df["open"].iloc[0] == pytest.approx(49.5 * 50 / 51)
+    assert df["high"].iloc[0] == pytest.approx(51.0 * 50 / 51)
     assert (df["low"] <= df["close"]).all() and (df["close"] <= df["high"]).all()
+    # El volumen no se toca y adj_close se descarta.
     assert df["volume"].tolist() == raw["volume"].tolist()
     assert "adj_close" not in df.columns
