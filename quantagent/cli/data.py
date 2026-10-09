@@ -7,7 +7,14 @@ from typing import Dict
 import click
 import pandas as pd
 
-from quantagent.data.snapshot import SnapshotError, load_manifest, snapshot_root, verify_snapshot, write_snapshot
+from quantagent.data.snapshot import (
+    SnapshotError,
+    check_snapshot,
+    load_manifest,
+    snapshot_root,
+    verify_snapshot,
+    write_snapshot,
+)
 
 _COLUMNS = {
     "Open": "open",
@@ -70,3 +77,22 @@ def verify_snapshot_cmd(name: str) -> None:
     except SnapshotError as exc:
         raise click.ClickException(str(exc))
     click.echo(f"OK {len(symbols)} símbolos, {sum(i['rows'] for i in symbols.values())} filas")
+
+
+@snapshot_group.command("check", help="Reporte de calidad contra el calendario NYSE. Exit 1 solo si faltan sesiones.")
+@click.option("--name", required=True)
+def check_snapshot_cmd(name: str) -> None:
+    try:
+        report = check_snapshot(name)
+    except SnapshotError as exc:
+        raise click.ClickException(str(exc))
+    for symbol, r in report.items():
+        click.echo(
+            f"{symbol}: faltan {len(r['faltan'])}, de más {len(r['de_mas'])}, OHLC incoherente {r['ohlc_incoherente']}, "
+            f"volumen 0 {r['volumen_cero']}, saltos >20% {len(r['saltos'])}"
+        )
+        for label, key in (("faltan", "faltan"), ("de más", "de_mas"), ("saltos", "saltos")):
+            if r[key]:
+                click.echo(f"  {label}: {', '.join(r[key][:10])}{' ...' if len(r[key]) > 10 else ''}")
+    if any(r["faltan"] for r in report.values()):
+        raise SystemExit(1)
