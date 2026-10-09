@@ -426,6 +426,7 @@ Los primeros 5 son los más fáciles de revisar.
 | V02 | `QuantAgent-36g` | `data snapshot create` y `verify` desde Yahoo; no pisa un nombre existente | (VM) crea `etf-1d-2026-10` y `verify` da `OK 12 símbolos`; repetir `create` sale con 1 | probar | L4 |
 | V03 | `QuantAgent-jcl` | Precios ajustados por splits y dividendos; guarda el cierre sin ajustar | Test con split 2:1 a mano: el ajustado no salta y el sin ajustar sí | leer | L4 |
 | V04 | `QuantAgent-r3q` | `data snapshot check`: sesiones contra NYSE, OHLC incoherente, volumen 0, saltos | Test que borra un día y lo nombra; (VM) `faltan 0` en los 12 | probar | L4 |
+| V03b | `QuantAgent-5rc` | Nombre correcto del cierre guardado (Yahoo ya ajusta por splits) y `--end` obligatorio en `create` | `git grep -i "sin ajustar\|sin_ajustar" -- quantagent tests` vacío; `create` con `--end` de hoy sale con 1 | leer | L4 |
 | V05 | `QuantAgent-1xd` | Fixture `spy-90d-habiles` (sin fines de semana) y `--fixture` en `crossval_*` | `crossval_compare.py --fixture spy-90d-habiles --intrabar` imprime resultado y `Entradas en fin de semana: N` | probar | L4 |
 | V06 | `QuantAgent-48n` | El engine avanza por las velas del dato, no por una grilla de calendario | Sobre `spy-90d-habiles`: `TODO DENTRO DE TOLERANCIA` y 0 en fin de semana; referencias de M1 sin cambio | probar | L4 |
 | V07 | `QuantAgent-kwi` | `backtest run --snapshot --symbol --from --to` | (VM) rsi/SPY 2007–2018 exit 0 con 6 líneas; golden de M1 verde | probar | L4 |
