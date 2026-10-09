@@ -23,7 +23,13 @@ def run(argv):
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
         return {"rc": c.main(argv), "out": buf.getvalue()}
-print(json.dumps([run([]), run(["--port-pnl-delta", "5:0.5"])]))
+print(json.dumps([
+    run([]),
+    run(["--port-pnl-delta", "5:0.5"]),
+    run(["--intrabar"]),
+    run(["--intrabar", "--port-pnl-delta", "5:0.5"]),
+    run(["--intrabar", "--engine-pnl-delta", "5:0.5"]),
+]))
 """
 
 
@@ -47,3 +53,20 @@ def test_comparison_fails_and_names_the_altered_trade(runs):
     assert runs[1]["rc"] == 1, runs[1]["out"]
     assert "PRIMER TRADE DIFERENTE: nº 6, columnas: pnl" in runs[1]["out"]
     assert re.search(r"total_pnl .*NO\n", runs[1]["out"]), runs[1]["out"]
+
+
+def test_intrabar_comparison_passes_on_unmodified_engines(runs):
+    # Valida que motor y port coinciden en modo intravela: 340 trades y curvas dentro de tolerancia.
+    assert runs[2]["rc"] == 0, runs[2]["out"]
+    assert "Trades: motor=340 port=340" in runs[2]["out"]
+    assert "RESULTADO: TODO DENTRO DE TOLERANCIA" in runs[2]["out"]
+
+
+def test_intrabar_comparison_fails_and_names_altered_trade_on_either_side(runs):
+    # Valida que la comparacion intravela falla si se altera un trade de cualquiera de los dos lados:
+    # tanto alterando el port (runs[3]) como alterando el motor propio (runs[4]).
+    for idx in (3, 4):
+        run_res = runs[idx]
+        assert run_res["rc"] == 1, run_res["out"]
+        assert "PRIMER TRADE DIFERENTE: nº 6, columnas: pnl" in run_res["out"]
+        assert re.search(r"total_pnl .*NO\n", run_res["out"]), run_res["out"]
