@@ -21,7 +21,7 @@ from io import StringIO
 from unittest.mock import patch
 
 import pytest
-from sqlalchemy import inspect, text
+from sqlalchemy import inspect
 
 from quantagent import settings
 from quantagent.database import SessionLocal, init_db
@@ -91,15 +91,8 @@ class TestDatabaseMigration:
 
     def test_logs_table_exists(self):
         """Verify logs table exists in database."""
-        with SessionLocal() as session:
-            result = session.execute(
-                text(
-                    "SELECT table_name FROM information_schema.tables "
-                    "WHERE table_name = 'logs'"
-                )
-            )
-            tables = result.fetchall()
-            assert len(tables) == 1, "logs table does not exist"
+        inspector = inspect(SessionLocal().bind)
+        assert inspector.has_table("logs"), "logs table does not exist"
 
     def test_logs_table_has_required_indexes(self):
         """Verify logs table has all required indexes."""
@@ -112,14 +105,11 @@ class TestDatabaseMigration:
             "ix_logs_thread_id",
         }
 
-        with SessionLocal() as session:
-            result = session.execute(
-                text("SELECT indexname FROM pg_indexes WHERE tablename = 'logs'")  # noqa: E501
-            )
-            actual_indexes = {row[0] for row in result.fetchall()}
+        inspector = inspect(SessionLocal().bind)
+        actual_indexes = {idx["name"] for idx in inspector.get_indexes("logs")}
 
-            missing = expected_indexes - actual_indexes
-            assert not missing, f"Missing indexes: {missing}"
+        missing = expected_indexes - actual_indexes
+        assert not missing, f"Missing indexes: {missing}"
 
     def test_logs_table_schema_matches_model(self):
         """Verify logs table columns match Log ORM model."""
