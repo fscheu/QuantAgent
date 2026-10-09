@@ -412,6 +412,7 @@ Los primeros 5 son los más fáciles de revisar.
 | T23b | `QuantAgent-al2.1` | Engine: modo `intrabar_stops` apagado por defecto (regla + tests) | Con el modo apagado el golden de T20 sigue verde; con `--intrabar-stops` rsi/spy-90d da `Trades:` distinto de 227 | probar | L3 |
 | T23c | `QuantAgent-al2.2` | Comparar el engine con `intrabar_stops` contra el port intravela | `crossval_compare.py --intrabar` imprime `TODO DENTRO DE TOLERANCIA` o lista cada trade que difiere con su causa | probar | L3 |
 | T23d | `QuantAgent-al2.3` | `intrabar_stops` por defecto y números de referencia nuevos | `backtest verify` da `OK reproducible` en las tres estrategias; tabla antes / después en el PR | decidir | L3 |
+| T23e | `QuantAgent-dj0` | La suite corre limpia sobre la base temporal de `try.sh` (15 tests solo-Postgres) | `try.sh <rama> -- 'python -m pytest -q -m "not slow and not api"'` da 0 failed y 0 errors; CI verde sin saltear esos tests | leer | L3 |
 | T25 | `QuantAgent-lp1` | Borrador del plan siguiente con la evidencia de T01–T24 | Doc con cola nueva en el mismo formato | decidir | L3 |
 
 Con el modo por lotes, el ritmo lo marcan las decisiones de Fede (T13, T10, T22, T23) y no la implementación.
@@ -421,6 +422,9 @@ T23b, T23c y T23d se agregaron el 2026-10-08: T22 mostró que el engine evalúa 
 cierre de la vela (227 trades / 13084.98 contra 340 / 5803.02 evaluando dentro de la vela). Fede decidió en la
 revisión de #55 seguir con el engine propio y corregirlo dentro de L3. T23d cambia los números de referencia de
 las tres estrategias.
+
+T23e se agregó el 2026-10-09 a pedido de Fede: 15 tests usan SQL solo de Postgres y fallan sobre la base temporal
+de `try.sh`, lo que obliga al PM a comparar la suite del lote contra la del PR en cada revisión (unos 30 minutos).
 
 T08b y T08c se agregaron el 2026-10-06: al revisar T08, Fede detectó que el script daba por bueno el `pnl` del CSV.
 El diagnóstico mostró 1% de slippage por lado y un CSV que mezcla precio ejecutado y teórico. Cambian los números
