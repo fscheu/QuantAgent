@@ -5,7 +5,7 @@ import math
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -68,6 +68,108 @@ class BacktestMetrics:
             self.close_reasons = {}
 
 
+def _get_field(obj: Any, key: str, default: Any = None) -> Any:
+    """Extract a named field from a dict, pandas Series, or object."""
+    for candidate in (key, key.capitalize(), key.upper(), key.lower()):
+        if isinstance(obj, dict) and candidate in obj:
+            return obj[candidate]
+        if hasattr(obj, candidate):
+            return getattr(obj, candidate)
+        try:
+            if candidate in obj:
+                return obj[candidate]
+        except (KeyError, TypeError, IndexError):
+            pass
+    return default
+
+
+def _is_candle_after_entry(
+    current_date: Optional[datetime],
+    decision_timestamp: Optional[datetime],
+) -> bool:
+    """Return True if current candle is strictly posterior to entry candle."""
+    if current_date is None or decision_timestamp is None:
+        return True
+    c_date, d_date = current_date, decision_timestamp
+    if c_date.tzinfo is not None and d_date.tzinfo is None:
+        c_date = c_date.replace(tzinfo=None)
+    elif c_date.tzinfo is None and d_date.tzinfo is not None:
+        d_date = d_date.replace(tzinfo=None)
+    return c_date > d_date
+
+
+def check_intrabar_stops(
+    position: Any,
+    candle: Any,
+) -> Optional[Tuple[str, float]]:
+    """Evaluate whether an active position hits stop loss or take profit intrabar.
+
+    Pure function: (position, candle) -> (reason, exit_price) or None.
+    """
+    raw_side = _get_field(position, "side")
+    if raw_side is None:
+        return None
+    if hasattr(raw_side, "value"):
+        raw_side = raw_side.value
+    side_str = str(raw_side).lower()
+
+    is_long = side_str in ("buy", "long")
+    is_short = side_str in ("sell", "short")
+    if not (is_long or is_short):
+        return None
+
+    raw_sl = _get_field(position, "stop_loss")
+    raw_tp = _get_field(position, "take_profit")
+    sl = float(raw_sl) if raw_sl is not None and float(raw_sl) > 0 else None
+    tp = float(raw_tp) if raw_tp is not None and float(raw_tp) > 0 else None
+
+    open_val = _get_field(candle, "open")
+    high_val = _get_field(candle, "high")
+    low_val = _get_field(candle, "low")
+    if open_val is None or high_val is None or low_val is None:
+        return None
+
+    open_price = float(open_val)
+    high_price = float(high_val)
+    low_price = float(low_val)
+
+    if is_long:
+        # 1. Opening gap
+        if sl is not None and open_price <= sl:
+            return ("STOP_LOSS", open_price)
+        if tp is not None and open_price >= tp:
+            return ("TAKE_PROFIT", open_price)
+
+        # 2 & 3. Intrabar hit (if both, STOP_LOSS wins)
+        hit_sl = sl is not None and low_price <= sl
+        hit_tp = tp is not None and high_price >= tp
+
+        if hit_sl:
+            return ("STOP_LOSS", sl)
+        if hit_tp:
+            return ("TAKE_PROFIT", tp)
+
+        return None
+
+    else:  # is_short
+        # 1. Opening gap
+        if sl is not None and open_price >= sl:
+            return ("STOP_LOSS", open_price)
+        if tp is not None and open_price <= tp:
+            return ("TAKE_PROFIT", open_price)
+
+        # 2 & 3. Intrabar hit (if both, STOP_LOSS wins)
+        hit_sl = sl is not None and high_price >= sl
+        hit_tp = tp is not None and low_price <= tp
+
+        if hit_sl:
+            return ("STOP_LOSS", sl)
+        if hit_tp:
+            return ("TAKE_PROFIT", tp)
+
+        return None
+
+
 class Backtest:
     """
     Backtesting engine for validating trading strategies.
@@ -98,6 +200,7 @@ class Backtest:
         db_session: Optional[Session] = None,
         use_checkpointing: bool = False,
         strategy: Optional[TradingStrategy] = None,
+        intrabar_stops: bool = True,
     ):
         """
         Initialize Backtest.
@@ -112,6 +215,7 @@ class Backtest:
             db_session: Database session (creates new if None)
             use_checkpointing: Enable LangGraph checkpointing for state persistence
             strategy: Optional TradingStrategy. If None, uses LLMAgentStrategy with TradingGraph
+            intrabar_stops: Evaluate stop loss and take profit against intrabar high/low prices
         """
         self.start_date = start_date
         self.end_date = end_date
@@ -120,6 +224,7 @@ class Backtest:
         self.initial_capital = initial_capital
         self.config = config or {}
         self.use_checkpointing = use_checkpointing
+        self.intrabar_stops = bool(self.config.get("intrabar_stops", intrabar_stops))
 
         # Database
         self.db = db_session or SessionLocal()
@@ -449,22 +554,37 @@ class Backtest:
         self.total_candles_processed += 1
 
         if active_pos:
-            should_exit, reason = self.strategy.should_exit(
-                active_pos, current_price, df
+            intrabar_exit = (
+                check_intrabar_stops(active_pos, df.iloc[-1])
+                if self.intrabar_stops
+                and _is_candle_after_entry(current_date, active_pos.decision_timestamp)
+                else None
             )
-            if should_exit:
+            if intrabar_exit is not None:
+                reason, exit_price = intrabar_exit
                 self._close_position_with_trade_sync(
-                    active_pos, reason, current_price, timestamp=current_date
+                    active_pos, reason, exit_price, timestamp=current_date
                 )
                 logger.debug(
-                    f"[REPLAY] {asset}: Closed position ({reason}) @ ${current_price:.2f}"
+                    f"[REPLAY] {asset}: Closed position ({reason}) @ ${exit_price:.2f}"
                 )
             else:
-                prev_close = float(df.iloc[-2]["close"])
-                self.position_monitor.update_candle_tracking(
-                    active_pos, current_price, prev_close
+                should_exit, reason = self.strategy.should_exit(
+                    active_pos, current_price, df
                 )
-                return
+                if should_exit:
+                    self._close_position_with_trade_sync(
+                        active_pos, reason, current_price, timestamp=current_date
+                    )
+                    logger.debug(
+                        f"[REPLAY] {asset}: Closed position ({reason}) @ ${current_price:.2f}"
+                    )
+                else:
+                    prev_close = float(df.iloc[-2]["close"])
+                    self.position_monitor.update_candle_tracking(
+                        active_pos, current_price, prev_close
+                    )
+                    return
 
         stored_signal = signal_map.get((asset, current_date))
         if stored_signal is None or stored_signal.signal == TradeSignal.NEUTRAL:
@@ -677,28 +797,44 @@ class Backtest:
         self.total_candles_processed += 1
 
         if active_pos:
-            # Position active: check exit conditions via strategy
-            should_exit, reason = self.strategy.should_exit(
-                active_pos, current_price, df
+            intrabar_exit = (
+                check_intrabar_stops(active_pos, df.iloc[-1])
+                if self.intrabar_stops
+                and _is_candle_after_entry(current_date, active_pos.decision_timestamp)
+                else None
             )
-
-            if should_exit:
+            if intrabar_exit is not None:
+                reason, exit_price = intrabar_exit
                 self._close_position_with_trade_sync(
-                    active_pos, reason, current_price, timestamp=current_date
+                    active_pos, reason, exit_price, timestamp=current_date
                 )
                 logger.info(
-                    f"{asset}: Closed position - {reason} @ ${current_price:.2f}"
+                    f"{asset}: Closed position - {reason} @ ${exit_price:.2f}"
                 )
                 # Continue to potentially open new position below
             else:
-                # Position still active: update tracking only (NO INVOKE)
-                prev_close = (
-                    float(df.iloc[-2]["close"]) if len(df) >= 2 else current_price
+                # Position active: check exit conditions via strategy
+                should_exit, reason = self.strategy.should_exit(
+                    active_pos, current_price, df
                 )
-                self.position_monitor.update_candle_tracking(
-                    active_pos, current_price, prev_close
-                )
-                return  # Early return - invocation saved
+
+                if should_exit:
+                    self._close_position_with_trade_sync(
+                        active_pos, reason, current_price, timestamp=current_date
+                    )
+                    logger.info(
+                        f"{asset}: Closed position - {reason} @ ${current_price:.2f}"
+                    )
+                    # Continue to potentially open new position below
+                else:
+                    # Position still active: update tracking only (NO INVOKE)
+                    prev_close = (
+                        float(df.iloc[-2]["close"]) if len(df) >= 2 else current_price
+                    )
+                    self.position_monitor.update_candle_tracking(
+                        active_pos, current_price, prev_close
+                    )
+                    return  # Early return - invocation saved
 
         # No active position (or just closed): generate signal
         if isinstance(self.strategy, LLMAgentStrategy):
