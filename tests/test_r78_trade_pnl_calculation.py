@@ -43,17 +43,26 @@ def test_db():
         # Fallback to SQLite for local development
         engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
+
+    def _clean_tables():
+        if engine.dialect.name == "postgresql":
+            tables = ", ".join(table.name for table in reversed(Base.metadata.sorted_tables))
+            with engine.begin() as conn:
+                conn.execute(text(f"TRUNCATE TABLE {tables} RESTART IDENTITY CASCADE"))
+        else:
+            with engine.begin() as conn:
+                for table in reversed(Base.metadata.sorted_tables):
+                    conn.execute(table.delete())
+
     if database_url:
-        tables = ", ".join(table.name for table in reversed(Base.metadata.sorted_tables))
-        with engine.begin() as conn:
-            conn.execute(text(f"TRUNCATE TABLE {tables} RESTART IDENTITY CASCADE"))
+        _clean_tables()
     TestSession = sessionmaker(bind=engine)
     db = TestSession()
     yield db
     db.close()
     if database_url:
-        with engine.begin() as conn:
-            conn.execute(text(f"TRUNCATE TABLE {tables} RESTART IDENTITY CASCADE"))
+        _clean_tables()
+    engine.dispose()
 
 
 @pytest.fixture
