@@ -48,7 +48,8 @@ pip install -e ".[dev]"
 docker-compose up -d db
 
 # 3. Run the test suite (no API key or network needed)
-pytest -q -m "not slow and not api"
+python -m pytest -q -m "not slow and not api and not oraculo"
+# Los oráculos corren en el CI de cada PR y el PM los corre en cada revisión que toque quantagent/backtesting/, quantagent/trading/, quantagent/portfolio/ o quantagent/strategy/, y en el punto de control de cada lote, con python -m pytest -q -m oraculo.
 
 # 4. Run a backtest (requires OPENAI_API_KEY or ANTHROPIC_API_KEY, and network)
 export OPENAI_API_KEY="sk-..."  # or ANTHROPIC_API_KEY

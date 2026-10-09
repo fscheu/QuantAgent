@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = pytest.mark.oraculo
+
 pytest.importorskip("backtesting")
 
 ROOT = Path(__file__).resolve().parent.parent

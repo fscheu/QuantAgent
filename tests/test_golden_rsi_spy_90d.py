@@ -13,9 +13,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
 from sqlalchemy import create_engine
 
 from quantagent.models import Base
+
+pytestmark = pytest.mark.oraculo
 
 GOLDEN_CSV_PATH = (
     Path(__file__).resolve().parent / "fixtures" / "golden" / "rsi-spy-90d-trades.csv"

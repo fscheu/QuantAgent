@@ -234,7 +234,8 @@ decidir está en el cuerpo del PR.
 
 Todo PR `loop` cumple, antes de abrirse:
 
-1. `pytest -q -m "not slow and not api"` → 0 failed.
+1. `python -m pytest -q -m "not slow and not api and not oraculo"` → 0 failed.
+   Los oráculos corren en el CI de cada PR y el PM los corre en cada revisión que toque `quantagent/backtesting/`, `quantagent/trading/`, `quantagent/portfolio/` o `quantagent/strategy/`, y en el punto de control de cada lote, con `python -m pytest -q -m oraculo`.
 2. `scripts/loop/smoke.sh` → exit 0 (SQLite temporal, sin tocar la base de desarrollo).
 3. CI verde en el PR (el workflow corre en PRs hacia `main` y hacia `lote/**`; lo verifica el PM).
 4. Si cambia un comportamiento documentado, el README o el doc afectado se actualiza en el mismo PR.
