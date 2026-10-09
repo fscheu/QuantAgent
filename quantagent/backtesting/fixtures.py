@@ -5,9 +5,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
+from typing import Optional
 
+import pandas as pd
 from sqlalchemy.orm import Session
 
+from quantagent.data.snapshot import load_manifest, read_snapshot
 from quantagent.models import MarketData
 
 FIXTURES_DIR = Path(__file__).resolve().parent.parent.parent / "tests" / "fixtures"
@@ -73,6 +76,52 @@ def load_fixture(session: Session, name: str) -> int:
                 )
             )
 
+    session.bulk_save_objects(rows)
+    session.commit()
+    return len(rows)
+
+
+def _snapshot_range(name: str, symbol: str, start: Optional[datetime], end: Optional[datetime]) -> pd.DataFrame:
+    """Velas ajustadas de `symbol` entre `start` y `end` inclusive (fechas); `None` deja abierto ese borde."""
+    df = read_snapshot(name, symbol)
+    if start is not None:
+        df = df[df.index >= pd.Timestamp(start)]
+    if end is not None:
+        df = df[df.index < pd.Timestamp(end) + pd.Timedelta(days=1)]
+    if df.empty:
+        raise ValueError(f"El snapshot '{name}' no tiene velas de {symbol} en el rango pedido")
+    return df
+
+
+def snapshot_metadata(name: str, symbol: str, start: Optional[datetime], end: Optional[datetime]) -> FixtureMetadata:
+    """Resume el rango de un snapshot como `fixture_metadata`, sin tocar la base."""
+    df = _snapshot_range(name, symbol, start, end)
+    return FixtureMetadata(
+        symbol=symbol,
+        timeframe=load_manifest(name)["timeframe"],
+        start_date=df.index.min().to_pydatetime(),
+        end_date=df.index.max().to_pydatetime(),
+        row_count=len(df),
+    )
+
+
+def load_snapshot(session: Session, name: str, symbol: str, start: Optional[datetime], end: Optional[datetime]) -> int:
+    """Carga en `market_data` las velas ajustadas del rango, como `load_fixture`. Devuelve la cantidad de filas."""
+    df = _snapshot_range(name, symbol, start, end)
+    timeframe = load_manifest(name)["timeframe"]
+    rows = [
+        MarketData(
+            symbol=symbol,
+            timeframe=timeframe,
+            timestamp=ts.to_pydatetime(),
+            open=Decimal(f"{r.open:.8f}"),
+            high=Decimal(f"{r.high:.8f}"),
+            low=Decimal(f"{r.low:.8f}"),
+            close=Decimal(f"{r.close:.8f}"),
+            volume=Decimal(int(r.volume)),
+        )
+        for ts, r in df.iterrows()
+    ]
     session.bulk_save_objects(rows)
     session.commit()
     return len(rows)

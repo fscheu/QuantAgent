@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import math
 from contextlib import contextmanager
+from datetime import datetime
 from typing import Optional
 
 import click
@@ -13,7 +14,8 @@ from sqlalchemy.orm import Session
 
 from quantagent.backtesting.backtest import Backtest
 from quantagent.backtesting.export import TradeRow, equity_to_csv, trades_to_csv
-from quantagent.backtesting.fixtures import fixture_metadata, load_fixture
+from quantagent.backtesting.fixtures import fixture_metadata, load_fixture, load_snapshot, snapshot_metadata
+from quantagent.data.snapshot import SnapshotError
 from quantagent.models import ActivePosition, MarketData, Trade
 from quantagent.strategy.registry import build_strategy
 
@@ -78,9 +80,12 @@ def backtest_group() -> None:
 @click.option(
     "--fixture",
     "fixture_name",
-    required=True,
-    help="Fixture name under tests/fixtures/ (without the .csv extension).",
+    help="Fixture name under tests/fixtures/ (without the .csv extension). Excluyente con --snapshot.",
 )
+@click.option("--snapshot", "snapshot_name", help="Snapshot en $QUANTAGENT_SNAPSHOT_DIR (velas ajustadas). Requiere --symbol.")
+@click.option("--symbol", "symbol", help="Símbolo del snapshot (uno por corrida).")
+@click.option("--from", "from_date", type=click.DateTime(formats=["%Y-%m-%d"]), help="Primera sesión, YYYY-MM-DD (default: la primera del snapshot).")
+@click.option("--to", "to_date", type=click.DateTime(formats=["%Y-%m-%d"]), help="Última sesión, YYYY-MM-DD (default: la última del snapshot).")
 @click.option(
     "--out",
     "out_path",
@@ -105,16 +110,32 @@ def backtest_group() -> None:
 )
 def run_backtest(
     strategy_name: str,
-    fixture_name: str,
+    fixture_name: Optional[str],
+    snapshot_name: Optional[str],
+    symbol: Optional[str],
+    from_date: Optional[datetime],
+    to_date: Optional[datetime],
     out_path: Optional[str],
     equity_out_path: Optional[str],
     verbose: bool,
     intrabar_stops: bool,
 ) -> None:
+    if bool(fixture_name) == bool(snapshot_name):
+        raise click.UsageError("Indicá exactamente uno: --fixture o --snapshot.")
+    if snapshot_name and not symbol:
+        raise click.UsageError("--snapshot requiere --symbol.")
+    if fixture_name and (symbol or from_date or to_date):
+        raise click.UsageError("--symbol, --from y --to solo se usan con --snapshot.")
     try:
-        meta = fixture_metadata(fixture_name)
+        if snapshot_name:
+            symbol = symbol.upper()
+            meta = snapshot_metadata(snapshot_name, symbol, from_date, to_date)
+        else:
+            meta = fixture_metadata(fixture_name)
     except FileNotFoundError as exc:
         raise click.ClickException(f"Fixture not found: {fixture_name}") from exc
+    except (SnapshotError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
 
     with utils.session_scope() as session:
         existing_count = (
@@ -128,11 +149,14 @@ def run_backtest(
             .count()
         )
         if existing_count == 0:
-            load_fixture(session, fixture_name)
+            if snapshot_name:
+                load_snapshot(session, snapshot_name, symbol, from_date, to_date)
+            else:
+                load_fixture(session, fixture_name)
         elif existing_count != meta.row_count:
             raise click.ClickException(
                 f"La base tiene otros datos para {meta.symbol} {meta.timeframe} en el rango "
-                f"del fixture ({existing_count} filas, se esperaban {meta.row_count}): "
+                f"del {'snapshot' if snapshot_name else 'fixture'} ({existing_count} filas, se esperaban {meta.row_count}): "
                 "usá una base limpia."
             )
 
@@ -157,7 +181,7 @@ def run_backtest(
         if not verbose:
             engine_logger.addFilter(_hide_data_warnings)
         try:
-            metrics = bt.run(name=f"cli-{strategy_name}-{fixture_name}")
+            metrics = bt.run(name=f"cli-{strategy_name}-{fixture_name or snapshot_name}")
         finally:
             engine_logger.removeFilter(_hide_data_warnings)
 
