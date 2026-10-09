@@ -367,7 +367,7 @@ Lotes (definidos por el PM el 2026-10-06; cada uno se abre cuando Fede mergea el
 | L1 | `lote/metricas-auditadas` | T08c, T13, T09–T12, T14, T15, T15b, T10b, T20 | Las 5 métricas de rsi/spy-90d coinciden con un recálculo que no importa `quantagent`, la corrida es reproducible (`backtest verify`) y un test golden las congela | T13 (anualización del Sharpe), T10 (trades con pnl = 0) |
 | L2 | `lote/tres-estrategias` | T16–T19, T19b | RSI, 52-week-high y Triple Screen operan (≥5 trades cada una) sobre fixtures versionados y deterministas | ninguna prevista |
 | L3 | `lote/engine-y-cierre-m1` | T21–T25 | Comparación trade por trade contra `backtesting.py`, ADR del engine decidido (cierra M1), inventario de ramas y borrador del plan siguiente | T22, T23, T24, T25 |
-| L4 | `lote/datos-reales-diarios` | V00–V10 | Las 3 estrategias de M1 corren sobre SPY diario real 2007–2018 desde un snapshot con manifiesto; el engine avanza por las velas del dato y `backtesting.py` coincide con RSI | V00 (performance de la suite), V10 |
+| L4 | `lote/datos-reales-diarios` | V00, V00a–V00e, V01–V10 | Las 3 estrategias de M1 corren sobre SPY diario real 2007–2018 desde un snapshot con manifiesto; el engine avanza por las velas del dato y `backtesting.py` coincide con RSI | V00 (performance de la suite), V10 |
 | L5 | `lote/costos-y-referencia` | V11–V20 | La corrida informa comisión, slippage y tamaño, y se compara contra comprar y mantener con los mismos costos; un recálculo independiente coincide | V13, V17, V18 |
 
 T13 se adelantó dentro de L1: es un documento de decisión que no depende del resto, así la respuesta de Fede
@@ -417,6 +417,11 @@ Los primeros 5 son los más fáciles de revisar.
 | T23e | `QuantAgent-dj0` | La suite corre limpia sobre la base temporal de `try.sh` (15 tests solo-Postgres) | `try.sh <rama> -- 'python -m pytest -q -m "not slow and not api"'` da 0 failed y 0 errors; CI verde sin saltear esos tests | leer | L3 |
 | T25 | `QuantAgent-lp1` | Borrador del plan siguiente con la evidencia de T01–T24 | Doc con cola nueva en el mismo formato | decidir | L3 |
 | V00 | `QuantAgent-vfd` | Diagnóstico de performance de la suite: tests más lentos, causa y mejoras con ahorro estimado | Doc con la tabla de `--durations` de una corrida real y un objetivo de tiempo; nada fuera de `docs/` | decidir | L4 |
+| V00a | `QuantAgent-pcz` | Silenciar los 80.000 warnings de `datetime.utcnow` en la configuración de pytest | Suite con 0 failed y menos de 100 warnings; el filtro no es global | leer | L4 |
+| V00b | `QuantAgent-ron` | Marcador `oraculo` para golden y crossval: el loop lo saltea, el CI lo corre | `-m oraculo` corre solo esos dos archivos; el filtro del CI los sigue incluyendo; `.github/` sin cambios | leer | L4 |
+| V00c | `QuantAgent-ykx` | Datos reducidos en `test_backtest_run_isolation` y `test_triple_screen_strategy` | Los dos archivos en <=20 s, 0 failed, >=2 trades por corrida y la mutación sigue fallando | probar | L4 |
+| V00d | `QuantAgent-iky` | `test_backtest_cli.py` comparte corridas en vez de repetir backtests | Mismo número de tests, 0 failed, <=120 s | probar | L4 |
+| V00e | `QuantAgent-ap7` | Suite en paralelo con `pytest-xdist` en la VM | `-n 4`: 0 failed en 3 corridas seguidas y <=180 s; sin `-n` no cambia | probar | L4 |
 | V01 | `QuantAgent-dga` | Snapshot: Parquet por símbolo con manifiesto (hashes, rango, filas, versión de `yfinance`) | `pytest -q tests/test_snapshot.py`: un byte cambiado hace fallar `verify_snapshot` | leer | L4 |
 | V02 | `QuantAgent-36g` | `data snapshot create` y `verify` desde Yahoo; no pisa un nombre existente | (VM) crea `etf-1d-2026-10` y `verify` da `OK 12 símbolos`; repetir `create` sale con 1 | probar | L4 |
 | V03 | `QuantAgent-jcl` | Precios ajustados por splits y dividendos; guarda el cierre sin ajustar | Test con split 2:1 a mano: el ajustado no salta y el sin ajustar sí | leer | L4 |
@@ -444,6 +449,9 @@ M1 se cumple al cerrar T23d. **M1 cumplido el 2026-10-09** (lote L3, PR #52 merg
 **M2, validación con datos reales.** Plan aprobado por Fede el 2026-10-09 (PR #62): `docs/02_planning/QuantAgent-lp1-PL-m2-validacion-datos-reales.md`. Son 7 lotes; acá están las filas de los dos primeros
 (L4 y L5 = lotes 1 y 2 del plan), ya cargadas en BEADS. Las de los lotes 3 a 7 están en §11 de ese doc y el PM las copia
 y las carga al abrir cada lote. El texto completo de cada ticket está en BEADS; los `Vnn` son el número de fila.
+V00a–V00e son las mejoras de performance de la suite que Fede aprobó en la `R:` del PR #64 (objetivo: 180 s); V00b cambia el
+comando de la suite del loop y saca los dos oráculos de cada entrega, que pasan a correr en el CI y en la revisión del PM.
+V01–V04 las hace una sesión de Claude Code cloud lanzada por Fede el 2026-10-09 (tickets `in_progress`, PRs sin label `loop`).
 V00 (`QuantAgent-vfd`) y la fuente de SPY 4h (Alpaca, solo datos) se agregaron por decisión de Fede del 2026-10-09.
 Filas marcadas (VM): necesitan `QUANTAGENT_SNAPSHOT_DIR` y el snapshot `etf-1d-2026-10`, que crea el PM al mergear V02.
 
