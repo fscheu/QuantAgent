@@ -98,12 +98,29 @@ def load_manifest(name: str, base_dir: Optional[Path] = None) -> dict:
     return json.loads(path.read_text())
 
 
-def read_snapshot(name: str, symbol: str, base_dir: Optional[Path] = None) -> pd.DataFrame:
-    """Lee el Parquet de `symbol` tal como se guardó."""
+def read_snapshot(name: str, symbol: str, base_dir: Optional[Path] = None, adjusted: bool = True) -> pd.DataFrame:
+    """Lee el Parquet de `symbol`.
+
+    Por defecto devuelve precios ajustados por splits y dividendos (iuf D6). Para cada fila:
+
+        factor = adj_close / close
+        open, high, low, close  ->  valor * factor
+
+    El volumen queda como viene, `close_sin_ajustar` conserva el cierre original y `adj_close`
+    se descarta (ya es `close`). Con `adjusted=False` devuelve el DataFrame tal como se guardó.
+    """
     manifest = load_manifest(name, base_dir)
     if symbol not in manifest["symbols"]:
         raise SnapshotError(f"{symbol} no está en el snapshot '{name}'")
-    return pd.read_parquet(snapshot_root(base_dir) / name / manifest["symbols"][symbol]["file"])
+    df = pd.read_parquet(snapshot_root(base_dir) / name / manifest["symbols"][symbol]["file"])
+    if not adjusted:
+        return df
+    factor = df["adj_close"] / df["close"]
+    out = df.drop(columns="adj_close")
+    for column in ("open", "high", "low", "close"):
+        out[column] = df[column] * factor
+    out["close_sin_ajustar"] = df["close"]
+    return out
 
 
 def verify_snapshot(name: str, base_dir: Optional[Path] = None, versioned_dir: Optional[Path] = None) -> dict:
