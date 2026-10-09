@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """QuantAgent-832.1: la estrategia RSI del proyecto portada a backtesting.py (oraculo de cross-validation).
 
-Uso:  python scripts/crossval_rsi.py [--out crossval_trades.csv]
+Uso:  python scripts/crossval_rsi.py [--out crossval_trades.csv] [--fixture spy-90d]
 
-Corre RSI mean-reversion sobre tests/fixtures/spy-90d.csv con backtesting.py (dependencia de
+Corre RSI mean-reversion sobre tests/fixtures/<fixture>.csv (default spy-90d) con backtesting.py (dependencia de
 desarrollo, nunca de runtime: nada bajo quantagent/ la importa) y escribe un CSV con las mismas 10
 columnas, en el mismo orden, que `python -m quantagent.cli backtest run ... --out` (COLUMNS de
 quantagent/backtesting/export.py). Este script NO compara contra el motor del proyecto.
@@ -64,7 +64,10 @@ DIFERENCIAS DE SEMÁNTICA CONOCIDAS (motor del proyecto vs port; ninguna se corr
    ejercita (ultima entrada 2026-03-31T17:00) y probarla exigiria otro fixture.
 8. Ventana de datos: el motor pasa a la estrategia las velas de los ultimos 7 dias (ventana por
    calendario), el port el historial completo; con RSI de 14 periodos el valor es el mismo salvo que la
-   ventana tuviera huecos (el fixture es continuo 24/7).
+   ventana tuviera huecos (el fixture es continuo 24/7). Con spy-90d-habiles (sin sabados ni domingos,
+   QuantAgent-1xd) la ventana de 7 dias trae >= 120 velas y el RSI usa las ultimas 15 filas del dato en
+   ambos lados, asi que el port no necesita ajuste; la diferencia con huecos es el reloj del motor (grilla
+   de calendario: un sabado vuelve a evaluar la vela del viernes), no la ventana.
 9. Hora/precio de fill: backtesting.py rellena las ordenes de mercado (trade_on_close) al close de la
    vela previa a su procesamiento y les pone esa hora; tests/test_crossval_rsi.py verifica que
    entry_time/exit_time son velas del fixture y que los precios son el close de esa vela. El motor usa
@@ -106,7 +109,8 @@ from quantagent.backtesting.export import COLUMNS  # noqa: E402
 from quantagent.strategy.registry import build_strategy  # noqa: E402
 from quantagent.trading.paper_broker import PaperBroker  # noqa: E402
 
-FIXTURE = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "spy-90d.csv"
+FIXTURES_DIR = Path(__file__).resolve().parent.parent / "tests" / "fixtures"
+FIXTURE = FIXTURES_DIR / "spy-90d.csv"
 SYMBOL = "SPY"
 SCALE = float(2**27)  # potencia de 2: dividir/multiplicar precios es exacto en float
 
@@ -248,15 +252,15 @@ def load_fixture(path: Path) -> pd.DataFrame:
     return df
 
 
-def run_port_stats(history_bars: int, intrabar: bool = False):
-    df = load_fixture(FIXTURE)
+def run_port_stats(history_bars: int, intrabar: bool = False, fixture: str = "spy-90d"):
+    df = load_fixture(FIXTURES_DIR / f"{fixture}.csv")
     bt = Backtest(df, RsiPort, cash=PORT_PARAMS["initial_cash"], commission=0.0, margin=1.0,
                   trade_on_close=True, hedging=False, exclusive_orders=False, finalize_trades=False)
     return bt.run(n_real_bars=len(df) - 1, min_history=history_bars, intrabar=intrabar)
 
 
-def run_port(history_bars: int) -> pd.DataFrame:
-    return run_port_stats(history_bars)["_trades"].sort_values("EntryTime")
+def run_port(history_bars: int, fixture: str = "spy-90d") -> pd.DataFrame:
+    return run_port_stats(history_bars, fixture=fixture)["_trades"].sort_values("EntryTime")
 
 
 def write_csv(trades: pd.DataFrame, out: Path) -> None:
@@ -274,13 +278,14 @@ def write_csv(trades: pd.DataFrame, out: Path) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--out", default="crossval_trades.csv", help="CSV de salida")
+    ap.add_argument("--fixture", default="spy-90d", help="fixture bajo tests/fixtures/ (sin .csv)")
     args = ap.parse_args()
 
     proj = project_params()
     if not print_param_table(proj):
         print("ERROR: los parametros del port difieren del proyecto", file=sys.stderr)
         return 1
-    trades = run_port(proj["_required_history_bars"])
+    trades = run_port(proj["_required_history_bars"], args.fixture)
     write_csv(trades, Path(args.out))
     print(f"Trades: {len(trades)}")
     print(f"CSV escrito en {args.out}")
