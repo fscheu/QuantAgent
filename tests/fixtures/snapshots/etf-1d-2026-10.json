@@ -1,0 +1,93 @@
+{
+  "downloaded_at": "2026-10-09T23:18:12+00:00",
+  "name": "etf-1d-2026-10",
+  "source": "yahoo",
+  "symbols": {
+    "DBC": {
+      "end": "2026-10-08",
+      "file": "DBC.parquet",
+      "rows": 4973,
+      "sha256": "2c1b78772344c6e90d29fff30985ba31ae8337bf87e339610ff835abf43b0fd5",
+      "start": "2007-01-03"
+    },
+    "EEM": {
+      "end": "2026-10-08",
+      "file": "EEM.parquet",
+      "rows": 4973,
+      "sha256": "fa39410c6cfd97d9ecd5d2615d57539809a9565af0deb6453b9d419638973642",
+      "start": "2007-01-03"
+    },
+    "EFA": {
+      "end": "2026-10-08",
+      "file": "EFA.parquet",
+      "rows": 4973,
+      "sha256": "0e0d0ab3a07e6113c2dbedaeedc9cd0cc1d70f69f40ff92d61b0ce1e80399655",
+      "start": "2007-01-03"
+    },
+    "GLD": {
+      "end": "2026-10-08",
+      "file": "GLD.parquet",
+      "rows": 4973,
+      "sha256": "d756a7ff7654152a9a683315cdcb9f77732d6a07a2b66c92d8ff2d7080d2c136",
+      "start": "2007-01-03"
+    },
+    "IWM": {
+      "end": "2026-10-08",
+      "file": "IWM.parquet",
+      "rows": 4973,
+      "sha256": "ae5bd3f65d725119cb4e82d0b4618cb51c77f0b589bd309057d91bf5b9bfc6ce",
+      "start": "2007-01-03"
+    },
+    "SHY": {
+      "end": "2026-10-08",
+      "file": "SHY.parquet",
+      "rows": 4973,
+      "sha256": "6078b11e4a799c2cca7ac7e47d33016f25a8bdfdab522620ceb44115de5d52b3",
+      "start": "2007-01-03"
+    },
+    "SPY": {
+      "end": "2026-10-08",
+      "file": "SPY.parquet",
+      "rows": 4973,
+      "sha256": "c8885d5b0afac96a904fbf20527ec152231ba9af3c61562657dd9aaf7a42c8c6",
+      "start": "2007-01-03"
+    },
+    "TLT": {
+      "end": "2026-10-08",
+      "file": "TLT.parquet",
+      "rows": 4973,
+      "sha256": "5a6e585b59a7d19e82d0c63490eae0ad24d7b5f379117bf1d667d624857d748b",
+      "start": "2007-01-03"
+    },
+    "XLE": {
+      "end": "2026-10-08",
+      "file": "XLE.parquet",
+      "rows": 4973,
+      "sha256": "acad90998c370c02dd4db39accc20f10e146fff613e6fea0dcdef0774fb35ddf",
+      "start": "2007-01-03"
+    },
+    "XLF": {
+      "end": "2026-10-08",
+      "file": "XLF.parquet",
+      "rows": 4973,
+      "sha256": "eb200686b20b8e78b76706c1266b2365418b3b22270c3a05af50b3256e1de848",
+      "start": "2007-01-03"
+    },
+    "XLK": {
+      "end": "2026-10-08",
+      "file": "XLK.parquet",
+      "rows": 4973,
+      "sha256": "051e787dea194cce5cb01cdf1798593d8ef692e82a68005f77cea0da17f327af",
+      "start": "2007-01-03"
+    },
+    "XLU": {
+      "end": "2026-10-08",
+      "file": "XLU.parquet",
+      "rows": 4973,
+      "sha256": "b6ce42156b748e0108cf5386b73d3b0b06049abf205765d6a6c4cc1ba57bfda6",
+      "start": "2007-01-03"
+    }
+  },
+  "timeframe": "1d",
+  "yfinance_version": "1.7.0"
+}
