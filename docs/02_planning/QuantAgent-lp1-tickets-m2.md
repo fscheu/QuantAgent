@@ -163,7 +163,7 @@ Orden y dependencias (la cola toma la primera fila elegible):
 
 ### V18 · Decisión: tamaño de posición y límite diario en las comparaciones
 - **Contexto:** cada trade usa 5% del capital por confianza (`settings.py:72`, tope 10% en `:74`). Contra comprar y mantener con todo el capital, una estrategia con 95% en efectivo pierde retorno y gana drawdown por construcción.
-- **Cambio requerido:** doc en `docs/04_decisions/`, de 40 líneas como máximo, con tres opciones: A, 5% y la referencia escalada; B, 100% sin apalancamiento en las corridas de M2; C, otra que proponga el agente. Lleva una corrida de rsi/SPY 2007–2018 por opción (PnL, Sharpe, max drawdown, exposición media y referencia) y la regla del límite diario según V17.
+- **Cambio requerido:** doc en `docs/04_decisions/`, de 40 líneas como máximo, con tres opciones: A, 5% y la referencia escalada; B, 100% sin apalancamiento en las corridas de M2; C, otra que proponga el agente. Tiene que explicar cómo lo hace la práctica profesional (capital asignado por estrategia, tamaño por riesgo o volatilidad), con fuente o "no verificado". Inclinación de Fede (2026-10-09): que todas operen con 5%, o con 100% del capital asignado a cada estrategia si el 5% se aplica al nivel de la asignación. Lleva una corrida de rsi/SPY 2007–2018 por opción (PnL, Sharpe, max drawdown, exposición media y referencia) y la regla del límite diario según V17.
 - **Criterio de aceptación:** el doc trae la tabla y los comandos. El PM reproduce una fila.
 - **Archivos relevantes:** `docs/04_decisions/` (nuevo).
 - **Fuera de scope:** código.
