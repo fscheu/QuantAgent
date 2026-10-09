@@ -101,13 +101,15 @@ def load_manifest(name: str, base_dir: Optional[Path] = None) -> dict:
 def read_snapshot(name: str, symbol: str, base_dir: Optional[Path] = None, adjusted: bool = True) -> pd.DataFrame:
     """Lee el Parquet de `symbol`.
 
-    Por defecto devuelve precios ajustados por splits y dividendos (iuf D6). Para cada fila:
+    Lo guardado es lo que entrega Yahoo con `auto_adjust=False`: OHLC y volumen ya ajustados por splits,
+    sin ajuste por dividendos, más `adj_close` (que suma el ajuste por dividendos). Por defecto se aplica
+    ese ajuste (iuf D6). Para cada fila:
 
-        factor = adj_close / close
+        factor = adj_close / close          (1.0 si no hay dividendos posteriores)
         open, high, low, close  ->  valor * factor
 
-    El volumen queda como viene, `close_sin_ajustar` conserva el cierre original y `adj_close`
-    se descarta (ya es `close`). Con `adjusted=False` devuelve el DataFrame tal como se guardó.
+    El volumen no se toca: ya viene ajustado por splits. `close_sin_dividendos` conserva el cierre guardado
+    y `adj_close` se descarta (ya es `close`). Con `adjusted=False` devuelve el DataFrame tal como se guardó.
     """
     manifest = load_manifest(name, base_dir)
     if symbol not in manifest["symbols"]:
@@ -119,7 +121,7 @@ def read_snapshot(name: str, symbol: str, base_dir: Optional[Path] = None, adjus
     out = df.drop(columns="adj_close")
     for column in ("open", "high", "low", "close"):
         out[column] = df[column] * factor
-    out["close_sin_ajustar"] = df["close"]
+    out["close_sin_dividendos"] = df["close"]
     return out
 
 
