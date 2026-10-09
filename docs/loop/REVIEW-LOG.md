@@ -40,4 +40,5 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-08 · #53 · PM: 832.1 vi: corrí el port en la VM: tabla con SI en los 10 parámetros, Trades: 227 y dos corridas con CSV idéntico; cruzado contra el engine propio con TRADING_SLIPPAGE_PCT=0: 227 de 227 trades con la misma entrada, salida y lado, diferencia máxima 8.5e-09 en qty y 1.4e-07 en pnl, PnL 13084.98 en los dos; suite 847 passed (modelo: claude-sonnet-5-5 en cloud) decido: merge
 2026-10-08 · #55 · R: 832 vi: 227 trades iguales en los dos engines; intravela 340 / 5803 decido: merge
 2026-10-08 · #56 · R: lcv vi: opción B, motor propio con stops dentro de la vela; 3 entregas ya en cola decido: merge
+2026-10-09 · #57 · PM: al2.1 vi: engine con --intrabar-stops contra el port de backtesting.py en modo intravela: 340 de 340 trades iguales, diferencia máxima 9.0e-09 en qty y 1.3e-07 en pnl, PnL 5803.02 en los dos; con el flag apagado siguen 227 / 12120.98; suite 848 passed, con los mismos 2 failed + 13 errors de entorno que el lote sin el cambio; CI verde; 251 líneas contra objetivo de 100 (modelo: gemini-3.8-flash-high) decido: merge
 ```
