@@ -1,5 +1,9 @@
 # QuantAgent User Manual
 
+> **Manual sin mantenimiento desde el 2026-10-09** (decisión de Fede, plan de M2, PR #62). Cubre la UI, el paper trading
+> y los agentes LLM tal como estaban en mayo de 2026. Para el backtesting por línea de comandos, los números de referencia
+> y el estado actual del proyecto, la fuente vigente es el [README](../../README.md).
+
 **A multi-agent AI system for automated trading strategy development and validation**
 
 Last updated: May 16, 2026

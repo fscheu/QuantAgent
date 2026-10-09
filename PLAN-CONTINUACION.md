@@ -367,6 +367,8 @@ Lotes (definidos por el PM el 2026-10-06; cada uno se abre cuando Fede mergea el
 | L1 | `lote/metricas-auditadas` | T08c, T13, T09–T12, T14, T15, T15b, T10b, T20 | Las 5 métricas de rsi/spy-90d coinciden con un recálculo que no importa `quantagent`, la corrida es reproducible (`backtest verify`) y un test golden las congela | T13 (anualización del Sharpe), T10 (trades con pnl = 0) |
 | L2 | `lote/tres-estrategias` | T16–T19, T19b | RSI, 52-week-high y Triple Screen operan (≥5 trades cada una) sobre fixtures versionados y deterministas | ninguna prevista |
 | L3 | `lote/engine-y-cierre-m1` | T21–T25 | Comparación trade por trade contra `backtesting.py`, ADR del engine decidido (cierra M1), inventario de ramas y borrador del plan siguiente | T22, T23, T24, T25 |
+| L4 | `lote/datos-reales-diarios` | V00–V10 | Las 3 estrategias de M1 corren sobre SPY diario real 2007–2018 desde un snapshot con manifiesto; el engine avanza por las velas del dato y `backtesting.py` coincide con RSI | V00 (performance de la suite), V10 |
+| L5 | `lote/costos-y-referencia` | V11–V20 | La corrida informa comisión, slippage y tamaño, y se compara contra comprar y mantener con los mismos costos; un recálculo independiente coincide | V13, V17, V18 |
 
 T13 se adelantó dentro de L1: es un documento de decisión que no depende del resto, así la respuesta de Fede
 llega mientras el lote avanza. T20 pasó a L1 porque congela los números que ese lote audita.
@@ -414,9 +416,36 @@ Los primeros 5 son los más fáciles de revisar.
 | T23d | `QuantAgent-al2.3` | `intrabar_stops` por defecto y números de referencia nuevos | `backtest verify` da `OK reproducible` en las tres estrategias; tabla antes / después en el PR | decidir | L3 |
 | T23e | `QuantAgent-dj0` | La suite corre limpia sobre la base temporal de `try.sh` (15 tests solo-Postgres) | `try.sh <rama> -- 'python -m pytest -q -m "not slow and not api"'` da 0 failed y 0 errors; CI verde sin saltear esos tests | leer | L3 |
 | T25 | `QuantAgent-lp1` | Borrador del plan siguiente con la evidencia de T01–T24 | Doc con cola nueva en el mismo formato | decidir | L3 |
+| V00 | `QuantAgent-vfd` | Diagnóstico de performance de la suite: tests más lentos, causa y mejoras con ahorro estimado | Doc con la tabla de `--durations` de una corrida real y un objetivo de tiempo; nada fuera de `docs/` | decidir | L4 |
+| V01 | `QuantAgent-dga` | Snapshot: Parquet por símbolo con manifiesto (hashes, rango, filas, versión de `yfinance`) | `pytest -q tests/test_snapshot.py`: un byte cambiado hace fallar `verify_snapshot` | leer | L4 |
+| V02 | `QuantAgent-36g` | `data snapshot create` y `verify` desde Yahoo; no pisa un nombre existente | (VM) crea `etf-1d-2026-10` y `verify` da `OK 12 símbolos`; repetir `create` sale con 1 | probar | L4 |
+| V03 | `QuantAgent-jcl` | Precios ajustados por splits y dividendos; guarda el cierre sin ajustar | Test con split 2:1 a mano: el ajustado no salta y el sin ajustar sí | leer | L4 |
+| V04 | `QuantAgent-r3q` | `data snapshot check`: sesiones contra NYSE, OHLC incoherente, volumen 0, saltos | Test que borra un día y lo nombra; (VM) `faltan 0` en los 12 | probar | L4 |
+| V05 | `QuantAgent-1xd` | Fixture `spy-90d-habiles` (sin fines de semana) y `--fixture` en `crossval_*` | `crossval_compare.py --fixture spy-90d-habiles --intrabar` imprime resultado y `Entradas en fin de semana: N` | probar | L4 |
+| V06 | `QuantAgent-48n` | El engine avanza por las velas del dato, no por una grilla de calendario | Sobre `spy-90d-habiles`: `TODO DENTRO DE TOLERANCIA` y 0 en fin de semana; referencias de M1 sin cambio | probar | L4 |
+| V07 | `QuantAgent-kwi` | `backtest run --snapshot --symbol --from --to` | (VM) rsi/SPY 2007–2018 exit 0 con 6 líneas; golden de M1 verde | probar | L4 |
+| V08 | `QuantAgent-43b` | Candado de la reserva (desde 2023-01-01) con registro de aperturas | `--to 2024-01-01` sin `--abrir-reserva` sale con 1; con el flag, el registro suma una línea | probar | L4 |
+| V09 | `QuantAgent-5ti` | `backtest verify --snapshot`; las 3 estrategias sobre SPY 2007–2018 | (VM) tres `OK reproducible`; el PR informa trades y tiempo | probar | L4 |
+| V10 | `QuantAgent-a03` | Control con backtesting.py sobre SPY real; cuenta velas que tocan stop y take profit | (VM) `TODO DENTRO DE TOLERANCIA` o cada diferencia con su causa | decidir | L4 |
+| V11 | `QuantAgent-de5` | Comisiones del `PaperBroker` en backtest y CLI (`--commission-pct`, default 0) | Default: referencias sin cambio; con 0.001, PnL menor y `Comisión: 0.10% por lado` | probar | L5 |
+| V12 | `QuantAgent-40o` | `recalc_metrics.py --commission-pct` (entrada y salida) | `N/N filas coinciden`, o evidencia de que falta la comisión de entrada (escala) | probar | L5 |
+| V13 | `QuantAgent-ld3` | Decisión: perfiles de costos ETF y cripto, con fuente | Doc ≤40 líneas con efecto medido por perfil; el PM reproduce una fila | decidir | L5 |
+| V14 | `QuantAgent-dgi` | `--costos <perfil>` | Diferencia de PnL entre perfiles = la de `recalc_metrics.py` (±0.01); sin flag, 340 / 4571.27 | probar | L5 |
+| V15 | `QuantAgent-rnl` | Referencia comprar y mantener en el CLI, con los mismos costos y ventana | Test con 3 velas a mano; (VM) aparece `Comprar y mantener:` | probar | L5 |
+| V16 | `QuantAgent-bzt` | `recalc_metrics.py --comprar-y-mantener` sin importar `quantagent` | Igual a la línea del CLI sobre spy-90d (±0.01) | probar | L5 |
+| V17 | `QuantAgent-cub` | ¿El límite de pérdida diaria actúa en backtest? (`date.today()`) | `xfail(strict=True)` si lo confirma; respuesta con evidencia en el PR | decidir | L5 |
+| V18 | `QuantAgent-cbp` | Decisión: tamaño de posición contra la referencia (hoy 5%) y regla del límite diario | Doc ≤40 líneas con una corrida por opción; el PM reproduce una fila | decidir | L5 |
+| V19 | `QuantAgent-e18` | `--tamano-posicion` (opción B de V18) | Test: qty = equity × tamaño × confianza / precio en 3 trades; sin flag, referencias sin cambio | probar | L5 |
+| V20 | `QuantAgent-688` | Golden sobre el snapshot real, solo en la VM | (VM) pasa y falla con un dígito cambiado; en CI, skipped con motivo | leer | L5 |
 
 Con el modo por lotes, el ritmo lo marcan las decisiones de Fede (T13, T10, T22, T23) y no la implementación.
-M1 se cumple al cerrar T23d.
+M1 se cumple al cerrar T23d. **M1 cumplido el 2026-10-09** (lote L3, PR #52 mergeado a `main`).
+
+**M2, validación con datos reales.** Plan aprobado por Fede el 2026-10-09 (PR #62): `docs/02_planning/QuantAgent-lp1-PL-m2-validacion-datos-reales.md`. Son 7 lotes; acá están las filas de los dos primeros
+(L4 y L5 = lotes 1 y 2 del plan), ya cargadas en BEADS. Las de los lotes 3 a 7 están en §11 de ese doc y el PM las copia
+y las carga al abrir cada lote. El texto completo de cada ticket está en BEADS; los `Vnn` son el número de fila.
+V00 (`QuantAgent-vfd`) y la fuente de SPY 4h (Alpaca, solo datos) se agregaron por decisión de Fede del 2026-10-09.
+Filas marcadas (VM): necesitan `QUANTAGENT_SNAPSHOT_DIR` y el snapshot `etf-1d-2026-10`, que crea el PM al mergear V02.
 
 T23b, T23c y T23d se agregaron el 2026-10-08: T22 mostró que el engine evalúa stop loss y take profit solo al
 cierre de la vela (227 trades / 13084.98 contra 340 / 5803.02 evaluando dentro de la vela). Fede decidió en la

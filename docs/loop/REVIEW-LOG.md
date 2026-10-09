@@ -45,4 +45,5 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-09 · #60 · R: al2.3 vi: rsi 340 / 4571.27; 52w 6 / -249.35; triple 6 / 174.34; verify OK en las tres decido: merge
 2026-10-09 · #61 · PM: dj0 vi: corrí el comando del criterio sobre la base temporal de try.sh: 867 passed, 0 failed, 0 errors, 21 skipped (los mismos que antes), contra 2 failed + 13 errors en el lote sin el cambio; en el log del CI los tests de test_r78_trade_pnl_calculation y TestDatabaseMigration figuran PASSED (16 líneas), ninguno salteado; el diff son 43 líneas en 2 archivos de tests/, con TRUNCATE conservado para Postgres (modelo: gemini-3.8-flash-high) decido: merge
 2026-10-09 · #62 · R: lp1 vi: 7 lotes, 55 filas, 20 tickets; decisiones previas sí, con la 5 cambiada a SPY 4h desde Alpaca solo datos decido: merge
+2026-10-09 · #52 · R: lote-engine-y-cierre-m1 vi: tres estrategias OK reproducible; motor igual a backtesting.py en 227 y 340 trades decido: merge
 ```
