@@ -67,7 +67,8 @@ DIFERENCIAS DE SEMÁNTICA CONOCIDAS (motor del proyecto vs port; ninguna se corr
    ventana tuviera huecos (el fixture es continuo 24/7). Con spy-90d-habiles (sin sabados ni domingos,
    QuantAgent-1xd) la ventana de 7 dias trae >= 120 velas y el RSI usa las ultimas 15 filas del dato en
    ambos lados, asi que el port no necesita ajuste; la diferencia con huecos es el reloj del motor (grilla
-   de calendario: un sabado vuelve a evaluar la vela del viernes), no la ventana.
+   de calendario: un sabado vuelve a evaluar la vela del viernes), no la ventana. Desde QuantAgent-48n el
+   motor avanza por las velas cargadas y sobre spy-90d-habiles coincide en trades y en los 1536 instantes.
 9. Hora/precio de fill: backtesting.py rellena las ordenes de mercado (trade_on_close) al close de la
    vela previa a su procesamiento y les pone esa hora; tests/test_crossval_rsi.py verifica que
    entry_time/exit_time son velas del fixture y que los precios son el close de esa vela. El motor usa

@@ -21,6 +21,7 @@ from quantagent.models import (
     ActivePosition,
     BacktestRun,
     Environment,
+    MarketData,
     OrderSide,
     Signal,
     Trade,
@@ -735,13 +736,32 @@ class Backtest:
         """
         Get date range filtered by market hours for specific asset.
 
+        With offline_data the candles are already in market_data, so the clock is the
+        loaded timestamps for this asset and timeframe (QuantAgent-48n): a gap (weekend,
+        holiday) is skipped instead of re-evaluating the last candle before it. Online
+        runs fetch lazily and keep the calendar grid of _get_date_range.
+
         Args:
             asset: Asset symbol
 
         Returns:
             List of valid trading timestamps for this asset
         """
-        all_dates = self._get_date_range()
+        if self.config.get("offline_data", False):
+            rows = (
+                self.db.query(MarketData.timestamp)
+                .filter(
+                    MarketData.symbol == asset,
+                    MarketData.timeframe == self.timeframe,
+                    MarketData.timestamp >= self.start_date,
+                    MarketData.timestamp <= self.end_date,
+                )
+                .order_by(MarketData.timestamp)
+                .all()
+            )
+            all_dates = [row[0] for row in rows]
+        else:
+            all_dates = self._get_date_range()
 
         if not self.market_hours_filter or self._market_calendar is None:
             return all_dates
