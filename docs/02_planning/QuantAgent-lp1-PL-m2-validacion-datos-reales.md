@@ -1,7 +1,7 @@
 # M2 — Validación con datos reales (plan posterior a M1)
 
-Ticket: `QuantAgent-lp1` (T25 de `PLAN-CONTINUACION.md`). Estado: ~~**borrador**, escrito el 2026-10-06.~~ **propuesta
-cerrada el 2026-10-09; faltan las decisiones de Fede de §13.** §1–§7 son el borrador del 2026-10-06; §8–§14, el cierre.
+Ticket: `QuantAgent-lp1` (T25 de `PLAN-CONTINUACION.md`). Estado: ~~**borrador**, escrito el 2026-10-06.~~ **aprobada por Fede
+el 2026-10-09 (PR #62), con la decisión previa 5 cambiada: ver §13.** §1–§7 son el borrador del 2026-10-06; §8–§14, el cierre.
 ~~Se cierra después de T23 (ADR del engine): si el engine cambia, las filas de los lotes A a C se reescriben.~~ T23 eligió el engine propio (opción B).
 Los tickets de BEADS se crean cuando Fede apruebe este documento; hasta entonces las filas usan ~~`V01`…`V41`~~ `V01`…`V55`
 de §11. Texto completo de los lotes 1 y 2: [`QuantAgent-lp1-tickets-m2.md`](./QuantAgent-lp1-tickets-m2.md).
@@ -257,6 +257,7 @@ Mismo formato que `PLAN-CONTINUACION.md` §4. El PM la copia ahí cuando Fede la
 
 | # | Ticket | Objetivo | Aceptación binaria | Revisión | Lote |
 |---:|---|---|---|---|---|
+| V00 | `QuantAgent-vfd` | Diagnóstico de performance de la suite: tests más lentos, causa y mejoras con ahorro estimado | Doc con la tabla de `--durations` de una corrida real y un objetivo de tiempo; nada fuera de `docs/` | decidir | 1 |
 | V01 | nuevo | Snapshot: Parquet por símbolo con manifiesto (hashes, rango, filas, versión de `yfinance`) | `pytest -q tests/test_snapshot.py`: un byte cambiado hace fallar `verify_snapshot` | leer | 1 |
 | V02 | nuevo | `data snapshot create` y `verify` desde Yahoo; no pisa un nombre existente | (VM) crea `etf-1d-2026-10` y `verify` da `OK 12 símbolos`; repetir `create` sale con 1 | probar | 1 |
 | V03 | nuevo | Precios ajustados por splits y dividendos; guarda el cierre sin ajustar | Test con split 2:1 a mano: el ajustado no salta y el sin ajustar sí | leer | 1 |
@@ -295,7 +296,8 @@ Mismo formato que `PLAN-CONTINUACION.md` §4. El PM la copia ahí cuando Fede la
 | V36 | nuevo | `scripts/recalc_verdict.py`: veredicto recalculado sin importar `quantagent` | Coincide con el CLI en todas las filas | probar | 4 |
 | V37 | `QuantAgent-col` | Confirmar o descartar el corrimiento de hora con velas reales de SPY | Test que lo reproduce o evidencia de que no ocurre, en diario y 4h | decidir | 5 |
 | V38 | nuevo | UTC explícito de punta a punta (si V37 lo confirma) y destino del caché | 0 velas de SPY fuera de 9:30–16:00 de Nueva York | probar | 5 |
-| V39 | nuevo | Snapshot de SPY 4h desde Yahoo (`period="730d"`) | `snapshot check`: 0 fuera de horario; ~1.450 velas (iuf) | probar | 5 |
+| V39a | nuevo | Adaptador de datos de Alpaca, solo lectura (velas históricas); sin órdenes ni cuenta | Test con respuestas grabadas; un test falla si el adaptador llama a un endpoint que no sea de datos de mercado; sin claves, sale con un mensaje claro | leer | 5 |
+| V39 | nuevo | Snapshot de SPY 4h desde Alpaca (feed SIP, desde 2016); Yahoo (`period="730d"`) queda como alternativa si la cuenta gratuita no alcanza | (VM) `snapshot check`: 0 fuera de horario; el PR informa primera vela y cantidad (iuf estima ~10,7 años, sin medir) | probar | 5 |
 | V40 | nuevo | Snapshot de BTC 4h desde Binance (`data-api.binance.vision`, host configurable) | Desde 2017-08-17; `snapshot check` lista los huecos (iuf midió 16) | probar | 5 |
 | V41 | nuevo | Sharpe anualizado verificado con horario (SPY) y 24/7 (BTC) | `recalc_metrics.py` = CLI en los dos | leer | 5 |
 | V42 | nuevo | `compare` y `verdict` sobre SPY 4h y BTC 4h | Tabla y veredicto de los 2; el registro de la reserva no cambia | probar | 5 |
@@ -332,7 +334,7 @@ Supuestos: la VM llega a Yahoo (`QuantAgent-577`). `data-api.binance.vision` res
 2. **Licencia de Yahoo:** **recomiendo** aceptarla para investigación personal, sin publicar precios ni trades derivados, y revisarla antes de cualquier uso comercial.
 3. **Cortes de la historia diaria, desde ya:** ajuste 2007–2018, prueba 2019–2022 y reserva desde 2023 (el ejemplo de iuf D2). Los lotes 1 a 3 solo leen el ajuste; la prueba se abre en el lote 4, con los umbrales ya fijados (V30), y la reserva una sola vez (V54). **Recomiendo** sí: lo que se mira antes de tiempo deja de servir como prueba.
 4. **El engine avanza por las velas del dato (V06),** con la condición de que no cambie ningún número de referencia de M1. **Recomiendo** sí; si cambia alguno, el PM escala.
-5. **4h sin Alpaca:** SPY desde Yahoo y BTC desde Binance (9,1 años, según iuf). **Recomiendo** sí: respeta que Alpaca es M3, y SPY 4h gana historia en M3, cuando ya haya claves.
+5. ~~**4h sin Alpaca:** SPY desde Yahoo y BTC desde Binance.~~ **Cambiada por Fede el 2026-10-09 (`R:` del PR #62): SPY 4h desde Alpaca, solo datos; BTC desde Binance.** Alpaca como broker (órdenes, posiciones, conciliación) sigue en M3. Condición: sin suscripciones ni depósito mínimo; si la cuenta gratuita no alcanza, se vuelve a Yahoo. Fede crea la cuenta y deja las claves en la VM antes del lote 5. Los datos diarios siguen en Yahoo: Alpaca arranca en 2016 y deja afuera 2008 (iuf D2-C). Filas V39a y V39 de §11. Además, por pedido de Fede del mismo día, el lote 1 suma V00 (`QuantAgent-vfd`).
 6. **Manual de usuario:** **recomiendo** darlo de baja. Al abrir el lote 1, el PM agrega en `docs/user-manual/index.md` un aviso que apunta al README. El manual cubre UI, paper y agentes LLM, que M2 no toca, y mantenerlo en cada lote cuesta una revisión que nadie lee. El README sigue al día por la regla 4 de §3.4.
 7. **OpenBB (`QuantAgent-6ie`):** **recomiendo** aceptar lo que propone el doc: no usarlo para precios y usar su MCP para la nota macro, fuera del loop. No bloquea el lote 1.
 
