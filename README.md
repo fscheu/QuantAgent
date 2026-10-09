@@ -144,11 +144,12 @@ Expected output (exact numbers depend on the strategy/fixture combination, but
 the shape is always these 5 lines):
 
 ```
-Trades: 227
-Win rate: 49.78%
-Profit factor: 0.61
-Sharpe ratio: 0.40
-Total PnL: -4717.33
+Trades: 340
+Win rate: 33.24%
+Profit factor: 1.35
+Sharpe ratio: 9.46
+Total PnL: 4571.27
+Slippage: 0.05% por lado
 Trade log written to run.csv
 ```
 

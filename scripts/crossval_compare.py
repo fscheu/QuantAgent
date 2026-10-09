@@ -96,6 +96,8 @@ def run_engine(probe: bool = False, intrabar: bool = False) -> dict:
             "--out", str(d / "trades.csv"), "--equity-out", str(d / "equity.csv")]
     if intrabar:
         args.append("--intrabar-stops")
+    else:
+        args.append("--no-intrabar-stops")
     cmd = [sys.executable, "-c", PROBE, *args] if probe else [sys.executable, "-m", "quantagent.cli", *args]
     p = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True)
     if p.returncode:

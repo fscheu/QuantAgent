@@ -99,9 +99,8 @@ def backtest_group() -> None:
     help="Also show the engine's per-candle 'Insufficient data' messages on stderr.",
 )
 @click.option(
-    "--intrabar-stops",
-    is_flag=True,
-    default=False,
+    "--intrabar-stops/--no-intrabar-stops",
+    default=True,
     help="Evaluate stop loss and take profit against intrabar high/low prices.",
 )
 def run_backtest(
