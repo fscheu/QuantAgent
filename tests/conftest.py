@@ -793,6 +793,9 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "integration: marks tests as integration tests")
     config.addinivalue_line("markers", "api: marks tests requiring API calls")
     config.addinivalue_line("markers", "vision: marks tests using vision-capable LLMs")
+    config.addinivalue_line(
+        "markers", "xdist_group: mark test to run in a specific xdist worker group"
+    )
 
 
 def pytest_collection_modifyitems(config, items):
@@ -815,10 +818,6 @@ def pytest_collection_modifyitems(config, items):
         # Mark tests with 'vision' in the name
         if "vision" in item.nodeid:
             item.add_marker(pytest.mark.vision)
-
-        # Group test_backtest_cli on single worker to share module fixtures
-        if "test_backtest_cli.py" in item.nodeid:
-            item.add_marker(pytest.mark.xdist_group("backtest_cli"))
 
 
 
