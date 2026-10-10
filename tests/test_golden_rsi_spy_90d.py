@@ -3,7 +3,7 @@
 Freezes trades and audited metrics from M1 (with intrabar stops enabled by default):
 - 340 closed trades matching tests/fixtures/golden/rsi-spy-90d-trades.csv row-by-row
 - Reference metrics: Win rate 33.24%, Profit factor 1.35, Sharpe ratio 9.46,
-  Total PnL 4571.27, Slippage 0.05% por lado, max drawdown 0.001414
+  Total PnL 4571.27, Slippage 0.05% por lado, Comisión 0.00% por lado, max drawdown 0.001414
 """
 
 import csv
@@ -31,6 +31,7 @@ EXPECTED_METRICS = {
     "Sharpe ratio": "9.46",
     "Total PnL": "4571.27",
     "Slippage": "0.05% por lado",
+    "Comisión": "0.00% por lado",
     "max drawdown": "0.001414",
 }
 

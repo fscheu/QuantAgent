@@ -106,6 +106,13 @@ def _resolve_source_and_meta(
     return meta, symbol, to_date
 
 
+def _engine_config(commission_pct: Optional[float]) -> dict:
+    config = {"market_hours_filter": False, "offline_data": True}
+    if commission_pct is not None:
+        config["commission_pct"] = commission_pct
+    return config
+
+
 def _hide_data_warnings(record: logging.LogRecord) -> bool:
     return getattr(record, "event_type", None) != "backtest_data_warning"
 
@@ -185,6 +192,13 @@ def backtest_group() -> None:
     help="Also show the engine's per-candle 'Insufficient data' messages on stderr.",
 )
 @click.option(
+    "--commission-pct",
+    "commission_pct",
+    type=click.FloatRange(min=0.0),
+    default=None,
+    help="Comisión por lado sobre el nocional (0.001 = 0.10%). Default: TRADING_COMMISSION_PCT.",
+)
+@click.option(
     "--intrabar-stops/--no-intrabar-stops",
     default=True,
     help="Evaluate stop loss and take profit against intrabar high/low prices.",
@@ -201,6 +215,7 @@ def run_backtest(
     equity_out_path: Optional[str],
     verbose: bool,
     intrabar_stops: bool,
+    commission_pct: Optional[float],
 ) -> None:
     meta, symbol, to_date = _resolve_source_and_meta(
         "run",
@@ -246,7 +261,7 @@ def run_backtest(
             # offline_data avoids live yfinance calls for the lookback window before the
             # fixture's first row -- the whole point of a fixture-based run is to be
             # deterministic and network-free.
-            config={"market_hours_filter": False, "offline_data": True},
+            config=_engine_config(commission_pct),
             db_session=session,
             strategy=build_strategy(STRATEGY_ALIASES[strategy_name]),
             intrabar_stops=intrabar_stops,
@@ -262,6 +277,7 @@ def run_backtest(
             engine_logger.removeFilter(_hide_data_warnings)
 
         slippage_pct = bt.order_manager.broker.slippage_pct
+        commission = bt.order_manager.broker.commission_pct
         rows = _extract_trade_rows(session, bt.backtest_run_id) if out_path else []
 
     click.echo(f"Trades: {metrics.total_trades}")
@@ -273,6 +289,7 @@ def run_backtest(
     click.echo(f"Sharpe ratio: {metrics.sharpe_ratio:.2f}")
     click.echo(f"Total PnL: {metrics.total_pnl:.2f}")
     click.echo(f"Slippage: {slippage_pct * 100:.2f}% por lado")
+    click.echo(f"Comisión: {commission * 100:.2f}% por lado")
 
     if out_path:
         with open(out_path, "w", newline="") as f:
@@ -331,6 +348,7 @@ def _run_verify_pass(
     from_date: Optional[datetime] = None,
     to_date: Optional[datetime] = None,
     meta: Optional[FixtureMetadata] = None,
+    commission_pct: Optional[float] = None,
 ):
     if meta is None:
         if snapshot_name:
@@ -347,7 +365,7 @@ def _run_verify_pass(
             end_date=meta.end_date,
             assets=[meta.symbol],
             timeframe=meta.timeframe,
-            config={"market_hours_filter": False, "offline_data": True},
+            config=_engine_config(commission_pct),
             db_session=session,
             strategy=build_strategy(STRATEGY_ALIASES[strategy_name]),
         )
@@ -392,6 +410,13 @@ def _run_verify_pass(
     is_flag=True,
     help="Also show engine warnings on stderr.",
 )
+@click.option(
+    "--commission-pct",
+    "commission_pct",
+    type=click.FloatRange(min=0.0),
+    default=None,
+    help="Comisión por lado sobre el nocional (0.001 = 0.10%). Default: TRADING_COMMISSION_PCT.",
+)
 def verify_backtest(
     strategy_name: str,
     fixture_name: Optional[str],
@@ -401,6 +426,7 @@ def verify_backtest(
     to_date: Optional[datetime],
     abrir_reserva: bool,
     verbose: bool,
+    commission_pct: Optional[float],
 ) -> None:
     import difflib
 
@@ -424,6 +450,7 @@ def verify_backtest(
         from_date=from_date,
         to_date=to_date,
         meta=meta,
+        commission_pct=commission_pct,
     )
     m2, s2, csv2 = _run_verify_pass(
         strategy_name,
@@ -434,6 +461,7 @@ def verify_backtest(
         from_date=from_date,
         to_date=to_date,
         meta=meta,
+        commission_pct=commission_pct,
     )
 
     diff_lines = []
