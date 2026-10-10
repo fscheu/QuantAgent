@@ -30,6 +30,44 @@ from quantagent.agent_models import (
 )
 
 
+def _configure_xdist_worker_database() -> None:
+    """Derive worker-specific SQLite database when running under pytest-xdist."""
+    worker = os.environ.get("PYTEST_XDIST_WORKER")
+    if not worker or worker == "master":
+        return
+    url = os.environ.get("DATABASE_URL", "")
+    if not url.startswith("sqlite:///"):
+        return
+    path_str = url[len("sqlite:///"):]
+    if path_str in ("", ":memory:"):
+        return
+    orig_path = Path(path_str)
+    worker_path = orig_path.with_name(f"{orig_path.stem}_{worker}{orig_path.suffix}")
+    if orig_path.exists():
+        import shutil
+        shutil.copy2(orig_path, worker_path)
+    worker_url = f"sqlite:///{worker_path}"
+    os.environ["DATABASE_URL"] = worker_url
+    try:
+        from quantagent import settings
+        settings.DATABASE_URL = worker_url
+    except Exception:
+        pass
+    if "quantagent.database" in sys.modules:
+        qdb = sys.modules["quantagent.database"]
+        qdb._engine = None
+        qdb._SessionLocal = None
+    if not orig_path.exists() and not worker_path.exists():
+        try:
+            from quantagent.database import init_db
+            init_db()
+        except Exception:
+            pass
+
+
+_configure_xdist_worker_database()
+
+
 def _module_available(module_name: str) -> bool:
     try:
         return importlib.util.find_spec(module_name) is not None
@@ -778,6 +816,11 @@ def pytest_collection_modifyitems(config, items):
         if "vision" in item.nodeid:
             item.add_marker(pytest.mark.vision)
 
+        # Group test_backtest_cli on single worker to share module fixtures
+        if "test_backtest_cli.py" in item.nodeid:
+            item.add_marker(pytest.mark.xdist_group("backtest_cli"))
+
+
 
 # ============================================================================
 # Database Fixtures
@@ -830,3 +873,34 @@ def db_session():
         conn.commit()
     Base.metadata.drop_all(test_engine)
     test_engine.dispose()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _cleanup_xdist_worker_database():
+    """Clean up worker-specific SQLite database file at session end."""
+    yield
+    worker = os.environ.get("PYTEST_XDIST_WORKER")
+    if not worker or worker == "master":
+        return
+    url = os.environ.get("DATABASE_URL", "")
+    if not url.startswith("sqlite:///"):
+        return
+    path_str = url[len("sqlite:///"):]
+    if path_str in ("", ":memory:"):
+        return
+    worker_path = Path(path_str)
+    if worker_path.exists() and worker in worker_path.name:
+        if "quantagent.database" in sys.modules:
+            qdb = sys.modules["quantagent.database"]
+            if getattr(qdb, "_engine", None) is not None:
+                try:
+                    qdb._engine.dispose()
+                except Exception:
+                    pass
+        try:
+            worker_path.unlink(missing_ok=True)
+            for extra in ("-wal", "-shm"):
+                Path(f"{worker_path}{extra}").unlink(missing_ok=True)
+        except Exception:
+            pass
+

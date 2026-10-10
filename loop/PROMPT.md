@@ -14,7 +14,7 @@ REGLAS DURAS
 - Tamaño: el objetivo es ≤100 líneas agregadas+borradas. El límite duro es 400 líneas y 10 archivos, excluyendo
   .beads/**, tests/fixtures/** y docs/loop/REVIEW-LOG.md. Medí con `scripts/loop/diff_size.sh origin/<base>`
   (exit 1 = excede). El límite duro no es permiso para hacer tickets grandes: ver PASO 3.
-- Cada entrega deja el proyecto funcionando: `python -m pytest -q -m "not slow and not api and not oraculo"` en 0 failed
+- Cada entrega deja el proyecto funcionando: `python -m pytest -q -n 4 -m "not slow and not api and not oraculo"` (o sin `-n 4`) en 0 failed
   y `scripts/loop/smoke.sh` con exit 0. Los oráculos corren en el CI de cada PR y el PM los corre en cada revisión que toque `quantagent/backtesting/`, `quantagent/trading/`, `quantagent/portfolio/` o `quantagent/strategy/`, y en el punto de control de cada lote, con `python -m pytest -q -m oraculo`. DATABASE_URL ya apunta a la base de tests del loop (migrada); no la
   cambies. Si un test falla por la base, es un bloqueo, no algo a ignorar.
 - Respetá AGENTS.md y CLAUDE.md del repo, salvo la regla de pedir confirmación: acá no hay humano, así que
@@ -22,7 +22,7 @@ REGLAS DURAS
 - Corré todos los comandos en primer plano y esperá su salida: la suite, el smoke, los backtests y `try.sh`.
   No lances nada en segundo plano ni delegues comandos largos a una tarea aparte: si te quedás esperando una
   tarea de fondo, la corrida termina sola y se pierde la entrega (pasó dos veces el 2026-10-06 con hx0.2).
-  La suite tarda unos 4 minutos; es esperable.
+  La suite tarda unos 2-3 minutos con -n 4 (4 minutos en serie); es esperable.
 - Cada comando de terminal va en UNA sola línea. Nada de heredocs (`<<'EOF'`), ni `python - <<...`, ni
   `cat > archivo <<...`: un comando con saltos de línea no pasa la regla de permisos del modo desatendido, se
   rechaza y la corrida termina sin entrega (pasó dos veces el 2026-10-07 con hx0.11). Para crear o modificar
