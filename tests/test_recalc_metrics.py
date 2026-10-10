@@ -63,6 +63,38 @@ def test_mismatched_pnl_exits_with_code_1(tmp_path):
     assert "PnL por trade: 0/1 filas coinciden" in proc.stdout
 
 
+# Comisión 0.1% por lado (QuantAgent-40o). Long 10 @ 100 -> 110: bruto 100, comisión 0.001 * 10 * (100 + 110) = 2.10.
+# Short 10 @ 110 -> 105: bruto 50, comisión 0.001 * 10 * (110 + 105) = 2.15.
+COMMISSION_TRADES = HEADER + (
+    "2026-01-02T05:00:00,2026-01-02T13:00:00,SPY,buy,10,100,110,95,97.90,TAKE_PROFIT\n"
+    "2026-01-02T13:00:00,2026-01-02T17:00:00,SPY,sell,10,110,105,115,47.85,SIGNAL\n"
+)
+
+
+def test_commission_pct_discounts_entry_and_exit_commission(tmp_path):
+    """Validates the per-trade formula with commission: pnl = bruto - pct * qty * (entry + exit)."""
+    csv_path = tmp_path / "run.csv"
+    csv_path.write_text(COMMISSION_TRADES)
+    out = subprocess.run(
+        [sys.executable, str(SCRIPT), str(csv_path), "--commission-pct", "0.001"],
+        capture_output=True, text=True, check=True,
+    ).stdout
+    assert "Total PnL: 145.75" in out  # 97.90 + 47.85
+    assert "PnL por trade: 2/2 filas coinciden" in out
+
+
+def test_commission_pct_flags_a_pnl_missing_the_entry_commission(tmp_path):
+    """Validates the mismatch report: a pnl net of only the exit commission (100 - 1.10) is off by the entry one (1.00)."""
+    csv_path = tmp_path / "run.csv"
+    csv_path.write_text(HEADER + "2026-01-02T05:00:00,2026-01-02T13:00:00,SPY,buy,10,100,110,95,98.90,SIGNAL\n")
+    proc = subprocess.run(
+        [sys.executable, str(SCRIPT), str(csv_path), "--commission-pct", "0.001"], capture_output=True, text=True
+    )
+    assert proc.returncode == 1
+    assert "PnL por trade: 0/1 filas coinciden" in proc.stdout
+    assert "Diferencia CSV - recalculado: total 1.00, min 1.00, max 1.00" in proc.stdout
+
+
 def test_script_does_not_import_the_engine():
     """Validates the independence claim: loading the script must not pull in `quantagent`."""
     code = f"import runpy, sys; runpy.run_path({str(SCRIPT)!r}); sys.exit('quantagent' in sys.modules)"

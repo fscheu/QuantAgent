@@ -2,7 +2,7 @@
 """Recalculate backtest metrics independently of the engine (QuantAgent-hx0.5, QuantAgent-hx0.6).
 
 Usage:
-  python scripts/recalc_metrics.py run.csv
+  python scripts/recalc_metrics.py run.csv [--commission-pct C]
   python scripts/recalc_metrics.py --equity eq.csv [--periods-per-year N]
   python scripts/recalc_metrics.py run.csv --equity eq.csv [--periods-per-year N]
 
@@ -18,7 +18,7 @@ import statistics
 import sys
 
 
-def recalc(path):
+def recalc(path, commission_pct=0.0):
     with open(path, newline="") as f:
         rows = [row for row in csv.DictReader(f) if row["pnl"]]  # rows without pnl are still open
 
@@ -32,13 +32,18 @@ def recalc(path):
     profit_factor = gross_profit / gross_loss if gross_loss else (math.inf if gross_profit else 0.0)  # $ won per $ lost
 
     matched = 0
+    diffs = []  # pnl del CSV menos pnl recalculado, solo filas que no coinciden
     for row in rows:
         entry = float(row["entry_price"])
         exit_ = float(row["exit_price"])
         qty = float(row["qty"])
         trade_pnl = (exit_ - entry) * qty if row["side"].lower() == "buy" else (entry - exit_) * qty
+        # Comisión por lado sobre el nocional ejecutado: una al entrar y otra al salir.
+        trade_pnl -= commission_pct * qty * (entry + exit_)
         if abs(trade_pnl - float(row["pnl"])) <= 0.01:
             matched += 1
+        else:
+            diffs.append(float(row["pnl"]) - trade_pnl)
 
     return {
         "trades": trades,
@@ -46,6 +51,7 @@ def recalc(path):
         "win_rate": win_rate,
         "profit_factor": profit_factor,
         "matched": matched,
+        "diffs": diffs,
     }
 
 
@@ -94,9 +100,10 @@ if __name__ == "__main__":
     parser.add_argument("--equity")
     parser.add_argument("--periods-per-year", type=float, default=None)
     parser.add_argument("--risk-free-rate", type=float, default=0.02)
+    parser.add_argument("--commission-pct", type=float, default=0.0, help="por lado; 0.001 = 0.10%%")
     args = parser.parse_args()
 
-    m = recalc(args.trades_csv) if args.trades_csv else None
+    m = recalc(args.trades_csv, args.commission_pct) if args.trades_csv else None
     eq = recalc_equity(args.equity, args.periods_per_year, args.risk_free_rate) if args.equity else None
 
     if m:
@@ -112,6 +119,9 @@ if __name__ == "__main__":
     if m:
         print(f"Total PnL: {m['total_pnl']:.2f}")
         print(f"PnL por trade: {m['matched']}/{m['trades']} filas coinciden")
+        if m["diffs"]:
+            d = m["diffs"]
+            print(f"Diferencia CSV - recalculado: total {math.fsum(d):.2f}, min {min(d):.2f}, max {max(d):.2f}")
     if eq:
         print(f"Max drawdown: {eq['max_drawdown']:.6f}")
     if m and m["matched"] != m["trades"]:
