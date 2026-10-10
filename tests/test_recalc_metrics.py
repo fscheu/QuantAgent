@@ -4,6 +4,7 @@ The expected values are worked out by hand in the comments, never taken from the
 regression here means the "second opinion" used to audit the backtest metrics is itself wrong.
 """
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -221,3 +222,60 @@ def test_synthetic_equity_same_sharpe_in_both_calendars_without_calendar_param(t
         check=True,
     ).stdout.splitlines()
     assert "Sharpe ratio: 0.68" in out_fixed
+
+
+# Comprar y mantener (QuantAgent-bzt): 3 velas diarias 100 -> 90 -> 120, capital 10000.
+THREE_CANDLES = (
+    "symbol,timeframe,timestamp,open,high,low,close,volume\n"
+    "SPY,1d,2024-01-01T00:00:00,100,100,100,100,1\n"
+    "SPY,1d,2024-01-02T00:00:00,90,90,90,90,1\n"
+    "SPY,1d,2024-01-03T00:00:00,120,120,120,120,1\n"
+)
+
+
+def _buy_and_hold(path, *extra):
+    cmd = [sys.executable, str(SCRIPT), "--comprar-y-mantener", str(path), "--capital", "10000", *extra]
+    return subprocess.run(cmd, capture_output=True, text=True, check=True).stdout.strip()
+
+
+def test_buy_and_hold_three_candles_with_costs_gives_the_hand_computed_line(tmp_path):
+    """Validates PnL, Sharpe and max drawdown of buy and hold with slippage 0.1% and commission 0.2% per side.
+
+    qty = 10000 / (100 * 1.001 * 1.002) = 99.70070; vende a 120 * 0.999 menos 0.2%: PnL = 1928.22.
+    Equity qty*100, qty*90, venta: retornos -0.1 y 120 * 0.999 * 0.998 / 90 - 1 = 0.329336;
+    N = 2 / (2 / 365.25) = 365.25 -> Sharpe 7.22. El pozo 100 -> 90 es 10%.
+    """
+    csv_path = tmp_path / "velas.csv"
+    csv_path.write_text(THREE_CANDLES)
+    out = _buy_and_hold(csv_path, "--slippage-pct", "0.001", "--commission-pct", "0.002")
+    assert out == "Comprar y mantener: PnL 1928.22, Sharpe 7.22, max drawdown 0.100000"
+
+
+def test_buy_and_hold_reads_the_adjusted_close_from_a_snapshot_parquet(tmp_path):
+    """Validates the parquet path: uses adj_close (100 -> 95 -> 130), not close: PnL 10000 * 0.30, pozo 5%."""
+    import pandas as pd
+
+    idx = pd.to_datetime(["2024-01-01", "2024-01-02", "2024-01-03"])
+    path = tmp_path / "SPY.parquet"
+    pd.DataFrame({"close": [100.0, 90.0, 120.0], "adj_close": [100.0, 95.0, 130.0]}, index=idx).to_parquet(path)
+    assert _buy_and_hold(path).startswith("Comprar y mantener: PnL 3000.00, Sharpe ")
+    assert _buy_and_hold(path).endswith(", max drawdown 0.050000")
+
+
+def test_buy_and_hold_matches_the_cli_line_on_spy_smoke(tmp_path):
+    """Validates the cross-check: the recalculation equals the engine's 'Comprar y mantener' line on spy-smoke."""
+    env = {**os.environ, "DATABASE_URL": f"sqlite:///{tmp_path / 'bh.db'}", "OPENAI_API_KEY": ""}
+    subprocess.run([sys.executable, "-c", "from quantagent.database import init_db; init_db()"], env=env, check=True)
+    cli = subprocess.run(
+        [sys.executable, "-m", "quantagent.cli", "backtest", "run", "--strategy", "rsi", "--fixture", "spy-smoke",
+         "--commission-pct", "0.001"],
+        env=env, capture_output=True, text=True, check=True,
+    ).stdout
+    engine_line = next(line for line in cli.splitlines() if line.startswith("Comprar y mantener"))
+    fixture = Path(__file__).resolve().parent / "fixtures" / "spy-smoke.csv"
+    recalc_line = subprocess.run(
+        [sys.executable, str(SCRIPT), "--comprar-y-mantener", str(fixture), "--slippage-pct", "0.0005",
+         "--commission-pct", "0.001"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    assert recalc_line == engine_line
