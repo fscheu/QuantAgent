@@ -19,6 +19,7 @@ from quantagent.backtesting.backtest import Backtest, CloseRejectedError
 from quantagent.models import MarketData, OrderSide, Trade
 from quantagent.strategy.base import TradingSignal, TradingStrategy
 from quantagent.trading.paper_broker import PaperBroker
+from quantagent.trading.position_sizer import PositionSizer
 
 DAY1 = [datetime(2018, 3, 5, h) for h in range(10, 16)]
 DAY2 = [datetime(2018, 3, 6, h) for h in range(10, 16)]
@@ -46,18 +47,20 @@ class AlwaysLong(TradingStrategy):
         return False
 
 
-def _run(db_session, crash_close: int = 100):
+def _run(db_session, crash_close: int = 100, crash_low: int = 90, last_close: int = 100, **config):
     for ts in DAY1 + DAY2:
         crash = ts == CRASH
+        close = crash_close if crash else last_close if ts == DAY2[-1] else 100
         db_session.add(MarketData(symbol="SPY", timeframe="1h", timestamp=ts, open=Decimal(100),
-                                  high=Decimal(101), low=Decimal(90 if crash else 99),
-                                  close=Decimal(crash_close if crash else 100), volume=Decimal(1000)))
+                                  high=Decimal(max(101, close)), low=Decimal(crash_low if crash else 99),
+                                  close=Decimal(close), volume=Decimal(1000)))
     db_session.commit()
     strategy = AlwaysLong()
     bt = Backtest(start_date=DAY1[0], end_date=DAY2[-1], assets=["SPY"], timeframe="1h",
                   db_session=db_session, strategy=strategy, intrabar_stops=True,
                   config={"market_hours_filter": False, "offline_data": True, "slippage_pct": 0.0,
-                          "base_position_pct": 0.10, "max_position_pct": 0.20, "max_daily_loss_pct": 0.005})
+                          "base_position_pct": 0.10, "max_position_pct": 0.20, "max_daily_loss_pct": 0.005,
+                          **config})
     strategy.bt = bt
     bt.run(name="limite-diario")
     return bt, strategy, db_session.query(Trade).order_by(Trade.id).all()
@@ -107,3 +110,26 @@ def test_close_rejected_by_the_broker_aborts_the_run_naming_the_trade(db_session
     trade = db_session.query(Trade).one()
     assert f"Trade {trade.id} (SPY)" in str(exc.value) and "conserva 100.0 acciones" in str(exc.value)
     assert (trade.opened_at, trade.closed_at, trade.pnl) == (DAY1[0], None, None)
+
+
+def test_close_of_a_position_that_outgrew_the_size_limit_is_executed(db_session):
+    # QuantAgent-8wxb: entra con 5% del capital (50 acciones a 100) y la última vela cierra en 299. La
+    # posición vale más que el 10% de la cartera; el cierre de fin de corrida igual se ejecuta.
+    qty, exit_price = 0.05 * 100000 / 100, 299
+    assert qty * exit_price > 0.10 * (100000 + qty * (exit_price - 100))  # supera el límite de tamaño
+    bt, _, trades = _run(db_session, crash_low=99, last_close=exit_price,
+                         base_position_pct=0.05, max_position_pct=0.10)
+    assert [(t.opened_at, t.closed_at, float(t.pnl)) for t in trades] == [
+        (DAY1[0], DAY2[-1], qty * (exit_price - 100))]
+    assert bt.portfolio.positions["SPY"]["qty"] == 0.0
+    assert bt.portfolio.cash == pytest.approx(100000.0 + qty * (exit_price - 100))
+
+
+def test_close_is_executed_when_the_position_took_almost_all_the_cash(db_session, monkeypatch):
+    # QuantAgent-8wxb: entra con 99% del capital (990 acciones a 100, quedan 1000 USD; el sizer real no pasa
+    # de 10%, por eso se fija la cantidad). El cierre vale 99000 USD, mucho más que el efectivo; se ejecuta.
+    monkeypatch.setattr(PositionSizer, "calculate_size", lambda *args, **kwargs: 990.0)
+    bt, _, trades = _run(db_session, crash_low=99, max_position_pct=1.0)
+    assert [(t.opened_at, t.closed_at, float(t.quantity)) for t in trades] == [(DAY1[0], DAY2[-1], 990.0)]
+    assert bt.portfolio.positions["SPY"]["qty"] == 0.0
+    assert bt.portfolio.cash == pytest.approx(100000.0)
