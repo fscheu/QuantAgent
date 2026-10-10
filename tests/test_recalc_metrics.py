@@ -251,6 +251,18 @@ def test_buy_and_hold_three_candles_with_costs_gives_the_hand_computed_line(tmp_
     assert out == "Comprar y mantener: PnL 1928.22, Sharpe 7.22, max drawdown 0.100000"
 
 
+def test_buy_and_hold_from_to_trims_the_candles_to_the_range(tmp_path):
+    """Validates --from/--to (QuantAgent-824): with a 4th candle at 60, 01-02..01-03 buys at 90 and sells at 120.
+
+    PnL = 10000 * (120 / 90 - 1) = 3333.33 and no drawdown; without the range it would be 10000 * (60 / 100 - 1).
+    """
+    csv_path = tmp_path / "velas.csv"
+    csv_path.write_text(THREE_CANDLES + "SPY,1d,2024-01-04T00:00:00,60,60,60,60,1\n")
+    out = _buy_and_hold(csv_path, "--from", "2024-01-02", "--to", "2024-01-03")
+    assert out == f"Comprar y mantener: PnL {10000 * (120 / 90 - 1):.2f}, Sharpe 0.00, max drawdown 0.000000"
+    assert _buy_and_hold(csv_path).startswith(f"Comprar y mantener: PnL {10000 * (60 / 100 - 1):.2f},")
+
+
 def test_buy_and_hold_reads_the_adjusted_close_from_a_snapshot_parquet(tmp_path):
     """Validates the parquet path: uses adj_close (100 -> 95 -> 130), not close: PnL 10000 * 0.30, pozo 5%."""
     import pandas as pd
