@@ -7,7 +7,7 @@ Documento de diseño y auditoría para las métricas del motor de backtest (Quan
 ## 1. PnL: Fórmulas y Definiciones
 
 ### 1.1 PnL por Trade
-Para cada operación cerrada (`Trade` con `closed_at` y `exit_price`), el PnL se calcula a partir de los precios ejecutados reportados por el broker (`entry_price` y `exit_price`), los cuales ya incorporan el slippage por lado (default 0,05% según QuantAgent-hx0.9). Las comisiones son actualmente 0 (`commission = 0`, scope de QuantAgent-les):
+Para cada operación cerrada (`Trade` con `closed_at` y `exit_price`), el PnL se calcula a partir de los precios ejecutados reportados por el broker (`entry_price` y `exit_price`), los cuales ya incorporan el slippage por lado (default 0,05% según QuantAgent-hx0.9). La comisión es un porcentaje `c` por lado sobre el nocional ejecutado (`TRADING_COMMISSION_PCT` o `--commission-pct`, default 0; QuantAgent-de5):
 
 - **LONG (compra inicial, venta de cierre):**
   $$\text{pnl} = (\text{exit\_price} - \text{entry\_price}) \times \text{qty} - \text{commission}$$
@@ -16,6 +16,12 @@ Para cada operación cerrada (`Trade` con `closed_at` y `exit_price`), el PnL se
 - **SHORT (venta inicial, compra de cierre):**
   $$\text{pnl} = (\text{entry\_price} - \text{exit\_price}) \times \text{qty} - \text{commission}$$
   $$\text{pnl\_pct} = \frac{\text{pnl}}{\text{entry\_price} \times \text{qty}} \times 100$$
+
+**Qué es `commission` en el engine (medido en QuantAgent-40o, rsi/spy-90d con `c = 0.001`):** solo la de la orden de cierre, $c \times \text{qty} \times \text{exit\_price}$ (`portfolio/manager.py`, copiado a la fila de apertura en `Backtest._sync_linked_trade_exit`). La de entrada, $c \times \text{qty} \times \text{entry\_price}$, queda guardada en `Trade.commission` de esa fila pero no se descuenta del `pnl`. `PortfolioManager.cash` no descuenta ninguna de las dos, así que equity, Sharpe y drawdown no ven comisiones.
+
+**Qué recalcula `scripts/recalc_metrics.py --commission-pct c`:** entrada y salida,
+$$\text{commission} = c \times \text{qty} \times (\text{entry\_price} + \text{exit\_price})$$
+Con `c > 0` las filas no coinciden por la comisión de entrada: es un bug abierto del engine, pendiente de decisión.
 
 ### 1.2 Total PnL y Retorno Porcentual
 - **Total PnL:** Suma de `Trade.pnl` de todas las operaciones cerradas del run:
