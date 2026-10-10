@@ -4,6 +4,7 @@ The expected values are worked out by hand in the comments, never taken from the
 regression here means the "second opinion" used to audit the backtest metrics is itself wrong.
 """
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -61,6 +62,38 @@ def test_mismatched_pnl_exits_with_code_1(tmp_path):
     proc = subprocess.run([sys.executable, str(SCRIPT), str(csv_path)], capture_output=True, text=True)
     assert proc.returncode == 1
     assert "PnL por trade: 0/1 filas coinciden" in proc.stdout
+
+
+# Comisión 0.1% por lado (QuantAgent-40o). Long 10 @ 100 -> 110: bruto 100, comisión 0.001 * 10 * (100 + 110) = 2.10.
+# Short 10 @ 110 -> 105: bruto 50, comisión 0.001 * 10 * (110 + 105) = 2.15.
+COMMISSION_TRADES = HEADER + (
+    "2026-01-02T05:00:00,2026-01-02T13:00:00,SPY,buy,10,100,110,95,97.90,TAKE_PROFIT\n"
+    "2026-01-02T13:00:00,2026-01-02T17:00:00,SPY,sell,10,110,105,115,47.85,SIGNAL\n"
+)
+
+
+def test_commission_pct_discounts_entry_and_exit_commission(tmp_path):
+    """Validates the per-trade formula with commission: pnl = bruto - pct * qty * (entry + exit)."""
+    csv_path = tmp_path / "run.csv"
+    csv_path.write_text(COMMISSION_TRADES)
+    out = subprocess.run(
+        [sys.executable, str(SCRIPT), str(csv_path), "--commission-pct", "0.001"],
+        capture_output=True, text=True, check=True,
+    ).stdout
+    assert "Total PnL: 145.75" in out  # 97.90 + 47.85
+    assert "PnL por trade: 2/2 filas coinciden" in out
+
+
+def test_commission_pct_flags_a_pnl_missing_the_entry_commission(tmp_path):
+    """Validates the mismatch report: a pnl net of only the exit commission (100 - 1.10) is off by the entry one (1.00)."""
+    csv_path = tmp_path / "run.csv"
+    csv_path.write_text(HEADER + "2026-01-02T05:00:00,2026-01-02T13:00:00,SPY,buy,10,100,110,95,98.90,SIGNAL\n")
+    proc = subprocess.run(
+        [sys.executable, str(SCRIPT), str(csv_path), "--commission-pct", "0.001"], capture_output=True, text=True
+    )
+    assert proc.returncode == 1
+    assert "PnL por trade: 0/1 filas coinciden" in proc.stdout
+    assert "Diferencia CSV - recalculado: total 1.00, min 1.00, max 1.00" in proc.stdout
 
 
 def test_script_does_not_import_the_engine():
@@ -189,3 +222,72 @@ def test_synthetic_equity_same_sharpe_in_both_calendars_without_calendar_param(t
         check=True,
     ).stdout.splitlines()
     assert "Sharpe ratio: 0.68" in out_fixed
+
+
+# Comprar y mantener (QuantAgent-bzt): 3 velas diarias 100 -> 90 -> 120, capital 10000.
+THREE_CANDLES = (
+    "symbol,timeframe,timestamp,open,high,low,close,volume\n"
+    "SPY,1d,2024-01-01T00:00:00,100,100,100,100,1\n"
+    "SPY,1d,2024-01-02T00:00:00,90,90,90,90,1\n"
+    "SPY,1d,2024-01-03T00:00:00,120,120,120,120,1\n"
+)
+
+
+def _buy_and_hold(path, *extra):
+    cmd = [sys.executable, str(SCRIPT), "--comprar-y-mantener", str(path), "--capital", "10000", *extra]
+    return subprocess.run(cmd, capture_output=True, text=True, check=True).stdout.strip()
+
+
+def test_buy_and_hold_three_candles_with_costs_gives_the_hand_computed_line(tmp_path):
+    """Validates PnL, Sharpe and max drawdown of buy and hold with slippage 0.1% and commission 0.2% per side.
+
+    qty = 10000 / (100 * 1.001 * 1.002) = 99.70070; vende a 120 * 0.999 menos 0.2%: PnL = 1928.22.
+    Equity qty*100, qty*90, venta: retornos -0.1 y 120 * 0.999 * 0.998 / 90 - 1 = 0.329336;
+    N = 2 / (2 / 365.25) = 365.25 -> Sharpe 7.22. El pozo 100 -> 90 es 10%.
+    """
+    csv_path = tmp_path / "velas.csv"
+    csv_path.write_text(THREE_CANDLES)
+    out = _buy_and_hold(csv_path, "--slippage-pct", "0.001", "--commission-pct", "0.002")
+    assert out == "Comprar y mantener: PnL 1928.22, Sharpe 7.22, max drawdown 0.100000"
+
+
+def test_buy_and_hold_from_to_trims_the_candles_to_the_range(tmp_path):
+    """Validates --from/--to (QuantAgent-824): with a 4th candle at 60, 01-02..01-03 buys at 90 and sells at 120.
+
+    PnL = 10000 * (120 / 90 - 1) = 3333.33 and no drawdown; without the range it would be 10000 * (60 / 100 - 1).
+    """
+    csv_path = tmp_path / "velas.csv"
+    csv_path.write_text(THREE_CANDLES + "SPY,1d,2024-01-04T00:00:00,60,60,60,60,1\n")
+    out = _buy_and_hold(csv_path, "--from", "2024-01-02", "--to", "2024-01-03")
+    assert out == f"Comprar y mantener: PnL {10000 * (120 / 90 - 1):.2f}, Sharpe 0.00, max drawdown 0.000000"
+    assert _buy_and_hold(csv_path).startswith(f"Comprar y mantener: PnL {10000 * (60 / 100 - 1):.2f},")
+
+
+def test_buy_and_hold_reads_the_adjusted_close_from_a_snapshot_parquet(tmp_path):
+    """Validates the parquet path: uses adj_close (100 -> 95 -> 130), not close: PnL 10000 * 0.30, pozo 5%."""
+    import pandas as pd
+
+    idx = pd.to_datetime(["2024-01-01", "2024-01-02", "2024-01-03"])
+    path = tmp_path / "SPY.parquet"
+    pd.DataFrame({"close": [100.0, 90.0, 120.0], "adj_close": [100.0, 95.0, 130.0]}, index=idx).to_parquet(path)
+    assert _buy_and_hold(path).startswith("Comprar y mantener: PnL 3000.00, Sharpe ")
+    assert _buy_and_hold(path).endswith(", max drawdown 0.050000")
+
+
+def test_buy_and_hold_matches_the_cli_line_on_spy_smoke(tmp_path):
+    """Validates the cross-check: the recalculation equals the engine's 'Comprar y mantener' line on spy-smoke."""
+    env = {**os.environ, "DATABASE_URL": f"sqlite:///{tmp_path / 'bh.db'}", "OPENAI_API_KEY": ""}
+    subprocess.run([sys.executable, "-c", "from quantagent.database import init_db; init_db()"], env=env, check=True)
+    cli = subprocess.run(
+        [sys.executable, "-m", "quantagent.cli", "backtest", "run", "--strategy", "rsi", "--fixture", "spy-smoke",
+         "--commission-pct", "0.001"],
+        env=env, capture_output=True, text=True, check=True,
+    ).stdout
+    engine_line = next(line for line in cli.splitlines() if line.startswith("Comprar y mantener"))
+    fixture = Path(__file__).resolve().parent / "fixtures" / "spy-smoke.csv"
+    recalc_line = subprocess.run(
+        [sys.executable, str(SCRIPT), "--comprar-y-mantener", str(fixture), "--slippage-pct", "0.0005",
+         "--commission-pct", "0.001"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    assert recalc_line == engine_line

@@ -84,13 +84,40 @@ def test_backtest_run_exits_zero_and_prints_metrics(cli_runner):
 
     assert result.exit_code == 0, result.output
     lines = result.output.strip().splitlines()
-    assert len(lines) == 6
+    assert len(lines) == 8
     assert lines[0].startswith("Trades:")
     assert lines[1].startswith("Win rate:")
     assert lines[2].startswith("Profit factor:")
     assert lines[3].startswith("Sharpe ratio:")
     assert lines[4].startswith("Total PnL:")
     assert lines[5] == "Slippage: 0.05% por lado"
+    assert lines[6] == "Comisión: 0.00% por lado"
+    assert lines[7].startswith("Comprar y mantener: PnL ")
+
+
+def test_backtest_run_commission_pct_charges_every_fill_and_lowers_pnl(cli_runner):
+    """--commission-pct llega al broker con modelo pct: la entrada queda registrada como qty * precio * pct
+    en el trade y la salida baja el Total PnL, sin cambiar los trades (QuantAgent-de5)."""
+    args = ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
+    base = cli_runner.invoke(backtest_group, args)
+    assert base.exit_code == 0, base.output
+    result = cli_runner.invoke(backtest_group, [*args, "--commission-pct", "0.001"])
+    assert result.exit_code == 0, result.output
+
+    out0 = dict(line.split(": ", 1) for line in base.output.splitlines())
+    out1 = dict(line.split(": ", 1) for line in result.output.splitlines())
+    assert out1["Comisión"] == "0.10% por lado"
+    assert out1["Trades"] == out0["Trades"]
+    assert float(out1["Total PnL"]) < float(out0["Total PnL"])
+
+    with Session(create_engine(os.environ["DATABASE_URL"])) as s:
+        rows = s.execute(text(
+            "SELECT quantity, entry_price, commission FROM trades"
+            " WHERE backtest_run_id = (SELECT MAX(id) FROM backtest_runs)"
+        )).all()
+    assert len(rows) == int(out1["Trades"])
+    for qty, entry, commission in rows:
+        assert float(commission) == pytest.approx(float(qty) * float(entry) * 0.001, rel=1e-9)
 
 
 def test_backtest_run_writes_csv_matching_reported_trade_count(shared_rsi_run):
@@ -285,16 +312,18 @@ def shared_cli_process_run(tmp_path_factory):
 
 
 def test_backtest_run_output_is_only_metrics_lines(shared_cli_process_run):
-    """stdout+stderr is exactly the 6 metric lines plus the --out line: no log or SAWarning noise."""
+    """stdout+stderr is exactly the 8 metric lines plus the --out line: no log or SAWarning noise."""
     proc, trades_csv = shared_cli_process_run
 
     assert proc.returncode == 0, proc.stdout
     prefixes = [line.split(":")[0] for line in proc.stdout.splitlines()]
     assert prefixes == [
-        "Trades", "Win rate", "Profit factor", "Sharpe ratio", "Total PnL", "Slippage",
+        "Trades", "Win rate", "Profit factor", "Sharpe ratio", "Total PnL", "Slippage", "Comisión",
+        "Comprar y mantener",
         f"Trade log written to {trades_csv}",
     ]
     assert proc.stdout.splitlines()[5] == "Slippage: 0.05% por lado"
+    assert proc.stdout.splitlines()[6] == "Comisión: 0.00% por lado"
 
 
 def test_backtest_run_output_with_custom_slippage_env(tmp_path):
@@ -311,8 +340,8 @@ def test_backtest_run_output_with_custom_slippage_env(tmp_path):
     )
     assert proc.returncode == 0, proc.stdout
     lines = proc.stdout.strip().splitlines()
-    assert len(lines) == 6
-    assert lines[-1] == "Slippage: 1.00% por lado"
+    assert len(lines) == 8
+    assert lines[-3] == "Slippage: 1.00% por lado"
 
 
 def test_backtest_run_verbose_shows_insufficient_data_messages(tmp_path):
@@ -434,20 +463,20 @@ def test_backtest_verify_process_output_is_only_ok_reproducible():
 def test_backtest_run_consecutive_runs_on_same_database_produce_identical_output(
     cli_runner,
 ):
-    """Two consecutive `backtest run` on the same database must produce identical 6 lines (QuantAgent-hx0.11)."""
+    """Two consecutive `backtest run` on the same database must produce identical 8 lines (QuantAgent-hx0.11)."""
     res1 = cli_runner.invoke(
         backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
     )
     assert res1.exit_code == 0, res1.output
     lines1 = res1.output.strip().splitlines()
-    assert len(lines1) == 6
+    assert len(lines1) == 8
 
     res2 = cli_runner.invoke(
         backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
     )
     assert res2.exit_code == 0, res2.output
     lines2 = res2.output.strip().splitlines()
-    assert len(lines2) == 6
+    assert len(lines2) == 8
 
     assert lines1 == lines2
 

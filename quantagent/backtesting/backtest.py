@@ -171,6 +171,10 @@ def check_intrabar_stops(
         return None
 
 
+class CloseRejectedError(RuntimeError):
+    """El cierre de un trade no se ejecutó: cartera y registro de trades divergirían (QuantAgent-oat)."""
+
+
 class Backtest:
     """
     Backtesting engine for validating trading strategies.
@@ -249,6 +253,7 @@ class Backtest:
                 "max_daily_loss_pct": self.config.get("max_daily_loss_pct", settings.TRADING_MAX_DAILY_LOSS_PCT),
                 "max_position_pct": self.config.get("max_position_pct", settings.TRADING_MAX_POSITION_PCT),
                 "slippage_pct": self.config.get("slippage_pct", settings.TRADING_SLIPPAGE_PCT),
+                "commission_pct": self.config.get("commission_pct", settings.TRADING_COMMISSION_PCT),
                 # Normalize model fields into generic ones; accept both
                 "model_provider": self.config.get(
                     "agent_llm_provider", self.config.get("model_provider", settings.AGENT_LLM_PROVIDER)
@@ -374,6 +379,8 @@ class Backtest:
 
                 try:
                     self._analyze_and_trade(asset, current_date)
+                except CloseRejectedError:
+                    raise
                 except Exception as e:
                     logger.error(
                         f"Error analyzing {asset} at {current_date}: {e}",
@@ -505,6 +512,8 @@ class Backtest:
 
                 try:
                     self._replay_and_trade(asset, current_date, signal_map)
+                except CloseRejectedError:
+                    raise
                 except Exception as e:
                     logger.error(
                         f"[REPLAY] Error replaying {asset} at {current_date}: {e}",
@@ -686,6 +695,7 @@ class Backtest:
                 "max_daily_loss_pct": self.config.get("max_daily_loss_pct", settings.TRADING_MAX_DAILY_LOSS_PCT),
                 "max_position_pct": self.config.get("max_position_pct", settings.TRADING_MAX_POSITION_PCT),
                 "slippage_pct": self.config.get("slippage_pct", settings.TRADING_SLIPPAGE_PCT),
+                "commission_pct": self.config.get("commission_pct", settings.TRADING_COMMISSION_PCT),
                 "model_provider": self.config.get(
                     "agent_llm_provider", self.config.get("model_provider", settings.AGENT_LLM_PROVIDER)
                 ),
@@ -1285,6 +1295,12 @@ class Backtest:
                 environment=Environment.BACKTEST,
                 timestamp=timestamp,
             )
+            held = self.portfolio.positions.get(position.symbol, {}).get("qty", 0.0)
+            if close_order is None and abs(held) > 1e-8:
+                raise CloseRejectedError(
+                    f"Trade {position.trade_id} ({position.symbol}): el cierre por '{reason}' a {exit_price} "
+                    f"no se ejecutó y la cartera conserva {held} acciones; se corta la corrida"
+                )
 
         self._sync_linked_trade_exit(position, reason, exit_price, close_order)
 

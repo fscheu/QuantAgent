@@ -129,8 +129,8 @@ class TestNetPnLLongClose:
         assert closing_trade.commission == Decimal("10.0")
 
         # Gross P&L = (65000 - 60000) * 0.1 = $500
-        # Net P&L = $500 - $10 = $490
-        expected_pnl = Decimal("490.0")
+        # Net P&L = $500 - $10 de entrada - $10 de salida = $480 (QuantAgent-j62)
+        expected_pnl = Decimal("480.0")
         assert closing_trade.pnl == expected_pnl
 
 
@@ -183,8 +183,8 @@ class TestNetPnLShortClose:
         assert closing_trade.commission == Decimal("10.0")
 
         # Gross P&L = (65000 - 60000) * 0.1 = $500
-        # Net P&L = $500 - $10 = $490
-        expected_pnl = Decimal("490.0")
+        # Net P&L = $500 - $10 de entrada - $10 de salida = $480 (QuantAgent-j62)
+        expected_pnl = Decimal("480.0")
         assert closing_trade.pnl == expected_pnl
 
 
@@ -235,9 +235,9 @@ class TestNetPnLPercent:
         )
         assert closing_trade is not None
 
-        # Net P&L = $490, Entry notional = $6,000
-        # pnl_pct = (490 / 6000) * 100 = 8.1667%
-        expected_pnl_pct = (Decimal("490") / Decimal("6000")) * 100
+        # Net P&L = $480 (resta las dos comisiones, QuantAgent-j62), Entry notional = $6,000
+        # pnl_pct = (480 / 6000) * 100 = 8.0%
+        expected_pnl_pct = (Decimal("480") / Decimal("6000")) * 100
         assert closing_trade.pnl_pct is not None
         assert abs(closing_trade.pnl_pct - float(expected_pnl_pct)) < 0.01
 
@@ -353,3 +353,101 @@ class TestCommissionDefaults:
         # Approximate P&L around $375 (exact value depends on slippage)
         assert closing_trade.pnl is not None
         assert closing_trade.pnl > 0
+
+
+class TestCommissionChargedOnceInCashAndPnl:
+    """QuantAgent-j62: cada comisión baja el efectivo y el PnL del trade, una sola vez."""
+
+    def test_round_trip_nets_both_commissions(self, portfolio, test_db):
+        """Valida efectivo, PnL de la fila del run e identidad equity - capital = pnl."""
+        from types import SimpleNamespace
+
+        from quantagent.backtesting.backtest import Backtest
+
+        c, qty, entry, exit_ = Decimal("0.001"), Decimal("10"), Decimal("100"), Decimal("110")
+        broker = PaperBroker(slippage_pct=0, commission_model="pct", commission_pct=float(c))
+
+        def fill(side, price):
+            order = Order(
+                symbol="SPY",
+                side=side,
+                order_type=OrderType.MARKET,
+                quantity=qty,
+                price=price,
+                status=OrderStatus.PENDING,
+                environment=Environment.BACKTEST,
+            )
+            test_db.add(order)
+            test_db.commit()
+            broker.place_order(order)
+            return order, portfolio.execute_trade(order, fill_price=float(price))
+
+        _, opening_trade = fill(OrderSide.BUY, entry)
+        entry_commission = c * qty * entry  # 1.00
+        assert portfolio.cash == pytest.approx(float(100000 - qty * entry - entry_commission))
+
+        close_order, _ = fill(OrderSide.SELL, exit_)
+        exit_commission = c * qty * exit_  # 1.10
+        expected_pnl = (exit_ - entry) * qty - entry_commission - exit_commission  # 97.90
+        assert portfolio.cash == pytest.approx(float(100000 + expected_pnl))
+
+        # El motor deja una sola fila por trade: la de apertura con los datos del cierre.
+        position = SimpleNamespace(trade_id=opening_trade.id, closed_at=None)
+        Backtest._sync_linked_trade_exit(
+            SimpleNamespace(db=test_db), position, "take_profit", float(exit_), close_order
+        )
+
+        rows = test_db.query(Trade).all()
+        assert len(rows) == 1
+        assert float(rows[0].pnl) == pytest.approx(float(expected_pnl))
+        assert rows[0].pnl_pct == pytest.approx(float(expected_pnl / (entry * qty) * 100))
+        assert portfolio.cash - portfolio.initial_cash == pytest.approx(float(rows[0].pnl))
+
+
+class TestEntryCommissionNettedByPortfolio:
+    """QuantAgent-j62: el camino de paper (PortfolioManager + PaperBroker, sin motor de backtest)."""
+
+    C, ENTRY, EXIT = Decimal("0.001"), Decimal("100"), Decimal("110")
+
+    def _fill(self, test_db, paper, side, qty, price):
+        order = Order(
+            symbol="SPY",
+            side=side,
+            order_type=OrderType.MARKET,
+            quantity=qty,
+            price=price,
+            status=OrderStatus.PENDING,
+            environment=Environment.PAPER,
+        )
+        test_db.add(order)
+        test_db.commit()
+        PaperBroker(slippage_pct=0, commission_model="pct", commission_pct=float(self.C)).place_order(order)
+        return paper.execute_trade(order, fill_price=float(price))
+
+    def test_closing_trade_pnl_nets_entry_and_exit_commission(self, test_db):
+        """Valida que el pnl que devuelve execute_trade al cerrar ya resta las dos comisiones."""
+        paper = PortfolioManager(initial_cash=100000.0, environment=Environment.PAPER, db=test_db)
+        qty = Decimal("10")
+        self._fill(test_db, paper, OrderSide.BUY, qty, self.ENTRY)
+        closing = self._fill(test_db, paper, OrderSide.SELL, qty, self.EXIT)
+
+        expected = (self.EXIT - self.ENTRY) * qty - self.C * qty * self.ENTRY - self.C * qty * self.EXIT  # 97.90
+        assert float(closing.pnl) == pytest.approx(float(expected))
+        assert closing.pnl_pct == pytest.approx(float(expected / (self.ENTRY * qty) * 100))
+        assert paper.cash - paper.initial_cash == pytest.approx(float(expected))
+
+    def test_partial_closes_split_entry_commission_by_quantity(self, test_db):
+        """Valida el cierre en dos mitades: cada una carga media comisión de entrada y no queda resto."""
+        paper = PortfolioManager(initial_cash=100000.0, environment=Environment.PAPER, db=test_db)
+        qty, half, exit_2 = Decimal("10"), Decimal("5"), Decimal("120")
+        self._fill(test_db, paper, OrderSide.BUY, qty, self.ENTRY)
+        entry_commission = self.C * qty * self.ENTRY  # 1.00
+        first = self._fill(test_db, paper, OrderSide.SELL, half, self.EXIT)
+        second = self._fill(test_db, paper, OrderSide.SELL, half, exit_2)
+
+        expected_first = (self.EXIT - self.ENTRY) * half - entry_commission / 2 - self.C * half * self.EXIT  # 48.95
+        expected_second = (exit_2 - self.ENTRY) * half - entry_commission / 2 - self.C * half * exit_2  # 98.90
+        assert float(first.pnl) == pytest.approx(float(expected_first))
+        assert float(second.pnl) == pytest.approx(float(expected_second))
+        assert paper.cash - paper.initial_cash == pytest.approx(float(expected_first + expected_second))
+        assert paper.positions["SPY"]["entry_commission"] == 0

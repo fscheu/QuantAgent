@@ -5,7 +5,9 @@ from typing import Any
 from .base import TradingStrategy
 from .fifty_two_week_high_strategy import FiftyTwoWeekHighStrategy
 from .llm_agent_strategy import LLMAgentStrategy
+from .momentum_12m_strategy import Momentum12mStrategy
 from .rsi_strategy import RSIMeanReversionStrategy
+from .sma_cross_strategy import SmaCrossStrategy
 from .triple_screen_strategy import TripleScreenStrategy
 
 STRATEGY_REGISTRY: dict[str, dict[str, Any]] = {
@@ -148,6 +150,39 @@ STRATEGY_REGISTRY: dict[str, dict[str, Any]] = {
                 "type": float,
                 "default": 0.05,
                 "description": "Trailing stop percentage.",
+            },
+        },
+    },
+    "SmaCrossStrategy": {
+        "cls": SmaCrossStrategy,
+        "type": "deterministic",
+        "display_name": SmaCrossStrategy.describe()["display_name"],
+        "description": SmaCrossStrategy.describe()["description"],
+        "min_bars": 201,
+        "params": {
+            "fast": {
+                "type": int,
+                "default": 50,
+                "description": "Fast simple moving average period (sessions).",
+            },
+            "slow": {
+                "type": int,
+                "default": 200,
+                "description": "Slow simple moving average period (sessions).",
+            },
+        },
+    },
+    "Momentum12mStrategy": {
+        "cls": Momentum12mStrategy,
+        "type": "deterministic",
+        "display_name": Momentum12mStrategy.describe()["display_name"],
+        "description": Momentum12mStrategy.describe()["description"],
+        "min_bars": 253,
+        "params": {
+            "lookback": {
+                "type": int,
+                "default": 252,
+                "description": "Sessions of the reference return (12 months).",
             },
         },
     },

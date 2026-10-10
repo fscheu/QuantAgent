@@ -7,7 +7,7 @@ Documento de diseño y auditoría para las métricas del motor de backtest (Quan
 ## 1. PnL: Fórmulas y Definiciones
 
 ### 1.1 PnL por Trade
-Para cada operación cerrada (`Trade` con `closed_at` y `exit_price`), el PnL se calcula a partir de los precios ejecutados reportados por el broker (`entry_price` y `exit_price`), los cuales ya incorporan el slippage por lado (default 0,05% según QuantAgent-hx0.9). Las comisiones son actualmente 0 (`commission = 0`, scope de QuantAgent-les):
+Para cada operación cerrada (`Trade` con `closed_at` y `exit_price`), el PnL se calcula a partir de los precios ejecutados reportados por el broker (`entry_price` y `exit_price`), los cuales ya incorporan el slippage por lado (default 0,05% según QuantAgent-hx0.9). La comisión es un porcentaje `c` por lado sobre el nocional ejecutado (`TRADING_COMMISSION_PCT` o `--commission-pct`, default 0; QuantAgent-de5):
 
 - **LONG (compra inicial, venta de cierre):**
   $$\text{pnl} = (\text{exit\_price} - \text{entry\_price}) \times \text{qty} - \text{commission}$$
@@ -16,6 +16,12 @@ Para cada operación cerrada (`Trade` con `closed_at` y `exit_price`), el PnL se
 - **SHORT (venta inicial, compra de cierre):**
   $$\text{pnl} = (\text{entry\_price} - \text{exit\_price}) \times \text{qty} - \text{commission}$$
   $$\text{pnl\_pct} = \frac{\text{pnl}}{\text{entry\_price} \times \text{qty}} \times 100$$
+
+**Qué es `commission` (QuantAgent-j62):** la de entrada más la de salida, cada una descontada una sola vez,
+$$\text{commission} = c \times \text{qty} \times (\text{entry\_price} + \text{exit\_price})$$
+`PortfolioManager.execute_trade` resta de `cash` la comisión de cada orden ejecutada, así que equity, Sharpe y drawdown ven los costos y vale la identidad de §1.3. El `pnl` se calcula en un solo lugar, `PortfolioManager.execute_trade`, que comparten backtest y paper: la posición guarda la comisión de entrada acumulada (`positions[symbol]["entry_commission"]`) y el trade de cierre resta la parte proporcional a la cantidad que cierra más su propia comisión de salida; en un cierre parcial el resto queda en la posición. `Backtest._sync_linked_trade_exit` solo copia `pnl` y `pnl_pct` de la fila de cierre a la de apertura. `Trade.commission` de cada fila sigue guardando solo la comisión de su propia orden (en la fila del run, la de entrada).
+
+`scripts/recalc_metrics.py --commission-pct c` recalcula con la misma fórmula: en rsi/spy-90d con `c = 0.001` coinciden 340/340 filas. Hasta QuantAgent-j62 el engine descontaba solo la de salida y `cash` ninguna (medido en QuantAgent-40o).
 
 ### 1.2 Total PnL y Retorno Porcentual
 - **Total PnL:** Suma de `Trade.pnl` de todas las operaciones cerradas del run:
