@@ -182,3 +182,38 @@ def test_abrir_reserva_con_to_anterior_no_es_una_apertura(snap_env, monkeypatch,
 
 def test_abrir_reserva_con_fixture_es_error_de_uso(snap_env):
     assert _run(snap_env[0], "--fixture", DAILY, "--abrir-reserva").exit_code == 2
+
+
+def _verify(runner, *args):
+    return runner.invoke(backtest_group, ["verify", "--strategy", "fifty-two-week-high", *args])
+
+
+def test_verify_snapshot_imprime_ok_reproducible(snap_env):
+    runner, _ = snap_env
+    write_snapshot("t", {"SPY": _daily_frame()})
+    result = _verify(runner, "--snapshot", "t", "--symbol", "SPY")
+    assert result.exit_code == 0, result.output
+    assert result.output.strip() == "OK reproducible"
+
+
+def test_verify_snapshot_respeta_reserva_y_registra_apertura(snap_env, monkeypatch, tmp_path):
+    runner, _, log = _con_reserva(snap_env, monkeypatch, tmp_path)
+    blocked = _verify(runner, "--snapshot", "t", "--symbol", "SPY", "--to", "2024-09-30")
+    assert blocked.exit_code == 1 and "reserva" in blocked.output
+    assert not log.exists()
+
+    opened = _verify(runner, "--snapshot", "t", "--symbol", "SPY", "--to", "2024-09-30", "--abrir-reserva")
+    assert opened.exit_code == 0, opened.output
+    assert opened.output.strip() == "OK reproducible"
+    assert log.exists()
+    lines = log.read_text().splitlines()
+    assert len(lines) == 1
+    assert "backtest verify --strategy fifty-two-week-high --snapshot t --symbol SPY --to 2024-09-30 --abrir-reserva" in lines[0]
+
+
+def test_verify_fixture_y_snapshot_son_excluyentes(snap_env):
+    runner, _ = snap_env
+    write_snapshot("t", {"SPY": _daily_frame()})
+    both = _verify(runner, "--fixture", DAILY, "--snapshot", "t", "--symbol", "SPY")
+    assert both.exit_code == 2 and "exactamente uno" in both.output
+    assert _verify(runner).exit_code == 2

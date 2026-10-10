@@ -15,7 +15,13 @@ from sqlalchemy.orm import Session
 
 from quantagent.backtesting.backtest import Backtest
 from quantagent.backtesting.export import TradeRow, equity_to_csv, trades_to_csv
-from quantagent.backtesting.fixtures import fixture_metadata, load_fixture, load_snapshot, snapshot_metadata
+from quantagent.backtesting.fixtures import (
+    FixtureMetadata,
+    fixture_metadata,
+    load_fixture,
+    load_snapshot,
+    snapshot_metadata,
+)
 from quantagent.data.snapshot import SnapshotError, snapshot_root
 from quantagent.models import ActivePosition, MarketData, Trade
 from quantagent.strategy.registry import build_strategy
@@ -50,6 +56,54 @@ def _registrar_apertura(comando: str) -> None:
     ahora = datetime.now(timezone.utc).isoformat(timespec="seconds")
     with (snapshot_root() / RESERVA_LOG).open("a") as f:
         f.write(f"{ahora}\t{comando}\n")
+
+
+def _resolve_source_and_meta(
+    subcommand: str,
+    strategy_name: str,
+    fixture_name: Optional[str],
+    snapshot_name: Optional[str],
+    symbol: Optional[str],
+    from_date: Optional[datetime],
+    to_date: Optional[datetime],
+    abrir_reserva: bool,
+):
+    if bool(fixture_name) == bool(snapshot_name):
+        raise click.UsageError("Indicá exactamente uno: --fixture o --snapshot.")
+    if snapshot_name and not symbol:
+        raise click.UsageError("--snapshot requiere --symbol.")
+    if fixture_name and (symbol or from_date or to_date or abrir_reserva):
+        raise click.UsageError("--symbol, --from, --to y --abrir-reserva solo se usan con --snapshot.")
+    abriendo = False
+    if snapshot_name:
+        reserva = _reserva_desde()
+        if to_date is None:
+            to_date = reserva - timedelta(days=1)
+        elif to_date >= reserva:
+            if not abrir_reserva:
+                raise click.ClickException(
+                    f"--to {to_date:%Y-%m-%d} cae en la reserva, que empieza el {reserva:%Y-%m-%d}: "
+                    "ninguna corrida la lee. Para abrirla, --abrir-reserva (queda registrado)."
+                )
+            abriendo = True
+    try:
+        if snapshot_name:
+            symbol = symbol.upper()
+            meta = snapshot_metadata(snapshot_name, symbol, from_date, to_date)
+        else:
+            meta = fixture_metadata(fixture_name)
+    except FileNotFoundError as exc:
+        raise click.ClickException(f"Fixture not found: {fixture_name}") from exc
+    except (SnapshotError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    if abriendo:
+        partes = [f"backtest {subcommand} --strategy {strategy_name} --snapshot {snapshot_name} --symbol {symbol}"]
+        partes += [f"--from {from_date:%Y-%m-%d}"] if from_date else []
+        partes += [f"--to {to_date:%Y-%m-%d} --abrir-reserva"]
+        _registrar_apertura(" ".join(partes))
+
+    return meta, symbol, to_date
 
 
 def _hide_data_warnings(record: logging.LogRecord) -> bool:
@@ -148,40 +202,16 @@ def run_backtest(
     verbose: bool,
     intrabar_stops: bool,
 ) -> None:
-    if bool(fixture_name) == bool(snapshot_name):
-        raise click.UsageError("Indicá exactamente uno: --fixture o --snapshot.")
-    if snapshot_name and not symbol:
-        raise click.UsageError("--snapshot requiere --symbol.")
-    if fixture_name and (symbol or from_date or to_date or abrir_reserva):
-        raise click.UsageError("--symbol, --from, --to y --abrir-reserva solo se usan con --snapshot.")
-    abriendo = False
-    if snapshot_name:
-        reserva = _reserva_desde()
-        if to_date is None:
-            to_date = reserva - timedelta(days=1)
-        elif to_date >= reserva:
-            if not abrir_reserva:
-                raise click.ClickException(
-                    f"--to {to_date:%Y-%m-%d} cae en la reserva, que empieza el {reserva:%Y-%m-%d}: "
-                    "ninguna corrida la lee. Para abrirla, --abrir-reserva (queda registrado)."
-                )
-            abriendo = True
-    try:
-        if snapshot_name:
-            symbol = symbol.upper()
-            meta = snapshot_metadata(snapshot_name, symbol, from_date, to_date)
-        else:
-            meta = fixture_metadata(fixture_name)
-    except FileNotFoundError as exc:
-        raise click.ClickException(f"Fixture not found: {fixture_name}") from exc
-    except (SnapshotError, ValueError) as exc:
-        raise click.ClickException(str(exc)) from exc
-
-    if abriendo:
-        partes = [f"backtest run --strategy {strategy_name} --snapshot {snapshot_name} --symbol {symbol}"]
-        partes += [f"--from {from_date:%Y-%m-%d}"] if from_date else []
-        partes += [f"--to {to_date:%Y-%m-%d} --abrir-reserva"]
-        _registrar_apertura(" ".join(partes))
+    meta, symbol, to_date = _resolve_source_and_meta(
+        "run",
+        strategy_name,
+        fixture_name,
+        snapshot_name,
+        symbol,
+        from_date,
+        to_date,
+        abrir_reserva,
+    )
 
     with utils.session_scope() as session:
         existing_count = (
@@ -291,10 +321,27 @@ def _isolated_sqlite_db():
                 database._SessionLocal = None
 
 
-def _run_verify_pass(strategy_name: str, fixture_name: str, verbose: bool):
-    meta = fixture_metadata(fixture_name)
+def _run_verify_pass(
+    strategy_name: str,
+    fixture_name: Optional[str] = None,
+    verbose: bool = False,
+    *,
+    snapshot_name: Optional[str] = None,
+    symbol: Optional[str] = None,
+    from_date: Optional[datetime] = None,
+    to_date: Optional[datetime] = None,
+    meta: Optional[FixtureMetadata] = None,
+):
+    if meta is None:
+        if snapshot_name:
+            meta = snapshot_metadata(snapshot_name, symbol, from_date, to_date)
+        else:
+            meta = fixture_metadata(fixture_name)
     with _isolated_sqlite_db(), utils.session_scope() as session:
-        load_fixture(session, fixture_name)
+        if snapshot_name:
+            load_snapshot(session, snapshot_name, symbol, from_date, to_date)
+        else:
+            load_fixture(session, fixture_name)
         bt = Backtest(
             start_date=meta.start_date,
             end_date=meta.end_date,
@@ -308,7 +355,7 @@ def _run_verify_pass(strategy_name: str, fixture_name: str, verbose: bool):
         if not verbose:
             engine_logger.addFilter(_hide_data_warnings)
         try:
-            metrics = bt.run(name=f"verify-{strategy_name}-{fixture_name}")
+            metrics = bt.run(name=f"verify-{strategy_name}-{fixture_name or snapshot_name}")
         finally:
             engine_logger.removeFilter(_hide_data_warnings)
 
@@ -328,24 +375,66 @@ def _run_verify_pass(strategy_name: str, fixture_name: str, verbose: bool):
 @click.option(
     "--fixture",
     "fixture_name",
-    required=True,
-    help="Fixture name under tests/fixtures/ (without the .csv extension).",
+    help="Fixture name under tests/fixtures/ (without the .csv extension). Excluyente con --snapshot.",
+)
+@click.option("--snapshot", "snapshot_name", help="Snapshot en $QUANTAGENT_SNAPSHOT_DIR (velas ajustadas). Requiere --symbol.")
+@click.option("--symbol", "symbol", help="Símbolo del snapshot (uno por corrida).")
+@click.option("--from", "from_date", type=click.DateTime(formats=["%Y-%m-%d"]), help="Primera sesión, YYYY-MM-DD (default: la primera del snapshot).")
+@click.option("--to", "to_date", type=click.DateTime(formats=["%Y-%m-%d"]), help="Última sesión, YYYY-MM-DD (default: la última del snapshot).")
+@click.option(
+    "--abrir-reserva",
+    "abrir_reserva",
+    is_flag=True,
+    help="Permite que --to llegue a la reserva (desde $QUANTAGENT_RESERVA_DESDE, default 2023-01-01). Queda registrado.",
 )
 @click.option(
     "--verbose",
     is_flag=True,
     help="Also show engine warnings on stderr.",
 )
-def verify_backtest(strategy_name: str, fixture_name: str, verbose: bool) -> None:
+def verify_backtest(
+    strategy_name: str,
+    fixture_name: Optional[str],
+    snapshot_name: Optional[str],
+    symbol: Optional[str],
+    from_date: Optional[datetime],
+    to_date: Optional[datetime],
+    abrir_reserva: bool,
+    verbose: bool,
+) -> None:
     import difflib
 
-    try:
-        fixture_metadata(fixture_name)
-    except FileNotFoundError as exc:
-        raise click.ClickException(f"Fixture not found: {fixture_name}") from exc
+    meta, symbol, to_date = _resolve_source_and_meta(
+        "verify",
+        strategy_name,
+        fixture_name,
+        snapshot_name,
+        symbol,
+        from_date,
+        to_date,
+        abrir_reserva,
+    )
 
-    m1, s1, csv1 = _run_verify_pass(strategy_name, fixture_name, verbose)
-    m2, s2, csv2 = _run_verify_pass(strategy_name, fixture_name, verbose)
+    m1, s1, csv1 = _run_verify_pass(
+        strategy_name,
+        fixture_name,
+        verbose,
+        snapshot_name=snapshot_name,
+        symbol=symbol,
+        from_date=from_date,
+        to_date=to_date,
+        meta=meta,
+    )
+    m2, s2, csv2 = _run_verify_pass(
+        strategy_name,
+        fixture_name,
+        verbose,
+        snapshot_name=snapshot_name,
+        symbol=symbol,
+        from_date=from_date,
+        to_date=to_date,
+        meta=meta,
+    )
 
     diff_lines = []
     if csv1 != csv2:
