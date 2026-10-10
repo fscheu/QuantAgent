@@ -37,6 +37,7 @@ STRATEGY_ALIASES = {
     "fifty-two-week-high": "FiftyTwoWeekHighStrategy",
     "triple-screen": "TripleScreenStrategy",
     "sma-cross": "SmaCrossStrategy",
+    "momentum-12m": "Momentum12mStrategy",
 }
 
 
