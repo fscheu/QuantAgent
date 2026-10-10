@@ -1,6 +1,6 @@
 # QuantAgent-ld3 · Perfiles de costos de backtest para M2 (fila V13)
 
-Estado: **propuesta, decide Fede**. Consulta de fuentes: 2026-10-10. Plan: `docs/02_planning/QuantAgent-lp1-tickets-m2.md` (V13). Unidades: fracción por lado, como `TRADING_SLIPPAGE_PCT` y `--commission-pct` (0,001 = 0,10%). Hoy: slippage 0,0005 y comisión 0.
+Estado: **decidido por Fede el 2026-10-10** (`R:` en el PR #93; ver sección 6). Consulta de fuentes: 2026-10-10. Plan: `docs/02_planning/QuantAgent-lp1-tickets-m2.md` (V13). Unidades: fracción por lado, como `TRADING_SLIPPAGE_PCT` y `--commission-pct` (0,001 = 0,10%). Hoy: slippage 0,0005 y comisión 0.
 
 ## 1. Lo que cuesta operar hoy
 
@@ -46,11 +46,25 @@ TRADING_SLIPPAGE_PCT=<slip> python -m quantagent.cli backtest run --strategy rsi
 
 | Perfil | slip | com | Trades | Total PnL | Sharpe |
 |---|---|---|---|---|---|
-| actual | 0.0005 | 0 | | | |
-| `etf` | 0.0002 | 0.00001 | | | |
-| `etf-conservador` | 0.0005 | 0.0002 | | | |
-| `cripto` | 0.0005 | 0.001 | | | |
+| actual | 0.0005 | 0 | 187 | -447.29 | -11.86 |
+| `etf` (propuesto) | 0.0002 | 0.00001 | 187 | -315.83 | -11.82 |
+| `etf-conservador` | 0.0005 | 0.0002 | 187 | -537.84 | -11.89 |
+| `cripto` | 0.0005 | 0.001 | 187 | -899.26 | -11.98 |
 
 ## 5. Recomendación
 
 Adoptar `etf` para los 12 ETFs diarios y SPY en 4h, y `cripto` para BTC; guardar `etf-conservador` como piso para la prueba de robustez. Los valores de slippage son estimaciones mías y no están sostenidos por un spread verificado de SPY ni de DBC: antes de fijarlos conviene medir esos dos spreads con Alpaca o con una consulta a la cuenta, y si Fede prefiere no apoyarse en estimaciones, usar 0,0005 en los tres perfiles y que solo cambie la comisión.
+
+Medido por el PM en la VM el 2026-10-10 sobre `lote/costos-y-referencia` @ cb00a864 (con #96). Comprar y mantener en el mismo rango: PnL entre 125452 y 126035 según el perfil.
+
+## 6. Decisión
+
+Fede, 2026-10-10 (PR #93): slippage 0,0005 por lado en los tres perfiles, porque el slippage de ETFs propuesto (0,0002) es una estimación sin spread verificado de SPY ni de DBC. Solo cambia la comisión por lado:
+
+| Perfil | Comisión/lado | Slippage/lado |
+|---|---|---|
+| `etf` | 0 | 0,0005 |
+| `etf-conservador` | 0,0002 | 0,0005 |
+| `cripto` | 0,001 | 0,0005 |
+
+Estos son los valores que implementa V14 (`--costos`). La tabla de la sección 2 queda como propuesta original.
