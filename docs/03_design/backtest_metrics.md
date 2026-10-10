@@ -19,7 +19,7 @@ Para cada operación cerrada (`Trade` con `closed_at` y `exit_price`), el PnL se
 
 **Qué es `commission` (QuantAgent-j62):** la de entrada más la de salida, cada una descontada una sola vez,
 $$\text{commission} = c \times \text{qty} \times (\text{entry\_price} + \text{exit\_price})$$
-`PortfolioManager.execute_trade` resta de `cash` la comisión de cada orden ejecutada, así que equity, Sharpe y drawdown ven los costos y vale la identidad de §1.3. En el `pnl`, la de salida la descuenta `portfolio/manager.py` al cerrar y la de entrada (guardada en `Trade.commission` de la fila de apertura) la descuenta `Backtest._sync_linked_trade_exit` al copiar el cierre sobre esa fila. `Trade.commission` de la fila sigue guardando solo la de entrada.
+`PortfolioManager.execute_trade` resta de `cash` la comisión de cada orden ejecutada, así que equity, Sharpe y drawdown ven los costos y vale la identidad de §1.3. El `pnl` se calcula en un solo lugar, `PortfolioManager.execute_trade`, que comparten backtest y paper: la posición guarda la comisión de entrada acumulada (`positions[symbol]["entry_commission"]`) y el trade de cierre resta la parte proporcional a la cantidad que cierra más su propia comisión de salida; en un cierre parcial el resto queda en la posición. `Backtest._sync_linked_trade_exit` solo copia `pnl` y `pnl_pct` de la fila de cierre a la de apertura. `Trade.commission` de cada fila sigue guardando solo la comisión de su propia orden (en la fila del run, la de entrada).
 
 `scripts/recalc_metrics.py --commission-pct c` recalcula con la misma fórmula: en rsi/spy-90d con `c = 0.001` coinciden 340/340 filas. Hasta QuantAgent-j62 el engine descontaba solo la de salida y `cash` ninguna (medido en QuantAgent-40o).
 
