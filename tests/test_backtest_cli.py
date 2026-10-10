@@ -297,27 +297,31 @@ def test_backtest_run_output_is_only_metrics_lines(shared_cli_process_run):
     assert proc.stdout.splitlines()[5] == "Slippage: 0.05% por lado"
 
 
-def test_backtest_run_output_with_custom_slippage_env(cli_runner, monkeypatch):
+def test_backtest_run_output_with_custom_slippage_env(tmp_path):
     """Setting TRADING_SLIPPAGE_PCT changes the effective slippage line."""
-    monkeypatch.setattr(settings, "TRADING_SLIPPAGE_PCT", 0.01)
-    result = cli_runner.invoke(
-        backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
+    env_db = f"sqlite:///{tmp_path / 'proc.db'}"
+    Base.metadata.create_all(create_engine(env_db))
+    proc = subprocess.run(
+        [sys.executable, "-m", "quantagent.cli", "backtest", "run", "--strategy", "rsi",
+         "--fixture", "spy-smoke"],
+        env={**os.environ, "DATABASE_URL": env_db, "TRADING_SLIPPAGE_PCT": "0.01", **NO_OPENAI_KEY_ENV},
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
     )
-    assert result.exit_code == 0, result.output
-    lines = result.output.strip().splitlines()
+    assert proc.returncode == 0, proc.stdout
+    lines = proc.stdout.strip().splitlines()
     assert len(lines) == 6
     assert lines[-1] == "Slippage: 1.00% por lado"
 
 
-def test_backtest_run_verbose_shows_insufficient_data_messages(cli_runner, caplog):
+def test_backtest_run_verbose_shows_insufficient_data_messages(tmp_path):
     """--verbose brings back the engine's per-candle 'Insufficient data' messages."""
-    result = cli_runner.invoke(
-        backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke", "--verbose"]
-    )
+    proc = _run_cli_process(tmp_path, "--verbose")
 
-    assert result.exit_code == 0, result.output
-    assert "Insufficient data for SPY" in (result.output + caplog.text)
-    assert "Trades: " in result.output
+    assert proc.returncode == 0, proc.stdout
+    assert "Insufficient data for SPY" in proc.stdout
+    assert "Trades: " in proc.stdout
 
 
 def test_backtest_run_deterministic_strategy_needs_no_openai_key(shared_cli_process_run):
