@@ -368,7 +368,7 @@ Lotes (definidos por el PM el 2026-10-06; cada uno se abre cuando Fede mergea el
 | L1 | `lote/metricas-auditadas` | T08c, T13, T09–T12, T14, T15, T15b, T10b, T20 | Las 5 métricas de rsi/spy-90d coinciden con un recálculo que no importa `quantagent`, la corrida es reproducible (`backtest verify`) y un test golden las congela | T13 (anualización del Sharpe), T10 (trades con pnl = 0) |
 | L2 | `lote/tres-estrategias` | T16–T19, T19b | RSI, 52-week-high y Triple Screen operan (≥5 trades cada una) sobre fixtures versionados y deterministas | ninguna prevista |
 | L3 | `lote/engine-y-cierre-m1` | T21–T25 | Comparación trade por trade contra `backtesting.py`, ADR del engine decidido (cierra M1), inventario de ramas y borrador del plan siguiente | T22, T23, T24, T25 |
-| L4 | `lote/datos-reales-diarios` | V00, V00a–V00e, V01–V10 | Las 3 estrategias de M1 corren sobre SPY diario real 2007–2018 desde un snapshot con manifiesto; el engine avanza por las velas del dato y `backtesting.py` coincide con RSI | V00 (performance de la suite), V10 |
+| L4 | `lote/datos-reales-diarios` | V00, V00a–V00e, V01–V10, V03b, V10b | Las 3 estrategias de M1 corren sobre SPY diario real 2007–2018 desde un snapshot con manifiesto; el engine avanza por las velas del dato y `backtesting.py` coincide con RSI | V00 (performance de la suite), V10 |
 | L5 | `lote/costos-y-referencia` | V11–V20 | La corrida informa comisión, slippage y tamaño, y se compara contra comprar y mantener con los mismos costos; un recálculo independiente coincide | V13, V17, V18 |
 
 T13 se adelantó dentro de L1: es un documento de decisión que no depende del resto, así la respuesta de Fede
@@ -434,6 +434,7 @@ Los primeros 5 son los más fáciles de revisar.
 | V08 | `QuantAgent-43b` | Candado de la reserva (desde 2023-01-01) con registro de aperturas | `--to 2024-01-01` sin `--abrir-reserva` sale con 1; con el flag, el registro suma una línea | probar | L4 |
 | V09 | `QuantAgent-5ti` | `backtest verify --snapshot`; las 3 estrategias sobre SPY 2007–2018 | (VM) tres `OK reproducible`; el PR informa trades y tiempo | probar | L4 |
 | V10 | `QuantAgent-a03` | Control con backtesting.py sobre SPY real; cuenta velas que tocan stop y take profit | (VM) `TODO DENTRO DE TOLERANCIA` o cada diferencia con su causa | decidir | L4 |
+| V10b | `QuantAgent-8to` | El engine pide la historia por velas del dato, no por días de calendario (salteaba 180 de 3020 velas en SPY diario) | (VM) `crossval_compare.py --snapshot etf-1d-2026-10 --symbol SPY --from 2007-01-03 --to 2018-12-31 --intrabar`: misma cantidad de trades en los dos lados; como mucho 30 `Insufficient data`; referencias de M1 sin cambio | decidir | L4 |
 | V11 | `QuantAgent-de5` | Comisiones del `PaperBroker` en backtest y CLI (`--commission-pct`, default 0) | Default: referencias sin cambio; con 0.001, PnL menor y `Comisión: 0.10% por lado` | probar | L5 |
 | V12 | `QuantAgent-40o` | `recalc_metrics.py --commission-pct` (entrada y salida) | `N/N filas coinciden`, o evidencia de que falta la comisión de entrada (escala) | probar | L5 |
 | V13 | `QuantAgent-ld3` | Decisión: perfiles de costos ETF y cripto, con fuente | Doc ≤40 líneas con efecto medido por perfil; el PM reproduce una fila | decidir | L5 |
