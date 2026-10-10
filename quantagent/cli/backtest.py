@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from quantagent.backtesting.backtest import Backtest
+from quantagent.backtesting.buy_and_hold import buy_and_hold
 from quantagent.backtesting.export import TradeRow, equity_to_csv, trades_to_csv
 from quantagent.backtesting.fixtures import (
     FixtureMetadata,
@@ -279,6 +280,21 @@ def run_backtest(
         slippage_pct = bt.order_manager.broker.slippage_pct
         commission = bt.order_manager.broker.commission_pct
         rows = _extract_trade_rows(session, bt.backtest_run_id) if out_path else []
+        candles = (
+            session.query(MarketData.timestamp, MarketData.close)
+            .filter(
+                MarketData.symbol == meta.symbol,
+                MarketData.timeframe == meta.timeframe,
+                MarketData.timestamp >= meta.start_date,
+                MarketData.timestamp <= meta.end_date,
+            )
+            .order_by(MarketData.timestamp)
+            .all()
+        )
+        bh = buy_and_hold(
+            [c.timestamp for c in candles], [float(c.close) for c in candles],
+            bt.initial_capital, slippage_pct, commission,
+        )
 
     click.echo(f"Trades: {metrics.total_trades}")
     click.echo(f"Win rate: {metrics.win_rate:.2%}")
@@ -290,6 +306,10 @@ def run_backtest(
     click.echo(f"Total PnL: {metrics.total_pnl:.2f}")
     click.echo(f"Slippage: {slippage_pct * 100:.2f}% por lado")
     click.echo(f"Comisión: {commission * 100:.2f}% por lado")
+    click.echo(
+        f"Comprar y mantener: PnL {bh['pnl']:.2f}, Sharpe {bh['sharpe']:.2f}, "
+        f"max drawdown {bh['max_drawdown']:.6f}"
+    )
 
     if out_path:
         with open(out_path, "w", newline="") as f:
