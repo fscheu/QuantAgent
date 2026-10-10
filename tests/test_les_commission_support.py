@@ -353,3 +353,52 @@ class TestCommissionDefaults:
         # Approximate P&L around $375 (exact value depends on slippage)
         assert closing_trade.pnl is not None
         assert closing_trade.pnl > 0
+
+
+class TestCommissionChargedOnceInCashAndPnl:
+    """QuantAgent-j62: cada comisión baja el efectivo y el PnL del trade, una sola vez."""
+
+    def test_round_trip_nets_both_commissions(self, portfolio, test_db):
+        """Valida efectivo, PnL de la fila del run e identidad equity - capital = pnl."""
+        from types import SimpleNamespace
+
+        from quantagent.backtesting.backtest import Backtest
+
+        c, qty, entry, exit_ = Decimal("0.001"), Decimal("10"), Decimal("100"), Decimal("110")
+        broker = PaperBroker(slippage_pct=0, commission_model="pct", commission_pct=float(c))
+
+        def fill(side, price):
+            order = Order(
+                symbol="SPY",
+                side=side,
+                order_type=OrderType.MARKET,
+                quantity=qty,
+                price=price,
+                status=OrderStatus.PENDING,
+                environment=Environment.BACKTEST,
+            )
+            test_db.add(order)
+            test_db.commit()
+            broker.place_order(order)
+            return order, portfolio.execute_trade(order, fill_price=float(price))
+
+        _, opening_trade = fill(OrderSide.BUY, entry)
+        entry_commission = c * qty * entry  # 1.00
+        assert portfolio.cash == pytest.approx(float(100000 - qty * entry - entry_commission))
+
+        close_order, _ = fill(OrderSide.SELL, exit_)
+        exit_commission = c * qty * exit_  # 1.10
+        expected_pnl = (exit_ - entry) * qty - entry_commission - exit_commission  # 97.90
+        assert portfolio.cash == pytest.approx(float(100000 + expected_pnl))
+
+        # El motor deja una sola fila por trade: la de apertura con los datos del cierre.
+        position = SimpleNamespace(trade_id=opening_trade.id, closed_at=None)
+        Backtest._sync_linked_trade_exit(
+            SimpleNamespace(db=test_db), position, "take_profit", float(exit_), close_order
+        )
+
+        rows = test_db.query(Trade).all()
+        assert len(rows) == 1
+        assert float(rows[0].pnl) == pytest.approx(float(expected_pnl))
+        assert rows[0].pnl_pct == pytest.approx(float(expected_pnl / (entry * qty) * 100))
+        assert portfolio.cash - portfolio.initial_cash == pytest.approx(float(rows[0].pnl))

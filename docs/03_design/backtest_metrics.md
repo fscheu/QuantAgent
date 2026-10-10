@@ -17,11 +17,11 @@ Para cada operación cerrada (`Trade` con `closed_at` y `exit_price`), el PnL se
   $$\text{pnl} = (\text{entry\_price} - \text{exit\_price}) \times \text{qty} - \text{commission}$$
   $$\text{pnl\_pct} = \frac{\text{pnl}}{\text{entry\_price} \times \text{qty}} \times 100$$
 
-**Qué es `commission` en el engine (medido en QuantAgent-40o, rsi/spy-90d con `c = 0.001`):** solo la de la orden de cierre, $c \times \text{qty} \times \text{exit\_price}$ (`portfolio/manager.py`, copiado a la fila de apertura en `Backtest._sync_linked_trade_exit`). La de entrada, $c \times \text{qty} \times \text{entry\_price}$, queda guardada en `Trade.commission` de esa fila pero no se descuenta del `pnl`. `PortfolioManager.cash` no descuenta ninguna de las dos, así que equity, Sharpe y drawdown no ven comisiones.
-
-**Qué recalcula `scripts/recalc_metrics.py --commission-pct c`:** entrada y salida,
+**Qué es `commission` (QuantAgent-j62):** la de entrada más la de salida, cada una descontada una sola vez,
 $$\text{commission} = c \times \text{qty} \times (\text{entry\_price} + \text{exit\_price})$$
-Con `c > 0` las filas no coinciden por la comisión de entrada: es un bug abierto del engine, pendiente de decisión.
+`PortfolioManager.execute_trade` resta de `cash` la comisión de cada orden ejecutada, así que equity, Sharpe y drawdown ven los costos y vale la identidad de §1.3. En el `pnl`, la de salida la descuenta `portfolio/manager.py` al cerrar y la de entrada (guardada en `Trade.commission` de la fila de apertura) la descuenta `Backtest._sync_linked_trade_exit` al copiar el cierre sobre esa fila. `Trade.commission` de la fila sigue guardando solo la de entrada.
+
+`scripts/recalc_metrics.py --commission-pct c` recalcula con la misma fórmula: en rsi/spy-90d con `c = 0.001` coinciden 340/340 filas. Hasta QuantAgent-j62 el engine descontaba solo la de salida y `cash` ninguna (medido en QuantAgent-40o).
 
 ### 1.2 Total PnL y Retorno Porcentual
 - **Total PnL:** Suma de `Trade.pnl` de todas las operaciones cerradas del run:
