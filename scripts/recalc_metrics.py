@@ -6,6 +6,7 @@ Usage:
   python scripts/recalc_metrics.py --equity eq.csv [--periods-per-year N]
   python scripts/recalc_metrics.py run.csv --equity eq.csv [--periods-per-year N]
   python scripts/recalc_metrics.py --comprar-y-mantener velas.csv|velas.parquet [--slippage-pct S] [--commission-pct C]
+      [--from YYYY-MM-DD] [--to YYYY-MM-DD]
 
 Reads CSVs written by `backtest run` (--out and/or --equity-out). Imports nothing from
 `quantagent`, so matching numbers are a second opinion and not the engine checking itself.
@@ -95,11 +96,13 @@ def equity_metrics(equities, timestamps, periods_per_year=None, risk_free_rate=0
     return {"max_drawdown": max_drawdown, "sharpe": sharpe, "periods_per_year": periods_per_year}
 
 
-def buy_and_hold(path, slippage_pct=0.0, commission_pct=0.0, capital=100000.0, risk_free_rate=0.02):
+def buy_and_hold(path, slippage_pct=0.0, commission_pct=0.0, capital=100000.0, risk_free_rate=0.02,
+                 from_date=None, to_date=None):
     """Compra todo al primer cierre (+slippage, +comisión) y vende al último (-slippage, -comisión).
 
     Acciones fraccionarias, sin efectivo sobrante; un punto de equity por vela al cierre y el último ya vendido.
     Velas: CSV con timestamp y close, o parquet del snapshot (índice de fechas; usa adj_close si está).
+    from_date / to_date (YYYY-MM-DD, inclusivos) recortan las velas antes de calcular.
     """
     if str(path).endswith(".parquet"):
         import pandas as pd
@@ -111,6 +114,10 @@ def buy_and_hold(path, slippage_pct=0.0, commission_pct=0.0, capital=100000.0, r
         with open(path, newline="") as f:
             rows = list(csv.DictReader(f))
         closes, timestamps = [float(r["close"]) for r in rows], [r["timestamp"] for r in rows]
+    if from_date or to_date:
+        keep = [(not from_date or t[:10] >= from_date) and (not to_date or t[:10] <= to_date) for t in timestamps]
+        closes = [c for c, k in zip(closes, keep) if k]
+        timestamps = [t for t, k in zip(timestamps, keep) if k]
 
     qty = capital / (closes[0] * (1 + slippage_pct) * (1 + commission_pct))
     proceeds = qty * closes[-1] * (1 - slippage_pct) * (1 - commission_pct)
@@ -130,11 +137,14 @@ if __name__ == "__main__":
     parser.add_argument("--comprar-y-mantener", metavar="VELAS")
     parser.add_argument("--slippage-pct", type=float, default=0.0, help="por lado; solo con --comprar-y-mantener")
     parser.add_argument("--capital", type=float, default=100000.0, help="solo con --comprar-y-mantener")
+    parser.add_argument("--from", dest="from_date", help="primera sesión YYYY-MM-DD; solo con --comprar-y-mantener")
+    parser.add_argument("--to", dest="to_date", help="última sesión YYYY-MM-DD; solo con --comprar-y-mantener")
     args = parser.parse_args()
 
     if args.comprar_y_mantener:
         bh = buy_and_hold(
-            args.comprar_y_mantener, args.slippage_pct, args.commission_pct, args.capital, args.risk_free_rate
+            args.comprar_y_mantener, args.slippage_pct, args.commission_pct, args.capital, args.risk_free_rate,
+            args.from_date, args.to_date,
         )
         print(f"Comprar y mantener: PnL {bh['pnl']:.2f}, Sharpe {bh['sharpe']:.2f}, max drawdown {bh['max_drawdown']:.6f}")
 
