@@ -53,6 +53,30 @@ def cli_runner(monkeypatch, tmp_path):
         database._SessionLocal = None
 
 
+@pytest.fixture(scope="module")
+def shared_rsi_run(tmp_path_factory):
+    """Run `backtest run` with RSI on spy-smoke once for all tests verifying its outputs."""
+    tmp_path = tmp_path_factory.mktemp("shared_rsi")
+    db_path, out_path = tmp_path / "test.db", tmp_path / "trades.csv"
+    Base.metadata.create_all(create_engine(f"sqlite:///{db_path}"))
+    old_env, old_url = os.environ.get("DATABASE_URL"), settings.DATABASE_URL
+    os.environ["DATABASE_URL"] = settings.DATABASE_URL = f"sqlite:///{db_path}"
+    database._engine = database._SessionLocal = None
+    try:
+        res = CliRunner().invoke(
+            backtest_group,
+            ["run", "--strategy", "rsi", "--fixture", "spy-smoke", "--out", str(out_path)],
+        )
+    finally:
+        if old_env is not None:
+            os.environ["DATABASE_URL"] = old_env
+        else:
+            os.environ.pop("DATABASE_URL", None)
+        settings.DATABASE_URL = old_url
+        database._engine = database._SessionLocal = None
+    return res, out_path, db_path
+
+
 def test_backtest_run_exits_zero_and_prints_metrics(cli_runner):
     result = cli_runner.invoke(
         backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
@@ -69,13 +93,8 @@ def test_backtest_run_exits_zero_and_prints_metrics(cli_runner):
     assert lines[5] == "Slippage: 0.05% por lado"
 
 
-def test_backtest_run_writes_csv_matching_reported_trade_count(cli_runner, tmp_path):
-    out_path = tmp_path / "trades.csv"
-
-    result = cli_runner.invoke(
-        backtest_group,
-        ["run", "--strategy", "rsi", "--fixture", "spy-smoke", "--out", str(out_path)],
-    )
+def test_backtest_run_writes_csv_matching_reported_trade_count(shared_rsi_run):
+    result, out_path, _ = shared_rsi_run
 
     assert result.exit_code == 0, result.output
     assert out_path.exists()
@@ -186,19 +205,17 @@ def test_backtest_run_equity_out_max_drawdown_matches_engine(cli_runner, tmp_pat
     assert all(abs(b - a) / a <= 0.02 for a, b in zip(equities, equities[1:]))
 
 
-def test_backtest_run_stores_one_closed_trade_row_per_round_trip(cli_runner, tmp_path):
+def test_backtest_run_stores_one_closed_trade_row_per_round_trip(shared_rsi_run):
     """Closed Trade rows of a run must equal its round-trips, and their pnl must add up to Total PnL.
 
     Regression for QuantAgent-89e: every close (take-profit, stop-loss, end of backtest) used to
     leave two closed rows with the same pnl, the opening trade and its closing leg.
     """
-    result = cli_runner.invoke(
-        backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
-    )
+    result, _, db_path = shared_rsi_run
     assert result.exit_code == 0, result.output
     reported = dict(line.split(": ") for line in result.output.splitlines() if ": " in line)
 
-    with create_engine(f"sqlite:///{tmp_path / 'test.db'}").connect() as conn:
+    with create_engine(f"sqlite:///{db_path}").connect() as conn:
         round_trips = conn.execute(
             text("SELECT COUNT(*) FROM active_positions WHERE is_active = 0")
         ).scalar()
@@ -211,17 +228,13 @@ def test_backtest_run_stores_one_closed_trade_row_per_round_trip(cli_runner, tmp
     assert float(pnl_sum) == pytest.approx(float(reported["Total PnL"]), abs=0.01)
 
 
-def test_backtest_run_trade_exit_price_is_executed_not_theoretical(cli_runner, tmp_path):
+def test_backtest_run_trade_exit_price_is_executed_not_theoretical(shared_rsi_run):
     """The CSV exit_price is the executed fill price with slippage, not the theoretical candle price.
 
     Regression for QuantAgent-hx0.8: previously exit_price had no slippage while entry_price did,
     so (exit - entry) * qty diverged from the realized pnl on both long and short trades.
     """
-    out_path = tmp_path / "trades.csv"
-    result = cli_runner.invoke(
-        backtest_group,
-        ["run", "--strategy", "rsi", "--fixture", "spy-smoke", "--out", str(out_path)],
-    )
+    result, out_path, _ = shared_rsi_run
     assert result.exit_code == 0, result.output
 
     with out_path.open(newline="") as f:
@@ -263,49 +276,53 @@ def _run_cli_process(tmp_path, *extra_args):
     )
 
 
-def test_backtest_run_output_is_only_metrics_lines(tmp_path):
-    """stdout+stderr is exactly the 6 metric lines plus the --out line: no log or SAWarning noise."""
+@pytest.fixture(scope="module")
+def shared_cli_process_run(tmp_path_factory):
+    """Run the CLI subprocess once to verify clean output format and OpenAI key independence."""
+    tmp_path = tmp_path_factory.mktemp("cli_proc")
     proc = _run_cli_process(tmp_path)
+    return proc, tmp_path / "trades.csv"
+
+
+def test_backtest_run_output_is_only_metrics_lines(shared_cli_process_run):
+    """stdout+stderr is exactly the 6 metric lines plus the --out line: no log or SAWarning noise."""
+    proc, trades_csv = shared_cli_process_run
 
     assert proc.returncode == 0, proc.stdout
     prefixes = [line.split(":")[0] for line in proc.stdout.splitlines()]
     assert prefixes == [
         "Trades", "Win rate", "Profit factor", "Sharpe ratio", "Total PnL", "Slippage",
-        f"Trade log written to {tmp_path / 'trades.csv'}",
+        f"Trade log written to {trades_csv}",
     ]
     assert proc.stdout.splitlines()[5] == "Slippage: 0.05% por lado"
 
 
-def test_backtest_run_output_with_custom_slippage_env(tmp_path):
+def test_backtest_run_output_with_custom_slippage_env(cli_runner, monkeypatch):
     """Setting TRADING_SLIPPAGE_PCT changes the effective slippage line."""
-    env_db = f"sqlite:///{tmp_path / 'proc.db'}"
-    Base.metadata.create_all(create_engine(env_db))
-    proc = subprocess.run(
-        [sys.executable, "-m", "quantagent.cli", "backtest", "run", "--strategy", "rsi",
-         "--fixture", "spy-smoke"],
-        env={**os.environ, "DATABASE_URL": env_db, "TRADING_SLIPPAGE_PCT": "0.01", **NO_OPENAI_KEY_ENV},
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
+    monkeypatch.setattr(settings, "TRADING_SLIPPAGE_PCT", 0.01)
+    result = cli_runner.invoke(
+        backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
     )
-    assert proc.returncode == 0, proc.stdout
-    lines = proc.stdout.strip().splitlines()
+    assert result.exit_code == 0, result.output
+    lines = result.output.strip().splitlines()
     assert len(lines) == 6
     assert lines[-1] == "Slippage: 1.00% por lado"
 
 
-def test_backtest_run_verbose_shows_insufficient_data_messages(tmp_path):
+def test_backtest_run_verbose_shows_insufficient_data_messages(cli_runner, caplog):
     """--verbose brings back the engine's per-candle 'Insufficient data' messages."""
-    proc = _run_cli_process(tmp_path, "--verbose")
+    result = cli_runner.invoke(
+        backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke", "--verbose"]
+    )
 
-    assert proc.returncode == 0, proc.stdout
-    assert "Insufficient data for SPY" in proc.stdout
-    assert "Trades: " in proc.stdout
+    assert result.exit_code == 0, result.output
+    assert "Insufficient data for SPY" in (result.output + caplog.text)
+    assert "Trades: " in result.output
 
 
-def test_backtest_run_deterministic_strategy_needs_no_openai_key(tmp_path):
+def test_backtest_run_deterministic_strategy_needs_no_openai_key(shared_cli_process_run):
     """Without OPENAI_API_KEY the rsi backtest still runs: it must not build the LLM client."""
-    proc = _run_cli_process(tmp_path)
+    proc, _ = shared_cli_process_run
 
     assert proc.returncode == 0, proc.stdout
     assert "OPENAI_API_KEY" not in proc.stdout
@@ -333,38 +350,49 @@ def test_backtest_default_llm_strategy_still_requires_openai_key(tmp_path):
     assert "OPENAI_API_KEY not found" in proc.stdout
 
 
-def test_backtest_verify_success_exits_zero_and_prints_ok_reproducible(cli_runner):
+@pytest.fixture(scope="module")
+def shared_verify_smoke():
+    """Run `backtest verify` once per strategy on spy-smoke and share across verify tests."""
+    runner = CliRunner()
+    return {
+        strat: runner.invoke(
+            backtest_group, ["verify", "--strategy", strat, "--fixture", "spy-smoke"]
+        )
+        for strat in ["rsi", "fifty-two-week-high", "triple-screen"]
+    }
+
+
+def test_backtest_verify_success_exits_zero_and_prints_ok_reproducible(shared_verify_smoke):
     """Verify RSI strategy against spy-smoke fixture passes and prints OK reproducible."""
-    result = cli_runner.invoke(
-        backtest_group, ["verify", "--strategy", "rsi", "--fixture", "spy-smoke"]
-    )
+    result = shared_verify_smoke["rsi"]
     assert result.exit_code == 0, result.output
     assert result.output.strip() == "OK reproducible"
 
 
-def test_backtest_verify_all_three_strategies(cli_runner):
+def test_backtest_verify_all_three_strategies(shared_verify_smoke):
     """Verify accepts all 3 deterministic strategies (RSI, Fifty-Two-Week-High, Triple Screen)."""
     for strat in ["rsi", "fifty-two-week-high", "triple-screen"]:
-        result = cli_runner.invoke(
-            backtest_group, ["verify", "--strategy", strat, "--fixture", "spy-smoke"]
-        )
+        result = shared_verify_smoke[strat]
         assert result.exit_code == 0, f"Strategy {strat} failed: {result.output}"
         assert "OK reproducible" in result.output
 
 
 def test_backtest_verify_detects_difference_and_exits_nonzero(cli_runner, monkeypatch):
     """When two runs produce different metrics, verify outputs the mismatch and exits non-zero."""
+    import copy
     from quantagent.cli import backtest as bt_cli
     real_execute = bt_cli._run_verify_pass
-    call_count = 0
+    first_pass = None
 
     def patched_execute(*args, **kwargs):
-        nonlocal call_count
-        call_count += 1
-        metrics, slippage, csv_str = real_execute(*args, **kwargs)
-        if call_count == 2:
-            metrics.total_trades += 1
-        return metrics, slippage, csv_str
+        nonlocal first_pass
+        if first_pass is None:
+            first_pass = real_execute(*args, **kwargs)
+            return first_pass
+        metrics, slippage, csv_str = first_pass
+        m2 = copy.copy(metrics)
+        m2.total_trades += 1
+        return m2, slippage, csv_str
 
     monkeypatch.setattr(bt_cli, "_run_verify_pass", patched_execute)
 
