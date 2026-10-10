@@ -249,6 +249,7 @@ class Backtest:
                 "max_daily_loss_pct": self.config.get("max_daily_loss_pct", settings.TRADING_MAX_DAILY_LOSS_PCT),
                 "max_position_pct": self.config.get("max_position_pct", settings.TRADING_MAX_POSITION_PCT),
                 "slippage_pct": self.config.get("slippage_pct", settings.TRADING_SLIPPAGE_PCT),
+                "commission_pct": self.config.get("commission_pct", settings.TRADING_COMMISSION_PCT),
                 # Normalize model fields into generic ones; accept both
                 "model_provider": self.config.get(
                     "agent_llm_provider", self.config.get("model_provider", settings.AGENT_LLM_PROVIDER)
@@ -688,6 +689,7 @@ class Backtest:
                 "max_daily_loss_pct": self.config.get("max_daily_loss_pct", settings.TRADING_MAX_DAILY_LOSS_PCT),
                 "max_position_pct": self.config.get("max_position_pct", settings.TRADING_MAX_POSITION_PCT),
                 "slippage_pct": self.config.get("slippage_pct", settings.TRADING_SLIPPAGE_PCT),
+                "commission_pct": self.config.get("commission_pct", settings.TRADING_COMMISSION_PCT),
                 "model_provider": self.config.get(
                     "agent_llm_provider", self.config.get("model_provider", settings.AGENT_LLM_PROVIDER)
                 ),

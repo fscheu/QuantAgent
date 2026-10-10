@@ -142,7 +142,7 @@ python -m quantagent.cli backtest run --strategy rsi --fixture spy-90d --out run
 ```
 
 Expected output (exact numbers depend on the strategy/fixture combination, but
-the shape is always these 5 lines):
+the shape is always these 7 lines plus the `--out` line):
 
 ```
 Trades: 340
@@ -151,6 +151,7 @@ Profit factor: 1.35
 Sharpe ratio: 9.46
 Total PnL: 4571.27
 Slippage: 0.05% por lado
+Comisión: 0.00% por lado
 Trade log written to run.csv
 ```
 
