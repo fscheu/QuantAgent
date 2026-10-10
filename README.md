@@ -307,6 +307,18 @@ The original implementation focused on analysis. This fork adds execution, backt
 
 See [AGENTS.md](AGENTS.md) for development guidelines.
 
+### Running Tests
+
+```bash
+# Parallel test execution with pytest-xdist (for SQLite / try.sh on 4 CPUs)
+python -m pytest -q -n 4 -m "not slow and not api and not oraculo"
+
+# Sequential test execution (for PostgreSQL / loop database)
+python -m pytest -q -m "not slow and not api and not oraculo"
+```
+
+Parallel execution (`-n 4`) derives worker-specific databases and is only supported with SQLite (e.g. `try.sh`). When running against PostgreSQL, tests must be run sequentially.
+
 ---
 
 ## License
