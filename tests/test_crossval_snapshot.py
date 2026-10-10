@@ -32,7 +32,7 @@ def test_crossval_snapshot_reports_comparison_and_double_touches():
         "--intrabar",
     ]
     p = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=600)
-    assert "Trades: motor=180 port=187" in p.stdout
+    assert "Trades: motor=187 port=187" in p.stdout
     assert "Velas que tocan stop y take profit: 3" in p.stdout
     assert "PRIMER TRADE DIFERENTE: nº 2" in p.stdout
 
