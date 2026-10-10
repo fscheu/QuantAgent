@@ -15,9 +15,10 @@ from decimal import Decimal
 
 import pytest
 
-from quantagent.backtesting.backtest import Backtest
-from quantagent.models import MarketData, Trade
+from quantagent.backtesting.backtest import Backtest, CloseRejectedError
+from quantagent.models import MarketData, OrderSide, Trade
 from quantagent.strategy.base import TradingSignal, TradingStrategy
+from quantagent.trading.paper_broker import PaperBroker
 
 DAY1 = [datetime(2018, 3, 5, h) for h in range(10, 16)]
 DAY2 = [datetime(2018, 3, 6, h) for h in range(10, 16)]
@@ -81,9 +82,6 @@ def test_get_daily_pnl_counts_the_loss_realized_on_the_candle_day(db_session):
     assert strategy.daily_pnl_seen[CRASH] == pytest.approx(-800.0)
 
 
-@pytest.mark.xfail(strict=True, reason="QuantAgent-cub: validate_trade rechaza por 'Daily loss limit' la "
-                   "orden que CIERRA una posición cuya pérdida abierta supera el límite: el trade queda "
-                   "cerrado en la base, las acciones siguen en cartera y no se opera más")
 def test_stop_exit_is_not_rejected_by_the_daily_loss_limit(db_session):
     # Igual que el caso base, pero la vela CRASH cierra en 91: la pérdida abierta (-900) supera el límite
     # antes del stop. Comportamiento correcto: el stop se ejecuta a 92 y la cartera queda sin acciones.
@@ -91,3 +89,21 @@ def test_stop_exit_is_not_rejected_by_the_daily_loss_limit(db_session):
     assert float(trades[0].pnl) == -800.0
     assert bt.portfolio.positions["SPY"]["qty"] == 0.0
     assert bt.portfolio.cash == pytest.approx(100000.0 - 800.0)
+
+
+def test_close_rejected_by_the_broker_aborts_the_run_naming_the_trade(db_session, monkeypatch):
+    # QuantAgent-oat: si el cierre no se ejecuta por otro motivo (acá el broker rechaza toda venta), bt.run
+    # corta con un error que nombra el trade y las acciones que quedan, y el trade no figura como cerrado.
+    real_place_order = PaperBroker.place_order
+
+    def reject_sells(self, order):
+        if order.side == OrderSide.SELL:
+            raise RuntimeError("venta rechazada por el broker")
+        return real_place_order(self, order)
+
+    monkeypatch.setattr(PaperBroker, "place_order", reject_sells)
+    with pytest.raises(CloseRejectedError) as exc:
+        _run(db_session)
+    trade = db_session.query(Trade).one()
+    assert f"Trade {trade.id} (SPY)" in str(exc.value) and "conserva 100.0 acciones" in str(exc.value)
+    assert (trade.opened_at, trade.closed_at, trade.pnl) == (DAY1[0], None, None)
