@@ -74,6 +74,12 @@ TRADING_MAX_DAILY_LOSS_PCT: float = float(os.getenv("TRADING_MAX_DAILY_LOSS_PCT"
 TRADING_MAX_POSITION_PCT: float = float(os.getenv("TRADING_MAX_POSITION_PCT", "0.10"))
 TRADING_SLIPPAGE_PCT: float = float(os.getenv("TRADING_SLIPPAGE_PCT", "0.0005"))
 TRADING_COMMISSION_PCT: float = float(os.getenv("TRADING_COMMISSION_PCT", "0"))  # por lado, sobre el nocional
+# Perfiles de costos por lado para `backtest --costos` (QuantAgent-dgi; valores: docs/04_decisions/QuantAgent-ld3-DC-costos-m2.md §6)
+COSTOS_PERFILES: dict = {
+    "etf": {"slippage_pct": 0.0005, "commission_pct": 0.0},
+    "etf-conservador": {"slippage_pct": 0.0005, "commission_pct": 0.0002},
+    "cripto": {"slippage_pct": 0.0005, "commission_pct": 0.001},
+}
 TRADING_USE_CHECKPOINTING: bool = os.getenv("TRADING_USE_CHECKPOINTING", "false").lower() in {"true", "1", "yes"}
 TRADING_UNIVERSE: str = os.getenv("TRADING_UNIVERSE", "")
 

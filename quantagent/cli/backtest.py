@@ -25,6 +25,7 @@ from quantagent.backtesting.fixtures import (
 )
 from quantagent.data.snapshot import SnapshotError, snapshot_root
 from quantagent.models import ActivePosition, MarketData, Trade
+from quantagent.settings import COSTOS_PERFILES
 from quantagent.strategy.registry import build_strategy
 
 from . import utils
@@ -109,9 +110,13 @@ def _resolve_source_and_meta(
     return meta, symbol, to_date
 
 
-def _engine_config(commission_pct: Optional[float]) -> dict:
+def _engine_config(commission_pct: Optional[float], costos: Optional[str] = None) -> dict:
     config = {"market_hours_filter": False, "offline_data": True}
-    if commission_pct is not None:
+    if costos is not None:
+        if commission_pct is not None:
+            raise click.UsageError("--costos y --commission-pct son excluyentes: elegí uno.")
+        config.update(COSTOS_PERFILES[costos])
+    elif commission_pct is not None:
         config["commission_pct"] = commission_pct
     return config
 
@@ -202,6 +207,12 @@ def backtest_group() -> None:
     help="Comisión por lado sobre el nocional (0.001 = 0.10%). Default: TRADING_COMMISSION_PCT.",
 )
 @click.option(
+    "--costos",
+    type=click.Choice(sorted(COSTOS_PERFILES)),
+    default=None,
+    help="Perfil de costos (slippage y comisión por lado). Excluyente con --commission-pct.",
+)
+@click.option(
     "--intrabar-stops/--no-intrabar-stops",
     default=True,
     help="Evaluate stop loss and take profit against intrabar high/low prices.",
@@ -219,7 +230,9 @@ def run_backtest(
     verbose: bool,
     intrabar_stops: bool,
     commission_pct: Optional[float],
+    costos: Optional[str],
 ) -> None:
+    config = _engine_config(commission_pct, costos)
     meta, symbol, to_date = _resolve_source_and_meta(
         "run",
         strategy_name,
@@ -264,7 +277,7 @@ def run_backtest(
             # offline_data avoids live yfinance calls for the lookback window before the
             # fixture's first row -- the whole point of a fixture-based run is to be
             # deterministic and network-free.
-            config=_engine_config(commission_pct),
+            config=config,
             db_session=session,
             strategy=build_strategy(STRATEGY_ALIASES[strategy_name]),
             intrabar_stops=intrabar_stops,
@@ -308,6 +321,8 @@ def run_backtest(
     click.echo(f"Total PnL: {metrics.total_pnl:.2f}")
     click.echo(f"Slippage: {slippage_pct * 100:.2f}% por lado")
     click.echo(f"Comisión: {commission * 100:.2f}% por lado")
+    if costos:
+        click.echo(f"Costos: {costos}")
     click.echo(
         f"Comprar y mantener: PnL {bh['pnl']:.2f}, Sharpe {bh['sharpe']:.2f}, "
         f"max drawdown {bh['max_drawdown']:.6f}"
@@ -371,6 +386,7 @@ def _run_verify_pass(
     to_date: Optional[datetime] = None,
     meta: Optional[FixtureMetadata] = None,
     commission_pct: Optional[float] = None,
+    costos: Optional[str] = None,
 ):
     if meta is None:
         if snapshot_name:
@@ -387,7 +403,7 @@ def _run_verify_pass(
             end_date=meta.end_date,
             assets=[meta.symbol],
             timeframe=meta.timeframe,
-            config=_engine_config(commission_pct),
+            config=_engine_config(commission_pct, costos),
             db_session=session,
             strategy=build_strategy(STRATEGY_ALIASES[strategy_name]),
         )
@@ -439,6 +455,12 @@ def _run_verify_pass(
     default=None,
     help="Comisión por lado sobre el nocional (0.001 = 0.10%). Default: TRADING_COMMISSION_PCT.",
 )
+@click.option(
+    "--costos",
+    type=click.Choice(sorted(COSTOS_PERFILES)),
+    default=None,
+    help="Perfil de costos (slippage y comisión por lado). Excluyente con --commission-pct.",
+)
 def verify_backtest(
     strategy_name: str,
     fixture_name: Optional[str],
@@ -449,9 +471,11 @@ def verify_backtest(
     abrir_reserva: bool,
     verbose: bool,
     commission_pct: Optional[float],
+    costos: Optional[str],
 ) -> None:
     import difflib
 
+    _engine_config(commission_pct, costos)
     meta, symbol, to_date = _resolve_source_and_meta(
         "verify",
         strategy_name,
@@ -473,6 +497,7 @@ def verify_backtest(
         to_date=to_date,
         meta=meta,
         commission_pct=commission_pct,
+        costos=costos,
     )
     m2, s2, csv2 = _run_verify_pass(
         strategy_name,
@@ -484,6 +509,7 @@ def verify_backtest(
         to_date=to_date,
         meta=meta,
         commission_pct=commission_pct,
+        costos=costos,
     )
 
     diff_lines = []
