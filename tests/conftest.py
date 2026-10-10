@@ -36,6 +36,11 @@ def _configure_xdist_worker_database() -> None:
     if not worker or worker == "master":
         return
     url = os.environ.get("DATABASE_URL", "")
+    if not url.startswith("sqlite"):
+        raise pytest.UsageError(
+            f"pytest-xdist parallel execution is only supported with SQLite (e.g. try.sh). "
+            f"Current DATABASE_URL is not SQLite. Run tests sequentially without -n."
+        )
     if not url.startswith("sqlite:///"):
         return
     path_str = url[len("sqlite:///"):]
@@ -793,9 +798,6 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "integration: marks tests as integration tests")
     config.addinivalue_line("markers", "api: marks tests requiring API calls")
     config.addinivalue_line("markers", "vision: marks tests using vision-capable LLMs")
-    config.addinivalue_line(
-        "markers", "xdist_group: mark test to run in a specific xdist worker group"
-    )
 
 
 def pytest_collection_modifyitems(config, items):
