@@ -5,6 +5,7 @@ Usage:
   python scripts/recalc_metrics.py run.csv [--commission-pct C]
   python scripts/recalc_metrics.py --equity eq.csv [--periods-per-year N]
   python scripts/recalc_metrics.py run.csv --equity eq.csv [--periods-per-year N]
+  python scripts/recalc_metrics.py --comprar-y-mantener velas.csv|velas.parquet [--slippage-pct S] [--commission-pct C]
 
 Reads CSVs written by `backtest run` (--out and/or --equity-out). Imports nothing from
 `quantagent`, so matching numbers are a second opinion and not the engine checking itself.
@@ -58,8 +59,11 @@ def recalc(path, commission_pct=0.0):
 def recalc_equity(path, periods_per_year=None, risk_free_rate=0.02):
     with open(path, newline="") as f:
         rows = [r for r in csv.DictReader(f) if r.get("equity")]
+    timestamps = [r.get("timestamp") or r.get("date") for r in rows]
+    return equity_metrics([float(r["equity"]) for r in rows], timestamps, periods_per_year, risk_free_rate)
 
-    equities = [float(r["equity"]) for r in rows]
+
+def equity_metrics(equities, timestamps, periods_per_year=None, risk_free_rate=0.02):
     if len(equities) < 2:
         return {"max_drawdown": 0.0, "sharpe": 0.0}
 
@@ -73,11 +77,10 @@ def recalc_equity(path, periods_per_year=None, risk_free_rate=0.02):
         return {"max_drawdown": max_drawdown, "sharpe": 0.0}
 
     if periods_per_year is None:
-        timestamps = [r.get("timestamp") or r.get("date") for r in rows]
         if len(timestamps) < 2 or not timestamps[0] or not timestamps[-1]:
             return {"max_drawdown": max_drawdown, "sharpe": 0.0}
-        t0 = datetime.datetime.fromisoformat(timestamps[0])
-        t1 = datetime.datetime.fromisoformat(timestamps[-1])
+        t0 = datetime.datetime.fromisoformat(str(timestamps[0]))
+        t1 = datetime.datetime.fromisoformat(str(timestamps[-1]))
         elapsed_seconds = (t1 - t0).total_seconds()
         elapsed_years = elapsed_seconds / (365.25 * 86400.0)
         if elapsed_years <= 0:
@@ -92,6 +95,29 @@ def recalc_equity(path, periods_per_year=None, risk_free_rate=0.02):
     return {"max_drawdown": max_drawdown, "sharpe": sharpe, "periods_per_year": periods_per_year}
 
 
+def buy_and_hold(path, slippage_pct=0.0, commission_pct=0.0, capital=100000.0, risk_free_rate=0.02):
+    """Compra todo al primer cierre (+slippage, +comisión) y vende al último (-slippage, -comisión).
+
+    Acciones fraccionarias, sin efectivo sobrante; un punto de equity por vela al cierre y el último ya vendido.
+    Velas: CSV con timestamp y close, o parquet del snapshot (índice de fechas; usa adj_close si está).
+    """
+    if str(path).endswith(".parquet"):
+        import pandas as pd
+
+        df = pd.read_parquet(path)
+        closes = df["adj_close" if "adj_close" in df else "close"].astype(float).tolist()
+        timestamps = [ts.isoformat() for ts in df.index]
+    else:
+        with open(path, newline="") as f:
+            rows = list(csv.DictReader(f))
+        closes, timestamps = [float(r["close"]) for r in rows], [r["timestamp"] for r in rows]
+
+    qty = capital / (closes[0] * (1 + slippage_pct) * (1 + commission_pct))
+    proceeds = qty * closes[-1] * (1 - slippage_pct) * (1 - commission_pct)
+    m = equity_metrics([qty * c for c in closes[:-1]] + [proceeds], timestamps, None, risk_free_rate)
+    return {"pnl": proceeds - capital, **m}
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -101,7 +127,16 @@ if __name__ == "__main__":
     parser.add_argument("--periods-per-year", type=float, default=None)
     parser.add_argument("--risk-free-rate", type=float, default=0.02)
     parser.add_argument("--commission-pct", type=float, default=0.0, help="por lado; 0.001 = 0.10%%")
+    parser.add_argument("--comprar-y-mantener", metavar="VELAS")
+    parser.add_argument("--slippage-pct", type=float, default=0.0, help="por lado; solo con --comprar-y-mantener")
+    parser.add_argument("--capital", type=float, default=100000.0, help="solo con --comprar-y-mantener")
     args = parser.parse_args()
+
+    if args.comprar_y_mantener:
+        bh = buy_and_hold(
+            args.comprar_y_mantener, args.slippage_pct, args.commission_pct, args.capital, args.risk_free_rate
+        )
+        print(f"Comprar y mantener: PnL {bh['pnl']:.2f}, Sharpe {bh['sharpe']:.2f}, max drawdown {bh['max_drawdown']:.6f}")
 
     m = recalc(args.trades_csv, args.commission_pct) if args.trades_csv else None
     eq = recalc_equity(args.equity, args.periods_per_year, args.risk_free_rate) if args.equity else None
