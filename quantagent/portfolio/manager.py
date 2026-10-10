@@ -159,6 +159,8 @@ class PortfolioManager:
             commission = sum(
                 (fill.commission for fill in order.fills), Decimal("0")
             )
+        # Every executed order pays its own commission in cash (QuantAgent-j62).
+        self.cash -= float(commission)
 
         # Calculate P&L for closing trades
         pnl: Decimal | None = None

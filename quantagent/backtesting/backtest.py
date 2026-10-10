@@ -1345,6 +1345,11 @@ class Backtest:
                     opening_trade.exit_price = close_trade.exit_price
                 opening_trade.pnl = close_trade.pnl
                 opening_trade.pnl_pct = close_trade.pnl_pct
+                # close_trade.pnl only nets the exit commission; the entry one lives on
+                # the opening row and is charged here, once (QuantAgent-j62).
+                if close_trade.pnl is not None and opening_trade.commission:
+                    opening_trade.pnl = close_trade.pnl - opening_trade.commission
+                    opening_trade.pnl_pct = float(opening_trade.pnl / (close_trade.entry_price * close_trade.quantity) * 100)
                 # The opening trade now carries the realized exit; keeping the closing leg
                 # as a second closed row doubles counts and pnl (QuantAgent-89e).
                 self.db.delete(close_trade)
