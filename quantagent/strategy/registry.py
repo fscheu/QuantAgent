@@ -6,6 +6,7 @@ from .base import TradingStrategy
 from .fifty_two_week_high_strategy import FiftyTwoWeekHighStrategy
 from .llm_agent_strategy import LLMAgentStrategy
 from .rsi_strategy import RSIMeanReversionStrategy
+from .sma_cross_strategy import SmaCrossStrategy
 from .triple_screen_strategy import TripleScreenStrategy
 
 STRATEGY_REGISTRY: dict[str, dict[str, Any]] = {
@@ -148,6 +149,25 @@ STRATEGY_REGISTRY: dict[str, dict[str, Any]] = {
                 "type": float,
                 "default": 0.05,
                 "description": "Trailing stop percentage.",
+            },
+        },
+    },
+    "SmaCrossStrategy": {
+        "cls": SmaCrossStrategy,
+        "type": "deterministic",
+        "display_name": SmaCrossStrategy.describe()["display_name"],
+        "description": SmaCrossStrategy.describe()["description"],
+        "min_bars": 201,
+        "params": {
+            "fast": {
+                "type": int,
+                "default": 50,
+                "description": "Fast simple moving average period (sessions).",
+            },
+            "slow": {
+                "type": int,
+                "default": 200,
+                "description": "Slow simple moving average period (sessions).",
             },
         },
     },

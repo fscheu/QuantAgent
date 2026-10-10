@@ -36,6 +36,7 @@ STRATEGY_ALIASES = {
     "rsi": "RSIMeanReversionStrategy",
     "fifty-two-week-high": "FiftyTwoWeekHighStrategy",
     "triple-screen": "TripleScreenStrategy",
+    "sma-cross": "SmaCrossStrategy",
 }
 
 
