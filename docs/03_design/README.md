@@ -39,6 +39,7 @@ These documents represent the current technical design of the system. When imple
 
 ## Active Per-Change Design
 
+- [QuantAgent-vfd-DS-suite-performance-diagnosis.md](./QuantAgent-vfd-DS-suite-performance-diagnosis.md) - Suite performance diagnosis, bottleneck analysis and improvement plan (QuantAgent-vfd)
 - [QuantAgent-um8-DS-batch-processing.md](./QuantAgent-um8-DS-batch-processing.md) - Batch processing design: concurrent (LangGraph .batch()) and provider_batch (Anthropic/OpenAI async APIs) modes, BatchSignalCollector, BatchProvider protocol, error handling
 
 - [QuantAgent-kkj.11-DS-multi-provider-routing.md](./QuantAgent-kkj.11-DS-multi-provider-routing.md) - Provider registry, role config, routing policy, TradingGraph wiring, persistence (configuration, cost, llm)

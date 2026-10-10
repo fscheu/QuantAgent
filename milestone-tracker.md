@@ -1,16 +1,17 @@
 # QuantAgent — Milestone Tracker
 
 ## Milestone actual
-- Milestone: M1 — Backtesting estable
-- Progreso: 2/14 tickets M1 cerrados (`gg6`, `83e`). Por criterio real (3 estrategias distintas, punta a punta): 1/3 — RSI validado vía `quantagent backtest run` (CLI determinístico, sin API key, D13-D18 de `PLAN-30-DIAS.md`); Triple Screen y 52-week-high aún no producen trades reales (`8u8`, `46h`, ya desbloqueados tras cerrar `83e`). Auditoría de métricas (`hx0` + 4 subtickets), verificación de reproducibilidad (`y8z`) y cross-validación contra `backtesting.py` (`832`, `lcv`) siguen abiertas.
-- Fecha objetivo: sin fecha. Ritmo: una entrega revisada por día hábil, en el orden de la cola de `PLAN-CONTINUACION.md` §4 (M1 = T01–T23).
+- Milestone: M2 — Validación con datos reales
+- Progreso: lote 1 de 7 abierto el 2026-10-09 (`lote/datos-reales-diarios`). Plan y cola: `docs/02_planning/QuantAgent-lp1-PL-m2-validacion-datos-reales.md` y `PLAN-CONTINUACION.md` §4.
+- M1 cumplido el 2026-10-09 (PR #52): tres estrategias reproducibles sobre fixtures, métricas auditadas y engine igual a `backtesting.py` trade por trade.
+- Fecha objetivo: sin fecha. Ritmo: lotes de 5–10 entregas revisadas por el PM; Fede revisa un PR por lote.
 - Estado: on track
 
 ## Milestones
 
 | Milestone | Nombre | Criterio de completitud | Fecha objetivo | Estado |
 |---|---|---|---|---|
-| M1 | Backtesting estable | Suite de backtesting corre sin bugs para 3 estrategias distintas, resultados reproducibles | 2026-10-16 | on track |
+| M1 | Backtesting estable | Suite de backtesting corre sin bugs para 3 estrategias distintas, resultados reproducibles | 2026-10-09 | cumplido |
 | M2 | Validación con datos reales | Comparación de N estrategias sobre datos reales con costos, contra comprar y mantener, con veredicto fuera de muestra (`docs/02_planning/QuantAgent-lp1-PL-m2-validacion-datos-reales.md`) | TBD | TBD |
 | M3 | Broker Alpaca en paper | Integración con Alpaca funcionando contra la cuenta paper | TBD | TBD |
 | M4 | Paper trading estable | La estrategia validada corre en paper trading 2 semanas sin intervención manual | TBD | TBD |

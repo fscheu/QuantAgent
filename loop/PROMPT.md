@@ -14,8 +14,8 @@ REGLAS DURAS
 - Tamaño: el objetivo es ≤100 líneas agregadas+borradas. El límite duro es 400 líneas y 10 archivos, excluyendo
   .beads/**, tests/fixtures/** y docs/loop/REVIEW-LOG.md. Medí con `scripts/loop/diff_size.sh origin/<base>`
   (exit 1 = excede). El límite duro no es permiso para hacer tickets grandes: ver PASO 3.
-- Cada entrega deja el proyecto funcionando: `python -m pytest -q -m "not slow and not api"` en 0 failed
-  y `scripts/loop/smoke.sh` con exit 0. DATABASE_URL ya apunta a la base de tests del loop (migrada); no la
+- Cada entrega deja el proyecto funcionando: `python -m pytest -q -m "not slow and not api and not oraculo"` en 0 failed
+  y `scripts/loop/smoke.sh` con exit 0 (el modo paralelo con `-n 4` solo es seguro con SQLite; con Postgres corre en serie). Los oráculos corren en el CI de cada PR y el PM los corre en cada revisión que toque `quantagent/backtesting/`, `quantagent/trading/`, `quantagent/portfolio/` o `quantagent/strategy/`, y en el punto de control de cada lote, con `python -m pytest -q -m oraculo`. DATABASE_URL ya apunta a la base de tests del loop (migrada); no la
   cambies. Si un test falla por la base, es un bloqueo, no algo a ignorar.
 - Respetá AGENTS.md y CLAUDE.md del repo, salvo la regla de pedir confirmación: acá no hay humano, así que
   ante una duda real hacés una entrega de bloqueo en vez de preguntar.

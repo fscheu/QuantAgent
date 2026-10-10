@@ -411,7 +411,7 @@ def test_trades_isolated_across_consecutive_backtest_runs(db_session):
     """
     symbol = "BTC"
     end = datetime(2026, 6, 30)
-    start = end - timedelta(days=90)
+    start = end - timedelta(days=2)
     _seed_rsi_market_data(db_session, symbol, start, end)
 
     config = {
@@ -434,7 +434,7 @@ def test_trades_isolated_across_consecutive_backtest_runs(db_session):
             strategy=RSIMeanReversionStrategy(),
         )
         metrics = backtest.run(name=name)
-        assert metrics.total_trades > 0, "fixture must actually produce trades"
+        assert metrics.total_trades >= 2, "fixture must actually produce trades"
         return backtest, metrics
 
     backtest_a, metrics_a = _run("isolation-run-a")
@@ -455,8 +455,8 @@ def test_trades_isolated_across_consecutive_backtest_runs(db_session):
 
     # Every row created by execute_trade() (open leg + close leg) must carry
     # its own run's backtest_run_id -- none should be left unstamped (None).
-    assert len(trades_a) > 0
-    assert len(trades_b) > 0
+    assert len(trades_a) >= 2
+    assert len(trades_b) >= 2
 
     ids_a = {t.id for t in trades_a}
     ids_b = {t.id for t in trades_b}

@@ -1,0 +1,95 @@
+"""`data snapshot create` y `verify` (V02). La descarga de Yahoo se reemplaza por un DataFrame fijo; sin red."""
+
+from datetime import date, timedelta
+
+import pandas as pd
+import pytest
+from click.testing import CliRunner
+
+from quantagent.cli import data as cli_data
+from quantagent.cli.data import data_group
+from quantagent.data.snapshot import load_manifest, read_snapshot
+
+
+def _fixed(symbol: str, start: str) -> pd.DataFrame:
+    base = 100.0 + len(symbol)
+    idx = pd.DatetimeIndex(["2020-01-02", "2020-01-03", "2020-01-06"], name="timestamp")
+    return pd.DataFrame(
+        {
+            "open": [base, base + 1, base + 2],
+            "high": [base + 1, base + 2, base + 3],
+            "low": [base - 1, base, base + 1],
+            "close": [base + 0.5, base + 1.5, base + 2.5],
+            "adj_close": [base + 0.4, base + 1.4, base + 2.4],
+            "volume": [10, 20, 30],
+        },
+        index=idx,
+    )
+
+
+@pytest.fixture
+def runner(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    monkeypatch.setattr(cli_data, "download_daily", _fixed)
+    return CliRunner()
+
+
+def _create(runner, name="t", end="2020-12-31"):
+    args = ["snapshot", "create", "--name", name, "--symbols", "SPY,TLT", "--start", "2020-01-01", "--end", end]
+    return runner.invoke(data_group, args)
+
+
+def test_crea_y_verify_da_ok(runner):
+    result = _create(runner)
+    assert result.exit_code == 0, result.output
+    verify = runner.invoke(data_group, ["snapshot", "verify", "--name", "t"])
+    assert verify.exit_code == 0, verify.output
+    assert verify.output.strip() == "OK 2 símbolos, 6 filas"
+
+
+def test_segundo_create_con_el_mismo_nombre_sale_con_1_sin_tocar_nada(runner, tmp_path):
+    assert _create(runner).exit_code == 0
+    before = {p.name: p.read_bytes() for p in (tmp_path / "t").iterdir()}
+    result = _create(runner)
+    assert result.exit_code == 1
+    assert "ya existe" in result.output
+    assert {p.name: p.read_bytes() for p in (tmp_path / "t").iterdir()} == before
+
+
+def test_verify_nombra_el_archivo_alterado(runner, tmp_path):
+    assert _create(runner).exit_code == 0
+    path = tmp_path / "t" / "SPY.parquet"
+    data = bytearray(path.read_bytes())
+    data[len(data) // 2] ^= 0x01
+    path.write_bytes(bytes(data))
+    result = runner.invoke(data_group, ["snapshot", "verify", "--name", "t"])
+    assert result.exit_code == 1
+    assert "SPY.parquet" in result.output
+
+
+def test_simbolo_sin_filas_no_crea_nada(runner, tmp_path, monkeypatch):
+    monkeypatch.setattr(cli_data, "download_daily", lambda s, start: _fixed(s, start).iloc[0:0])
+    result = _create(runner)
+    assert result.exit_code == 1
+    assert not (tmp_path / "t").exists()
+
+
+def test_end_de_hoy_sale_con_1_y_no_crea_nada(runner, tmp_path):
+    result = _create(runner, end=date.today().isoformat())
+    assert result.exit_code == 1
+    assert "hoy o futuro" in result.output
+    assert not (tmp_path / "t").exists()
+
+
+def test_end_futuro_sale_con_1(runner, tmp_path):
+    assert _create(runner, end=(date.today() + timedelta(days=30)).isoformat()).exit_code == 1
+    assert not (tmp_path / "t").exists()
+
+
+def test_end_pasado_descarta_las_filas_posteriores(runner, tmp_path):
+    result = _create(runner, end="2020-01-03")
+    assert result.exit_code == 0, result.output
+    df = read_snapshot("t", "SPY", tmp_path, adjusted=False)
+    assert df.index.max() <= pd.Timestamp("2020-01-03")
+    assert len(df) == 2  # el fijo trae 3 filas (02, 03 y 06 de enero): la del 06 se descarta
+    assert load_manifest("t", tmp_path)["symbols"]["SPY"]["end"] == "2020-01-03"

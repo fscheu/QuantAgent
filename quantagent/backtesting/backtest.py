@@ -21,6 +21,7 @@ from quantagent.models import (
     ActivePosition,
     BacktestRun,
     Environment,
+    MarketData,
     OrderSide,
     Signal,
     Trade,
@@ -536,14 +537,12 @@ class Backtest:
         self, asset: str, current_date: datetime, signal_map: Dict
     ) -> None:
         """Execute a single candle in replay mode — uses stored signal, no LLM call."""
-        lookback_days = 30
-        data_start = current_date - timedelta(days=lookback_days)
-        df = self.data_provider.get_ohlc(
-            symbol=asset,
-            timeframe=self.timeframe,
-            start_date=data_start,
-            end_date=current_date,
-        )
+        lookback_bars = 30
+        if hasattr(self, "strategy") and self.strategy:
+            req = getattr(self.strategy, "required_history_bars", None)
+            if isinstance(req, int) and not isinstance(req, bool) and req > 0:
+                lookback_bars = req
+        df = self._get_history_df(asset, current_date, lookback_bars)
 
         if df.empty or len(df) < 2:
             return
@@ -735,13 +734,32 @@ class Backtest:
         """
         Get date range filtered by market hours for specific asset.
 
+        With offline_data the candles are already in market_data, so the clock is the
+        loaded timestamps for this asset and timeframe (QuantAgent-48n): a gap (weekend,
+        holiday) is skipped instead of re-evaluating the last candle before it. Online
+        runs fetch lazily and keep the calendar grid of _get_date_range.
+
         Args:
             asset: Asset symbol
 
         Returns:
             List of valid trading timestamps for this asset
         """
-        all_dates = self._get_date_range()
+        if self.config.get("offline_data", False):
+            rows = (
+                self.db.query(MarketData.timestamp)
+                .filter(
+                    MarketData.symbol == asset,
+                    MarketData.timeframe == self.timeframe,
+                    MarketData.timestamp >= self.start_date,
+                    MarketData.timestamp <= self.end_date,
+                )
+                .order_by(MarketData.timestamp)
+                .all()
+            )
+            all_dates = [row[0] for row in rows]
+        else:
+            all_dates = self._get_date_range()
 
         if not self.market_hours_filter or self._market_calendar is None:
             return all_dates
@@ -768,23 +786,9 @@ class Backtest:
         if lookback_bars <= 0:
             lookback_bars = 30
 
-        data_start = current_date - timedelta(
-            days=self._bars_to_calendar_days(lookback_bars)
-        )
+        df = self._get_history_df(asset, current_date, lookback_bars)
 
-        df = self.data_provider.get_ohlc(
-            symbol=asset,
-            timeframe=self.timeframe,
-            start_date=data_start,
-            end_date=current_date,
-        )
-
-        if df.empty or len(df) < lookback_bars:
-            logger.warning(
-                f"Insufficient data for {asset} at {current_date} "
-                f"(got {len(df)}, need {lookback_bars})",
-                extra={"event_type": "backtest_data_warning", "symbol": asset},
-            )
+        if df.empty:
             return
 
         current_price = float(df.iloc[-1]["close"])
@@ -835,6 +839,14 @@ class Backtest:
                         active_pos, current_price, prev_close
                     )
                     return  # Early return - invocation saved
+
+        if len(df) < lookback_bars:
+            logger.warning(
+                f"Insufficient data for {asset} at {current_date} "
+                f"(got {len(df)}, need {lookback_bars})",
+                extra={"event_type": "backtest_data_warning", "symbol": asset},
+            )
+            return
 
         # No active position (or just closed): generate signal
         if isinstance(self.strategy, LLMAgentStrategy):
@@ -934,6 +946,34 @@ class Backtest:
                 f"@ "
                 f"${current_price:.2f}, qty: {order.filled_quantity}"
             )
+
+    def _get_history_df(
+        self, asset: str, current_date: datetime, lookback_bars: int
+    ) -> pd.DataFrame:
+        """Get the historical OHLC window up to current_date."""
+        if self.config.get("offline_data", False):
+            rows = (
+                self.db.query(MarketData)
+                .filter(
+                    MarketData.symbol == asset,
+                    MarketData.timeframe == self.timeframe,
+                    MarketData.timestamp <= current_date,
+                )
+                .order_by(MarketData.timestamp.desc())
+                .limit(lookback_bars)
+                .all()
+            )[::-1]
+            return self.data_provider._rows_to_df(rows)
+
+        data_start = current_date - timedelta(
+            days=self._bars_to_calendar_days(lookback_bars)
+        )
+        return self.data_provider.get_ohlc(
+            symbol=asset,
+            timeframe=self.timeframe,
+            start_date=data_start,
+            end_date=current_date,
+        )
 
     def _bars_to_calendar_days(self, bars: int) -> int:
         """Convert required trading bars to a calendar-day lookback window."""

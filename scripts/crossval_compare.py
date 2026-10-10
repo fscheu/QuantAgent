@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 """QuantAgent-832: compara trade por trade el motor del proyecto contra el port a backtesting.py.
 
-Uso:  python scripts/crossval_compare.py [--intrabar]
+Uso:  python scripts/crossval_compare.py [--intrabar] [--fixture spy-90d]
 
-Corre ambos sobre tests/fixtures/spy-90d.csv sin slippage ni comision: el CLI del motor como subproceso
+Corre ambos sobre tests/fixtures/<fixture>.csv (default spy-90d) sin slippage ni comision: el CLI del motor como subproceso
 (TRADING_SLIPPAGE_PCT=0, SQLite nueva y vacia, --out y --equity-out) y el port (scripts/crossval_rsi.py,
 importado). Con --intrabar corre ambos con stops evaluados intravela (--intrabar-stops en el motor).
 Sale con 0 solo si todo cae dentro de tolerancia; un "NO COMPARADO" tambien da distinto de 0.
+Imprime "Entradas en fin de semana: N": trades del motor que abren en sabado o domingo (informativo; con
+spy-90d-habiles toda entrada en fin de semana es a un precio sin vela, QuantAgent-1xd).
 
 Tolerancias (el motor guarda Numeric(18,8): redondeo de hasta 5e-9 por valor):
 - entry_time, exit_time, symbol, side: exactos. Nº de trades y win rate: exactos. Profit factor: 1e-6 relativo.
@@ -18,7 +20,7 @@ Tolerancias (el motor guarda Numeric(18,8): redondeo de hasta 5e-9 por valor):
 Max drawdown: cada lado con su PROPIA curva (motor: --equity-out; port: stats._equity_curve de
 backtesting.py) y la misma formula (scripts/recalc_metrics.py::recalc_equity: maximo corrido,
 (pico - equity) / pico). backtesting.py suma un instante extra (la vela centinela del port, que se
-descarta); se verifica que los 2160 instantes restantes sean los mismos antes de comparar.
+descarta); se verifica que los instantes (2160 en spy-90d) restantes sean los mismos antes de comparar.
 """
 
 from __future__ import annotations
@@ -33,9 +35,12 @@ import re
 import subprocess
 import sys
 import tempfile
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import crossval_rsi as port  # noqa: E402  (sale con un mensaje si falta backtesting.py)
@@ -52,7 +57,7 @@ import json, os, sys
 from datetime import date
 from quantagent.trading.risk_manager import RiskManager as R
 st = {"validate_calls": 0, "rejections": {}, "min_daily_loss_margin": None, "breaker_active": 0,
-      "today": str(date.today())}
+      "today": str(date.today()), "double_touches": 0}
 _v, _d, _t = R.validate_trade, R.get_daily_pnl, R.on_trade_executed
 def v(self, *a, **k):
     st["validate_calls"] += 1
@@ -71,6 +76,21 @@ def t(self, trade):
     _t(self, trade)
     st["breaker_active"] += bool(self.circuit_breaker_triggered)
 R.validate_trade, R.get_daily_pnl, R.on_trade_executed = v, d, t
+from quantagent.backtesting import backtest as _B
+_cis = _B.check_intrabar_stops
+def _wcis(pos, candle):
+    raw_sl, raw_tp = getattr(pos, "stop_loss", None), getattr(pos, "take_profit", None)
+    side = getattr(pos, "side", None)
+    if hasattr(side, "value"): side = side.value
+    side = str(side).lower()
+    sl = float(raw_sl) if raw_sl is not None and float(raw_sl) > 0 else None
+    tp = float(raw_tp) if raw_tp is not None and float(raw_tp) > 0 else None
+    lo, hi = float(candle["low"]), float(candle["high"])
+    hit = (lo <= sl and hi >= tp) if side in ("buy", "long") else (hi >= sl and lo <= tp) if side in ("sell", "short") else False
+    if sl is not None and tp is not None and hit:
+        st["double_touches"] += 1
+    return _cis(pos, candle)
+_B.check_intrabar_stops = _wcis
 from quantagent.cli.__main__ import cli
 try:
     cli(sys.argv[1:], standalone_mode=False)
@@ -82,9 +102,18 @@ _TMP = tempfile.TemporaryDirectory(prefix="crossval_")  # se borra al salir el p
 
 
 @functools.cache
-def run_engine(probe: bool = False, intrabar: bool = False) -> dict:
+def run_engine(
+    probe: bool = False,
+    intrabar: bool = False,
+    fixture: str | None = None,
+    snapshot: str | None = None,
+    symbol: str = "SPY",
+    from_date: str | None = None,
+    to_date: str | None = None,
+) -> dict:
     """Corre el CLI del motor sobre una base SQLite nueva. Cacheado por proceso (los tests lo reusan)."""
-    d = Path(_TMP.name) / f"{'probe' if probe else 'plain'}{'_intra' if intrabar else ''}"
+    src = snapshot or fixture or "spy-90d"
+    d = Path(_TMP.name) / f"{'probe' if probe else 'plain'}{'_intra' if intrabar else ''}_{src}"
     d.mkdir()
     db = d / "engine.db"
     db.touch()
@@ -92,8 +121,16 @@ def run_engine(probe: bool = False, intrabar: bool = False) -> dict:
            "PROBE_OUT": str(d / "probe.json")}
     subprocess.run([sys.executable, "-c", "from quantagent.database import init_db; init_db()"],
                    cwd=ROOT, env=env, check=True, capture_output=True, text=True)
-    args = ["backtest", "run", "--strategy", "rsi", "--fixture", "spy-90d",
+    args = ["backtest", "run", "--strategy", "rsi",
             "--out", str(d / "trades.csv"), "--equity-out", str(d / "equity.csv")]
+    if snapshot:
+        args += ["--snapshot", snapshot, "--symbol", symbol]
+        if from_date:
+            args += ["--from", from_date]
+        if to_date:
+            args += ["--to", to_date]
+    else:
+        args += ["--fixture", fixture or "spy-90d"]
     if intrabar:
         args.append("--intrabar-stops")
     else:
@@ -119,11 +156,28 @@ def read_rows(path: Path) -> list[dict]:
         return list(csv.DictReader(f))
 
 
-def run_port_rows(history_bars: int, tag: str, intrabar: bool = False):
+def run_port_rows(
+    history_bars: int,
+    tag: str,
+    intrabar: bool = False,
+    fixture: str | None = None,
+    snapshot: str | None = None,
+    symbol: str = "SPY",
+    from_date: str | None = None,
+    to_date: str | None = None,
+):
     """Devuelve (filas de trades como las del CSV, stats de backtesting.py) para el port."""
-    stats = port.run_port_stats(history_bars, intrabar=intrabar)
+    stats = port.run_port_stats(
+        history_bars,
+        intrabar=intrabar,
+        fixture=fixture,
+        snapshot=snapshot,
+        symbol=symbol,
+        from_date=from_date,
+        to_date=to_date,
+    )
     path = Path(_TMP.name) / f"port_{tag}.csv"
-    port.write_csv(stats["_trades"].sort_values("EntryTime"), path)
+    port.write_csv(stats["_trades"].sort_values("EntryTime"), path, symbol=symbol)
     return read_rows(path), stats
 
 
@@ -185,10 +239,32 @@ def drawdown(timestamps: list[str], equities: list[float]) -> float:
 def compare_all(args) -> tuple[list[str], bool]:
     lines, ok = [], True
     intrabar = bool(args.intrabar)
-    eng, proj = run_engine(intrabar=intrabar), port.project_params()
+    snapshot = getattr(args, "snapshot", None)
+    symbol = getattr(args, "symbol", "SPY")
+    from_date = getattr(args, "from_date", None)
+    to_date = getattr(args, "to_date", None)
+    eng = run_engine(
+        probe=False,
+        intrabar=intrabar,
+        fixture=args.fixture,
+        snapshot=snapshot,
+        symbol=symbol,
+        from_date=from_date,
+        to_date=to_date,
+    )
+    proj = port.project_params()
     eng_rows = read_rows(eng["trades"])
-    tag = "intrabar" if intrabar else "main"
-    prt_rows, stats = run_port_rows(proj["_required_history_bars"], tag, intrabar=intrabar)
+    tag = ("intrabar" if intrabar else "main") + f"_{snapshot or args.fixture or 'spy-90d'}"
+    prt_rows, stats = run_port_rows(
+        proj["_required_history_bars"],
+        tag,
+        intrabar=intrabar,
+        fixture=args.fixture,
+        snapshot=snapshot,
+        symbol=symbol,
+        from_date=from_date,
+        to_date=to_date,
+    )
     if args.port_pnl_delta:  # costura para el test "la comparacion puede fallar"
         idx, delta = args.port_pnl_delta.split(":")
         prt_rows[int(idx)]["pnl"] = str(float(prt_rows[int(idx)]["pnl"]) + float(delta))
@@ -245,7 +321,15 @@ def compare_all(args) -> tuple[list[str], bool]:
                  + ("coincide" if not mism else f"DIFIERE en {mism} (CLI={pr})"))
     ok &= not mism
 
-    probe = run_engine(probe=True, intrabar=intrabar)
+    probe = run_engine(
+        probe=True,
+        intrabar=intrabar,
+        fixture=args.fixture,
+        snapshot=snapshot,
+        symbol=symbol,
+        from_date=from_date,
+        to_date=to_date,
+    )
     same_probe = Path(probe["trades"]).read_bytes() == Path(eng["trades"]).read_bytes()
     pb = probe["probe"]
     lines += ["== Informativo: riesgo del motor (corrida instrumentada del mismo CLI) ==",
@@ -258,16 +342,30 @@ def compare_all(args) -> tuple[list[str], bool]:
     ok &= same_probe
     reasons = collections.Counter(r["exit_reason"] for r in eng_rows)
     lines.append(f"exit_reason del motor: {dict(reasons)} (TRAILING_STOP: {reasons['TRAILING_STOP']})")
+    lines.append(f"Entradas en fin de semana: {weekend_entries(eng_rows)}")
+    lines.append(f"Velas que tocan stop y take profit: {pb.get('double_touches', 0)}")
 
     return lines, bool(ok)
+
+
+def weekend_entries(rows: list[dict]) -> int:
+    """Trades que abren en sabado o domingo (weekday 5 o 6 del entry_time)."""
+    return sum(datetime.fromisoformat(r["entry_time"]).weekday() >= 5 for r in rows)
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--intrabar", action="store_true", help="evalua stop loss y take profit dentro de la vela")
+    ap.add_argument("--fixture", help="fixture bajo tests/fixtures/ (sin .csv)")
+    ap.add_argument("--snapshot", help="Snapshot en $QUANTAGENT_SNAPSHOT_DIR")
+    ap.add_argument("--symbol", default="SPY", help="Símbolo (default SPY)")
+    ap.add_argument("--from", dest="from_date", help="Primera sesión, YYYY-MM-DD")
+    ap.add_argument("--to", dest="to_date", help="Última sesión, YYYY-MM-DD")
     ap.add_argument("--port-pnl-delta", metavar="IDX:DELTA", help=argparse.SUPPRESS)  # solo para tests
     ap.add_argument("--engine-pnl-delta", metavar="IDX:DELTA", help=argparse.SUPPRESS)  # solo para tests
     args = ap.parse_args(argv)
+    if not args.snapshot and not args.fixture:
+        args.fixture = "spy-90d"
     lines, ok = compare_all(args)
     print("\n".join(lines))
     print("\nRESULTADO: " + ("TODO DENTRO DE TOLERANCIA" if ok else "HAY DIFERENCIAS (exit 1)"))
