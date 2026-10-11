@@ -78,6 +78,9 @@ Diario: queda Yahoo (ya integrado, gratis, sin clave, historia desde antes de 20
 | B. Git LFS | Mismo problema de licencia: el repo es público y LFS también se descarga. Suma cuota de GitHub |
 | **C (recomendada). Fuera del repo + manifiesto adentro** | Respeta licencias. El manifiesto (símbolo, fuente, rango, filas, sha256, fecha de descarga, versión de `yfinance`) prueba que es el mismo dato. Si se pierde la carpeta no se recrea igual: hace falta copia privada (por ejemplo Drive). El golden de V07 sobre datos reales no corre en CI. Formato: Parquet (35–55% menos que CSV) |
 
+Actualización 2026-10-11 (QuantAgent-78ja): los datos locales no versionados (snapshots y archivos golden) viven dentro del repo en `data/local/`, ignorada por git vía `.gitignore` salvo su `README.md`. Corrige la ubicación física de D5 para ver los archivos al abrir el repo, sin versionar ningún dato. `QUANTAGENT_SNAPSHOT_DIR` apunta por defecto a la ruta absoluta de `data/local/` del checkout principal (para que los worktrees temporales del loop los encuentren).
+
+
 ## D6. Calidad
 
 | Problema | Por qué importa | Chequeo |

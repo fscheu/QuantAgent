@@ -30,7 +30,7 @@ RUN = ["--strategy", "rsi", "--snapshot", SNAPSHOT, "--symbol", "SPY", "--from",
        "--costos", "etf"]
 SNAPSHOT_DIR = os.environ.get("QUANTAGENT_SNAPSHOT_DIR")
 if not SNAPSHOT_DIR:
-    pytest.skip(f"Falta QUANTAGENT_SNAPSHOT_DIR (carpeta con el snapshot {SNAPSHOT})", allow_module_level=True)
+    pytest.skip(f"Falta QUANTAGENT_SNAPSHOT_DIR (debe apuntar a data/local/ con el snapshot {SNAPSHOT})", allow_module_level=True)
 if not (Path(SNAPSHOT_DIR) / SNAPSHOT).exists():
     pytest.skip(f"Falta el snapshot {SNAPSHOT} en {SNAPSHOT_DIR}", allow_module_level=True)
 GOLDEN = Path(SNAPSHOT_DIR) / GOLDEN_REL
