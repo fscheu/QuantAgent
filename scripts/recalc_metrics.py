@@ -96,6 +96,25 @@ def equity_metrics(equities, timestamps, periods_per_year=None, risk_free_rate=0
     return {"max_drawdown": max_drawdown, "sharpe": sharpe, "periods_per_year": periods_per_year}
 
 
+def annual_return(first, last, t0, t1):
+    years = (datetime.datetime.fromisoformat(str(t1)) - datetime.datetime.fromisoformat(str(t0))).total_seconds() / (365.25 * 86400.0)
+    return (last / first) ** (1 / years) - 1 if years > 0 else 0.0
+
+
+def recalc_exposure(path):
+    with open(path, newline="") as f:
+        rows = [r for r in csv.DictReader(f) if r.get("equity")]
+    if not rows or "positions_value" not in rows[0]:  # CSV mínimo (solo equity): sin estas métricas
+        return None
+    eq = [float(r["equity"]) for r in rows]
+    pv = [float(r["positions_value"]) for r in rows]
+    return {
+        "annual_return": annual_return(eq[0], eq[-1], rows[0]["timestamp"], rows[-1]["timestamp"]),
+        "in_market": sum(v != 0 for v in pv) / len(pv),
+        "invested": sum(abs(v) / e for v, e in zip(pv, eq)) / len(pv),
+    }
+
+
 def buy_and_hold(path, slippage_pct=0.0, commission_pct=0.0, capital=100000.0, risk_free_rate=0.02,
                  from_date=None, to_date=None):
     """Compra todo al primer cierre (+slippage, +comisión) y vende al último (-slippage, -comisión).
@@ -122,7 +141,7 @@ def buy_and_hold(path, slippage_pct=0.0, commission_pct=0.0, capital=100000.0, r
     qty = capital / (closes[0] * (1 + slippage_pct) * (1 + commission_pct))
     proceeds = qty * closes[-1] * (1 - slippage_pct) * (1 - commission_pct)
     m = equity_metrics([qty * c for c in closes[:-1]] + [proceeds], timestamps, None, risk_free_rate)
-    return {"pnl": proceeds - capital, **m}
+    return {"pnl": proceeds - capital, "annual_return": annual_return(capital, proceeds, timestamps[0], timestamps[-1]), **m}
 
 
 if __name__ == "__main__":
@@ -141,6 +160,7 @@ if __name__ == "__main__":
     parser.add_argument("--to", dest="to_date", help="última sesión YYYY-MM-DD; solo con --comprar-y-mantener")
     args = parser.parse_args()
 
+    bh = None
     if args.comprar_y_mantener:
         bh = buy_and_hold(
             args.comprar_y_mantener, args.slippage_pct, args.commission_pct, args.capital, args.risk_free_rate,
@@ -169,5 +189,13 @@ if __name__ == "__main__":
             print(f"Diferencia CSV - recalculado: total {math.fsum(d):.2f}, min {min(d):.2f}, max {max(d):.2f}")
     if eq:
         print(f"Max drawdown: {eq['max_drawdown']:.6f}")
+    ex = recalc_exposure(args.equity) if eq else None
+    if ex:
+        print(f"Retorno anualizado: {ex['annual_return']:.2%}")
+        if bh:
+            print(f"Exceso sobre la referencia: {ex['annual_return'] - bh['annual_return']:.2%}")
+        print(f"Tiempo en mercado: {ex['in_market']:.2%}")
+        print(f"Capital invertido medio: {ex['invested']:.2%}")
+        print(f"Sharpe (tasa 0): {recalc_equity(args.equity, args.periods_per_year, 0.0)['sharpe']:.2f}")
     if m and m["matched"] != m["trades"]:
         sys.exit(1)
