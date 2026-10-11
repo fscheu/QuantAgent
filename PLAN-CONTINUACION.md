@@ -370,7 +370,7 @@ Lotes (definidos por el PM el 2026-10-06; cada uno se abre cuando Fede mergea el
 | L3 | `lote/engine-y-cierre-m1` | T21–T25 | Comparación trade por trade contra `backtesting.py`, ADR del engine decidido (cierra M1), inventario de ramas y borrador del plan siguiente | T22, T23, T24, T25 |
 | L4 | `lote/datos-reales-diarios` | V00, V00a–V00e, V01–V10, V03b, V10b | Las 3 estrategias de M1 corren sobre SPY diario real 2007–2018 desde un snapshot con manifiesto; el engine avanza por las velas del dato y `backtesting.py` coincide con RSI | V00 (performance de la suite), V10 |
 | L5 | `lote/costos-y-referencia` | V11–V20, más V12b, V16b–V16g, V17b, V17c, V19a–V19g | La corrida informa comisión, slippage y tamaño, y se compara contra comprar y mantener con los mismos costos; un recálculo independiente coincide; motor y `backtesting.py` coinciden trade por trade con los costos reales | V13, V17, V18, V16e (motor oficial), V12b, V17b, V17c, V19a, V19c |
-| L6 | `lote/comparacion` | V20b, V21a, V21b, V22–V26, V23b, V23c | Un comando corre cuatro estrategias diarias sobre los 12 ETFs y escribe una tabla con el resultado, la referencia de comprar y mantener, la marca "coinciden N de N" contra `backtesting.py` y la sensibilidad de apertura siguiente | V20b (carpeta de datos locales), V21a (límite diario) |
+| L6 | `lote/comparacion` | V20b, V21a, V21b, V22–V26, V23a, V23b, V23c | Un comando corre cuatro estrategias diarias sobre los 12 ETFs y escribe una tabla con el resultado, la referencia de comprar y mantener, la marca "coinciden N de N" contra `backtesting.py` y la sensibilidad de apertura siguiente | V20b (carpeta de datos locales), V21a (límite diario) |
 
 T13 se adelantó dentro de L1: es un documento de decisión que no depende del resto, así la respuesta de Fede
 llega mientras el lote avanza. T20 pasó a L1 porque congela los números que ese lote audita.
@@ -465,6 +465,13 @@ Los primeros 5 son los más fáciles de revisar.
 | V22 | `QuantAgent-ol11` | Cinco métricas de comparación al final del resumen (PR #107, adelantado; falta traer el lote y cubrir la curva vacía) | `recalc_metrics.py` = CLI en las cinco; referencias sin cambio | probar | L6 |
 | V21a | `QuantAgent-j422` | El día del límite de pérdida diaria es el de la vela; apagado en corridas `1d` (decisión del PR #103) | El `xfail` de cub pasa a test normal; (VM) rsi/SPY sigue 187 / -9141.21 | decidir | L6 |
 | V21b | `QuantAgent-6zam` | `backtest run` informa el peor día de la corrida | Línea del CLI = `recalc_metrics.py` sobre el `--equity-out` | probar | L6 |
+| V23a | `QuantAgent-5nx0` | Los números del resumen de `backtest run` salen de una función reutilizable | Salida de las 3 referencias idéntica byte a byte | leer | L6 |
+| V23 | `QuantAgent-opfu` | `backtest compare`: una corrida por par estrategia/activo y tabla en CSV | (VM) 4 estrategias × 12 ETFs: 49 líneas; rsi/SPY 187 / -9141.21 | probar | L6 |
+| V23b | `QuantAgent-k6n9` | Columna de control "coinciden N de N" contra `backtesting.py` (opción C) | (VM) rsi/SPY 187 de 187; el PR cuenta cuántas de las 48 celdas coinciden | probar | L6 |
+| V23c | `QuantAgent-00cn` | Sensibilidad: PnL con llenado en la apertura siguiente (R: de Fede en #102) | Test con gap a mano; (VM) el PR informa celdas donde cambia la cantidad de trades | probar | L6 |
+| V24 | `QuantAgent-skrn` | `compare` escribe markdown con rango, hash del snapshot, costos y parámetros | Dos corridas dan el mismo archivo, con esos 4 datos | leer | L6 |
+| V25 | `QuantAgent-bz3z` | Parámetros de estrategia desde un archivo JSON | Dos archivos dan dos filas distintas en `compare` | leer | L6 |
+| V26 | `QuantAgent-j2rt` | Agregar una estrategia = un archivo + una línea de registro | Test que registra una sin tocar `quantagent/backtesting/` ni el CLI | leer | L6 |
 
 **Decisión de Fede (2026-10-10):** Triple Screen sale de la comparación diaria de M2 y se evalúa en el lote de 4h (`docs/06_implementation/QuantAgent-4x6-IM-dependencia-ventana.md`). La comparación diaria usa cuatro estrategias: `rsi`, `fifty-two-week-high`, `sma-cross` y `momentum-12m`.
 
