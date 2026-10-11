@@ -9,6 +9,7 @@ TRADING_SLIPPAGE_PCT=0 al importarse y no debe filtrarse a otros tests del mismo
 """
 
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime
@@ -33,6 +34,7 @@ SCENARIOS = {
     "exit_after_1": {"exit_after": 1},
     "exit_after_0": {"exit_after": 0},
     "next_open": {"fill": "next-open", "commission_pct": 0.001},
+    "slippage": {"exit_after": 0, "always": True, "slippage_pct": 0.01},  # QuantAgent-xyf6
 }
 
 
@@ -49,8 +51,9 @@ def _run_scenarios(workdir: Path) -> dict:
     from quantagent.strategy.base import TradingSignal, TradingStrategy
 
     class MiniStrategy(TradingStrategy):
-        def __init__(self, exit_after=None):
+        def __init__(self, exit_after=None, always=False):
             self.exit_after = exit_after  # None = should_exit por defecto de TradingStrategy
+            self.always = always  # senal en todas las velas, no solo con volumen 2
             self.signal_calls, self.exit_calls = [], []
 
         @property
@@ -61,7 +64,7 @@ def _run_scenarios(workdir: Path) -> dict:
             self.signal_calls.append({"timestamps": [k["timestamp"].isoformat() for k in kline_data],
                                       "keys": sorted(kline_data[0]), "symbol": symbol, "timeframe": timeframe,
                                       "price": current_price})
-            if kline_data[-1]["volume"] != 2:
+            if not self.always and kline_data[-1]["volume"] != 2:
                 return None
             return TradingSignal(decision="LONG", confidence=0.5, stop_loss=current_price * 0.95,
                                  take_profit=current_price * 1.10)
@@ -83,7 +86,7 @@ def _run_scenarios(workdir: Path) -> dict:
     out = {}
     for name, kwargs in SCENARIOS.items():
         kwargs = dict(kwargs)
-        strategy = MiniStrategy(exit_after=kwargs.pop("exit_after", None))
+        strategy = MiniStrategy(exit_after=kwargs.pop("exit_after", None), always=kwargs.pop("always", False))
         stats = bt_adapter.run_adapter(strategy, crossval_rsi.load_fixture(path), symbol="XYZ", timeframe="1d", **kwargs)
         rows = [{**vars(r), "entry_time": r.entry_time.isoformat(), "exit_time": r.exit_time.isoformat()}
                 for r in bt_adapter.trade_rows(stats, "XYZ")]
@@ -147,6 +150,48 @@ def test_llenado_en_la_apertura_siguiente_y_comision_nativa(results):
     # 25 * (95 - 100.5) menos 0.1 % del nocional en la entrada y en la salida
     assert first["pnl"] == pytest.approx(-137.5 - 0.001 * 25 * (100.5 + 95.0))
     assert (second["entry_time"], second["exit_time"], second["exit_reason"]) == (day(6), day(6), "backtest_end")
+
+
+def test_slippage_con_la_regla_del_paper_broker(results):
+    """Compra a referencia * (1 + s), vende a referencia * (1 - s), en la entrada, la salida por regla y el stop."""
+    s = 0.01
+    first, second = results["slippage"]["rows"][:2]
+
+    # tamano y entry_price de should_exit usan la referencia 100; solo el precio de llenado lleva slippage
+    assert (first["entry_time"], first["qty"], first["entry_price"]) == (day(2), 25.0, pytest.approx(100.0 * (1 + s)))
+    assert results["slippage"]["exit_calls"][0][1] == 100.0
+    assert (first["exit_time"], first["exit_reason"]) == (day(3), "REGLA_PROPIA")
+    assert first["exit_price"] == pytest.approx(101.0 * (1 - s))
+    pnl = 25.0 * (101.0 * (1 - s) - 100.0 * (1 + s))
+    assert first["pnl"] == pytest.approx(pnl)
+
+    # reentra en la vela de la salida: el tamano ya descuenta el slippage de esa salida. Stop 95.95 tocado en la vela 4
+    assert second["entry_time"] == day(3)
+    assert second["qty"] == pytest.approx((100000 + pnl) * 0.05 * 0.5 / 101.0, abs=1e-8)
+    assert second["entry_price"] == pytest.approx(101.0 * (1 + s))
+    assert (second["exit_time"], second["exit_reason"]) == (day(4), "STOP_LOSS")
+    assert second["exit_price"] == pytest.approx(101.0 * 0.95 * (1 - s))
+
+
+def test_motor_y_adaptador_coinciden_con_slippage(tmp_path):
+    """rsi sobre spy-90d con slippage 0.0005: mismos trades que el motor, con las tolerancias de crossval_compare."""
+    pytest.importorskip("backtesting")
+    (tmp_path / "engine.db").touch()
+    env = {**os.environ, "TRADING_SLIPPAGE_PCT": "0.0005", "DATABASE_URL": f"sqlite:///{tmp_path / 'engine.db'}"}
+    compare = ("import sys; sys.path.insert(0, 'scripts'); import crossval_compare as c; "
+               "e, a = c.read_rows(sys.argv[1]), c.read_rows(sys.argv[2]); lines, ok = c.compare_trades(e, a); "
+               "print(len(e), sum(float(r['pnl']) for r in e)); print(*lines, sep='\\n'); "
+               "sys.exit(not ok or [r['exit_reason'] for r in e] != [r['exit_reason'] for r in a])")
+    for cmd in (["-c", "from quantagent.database import init_db; init_db()"],
+                ["-m", "quantagent.cli", "backtest", "run", "--strategy", "rsi", "--fixture", "spy-90d", "--out", "motor.csv"],
+                ["scripts/bt_adapter.py", "--strategy", "rsi", "--fixture", "spy-90d", "--slippage-pct", "0.0005",
+                 "--out", "adaptador.csv"],
+                ["-c", compare, "motor.csv", "adaptador.csv"]):
+        cmd = [str(tmp_path / a) if a.endswith(".csv") else a for a in cmd]
+        proc = subprocess.run([sys.executable, *cmd], cwd=ROOT, env=env, capture_output=True, text=True, timeout=600)
+        assert proc.returncode == 0, proc.stdout[-2000:] + proc.stderr[-2000:]
+    trades, total_pnl = proc.stdout.splitlines()[0].split()
+    assert (int(trades), round(float(total_pnl), 2)) == (340, 4571.27)  # referencia de M1: no es una corrida vacia
 
 
 if __name__ == "__main__":
