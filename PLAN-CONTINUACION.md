@@ -458,6 +458,8 @@ Los primeros 5 son los más fáciles de revisar.
 | V19d | `QuantAgent-xyf6` | Slippage y `--costos` en el adaptador de `backtesting.py`, con la regla del `PaperBroker` | (VM) rsi/SPY con `--costos etf`: -447.29 y 187 de 187 con el motor | probar | L5 |
 | V20 | `QuantAgent-688` | Golden sobre el snapshot real, solo en la VM: número del motor con `--costos etf` y 100%, junto con la marca "coinciden N de N" contra la librería (opción C) | (VM) pasa y falla con un dígito cambiado; en CI, skipped con motivo | leer | L5 |
 
+**Decisión de Fede (2026-10-10):** Triple Screen sale de la comparación diaria de M2 y se evalúa en el lote de 4h (`docs/06_implementation/QuantAgent-4x6-IM-dependencia-ventana.md`). La comparación diaria usa cuatro estrategias: `rsi`, `fifty-two-week-high`, `sma-cross` y `momentum-12m`.
+
 Con el modo por lotes, el ritmo lo marcan las decisiones de Fede (T13, T10, T22, T23) y no la implementación.
 M1 se cumple al cerrar T23d. **M1 cumplido el 2026-10-09** (lote L3, PR #52 mergeado a `main`).
 

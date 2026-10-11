@@ -55,3 +55,7 @@ No hay dependencia: `rsi_strategy.py:141-142` promedia las últimas 14 diferenci
 - El script le pregunta a la estrategia en todas las fechas. El motor solo pregunta cuando no hay posición abierta, así que estos números son respuestas de la estrategia, no trades.
 - La tabla de tendencia sale de un fragmento que llama a `_aggregate_weekly_bars` y `_screen1_trend` con las mismas ventanas; está en el PR.
 - **No medido:** la rama con datos en vivo de `_get_history_df` (`backtest.py:970-978`) pide la ventana por días de calendario, así que la cantidad de velas varía sola de una fecha a otra. Por la causa 1 eso alcanza para mover la tendencia de Triple Screen. Tampoco se revisó qué ventana arma paper.
+
+## Decisión (Fede, 2026-10-10)
+
+Triple Screen queda fuera de la comparación diaria de M2 y se evalúa en 4h, que es el timeframe para el que está pensada (lote de 4h del plan de M2). La comparación diaria usa `rsi`, `fifty-two-week-high`, `sma-cross` y `momentum-12m`. Su agregación semanal por bloques de 5 velas no se corrige ahora: corregirla movería la referencia de M1 y se decide al llegar a 4h.
