@@ -159,6 +159,18 @@ class PortfolioManager:
             commission = sum(
                 (fill.commission for fill in order.fills), Decimal("0")
             )
+        # Every executed order pays its own commission in cash (QuantAgent-j62).
+        self.cash -= float(commission)
+        # The position remembers what it paid to get in; a close takes the share of
+        # the quantity it closes, so backtest and paper report the same pnl.
+        pos = self.positions[symbol]
+        held_entry_commission = Decimal("0") if is_opening else pos.get("entry_commission", Decimal("0"))
+        entry_commission_share = Decimal("0")
+        if is_closing_long or is_closing_short:
+            entry_commission_share = held_entry_commission * Decimal(str(fill_qty)) / Decimal(str(abs(position_qty_before)))
+            pos["entry_commission"] = held_entry_commission - entry_commission_share
+        else:
+            pos["entry_commission"] = held_entry_commission + commission
 
         # Calculate P&L for closing trades
         pnl: Decimal | None = None
@@ -174,8 +186,8 @@ class PortfolioManager:
                     # SHORT: profit when entry > exit
                     gross_pnl = (entry_price - exit_price) * Decimal(str(fill_qty))
 
-                # Calculate net P&L (gross - commission)
-                pnl = gross_pnl - commission
+                # Net P&L: gross minus this share of the entry commission and the exit one
+                pnl = gross_pnl - entry_commission_share - commission
 
                 # Calculate net pnl_pct based on entry notional
                 entry_notional = entry_price * Decimal(str(fill_qty))

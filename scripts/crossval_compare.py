@@ -12,9 +12,16 @@ spy-90d-habiles toda entrada en fin de semana es a un precio sin vela, QuantAgen
 
 Tolerancias (el motor guarda Numeric(18,8): redondeo de hasta 5e-9 por valor):
 - entry_time, exit_time, symbol, side: exactos. Nº de trades y win rate: exactos. Profit factor: 1e-6 relativo.
-- qty 1e-8: cota real 5e-9 (redondeo del motor) + 2**-28 ~ 3.7e-9 (el port cuantiza a 2**-27) = 8.7e-9.
-- entry_price, exit_price 1e-8 (el fixture tiene 2 decimales; solo cuenta el redondeo a 8).
-- pnl: 1e-8 * |exit - entry| + 1e-8 por trade (error de qty por el movimiento + redondeo); total PnL: su suma.
+- qty 1.5e-6 RELATIVA a la cantidad del motor (QuantAgent-zd9n; antes 1e-6 acciones, que dependia del tamano):
+  el motor calcula la senal con precios a 8 decimales (Numeric(18,8)) y la libreria con los del snapshot sin
+  redondear; eso mueve la confianza de rsi hasta 5.4e-9 y la cantidad en dif/confianza. Medido en rsi sobre SPY
+  2007-2018 con costos etf: 1.43e-6 al 5% del capital y 1.39e-6 al 100% (confianza 0.0023), mediana 4e-9.
+  Desde QuantAgent-bwqb la libreria recibe los precios a 8 decimales (crossval_rsi.load_fixture) y esa causa
+  ya no existe: queda el redondeo del CSV (hasta 9e-9 acciones), 1.13e-7 relativo al 5% (sobre 0.03 acciones)
+  y 7.8e-9 al 100%. La tolerancia no se bajo: en spy-90d --intrabar ese redondeo es 7.06e-7 de una cantidad.
+- entry_price, exit_price 2e-8: una unidad del octavo decimal (medido 1.0000008e-8 en SPY real) mas ruido de float.
+- pnl: 1e-6 * |exit - entry| + 1e-8 por trade (1e-6 acciones por el movimiento + redondeo; medido 6.44e-7).
+- total PnL: suma de 1e-8 * |exit - entry| + 1e-8 por trade (no cambio con QuantAgent-824).
 - max drawdown 1e-6; equity punto a punto 1e-3 USD (el CSV de equity del motor tiene 4 decimales).
 
 Max drawdown: cada lado con su PROPIA curva (motor: --equity-out; port: stats._equity_curve de
@@ -46,9 +53,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import crossval_rsi as port  # noqa: E402  (sale con un mensaje si falta backtesting.py)
 import recalc_metrics  # noqa: E402
 
-QTY_TOL, PRICE_TOL, PNL_TOL = 1e-8, 1e-8, 1e-8
+QTY_RTOL, PRICE_TOL, PNL_TOL = 1.5e-6, 2e-8, 1e-8
+PNL_QTY_TOL = 1e-6  # acciones; solo para la tolerancia de pnl (no cambio con QuantAgent-zd9n)
 PF_RTOL, DD_TOL, EQUITY_TOL = 1e-6, 1e-6, 1e-3
 NUMERIC = ("qty", "entry_price", "exit_price", "pnl")
+LABELS = {"qty": "1.5e-6*qty", "pnl": "1e-6*|mov|+1e-8"}
 
 # Mide, sin tocar el motor, los rechazos del RiskManager (los rechazos no se persisten ni se loguean en el
 # CLI): envuelve validate_trade / get_daily_pnl / on_trade_executed y corre el mismo CLI.
@@ -190,8 +199,8 @@ def metrics_of(rows: list[dict], tag: str) -> dict:
     return recalc_metrics.recalc(path)
 
 
-def pnl_tol(row: dict) -> float:
-    return PNL_TOL * abs(float(row["exit_price"]) - float(row["entry_price"])) + PNL_TOL
+def pnl_tol(row: dict, qty_tol: float = PNL_QTY_TOL) -> float:
+    return qty_tol * abs(float(row["exit_price"]) - float(row["entry_price"])) + PNL_TOL
 
 
 def compare_trades(eng: list[dict], prt: list[dict]) -> tuple[list[str], bool]:
@@ -199,10 +208,12 @@ def compare_trades(eng: list[dict], prt: list[dict]) -> tuple[list[str], bool]:
     if not ok:
         lines.append("  DIFERENTE: distinta cantidad de trades")
     maxdiff = dict.fromkeys(NUMERIC, 0.0)
-    first = None
+    first, qty_rel = None, 0.0
     for i, (e, p) in enumerate(zip(eng, prt)):
         bad = [c for c in ("entry_time", "exit_time", "symbol", "side") if e[c] != p[c]]
-        tols = {"qty": QTY_TOL, "entry_price": PRICE_TOL, "exit_price": PRICE_TOL, "pnl": pnl_tol(e)}
+        qty_rel = max(qty_rel, abs(float(e["qty"]) - float(p["qty"])) / abs(float(e["qty"])))
+        tols = {"qty": QTY_RTOL * abs(float(e["qty"])), "entry_price": PRICE_TOL, "exit_price": PRICE_TOL,
+                "pnl": pnl_tol(e)}
         for c in NUMERIC:
             diff = abs(float(e[c]) - float(p[c]))
             maxdiff[c] = max(maxdiff[c], diff)
@@ -218,7 +229,7 @@ def compare_trades(eng: list[dict], prt: list[dict]) -> tuple[list[str], bool]:
     else:
         lines.append("Todos los trades comparados coinciden en entry_time, exit_time, symbol, side y dentro de tolerancia")
     lines.append("Maxima diferencia absoluta por columna (tolerancia): " + ", ".join(
-        f"{c}={maxdiff[c]:.3g} ({'1e-8' if c != 'pnl' else '1e-8*|mov|+1e-8'})" for c in NUMERIC))
+        f"{c}={maxdiff[c]:.3g} ({LABELS.get(c, '2e-8')})" for c in NUMERIC) + f"; qty relativa={qty_rel:.3g}")
     return lines, ok
 
 
@@ -300,7 +311,7 @@ def compare_all(args) -> tuple[list[str], bool]:
 
     pe, pp = me["profit_factor"], mp["profit_factor"]
     pf_ok = pe == pp or abs(pe - pp) <= PF_RTOL * abs(pe)
-    pnl_tol_total = sum(pnl_tol(r) for r in eng_rows)
+    pnl_tol_total = sum(pnl_tol(r, 1e-8) for r in eng_rows)  # agregado: sigue con el 1e-8 anterior a 824
     checks = [("trades", me["trades"], mp["trades"], me["trades"] == mp["trades"]),
               ("total_pnl", me["total_pnl"], mp["total_pnl"],
                abs(me["total_pnl"] - mp["total_pnl"]) <= pnl_tol_total),

@@ -84,13 +84,40 @@ def test_backtest_run_exits_zero_and_prints_metrics(cli_runner):
 
     assert result.exit_code == 0, result.output
     lines = result.output.strip().splitlines()
-    assert len(lines) == 6
+    assert len(lines) == 8
     assert lines[0].startswith("Trades:")
     assert lines[1].startswith("Win rate:")
     assert lines[2].startswith("Profit factor:")
     assert lines[3].startswith("Sharpe ratio:")
     assert lines[4].startswith("Total PnL:")
     assert lines[5] == "Slippage: 0.05% por lado"
+    assert lines[6] == "Comisión: 0.00% por lado"
+    assert lines[7].startswith("Comprar y mantener: PnL ")
+
+
+def test_backtest_run_commission_pct_charges_every_fill_and_lowers_pnl(cli_runner):
+    """--commission-pct llega al broker con modelo pct: la entrada queda registrada como qty * precio * pct
+    en el trade y la salida baja el Total PnL, sin cambiar los trades (QuantAgent-de5)."""
+    args = ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
+    base = cli_runner.invoke(backtest_group, args)
+    assert base.exit_code == 0, base.output
+    result = cli_runner.invoke(backtest_group, [*args, "--commission-pct", "0.001"])
+    assert result.exit_code == 0, result.output
+
+    out0 = dict(line.split(": ", 1) for line in base.output.splitlines())
+    out1 = dict(line.split(": ", 1) for line in result.output.splitlines())
+    assert out1["Comisión"] == "0.10% por lado"
+    assert out1["Trades"] == out0["Trades"]
+    assert float(out1["Total PnL"]) < float(out0["Total PnL"])
+
+    with Session(create_engine(os.environ["DATABASE_URL"])) as s:
+        rows = s.execute(text(
+            "SELECT quantity, entry_price, commission FROM trades"
+            " WHERE backtest_run_id = (SELECT MAX(id) FROM backtest_runs)"
+        )).all()
+    assert len(rows) == int(out1["Trades"])
+    for qty, entry, commission in rows:
+        assert float(commission) == pytest.approx(float(qty) * float(entry) * 0.001, rel=1e-9)
 
 
 def test_backtest_run_writes_csv_matching_reported_trade_count(shared_rsi_run):
@@ -285,16 +312,18 @@ def shared_cli_process_run(tmp_path_factory):
 
 
 def test_backtest_run_output_is_only_metrics_lines(shared_cli_process_run):
-    """stdout+stderr is exactly the 6 metric lines plus the --out line: no log or SAWarning noise."""
+    """stdout+stderr is exactly the 8 metric lines plus the --out line: no log or SAWarning noise."""
     proc, trades_csv = shared_cli_process_run
 
     assert proc.returncode == 0, proc.stdout
     prefixes = [line.split(":")[0] for line in proc.stdout.splitlines()]
     assert prefixes == [
-        "Trades", "Win rate", "Profit factor", "Sharpe ratio", "Total PnL", "Slippage",
+        "Trades", "Win rate", "Profit factor", "Sharpe ratio", "Total PnL", "Slippage", "Comisión",
+        "Comprar y mantener",
         f"Trade log written to {trades_csv}",
     ]
     assert proc.stdout.splitlines()[5] == "Slippage: 0.05% por lado"
+    assert proc.stdout.splitlines()[6] == "Comisión: 0.00% por lado"
 
 
 def test_backtest_run_output_with_custom_slippage_env(tmp_path):
@@ -311,8 +340,8 @@ def test_backtest_run_output_with_custom_slippage_env(tmp_path):
     )
     assert proc.returncode == 0, proc.stdout
     lines = proc.stdout.strip().splitlines()
-    assert len(lines) == 6
-    assert lines[-1] == "Slippage: 1.00% por lado"
+    assert len(lines) == 8
+    assert lines[-3] == "Slippage: 1.00% por lado"
 
 
 def test_backtest_run_verbose_shows_insufficient_data_messages(tmp_path):
@@ -434,20 +463,20 @@ def test_backtest_verify_process_output_is_only_ok_reproducible():
 def test_backtest_run_consecutive_runs_on_same_database_produce_identical_output(
     cli_runner,
 ):
-    """Two consecutive `backtest run` on the same database must produce identical 6 lines (QuantAgent-hx0.11)."""
+    """Two consecutive `backtest run` on the same database must produce identical 8 lines (QuantAgent-hx0.11)."""
     res1 = cli_runner.invoke(
         backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
     )
     assert res1.exit_code == 0, res1.output
     lines1 = res1.output.strip().splitlines()
-    assert len(lines1) == 6
+    assert len(lines1) == 8
 
     res2 = cli_runner.invoke(
         backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
     )
     assert res2.exit_code == 0, res2.output
     lines2 = res2.output.strip().splitlines()
-    assert len(lines2) == 6
+    assert len(lines2) == 8
 
     assert lines1 == lines2
 
@@ -511,3 +540,54 @@ def test_backtest_run_prints_na_profit_factor_when_no_losses(cli_runner, monkeyp
     assert result.exit_code == 0, result.output
     lines = result.output.strip().splitlines()
     assert lines[2] == "Profit factor: n/a"
+
+
+@pytest.mark.parametrize("extra, pct, regla", [
+    (["--tamano-posicion", "1.0"], 1.0, "confianza"),
+    (["--regla-tamano", "fijo", "--tamano-posicion", "0.5"], 0.5, "fijo"),
+])
+def test_backtest_run_tamano_posicion_y_regla_dimensionan_cada_entrada(cli_runner, tmp_path, monkeypatch, extra, pct, regla):
+    """--tamano-posicion y --regla-tamano llegan al motor (QuantAgent-3has): en los 3 primeros trades
+    qty = equity al entrar × fracción (× confianza de la señal, salvo regla fijo) / precio de entrada."""
+    monkeypatch.setattr(settings, "TRADING_SLIPPAGE_PCT", 0.0)  # sin slippage, precio de entrada = precio de la señal
+    out = tmp_path / "trades.csv"
+    result = cli_runner.invoke(backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke", "--out", str(out), *extra])
+    assert result.exit_code == 0, result.output
+    assert f"Tamaño: {pct:.0%} del capital, regla {regla}" in result.output.splitlines()
+    with Session(create_engine(os.environ["DATABASE_URL"])) as s:
+        senales = s.execute(text("SELECT generated_at, confidence FROM signals ORDER BY generated_at LIMIT 3")).all()
+        config = s.execute(text("SELECT config_snapshot FROM backtest_runs")).scalar_one()
+    assert all(f'"{k}": {v}' in config for k, v in [("base_position_pct", pct), ("max_position_pct", pct), ("regla_tamano", f'"{regla}"')])
+    trades = list(csv.DictReader(out.read_text().splitlines()))[:3]
+    assert len(trades) == 3 and len({c for _, c in senales}) == 3  # confianzas distintas: las dos reglas no se confunden
+    equity = 100000.0
+    for trade, (generada, confianza) in zip(trades, senales):
+        assert str(generada)[:19].replace(" ", "T") == trade["entry_time"]
+        factor = confianza if regla == "confianza" else 1.0
+        assert float(trade["qty"]) == pytest.approx(equity * pct * factor / float(trade["entry_price"]), rel=1e-7)
+        equity += float(trade["pnl"])  # una posición por vez: el equity al entrar es capital + PnL ya realizado
+
+
+def test_backtest_verify_usa_el_mismo_tamano_y_regla_en_las_dos_corridas(cli_runner, monkeypatch):
+    """verify pasa --tamano-posicion y --regla-tamano a las dos corridas: en ambas el primer trade usa equity × 0.5 / precio."""
+    from quantagent.cli import backtest as bt_cli
+    real, csvs = bt_cli._run_verify_pass, []
+    monkeypatch.setattr(bt_cli, "_run_verify_pass", lambda *a, **k: csvs.append(real(*a, **k)) or csvs[-1])
+    monkeypatch.setattr(settings, "TRADING_SLIPPAGE_PCT", 0.0)
+    result = cli_runner.invoke(
+        backtest_group, ["verify", "--strategy", "rsi", "--fixture", "spy-smoke", "--regla-tamano", "fijo", "--tamano-posicion", "0.5"]
+    )
+    assert result.exit_code == 0, result.output
+    assert result.output.splitlines() == ["Tamaño: 50% del capital, regla fijo", "OK reproducible"]
+    assert len(csvs) == 2
+    for _, _, trades_csv in csvs:
+        primero = next(csv.DictReader(trades_csv.splitlines()))
+        assert float(primero["qty"]) == pytest.approx(100000.0 * 0.5 / float(primero["entry_price"]), rel=1e-7)
+
+
+@pytest.mark.parametrize("cmd", ["run", "verify"])
+@pytest.mark.parametrize("extra", [["--tamano-posicion", "0"], ["--tamano-posicion", "1.01"], ["--regla-tamano", "kelly"]])
+def test_backtest_tamano_o_regla_invalidos_salen_con_2_sin_traceback(cli_runner, cmd, extra):
+    result = cli_runner.invoke(backtest_group, [cmd, "--strategy", "rsi", "--fixture", "spy-smoke", *extra])
+    assert result.exit_code == 2
+    assert f"Invalid value for '{extra[0]}'" in result.output and "Traceback" not in result.output

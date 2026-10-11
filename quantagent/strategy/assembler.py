@@ -36,6 +36,8 @@ class ResolvedConfig:
     temperature: float
     use_checkpointing: bool
     extras: Optional[Dict] = None
+    commission_pct: float = 0.0
+    regla_tamano: str = "confianza"
 
 
 @dataclass
@@ -61,6 +63,7 @@ class StrategyAssembler:
             "max_daily_loss_pct": settings.TRADING_MAX_DAILY_LOSS_PCT,
             "max_position_pct": settings.TRADING_MAX_POSITION_PCT,
             "slippage_pct": settings.TRADING_SLIPPAGE_PCT,
+            "commission_pct": settings.TRADING_COMMISSION_PCT,
             "model_provider": settings.AGENT_LLM_PROVIDER,
             "model_name": settings.AGENT_LLM_MODEL,
             "temperature": settings.AGENT_LLM_TEMPERATURE,
@@ -166,14 +169,18 @@ class StrategyAssembler:
             environment=resolved.environment,
             db=db_session,
         )
-        ps = PositionSizer(base_position_pct=resolved.base_position_pct)
+        ps = PositionSizer(base_position_pct=resolved.base_position_pct, regla=resolved.regla_tamano)
         rm = RiskManager(
             portfolio_manager=pm,
             max_daily_loss_pct=resolved.max_daily_loss_pct,
             max_position_pct=resolved.max_position_pct,
             db=db_session,
         )
-        broker = PaperBroker(slippage_pct=resolved.slippage_pct)
+        broker = PaperBroker(
+            slippage_pct=resolved.slippage_pct,
+            commission_model="pct" if resolved.commission_pct > 0 else "none",
+            commission_pct=resolved.commission_pct,
+        )
         om = OrderManager(
             position_sizer=ps,
             risk_manager=rm,
@@ -210,6 +217,7 @@ class StrategyAssembler:
             "max_daily_loss_pct": resolved.max_daily_loss_pct,
             "max_position_pct": resolved.max_position_pct,
             "slippage_pct": resolved.slippage_pct,
+            "commission_pct": resolved.commission_pct,
             # Align with TradingGraph expected keys (agent_llm_*)
             "agent_llm_provider": resolved.model_provider,
             "agent_llm_model": resolved.model_name,
@@ -303,4 +311,8 @@ class StrategyAssembler:
             temperature=temp,
             use_checkpointing=use_ckpt,
             extras=None,
+            commission_pct=float(
+                merged.get("commission_pct", StrategyAssembler.DEFAULTS()["commission_pct"])
+            ),
+            regla_tamano=merged.get("regla_tamano", "confianza"),
         )

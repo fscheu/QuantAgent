@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from quantagent.backtesting.backtest import Backtest
+from quantagent.backtesting.buy_and_hold import buy_and_hold
 from quantagent.backtesting.export import TradeRow, equity_to_csv, trades_to_csv
 from quantagent.backtesting.fixtures import (
     FixtureMetadata,
@@ -24,7 +25,10 @@ from quantagent.backtesting.fixtures import (
 )
 from quantagent.data.snapshot import SnapshotError, snapshot_root
 from quantagent.models import ActivePosition, MarketData, Trade
+from quantagent import settings
+from quantagent.settings import COSTOS_PERFILES
 from quantagent.strategy.registry import build_strategy
+from quantagent.trading.position_sizer import PositionSizer
 
 from . import utils
 
@@ -35,6 +39,8 @@ STRATEGY_ALIASES = {
     "rsi": "RSIMeanReversionStrategy",
     "fifty-two-week-high": "FiftyTwoWeekHighStrategy",
     "triple-screen": "TripleScreenStrategy",
+    "sma-cross": "SmaCrossStrategy",
+    "momentum-12m": "Momentum12mStrategy",
 }
 
 
@@ -104,6 +110,40 @@ def _resolve_source_and_meta(
         _registrar_apertura(" ".join(partes))
 
     return meta, symbol, to_date
+
+
+def _engine_config(commission_pct: Optional[float], costos: Optional[str] = None,
+                   tamano_posicion: Optional[float] = None, regla_tamano: Optional[str] = None) -> dict:
+    config = {"market_hours_filter": False, "offline_data": True}
+    if tamano_posicion is not None:
+        config["base_position_pct"] = config["max_position_pct"] = tamano_posicion
+    if regla_tamano is not None:
+        config["regla_tamano"] = regla_tamano
+    if costos is not None:
+        if commission_pct is not None:
+            raise click.UsageError("--costos y --commission-pct son excluyentes: elegí uno.")
+        config.update(COSTOS_PERFILES[costos])
+    elif commission_pct is not None:
+        config["commission_pct"] = commission_pct
+    return config
+
+
+def _tamano_options(f):
+    f = click.option(
+        "--regla-tamano", "regla_tamano", type=click.Choice(PositionSizer.REGLAS), default=None,
+        help="Regla de tamaño: confianza (capital × fracción × confianza de la señal) o fijo. Default: confianza.",
+    )(f)
+    return click.option(
+        "--tamano-posicion", "tamano_posicion", type=click.FloatRange(min=0.0, max=1.0, min_open=True), default=None,
+        help="Fracción del capital por posición, en (0, 1] (1.0 = 100%). Fija base y máximo de la corrida.",
+    )(f)
+
+
+def _echo_tamano(config: dict) -> None:
+    """Imprime con qué tamaño se corrió, solo si se pidió --tamano-posicion o --regla-tamano."""
+    if "base_position_pct" in config or "regla_tamano" in config:
+        pct = config.get("base_position_pct", settings.TRADING_BASE_POSITION_PCT)
+        click.echo(f"Tamaño: {pct * 100:g}% del capital, regla {config.get('regla_tamano', 'confianza')}")
 
 
 def _hide_data_warnings(record: logging.LogRecord) -> bool:
@@ -185,6 +225,20 @@ def backtest_group() -> None:
     help="Also show the engine's per-candle 'Insufficient data' messages on stderr.",
 )
 @click.option(
+    "--commission-pct",
+    "commission_pct",
+    type=click.FloatRange(min=0.0),
+    default=None,
+    help="Comisión por lado sobre el nocional (0.001 = 0.10%). Default: TRADING_COMMISSION_PCT.",
+)
+@click.option(
+    "--costos",
+    type=click.Choice(sorted(COSTOS_PERFILES)),
+    default=None,
+    help="Perfil de costos (slippage y comisión por lado). Excluyente con --commission-pct.",
+)
+@_tamano_options
+@click.option(
     "--intrabar-stops/--no-intrabar-stops",
     default=True,
     help="Evaluate stop loss and take profit against intrabar high/low prices.",
@@ -201,7 +255,12 @@ def run_backtest(
     equity_out_path: Optional[str],
     verbose: bool,
     intrabar_stops: bool,
+    commission_pct: Optional[float],
+    costos: Optional[str],
+    tamano_posicion: Optional[float],
+    regla_tamano: Optional[str],
 ) -> None:
+    config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano)
     meta, symbol, to_date = _resolve_source_and_meta(
         "run",
         strategy_name,
@@ -246,7 +305,7 @@ def run_backtest(
             # offline_data avoids live yfinance calls for the lookback window before the
             # fixture's first row -- the whole point of a fixture-based run is to be
             # deterministic and network-free.
-            config={"market_hours_filter": False, "offline_data": True},
+            config=config,
             db_session=session,
             strategy=build_strategy(STRATEGY_ALIASES[strategy_name]),
             intrabar_stops=intrabar_stops,
@@ -262,7 +321,23 @@ def run_backtest(
             engine_logger.removeFilter(_hide_data_warnings)
 
         slippage_pct = bt.order_manager.broker.slippage_pct
+        commission = bt.order_manager.broker.commission_pct
         rows = _extract_trade_rows(session, bt.backtest_run_id) if out_path else []
+        candles = (
+            session.query(MarketData.timestamp, MarketData.close)
+            .filter(
+                MarketData.symbol == meta.symbol,
+                MarketData.timeframe == meta.timeframe,
+                MarketData.timestamp >= meta.start_date,
+                MarketData.timestamp <= meta.end_date,
+            )
+            .order_by(MarketData.timestamp)
+            .all()
+        )
+        bh = buy_and_hold(
+            [c.timestamp for c in candles], [float(c.close) for c in candles],
+            bt.initial_capital, slippage_pct, commission,
+        )
 
     click.echo(f"Trades: {metrics.total_trades}")
     click.echo(f"Win rate: {metrics.win_rate:.2%}")
@@ -273,6 +348,14 @@ def run_backtest(
     click.echo(f"Sharpe ratio: {metrics.sharpe_ratio:.2f}")
     click.echo(f"Total PnL: {metrics.total_pnl:.2f}")
     click.echo(f"Slippage: {slippage_pct * 100:.2f}% por lado")
+    click.echo(f"Comisión: {commission * 100:.2f}% por lado")
+    if costos:
+        click.echo(f"Costos: {costos}")
+    _echo_tamano(config)
+    click.echo(
+        f"Comprar y mantener: PnL {bh['pnl']:.2f}, Sharpe {bh['sharpe']:.2f}, "
+        f"max drawdown {bh['max_drawdown']:.6f}"
+    )
 
     if out_path:
         with open(out_path, "w", newline="") as f:
@@ -331,6 +414,9 @@ def _run_verify_pass(
     from_date: Optional[datetime] = None,
     to_date: Optional[datetime] = None,
     meta: Optional[FixtureMetadata] = None,
+    commission_pct: Optional[float] = None,
+    costos: Optional[str] = None,
+    config: Optional[dict] = None,
 ):
     if meta is None:
         if snapshot_name:
@@ -347,7 +433,7 @@ def _run_verify_pass(
             end_date=meta.end_date,
             assets=[meta.symbol],
             timeframe=meta.timeframe,
-            config={"market_hours_filter": False, "offline_data": True},
+            config=config or _engine_config(commission_pct, costos),
             db_session=session,
             strategy=build_strategy(STRATEGY_ALIASES[strategy_name]),
         )
@@ -392,6 +478,20 @@ def _run_verify_pass(
     is_flag=True,
     help="Also show engine warnings on stderr.",
 )
+@click.option(
+    "--commission-pct",
+    "commission_pct",
+    type=click.FloatRange(min=0.0),
+    default=None,
+    help="Comisión por lado sobre el nocional (0.001 = 0.10%). Default: TRADING_COMMISSION_PCT.",
+)
+@click.option(
+    "--costos",
+    type=click.Choice(sorted(COSTOS_PERFILES)),
+    default=None,
+    help="Perfil de costos (slippage y comisión por lado). Excluyente con --commission-pct.",
+)
+@_tamano_options
 def verify_backtest(
     strategy_name: str,
     fixture_name: Optional[str],
@@ -401,9 +501,14 @@ def verify_backtest(
     to_date: Optional[datetime],
     abrir_reserva: bool,
     verbose: bool,
+    commission_pct: Optional[float],
+    costos: Optional[str],
+    tamano_posicion: Optional[float],
+    regla_tamano: Optional[str],
 ) -> None:
     import difflib
 
+    config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano)
     meta, symbol, to_date = _resolve_source_and_meta(
         "verify",
         strategy_name,
@@ -424,6 +529,9 @@ def verify_backtest(
         from_date=from_date,
         to_date=to_date,
         meta=meta,
+        commission_pct=commission_pct,
+        costos=costos,
+        config=config,
     )
     m2, s2, csv2 = _run_verify_pass(
         strategy_name,
@@ -434,6 +542,9 @@ def verify_backtest(
         from_date=from_date,
         to_date=to_date,
         meta=meta,
+        commission_pct=commission_pct,
+        costos=costos,
+        config=config,
     )
 
     diff_lines = []
@@ -466,4 +577,5 @@ def verify_backtest(
         click.echo("".join(diff_lines), nl=False)
         raise click.ClickException("Backtest reproducibility check failed")
 
+    _echo_tamano(config)
     click.echo("OK reproducible")

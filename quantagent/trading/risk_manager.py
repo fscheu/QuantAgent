@@ -76,8 +76,14 @@ class RiskManager:
         """
         trade_value = qty * price
 
+        # Checks 1 a 4 frenan entradas nuevas: una orden que reduce o cierra la posición
+        # existente nunca se rechaza por ellos (QuantAgent-oat, QuantAgent-8wxb).
+        held = self.portfolio.positions[symbol]["qty"] if symbol in self.portfolio.positions else 0.0
+        opposes = (held > 0 and side == OrderSide.SELL) or (held < 0 and side == OrderSide.BUY)
+        reduces = opposes and qty <= abs(held) + self._position_epsilon
+
         # Check 1: Capital available
-        if self.portfolio.cash < trade_value:
+        if not reduces and self.portfolio.cash < trade_value:
             reason = f"Insufficient capital: need ${trade_value:.2f}, have ${self.portfolio.cash:.2f}"
             logger.warning(
                 f"Order rejected - {reason}",
@@ -96,7 +102,7 @@ class RiskManager:
         # Check 2: Position size <= 10% of portfolio
         portfolio_value = self.portfolio.get_total_value()
         max_position_value = portfolio_value * self.max_position_pct
-        if trade_value > max_position_value:
+        if not reduces and trade_value > max_position_value:
             reason = f"Position too large: ${trade_value:.2f} > max ${max_position_value:.2f} (10% limit)"
             logger.warning(
                 f"Order rejected - {reason}",
@@ -115,7 +121,7 @@ class RiskManager:
         # Check 3: Daily loss limit not exceeded
         daily_pnl = self.get_daily_pnl()
         max_daily_loss = -(portfolio_value * self.max_daily_loss_pct)
-        if daily_pnl < max_daily_loss:
+        if not reduces and daily_pnl < max_daily_loss:
             reason = f"Daily loss limit exceeded: ${daily_pnl:.2f} < max loss ${max_daily_loss:.2f} (5% limit)"
             logger.warning(
                 f"Order rejected - {reason}",
@@ -132,7 +138,7 @@ class RiskManager:
             return (False, reason)
 
         # Check 4: Circuit breaker not triggered
-        if self.circuit_breaker_triggered:
+        if not reduces and self.circuit_breaker_triggered:
             reason = "Circuit breaker is active - no more trades allowed today"
             logger.warning(
                 f"Order rejected - {reason}",

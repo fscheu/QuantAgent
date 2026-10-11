@@ -25,11 +25,46 @@ class TestPositionSizer:
 
     def test_init_invalid_pct(self):
         """Test PositionSizer rejects invalid position percentages."""
-        with pytest.raises(ValueError, match="must be between 0% and 10%"):
-            PositionSizer(base_position_pct=0.15)
+        assert PositionSizer(base_position_pct=1.0).base_position_pct == 1.0
 
-        with pytest.raises(ValueError, match="must be between 0% and 10%"):
+        with pytest.raises(ValueError, match="must be between 0% and 100%"):
+            PositionSizer(base_position_pct=1.01)
+
+        with pytest.raises(ValueError, match="must be between 0% and 100%"):
             PositionSizer(base_position_pct=0.0)
+
+    def test_init_regla_desconocida(self):
+        """Una regla desconocida da ValueError y el mensaje lista las validas."""
+        with pytest.raises(ValueError, match="confianza.*fijo"):
+            PositionSizer(regla="otra")
+
+    @pytest.mark.parametrize("pct", [0.05, 1.0])
+    def test_reglas_de_tamano(self, pct):
+        """'confianza' multiplica por la confianza y 'fijo' no (5%: 40 y 100; 100%: 800 y 2.000)."""
+        equity, precio, confianza = 100000.0, 50.0, 0.4
+        kwargs = dict(symbol="SPY", signal_confidence=confianza, current_price=precio, portfolio_value=equity)
+
+        assert PositionSizer(pct).regla == "confianza"  # regla por defecto
+        con_confianza = PositionSizer(pct, regla="confianza").calculate_size(**kwargs)
+        fijo = PositionSizer(pct, regla="fijo").calculate_size(**kwargs)
+
+        assert con_confianza == pytest.approx(equity * pct * confianza / precio)
+        assert fijo == pytest.approx(equity * pct / precio)
+        assert (con_confianza, fijo) == pytest.approx({0.05: (40.0, 100.0), 1.0: (800.0, 2000.0)}[pct])
+
+    def test_build_components_lleva_la_regla(self):
+        """ResolvedConfig lleva la regla hasta el PositionSizer; sin indicarla queda 'confianza'."""
+        from quantagent.strategy.assembler import StrategyAssembler
+
+        def sizer(snapshot):
+            resolved = StrategyAssembler.from_snapshot(snapshot)
+            return StrategyAssembler.build_components(resolved, db_session=None, build_graph=False).position_sizer
+
+        assert sizer({}).regla == "confianza"
+        fijo = sizer({"regla_tamano": "fijo", "base_position_pct": 1.0})
+        assert (fijo.regla, fijo.base_position_pct) == ("fijo", 1.0)
+        with pytest.raises(ValueError, match="confianza.*fijo"):
+            sizer({"regla_tamano": "otra"})
 
     def test_calculate_size_low_confidence(self):
         """Test position size calculation with low confidence (50%)."""
@@ -1097,6 +1132,49 @@ class TestFullEndToEndIntegration:
         assert result is not None
         assert self.portfolio.positions["BTC"]["qty"] > 0
         assert self.portfolio.execute_trade.call_count == 2
+
+
+class TestEntryCappedToCash:
+    """Entradas al 100% del capital con costos: la cantidad se recorta a lo que el efectivo paga."""
+
+    SLIP, COM, PRICE = 0.0005, 0.001, 100.0
+
+    def _build(self, db_session, base_pct):
+        from quantagent.models import Environment
+        from quantagent.portfolio.manager import PortfolioManager
+
+        portfolio = PortfolioManager(initial_cash=100000.0, environment=Environment.BACKTEST, db=db_session)
+        risk = RiskManager(portfolio, max_position_pct=1.0, db=db_session)
+        broker = PaperBroker(slippage_pct=self.SLIP, commission_model="pct", commission_pct=self.COM)
+        om = OrderManager(PositionSizer(base_position_pct=base_pct), risk, broker, portfolio, db_session)
+        return om, portfolio
+
+    def test_long_entry_at_100pct_is_capped_not_rejected(self, db_session):
+        om, portfolio = self._build(db_session, 1.0)
+        order = om.execute_decision("SPY", "LONG", 1.0, self.PRICE)
+        assert order is not None, "la entrada al 100% con costos no debe rechazarse"
+        # cantidad esperada: el efectivo dividido el costo por unidad (slippage de compra + comisión sobre el precio con slippage)
+        expected = 100000.0 / (self.PRICE * (1 + self.SLIP) * (1 + self.COM))
+        qty = float(order.filled_quantity)
+        assert qty == pytest.approx(expected, rel=1e-9)
+        assert qty < 100000.0 / self.PRICE
+        assert 0 <= portfolio.cash < 1e-6
+
+    def test_short_entry_at_100pct_keeps_its_quantity(self, db_session):
+        """Un corto no paga su nocional en efectivo (la venta suma): no hay faltante que recortar."""
+        om, portfolio = self._build(db_session, 1.0)
+        order = om.execute_decision("SPY", "SHORT", 1.0, self.PRICE)
+        assert order is not None
+        assert float(order.filled_quantity) == pytest.approx(100000.0 / self.PRICE, rel=1e-12)
+        # efectivo: el inicial más lo cobrado por la venta (precio con slippage de venta) menos su comisión
+        proceeds = 1000.0 * self.PRICE * (1 - self.SLIP)
+        assert portfolio.cash == pytest.approx(100000.0 + proceeds * (1 - self.COM), rel=1e-9)
+        assert portfolio.cash >= 0
+
+    def test_entry_at_5pct_keeps_its_quantity(self, db_session):
+        om, _ = self._build(db_session, 0.05)
+        order = om.execute_decision("SPY", "LONG", 1.0, self.PRICE)
+        assert float(order.filled_quantity) == pytest.approx(100000.0 * 0.05 / self.PRICE, rel=1e-12)
 
 
 if __name__ == "__main__":

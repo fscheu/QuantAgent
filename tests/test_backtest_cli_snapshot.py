@@ -69,7 +69,7 @@ def test_snapshot_da_lo_mismo_que_el_fixture_del_que_sale(snap_env):
     write_snapshot("t", {"SPY": _daily_frame()})
     by_snapshot = _run(runner, "--snapshot", "t", "--symbol", "SPY")
     assert by_snapshot.exit_code == 0, by_snapshot.output
-    assert len(by_snapshot.output.strip().splitlines()) == 6
+    assert len(by_snapshot.output.strip().splitlines()) == 8
     assert _metrics(by_snapshot.output) == ("Trades: 6", "Total PnL: -249.35")
 
 
