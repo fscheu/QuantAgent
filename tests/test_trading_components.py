@@ -25,11 +25,46 @@ class TestPositionSizer:
 
     def test_init_invalid_pct(self):
         """Test PositionSizer rejects invalid position percentages."""
-        with pytest.raises(ValueError, match="must be between 0% and 10%"):
-            PositionSizer(base_position_pct=0.15)
+        assert PositionSizer(base_position_pct=1.0).base_position_pct == 1.0
 
-        with pytest.raises(ValueError, match="must be between 0% and 10%"):
+        with pytest.raises(ValueError, match="must be between 0% and 100%"):
+            PositionSizer(base_position_pct=1.01)
+
+        with pytest.raises(ValueError, match="must be between 0% and 100%"):
             PositionSizer(base_position_pct=0.0)
+
+    def test_init_regla_desconocida(self):
+        """Una regla desconocida da ValueError y el mensaje lista las validas."""
+        with pytest.raises(ValueError, match="confianza.*fijo"):
+            PositionSizer(regla="otra")
+
+    @pytest.mark.parametrize("pct", [0.05, 1.0])
+    def test_reglas_de_tamano(self, pct):
+        """'confianza' multiplica por la confianza y 'fijo' no (5%: 40 y 100; 100%: 800 y 2.000)."""
+        equity, precio, confianza = 100000.0, 50.0, 0.4
+        kwargs = dict(symbol="SPY", signal_confidence=confianza, current_price=precio, portfolio_value=equity)
+
+        assert PositionSizer(pct).regla == "confianza"  # regla por defecto
+        con_confianza = PositionSizer(pct, regla="confianza").calculate_size(**kwargs)
+        fijo = PositionSizer(pct, regla="fijo").calculate_size(**kwargs)
+
+        assert con_confianza == pytest.approx(equity * pct * confianza / precio)
+        assert fijo == pytest.approx(equity * pct / precio)
+        assert (con_confianza, fijo) == pytest.approx({0.05: (40.0, 100.0), 1.0: (800.0, 2000.0)}[pct])
+
+    def test_build_components_lleva_la_regla(self):
+        """ResolvedConfig lleva la regla hasta el PositionSizer; sin indicarla queda 'confianza'."""
+        from quantagent.strategy.assembler import StrategyAssembler
+
+        def sizer(snapshot):
+            resolved = StrategyAssembler.from_snapshot(snapshot)
+            return StrategyAssembler.build_components(resolved, db_session=None, build_graph=False).position_sizer
+
+        assert sizer({}).regla == "confianza"
+        fijo = sizer({"regla_tamano": "fijo", "base_position_pct": 1.0})
+        assert (fijo.regla, fijo.base_position_pct) == ("fijo", 1.0)
+        with pytest.raises(ValueError, match="confianza.*fijo"):
+            sizer({"regla_tamano": "otra"})
 
     def test_calculate_size_low_confidence(self):
         """Test position size calculation with low confidence (50%)."""
