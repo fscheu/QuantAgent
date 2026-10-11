@@ -14,7 +14,7 @@ Flow:
 """
 
 import logging
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -497,9 +497,9 @@ class OrderManager:
         )
         return filled_new_order
 
-    def reset_daily_tracker(self) -> None:
+    def reset_daily_tracker(self, current_date: Optional[date] = None) -> None:
         """Delegate daily-tracker reset to RiskManager (facade method)."""
-        self.risk_manager.reset_daily_tracker()
+        self.risk_manager.reset_daily_tracker(current_date)
 
     def close_trade(
         self,
