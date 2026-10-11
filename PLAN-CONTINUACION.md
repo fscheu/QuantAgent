@@ -318,6 +318,17 @@ es señal de que los tickets están mal definidos, no de que falte velocidad.
 5. Decidir y comentar la línea `PM:`. En `vi:` va el dato de la comprobación propia del paso 4.
 6. Al cerrar la revisión, agregar la línea a `docs/loop/REVIEW-LOG.md` en la rama del lote (§5.4).
 
+**Revisor mecánico (Codex), desde el 2026-10-11.** Para no gastar el cupo del PM en correr comandos, los pasos 3
+y 4 los puede hacer Codex con `scripts/loop/codex_review.sh` (instalación en `docs/loop/SETUP-HERMES.md`). Codex
+deja un comentario `CODEX:` con las salidas reales y una sugerencia; no decide ni escribe la línea `PM:`. El PM
+lee el diff y ese reporte, y decide. Tres resguardos:
+
+- El PM sigue corriendo él mismo los pasos 3 y 4 en las entregas de tipo "decidir" y en las que tocan PnL,
+  comisiones, slippage, tamaño de posición o límites.
+- Del resto, el PM repite completa una de cada cinco revisiones de Codex. Si encuentra algo que Codex dejó
+  pasar, ese tipo de entrega vuelve al PM y se anota en `docs/loop/REVIEW-LOG.md`.
+- Las tres primeras entregas con Codex llevan doble revisión completa, para medir cuánto coinciden.
+
 **Qué no aprueba el PM (siempre `decido: escalo`)**
 
 - Entregas de tipo "decidir".
