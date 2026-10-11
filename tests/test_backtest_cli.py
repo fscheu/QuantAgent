@@ -522,10 +522,6 @@ def test_backtest_run_prints_na_profit_factor_when_no_losses(cli_runner, monkeyp
     from quantagent.backtesting.backtest import Backtest, BacktestMetrics
 
     def mock_run(self, *args, **kwargs):
-        self.equity_curve = [
-            {"date": datetime(2024, 1, d), "equity": 100000.0 + d, "cash": 100000.0 + d, "positions_value": 0.0}
-            for d in (1, 2, 3)
-        ]
         return BacktestMetrics(
             total_trades=2,
             winning_trades=2,
@@ -564,3 +560,79 @@ def test_annual_return_and_exposure_on_a_hand_curve_and_edge_cases():
     assert invested == pytest.approx((0.4 + 0.5 + 0.25) / 5)
     assert annual_return(100.0, 105.0, t0, t0) == 0.0  # ventana de 0 días
     assert exposure(curve[:1]) == (0.0, 0.0)  # una sola vela, sin posición
+
+
+def test_backtest_run_empty_equity_curve_omits_comparison_metrics(cli_runner, monkeypatch):
+    """When the equity curve is empty, the 5 comparison metrics are omitted and command exits 0 (QuantAgent-ol11)."""
+    from quantagent.backtesting.backtest import Backtest
+
+    monkeypatch.setattr(Backtest, "_record_equity", lambda self, *a, **k: None)
+    result = cli_runner.invoke(
+        backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
+    )
+    assert result.exit_code == 0, result.output
+    lines = result.output.strip().splitlines()
+    assert len(lines) == 8
+    assert not any(
+        l.startswith(
+            ("Retorno anualizado", "Exceso sobre la referencia", "Tiempo en mercado", "Capital invertido medio", "Sharpe (tasa 0)")
+        )
+        for l in lines
+    )
+
+
+@pytest.mark.parametrize("extra, pct, regla", [
+    (["--tamano-posicion", "1.0"], 1.0, "confianza"),
+    (["--regla-tamano", "fijo", "--tamano-posicion", "0.5"], 0.5, "fijo"),
+])
+def test_backtest_run_tamano_posicion_y_regla_dimensionan_cada_entrada(cli_runner, tmp_path, monkeypatch, extra, pct, regla):
+    """--tamano-posicion y --regla-tamano llegan al motor (QuantAgent-3has): en los 3 primeros trades
+    qty = equity al entrar × fracción (× confianza de la señal, salvo regla fijo) / precio de entrada."""
+    monkeypatch.setattr(settings, "TRADING_SLIPPAGE_PCT", 0.0)  # sin slippage, precio de entrada = precio de la señal
+    out = tmp_path / "trades.csv"
+    result = cli_runner.invoke(backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke", "--out", str(out), *extra])
+    assert result.exit_code == 0, result.output
+    lines = result.output.strip().splitlines()
+    assert len(lines) == 15
+    assert f"Tamaño: {pct:.0%} del capital, regla {regla}" in lines
+    assert [l.split(":")[0] for l in lines[9:14]] == [
+        "Retorno anualizado", "Exceso sobre la referencia", "Tiempo en mercado", "Capital invertido medio",
+        "Sharpe (tasa 0)",
+    ]
+    with Session(create_engine(os.environ["DATABASE_URL"])) as s:
+        senales = s.execute(text("SELECT generated_at, confidence FROM signals ORDER BY generated_at LIMIT 3")).all()
+        config = s.execute(text("SELECT config_snapshot FROM backtest_runs")).scalar_one()
+    assert all(f'"{k}": {v}' in config for k, v in [("base_position_pct", pct), ("max_position_pct", pct), ("regla_tamano", f'"{regla}"')])
+    trades = list(csv.DictReader(out.read_text().splitlines()))[:3]
+    assert len(trades) == 3 and len({c for _, c in senales}) == 3  # confianzas distintas: las dos reglas no se confunden
+    equity = 100000.0
+    for trade, (generada, confianza) in zip(trades, senales):
+        assert str(generada)[:19].replace(" ", "T") == trade["entry_time"]
+        factor = confianza if regla == "confianza" else 1.0
+        assert float(trade["qty"]) == pytest.approx(equity * pct * factor / float(trade["entry_price"]), rel=1e-7)
+        equity += float(trade["pnl"])  # una posición por vez: el equity al entrar es capital + PnL ya realizado
+
+
+def test_backtest_verify_usa_el_mismo_tamano_y_regla_en_las_dos_corridas(cli_runner, monkeypatch):
+    """verify pasa --tamano-posicion y --regla-tamano a las dos corridas: en ambas el primer trade usa equity × 0.5 / precio."""
+    from quantagent.cli import backtest as bt_cli
+    real, csvs = bt_cli._run_verify_pass, []
+    monkeypatch.setattr(bt_cli, "_run_verify_pass", lambda *a, **k: csvs.append(real(*a, **k)) or csvs[-1])
+    monkeypatch.setattr(settings, "TRADING_SLIPPAGE_PCT", 0.0)
+    result = cli_runner.invoke(
+        backtest_group, ["verify", "--strategy", "rsi", "--fixture", "spy-smoke", "--regla-tamano", "fijo", "--tamano-posicion", "0.5"]
+    )
+    assert result.exit_code == 0, result.output
+    assert result.output.splitlines() == ["Tamaño: 50% del capital, regla fijo", "OK reproducible"]
+    assert len(csvs) == 2
+    for _, _, trades_csv in csvs:
+        primero = next(csv.DictReader(trades_csv.splitlines()))
+        assert float(primero["qty"]) == pytest.approx(100000.0 * 0.5 / float(primero["entry_price"]), rel=1e-7)
+
+
+@pytest.mark.parametrize("cmd", ["run", "verify"])
+@pytest.mark.parametrize("extra", [["--tamano-posicion", "0"], ["--tamano-posicion", "1.01"], ["--regla-tamano", "kelly"]])
+def test_backtest_tamano_o_regla_invalidos_salen_con_2_sin_traceback(cli_runner, cmd, extra):
+    result = cli_runner.invoke(backtest_group, [cmd, "--strategy", "rsi", "--fixture", "spy-smoke", *extra])
+    assert result.exit_code == 2
+    assert f"Invalid value for '{extra[0]}'" in result.output and "Traceback" not in result.output

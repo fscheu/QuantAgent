@@ -369,7 +369,8 @@ Lotes (definidos por el PM el 2026-10-06; cada uno se abre cuando Fede mergea el
 | L2 | `lote/tres-estrategias` | T16–T19, T19b | RSI, 52-week-high y Triple Screen operan (≥5 trades cada una) sobre fixtures versionados y deterministas | ninguna prevista |
 | L3 | `lote/engine-y-cierre-m1` | T21–T25 | Comparación trade por trade contra `backtesting.py`, ADR del engine decidido (cierra M1), inventario de ramas y borrador del plan siguiente | T22, T23, T24, T25 |
 | L4 | `lote/datos-reales-diarios` | V00, V00a–V00e, V01–V10, V03b, V10b | Las 3 estrategias de M1 corren sobre SPY diario real 2007–2018 desde un snapshot con manifiesto; el engine avanza por las velas del dato y `backtesting.py` coincide con RSI | V00 (performance de la suite), V10 |
-| L5 | `lote/costos-y-referencia` | V11–V20, más V12b, V16b–V16g, V17b, V17c, V19a–V19d | La corrida informa comisión, slippage y tamaño, y se compara contra comprar y mantener con los mismos costos; un recálculo independiente coincide; motor y `backtesting.py` coinciden trade por trade con los costos reales | V13, V17, V18, V16e (motor oficial), V12b, V17b, V17c, V19a, V19c |
+| L5 | `lote/costos-y-referencia` | V11–V20, más V12b, V16b–V16g, V17b, V17c, V19a–V19g | La corrida informa comisión, slippage y tamaño, y se compara contra comprar y mantener con los mismos costos; un recálculo independiente coincide; motor y `backtesting.py` coinciden trade por trade con los costos reales | V13, V17, V18, V16e (motor oficial), V12b, V17b, V17c, V19a, V19c |
+| L6 | `lote/comparacion` | V20b, V21a, V21b, V22–V26, V23b, V23c | Un comando corre cuatro estrategias diarias sobre los 12 ETFs y escribe una tabla con el resultado, la referencia de comprar y mantener, la marca "coinciden N de N" contra `backtesting.py` y la sensibilidad de apertura siguiente | V20b (carpeta de datos locales), V21a (límite diario) |
 
 T13 se adelantó dentro de L1: es un documento de decisión que no depende del resto, así la respuesta de Fede
 llega mientras el lote avanza. T20 pasó a L1 porque congela los números que ese lote audita.
@@ -456,7 +457,14 @@ Los primeros 5 son los más fáciles de revisar.
 | V19b | `QuantAgent-3has` | `--tamano-posicion` y `--regla-tamano` en `backtest run` y `verify` | Test: qty en 3 trades; (VM) rsi/SPY a 100% y slippage 0: -4908.13 | probar | L5 |
 | V19c | `QuantAgent-oh70` | La entrada que pide todo el efectivo se recorta a lo que alcanza, no se rechaza | (VM) sma-cross/SPY a 100% con `--costos etf`: 5 trades y efectivo >= 0 | decidir | L5 |
 | V19d | `QuantAgent-xyf6` | Slippage y `--costos` en el adaptador de `backtesting.py`, con la regla del `PaperBroker` | (VM) rsi/SPY con `--costos etf`: -447.29 y 187 de 187 con el motor | probar | L5 |
+| V19e | `QuantAgent-zd9n` | Control motor vs librería: tolerancia de cantidad relativa (1.5e-6, provisoria), no depende del tamaño | (VM) rsi/SPY con `--costos etf`: 187 de 187 al 5% y al 100% | decidir | L5 |
+| V19f | `QuantAgent-gti6` | Adaptador de `backtesting.py`: el mismo recorte de la entrada que compra con todo el efectivo | (VM) sma-cross/SPY a 100% con `--costos etf`: 5 trades en los dos y coinciden 5 de 5 | probar | L5 |
+| V19g | `QuantAgent-bwqb` | Adaptador con precios a 8 decimales como el motor; bajar la tolerancia de cantidad y la de PnL por trade del control (R: de Fede en #109) | (VM) `compare_trades` da 187 de 187 en rsi/SPY al 5% y al 100%; totales sin cambio | decidir | L5 |
 | V20 | `QuantAgent-688` | Golden sobre el snapshot real, solo en la VM: número del motor con `--costos etf` y 100%, junto con la marca "coinciden N de N" contra la librería (opción C) | (VM) pasa y falla con un dígito cambiado; en CI, skipped con motivo | leer | L5 |
+| V20b | `QuantAgent-78ja` | Datos locales en `data/local/`, carpeta del repo ignorada por git, con README versionado (pedido de Fede) | `git status` limpio con archivos adentro; el PR trae los comandos para mover, que corre el PM | decidir | L6 |
+| V22 | `QuantAgent-ol11` | Cinco métricas de comparación al final del resumen (PR #107, adelantado; falta traer el lote y cubrir la curva vacía) | `recalc_metrics.py` = CLI en las cinco; referencias sin cambio | probar | L6 |
+| V21a | `QuantAgent-j422` | El día del límite de pérdida diaria es el de la vela; apagado en corridas `1d` (decisión del PR #103) | El `xfail` de cub pasa a test normal; (VM) rsi/SPY sigue 187 / -9141.21 | decidir | L6 |
+| V21b | `QuantAgent-6zam` | `backtest run` informa el peor día de la corrida | Línea del CLI = `recalc_metrics.py` sobre el `--equity-out` | probar | L6 |
 
 **Decisión de Fede (2026-10-10):** Triple Screen sale de la comparación diaria de M2 y se evalúa en el lote de 4h (`docs/06_implementation/QuantAgent-4x6-IM-dependencia-ventana.md`). La comparación diaria usa cuatro estrategias: `rsi`, `fifty-two-week-high`, `sma-cross` y `momentum-12m`.
 

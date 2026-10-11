@@ -255,6 +255,9 @@ def load_fixture(
     else:
         raw = pd.read_csv(path, parse_dates=["timestamp"]).set_index("timestamp")
     raw = raw[["open", "high", "low", "close", "volume"]].astype(float)
+    # QuantAgent-bwqb: precios a 8 decimales, igual que el motor (quantagent/backtesting/fixtures.py::load_snapshot)
+    prices = ["open", "high", "low", "close"]
+    raw[prices] = raw[prices].map(lambda x: float(f"{x:.8f}"))
     last = raw.index[-1]
     step = raw.index[1] - raw.index[0]
     sentinel = pd.DataFrame(
