@@ -31,8 +31,13 @@ Esta carpeta contiene archivos y datos locales necesarios para el desarrollo, ba
     ```
 - **¿Se puede regenerar igual?:** Sí, siempre que se cuente con el snapshot `etf-1d-2026-10` y el motor conserve su comportamiento. Solo lectura.
 
+### 3. `reserva-accesos.log`
+- **Qué es:** Registro de aperturas de la reserva out-of-sample que `backtest run --abrir-reserva` escribe en esta carpeta (`quantagent/cli/backtest.py`). Cada línea registra fecha/hora UTC y el comando ejecutado al acceder a datos a partir de `QUANTAGENT_RESERVA_DESDE` (default 2023-01-01).
+- **Quién lo usa:** Auditoría de accesos a la reserva en backtests y revisiones del PM.
+- **¿Se puede regenerar igual?:** No se borra ni se regenera. Es el historial acumulativo de accesos a la reserva.
+
 ---
 
 ## Configuración de entorno
 
-La variable de entorno `QUANTAGENT_SNAPSHOT_DIR` apunta a esta carpeta. En `scripts/loop/try.sh` apunta por defecto a la ruta absoluta de `data/local/` del checkout principal (`$REPO/data/local`), para que los worktrees del loop puedan acceder a estos datos sin duplicar archivos.
+La variable de entorno `QUANTAGENT_SNAPSHOT_DIR` apunta a esta carpeta. `loop/config.env` (`LOOP_SNAPSHOT_DIR`), el valor por defecto de `scripts/loop/run_nightly.sh` y `scripts/loop/try.sh` apuntan a la ruta absoluta de `data/local/` del checkout principal, para que el loop y los worktrees puedan acceder a estos datos sin duplicar archivos.
