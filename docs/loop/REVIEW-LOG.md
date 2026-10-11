@@ -113,4 +113,7 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-11 · #117 · PM: j2rt vi: el test del criterio fallaba en la VM con try.sh (el subproceso importaba el quantagent instalado y no el de la rama; en CI pasaba). decido: cambio
 2026-10-11 · #117 · CODEX (gpt-6.1-sol, segunda revisión doble, ya con el cuerpo del PR en el prompt): criterios PASS, oráculos 21 passed, suite 953 passed pero excluyó tests/test_backtest_cli_snapshot.py por nombrar --abrir-reserva (exceso de cautela: hay que aclararlo en el prompt).
 2026-10-11 · #117 · Mergeado por Fede después del arreglo, antes de mi línea de cierre. PM posterior: sobre el lote ya mergeado, el archivo que Codex excluyó y el test nuevo dan 16 passed; con try.sh el arreglo dio 17 passed.
+2026-10-11 · #120 · PM: 5nx0 vi: salida de backtest run idéntica byte a byte a la del lote en las tres referencias y en una corrida real con costos, tamaño y CSV; suite 970 passed y oráculos 21 passed en la VM y en la notebook (WSL), mismos números; 256 líneas tocadas, unas 67 movidas sin cambios (Fede aceptó el tamaño). decido: merge
+2026-10-11 · #121 · PM: im48 vi: verificado en el checkout real (montajes del contenedor, dueño de la raíz, reglas de git); suite 967 passed, oráculos 19 passed. Hueco del ticket (mío): .dockerignore no listaba local-data. decido: escalo; Fede: pedir el cambio. decido: cambio
+2026-10-11 · #121 · PM: im48 vi: segunda revisión, una línea en .dockerignore; mi hallazgo estaba exagerado (ya se excluían *.parquet y *.csv). decido: escalo
 ```
