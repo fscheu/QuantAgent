@@ -1,6 +1,6 @@
 # QuantAgent-80x · Qué motor da el número oficial de M2
 
-Estado: **propuesta, decide Fede**. Medido el 2026-10-10 sobre `lote/costos-y-referencia` @ 3ea25e9a (sin #101). Puede revisar el [ADR del 2026-10-08](./2026-10-ADR-backtest-engine-propio-vs-terceros.md). Segunda parte de la prueba de `QuantAgent-i6n` (PR #92).
+Estado: **decidido por Fede el 2026-10-10 (PR #102): opción C**, ver §8. Medido el 2026-10-10 sobre `lote/costos-y-referencia` @ 3ea25e9a (sin #101). Puede revisar el [ADR del 2026-10-08](./2026-10-ADR-backtest-engine-propio-vs-terceros.md). Segunda parte de la prueba de `QuantAgent-i6n` (PR #92).
 
 ## 1. Qué se midió y cómo
 
@@ -70,7 +70,7 @@ Suponer que se opera al cierre de la vela que dio la señal pesa más que el sli
 ## 5. Hechos para decidir
 
 - **Tiempo por corrida en la VM:** rsi 55 s en el motor y 6 s en la librería; sma-cross 37 s y 5 s; momentum-12m unos 5 minutos en los dos (el costo está en la estrategia, no en el motor).
-- **Seis defectos del motor propio en una semana**, casi todos encontrados comparando con la librería: stops evaluados solo al cierre (#57, #60); reloj por calendario en vez de por velas (#72); ventana de historia en días de calendario (#91); comisiones fuera del efectivo (#96, #99); cierre rechazado por pérdida diaria (#95); cierre rechazado por capital y tamaño (#101, todavía abierto, cortaba momentum-12m sobre XLK).
+- **Seis defectos del motor propio en una semana**, casi todos encontrados comparando con la librería: stops evaluados solo al cierre (#57, #60); reloj por calendario en vez de por velas (#72); ventana de historia en días de calendario (#91); comisiones fuera del efectivo (#96, #99); cierre rechazado por pérdida diaria (#95); cierre rechazado por capital y tamaño (#101, mergeado el 2026-10-10 después de esta medición, cortaba momentum-12m sobre XLK).
 - **Lo que la librería no cubre:** control de riesgo, cartera compartida con paper, varias posiciones a la vez, persistencia. Tampoco slippage en el adaptador, ni más de un activo por corrida.
 - **Principio de arquitectura de Fede:** backtest y paper no pueden diferir por construcción.
 - **Licencia:** `backtesting.py` es AGPL-3.0. Hoy solo la importa `scripts/` (dependencia de desarrollo); nada bajo `quantagent/` la usa.
@@ -98,3 +98,9 @@ Qué me haría cambiar de opinión:
 - **Hacia B:** que al correr la matriz de 12 ETFs más de unas pocas celdas no coincidan, o que después de #101 sigan apareciendo defectos del motor al ritmo de esta semana. Ahí el motor no sirve como fuente y conviene publicar con la librería mientras se arregla.
 - **Hacia A:** que las 60 corridas extra vuelvan impracticable la matriz y no se pueda acelerar el adaptador.
 - **Contra las tres:** que una estrategia de M2 necesite varias posiciones o cartera entre activos. La librería no puede controlar eso y haría falta otro control.
+
+## 8. Decisión (Fede, 2026-10-10)
+
+- **Opción C:** el motor propio da el número de M2, y un número es oficial solo si la librería coincide trade por trade en esa celda (estrategia, activo, período y costos). La celda que no coincide se publica como "sin validar" y abre un ticket.
+- **Sensibilidad:** la tabla de M2 informa también el PnL con llenado en la apertura siguiente.
+- Consecuencias que arma el PM: slippage en el adaptador (ticket nuevo, antes de V20), la marca "coinciden N de N" en V20 y en V23, y la columna de apertura siguiente en la tabla de comparación.
