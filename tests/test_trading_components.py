@@ -1149,20 +1149,27 @@ class TestEntryCappedToCash:
         om = OrderManager(PositionSizer(base_position_pct=base_pct), risk, broker, portfolio, db_session)
         return om, portfolio
 
-    @pytest.mark.parametrize("decision", ["LONG", "SHORT"])
-    def test_entry_at_100pct_is_capped_not_rejected(self, db_session, decision):
+    def test_long_entry_at_100pct_is_capped_not_rejected(self, db_session):
         om, portfolio = self._build(db_session, 1.0)
-        order = om.execute_decision("SPY", decision, 1.0, self.PRICE)
+        order = om.execute_decision("SPY", "LONG", 1.0, self.PRICE)
         assert order is not None, "la entrada al 100% con costos no debe rechazarse"
         # cantidad esperada: el efectivo dividido el costo por unidad (slippage de compra + comisión sobre el precio con slippage)
         expected = 100000.0 / (self.PRICE * (1 + self.SLIP) * (1 + self.COM))
         qty = float(order.filled_quantity)
         assert qty == pytest.approx(expected, rel=1e-9)
         assert qty < 100000.0 / self.PRICE
-        if decision == "LONG":
-            assert 0 <= portfolio.cash < 1e-6
-        else:
-            assert portfolio.cash >= 0
+        assert 0 <= portfolio.cash < 1e-6
+
+    def test_short_entry_at_100pct_keeps_its_quantity(self, db_session):
+        """Un corto no paga su nocional en efectivo (la venta suma): no hay faltante que recortar."""
+        om, portfolio = self._build(db_session, 1.0)
+        order = om.execute_decision("SPY", "SHORT", 1.0, self.PRICE)
+        assert order is not None
+        assert float(order.filled_quantity) == pytest.approx(100000.0 / self.PRICE, rel=1e-12)
+        # efectivo: el inicial más lo cobrado por la venta (precio con slippage de venta) menos su comisión
+        proceeds = 1000.0 * self.PRICE * (1 - self.SLIP)
+        assert portfolio.cash == pytest.approx(100000.0 + proceeds * (1 - self.COM), rel=1e-9)
+        assert portfolio.cash >= 0
 
     def test_entry_at_5pct_keeps_its_quantity(self, db_session):
         om, _ = self._build(db_session, 0.05)

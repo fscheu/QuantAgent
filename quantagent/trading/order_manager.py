@@ -54,14 +54,15 @@ class OrderManager:
         self.portfolio = portfolio_manager
         self.db = db
 
-    def _cap_entry_qty(self, qty: float, price: float) -> float:
-        """Recorta una entrada a lo que el efectivo alcanza a pagar con slippage y comisión (sin apalancar).
+    def _cap_entry_qty(self, side: OrderSide, qty: float, price: float) -> float:
+        """Recorta una entrada que compra a lo que el efectivo alcanza a pagar con slippage y comisión (sin apalancar).
 
+        Una entrada en corto conserva su cantidad: la venta suma efectivo, no hay faltante que cubrir.
         Solo cubre el faltante de costos: si el nocional ya excede el efectivo, no toca la cantidad y
         RiskManager (check 1) la rechaza como antes. El 1e-9 absorbe el redondeo de flotantes al 100%.
         """
         cash = self.portfolio.cash
-        if qty * price > cash * (1 + 1e-9):
+        if side != OrderSide.BUY or qty * price > cash * (1 + 1e-9):
             return qty
         unit_cost = price * (1 + self.broker.slippage_pct)
         if self.broker.commission_model == "pct":
@@ -155,7 +156,7 @@ class OrderManager:
                 timestamp=timestamp,
             )
 
-        qty = self._cap_entry_qty(qty, current_price)
+        qty = self._cap_entry_qty(side, qty, current_price)
 
         # Step 3: Validate trade (now includes position management check)
         is_valid, reason = self.risk_manager.validate_trade(
@@ -416,7 +417,7 @@ class OrderManager:
         )
 
         # Validate new trade (the opening leg is an entry: cap it to the cash left after the close)
-        new_qty = self._cap_entry_qty(new_qty, current_price)
+        new_qty = self._cap_entry_qty(new_side, new_qty, current_price)
         is_valid, reason = self.risk_manager.validate_trade(
             symbol, new_side, new_qty, current_price
         )
