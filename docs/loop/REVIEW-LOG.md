@@ -106,4 +106,7 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-11 · #115 · PM: 78ja vi: segunda revisión; las tres rutas apuntan a data/local, un archivo adentro queda ignorado y el README se versiona; suite 967 passed; oráculos 19 passed; los comandos del PR no se corrigieron decido: escalo (¿los datos locales pasan a data/local con los comandos del PM?)
 2026-10-11 · #115 · R: 78ja vi: los datos locales quedan en data/local ignorada por git con su README decido: merge, el PM copia los datos con los comandos de su comentario y renombra la carpeta vieja como respaldo cuando el lote 3 esté en main
 2026-10-11 · #115 · PM (posterior al merge): la copia no se pudo hacer. En el checkout principal `data/` es de root: la crea el contenedor quantagent_qa, que la monta en /app/data con escritura. La revisión corrió en worktrees temporales y no lo vio. Escape de revisión del PM; ticket de corrección aparte.
+2026-10-11 · #118 · CODEX (gpt-6-astra, primera revisión doble): j422 cuatro criterios PASS, suite 969 passed, oráculos 19 passed, referencias sin cambio; no pudo leer "Probar" (sin red, se corrige en #119).
+2026-10-11 · #118 · PM: j422 vi: corrí todo por mi cuenta y coincide con Codex; referencias 340 / 4571.27, 6 / -249.35, 6 / 174.34 y SPY 2007-2018 al 100% en 187 / -9141.21; tres mutaciones propias detectadas por los tests. Observaciones: 163 líneas, el día se inyecta por dos caminos (clock y set_date), el apagado mira solo 1d. decido: escalo
+2026-10-11 · #118 · R: j422 vi: tests pasan verde decido: merge
 ```
