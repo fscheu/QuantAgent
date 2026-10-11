@@ -41,9 +41,9 @@ Cada celda: sin comisión / con 0,1% por lado. La cantidad de trades es la misma
 
 ## 3. Trade por trade: motor (slip 0) contra librería `close`
 
-Se compara fila por fila fecha de entrada, fecha de salida, lado, motivo, cantidad y precios (tolerancia 1e-6) y PnL (tolerancia 0,01). Imprime trades del motor, trades de la librería y cuántos coinciden:
+Se compara fila por fila fecha de entrada, fecha de salida, lado, motivo, cantidad (tolerancia relativa `QTY_RTOL` de `scripts/crossval_compare.py`, 1.5e-6 de la cantidad del motor; hasta QuantAgent-zd9n era 1e-6 acciones, que dejaba de alcanzar al subir el tamaño de la posición), precios (tolerancia 1e-6) y PnL (tolerancia 0,01). Se corre desde la raíz del repo. Imprime trades del motor, trades de la librería y cuántos coinciden:
 ```
-python -c "import sys,pandas as pd; a,b=[pd.read_csv(p) for p in sys.argv[1:3]]; t=['entry_time','exit_time','side','exit_reason']; n=['qty','entry_price','exit_price','pnl']; ok=(a[t]==b[t]).all(axis=1)&((a[n]-b[n]).abs()<[1e-6,1e-6,1e-6,0.01]).all(axis=1); print(len(a),len(b),int(ok.sum()))" m0.csv ac.csv
+python -c "import sys,pandas as pd; sys.path.insert(0,'scripts'); from crossval_compare import QTY_RTOL; a,b=[pd.read_csv(p) for p in sys.argv[1:3]]; t=['entry_time','exit_time','side','exit_reason']; n=['entry_price','exit_price','pnl']; ok=(a[t]==b[t]).all(axis=1)&((a.qty-b.qty).abs()<=QTY_RTOL*a.qty)&((a[n]-b[n]).abs()<[1e-6,1e-6,0.01]).all(axis=1); print(len(a),len(b),int(ok.sum()))" m0.csv ac.csv
 ```
 
 Resultado, igual sin comisión y con 0,1%: rsi 187 de 187, fifty-two-week-high 5 de 5, triple-screen 1 de 1, sma-cross 5 de 5, momentum-12m 3 de 3. Coinciden los 201 trades en las dos configuraciones. La mayor diferencia de PnL en un trade es 0,000001 USD y la mayor de cantidad 2,8e-07 acciones (redondeo del CSV del motor a 8 decimales). **No hay diferencias que explicar y no queda nada "sin explicar".**
