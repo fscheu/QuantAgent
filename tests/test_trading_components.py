@@ -1134,5 +1134,41 @@ class TestFullEndToEndIntegration:
         assert self.portfolio.execute_trade.call_count == 2
 
 
+class TestEntryCappedToCash:
+    """Entradas al 100% del capital con costos: la cantidad se recorta a lo que el efectivo paga."""
+
+    SLIP, COM, PRICE = 0.0005, 0.001, 100.0
+
+    def _build(self, db_session, base_pct):
+        from quantagent.models import Environment
+        from quantagent.portfolio.manager import PortfolioManager
+
+        portfolio = PortfolioManager(initial_cash=100000.0, environment=Environment.BACKTEST, db=db_session)
+        risk = RiskManager(portfolio, max_position_pct=1.0, db=db_session)
+        broker = PaperBroker(slippage_pct=self.SLIP, commission_model="pct", commission_pct=self.COM)
+        om = OrderManager(PositionSizer(base_position_pct=base_pct), risk, broker, portfolio, db_session)
+        return om, portfolio
+
+    @pytest.mark.parametrize("decision", ["LONG", "SHORT"])
+    def test_entry_at_100pct_is_capped_not_rejected(self, db_session, decision):
+        om, portfolio = self._build(db_session, 1.0)
+        order = om.execute_decision("SPY", decision, 1.0, self.PRICE)
+        assert order is not None, "la entrada al 100% con costos no debe rechazarse"
+        # cantidad esperada: el efectivo dividido el costo por unidad (slippage de compra + comisión sobre el precio con slippage)
+        expected = 100000.0 / (self.PRICE * (1 + self.SLIP) * (1 + self.COM))
+        qty = float(order.filled_quantity)
+        assert qty == pytest.approx(expected, rel=1e-9)
+        assert qty < 100000.0 / self.PRICE
+        if decision == "LONG":
+            assert 0 <= portfolio.cash < 1e-6
+        else:
+            assert portfolio.cash >= 0
+
+    def test_entry_at_5pct_keeps_its_quantity(self, db_session):
+        om, _ = self._build(db_session, 0.05)
+        order = om.execute_decision("SPY", "LONG", 1.0, self.PRICE)
+        assert float(order.filled_quantity) == pytest.approx(100000.0 * 0.05 / self.PRICE, rel=1e-12)
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
