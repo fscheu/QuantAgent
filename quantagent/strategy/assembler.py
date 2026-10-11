@@ -37,6 +37,7 @@ class ResolvedConfig:
     use_checkpointing: bool
     extras: Optional[Dict] = None
     commission_pct: float = 0.0
+    regla_tamano: str = "confianza"
 
 
 @dataclass
@@ -168,7 +169,7 @@ class StrategyAssembler:
             environment=resolved.environment,
             db=db_session,
         )
-        ps = PositionSizer(base_position_pct=resolved.base_position_pct)
+        ps = PositionSizer(base_position_pct=resolved.base_position_pct, regla=resolved.regla_tamano)
         rm = RiskManager(
             portfolio_manager=pm,
             max_daily_loss_pct=resolved.max_daily_loss_pct,
@@ -313,4 +314,5 @@ class StrategyAssembler:
             commission_pct=float(
                 merged.get("commission_pct", StrategyAssembler.DEFAULTS()["commission_pct"])
             ),
+            regla_tamano=merged.get("regla_tamano", "confianza"),
         )
