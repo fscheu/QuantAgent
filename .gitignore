@@ -12,3 +12,5 @@ quantagent.egg-info/
 .openclaw/
 .venv/
 tmp/
+data/local/*
+!data/local/README.md
