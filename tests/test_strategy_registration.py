@@ -56,7 +56,9 @@ def _run(workdir: Path) -> dict:
     buf = io.StringIO()
     with redirect_stdout(buf):
         code = bt_adapter.main(["--strategy", "probe", "--fixture", "spy-smoke"])
-    return {"registered": "ProbeStrategy" in STRATEGY_REGISTRY, "cli_exit": cli.exit_code, "cli_out": cli.output,
+    import quantagent
+
+    return {"package": quantagent.__file__, "registered": "ProbeStrategy" in STRATEGY_REGISTRY, "cli_exit": cli.exit_code, "cli_out": cli.output,
             "adapter_exit": code, "adapter_out": buf.getvalue()}
 
 
@@ -66,11 +68,13 @@ def _trades(output: str) -> int:
 
 def test_estrategia_registrada_con_una_linea_corre_en_cli_y_adaptador(tmp_path):
     pytest.importorskip("backtesting")
-    proc = subprocess.run([sys.executable, __file__, str(tmp_path)], cwd=ROOT, capture_output=True, text=True,
-                          timeout=180)
+    env = {**os.environ, "PYTHONPATH": os.pathsep.join([str(ROOT), os.environ.get("PYTHONPATH", "")])}
+    proc = subprocess.run([sys.executable, __file__, str(tmp_path)], cwd=ROOT, env=env, capture_output=True,
+                          text=True, timeout=180)
     assert proc.returncode == 0, proc.stderr
     res = json.loads(proc.stdout.splitlines()[-1])
 
+    assert Path(res["package"]).resolve().is_relative_to(ROOT)  # el árbol bajo prueba, no el instalado
     assert res["registered"]
     assert res["cli_exit"] == 0, res["cli_out"]
     assert _trades(res["cli_out"]) > 0
