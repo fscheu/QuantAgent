@@ -119,9 +119,9 @@ def test_ajuste_por_dividendo_sin_salto_en_el_split(tmp_path):
     assert "adj_close" not in df.columns
 
 
-def test_snapshot_root_sin_env_var_falla_nombrando_data_local(monkeypatch):
+def test_snapshot_root_sin_env_var_falla_nombrando_local_data(monkeypatch):
     monkeypatch.delenv("QUANTAGENT_SNAPSHOT_DIR", raising=False)
     with pytest.raises(SnapshotError) as exc:
         snapshot_root()
-    assert "data/local/" in str(exc.value)
+    assert "local-data/" in str(exc.value)
 
