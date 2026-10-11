@@ -4,7 +4,9 @@ The expected values are worked out by hand in the comments, never taken from the
 regression here means the "second opinion" used to audit the backtest metrics is itself wrong.
 """
 
+import math
 import os
+import statistics
 import subprocess
 import sys
 from pathlib import Path
@@ -291,3 +293,81 @@ def test_buy_and_hold_matches_the_cli_line_on_spy_smoke(tmp_path):
         capture_output=True, text=True, check=True,
     ).stdout.strip()
     assert recalc_line == engine_line
+
+
+# Curva escrita a mano (QuantAgent-ol11): 5 velas diarias, 4 días de ventana.
+HAND_CURVE = [  # (timestamp, equity, positions_value)
+    ("2025-01-01T00:00:00", 100000.0, 0.0),
+    ("2025-01-02T00:00:00", 101000.0, 40400.0),
+    ("2025-01-03T00:00:00", 100500.0, -50250.0),
+    ("2025-01-04T00:00:00", 102000.0, 0.0),
+    ("2025-01-05T00:00:00", 103000.0, 25750.0),
+]
+
+
+def _equity_csv(tmp_path, curve):
+    path = tmp_path / "eq.csv"
+    path.write_text("timestamp,equity,cash,positions_value,drawdown_pct\n" + "".join(
+        f"{t},{e},0,{pv},0\n" for t, e, pv in curve))
+    return path
+
+
+def _new_lines(path, *extra):
+    cmd = [sys.executable, str(SCRIPT), "--equity", str(path), *extra]
+    out = subprocess.run(cmd, capture_output=True, text=True, check=True).stdout.splitlines()
+    return [line for line in out if line.split(":")[0] in (
+        "Retorno anualizado", "Exceso sobre la referencia", "Tiempo en mercado", "Capital invertido medio",
+        "Sharpe (tasa 0)")]
+
+
+def test_hand_curve_gives_the_five_metrics_computed_in_the_test(tmp_path):
+    """Validates annualized return, time in market, mean invested capital (long and short) and Sharpe at rate 0."""
+    eq = [e for _, e, _ in HAND_CURVE]
+    years = 4 / 365.25
+    annual = (eq[-1] / eq[0]) ** (1 / years) - 1
+    invested = sum(abs(pv) / e for _, e, pv in HAND_CURVE) / 5
+    rets = [(b - a) / a for a, b in zip(eq, eq[1:])]
+    sharpe0 = statistics.mean(rets) / statistics.stdev(rets) * math.sqrt(4 / years)
+    assert _new_lines(_equity_csv(tmp_path, HAND_CURVE)) == [
+        f"Retorno anualizado: {annual:.2%}",
+        "Tiempo en mercado: 60.00%",  # 3 de 5 velas con posición (una corta)
+        f"Capital invertido medio: {invested:.2%}",  # (0 + .4 + .5 + 0 + .25) / 5 = 23.00%
+        f"Sharpe (tasa 0): {sharpe0:.2f}",
+    ]
+    assert f"{invested:.2%}" == "23.00%"
+
+
+def test_excess_over_reference_is_printed_only_with_buy_and_hold_data(tmp_path):
+    """Validates excess = strategy annual return - buy and hold annual return, same formula, and its absence otherwise."""
+    velas = tmp_path / "velas.csv"  # compra a 100 y vende a 110 en los mismos 4 días, sin costos
+    velas.write_text("symbol,timeframe,timestamp,open,high,low,close,volume\n" + "".join(
+        f"SPY,1d,2025-01-0{d}T00:00:00,{c},{c},{c},{c},1\n" for d, c in zip(range(1, 6), (100, 101, 102, 105, 110))))
+    curve = _equity_csv(tmp_path, HAND_CURVE)
+    expected = (103000 / 100000) ** (365.25 / 4) - (110 / 100) ** (365.25 / 4)
+    lines = _new_lines(curve, "--comprar-y-mantener", str(velas), "--capital", "100000")
+    assert f"Exceso sobre la referencia: {expected:.2%}" in lines
+    assert not any(l.startswith("Exceso") for l in _new_lines(curve))
+
+
+def test_edge_curves_single_candle_zero_window_and_never_in_market(tmp_path):
+    """Validates: one candle or a 0-day window -> 0.00% return (no division by zero); no positions -> 0.00% and 0.00%."""
+    one = _new_lines(_equity_csv(tmp_path, HAND_CURVE[:1]))
+    assert one[0] == "Retorno anualizado: 0.00%" and one[-1] == "Sharpe (tasa 0): 0.00"
+    same_day = [("2025-01-01T00:00:00", 100.0, 0.0), ("2025-01-01T00:00:00", 105.0, 0.0)]
+    assert _new_lines(_equity_csv(tmp_path, same_day))[0] == "Retorno anualizado: 0.00%"
+    flat = [(t, e, 0.0) for t, e, _ in HAND_CURVE]
+    lines = _new_lines(_equity_csv(tmp_path, flat))
+    assert "Tiempo en mercado: 0.00%" in lines and "Capital invertido medio: 0.00%" in lines
+
+
+def test_new_cli_lines_equal_recalc_on_the_equity_out_of_rsi_spy_90d(tmp_path):
+    """Validates the cross-check: the five CLI lines equal the script's over the same run's --equity-out."""
+    env = {**os.environ, "DATABASE_URL": f"sqlite:///{tmp_path / 'x.db'}", "OPENAI_API_KEY": ""}
+    subprocess.run([sys.executable, "-c", "from quantagent.database import init_db; init_db()"], env=env, check=True)
+    eq = tmp_path / "eq.csv"
+    cli = subprocess.run(
+        [sys.executable, "-m", "quantagent.cli", "backtest", "run", "--strategy", "rsi", "--fixture", "spy-90d",
+         "--equity-out", str(eq)], env=env, capture_output=True, text=True, check=True).stdout.splitlines()
+    fixture = Path(__file__).resolve().parent / "fixtures" / "spy-90d.csv"
+    expected = _new_lines(eq, "--comprar-y-mantener", str(fixture), "--slippage-pct", "0.0005")
+    assert len(expected) == 5 and [l for l in cli if l in expected] == expected

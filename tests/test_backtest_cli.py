@@ -10,7 +10,7 @@ import csv
 import os
 import subprocess
 import sys
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import pytest
 from click.testing import CliRunner
@@ -84,7 +84,7 @@ def test_backtest_run_exits_zero_and_prints_metrics(cli_runner):
 
     assert result.exit_code == 0, result.output
     lines = result.output.strip().splitlines()
-    assert len(lines) == 8
+    assert len(lines) == 13
     assert lines[0].startswith("Trades:")
     assert lines[1].startswith("Win rate:")
     assert lines[2].startswith("Profit factor:")
@@ -93,6 +93,10 @@ def test_backtest_run_exits_zero_and_prints_metrics(cli_runner):
     assert lines[5] == "Slippage: 0.05% por lado"
     assert lines[6] == "Comisión: 0.00% por lado"
     assert lines[7].startswith("Comprar y mantener: PnL ")
+    assert [l.split(":")[0] for l in lines[8:]] == [
+        "Retorno anualizado", "Exceso sobre la referencia", "Tiempo en mercado", "Capital invertido medio",
+        "Sharpe (tasa 0)",
+    ]
 
 
 def test_backtest_run_commission_pct_charges_every_fill_and_lowers_pnl(cli_runner):
@@ -312,14 +316,15 @@ def shared_cli_process_run(tmp_path_factory):
 
 
 def test_backtest_run_output_is_only_metrics_lines(shared_cli_process_run):
-    """stdout+stderr is exactly the 8 metric lines plus the --out line: no log or SAWarning noise."""
+    """stdout+stderr is exactly the 13 metric lines plus the --out line: no log or SAWarning noise."""
     proc, trades_csv = shared_cli_process_run
 
     assert proc.returncode == 0, proc.stdout
     prefixes = [line.split(":")[0] for line in proc.stdout.splitlines()]
     assert prefixes == [
         "Trades", "Win rate", "Profit factor", "Sharpe ratio", "Total PnL", "Slippage", "Comisión",
-        "Comprar y mantener",
+        "Comprar y mantener", "Retorno anualizado", "Exceso sobre la referencia", "Tiempo en mercado",
+        "Capital invertido medio", "Sharpe (tasa 0)",
         f"Trade log written to {trades_csv}",
     ]
     assert proc.stdout.splitlines()[5] == "Slippage: 0.05% por lado"
@@ -340,8 +345,8 @@ def test_backtest_run_output_with_custom_slippage_env(tmp_path):
     )
     assert proc.returncode == 0, proc.stdout
     lines = proc.stdout.strip().splitlines()
-    assert len(lines) == 8
-    assert lines[-3] == "Slippage: 1.00% por lado"
+    assert len(lines) == 13
+    assert lines[-8] == "Slippage: 1.00% por lado"
 
 
 def test_backtest_run_verbose_shows_insufficient_data_messages(tmp_path):
@@ -463,20 +468,20 @@ def test_backtest_verify_process_output_is_only_ok_reproducible():
 def test_backtest_run_consecutive_runs_on_same_database_produce_identical_output(
     cli_runner,
 ):
-    """Two consecutive `backtest run` on the same database must produce identical 8 lines (QuantAgent-hx0.11)."""
+    """Two consecutive `backtest run` on the same database must produce identical 13 lines (QuantAgent-hx0.11)."""
     res1 = cli_runner.invoke(
         backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
     )
     assert res1.exit_code == 0, res1.output
     lines1 = res1.output.strip().splitlines()
-    assert len(lines1) == 8
+    assert len(lines1) == 13
 
     res2 = cli_runner.invoke(
         backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
     )
     assert res2.exit_code == 0, res2.output
     lines2 = res2.output.strip().splitlines()
-    assert len(lines2) == 8
+    assert len(lines2) == 13
 
     assert lines1 == lines2
 
@@ -517,6 +522,10 @@ def test_backtest_run_prints_na_profit_factor_when_no_losses(cli_runner, monkeyp
     from quantagent.backtesting.backtest import Backtest, BacktestMetrics
 
     def mock_run(self, *args, **kwargs):
+        self.equity_curve = [
+            {"date": datetime(2024, 1, d), "equity": 100000.0 + d, "cash": 100000.0 + d, "positions_value": 0.0}
+            for d in (1, 2, 3)
+        ]
         return BacktestMetrics(
             total_trades=2,
             winning_trades=2,
@@ -540,3 +549,18 @@ def test_backtest_run_prints_na_profit_factor_when_no_losses(cli_runner, monkeyp
     assert result.exit_code == 0, result.output
     lines = result.output.strip().splitlines()
     assert lines[2] == "Profit factor: n/a"
+
+
+def test_annual_return_and_exposure_on_a_hand_curve_and_edge_cases():
+    """Validates the engine-side formulas (QuantAgent-ol11) against values computed here, plus the degenerate curves."""
+    from quantagent.backtesting.buy_and_hold import annual_return, exposure
+
+    equity, pv = [100000.0, 101000.0, 100500.0, 102000.0, 103000.0], [0.0, 40400.0, -50250.0, 0.0, 25750.0]
+    curve = [{"equity": e, "positions_value": v} for e, v in zip(equity, pv)]
+    t0, t1 = datetime(2025, 1, 1), datetime(2025, 1, 5)
+    assert annual_return(equity[0], equity[-1], t0, t1) == pytest.approx(1.03 ** (365.25 / 4) - 1)
+    in_market, invested = exposure(curve)
+    assert in_market == pytest.approx(3 / 5)
+    assert invested == pytest.approx((0.4 + 0.5 + 0.25) / 5)
+    assert annual_return(100.0, 105.0, t0, t0) == 0.0  # ventana de 0 días
+    assert exposure(curve[:1]) == (0.0, 0.0)  # una sola vela, sin posición

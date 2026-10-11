@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from quantagent.backtesting.backtest import Backtest
-from quantagent.backtesting.buy_and_hold import buy_and_hold
+from quantagent.backtesting.buy_and_hold import annual_return, buy_and_hold, exposure
 from quantagent.backtesting.export import TradeRow, equity_to_csv, trades_to_csv
 from quantagent.backtesting.fixtures import (
     FixtureMetadata,
@@ -327,6 +327,14 @@ def run_backtest(
         f"Comprar y mantener: PnL {bh['pnl']:.2f}, Sharpe {bh['sharpe']:.2f}, "
         f"max drawdown {bh['max_drawdown']:.6f}"
     )
+    curve = bt.equity_curve
+    annual = annual_return(curve[0]["equity"], curve[-1]["equity"], curve[0]["date"], curve[-1]["date"])
+    in_market, invested = exposure(curve)
+    click.echo(f"Retorno anualizado: {annual:.2%}")
+    click.echo(f"Exceso sobre la referencia: {annual - bh['annual_return']:.2%}")
+    click.echo(f"Tiempo en mercado: {in_market:.2%}")
+    click.echo(f"Capital invertido medio: {invested:.2%}")
+    click.echo(f"Sharpe (tasa 0): {bt._calculate_sharpe_ratio(0.0):.2f}")
 
     if out_path:
         with open(out_path, "w", newline="") as f:
