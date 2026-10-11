@@ -66,7 +66,7 @@ class StrategyAdapter(Strategy):
     timeframe = "1d"
     n_real_bars = 0  # sin la vela centinela
     fill_close = True
-    slippage = 0.0  # fraccion por lado
+    slippage = commission = 0.0  # fracciones por lado
 
     def init(self):
         df = self.data.df
@@ -131,6 +131,14 @@ class StrategyAdapter(Strategy):
         equity = self.equity - sum(abs(t.size) for t in self.trades) / SCALE * price * self.slippage
         qty = equity * settings.TRADING_BASE_POSITION_PCT * signal.confidence / price
         units = int(round(qty * SCALE))
+        # QuantAgent-gti6: el recorte de OrderManager._cap_entry_qty (quantagent/trading/order_manager.py:57-76).
+        # Solo compras cuyo nocional entra en el efectivo: se achican a lo que alcanza a pagar con slippage y
+        # comision. Sin esto la libreria cancela la orden. Sin posicion abierta el efectivo es el equity; se
+        # trunca en vez de redondear para no pasarse por una unidad (1 / SCALE acciones).
+        if long and qty * price <= equity * (1 + 1e-9):
+            max_qty = equity / (price * (1 + self.slippage) * (1 + self.commission))
+            if qty > max_qty > 0:
+                units = int(max_qty * SCALE)
         if units < 1:
             return
         stop = round(signal.stop_loss or price * (0.98 if long else 1.02), 8)
@@ -156,7 +164,7 @@ def run_adapter(strategy, df: pd.DataFrame, *, symbol: str, timeframe: str, fill
                   spread=slippage_pct,
                   trade_on_close=close, hedging=False, exclusive_orders=False, finalize_trades=not close)
     return bt.run(strategy=strategy, symbol=symbol, timeframe=timeframe, n_real_bars=len(df) - 1, fill_close=close,
-                  slippage=slippage_pct)
+                  slippage=slippage_pct, commission=commission_pct)
 
 
 def trade_rows(stats, symbol: str) -> list[TradeRow]:
