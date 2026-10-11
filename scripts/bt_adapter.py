@@ -2,7 +2,7 @@
 """QuantAgent-i6n: adaptador generico que corre cualquier TradingStrategy del proyecto dentro de backtesting.py.
 
 Uso:  python scripts/bt_adapter.py --strategy <alias> (--fixture <f> | --snapshot <s> --symbol <S> --from --to)
-          [--fill close|next-open] [--commission-pct C] [--out trades.csv]
+          [--fill close|next-open] [--commission-pct C] [--slippage-pct S | --costos <perfil>] [--out trades.csv]
 
 La DECISION es de la estrategia; la EJECUCION es de la libreria (sl=/tp= contra maximo y minimo,
 commission=, su efectivo y su equity). El adaptador solo traduce:
@@ -20,6 +20,13 @@ Llenado: `close` = al cierre de la vela de la senal (trade_on_close=True, vela c
 mercado opuesta, como scripts/crossval_rsi.py); `next-open` = apertura de la vela siguiente (default de la
 libreria, Position.close() y finalize_trades=True; sin centinela). Precios y unidades usan la escala 2**27
 del port. --commission-pct es fraccion del nocional por lado (0.001 = 0.1 %), el `commission=` nativo.
+
+Slippage (QuantAgent-xyf6): la regla de PaperBroker.place_order (quantagent/trading/paper_broker.py:92-99):
+toda orden llena a su precio de referencia * (1 + s) si compra y * (1 - s) si vende, en entradas y en
+salidas (por regla, stop, take profit o fin de corrida; la referencia de un stop es el nivel del stop, o la
+apertura si hubo gap). El tamano, los niveles de stop/take profit y el entry_price que ve should_exit usan
+la referencia sin slippage, como el motor. La libreria solo cubre la entrada (`spread=`; cierra "at
+unadjusted price"), asi que la salida se ajusta envolviendo `_close_trade` de su broker (API privada, 0.6.x).
 
 exit_reason del CSV: el motivo que devolvio should_exit; STOP_LOSS/TAKE_PROFIT cuando cerro la libreria
 (segun de que lado del stop quedo el precio de salida); backtest_end para lo que seguia abierto al final.
@@ -59,6 +66,7 @@ class StrategyAdapter(Strategy):
     timeframe = "1d"
     n_real_bars = 0  # sin la vela centinela
     fill_close = True
+    slippage = 0.0  # fraccion por lado
 
     def init(self):
         df = self.data.df
@@ -66,6 +74,10 @@ class StrategyAdapter(Strategy):
         self.bars = pd.DataFrame({"timestamp": df.index, **cols})  # precios reales, columnas del motor
         self.pos = None  # ActivePosition de la posicion abierta (o con orden de entrada pendiente)
         self.info = {}  # vela de entrada -> {"stop", "reason"} para el CSV
+        if self.slippage:  # cerrar un largo es vender (precio * (1 - s)); cerrar un corto es comprar (* (1 + s))
+            close_trade = self._broker._close_trade
+            self._broker._close_trade = lambda trade, price, i: close_trade(
+                trade, price * (1 - math.copysign(self.slippage, trade.size)), i)
 
     def next(self):
         n = len(self.data)
@@ -85,7 +97,8 @@ class StrategyAdapter(Strategy):
             price = float(window["close"].iloc[-1])
             if self.pos is not None:
                 trade = self.trades[0]
-                self.pos.entry_price = trade.entry_price * SCALE
+                # referencia sin slippage (= trade.entry_price * SCALE si slippage es 0), como el motor
+                self.pos.entry_price = float(self.bars["close" if self.fill_close else "open"].iloc[trade.entry_bar])
                 self.pos.quantity = abs(trade.size) / SCALE
                 should_exit, reason = self.strategy.should_exit(self.pos, price, window)
                 if should_exit:
@@ -114,7 +127,9 @@ class StrategyAdapter(Strategy):
         if signal is None or signal.decision == "HOLD":
             return
         long = signal.decision == "LONG"
-        qty = self.equity * settings.TRADING_BASE_POSITION_PCT * signal.confidence / price
+        # si se cerro en esta misma vela, la libreria todavia no desconto el slippage de esa salida
+        equity = self.equity - sum(abs(t.size) for t in self.trades) / SCALE * price * self.slippage
+        qty = equity * settings.TRADING_BASE_POSITION_PCT * signal.confidence / price
         units = int(round(qty * SCALE))
         if units < 1:
             return
@@ -134,12 +149,14 @@ class StrategyAdapter(Strategy):
 
 
 def run_adapter(strategy, df: pd.DataFrame, *, symbol: str, timeframe: str, fill: str = "close",
-                commission_pct: float = 0.0, cash: float = INITIAL_CASH):
+                commission_pct: float = 0.0, slippage_pct: float = 0.0, cash: float = INITIAL_CASH):
     """Corre `strategy` sobre `df` (el de crossval_rsi.load_fixture: escalado y con vela centinela)."""
     close = fill == "close"
     bt = Backtest(df if close else df.iloc[:-1], StrategyAdapter, cash=cash, commission=commission_pct, margin=1.0,
+                  spread=slippage_pct,
                   trade_on_close=close, hedging=False, exclusive_orders=False, finalize_trades=not close)
-    return bt.run(strategy=strategy, symbol=symbol, timeframe=timeframe, n_real_bars=len(df) - 1, fill_close=close)
+    return bt.run(strategy=strategy, symbol=symbol, timeframe=timeframe, n_real_bars=len(df) - 1, fill_close=close,
+                  slippage=slippage_pct)
 
 
 def trade_rows(stats, symbol: str) -> list[TradeRow]:
@@ -160,11 +177,18 @@ def main(argv=None) -> int:
     ap.add_argument("--from", dest="from_date", help="Primera sesion, YYYY-MM-DD")
     ap.add_argument("--to", dest="to_date", help="Ultima sesion, YYYY-MM-DD")
     ap.add_argument("--fill", choices=["close", "next-open"], default="close")
-    ap.add_argument("--commission-pct", type=float, default=0.0, help="fraccion del nocional por lado (0.001 = 0.1 %%)")
+    ap.add_argument("--commission-pct", type=float, help="fraccion del nocional por lado (0.001 = 0.1 %%). Default 0")
+    ap.add_argument("--slippage-pct", type=float, help="fraccion del precio por lado (0.0005 = 0.05 %%). Default 0")
+    ap.add_argument("--costos", choices=sorted(settings.COSTOS_PERFILES),
+                    help="perfil de costos (slippage y comision), como el CLI. Excluyente con las dos anteriores")
     ap.add_argument("--out", help="CSV de trades")
     args = ap.parse_args(argv)
     if bool(args.fixture) == bool(args.snapshot) or (args.snapshot and not args.symbol):
         ap.error("usar --fixture o bien --snapshot con --symbol")
+    if args.costos and (args.commission_pct is not None or args.slippage_pct is not None):
+        ap.error("--costos es excluyente con --commission-pct y --slippage-pct")
+    costos = settings.COSTOS_PERFILES.get(args.costos, {})
+    costos = {k: costos.get(k, getattr(args, k) or 0.0) for k in ("commission_pct", "slippage_pct")}
 
     if args.snapshot:
         symbol, timeframe = args.symbol, load_manifest(args.snapshot)["timeframe"]
@@ -174,7 +198,7 @@ def main(argv=None) -> int:
         symbol, timeframe = meta.symbol, meta.timeframe
         df = port.load_fixture(port.FIXTURES_DIR / f"{args.fixture}.csv")
     stats = run_adapter(build_strategy(STRATEGY_ALIASES[args.strategy]), df, symbol=symbol, timeframe=timeframe,
-                        fill=args.fill, commission_pct=args.commission_pct)
+                        fill=args.fill, **costos)
     rows = trade_rows(stats, symbol)
     if args.out:
         Path(args.out).write_text(trades_to_csv(rows))
