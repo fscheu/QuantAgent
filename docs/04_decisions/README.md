@@ -11,6 +11,7 @@ Agents working in this repository should review decision documents chronological
 - [QuantAgent-iuf-DC-datos-m2.md](./QuantAgent-iuf-DC-datos-m2.md) - Datos reales de M2: ETFs diarios, 2 activos en 4h, fuentes y dónde vive el snapshot (propuesta)
 - [2026-10-ADR-backtest-engine-propio-vs-terceros.md](./2026-10-ADR-backtest-engine-propio-vs-terceros.md) - ADR: Engine de backtesting propio vs. alternativas de terceros (QuantAgent-lcv)
 - [QuantAgent-ld3-DC-costos-m2.md](./QuantAgent-ld3-DC-costos-m2.md) - Perfiles de costos de backtest para M2 (ETF, ETF conservador, cripto) con fuentes y comandos de efecto medido (propuesta, V13)
+- [QuantAgent-cbp-DC-tamano-posicion-m2.md](./QuantAgent-cbp-DC-tamano-posicion-m2.md) - Tamaño de posición y límite diario en las comparaciones de M2: 5% con referencia escalada, 100% del capital asignado o tamaño fijo sin confianza, con corridas de rsi/SPY (propuesta, V18)
 
 ## Current Truth
 
