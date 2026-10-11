@@ -16,6 +16,9 @@ Tolerancias (el motor guarda Numeric(18,8): redondeo de hasta 5e-9 por valor):
   el motor calcula la senal con precios a 8 decimales (Numeric(18,8)) y la libreria con los del snapshot sin
   redondear; eso mueve la confianza de rsi hasta 5.4e-9 y la cantidad en dif/confianza. Medido en rsi sobre SPY
   2007-2018 con costos etf: 1.43e-6 al 5% del capital y 1.39e-6 al 100% (confianza 0.0023), mediana 4e-9.
+  Desde QuantAgent-bwqb la libreria recibe los precios a 8 decimales (crossval_rsi.load_fixture) y esa causa
+  ya no existe: queda el redondeo del CSV (hasta 9e-9 acciones), 1.13e-7 relativo al 5% (sobre 0.03 acciones)
+  y 7.8e-9 al 100%. La tolerancia no se bajo: en spy-90d --intrabar ese redondeo es 7.06e-7 de una cantidad.
 - entry_price, exit_price 2e-8: una unidad del octavo decimal (medido 1.0000008e-8 en SPY real) mas ruido de float.
 - pnl: 1e-6 * |exit - entry| + 1e-8 por trade (1e-6 acciones por el movimiento + redondeo; medido 6.44e-7).
 - total PnL: suma de 1e-8 * |exit - entry| + 1e-8 por trade (no cambio con QuantAgent-824).
