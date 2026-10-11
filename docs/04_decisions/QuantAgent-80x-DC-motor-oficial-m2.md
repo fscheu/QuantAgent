@@ -48,6 +48,8 @@ python -c "import sys,pandas as pd; sys.path.insert(0,'scripts'); from crossval_
 
 Resultado, igual sin comisión y con 0,1%: rsi 187 de 187, fifty-two-week-high 5 de 5, triple-screen 1 de 1, sma-cross 5 de 5, momentum-12m 3 de 3. Coinciden los 201 trades en las dos configuraciones. La mayor diferencia de PnL en un trade es 0,000001 USD y la mayor de cantidad 2,8e-07 acciones (redondeo del CSV del motor a 8 decimales). **No hay diferencias que explicar y no queda nada "sin explicar".**
 
+Desde QuantAgent-bwqb el adaptador le da a la estrategia y a la librería los precios redondeados a 8 decimales, como los guarda el motor. Sobre rsi con `--costos etf` la mayor diferencia relativa de cantidad bajó de 1.43e-6 a 1.13e-7 al 5% y de 1.39e-6 a 7.8e-9 al 100%; lo que queda es el redondeo a 8 decimales del CSV (hasta 9e-9 acciones). Este comando y `compare_trades` de `scripts/crossval_compare.py` dan 187 de 187 en los dos tamaños. Las tolerancias no cambiaron: el porqué está en el PR de QuantAgent-bwqb.
+
 Lo que esta coincidencia prueba y lo que no:
 - Prueba la ejecución y la contabilidad: en qué vela se llena, stops y take profit contra máximo y mínimo, efectivo, comisión de entrada y de salida.
 - No prueba la lógica de las estrategias. El adaptador llama al mismo `generate_signal` y al mismo `should_exit`, y usa la misma fórmula de tamaño. Un error ahí aparece igual en los dos lados.

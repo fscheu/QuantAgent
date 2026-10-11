@@ -40,6 +40,9 @@ def sized(pct, conf_motor, conf_lib, factor=1.0):  # una entrada con 100000 de e
            "entry_price": "106.36", "exit_price": "106.36", "pnl": "0"}
     return c.compare_trades([row], [{**row, "qty": repr(q(conf_lib) * factor)}])[1]
 CONFS = __CONFS__
+def loaded(csv_path):  # los precios reales (sin la escala del port) que load_fixture le da a la estrategia
+    df = c.port.load_fixture(csv_path)
+    return (df[["Open", "High", "Low", "Close"]] * c.port.SCALE).values.tolist()
 print(json.dumps([
     run([]),
     run(["--port-pnl-delta", "5:0.5"]),
@@ -52,13 +55,21 @@ print(json.dumps([
     altered("exit_price", 1e-8),
     altered("qty", 2e-6, qty="1"),
     [[sized(pct, *conf, factor) for factor in (1.0, 1.0001, 0.9999)] for pct in (0.05, 1.0) for conf in CONFS],
+    [[sized(pct, conf, conf, factor) for factor in (1.0, 1.00001, 0.99999)] for pct in (0.05, 1.0) for conf, _ in CONFS],
+    loaded(sys.argv[1]),
 ]))
 """.replace("__CONFS__", repr(CONFS))
+# Precios con mas de 8 decimales, como los ajustados de un snapshot (QuantAgent-bwqb).
+PRICES = [[100.123456784, 101.000000005, 99.999999994, 100.5], [100.5, 102.123456789012, 100.25, 101.987654321987]]
 
 
 @pytest.fixture(scope="module")
-def runs():
-    p = subprocess.run([sys.executable, "-c", DRIVER], cwd=ROOT, capture_output=True, text=True, timeout=600)
+def runs(tmp_path_factory):
+    csv_path = tmp_path_factory.mktemp("bwqb") / "velas.csv"
+    csv_path.write_text("timestamp,open,high,low,close,volume\n" + "".join(
+        f"2020-01-0{i + 1},{','.join(map(repr, row))},1000\n" for i, row in enumerate(PRICES)))
+    p = subprocess.run([sys.executable, "-c", DRIVER, str(csv_path)], cwd=ROOT, capture_output=True, text=True,
+                       timeout=600)
     assert p.returncode == 0, p.stderr[-2000:]
     return json.loads(p.stdout.splitlines()[-1])
 
@@ -116,3 +127,19 @@ def test_qty_tolerance_does_not_depend_on_position_size(runs):
     assert runs[9]["ok"] is False, runs[9]["out"]
     assert "qty (|dif|=2e-06 > tol 1.5e-06)" in runs[9]["out"]
     assert runs[10] == [[True, False, False]] * 4
+
+
+def test_qty_altered_by_one_thousandth_percent_fails_at_both_sizes(runs):
+    # Valida QuantAgent-bwqb: con la misma confianza en los dos lados (lo que pasa desde que la libreria recibe
+    # precios a 8 decimales) la cantidad del motor, redondeada a 8 decimales, pasa; y alterada en 0,001% hacia
+    # arriba o hacia abajo falla, al 5% y al 100% del capital.
+    assert runs[11] == [[True, False, False]] * 4
+
+
+def test_port_prices_are_rounded_to_8_decimals_like_the_engine(runs):
+    # Valida QuantAgent-bwqb: load_fixture entrega cada precio como lo guarda el motor (load_snapshot:
+    # Decimal(f"{x:.8f}")), y la vela centinela repite el ultimo close ya redondeado. Si se quita el redondeo,
+    # 100.123456784 llega con sus 9 decimales y este test falla.
+    expected = [[float(f"{x:.8f}") for x in row] for row in PRICES]
+    assert expected != PRICES and expected[0][:3] == [100.12345678, 101.00000001, 99.99999999]
+    assert runs[12] == expected + [[expected[-1][3]] * 4]  # la escala 2**27 del port es exacta en float
