@@ -8,6 +8,7 @@ in a fraction of a second while still producing real trades through the full eng
 
 import csv
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime, timedelta
@@ -636,3 +637,20 @@ def test_backtest_tamano_o_regla_invalidos_salen_con_2_sin_traceback(cli_runner,
     result = cli_runner.invoke(backtest_group, [cmd, "--strategy", "rsi", "--fixture", "spy-smoke", *extra])
     assert result.exit_code == 2
     assert f"Invalid value for '{extra[0]}'" in result.output and "Traceback" not in result.output
+
+
+def test_correr_par_devuelve_los_numeros_del_resumen_con_las_claves_documentadas(cli_runner):
+    """QuantAgent-5nx0: rsi/spy-90d da 340 trades y PnL 4571.27 (las cifras de `backtest run`), el dict
+    trae todas las claves del docstring y las cinco métricas de comparación vienen calculadas."""
+    from quantagent.cli.backtest import _engine_config, correr_par
+
+    r = correr_par("rsi", fixture_metadata("spy-90d"), _engine_config(None), None, "spy-90d", None, None, None, None)
+
+    assert r["trades"] == 340
+    assert round(r["pnl"], 2) == 4571.27
+    assert all(re.search(rf"\b{k}\b", correr_par.__doc__) for k in r)
+    assert (r["slippage_pct"], r["comision_pct"], r["costos"], r["tamano_pct"]) == (0.0005, 0.0, None, None)
+    assert all(r[k] is not None for k in (
+        "retorno_anualizado", "exceso_sobre_referencia", "tiempo_en_mercado", "capital_invertido_medio", "sharpe_tasa_0",
+    ))
+    assert r["filas"] == []
