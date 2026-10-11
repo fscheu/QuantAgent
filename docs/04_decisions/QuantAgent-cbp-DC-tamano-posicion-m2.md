@@ -1,5 +1,5 @@
 # QuantAgent-cbp · Tamaño de posición y límite diario en las comparaciones de M2
-Estado: **propuesta, decide Fede**. Medido el 2026-10-10 sobre `lote/costos-y-referencia` @ 54b761f7 (con #101). Fila V18. Todo es `rsi` sobre SPY diario, 2007-01-03 a 2018-12-31, snapshot `etf-1d-2026-10`, capital 100.000. Los números van como los imprimen las herramientas (punto decimal).
+Estado: **decidido por Fede el 2026-10-10 (PR #103): opción B**, ver §7. Medido el 2026-10-10 sobre `lote/costos-y-referencia` @ 54b761f7 (con #101). Fila V18. Todo es `rsi` sobre SPY diario, 2007-01-03 a 2018-12-31, snapshot `etf-1d-2026-10`, capital 100.000. Los números van como los imprimen las herramientas (punto decimal).
 ## 1. Cómo se calcula hoy el tamaño y qué pasa al pedir 100%
 `cantidad = equity × TRADING_BASE_POSITION_PCT × confianza de la señal / precio` (`quantagent/trading/position_sizer.py`). El 5% es un techo, no el tamaño: la confianza de rsi promedia 0.24 (mediana 0.19), así que la entrada media es de 1.211 USD (1,2% del capital), y como rsi tiene posición el 57,5% de los días, el capital invertido promedio es **0,75%**. `sma-cross` y `momentum-12m` devuelven confianza 1.0 y sí usan el 5% entero.
 
@@ -57,3 +57,8 @@ Hoy no actúa en backtest (V17, PR #84) y desde #95 y #101 no frena cierres. La 
 **C · Tamaño fijo, sin ponderar por confianza** (fila 6; para rsi, 50% equivale a arriesgar 1% del capital a su stop de 2%). Cambia lo que hace la estrategia, no solo la escala. Dimensionar por distancia al stop no sirve para `sma-cross` ni `momentum-12m`, que salen por regla y llevan stop en 0.01. Afecta V19, V20 y todo lo que compara. Referencias de M1: sin cambio solo si queda detrás de un flag.
 ## 6. Recomendación
 **B**, con dos agregados que no dependen del tamaño: la tabla de `compare` (V22, V23) informa capital invertido medio y Sharpe con tasa 0 al lado del actual. C la dejaría como variante de rsi dentro del barrido con registro de intentos (V31): adoptarla ahora, después de ver que da positivo, es elegir con el resultado a la vista. Me haría cambiar a **A** que V19 no pueda resolver las tres trabas sin tocar el control de riesgo que comparte con paper; y a **C** que Fede quiera que M2 juzgue la señal y no la señal multiplicada por la confianza.
+## 7. Decisión (Fede, 2026-10-10)
+- **B como convención de medición de M2:** cada estrategia corre con 100% del capital asignado. No define el tamaño para paper ni para operar.
+- **V19 se reescribe:** la regla de tamaño se elige por corrida, con dos reglas para empezar: por confianza (la actual) y fija.
+- **Regla por eficacia** (capital por estrategia según su resultado medido): ticket posterior de M2, después de la comparación y validada fuera de muestra.
+- **Límite diario:** apagado en las corridas diarias, informando el peor día; la corrección (V21) va antes del lote de 4h.
