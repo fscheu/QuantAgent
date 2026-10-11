@@ -10,7 +10,7 @@ $ TRADING_BASE_POSITION_PCT=1.0 TRADING_MAX_POSITION_PCT=1.0 python -m quantagen
     raise ValueError("base_position_pct must be between 0% and 10%")
 ValueError: base_position_pct must be between 0% and 10%          (exit 1, no corre ninguna vela)
 ```
-Salteando esa validación desde un script temporal (pegado en el PR, no está en el repo) aparecen dos trabas más. Con `TRADING_MAX_POSITION_PCT` por defecto, `RiskManager.validate_trade` rechaza 389 órdenes (`Order rejected - Position too large: $12516.45 > max $10028.79 (10% limit)`) y quedan 105 trades en vez de 187. Con `TRADING_MAX_POSITION_PCT=1.0` rsi corre entera, sin rechazos. Pero una estrategia con confianza 1.0 pide exactamente todo el efectivo y el control de capital la rechaza: `sma-cross` pierde su primer trade (`Insufficient capital: need $100000.00, have $100000.00`) y hace 4 en vez de 5. Son tres trabas, y las tres le tocan a V19.
+Salteando esa validación desde un script temporal (pegado en el PR #103, no está en el repo) aparecen dos trabas más. Con `TRADING_MAX_POSITION_PCT` por defecto, `RiskManager.validate_trade` rechaza 389 órdenes (`Order rejected - Position too large: $12516.45 > max $10028.79 (10% limit)`) y quedan 105 trades en vez de 187. Con `TRADING_MAX_POSITION_PCT=1.0` rsi corre entera, sin rechazos. Pero una estrategia con confianza 1.0 pide exactamente todo el efectivo y el control de capital la rechaza: `sma-cross` pierde su primer trade (`Insufficient capital: need $100000.00, have $100000.00`) y hace 4 en vez de 5. Son tres trabas, y las tres le tocan a V19.
 ## 2. Corridas
 ```
 python -m quantagent.cli backtest run --strategy rsi $R --costos etf --out f1.csv --equity-out f1-eq.csv                         # fila 1
@@ -20,7 +20,7 @@ python scripts/recalc_metrics.py f1.csv --equity f1-eq.csv [--risk-free-rate 0] 
 python -c "import sys,pandas as pd; t,e=pd.read_csv(sys.argv[1]),pd.read_csv(sys.argv[2]); x=e.positions_value.abs()/e.equity; print(f'{(x>0).mean():.1%} {x.mean():.2%} {t.groupby(t.exit_time.str[:10]).pnl.sum().min()/1e5:.3%} {e.equity.pct_change().min():.3%}')" f1.csv f1-eq.csv
 python scripts/recalc_metrics.py --comprar-y-mantener $QUANTAGENT_SNAPSHOT_DIR/etf-1d-2026-10/SPY.parquet --from 2007-01-03 --to 2018-12-31 --slippage-pct 0.0005 --capital 5000   # referencia de la fila 1
 ```
-Filas 4 y 5: el CLI del motor con la validación salteada y las dos variables en 1.0. Fila 6: el adaptador con `TRADING_BASE_POSITION_PCT=0.5` y la confianza reemplazada por 1.0. La curva de equity de las filas 3 y 6 sale de la librería (`_equity_curve`), porque el adaptador no la exporta. Los tres scripts temporales están completos en el PR.
+Filas 4 y 5: el CLI del motor con la validación salteada y las dos variables en 1.0. Fila 6: el adaptador con `TRADING_BASE_POSITION_PCT=0.5` y la confianza reemplazada por 1.0. La curva de equity de las filas 3 y 6 sale de la librería (`_equity_curve`), porque el adaptador no la exporta. Los tres scripts temporales están completos en el PR #103, con la salida de cada corrida.
 
 | Fila | Opción y origen | Costos | Trades | PnL (retorno) | Max drawdown | Sharpe 2% / 0% |
 |---|---|---|---|---|---|---|
