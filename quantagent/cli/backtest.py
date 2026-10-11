@@ -182,6 +182,134 @@ def _extract_trade_rows(session: Session, backtest_run_id: int) -> list[TradeRow
     ]
 
 
+def correr_par(
+    strategy_name: str,
+    meta: FixtureMetadata,
+    config: dict,
+    costos: Optional[str],
+    fixture_name: Optional[str],
+    snapshot_name: Optional[str],
+    symbol: Optional[str],
+    from_date: Optional[datetime],
+    to_date: Optional[datetime],
+    intrabar_stops: bool = True,
+    verbose: bool = False,
+    con_filas: bool = False,
+) -> dict:
+    """Corre un par estrategia/activo y devuelve los números del resumen de `backtest run`.
+
+    Claves: trades, win_rate, profit_factor (None o inf si no hay pérdidas), sharpe, pnl,
+    slippage_pct, comision_pct, costos (nombre del perfil o None), tamano_pct (None si no se
+    pidió tamaño), regla_tamano (None si no se pidió), bh_pnl, bh_sharpe, bh_max_drawdown,
+    retorno_anualizado, exceso_sobre_referencia, tiempo_en_mercado, capital_invertido_medio,
+    sharpe_tasa_0 (estas cinco son None si no hay curva de equity), max_drawdown,
+    equity_curve y filas (TradeRow; vacía salvo con con_filas=True).
+    """
+    with utils.session_scope() as session:
+        existing_count = (
+            session.query(MarketData)
+            .filter(
+                MarketData.symbol == meta.symbol,
+                MarketData.timeframe == meta.timeframe,
+                MarketData.timestamp >= meta.start_date,
+                MarketData.timestamp <= meta.end_date,
+            )
+            .count()
+        )
+        if existing_count == 0:
+            if snapshot_name:
+                load_snapshot(session, snapshot_name, symbol, from_date, to_date)
+            else:
+                load_fixture(session, fixture_name)
+        elif existing_count != meta.row_count:
+            raise click.ClickException(
+                f"La base tiene otros datos para {meta.symbol} {meta.timeframe} en el rango "
+                f"del {'snapshot' if snapshot_name else 'fixture'} ({existing_count} filas, se esperaban {meta.row_count}): "
+                "usá una base limpia."
+            )
+
+        bt = Backtest(
+            start_date=meta.start_date,
+            end_date=meta.end_date,
+            assets=[meta.symbol],
+            timeframe=meta.timeframe,
+            # Fixtures are versioned as continuous candles (every hour, no market-hours
+            # gaps), so filtering to real trading hours would misalign against them.
+            # offline_data avoids live yfinance calls for the lookback window before the
+            # fixture's first row -- the whole point of a fixture-based run is to be
+            # deterministic and network-free.
+            config=config,
+            db_session=session,
+            strategy=build_strategy(cli_aliases()[strategy_name]),
+            intrabar_stops=intrabar_stops,
+        )
+        # The lookback warm-up logs one "Insufficient data" warning per candle; keep the
+        # output to the metric lines unless --verbose asks for them.
+        engine_logger = logging.getLogger("quantagent.backtesting.backtest")
+        if not verbose:
+            engine_logger.addFilter(_hide_data_warnings)
+        try:
+            metrics = bt.run(name=f"cli-{strategy_name}-{fixture_name or snapshot_name}")
+        finally:
+            engine_logger.removeFilter(_hide_data_warnings)
+
+        slippage_pct = bt.order_manager.broker.slippage_pct
+        commission = bt.order_manager.broker.commission_pct
+        rows = _extract_trade_rows(session, bt.backtest_run_id) if con_filas else []
+        candles = (
+            session.query(MarketData.timestamp, MarketData.close)
+            .filter(
+                MarketData.symbol == meta.symbol,
+                MarketData.timeframe == meta.timeframe,
+                MarketData.timestamp >= meta.start_date,
+                MarketData.timestamp <= meta.end_date,
+            )
+            .order_by(MarketData.timestamp)
+            .all()
+        )
+        bh = buy_and_hold(
+            [c.timestamp for c in candles], [float(c.close) for c in candles],
+            bt.initial_capital, slippage_pct, commission,
+        )
+
+    curve = bt.equity_curve
+    r = {
+        "trades": metrics.total_trades,
+        "win_rate": metrics.win_rate,
+        "profit_factor": metrics.profit_factor,
+        "sharpe": metrics.sharpe_ratio,
+        "pnl": metrics.total_pnl,
+        "slippage_pct": slippage_pct,
+        "comision_pct": commission,
+        "costos": costos,
+        "tamano_pct": None,
+        "regla_tamano": None,
+        "bh_pnl": bh["pnl"],
+        "bh_sharpe": bh["sharpe"],
+        "bh_max_drawdown": bh["max_drawdown"],
+        "retorno_anualizado": None,
+        "exceso_sobre_referencia": None,
+        "tiempo_en_mercado": None,
+        "capital_invertido_medio": None,
+        "sharpe_tasa_0": None,
+        "max_drawdown": metrics.max_drawdown,
+        "equity_curve": curve,
+        "filas": rows,
+    }
+    if "base_position_pct" in config or "regla_tamano" in config:
+        r["tamano_pct"] = config.get("base_position_pct", settings.TRADING_BASE_POSITION_PCT)
+        r["regla_tamano"] = config.get("regla_tamano", "confianza")
+    if curve:
+        annual = annual_return(curve[0]["equity"], curve[-1]["equity"], curve[0]["date"], curve[-1]["date"])
+        in_market, invested = exposure(curve)
+        r["retorno_anualizado"] = annual
+        r["exceso_sobre_referencia"] = annual - bh["annual_return"]
+        r["tiempo_en_mercado"] = in_market
+        r["capital_invertido_medio"] = invested
+        r["sharpe_tasa_0"] = bt._calculate_sharpe_ratio(0.0)
+    return r
+
+
 @click.group(help="Run deterministic backtests against versioned fixtures.")
 def backtest_group() -> None:
     """Root command group for backtest operations."""
@@ -275,99 +403,35 @@ def run_backtest(
         abrir_reserva,
     )
 
-    with utils.session_scope() as session:
-        existing_count = (
-            session.query(MarketData)
-            .filter(
-                MarketData.symbol == meta.symbol,
-                MarketData.timeframe == meta.timeframe,
-                MarketData.timestamp >= meta.start_date,
-                MarketData.timestamp <= meta.end_date,
-            )
-            .count()
-        )
-        if existing_count == 0:
-            if snapshot_name:
-                load_snapshot(session, snapshot_name, symbol, from_date, to_date)
-            else:
-                load_fixture(session, fixture_name)
-        elif existing_count != meta.row_count:
-            raise click.ClickException(
-                f"La base tiene otros datos para {meta.symbol} {meta.timeframe} en el rango "
-                f"del {'snapshot' if snapshot_name else 'fixture'} ({existing_count} filas, se esperaban {meta.row_count}): "
-                "usá una base limpia."
-            )
+    r = correr_par(
+        strategy_name, meta, config, costos, fixture_name, snapshot_name, symbol,
+        from_date, to_date, intrabar_stops, verbose, con_filas=bool(out_path),
+    )
+    rows = r["filas"]
 
-        bt = Backtest(
-            start_date=meta.start_date,
-            end_date=meta.end_date,
-            assets=[meta.symbol],
-            timeframe=meta.timeframe,
-            # Fixtures are versioned as continuous candles (every hour, no market-hours
-            # gaps), so filtering to real trading hours would misalign against them.
-            # offline_data avoids live yfinance calls for the lookback window before the
-            # fixture's first row -- the whole point of a fixture-based run is to be
-            # deterministic and network-free.
-            config=config,
-            db_session=session,
-            strategy=build_strategy(cli_aliases()[strategy_name]),
-            intrabar_stops=intrabar_stops,
-        )
-        # The lookback warm-up logs one "Insufficient data" warning per candle; keep the
-        # output to the metric lines unless --verbose asks for them.
-        engine_logger = logging.getLogger("quantagent.backtesting.backtest")
-        if not verbose:
-            engine_logger.addFilter(_hide_data_warnings)
-        try:
-            metrics = bt.run(name=f"cli-{strategy_name}-{fixture_name or snapshot_name}")
-        finally:
-            engine_logger.removeFilter(_hide_data_warnings)
-
-        slippage_pct = bt.order_manager.broker.slippage_pct
-        commission = bt.order_manager.broker.commission_pct
-        rows = _extract_trade_rows(session, bt.backtest_run_id) if out_path else []
-        candles = (
-            session.query(MarketData.timestamp, MarketData.close)
-            .filter(
-                MarketData.symbol == meta.symbol,
-                MarketData.timeframe == meta.timeframe,
-                MarketData.timestamp >= meta.start_date,
-                MarketData.timestamp <= meta.end_date,
-            )
-            .order_by(MarketData.timestamp)
-            .all()
-        )
-        bh = buy_and_hold(
-            [c.timestamp for c in candles], [float(c.close) for c in candles],
-            bt.initial_capital, slippage_pct, commission,
-        )
-
-    click.echo(f"Trades: {metrics.total_trades}")
-    click.echo(f"Win rate: {metrics.win_rate:.2%}")
-    if metrics.profit_factor is None or math.isinf(metrics.profit_factor):
+    click.echo(f"Trades: {r['trades']}")
+    click.echo(f"Win rate: {r['win_rate']:.2%}")
+    if r["profit_factor"] is None or math.isinf(r["profit_factor"]):
         click.echo("Profit factor: n/a")
     else:
-        click.echo(f"Profit factor: {metrics.profit_factor:.2f}")
-    click.echo(f"Sharpe ratio: {metrics.sharpe_ratio:.2f}")
-    click.echo(f"Total PnL: {metrics.total_pnl:.2f}")
-    click.echo(f"Slippage: {slippage_pct * 100:.2f}% por lado")
-    click.echo(f"Comisión: {commission * 100:.2f}% por lado")
+        click.echo(f"Profit factor: {r['profit_factor']:.2f}")
+    click.echo(f"Sharpe ratio: {r['sharpe']:.2f}")
+    click.echo(f"Total PnL: {r['pnl']:.2f}")
+    click.echo(f"Slippage: {r['slippage_pct'] * 100:.2f}% por lado")
+    click.echo(f"Comisión: {r['comision_pct'] * 100:.2f}% por lado")
     if costos:
         click.echo(f"Costos: {costos}")
     _echo_tamano(config)
     click.echo(
-        f"Comprar y mantener: PnL {bh['pnl']:.2f}, Sharpe {bh['sharpe']:.2f}, "
-        f"max drawdown {bh['max_drawdown']:.6f}"
+        f"Comprar y mantener: PnL {r['bh_pnl']:.2f}, Sharpe {r['bh_sharpe']:.2f}, "
+        f"max drawdown {r['bh_max_drawdown']:.6f}"
     )
-    curve = bt.equity_curve
-    if curve:
-        annual = annual_return(curve[0]["equity"], curve[-1]["equity"], curve[0]["date"], curve[-1]["date"])
-        in_market, invested = exposure(curve)
-        click.echo(f"Retorno anualizado: {annual:.2%}")
-        click.echo(f"Exceso sobre la referencia: {annual - bh['annual_return']:.2%}")
-        click.echo(f"Tiempo en mercado: {in_market:.2%}")
-        click.echo(f"Capital invertido medio: {invested:.2%}")
-        click.echo(f"Sharpe (tasa 0): {bt._calculate_sharpe_ratio(0.0):.2f}")
+    if r["retorno_anualizado"] is not None:
+        click.echo(f"Retorno anualizado: {r['retorno_anualizado']:.2%}")
+        click.echo(f"Exceso sobre la referencia: {r['exceso_sobre_referencia']:.2%}")
+        click.echo(f"Tiempo en mercado: {r['tiempo_en_mercado']:.2%}")
+        click.echo(f"Capital invertido medio: {r['capital_invertido_medio']:.2%}")
+        click.echo(f"Sharpe (tasa 0): {r['sharpe_tasa_0']:.2f}")
 
     if out_path:
         with open(out_path, "w", newline="") as f:
@@ -376,10 +440,10 @@ def run_backtest(
 
     if equity_out_path:
         with open(equity_out_path, "w", newline="") as f:
-            f.write(equity_to_csv(bt.equity_curve))
+            f.write(equity_to_csv(r["equity_curve"]))
         click.echo(
             f"Equity curve written to {equity_out_path} "
-            f"(max drawdown: {metrics.max_drawdown:.6f})"
+            f"(max drawdown: {r['max_drawdown']:.6f})"
         )
 
 
