@@ -36,6 +36,8 @@ OUT="$STATE/review-$PR.md"; rm -f "$OUT"
   cat "$TMP/loop/REVIEW-PROMPT.md"
   printf '\nCONTEXTO\nPR: #%s · rama: %s · base: origin/%s · ticket: %s · modelo: %s\n\nTICKET (bd show)\n' "$PR" "$BRANCH" "$BASE" "$TICKET" "$MODEL"
   (cd "$REPO" && bd show "$TICKET" 2>&1)
+  printf '\nCUERPO DEL PR (el revisor no tiene red: no uses gh)\n'
+  gh pr view "$PR" -R "$LOOP_GITHUB_REPO" --json body -q .body 2>&1
 } >"$WT/.review-prompt.txt"
 cat >"$TMP/run.sh" <<RUN
 cd '$WT' && source '$REPO/.venv/bin/activate'

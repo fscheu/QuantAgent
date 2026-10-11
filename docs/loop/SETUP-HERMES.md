@@ -57,9 +57,11 @@ El topic `43` de Telegram es el mismo de "Ideas de Proyectos"; cambiarlo si se q
 ## Revisor mecánico con Codex
 
 `scripts/loop/codex_review.sh` lanza a Codex sobre un PR del loop para la parte mecánica de la revisión
-(PLAN-CONTINUACION.md §3.7). No se puede lanzar desde la sesión del PM: Codex arma su propio aislamiento y no
-puede hacerlo dentro de otro (`bwrap: setting up uid map: Permission denied`). Por eso corre desde un job de
-Hermes, igual que el lanzador.
+(PLAN-CONTINUACION.md §3.7). Requisito de la VM: Codex arma su aislamiento con `bubblewrap`, y Ubuntu 24.04
+restringe los espacios de usuario sin privilegios; sin el paquete `bubblewrap` y el perfil de AppArmor
+`bwrap-userns-restrict` falla con `bwrap: setting up uid map: Permission denied`. Ese aislamiento no tiene red:
+el script le pasa el ticket y el cuerpo del PR dentro del prompt. Corre desde un job de Hermes, igual que el
+lanzador.
 
 ```bash
 cat > ~/.hermes/scripts/quantagent_codex_review.sh <<'SH'
