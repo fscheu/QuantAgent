@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 
 from quantagent.backtesting.backtest import Backtest, check_intrabar_stops
-from quantagent.cli.backtest import STRATEGY_ALIASES
+from quantagent.strategy.registry import cli_aliases
 from quantagent.models import ActivePosition, Environment, ExitPolicy, MarketData, OrderSide
 from quantagent.strategy import build_strategy
 from quantagent.strategy.sma_cross_strategy import SmaCrossStrategy
@@ -133,7 +133,7 @@ def test_insufficient_history_returns_none_and_declares_slow_plus_one():
 
 
 def test_registered_and_aliased():
-    assert STRATEGY_ALIASES["sma-cross"] == "SmaCrossStrategy"
+    assert cli_aliases()["sma-cross"] == "SmaCrossStrategy"
     assert isinstance(build_strategy("SmaCrossStrategy"), SmaCrossStrategy)
 
 

@@ -27,21 +27,24 @@ from quantagent.data.snapshot import SnapshotError, snapshot_root
 from quantagent.models import ActivePosition, MarketData, Trade
 from quantagent import settings
 from quantagent.settings import COSTOS_PERFILES
-from quantagent.strategy.registry import build_strategy
+from quantagent.strategy.registry import build_strategy, cli_aliases
 from quantagent.trading.position_sizer import PositionSizer
 
 from . import utils
 
-# CLI-friendly short names for the deterministic strategies. LLMAgentStrategy is
-# excluded: it needs live model credentials, so it doesn't fit a fixture-based,
-# credential-free `backtest run`.
-STRATEGY_ALIASES = {
-    "rsi": "RSIMeanReversionStrategy",
-    "fifty-two-week-high": "FiftyTwoWeekHighStrategy",
-    "triple-screen": "TripleScreenStrategy",
-    "sma-cross": "SmaCrossStrategy",
-    "momentum-12m": "Momentum12mStrategy",
-}
+class _AliasChoice(click.Choice):
+    """Choice over the registry's CLI aliases, read at parse time so late registrations count."""
+
+    def __init__(self) -> None:
+        super().__init__(())
+
+    @property
+    def choices(self):
+        return sorted(cli_aliases())
+
+    @choices.setter
+    def choices(self, _value) -> None:
+        pass
 
 
 RESERVA_ENV = "QUANTAGENT_RESERVA_DESDE"
@@ -189,7 +192,7 @@ def backtest_group() -> None:
     "--strategy",
     "strategy_name",
     required=True,
-    type=click.Choice(sorted(STRATEGY_ALIASES)),
+    type=_AliasChoice(),
     help="Strategy to run.",
 )
 @click.option(
@@ -307,7 +310,7 @@ def run_backtest(
             # deterministic and network-free.
             config=config,
             db_session=session,
-            strategy=build_strategy(STRATEGY_ALIASES[strategy_name]),
+            strategy=build_strategy(cli_aliases()[strategy_name]),
             intrabar_stops=intrabar_stops,
         )
         # The lookback warm-up logs one "Insufficient data" warning per candle; keep the
@@ -444,7 +447,7 @@ def _run_verify_pass(
             timeframe=meta.timeframe,
             config=config or _engine_config(commission_pct, costos),
             db_session=session,
-            strategy=build_strategy(STRATEGY_ALIASES[strategy_name]),
+            strategy=build_strategy(cli_aliases()[strategy_name]),
         )
         engine_logger = logging.getLogger("quantagent.backtesting.backtest")
         if not verbose:
@@ -464,7 +467,7 @@ def _run_verify_pass(
     "--strategy",
     "strategy_name",
     required=True,
-    type=click.Choice(sorted(STRATEGY_ALIASES)),
+    type=_AliasChoice(),
     help="Strategy to run.",
 )
 @click.option(
