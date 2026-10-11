@@ -289,15 +289,14 @@ class Backtest:
         self.portfolio = components.portfolio_manager
         self.order_manager = components.order_manager
         self.order_manager.risk_manager.timeframe = self.timeframe
-        candle_clock = (
-            lambda: (
-                self.current_date.date()
-                if isinstance(self.current_date, datetime)
-                else self.current_date
-            )
-            if self.current_date
-            else date.today()
-        )
+
+        def candle_clock():
+            if not self.current_date:
+                return date.today()
+            if isinstance(self.current_date, datetime):
+                return self.current_date.date()
+            return self.current_date
+
         self.order_manager.risk_manager.clock = candle_clock
         self.portfolio.clock = candle_clock
 
