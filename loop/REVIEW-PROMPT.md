@@ -14,7 +14,7 @@ PASOS
 1. Leé el TICKET de abajo. El criterio de aceptación es el del ticket, no el del cuerpo del PR.
 2. Leé el diff completo: `git diff origin/<base>...HEAD`. Listá todo archivo o cambio fuera de "Archivos
    relevantes" o del "Cambio requerido".
-3. Corré el comando de "Probar" del PR (`gh pr view <pr> --json body -q .body`), sin el prefijo de try.sh: ya
+3. Corré el comando de "Probar" del PR (está en "CUERPO DEL PR", al final de este prompt), sin el prefijo de try.sh: ya
    estás en un worktree de la rama, con el entorno activado y una base SQLite propia.
 4. Corré `python -m pytest -q -n 2 -m "not slow and not api and not oraculo"` y, sola, `python -m pytest -q -m oraculo`.
 5. Corré las tres referencias de M1 y verificá que no cambian: rsi/spy-90d 340 trades y PnL 4571.27;
