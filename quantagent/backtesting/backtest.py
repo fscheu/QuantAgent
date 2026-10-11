@@ -254,6 +254,7 @@ class Backtest:
                 "max_position_pct": self.config.get("max_position_pct", settings.TRADING_MAX_POSITION_PCT),
                 "slippage_pct": self.config.get("slippage_pct", settings.TRADING_SLIPPAGE_PCT),
                 "commission_pct": self.config.get("commission_pct", settings.TRADING_COMMISSION_PCT),
+                "regla_tamano": self.config.get("regla_tamano", "confianza"),
                 # Normalize model fields into generic ones; accept both
                 "model_provider": self.config.get(
                     "agent_llm_provider", self.config.get("model_provider", settings.AGENT_LLM_PROVIDER)
@@ -696,6 +697,7 @@ class Backtest:
                 "max_position_pct": self.config.get("max_position_pct", settings.TRADING_MAX_POSITION_PCT),
                 "slippage_pct": self.config.get("slippage_pct", settings.TRADING_SLIPPAGE_PCT),
                 "commission_pct": self.config.get("commission_pct", settings.TRADING_COMMISSION_PCT),
+                "regla_tamano": self.config.get("regla_tamano", "confianza"),
                 "model_provider": self.config.get(
                     "agent_llm_provider", self.config.get("model_provider", settings.AGENT_LLM_PROVIDER)
                 ),
@@ -710,7 +712,7 @@ class Backtest:
             },
             environment=Environment.BACKTEST,
         )
-        return StrategyAssembler.config_snapshot(resolved)
+        return {**StrategyAssembler.config_snapshot(resolved), "regla_tamano": resolved.regla_tamano}
 
     def _get_date_range(self) -> List[datetime]:
         """
