@@ -1,6 +1,6 @@
 # QuantAgent-7nle — De dónde salen las velas al operar en paper (M3)
 
-Estado: **propuesta**, 2026-10-11. Decide Fede. No cambia código. Relacionado: [iuf (datos de M2)](./QuantAgent-iuf-DC-datos-m2.md), fila V39a de `docs/02_planning/QuantAgent-lp1-PL-m2-validacion-datos-reales.md` (§11, línea 303). Alcance: solo la cuenta gratuita de Alpaca; sin suscripciones ni depósito mínimo. El backtest y sus snapshots no se tocan.
+Estado: **decidido** por Fede el 2026-10-12 (`R:` del PR #116); las decisiones están al final, en "Decisiones de Fede". Propuesta del 2026-10-11. No cambia código. Relacionado: [iuf (datos de M2)](./QuantAgent-iuf-DC-datos-m2.md), fila V39a de `docs/02_planning/QuantAgent-lp1-PL-m2-validacion-datos-reales.md` (§11, línea 303). Alcance: solo la cuenta gratuita de Alpaca; sin suscripciones ni depósito mínimo. El backtest y sus snapshots no se tocan.
 
 ## Resumen
 
@@ -131,3 +131,44 @@ Orden: T1→T2→T3; T4→T5; T6, T7 después de T2; T9 antes de T8. Costo de la
 - Que 1e-4 sea un umbral adecuado para detectar ajuste.
 
 Índice: [docs/04_decisions/README.md](./README.md)
+
+## Decisiones de Fede (2026-10-12)
+
+Tomadas en la `R:` del PR #116 y confirmadas en la sesión del PM el mismo día. Lo de arriba queda como se propuso; esta sección manda donde difiera.
+
+| # | Pregunta | Decisión |
+|---|---|---|
+| 1 | Fuente de operación | Alpaca, feed SIP con `end` a 15 minutos; Yahoo queda de respaldo y para desarrollar sin claves |
+| 2 | Arquitectura | Opción A: proveedor abstracto `CandleSource` |
+| 3 | Convivencia | Columna `source` en `market_data`; incluye filtrar `source` en las dos consultas del backtest (`backtest.py:762` y `968`) |
+| 4 | Ajuste para operar | `adjustment=split` |
+| 5 | Cripto en paper | Afuera por ahora |
+| 6 | T9 y V39a | Se hacen juntos, en un solo ticket |
+
+Zona horaria (§5): UTC con zona en la frontera de cada fuente y UTC sin zona en la base, como se propuso.
+
+Tickets en BEADS (label `m3`; todavía no están en la cola de `PLAN-CONTINUACION.md` §4, se copian al abrir su lote):
+
+| Ticket | BEADS | Qué |
+|---|---|---|
+| T1 | `QuantAgent-qix2` | Interfaz `CandleSource` y `YahooSource` |
+| T2 | `QuantAgent-br4h` | `DataProvider` delega en la fuente |
+| T3 | `QuantAgent-vr3z` | Elegir la fuente por configuración |
+| T4 | `QuantAgent-1y0i` | Columna `source` y clave única |
+| T5 | `QuantAgent-lrf8` | Leer y escribir por fuente, backtest incluido |
+| T6 | `QuantAgent-gjmf` | Velas cerradas y UTC en la parte común |
+| T7 | `QuantAgent-01kb` | Detección de ajuste retroactivo |
+| T9 | `QuantAgent-jpms` | `AlpacaSource`, solo datos (es la fila V39a del plan de M2) |
+| T8 | `QuantAgent-v38v` | Medición con claves reales |
+
+Dependencias: T1 → T2 → T3; T4 y T2 → T5; T2 → T6 y T7; T9 → T8.
+
+Pendiente de ordenar: V39a está en el lote 5 de M2 y T1 es de M3. Si T9 se hace antes que T1, `AlpacaSource` define los tres métodos de la interfaz sin importar el protocolo (así quedó escrito en el ticket).
+
+### Novedades del 2026-10-12, sin medir
+
+- Fede tiene claves de Alpaca para paper trading. Según la [página de autenticación de Alpaca](https://docs.alpaca.markets/docs/authentication), las mismas claves de paper autentican contra `data.alpaca.markets`: no hace falta otra clave ni otra suscripción.
+- La documentación se contradice sobre si una cuenta que es solo de paper puede pedir histórico SIP: la [página de paper](https://docs.alpaca.markets/docs/paper-trading) habla de datos IEX y la [de planes](https://docs.alpaca.markets/docs/about-market-data-api) de SIP con 15 minutos de demora en el plan gratuito. Fede entiende que la cuenta alcanza; T8 lo deja medido.
+- Para T9 se usa un cliente propio sobre `requests` y no el SDK `alpaca-py`: es un solo endpoint y `requests` ya es dependencia. El SDK se reevalúa en M3, para órdenes y cuenta.
+- El soporte de Alpaca indica que sus datos no se pueden redistribuir: ningún PR ni snapshot versionado lleva velas de Alpaca.
+- Sugerencia del PM incluida en T8: comparar señales de las estrategias diarias con `split` contra `all`, porque el backtest usa precios ajustados por dividendos y esa diferencia no está medida.
