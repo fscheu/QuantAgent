@@ -54,6 +54,10 @@ RESERVA_ENV = "QUANTAGENT_RESERVA_DESDE"
 RESERVA_DEFAULT = "2023-01-01"
 RESERVA_LOG = "reserva-accesos.log"
 
+PRUEBA_ENV = "QUANTAGENT_PRUEBA_DESDE"
+PRUEBA_DEFAULT = "2019-01-01"
+PRUEBA_LOG = "prueba-accesos.log"
+
 
 def _reserva_desde() -> datetime:
     value = os.environ.get(RESERVA_ENV, RESERVA_DEFAULT)
@@ -63,10 +67,34 @@ def _reserva_desde() -> datetime:
         raise click.ClickException(f"{RESERVA_ENV}={value!r} no es una fecha YYYY-MM-DD")
 
 
+def _prueba_desde(reserva: Optional[datetime] = None) -> datetime:
+    value = os.environ.get(PRUEBA_ENV)
+    if value is not None:
+        try:
+            return datetime.strptime(value, "%Y-%m-%d")
+        except ValueError:
+            raise click.ClickException(f"{PRUEBA_ENV}={value!r} no es una fecha YYYY-MM-DD")
+    if reserva is not None and RESERVA_ENV in os.environ:
+        try:
+            reserva_dt = datetime.strptime(os.environ[RESERVA_ENV], "%Y-%m-%d")
+            if reserva_dt > datetime.strptime(RESERVA_DEFAULT, "%Y-%m-%d"):
+                return reserva
+        except ValueError:
+            pass
+    return datetime.strptime(PRUEBA_DEFAULT, "%Y-%m-%d")
+
+
 def _registrar_apertura(comando: str) -> None:
     """Agrega fecha y comando a `$QUANTAGENT_SNAPSHOT_DIR/reserva-accesos.log`."""
     ahora = datetime.now(timezone.utc).isoformat(timespec="seconds")
     with (snapshot_root() / RESERVA_LOG).open("a") as f:
+        f.write(f"{ahora}\t{comando}\n")
+
+
+def _registrar_apertura_prueba(comando: str) -> None:
+    """Agrega fecha y comando a `$QUANTAGENT_SNAPSHOT_DIR/prueba-accesos.log`."""
+    ahora = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    with (snapshot_root() / PRUEBA_LOG).open("a") as f:
         f.write(f"{ahora}\t{comando}\n")
 
 
@@ -79,25 +107,40 @@ def _resolve_source_and_meta(
     from_date: Optional[datetime],
     to_date: Optional[datetime],
     abrir_reserva: bool,
+    abrir_prueba: bool = False,
 ):
     if bool(fixture_name) == bool(snapshot_name):
         raise click.UsageError("Indicá exactamente uno: --fixture o --snapshot.")
     if snapshot_name and not symbol:
         raise click.UsageError("--snapshot requiere --symbol.")
-    if fixture_name and (symbol or from_date or to_date or abrir_reserva):
-        raise click.UsageError("--symbol, --from, --to y --abrir-reserva solo se usan con --snapshot.")
-    abriendo = False
+    if fixture_name and (symbol or from_date or to_date or abrir_reserva or abrir_prueba):
+        raise click.UsageError("--symbol, --from, --to, --abrir-reserva y --abrir-prueba solo se usan con --snapshot.")
+    abriendo_reserva = False
+    abriendo_prueba = False
     if snapshot_name:
         reserva = _reserva_desde()
+        prueba = _prueba_desde(reserva)
         if to_date is None:
-            to_date = reserva - timedelta(days=1)
+            to_date = prueba - timedelta(days=1)
+            click.echo(
+                f"Aviso: sin --to, se asume fin en {to_date:%Y-%m-%d} "
+                f"(el tramo de prueba empieza el {prueba:%Y-%m-%d}).",
+                err=True,
+            )
         elif to_date >= reserva:
             if not abrir_reserva:
                 raise click.ClickException(
                     f"--to {to_date:%Y-%m-%d} cae en la reserva, que empieza el {reserva:%Y-%m-%d}: "
                     "ninguna corrida la lee. Para abrirla, --abrir-reserva (queda registrado)."
                 )
-            abriendo = True
+            abriendo_reserva = True
+        elif to_date >= prueba:
+            if not abrir_prueba:
+                raise click.ClickException(
+                    f"--to {to_date:%Y-%m-%d} cae en el tramo de prueba, que empieza el {prueba:%Y-%m-%d}: "
+                    "para abrirlo, --abrir-prueba (queda registrado)."
+                )
+            abriendo_prueba = True
     try:
         if snapshot_name:
             symbol = symbol.upper()
@@ -109,11 +152,16 @@ def _resolve_source_and_meta(
     except (SnapshotError, ValueError) as exc:
         raise click.ClickException(str(exc)) from exc
 
-    if abriendo:
+    if abriendo_reserva:
         partes = [f"backtest {subcommand} --strategy {strategy_name} --snapshot {snapshot_name} --symbol {symbol}"]
         partes += [f"--from {from_date:%Y-%m-%d}"] if from_date else []
         partes += [f"--to {to_date:%Y-%m-%d} --abrir-reserva"]
         _registrar_apertura(" ".join(partes))
+    elif abriendo_prueba:
+        partes = [f"backtest {subcommand} --strategy {strategy_name} --snapshot {snapshot_name} --symbol {symbol}"]
+        partes += [f"--from {from_date:%Y-%m-%d}"] if from_date else []
+        partes += [f"--to {to_date:%Y-%m-%d} --abrir-prueba"]
+        _registrar_apertura_prueba(" ".join(partes))
 
     return meta, symbol, to_date
 
@@ -344,6 +392,12 @@ def backtest_group() -> None:
     help="Permite que --to llegue a la reserva (desde $QUANTAGENT_RESERVA_DESDE, default 2023-01-01). Queda registrado.",
 )
 @click.option(
+    "--abrir-prueba",
+    "abrir_prueba",
+    is_flag=True,
+    help="Permite que --to llegue al tramo de prueba (desde $QUANTAGENT_PRUEBA_DESDE, default 2019-01-01). Queda registrado.",
+)
+@click.option(
     "--out",
     "out_path",
     type=click.Path(dir_okay=False, writable=True),
@@ -387,6 +441,7 @@ def run_backtest(
     from_date: Optional[datetime],
     to_date: Optional[datetime],
     abrir_reserva: bool,
+    abrir_prueba: bool,
     out_path: Optional[str],
     equity_out_path: Optional[str],
     verbose: bool,
@@ -406,6 +461,7 @@ def run_backtest(
         from_date,
         to_date,
         abrir_reserva,
+        abrir_prueba,
     )
 
     r = correr_par(
@@ -560,6 +616,12 @@ def _run_verify_pass(
     help="Permite que --to llegue a la reserva (desde $QUANTAGENT_RESERVA_DESDE, default 2023-01-01). Queda registrado.",
 )
 @click.option(
+    "--abrir-prueba",
+    "abrir_prueba",
+    is_flag=True,
+    help="Permite que --to llegue al tramo de prueba (desde $QUANTAGENT_PRUEBA_DESDE, default 2019-01-01). Queda registrado.",
+)
+@click.option(
     "--verbose",
     is_flag=True,
     help="Also show engine warnings on stderr.",
@@ -586,6 +648,7 @@ def verify_backtest(
     from_date: Optional[datetime],
     to_date: Optional[datetime],
     abrir_reserva: bool,
+    abrir_prueba: bool,
     verbose: bool,
     commission_pct: Optional[float],
     costos: Optional[str],
@@ -604,6 +667,7 @@ def verify_backtest(
         from_date,
         to_date,
         abrir_reserva,
+        abrir_prueba,
     )
 
     m1, s1, csv1 = _run_verify_pass(
@@ -685,24 +749,39 @@ COMPARE_COLUMNS = [
 @click.option("--tamano-posicion", "tamano_posicion", type=click.FloatRange(min=0.0, max=1.0, min_open=True), default=1.0)
 @click.option("--regla-tamano", "regla_tamano", type=click.Choice(PositionSizer.REGLAS), default=None)
 @click.option("--abrir-reserva", "abrir_reserva", is_flag=True, help="Permite abrir la reserva.")
+@click.option("--abrir-prueba", "abrir_prueba", is_flag=True, help="Permite abrir el tramo de prueba.")
 @click.option("--out", "out_path", required=True, type=click.Path(dir_okay=False, writable=True), help="CSV de salida.")
 @click.option("--trades-dir", "trades_dir", type=click.Path(file_okay=False, writable=True), default=None)
 def compare_backtests(
     strategies: str, symbols: str, snapshot_name: str, from_date: Optional[datetime],
     to_date: Optional[datetime], costos: Optional[str], tamano_posicion: Optional[float],
-    regla_tamano: Optional[str], abrir_reserva: bool, out_path: str, trades_dir: Optional[str],
+    regla_tamano: Optional[str], abrir_reserva: bool, abrir_prueba: bool, out_path: str, trades_dir: Optional[str],
 ) -> None:
     reserva = _reserva_desde()
-    abriendo = False
+    prueba = _prueba_desde(reserva)
+    abriendo_reserva = False
+    abriendo_prueba = False
     if to_date is None:
-        to_date = reserva - timedelta(days=1)
+        to_date = prueba - timedelta(days=1)
+        click.echo(
+            f"Aviso: sin --to, se asume fin en {to_date:%Y-%m-%d} "
+            f"(el tramo de prueba empieza el {prueba:%Y-%m-%d}).",
+            err=True,
+        )
     elif to_date >= reserva:
         if not abrir_reserva:
             raise click.ClickException(
                 f"--to {to_date:%Y-%m-%d} cae en la reserva, que empieza el {reserva:%Y-%m-%d}: "
                 "ninguna corrida la lee. Para abrirla, --abrir-reserva (queda registrado)."
             )
-        abriendo = True
+        abriendo_reserva = True
+    elif to_date >= prueba:
+        if not abrir_prueba:
+            raise click.ClickException(
+                f"--to {to_date:%Y-%m-%d} cae en el tramo de prueba, que empieza el {prueba:%Y-%m-%d}: "
+                "para abrirlo, --abrir-prueba (queda registrado)."
+            )
+        abriendo_prueba = True
 
     strats = [s.strip() for s in strategies.split(",") if s.strip()]
     syms = [s.strip().upper() for s in symbols.split(",") if s.strip()]
@@ -716,12 +795,18 @@ def compare_backtests(
         if s not in aliases:
             raise click.UsageError(f"Estrategia desconocida: '{s}'. Opciones: {', '.join(sorted(aliases))}")
 
-    if abriendo:
+    if abriendo_reserva:
         partes = [f"backtest compare --strategies {strategies} --symbols {symbols} --snapshot {snapshot_name}"]
         if from_date:
             partes.append(f"--from {from_date:%Y-%m-%d}")
         partes.append(f"--to {to_date:%Y-%m-%d} --abrir-reserva")
         _registrar_apertura(" ".join(partes))
+    elif abriendo_prueba:
+        partes = [f"backtest compare --strategies {strategies} --symbols {symbols} --snapshot {snapshot_name}"]
+        if from_date:
+            partes.append(f"--from {from_date:%Y-%m-%d}")
+        partes.append(f"--to {to_date:%Y-%m-%d} --abrir-prueba")
+        _registrar_apertura_prueba(" ".join(partes))
 
     config = _engine_config(None, costos, tamano_posicion, regla_tamano)
     if trades_dir:

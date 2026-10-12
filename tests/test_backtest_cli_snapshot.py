@@ -70,8 +70,8 @@ def test_snapshot_da_lo_mismo_que_el_fixture_del_que_sale(snap_env):
     write_snapshot("t", {"SPY": _daily_frame()})
     by_snapshot = _run(runner, "--snapshot", "t", "--symbol", "SPY")
     assert by_snapshot.exit_code == 0, by_snapshot.output
-    assert len(by_snapshot.output.strip().splitlines()) == 14
-    assert _metrics(by_snapshot.output) == ("Trades: 6", "Total PnL: -249.35")
+    assert len(by_snapshot.stdout.strip().splitlines()) == 14
+    assert _metrics(by_snapshot.stdout) == ("Trades: 6", "Total PnL: -249.35")
 
 
 def test_carga_velas_ajustadas_y_solo_las_del_rango(snap_env):
@@ -183,6 +183,7 @@ def test_abrir_reserva_con_to_anterior_no_es_una_apertura(snap_env, monkeypatch,
 
 def test_abrir_reserva_con_fixture_es_error_de_uso(snap_env):
     assert _run(snap_env[0], "--fixture", DAILY, "--abrir-reserva").exit_code == 2
+    assert _run(snap_env[0], "--fixture", DAILY, "--abrir-prueba").exit_code == 2
 
 
 def _verify(runner, *args):
@@ -194,7 +195,7 @@ def test_verify_snapshot_imprime_ok_reproducible(snap_env):
     write_snapshot("t", {"SPY": _daily_frame()})
     result = _verify(runner, "--snapshot", "t", "--symbol", "SPY")
     assert result.exit_code == 0, result.output
-    assert result.output.strip() == "OK reproducible"
+    assert result.stdout.strip() == "OK reproducible"
 
 
 def test_verify_snapshot_respeta_reserva_y_registra_apertura(snap_env, monkeypatch, tmp_path):
@@ -307,3 +308,76 @@ def test_compare_reserva_bloquea_y_no_escribe_csv(snap_env, monkeypatch, tmp_pat
     )
     assert res.exit_code == 1 and "reserva" in res.output
     assert not out_csv.exists()
+
+
+LOG_PRUEBA = "prueba-accesos.log"
+
+
+def _multiyear_frame() -> pd.DataFrame:
+    df = pd.concat([_daily_frame(), _daily_frame()]).iloc[:600].copy()
+    df.index = pd.date_range("2018-01-01", periods=len(df), freq="B")
+    return df
+
+
+def test_sin_to_no_lee_desde_prueba_y_stderr_trae_aviso(snap_env, monkeypatch, tmp_path):
+    runner, engine = snap_env
+    monkeypatch.delenv("QUANTAGENT_PRUEBA_DESDE", raising=False)
+    monkeypatch.delenv("QUANTAGENT_RESERVA_DESDE", raising=False)
+    write_snapshot("p", {"SPY": _multiyear_frame()})
+
+    res_run = _run(runner, "--snapshot", "p", "--symbol", "SPY")
+    assert res_run.exit_code == 0, res_run.output
+    assert "Aviso: sin --to" in res_run.stderr
+    assert "2018-12-31" in res_run.stderr
+    with Session(engine) as session:
+        last = max(row.timestamp for row in session.query(MarketData))
+    assert last == datetime(2018, 12, 31)
+
+    out_csv = tmp_path / "cmp_p.csv"
+    res_cmp = _compare(
+        runner,
+        "--strategies", "fifty-two-week-high",
+        "--symbols", "SPY",
+        "--snapshot", "p",
+        "--out", str(out_csv),
+    )
+    assert res_cmp.exit_code == 0, res_cmp.output
+    assert "Aviso: sin --to" in res_cmp.stderr
+    assert "2018-12-31" in res_cmp.stderr
+    with out_csv.open() as f:
+        rows = list(csv.DictReader(f))
+    assert rows[0]["hasta"] == "2018-12-31"
+
+
+def test_to_en_prueba_sin_flag_sale_con_1_y_con_flag_registra(snap_env, monkeypatch, tmp_path):
+    runner, engine = snap_env
+    monkeypatch.delenv("QUANTAGENT_PRUEBA_DESDE", raising=False)
+    monkeypatch.delenv("QUANTAGENT_RESERVA_DESDE", raising=False)
+    write_snapshot("p", {"SPY": _multiyear_frame()})
+    log = tmp_path / "snaps" / LOG_PRUEBA
+
+    blocked = _run(runner, "--snapshot", "p", "--symbol", "SPY", "--to", "2020-01-01")
+    assert blocked.exit_code == 1
+    assert "2020-01-01" in blocked.output and "prueba" in blocked.output
+    assert not log.exists()
+
+    opened = _run(runner, "--snapshot", "p", "--symbol", "SPY", "--to", "2020-01-01", "--abrir-prueba")
+    assert opened.exit_code == 0, opened.output
+    assert log.exists()
+    lines = log.read_text().splitlines()
+    assert len(lines) == 1
+    fecha, comando = lines[0].split("\t")
+    assert abs((datetime.now(timezone.utc) - datetime.fromisoformat(fecha)).total_seconds()) < 300
+    assert "--snapshot p --symbol SPY --to 2020-01-01 --abrir-prueba" in comando
+
+
+def test_salida_estandar_sin_aviso_cuando_se_pasa_to(snap_env, monkeypatch):
+    runner, _ = snap_env
+    monkeypatch.delenv("QUANTAGENT_PRUEBA_DESDE", raising=False)
+    monkeypatch.delenv("QUANTAGENT_RESERVA_DESDE", raising=False)
+    write_snapshot("p", {"SPY": _multiyear_frame()})
+
+    res = _run(runner, "--snapshot", "p", "--symbol", "SPY", "--to", "2018-12-31")
+    assert res.exit_code == 0, res.output
+    assert "Aviso: sin --to" not in res.stderr
+    assert "Aviso: sin --to" not in res.stdout
