@@ -1,6 +1,7 @@
 """`backtest run --snapshot` (V07). Usa un snapshot armado en tmp_path a partir de un fixture; sin red ni snapshot real."""
 
 import csv
+import math
 from datetime import datetime, timezone
 
 import pandas as pd
@@ -224,11 +225,15 @@ def _compare(runner, *args):
 
 
 def test_compare_snapshot_arma_csv_e_imprime_tabla(snap_env, tmp_path):
+    from quantagent.backtesting.export import trades_to_csv
     from quantagent.backtesting.fixtures import snapshot_metadata
     from quantagent.cli.backtest import _engine_config, correr_par
 
     runner, _ = snap_env
-    write_snapshot("t", {"SPY": _daily_frame(), "IWM": _daily_frame()})
+    spy_frame = _daily_frame()
+    iwm_frame = _daily_frame().iloc[20:].copy()
+    iwm_frame[["open", "high", "low", "close", "adj_close"]] += 50.0
+    write_snapshot("t", {"SPY": spy_frame, "IWM": iwm_frame})
     out_csv = tmp_path / "cmp.csv"
     trades_dir = tmp_path / "trades"
     res = _compare(
@@ -247,17 +252,46 @@ def test_compare_snapshot_arma_csv_e_imprime_tabla(snap_env, tmp_path):
     assert (trades_dir / "rsi-SPY.csv").exists()
     assert (trades_dir / "fifty-two-week-high-IWM.csv").exists()
 
+    spy_rows = {r["estrategia"]: r for r in rows if r["activo"] == "SPY"}
+    iwm_rows = {r["estrategia"]: r for r in rows if r["activo"] == "IWM"}
+    for strat in ["rsi", "fifty-two-week-high"]:
+        assert {k: v for k, v in spy_rows[strat].items() if k != "activo"} != {
+            k: v for k, v in iwm_rows[strat].items() if k != "activo"
+        }
+        assert spy_rows[strat]["desde"] != iwm_rows[strat]["desde"]
+        assert spy_rows[strat]["bh_pnl"] != iwm_rows[strat]["bh_pnl"]
+
     to_dt = datetime(2024, 9, 30)
+    redondeos = {
+        "win_rate": 4, "sharpe": 2, "pnl": 2, "max_drawdown": 6,
+        "bh_pnl": 2, "bh_sharpe": 2, "bh_max_drawdown": 6,
+        "retorno_anualizado": 4, "exceso_sobre_referencia": 4,
+        "tiempo_en_mercado": 4, "capital_invertido_medio": 4,
+        "sharpe_tasa_0": 2,
+    }
     for row in rows:
         meta = snapshot_metadata("t", row["activo"], None, to_dt)
         r = correr_par(
             row["estrategia"], meta, _engine_config(None, None, 1.0), None,
-            None, "t", row["activo"], None, to_dt,
+            None, "t", row["activo"], None, to_dt, con_filas=True,
         )
+        assert row["desde"] == f"{meta.start_date:%Y-%m-%d}"
+        assert row["hasta"] == f"{meta.end_date:%Y-%m-%d}"
         assert int(row["trades"]) == r["trades"]
-        assert float(row["pnl"]) == round(r["pnl"], 2)
-        assert float(row["win_rate"]) == round(r["win_rate"], 4)
-        assert float(row["sharpe"]) == round(r["sharpe"], 2)
+        for col, dec in redondeos.items():
+            val = r[col]
+            if val is None:
+                assert row[col] == ""
+            else:
+                assert float(row[col]) == round(val, dec)
+        pf = r["profit_factor"]
+        if pf is None or math.isinf(pf):
+            assert row["profit_factor"] == ""
+        else:
+            assert float(row["profit_factor"]) == round(pf, 2)
+
+        trades_file = trades_dir / f"{row['estrategia']}-{row['activo']}.csv"
+        assert trades_file.read_bytes().decode() == trades_to_csv(r["filas"])
 
 
 def test_compare_reserva_bloquea_y_no_escribe_csv(snap_env, monkeypatch, tmp_path):
