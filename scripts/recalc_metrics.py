@@ -101,6 +101,23 @@ def annual_return(first, last, t0, t1):
     return (last / first) ** (1 / years) - 1 if years > 0 else 0.0
 
 
+def worst_day(rows):
+    daily = {}
+    for r in rows:
+        ts = r.get("timestamp") or r.get("date")
+        day = str(ts)[:10]
+        daily[day] = float(r["equity"])
+    days = list(daily.items())
+    drops = [
+        ((curr - prev) / prev, day)
+        for (_, prev), (day, curr) in zip(days, days[1:])
+        if prev > 0 and curr < prev
+    ]
+    if not drops:
+        return 0.0, None
+    return min(drops, key=lambda x: x[0])
+
+
 def recalc_exposure(path):
     with open(path, newline="") as f:
         rows = [r for r in csv.DictReader(f) if r.get("equity")]
@@ -112,6 +129,7 @@ def recalc_exposure(path):
         "annual_return": annual_return(eq[0], eq[-1], rows[0]["timestamp"], rows[-1]["timestamp"]),
         "in_market": sum(v != 0 for v in pv) / len(pv),
         "invested": sum(abs(v) / e for v, e in zip(pv, eq)) / len(pv),
+        "worst_day": worst_day(rows),
     }
 
 
@@ -197,5 +215,10 @@ if __name__ == "__main__":
         print(f"Tiempo en mercado: {ex['in_market']:.2%}")
         print(f"Capital invertido medio: {ex['invested']:.2%}")
         print(f"Sharpe (tasa 0): {recalc_equity(args.equity, args.periods_per_year, 0.0)['sharpe']:.2f}")
+        peor_pct, peor_fecha = ex["worst_day"]
+        if peor_pct < 0 and peor_fecha:
+            print(f"Peor día: {peor_pct:.2%} ({peor_fecha})")
+        else:
+            print("Peor día: 0.00%")
     if m and m["matched"] != m["trades"]:
         sys.exit(1)

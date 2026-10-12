@@ -77,8 +77,6 @@ def test_circuit_breaker_stops_trading_for_the_rest_of_the_candle_day(db_session
     assert [ts for ts in strategy.daily_pnl_seen if ts.date() == DAY1[0].date()] == DAY1
 
 
-@pytest.mark.xfail(strict=True, reason="QuantAgent-cub: get_daily_pnl filtra por date.today() (reloj), no "
-                   "por el día de la vela: en backtest la pérdida realizada del día siempre da 0")
 def test_get_daily_pnl_counts_the_loss_realized_on_the_candle_day(db_session):
     # Comportamiento correcto: en la vela del stop, la pérdida del día según el risk manager es -800.
     _, strategy, _ = _run(db_session)
@@ -133,3 +131,35 @@ def test_close_is_executed_when_the_position_took_almost_all_the_cash(db_session
     assert [(t.opened_at, t.closed_at, float(t.quantity)) for t in trades] == [(DAY1[0], DAY2[-1], 990.0)]
     assert bt.portfolio.positions["SPY"]["qty"] == 0.0
     assert bt.portfolio.cash == pytest.approx(100000.0)
+
+
+def test_daily_loss_limit_does_not_block_trades_in_1d_timeframe(db_session):
+    # QuantAgent-j422 (V21a): en backtest diario (1d) el límite de pérdida diaria y el circuit
+    # breaker están apagados (decisión de Fede). La misma pérdida que en 1h bloquea trades, en 1d no frena nada.
+    day1 = datetime(2018, 3, 5)
+    day2 = datetime(2018, 3, 6)
+    day3 = datetime(2018, 3, 7)
+    day4 = datetime(2018, 3, 8)
+    for ts in [day1, day2, day3, day4]:
+        crash = ts == day2
+        db_session.add(MarketData(symbol="SPY", timeframe="1d", timestamp=ts, open=Decimal(100),
+                                  high=Decimal(101), low=Decimal(90 if crash else 99),
+                                  close=Decimal(100), volume=Decimal(1000)))
+    db_session.commit()
+    strategy = AlwaysLong()
+    bt = Backtest(start_date=day1, end_date=day4, assets=["SPY"], timeframe="1d",
+                  db_session=db_session, strategy=strategy, intrabar_stops=True,
+                  config={"market_hours_filter": False, "offline_data": True, "slippage_pct": 0.0,
+                          "base_position_pct": 0.10, "max_position_pct": 0.20, "max_daily_loss_pct": 0.005})
+    strategy.bt = bt
+    bt.run(name="limite-diario-1d")
+    trades = db_session.query(Trade).filter(Trade.backtest_run_id == bt.backtest_run_id).order_by(Trade.id).all()
+    # Trade 1 entra en day1 y sale en day2 por stop a 92 perdiendo 800 USD (> límite de 500 USD).
+    # Con el límite apagado en 1d, la nueva entrada pedida en day2 se ejecuta de inmediato (en intradía
+    # el circuit breaker la habría bloqueado por el resto del día). Cierra en day4 a fin de corrida.
+    assert [(t.opened_at, t.closed_at, float(t.pnl)) for t in trades] == [
+        (day1, day2, -800.0),
+        (day2, day4, 0.0),
+    ]
+    assert bt.order_manager.risk_manager.circuit_breaker_triggered is False
+

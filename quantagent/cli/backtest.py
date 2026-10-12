@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import logging
 import math
 import os
@@ -12,9 +13,11 @@ from typing import Optional
 import click
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from tabulate import tabulate
 
+from quantagent import settings
 from quantagent.backtesting.backtest import Backtest
-from quantagent.backtesting.buy_and_hold import annual_return, buy_and_hold, exposure
+from quantagent.backtesting.buy_and_hold import annual_return, buy_and_hold, exposure, worst_day
 from quantagent.backtesting.export import TradeRow, equity_to_csv, trades_to_csv
 from quantagent.backtesting.fixtures import (
     FixtureMetadata,
@@ -25,23 +28,26 @@ from quantagent.backtesting.fixtures import (
 )
 from quantagent.data.snapshot import SnapshotError, snapshot_root
 from quantagent.models import ActivePosition, MarketData, Trade
-from quantagent import settings
 from quantagent.settings import COSTOS_PERFILES
-from quantagent.strategy.registry import build_strategy
+from quantagent.strategy.registry import build_strategy, cli_aliases
 from quantagent.trading.position_sizer import PositionSizer
 
 from . import utils
 
-# CLI-friendly short names for the deterministic strategies. LLMAgentStrategy is
-# excluded: it needs live model credentials, so it doesn't fit a fixture-based,
-# credential-free `backtest run`.
-STRATEGY_ALIASES = {
-    "rsi": "RSIMeanReversionStrategy",
-    "fifty-two-week-high": "FiftyTwoWeekHighStrategy",
-    "triple-screen": "TripleScreenStrategy",
-    "sma-cross": "SmaCrossStrategy",
-    "momentum-12m": "Momentum12mStrategy",
-}
+
+class _AliasChoice(click.Choice):
+    """Choice over the registry's CLI aliases, read at parse time so late registrations count."""
+
+    def __init__(self) -> None:
+        super().__init__(())
+
+    @property
+    def choices(self):
+        return sorted(cli_aliases())
+
+    @choices.setter
+    def choices(self, _value) -> None:
+        pass
 
 
 RESERVA_ENV = "QUANTAGENT_RESERVA_DESDE"
@@ -179,6 +185,136 @@ def _extract_trade_rows(session: Session, backtest_run_id: int) -> list[TradeRow
     ]
 
 
+def correr_par(
+    strategy_name: str,
+    meta: FixtureMetadata,
+    config: dict,
+    costos: Optional[str],
+    fixture_name: Optional[str],
+    snapshot_name: Optional[str],
+    symbol: Optional[str],
+    from_date: Optional[datetime],
+    to_date: Optional[datetime],
+    intrabar_stops: bool = True,
+    verbose: bool = False,
+    con_filas: bool = False,
+) -> dict:
+    """Corre un par estrategia/activo y devuelve los números del resumen de `backtest run`.
+
+    Claves: trades, win_rate, profit_factor (None o inf si no hay pérdidas), sharpe, pnl,
+    slippage_pct, comision_pct, costos (nombre del perfil o None), tamano_pct (None si no se
+    pidió tamaño), regla_tamano (None si no se pidió), bh_pnl, bh_sharpe, bh_max_drawdown,
+    retorno_anualizado, exceso_sobre_referencia, tiempo_en_mercado, capital_invertido_medio,
+    sharpe_tasa_0, peor_dia (estas seis son None si no hay curva de equity), max_drawdown,
+    equity_curve y filas (TradeRow; vacía salvo con con_filas=True).
+    """
+    with utils.session_scope() as session:
+        existing_count = (
+            session.query(MarketData)
+            .filter(
+                MarketData.symbol == meta.symbol,
+                MarketData.timeframe == meta.timeframe,
+                MarketData.timestamp >= meta.start_date,
+                MarketData.timestamp <= meta.end_date,
+            )
+            .count()
+        )
+        if existing_count == 0:
+            if snapshot_name:
+                load_snapshot(session, snapshot_name, symbol, from_date, to_date)
+            else:
+                load_fixture(session, fixture_name)
+        elif existing_count != meta.row_count:
+            raise click.ClickException(
+                f"La base tiene otros datos para {meta.symbol} {meta.timeframe} en el rango "
+                f"del {'snapshot' if snapshot_name else 'fixture'} ({existing_count} filas, se esperaban {meta.row_count}): "
+                "usá una base limpia."
+            )
+
+        bt = Backtest(
+            start_date=meta.start_date,
+            end_date=meta.end_date,
+            assets=[meta.symbol],
+            timeframe=meta.timeframe,
+            # Fixtures are versioned as continuous candles (every hour, no market-hours
+            # gaps), so filtering to real trading hours would misalign against them.
+            # offline_data avoids live yfinance calls for the lookback window before the
+            # fixture's first row -- the whole point of a fixture-based run is to be
+            # deterministic and network-free.
+            config=config,
+            db_session=session,
+            strategy=build_strategy(cli_aliases()[strategy_name]),
+            intrabar_stops=intrabar_stops,
+        )
+        # The lookback warm-up logs one "Insufficient data" warning per candle; keep the
+        # output to the metric lines unless --verbose asks for them.
+        engine_logger = logging.getLogger("quantagent.backtesting.backtest")
+        if not verbose:
+            engine_logger.addFilter(_hide_data_warnings)
+        try:
+            metrics = bt.run(name=f"cli-{strategy_name}-{fixture_name or snapshot_name}")
+        finally:
+            engine_logger.removeFilter(_hide_data_warnings)
+
+        slippage_pct = bt.order_manager.broker.slippage_pct
+        commission = bt.order_manager.broker.commission_pct
+        rows = _extract_trade_rows(session, bt.backtest_run_id) if con_filas else []
+        candles = (
+            session.query(MarketData.timestamp, MarketData.close)
+            .filter(
+                MarketData.symbol == meta.symbol,
+                MarketData.timeframe == meta.timeframe,
+                MarketData.timestamp >= meta.start_date,
+                MarketData.timestamp <= meta.end_date,
+            )
+            .order_by(MarketData.timestamp)
+            .all()
+        )
+        bh = buy_and_hold(
+            [c.timestamp for c in candles], [float(c.close) for c in candles],
+            bt.initial_capital, slippage_pct, commission,
+        )
+
+    curve = bt.equity_curve
+    r = {
+        "trades": metrics.total_trades,
+        "win_rate": metrics.win_rate,
+        "profit_factor": metrics.profit_factor,
+        "sharpe": metrics.sharpe_ratio,
+        "pnl": metrics.total_pnl,
+        "slippage_pct": slippage_pct,
+        "comision_pct": commission,
+        "costos": costos,
+        "tamano_pct": None,
+        "regla_tamano": None,
+        "bh_pnl": bh["pnl"],
+        "bh_sharpe": bh["sharpe"],
+        "bh_max_drawdown": bh["max_drawdown"],
+        "retorno_anualizado": None,
+        "exceso_sobre_referencia": None,
+        "tiempo_en_mercado": None,
+        "capital_invertido_medio": None,
+        "sharpe_tasa_0": None,
+        "peor_dia": None,
+        "max_drawdown": metrics.max_drawdown,
+        "equity_curve": curve,
+        "filas": rows,
+    }
+    if "base_position_pct" in config or "regla_tamano" in config:
+        r["tamano_pct"] = config.get("base_position_pct", settings.TRADING_BASE_POSITION_PCT)
+        r["regla_tamano"] = config.get("regla_tamano", "confianza")
+    if curve:
+        annual = annual_return(curve[0]["equity"], curve[-1]["equity"], curve[0]["date"], curve[-1]["date"])
+        in_market, invested = exposure(curve)
+        r["retorno_anualizado"] = annual
+        r["exceso_sobre_referencia"] = annual - bh["annual_return"]
+        r["tiempo_en_mercado"] = in_market
+        r["capital_invertido_medio"] = invested
+        r["sharpe_tasa_0"] = bt._calculate_sharpe_ratio(0.0)
+        r["peor_dia"] = worst_day(curve)
+    return r
+
+
 @click.group(help="Run deterministic backtests against versioned fixtures.")
 def backtest_group() -> None:
     """Root command group for backtest operations."""
@@ -189,7 +325,7 @@ def backtest_group() -> None:
     "--strategy",
     "strategy_name",
     required=True,
-    type=click.Choice(sorted(STRATEGY_ALIASES)),
+    type=_AliasChoice(),
     help="Strategy to run.",
 )
 @click.option(
@@ -272,99 +408,40 @@ def run_backtest(
         abrir_reserva,
     )
 
-    with utils.session_scope() as session:
-        existing_count = (
-            session.query(MarketData)
-            .filter(
-                MarketData.symbol == meta.symbol,
-                MarketData.timeframe == meta.timeframe,
-                MarketData.timestamp >= meta.start_date,
-                MarketData.timestamp <= meta.end_date,
-            )
-            .count()
-        )
-        if existing_count == 0:
-            if snapshot_name:
-                load_snapshot(session, snapshot_name, symbol, from_date, to_date)
-            else:
-                load_fixture(session, fixture_name)
-        elif existing_count != meta.row_count:
-            raise click.ClickException(
-                f"La base tiene otros datos para {meta.symbol} {meta.timeframe} en el rango "
-                f"del {'snapshot' if snapshot_name else 'fixture'} ({existing_count} filas, se esperaban {meta.row_count}): "
-                "usá una base limpia."
-            )
+    r = correr_par(
+        strategy_name, meta, config, costos, fixture_name, snapshot_name, symbol,
+        from_date, to_date, intrabar_stops, verbose, con_filas=bool(out_path),
+    )
+    rows = r["filas"]
 
-        bt = Backtest(
-            start_date=meta.start_date,
-            end_date=meta.end_date,
-            assets=[meta.symbol],
-            timeframe=meta.timeframe,
-            # Fixtures are versioned as continuous candles (every hour, no market-hours
-            # gaps), so filtering to real trading hours would misalign against them.
-            # offline_data avoids live yfinance calls for the lookback window before the
-            # fixture's first row -- the whole point of a fixture-based run is to be
-            # deterministic and network-free.
-            config=config,
-            db_session=session,
-            strategy=build_strategy(STRATEGY_ALIASES[strategy_name]),
-            intrabar_stops=intrabar_stops,
-        )
-        # The lookback warm-up logs one "Insufficient data" warning per candle; keep the
-        # output to the metric lines unless --verbose asks for them.
-        engine_logger = logging.getLogger("quantagent.backtesting.backtest")
-        if not verbose:
-            engine_logger.addFilter(_hide_data_warnings)
-        try:
-            metrics = bt.run(name=f"cli-{strategy_name}-{fixture_name or snapshot_name}")
-        finally:
-            engine_logger.removeFilter(_hide_data_warnings)
-
-        slippage_pct = bt.order_manager.broker.slippage_pct
-        commission = bt.order_manager.broker.commission_pct
-        rows = _extract_trade_rows(session, bt.backtest_run_id) if out_path else []
-        candles = (
-            session.query(MarketData.timestamp, MarketData.close)
-            .filter(
-                MarketData.symbol == meta.symbol,
-                MarketData.timeframe == meta.timeframe,
-                MarketData.timestamp >= meta.start_date,
-                MarketData.timestamp <= meta.end_date,
-            )
-            .order_by(MarketData.timestamp)
-            .all()
-        )
-        bh = buy_and_hold(
-            [c.timestamp for c in candles], [float(c.close) for c in candles],
-            bt.initial_capital, slippage_pct, commission,
-        )
-
-    click.echo(f"Trades: {metrics.total_trades}")
-    click.echo(f"Win rate: {metrics.win_rate:.2%}")
-    if metrics.profit_factor is None or math.isinf(metrics.profit_factor):
+    click.echo(f"Trades: {r['trades']}")
+    click.echo(f"Win rate: {r['win_rate']:.2%}")
+    if r["profit_factor"] is None or math.isinf(r["profit_factor"]):
         click.echo("Profit factor: n/a")
     else:
-        click.echo(f"Profit factor: {metrics.profit_factor:.2f}")
-    click.echo(f"Sharpe ratio: {metrics.sharpe_ratio:.2f}")
-    click.echo(f"Total PnL: {metrics.total_pnl:.2f}")
-    click.echo(f"Slippage: {slippage_pct * 100:.2f}% por lado")
-    click.echo(f"Comisión: {commission * 100:.2f}% por lado")
+        click.echo(f"Profit factor: {r['profit_factor']:.2f}")
+    click.echo(f"Sharpe ratio: {r['sharpe']:.2f}")
+    click.echo(f"Total PnL: {r['pnl']:.2f}")
+    click.echo(f"Slippage: {r['slippage_pct'] * 100:.2f}% por lado")
+    click.echo(f"Comisión: {r['comision_pct'] * 100:.2f}% por lado")
     if costos:
         click.echo(f"Costos: {costos}")
     _echo_tamano(config)
     click.echo(
-        f"Comprar y mantener: PnL {bh['pnl']:.2f}, Sharpe {bh['sharpe']:.2f}, "
-        f"max drawdown {bh['max_drawdown']:.6f}"
+        f"Comprar y mantener: PnL {r['bh_pnl']:.2f}, Sharpe {r['bh_sharpe']:.2f}, "
+        f"max drawdown {r['bh_max_drawdown']:.6f}"
     )
-    curve = bt.equity_curve
-    if curve:
-        annual = annual_return(curve[0]["equity"], curve[-1]["equity"], curve[0]["date"], curve[-1]["date"])
-        in_market, invested = exposure(curve)
-        click.echo(f"Retorno anualizado: {annual:.2%}")
-        click.echo(f"Exceso sobre la referencia: {annual - bh['annual_return']:.2%}")
-        click.echo(f"Tiempo en mercado: {in_market:.2%}")
-        click.echo(f"Capital invertido medio: {invested:.2%}")
-        click.echo(f"Sharpe (tasa 0): {bt._calculate_sharpe_ratio(0.0):.2f}")
+    if r["retorno_anualizado"] is not None:
+        click.echo(f"Retorno anualizado: {r['retorno_anualizado']:.2%}")
+        click.echo(f"Exceso sobre la referencia: {r['exceso_sobre_referencia']:.2%}")
+        click.echo(f"Tiempo en mercado: {r['tiempo_en_mercado']:.2%}")
+        click.echo(f"Capital invertido medio: {r['capital_invertido_medio']:.2%}")
+        click.echo(f"Sharpe (tasa 0): {r['sharpe_tasa_0']:.2f}")
+        peor_pct, peor_fecha = r["peor_dia"]
+        if peor_pct < 0 and peor_fecha:
+            click.echo(f"Peor día: {peor_pct:.2%} ({peor_fecha})")
+        else:
+            click.echo("Peor día: 0.00%")
 
     if out_path:
         with open(out_path, "w", newline="") as f:
@@ -373,10 +450,10 @@ def run_backtest(
 
     if equity_out_path:
         with open(equity_out_path, "w", newline="") as f:
-            f.write(equity_to_csv(bt.equity_curve))
+            f.write(equity_to_csv(r["equity_curve"]))
         click.echo(
             f"Equity curve written to {equity_out_path} "
-            f"(max drawdown: {metrics.max_drawdown:.6f})"
+            f"(max drawdown: {r['max_drawdown']:.6f})"
         )
 
 
@@ -444,7 +521,7 @@ def _run_verify_pass(
             timeframe=meta.timeframe,
             config=config or _engine_config(commission_pct, costos),
             db_session=session,
-            strategy=build_strategy(STRATEGY_ALIASES[strategy_name]),
+            strategy=build_strategy(cli_aliases()[strategy_name]),
         )
         engine_logger = logging.getLogger("quantagent.backtesting.backtest")
         if not verbose:
@@ -464,7 +541,7 @@ def _run_verify_pass(
     "--strategy",
     "strategy_name",
     required=True,
-    type=click.Choice(sorted(STRATEGY_ALIASES)),
+    type=_AliasChoice(),
     help="Strategy to run.",
 )
 @click.option(
@@ -588,3 +665,108 @@ def verify_backtest(
 
     _echo_tamano(config)
     click.echo("OK reproducible")
+
+
+COMPARE_COLUMNS = [
+    "estrategia", "activo", "desde", "hasta", "trades", "win_rate", "profit_factor",
+    "sharpe", "pnl", "max_drawdown", "bh_pnl", "bh_sharpe", "bh_max_drawdown",
+    "retorno_anualizado", "exceso_sobre_referencia", "tiempo_en_mercado",
+    "capital_invertido_medio", "sharpe_tasa_0",
+]
+
+
+@backtest_group.command("compare", help="Compare multiple strategies across symbols against a snapshot.")
+@click.option("--strategies", required=True, help="Estrategias separadas por coma (ej: rsi,sma-cross).")
+@click.option("--symbols", required=True, help="Símbolos separados por coma (ej: SPY,IWM).")
+@click.option("--snapshot", "snapshot_name", required=True, help="Snapshot en $QUANTAGENT_SNAPSHOT_DIR (velas ajustadas).")
+@click.option("--from", "from_date", type=click.DateTime(formats=["%Y-%m-%d"]), default=None, help="Primera sesión.")
+@click.option("--to", "to_date", type=click.DateTime(formats=["%Y-%m-%d"]), default=None, help="Última sesión.")
+@click.option("--costos", type=click.Choice(sorted(COSTOS_PERFILES)), default=None, help="Perfil de costos.")
+@click.option("--tamano-posicion", "tamano_posicion", type=click.FloatRange(min=0.0, max=1.0, min_open=True), default=1.0)
+@click.option("--regla-tamano", "regla_tamano", type=click.Choice(PositionSizer.REGLAS), default=None)
+@click.option("--abrir-reserva", "abrir_reserva", is_flag=True, help="Permite abrir la reserva.")
+@click.option("--out", "out_path", required=True, type=click.Path(dir_okay=False, writable=True), help="CSV de salida.")
+@click.option("--trades-dir", "trades_dir", type=click.Path(file_okay=False, writable=True), default=None)
+def compare_backtests(
+    strategies: str, symbols: str, snapshot_name: str, from_date: Optional[datetime],
+    to_date: Optional[datetime], costos: Optional[str], tamano_posicion: Optional[float],
+    regla_tamano: Optional[str], abrir_reserva: bool, out_path: str, trades_dir: Optional[str],
+) -> None:
+    reserva = _reserva_desde()
+    abriendo = False
+    if to_date is None:
+        to_date = reserva - timedelta(days=1)
+    elif to_date >= reserva:
+        if not abrir_reserva:
+            raise click.ClickException(
+                f"--to {to_date:%Y-%m-%d} cae en la reserva, que empieza el {reserva:%Y-%m-%d}: "
+                "ninguna corrida la lee. Para abrirla, --abrir-reserva (queda registrado)."
+            )
+        abriendo = True
+
+    strats = [s.strip() for s in strategies.split(",") if s.strip()]
+    syms = [s.strip().upper() for s in symbols.split(",") if s.strip()]
+    if not strats:
+        raise click.UsageError("--strategies requiere al menos una estrategia.")
+    if not syms:
+        raise click.UsageError("--symbols requiere al menos un símbolo.")
+
+    aliases = cli_aliases()
+    for s in strats:
+        if s not in aliases:
+            raise click.UsageError(f"Estrategia desconocida: '{s}'. Opciones: {', '.join(sorted(aliases))}")
+
+    if abriendo:
+        partes = [f"backtest compare --strategies {strategies} --symbols {symbols} --snapshot {snapshot_name}"]
+        if from_date:
+            partes.append(f"--from {from_date:%Y-%m-%d}")
+        partes.append(f"--to {to_date:%Y-%m-%d} --abrir-reserva")
+        _registrar_apertura(" ".join(partes))
+
+    config = _engine_config(None, costos, tamano_posicion, regla_tamano)
+    if trades_dir:
+        os.makedirs(trades_dir, exist_ok=True)
+
+    rows = []
+    for strat in strats:
+        for sym in syms:
+            try:
+                meta = snapshot_metadata(snapshot_name, sym, from_date, to_date)
+            except (SnapshotError, ValueError, FileNotFoundError) as exc:
+                raise click.ClickException(str(exc)) from exc
+
+            with _isolated_sqlite_db():
+                r = correr_par(
+                    strat, meta, config, costos, None, snapshot_name, sym,
+                    from_date, to_date, con_filas=bool(trades_dir),
+                )
+
+            if trades_dir:
+                with open(os.path.join(trades_dir, f"{strat}-{sym}.csv"), "w", newline="") as f:
+                    f.write(trades_to_csv(r["filas"]))
+
+            def _fmt(v: Optional[float], digits: int) -> object:
+                return "" if v is None else round(v, digits)
+
+            pf = "" if r["profit_factor"] is None or math.isinf(r["profit_factor"]) else round(r["profit_factor"], 2)
+            rows.append({
+                "estrategia": strat, "activo": sym, "desde": f"{meta.start_date:%Y-%m-%d}",
+                "hasta": f"{meta.end_date:%Y-%m-%d}", "trades": r["trades"],
+                "win_rate": round(r["win_rate"], 4), "profit_factor": pf,
+                "sharpe": round(r["sharpe"], 2), "pnl": round(r["pnl"], 2),
+                "max_drawdown": round(r["max_drawdown"], 6), "bh_pnl": round(r["bh_pnl"], 2),
+                "bh_sharpe": round(r["bh_sharpe"], 2), "bh_max_drawdown": round(r["bh_max_drawdown"], 6),
+                "retorno_anualizado": _fmt(r["retorno_anualizado"], 4),
+                "exceso_sobre_referencia": _fmt(r["exceso_sobre_referencia"], 4),
+                "tiempo_en_mercado": _fmt(r["tiempo_en_mercado"], 4),
+                "capital_invertido_medio": _fmt(r["capital_invertido_medio"], 4),
+                "sharpe_tasa_0": _fmt(r["sharpe_tasa_0"], 2),
+            })
+
+    with open(out_path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=COMPARE_COLUMNS)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    table_data = [[row[col] for col in COMPARE_COLUMNS] for row in rows]
+    click.echo(tabulate(table_data, headers=COMPARE_COLUMNS, tablefmt="github"))

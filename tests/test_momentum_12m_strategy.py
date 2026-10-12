@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 
 from quantagent.backtesting.backtest import Backtest, check_intrabar_stops
-from quantagent.cli.backtest import STRATEGY_ALIASES
+from quantagent.strategy.registry import cli_aliases
 from quantagent.models import ActivePosition, Environment, ExitPolicy, MarketData, OrderSide
 from quantagent.strategy import build_strategy
 from quantagent.strategy.momentum_12m_strategy import (
@@ -203,7 +203,7 @@ def test_insufficient_history_returns_none_and_declares_lookback_plus_one():
 
 
 def test_registered_and_aliased():
-    assert STRATEGY_ALIASES["momentum-12m"] == "Momentum12mStrategy"
+    assert cli_aliases()["momentum-12m"] == "Momentum12mStrategy"
     assert isinstance(build_strategy("Momentum12mStrategy"), Momentum12mStrategy)
 
 
