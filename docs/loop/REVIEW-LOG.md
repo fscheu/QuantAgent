@@ -116,4 +116,5 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-11 · #120 · PM: 5nx0 vi: salida de backtest run idéntica byte a byte a la del lote en las tres referencias y en una corrida real con costos, tamaño y CSV; suite 970 passed y oráculos 21 passed en la VM y en la notebook (WSL), mismos números; 256 líneas tocadas, unas 67 movidas sin cambios (Fede aceptó el tamaño). decido: merge
 2026-10-11 · #121 · PM: im48 vi: verificado en el checkout real (montajes del contenedor, dueño de la raíz, reglas de git); suite 967 passed, oráculos 19 passed. Hueco del ticket (mío): .dockerignore no listaba local-data. decido: escalo; Fede: pedir el cambio. decido: cambio
 2026-10-11 · #121 · PM: im48 vi: segunda revisión, una línea en .dockerignore; mi hallazgo estaba exagerado (ya se excluían *.parquet y *.csv). decido: escalo
+2026-10-11 · #122 · PM: 6zam vi: peor día recalculado por mi cuenta sobre el snapshot SPY 2007-2018 (sma-cross -6.51% 2011-08-08, rsi -2.26% 2008-10-10), igual al CLI y a recalc_metrics; suite 973 passed, oráculos 21 (Codex), CI verde. Observaciones: worst_day de recalc es copia de la del motor; ~25 líneas cosméticas fuera de alcance. decido: merge
 ```
