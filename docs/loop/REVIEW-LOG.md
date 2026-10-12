@@ -117,4 +117,6 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-11 · #121 · PM: im48 vi: verificado en el checkout real (montajes del contenedor, dueño de la raíz, reglas de git); suite 967 passed, oráculos 19 passed. Hueco del ticket (mío): .dockerignore no listaba local-data. decido: escalo; Fede: pedir el cambio. decido: cambio
 2026-10-11 · #121 · PM: im48 vi: segunda revisión, una línea en .dockerignore; mi hallazgo estaba exagerado (ya se excluían *.parquet y *.csv). decido: escalo
 2026-10-11 · #122 · PM: 6zam vi: peor día recalculado por mi cuenta sobre el snapshot SPY 2007-2018 (sma-cross -6.51% 2011-08-08, rsi -2.26% 2008-10-10), igual al CLI y a recalc_metrics; suite 973 passed, oráculos 21 (Codex), CI verde. Observaciones: worst_day de recalc es copia de la del motor; ~25 líneas cosméticas fuera de alcance. decido: merge
+2026-10-12 · #123 · PM: opfu vi: compare coincide en las 18 columnas con backtest run en 4 pares reales; el test 2x2 solo comparaba 4 columnas con frames iguales (Codex mutó bh_pnl y pasaba). decido: cambio
+2026-10-12 · #123 · PM: opfu vi: test corregido (18 columnas, frames distintos, CSV de trades), la mutación ahora falla; notebook: suite 975 passed, 21 oráculos, corrida 4x12 en 43 min con 49 líneas. Observaciones: profit_factor vacío si es infinito, CSV escrito al final, sin columna de peor día. decido: merge
 ```
