@@ -73,6 +73,27 @@ class StrategyAdapter(Strategy):
         self.bars = pd.DataFrame({"timestamp": df.index, **cols})  # precios reales, columnas del motor
         self.pos = None  # ActivePosition de la posicion abierta (o con orden de entrada pendiente)
         self.info = {}  # vela de entrada -> {"stop", "reason"} para el CSV
+        if not self.fill_close:
+            process_orders = self._broker._process_orders
+
+            def cap_open_entries():
+                broker = self._broker
+                entries = [o for o in broker.orders if not o.parent_trade]
+                broker.orders[:] = [o for o in broker.orders if o.parent_trade]
+                process_orders()  # primero los cierres pendientes, con sus costos
+                broker.orders.extend(entries)
+                price = float(self.data.Open[-1])
+                for order in entries:
+                    if order.is_long:
+                        # El efectivo y la apertura son los de ejecucion, no los de la senal.
+                        units = int(broker._cash / (price * (1 + self.slippage) * (1 + self.commission)))
+                        if units < 1:
+                            order.cancel()
+                        elif order.size > units:
+                            order._replace(size=units)
+                process_orders()
+
+            self._broker._process_orders = cap_open_entries
         if self.slippage:  # cerrar un largo es vender (precio * (1 - s)); cerrar un corto es comprar (* (1 + s))
             close_trade = self._broker._close_trade
             self._broker._close_trade = lambda trade, price, i: close_trade(
