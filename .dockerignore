@@ -35,6 +35,7 @@ logs/
 
 # Data
 data/
+local-data
 *.csv
 *.parquet
 
