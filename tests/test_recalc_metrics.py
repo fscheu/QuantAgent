@@ -371,3 +371,52 @@ def test_new_cli_lines_equal_recalc_on_the_equity_out_of_rsi_spy_90d(tmp_path):
     fixture = Path(__file__).resolve().parent / "fixtures" / "spy-90d.csv"
     expected = _new_lines(eq, "--comprar-y-mantener", str(fixture), "--slippage-pct", "0.0005")
     assert len(expected) == 5 and [l for l in cli if l in expected] == expected
+
+    recalc_all = subprocess.run(
+        [sys.executable, str(SCRIPT), "--equity", str(eq)],
+        capture_output=True, text=True, check=True).stdout.splitlines()
+    cli_peor = next(line for line in cli if line.startswith("Peor día"))
+    recalc_peor = next(line for line in recalc_all if line.startswith("Peor día"))
+    assert cli_peor == recalc_peor == "Peor día: -0.08% (2026-03-05)"
+
+
+# Curva escrita a mano de 5 días con dos velas en uno de ellos (QuantAgent-6zam).
+HAND_CURVE_5D_2C = [
+    ("2025-01-01T00:00:00", 100000.0, 0.0),
+    ("2025-01-02T00:00:00", 101000.0, 10000.0),
+    ("2025-01-03T10:00:00", 99000.0, 10000.0),
+    ("2025-01-03T16:00:00", 98000.0, 10000.0),
+    ("2025-01-04T00:00:00", 99500.0, 10000.0),
+    ("2025-01-05T00:00:00", 99000.0, 0.0),
+]
+
+
+def test_hand_curve_five_days_with_two_candles_gives_worst_day_percentage_and_date(tmp_path):
+    """Validates worst_day on 5 days (one with 2 candles): percentage and date computed in test (QuantAgent-6zam)."""
+    eq_path = _equity_csv(tmp_path, HAND_CURVE_5D_2C)
+    out = subprocess.run(
+        [sys.executable, str(SCRIPT), "--equity", str(eq_path)],
+        capture_output=True, text=True, check=True,
+    ).stdout.splitlines()
+    peor_line = next(line for line in out if line.startswith("Peor día"))
+    expected_pct = -3000 / 101000
+    assert peor_line == f"Peor día: {expected_pct:.2%} (2025-01-03)"
+    assert peor_line == "Peor día: -2.97% (2025-01-03)"
+
+
+def test_hand_curve_without_drops_prints_zero_worst_day(tmp_path):
+    """Validates that when no day drops, 'Peor día: 0.00%' is printed (QuantAgent-6zam)."""
+    all_up = [
+        ("2025-01-01T00:00:00", 100000.0, 0.0),
+        ("2025-01-02T00:00:00", 101000.0, 0.0),
+        ("2025-01-03T00:00:00", 102000.0, 0.0),
+        ("2025-01-04T00:00:00", 103000.0, 0.0),
+        ("2025-01-05T00:00:00", 104000.0, 0.0),
+    ]
+    eq_path = _equity_csv(tmp_path, all_up)
+    out = subprocess.run(
+        [sys.executable, str(SCRIPT), "--equity", str(eq_path)],
+        capture_output=True, text=True, check=True,
+    ).stdout.splitlines()
+    peor_line = next(line for line in out if line.startswith("Peor día"))
+    assert peor_line == "Peor día: 0.00%"

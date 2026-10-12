@@ -13,8 +13,9 @@ import click
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from quantagent import settings
 from quantagent.backtesting.backtest import Backtest
-from quantagent.backtesting.buy_and_hold import annual_return, buy_and_hold, exposure
+from quantagent.backtesting.buy_and_hold import annual_return, buy_and_hold, exposure, worst_day
 from quantagent.backtesting.export import TradeRow, equity_to_csv, trades_to_csv
 from quantagent.backtesting.fixtures import (
     FixtureMetadata,
@@ -25,12 +26,12 @@ from quantagent.backtesting.fixtures import (
 )
 from quantagent.data.snapshot import SnapshotError, snapshot_root
 from quantagent.models import ActivePosition, MarketData, Trade
-from quantagent import settings
 from quantagent.settings import COSTOS_PERFILES
 from quantagent.strategy.registry import build_strategy, cli_aliases
 from quantagent.trading.position_sizer import PositionSizer
 
 from . import utils
+
 
 class _AliasChoice(click.Choice):
     """Choice over the registry's CLI aliases, read at parse time so late registrations count."""
@@ -202,7 +203,7 @@ def correr_par(
     slippage_pct, comision_pct, costos (nombre del perfil o None), tamano_pct (None si no se
     pidió tamaño), regla_tamano (None si no se pidió), bh_pnl, bh_sharpe, bh_max_drawdown,
     retorno_anualizado, exceso_sobre_referencia, tiempo_en_mercado, capital_invertido_medio,
-    sharpe_tasa_0 (estas cinco son None si no hay curva de equity), max_drawdown,
+    sharpe_tasa_0, peor_dia (estas seis son None si no hay curva de equity), max_drawdown,
     equity_curve y filas (TradeRow; vacía salvo con con_filas=True).
     """
     with utils.session_scope() as session:
@@ -292,6 +293,7 @@ def correr_par(
         "tiempo_en_mercado": None,
         "capital_invertido_medio": None,
         "sharpe_tasa_0": None,
+        "peor_dia": None,
         "max_drawdown": metrics.max_drawdown,
         "equity_curve": curve,
         "filas": rows,
@@ -307,6 +309,7 @@ def correr_par(
         r["tiempo_en_mercado"] = in_market
         r["capital_invertido_medio"] = invested
         r["sharpe_tasa_0"] = bt._calculate_sharpe_ratio(0.0)
+        r["peor_dia"] = worst_day(curve)
     return r
 
 
@@ -432,6 +435,11 @@ def run_backtest(
         click.echo(f"Tiempo en mercado: {r['tiempo_en_mercado']:.2%}")
         click.echo(f"Capital invertido medio: {r['capital_invertido_medio']:.2%}")
         click.echo(f"Sharpe (tasa 0): {r['sharpe_tasa_0']:.2f}")
+        peor_pct, peor_fecha = r["peor_dia"]
+        if peor_pct < 0 and peor_fecha:
+            click.echo(f"Peor día: {peor_pct:.2%} ({peor_fecha})")
+        else:
+            click.echo("Peor día: 0.00%")
 
     if out_path:
         with open(out_path, "w", newline="") as f:

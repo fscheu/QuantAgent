@@ -52,3 +52,22 @@ def buy_and_hold(
         "pnl": proceeds - initial_capital, "sharpe": sharpe, "max_drawdown": max_drawdown,
         "annual_return": annual_return(initial_capital, proceeds, timestamps[0], timestamps[-1]),
     }
+
+
+def worst_day(curve: Sequence[dict]) -> tuple:
+    """(menor retorno diario entre días de calendario, fecha AAAA-MM-DD); (0.0, None) si ningún día cae."""
+    daily = {}
+    for p in curve:
+        ts = p.get("date") or p.get("timestamp")
+        day = ts.strftime("%Y-%m-%d") if hasattr(ts, "strftime") else str(ts)[:10]
+        daily[day] = float(p["equity"])
+    days = list(daily.items())
+    drops = [
+        ((curr - prev) / prev, day)
+        for (_, prev), (day, curr) in zip(days, days[1:])
+        if prev > 0 and curr < prev
+    ]
+    if not drops:
+        return 0.0, None
+    return min(drops, key=lambda x: x[0])
+
