@@ -45,6 +45,7 @@ def snap_env(monkeypatch, tmp_path):
     monkeypatch.setenv("DATABASE_URL", db_url)
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path / "snaps"))
     monkeypatch.setenv("QUANTAGENT_RESERVA_DESDE", "2030-01-01")  # los datos del fixture son de 2024-2025
+    monkeypatch.setenv("QUANTAGENT_PRUEBA_DESDE", "2030-01-01")
     engine = create_engine(db_url, connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
     original_database_url = settings.DATABASE_URL
@@ -129,6 +130,7 @@ LOG = "reserva-accesos.log"
 
 def _con_reserva(snap_env, monkeypatch, tmp_path, desde=RESERVA):
     monkeypatch.setenv("QUANTAGENT_RESERVA_DESDE", desde)
+    monkeypatch.setenv("QUANTAGENT_PRUEBA_DESDE", desde)
     write_snapshot("t", {"SPY": _daily_frame()})
     return snap_env[0], snap_env[1], tmp_path / "snaps" / LOG
 
@@ -381,3 +383,19 @@ def test_salida_estandar_sin_aviso_cuando_se_pasa_to(snap_env, monkeypatch):
     assert res.exit_code == 0, res.output
     assert "Aviso: sin --to" not in res.stderr
     assert "Aviso: sin --to" not in res.stdout
+
+
+def test_sin_to_con_reserva_fijada_sin_prueba_termina_en_2018(snap_env, monkeypatch):
+    runner, engine = snap_env
+    monkeypatch.setenv("QUANTAGENT_RESERVA_DESDE", "2024-01-01")
+    monkeypatch.delenv("QUANTAGENT_PRUEBA_DESDE", raising=False)
+    write_snapshot("p", {"SPY": _multiyear_frame()})
+
+    res = _run(runner, "--snapshot", "p", "--symbol", "SPY")
+    assert res.exit_code == 0, res.output
+    assert "Aviso: sin --to" in res.stderr
+    assert "2018-12-31" in res.stderr
+    with Session(engine) as session:
+        last = max(row.timestamp for row in session.query(MarketData))
+    assert last == datetime(2018, 12, 31)
+

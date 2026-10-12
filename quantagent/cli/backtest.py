@@ -67,21 +67,13 @@ def _reserva_desde() -> datetime:
         raise click.ClickException(f"{RESERVA_ENV}={value!r} no es una fecha YYYY-MM-DD")
 
 
-def _prueba_desde(reserva: Optional[datetime] = None) -> datetime:
-    value = os.environ.get(PRUEBA_ENV)
-    if value is not None:
-        try:
-            return datetime.strptime(value, "%Y-%m-%d")
-        except ValueError:
-            raise click.ClickException(f"{PRUEBA_ENV}={value!r} no es una fecha YYYY-MM-DD")
-    if reserva is not None and RESERVA_ENV in os.environ:
-        try:
-            reserva_dt = datetime.strptime(os.environ[RESERVA_ENV], "%Y-%m-%d")
-            if reserva_dt > datetime.strptime(RESERVA_DEFAULT, "%Y-%m-%d"):
-                return reserva
-        except ValueError:
-            pass
-    return datetime.strptime(PRUEBA_DEFAULT, "%Y-%m-%d")
+def _prueba_desde() -> datetime:
+    value = os.environ.get(PRUEBA_ENV, PRUEBA_DEFAULT)
+    try:
+        return datetime.strptime(value, "%Y-%m-%d")
+    except ValueError:
+        raise click.ClickException(f"{PRUEBA_ENV}={value!r} no es una fecha YYYY-MM-DD")
+
 
 
 def _registrar_apertura(comando: str) -> None:
@@ -119,7 +111,7 @@ def _resolve_source_and_meta(
     abriendo_prueba = False
     if snapshot_name:
         reserva = _reserva_desde()
-        prueba = _prueba_desde(reserva)
+        prueba = _prueba_desde()
         if to_date is None:
             to_date = prueba - timedelta(days=1)
             click.echo(
@@ -758,7 +750,7 @@ def compare_backtests(
     regla_tamano: Optional[str], abrir_reserva: bool, abrir_prueba: bool, out_path: str, trades_dir: Optional[str],
 ) -> None:
     reserva = _reserva_desde()
-    prueba = _prueba_desde(reserva)
+    prueba = _prueba_desde()
     abriendo_reserva = False
     abriendo_prueba = False
     if to_date is None:
