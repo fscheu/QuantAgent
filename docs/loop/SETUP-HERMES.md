@@ -54,6 +54,39 @@ hermes cron list | grep -A4 "QuantAgent loop"
 Verificar en `hermes cron list` que "Next run" muestre 23:00 y 02:30 con `-03:00`.
 El topic `43` de Telegram es el mismo de "Ideas de Proyectos"; cambiarlo si se quiere otro.
 
+## Revisor mecánico con Codex
+
+`scripts/loop/codex_review.sh` lanza a Codex sobre un PR del loop para la parte mecánica de la revisión
+(PLAN-CONTINUACION.md §3.7). Requisito de la VM: Codex arma su aislamiento con `bubblewrap`, y Ubuntu 24.04
+restringe los espacios de usuario sin privilegios; sin el paquete `bubblewrap` y el perfil de AppArmor
+`bwrap-userns-restrict` falla con `bwrap: setting up uid map: Permission denied`. Ese aislamiento no tiene red:
+el script le pasa el ticket y el cuerpo del PR dentro del prompt. Corre desde un job de Hermes, igual que el
+lanzador.
+
+```bash
+cat > ~/.hermes/scripts/quantagent_codex_review.sh <<'SH'
+#!/usr/bin/env bash
+git -C /home/azureuser/repos/projects/QuantAgent fetch -q origin
+git -C /home/azureuser/repos/projects/QuantAgent show origin/main:scripts/loop/codex_review.sh | bash
+SH
+chmod +x ~/.hermes/scripts/quantagent_codex_review.sh
+hermes cron create "0 0 1 1 *" --name "QuantAgent loop — revisor Codex" \
+  --script quantagent_codex_review.sh --no-agent --deliver local
+```
+
+El horario (1 de enero) es un relleno: el job se dispara a mano. El PM pide una revisión así:
+
+```bash
+echo "107 gpt-6.1-sol" > ~/.local/state/quantagent-loop/next-review   # <pr> [modelo]
+hermes cron run <id del job>
+```
+
+El reporte queda en `~/.local/state/quantagent-loop/review-<pr>.md` y como comentario del PR que empieza con
+`CODEX:`. Modelos (`LOOP_CODEX_MODELS` en `loop/config.env`): `gpt-6-luna` para solo correr comandos,
+`gpt-6.1-sol` para la revisión normal, `gpt-6-astra` para entregas de plata o riesgo. Codex corre con
+`-s workspace-write` sobre un worktree temporal de la rama: lee todo el disco, escribe solo ahí y en `/tmp`, y no
+tiene red. El comentario en GitHub lo publica el script, no Codex.
+
 ## Base de tests del loop
 
 El wrapper exporta `DATABASE_URL` hacia una base propia en el Postgres de desarrollo y corre
