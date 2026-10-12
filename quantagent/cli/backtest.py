@@ -11,9 +11,9 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import click
-from tabulate import tabulate
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from tabulate import tabulate
 
 from quantagent import settings
 from quantagent.backtesting.backtest import Backtest
@@ -745,9 +745,10 @@ def compare_backtests(
                 with open(os.path.join(trades_dir, f"{strat}-{sym}.csv"), "w", newline="") as f:
                     f.write(trades_to_csv(r["filas"]))
 
+            def _fmt(v: Optional[float], digits: int) -> object:
+                return "" if v is None else round(v, digits)
+
             pf = "" if r["profit_factor"] is None or math.isinf(r["profit_factor"]) else round(r["profit_factor"], 2)
-            f4 = lambda v: "" if v is None else round(v, 4)
-            f2 = lambda v: "" if v is None else round(v, 2)
             rows.append({
                 "estrategia": strat, "activo": sym, "desde": f"{meta.start_date:%Y-%m-%d}",
                 "hasta": f"{meta.end_date:%Y-%m-%d}", "trades": r["trades"],
@@ -755,11 +756,11 @@ def compare_backtests(
                 "sharpe": round(r["sharpe"], 2), "pnl": round(r["pnl"], 2),
                 "max_drawdown": round(r["max_drawdown"], 6), "bh_pnl": round(r["bh_pnl"], 2),
                 "bh_sharpe": round(r["bh_sharpe"], 2), "bh_max_drawdown": round(r["bh_max_drawdown"], 6),
-                "retorno_anualizado": f4(r["retorno_anualizado"]),
-                "exceso_sobre_referencia": f4(r["exceso_sobre_referencia"]),
-                "tiempo_en_mercado": f4(r["tiempo_en_mercado"]),
-                "capital_invertido_medio": f4(r["capital_invertido_medio"]),
-                "sharpe_tasa_0": f2(r["sharpe_tasa_0"]),
+                "retorno_anualizado": _fmt(r["retorno_anualizado"], 4),
+                "exceso_sobre_referencia": _fmt(r["exceso_sobre_referencia"], 4),
+                "tiempo_en_mercado": _fmt(r["tiempo_en_mercado"], 4),
+                "capital_invertido_medio": _fmt(r["capital_invertido_medio"], 4),
+                "sharpe_tasa_0": _fmt(r["sharpe_tasa_0"], 2),
             })
 
     with open(out_path, "w", newline="") as f:
