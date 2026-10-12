@@ -85,7 +85,7 @@ def test_backtest_run_exits_zero_and_prints_metrics(cli_runner):
 
     assert result.exit_code == 0, result.output
     lines = result.output.strip().splitlines()
-    assert len(lines) == 13
+    assert len(lines) == 14
     assert lines[0].startswith("Trades:")
     assert lines[1].startswith("Win rate:")
     assert lines[2].startswith("Profit factor:")
@@ -94,10 +94,11 @@ def test_backtest_run_exits_zero_and_prints_metrics(cli_runner):
     assert lines[5] == "Slippage: 0.05% por lado"
     assert lines[6] == "Comisión: 0.00% por lado"
     assert lines[7].startswith("Comprar y mantener: PnL ")
-    assert [l.split(":")[0] for l in lines[8:]] == [
+    assert [line.split(":")[0] for line in lines[8:]] == [
         "Retorno anualizado", "Exceso sobre la referencia", "Tiempo en mercado", "Capital invertido medio",
-        "Sharpe (tasa 0)",
+        "Sharpe (tasa 0)", "Peor día",
     ]
+    assert lines[13] == "Peor día: 0.00%"
 
 
 def test_backtest_run_commission_pct_charges_every_fill_and_lowers_pnl(cli_runner):
@@ -317,7 +318,7 @@ def shared_cli_process_run(tmp_path_factory):
 
 
 def test_backtest_run_output_is_only_metrics_lines(shared_cli_process_run):
-    """stdout+stderr is exactly the 13 metric lines plus the --out line: no log or SAWarning noise."""
+    """stdout+stderr is exactly the 14 metric lines plus the --out line: no log or SAWarning noise."""
     proc, trades_csv = shared_cli_process_run
 
     assert proc.returncode == 0, proc.stdout
@@ -325,7 +326,7 @@ def test_backtest_run_output_is_only_metrics_lines(shared_cli_process_run):
     assert prefixes == [
         "Trades", "Win rate", "Profit factor", "Sharpe ratio", "Total PnL", "Slippage", "Comisión",
         "Comprar y mantener", "Retorno anualizado", "Exceso sobre la referencia", "Tiempo en mercado",
-        "Capital invertido medio", "Sharpe (tasa 0)",
+        "Capital invertido medio", "Sharpe (tasa 0)", "Peor día",
         f"Trade log written to {trades_csv}",
     ]
     assert proc.stdout.splitlines()[5] == "Slippage: 0.05% por lado"
@@ -346,8 +347,8 @@ def test_backtest_run_output_with_custom_slippage_env(tmp_path):
     )
     assert proc.returncode == 0, proc.stdout
     lines = proc.stdout.strip().splitlines()
-    assert len(lines) == 13
-    assert lines[-8] == "Slippage: 1.00% por lado"
+    assert len(lines) == 14
+    assert lines[-9] == "Slippage: 1.00% por lado"
 
 
 def test_backtest_run_verbose_shows_insufficient_data_messages(tmp_path):
@@ -419,6 +420,7 @@ def test_backtest_verify_all_three_strategies(shared_verify_smoke):
 def test_backtest_verify_detects_difference_and_exits_nonzero(cli_runner, monkeypatch):
     """When two runs produce different metrics, verify outputs the mismatch and exits non-zero."""
     import copy
+
     from quantagent.cli import backtest as bt_cli
     real_execute = bt_cli._run_verify_pass
     first_pass = None
@@ -469,20 +471,20 @@ def test_backtest_verify_process_output_is_only_ok_reproducible():
 def test_backtest_run_consecutive_runs_on_same_database_produce_identical_output(
     cli_runner,
 ):
-    """Two consecutive `backtest run` on the same database must produce identical 13 lines (QuantAgent-hx0.11)."""
+    """Two consecutive `backtest run` on the same database must produce identical 14 lines (QuantAgent-hx0.11)."""
     res1 = cli_runner.invoke(
         backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
     )
     assert res1.exit_code == 0, res1.output
     lines1 = res1.output.strip().splitlines()
-    assert len(lines1) == 13
+    assert len(lines1) == 14
 
     res2 = cli_runner.invoke(
         backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"]
     )
     assert res2.exit_code == 0, res2.output
     lines2 = res2.output.strip().splitlines()
-    assert len(lines2) == 13
+    assert len(lines2) == 14
 
     assert lines1 == lines2
 
@@ -575,10 +577,10 @@ def test_backtest_run_empty_equity_curve_omits_comparison_metrics(cli_runner, mo
     lines = result.output.strip().splitlines()
     assert len(lines) == 8
     assert not any(
-        l.startswith(
-            ("Retorno anualizado", "Exceso sobre la referencia", "Tiempo en mercado", "Capital invertido medio", "Sharpe (tasa 0)")
+        line.startswith(
+            ("Retorno anualizado", "Exceso sobre la referencia", "Tiempo en mercado", "Capital invertido medio", "Sharpe (tasa 0)", "Peor día")
         )
-        for l in lines
+        for line in lines
     )
 
 
@@ -594,11 +596,11 @@ def test_backtest_run_tamano_posicion_y_regla_dimensionan_cada_entrada(cli_runne
     result = cli_runner.invoke(backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke", "--out", str(out), *extra])
     assert result.exit_code == 0, result.output
     lines = result.output.strip().splitlines()
-    assert len(lines) == 15
+    assert len(lines) == 16
     assert f"Tamaño: {pct:.0%} del capital, regla {regla}" in lines
-    assert [l.split(":")[0] for l in lines[9:14]] == [
+    assert [line.split(":")[0] for line in lines[9:15]] == [
         "Retorno anualizado", "Exceso sobre la referencia", "Tiempo en mercado", "Capital invertido medio",
-        "Sharpe (tasa 0)",
+        "Sharpe (tasa 0)", "Peor día",
     ]
     with Session(create_engine(os.environ["DATABASE_URL"])) as s:
         senales = s.execute(text("SELECT generated_at, confidence FROM signals ORDER BY generated_at LIMIT 3")).all()
@@ -651,6 +653,34 @@ def test_correr_par_devuelve_los_numeros_del_resumen_con_las_claves_documentadas
     assert all(re.search(rf"\b{k}\b", correr_par.__doc__) for k in r)
     assert (r["slippage_pct"], r["comision_pct"], r["costos"], r["tamano_pct"]) == (0.0005, 0.0, None, None)
     assert all(r[k] is not None for k in (
-        "retorno_anualizado", "exceso_sobre_referencia", "tiempo_en_mercado", "capital_invertido_medio", "sharpe_tasa_0",
+        "retorno_anualizado", "exceso_sobre_referencia", "tiempo_en_mercado", "capital_invertido_medio", "sharpe_tasa_0", "peor_dia",
     ))
     assert r["filas"] == []
+
+
+def test_worst_day_on_a_hand_curve_and_edge_cases():
+    """Validates engine-side worst_day on 5 days (one with 2 candles) and degenerate cases (QuantAgent-6zam)."""
+    from datetime import datetime
+
+    from quantagent.backtesting.buy_and_hold import worst_day
+
+    # 5 days, day 3 has 2 candles: 100k -> 101k -> (99k, 98k) -> 99.5k -> 99k
+    curve = [
+        {"date": datetime(2025, 1, 1, 0, 0), "equity": 100000.0},
+        {"date": datetime(2025, 1, 2, 0, 0), "equity": 101000.0},
+        {"date": datetime(2025, 1, 3, 10, 0), "equity": 99000.0},
+        {"date": datetime(2025, 1, 3, 16, 0), "equity": 98000.0},
+        {"date": datetime(2025, 1, 4, 0, 0), "equity": 99500.0},
+        {"date": datetime(2025, 1, 5, 0, 0), "equity": 99000.0},
+    ]
+    pct, fecha = worst_day(curve)
+    assert pct == pytest.approx(-3000 / 101000)
+    assert fecha == "2025-01-03"
+
+    # All days rising -> 0.0, None
+    up = [{"date": datetime(2025, 1, i), "equity": 100.0 + i} for i in range(1, 6)]
+    assert worst_day(up) == (0.0, None)
+
+    # Empty and single point
+    assert worst_day([]) == (0.0, None)
+    assert worst_day([{"date": datetime(2025, 1, 1), "equity": 100.0}]) == (0.0, None)
