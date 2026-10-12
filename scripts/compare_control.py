@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""QuantAgent-k6n9: control de compare contra backtesting.py (V23b)."""
+"""Control de compare contra backtesting.py (V23b, V23c: sensibilidad apertura siguiente)."""
 
 from __future__ import annotations
 
@@ -93,6 +93,8 @@ def main(argv=None) -> int:
         motor_file = Path(args.trades_dir) / f"{strat}-{sym}.csv"
         if not motor_file.exists():
             row["control"] = f"sin validar: falta archivo {motor_file.name}"
+            row["pnl_apertura_siguiente"] = ""
+            row["trades_apertura_siguiente"] = ""
             continue
         with open(motor_file, newline="") as f:
             eng_rows = list(csv.DictReader(f))
@@ -106,9 +108,22 @@ def main(argv=None) -> int:
         except Exception as exc:
             row["control"] = f"sin validar: error del adaptador ({exc})"
 
+        try:
+            df_open = _load_snapshot_df(args.snapshot, sym, row.get("desde"), row.get("hasta")).copy()
+            settings.TRADING_BASE_POSITION_PCT = args.tamano_posicion
+            bt_adapter.settings.TRADING_BASE_POSITION_PCT = args.tamano_posicion
+            stats_open = bt_adapter.run_adapter(build_strategy(aliases[strat]), df_open, symbol=sym, timeframe=timeframe, fill="next-open", **costos)
+            open_rows = bt_adapter.trade_rows(stats_open, sym)
+            row["pnl_apertura_siguiente"] = round(sum(r.pnl for r in open_rows), 2)
+            row["trades_apertura_siguiente"] = len(open_rows)
+        except Exception:
+            row["pnl_apertura_siguiente"] = ""
+            row["trades_apertura_siguiente"] = ""
+
     fieldnames = list(rows[0].keys())
-    if "control" not in fieldnames:
-        fieldnames.append("control")
+    for col in ("control", "pnl_apertura_siguiente", "trades_apertura_siguiente"):
+        if col not in fieldnames:
+            fieldnames.append(col)
     out_path = args.out or args.tabla
     with open(out_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)

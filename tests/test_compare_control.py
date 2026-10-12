@@ -142,3 +142,50 @@ def test_compare_control_coincide_y_falla_si_se_altera_un_trade(snap_env):
     with open(out_csv, newline="") as f:
         rows = list(csv.DictReader(f))
     assert rows[0]["control"] == "sin validar: falta archivo fifty-two-week-high-SPY.csv"
+
+
+def test_compare_control_sensibilidad_apertura_siguiente_gap(snap_env):
+    runner, tmp_path = snap_env
+    df = _daily_frame().iloc[:330].copy()
+    close_signal = df.loc[df.index[320], "close"]
+    gap = 10.0
+    open_next = close_signal + gap
+    df.loc[df.index[321], "open"] = open_next
+    df.loc[df.index[321], "high"] = max(df.loc[df.index[321], "high"], open_next)
+
+    write_snapshot("t_gap", {"SPY": df})
+    out_csv = tmp_path / "cmp_gap.csv"
+    trades_dir = tmp_path / "trades_gap"
+
+    res = runner.invoke(
+        backtest_group,
+        [
+            "compare",
+            "--strategies", "fifty-two-week-high",
+            "--symbols", "SPY",
+            "--snapshot", "t_gap",
+            "--out", str(out_csv),
+            "--trades-dir", str(trades_dir),
+        ],
+    )
+    assert res.exit_code == 0, res.output
+
+    _run_control(out_csv, trades_dir, "t_gap")
+    with open(out_csv, newline="") as f:
+        rows = list(csv.DictReader(f))
+
+    assert rows[0]["control"] == "coinciden 1 de 1"
+    assert rows[0]["trades"] == "1"
+    assert rows[0]["trades_apertura_siguiente"] == "1"
+
+    pnl_cierre = float(rows[0]["pnl"])
+    pnl_apertura = float(rows[0]["pnl_apertura_siguiente"])
+    assert pnl_apertura < pnl_cierre
+
+    with open(trades_dir / "fifty-two-week-high-SPY.csv", newline="") as f:
+        trade = next(csv.DictReader(f))
+    qty = float(trade["qty"])
+    slippage = float(settings.TRADING_SLIPPAGE_PCT)
+    effective_gap = gap * (1.0 + slippage)
+    expected_diff = round(effective_gap * qty, 2)
+    assert round(pnl_cierre - pnl_apertura, 2) == pytest.approx(expected_diff, abs=0.01)
