@@ -137,6 +137,20 @@ más nuevo de `~/.gemini/antigravity-cli/log/`.
 Consumo medido (2026-10-06, `gemini-3.8-flash-high`, una entrega de 39 min): cerca de 1% del límite semanal
 y 10% del de 5 horas del grupo Gemini. Se ve con `/usage` en una sesión interactiva de `agy`.
 
+### Codex como implementador (QuantAgent-dhlu)
+
+`LOOP_AGENT=codex`, o `next-agent` para una sola corrida, lanza `codex exec` con el modelo `LOOP_CODEX_MODEL`
+(`next-model` lo cambia por una corrida y tiene que estar en `LOOP_CODEX_MODELS`). Usa el mismo aislamiento que el
+revisor, `workspace-write`, con dos agregados que una entrega necesita y una revisión no: red (`git push`, `gh`,
+la base de tests) y escritura en el `.git` y el `.beads` del checkout principal, porque los commits de un worktree
+y la base de BEADS viven ahí. Lee todo el disco y escribe solo en el worktree, en esos dos directorios y en `/tmp`.
+
+La barrera de push (`push_guard.sh`) es la misma que para los otros agentes. Igual que con ellos, no cubre
+`gh pr merge`, y Codex no tiene reglas deny como las de `agy`: la protección es que el prompt lo prohíbe y que
+el PM revisa cada entrega. Requisitos: los mismos del revisor (`bubblewrap` y, en Ubuntu 24.04, el perfil de
+AppArmor) y `codex login` hecho. `loop/PROMPT.md` pide un subagente verificador en el paso 5; sin probar si
+Codex puede lanzarlo.
+
 ## Operación
 
 | Quiero | Cómo |
@@ -144,6 +158,7 @@ y 10% del de 5 horas del grupo Gemini. Se ve con `/usage` en una sesión interac
 | Usar otro agente en la próxima corrida (una sola vez) | `echo agy > ~/.local/state/quantagent-loop/next-agent` |
 | Cambiar el agente por defecto | PR que cambia `LOOP_AGENT` en `loop/config.env` |
 | Cambiar el modelo de `agy` | PR que cambia `LOOP_AGY_MODEL` (lista: `agy models`) |
+| Una corrida con Codex | `echo codex > ~/.local/state/quantagent-loop/next-agent`; con otro modelo de `LOOP_CODEX_MODELS`, además `echo gpt-6-astra > ~/.local/state/quantagent-loop/next-model` |
 | Pausar el loop | Crear `loop/PAUSE` en `main` desde GitHub mobile (cualquier contenido) |
 | Reanudar | Borrar `loop/PAUSE` |
 | Ver logs de una corrida | `ls -t ~/.local/state/quantagent-loop/` |
