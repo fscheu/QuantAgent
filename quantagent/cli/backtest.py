@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import logging
 import math
 import os
@@ -10,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import click
+from tabulate import tabulate
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -663,3 +665,107 @@ def verify_backtest(
 
     _echo_tamano(config)
     click.echo("OK reproducible")
+
+
+COMPARE_COLUMNS = [
+    "estrategia", "activo", "desde", "hasta", "trades", "win_rate", "profit_factor",
+    "sharpe", "pnl", "max_drawdown", "bh_pnl", "bh_sharpe", "bh_max_drawdown",
+    "retorno_anualizado", "exceso_sobre_referencia", "tiempo_en_mercado",
+    "capital_invertido_medio", "sharpe_tasa_0",
+]
+
+
+@backtest_group.command("compare", help="Compare multiple strategies across symbols against a snapshot.")
+@click.option("--strategies", required=True, help="Estrategias separadas por coma (ej: rsi,sma-cross).")
+@click.option("--symbols", required=True, help="Símbolos separados por coma (ej: SPY,IWM).")
+@click.option("--snapshot", "snapshot_name", required=True, help="Snapshot en $QUANTAGENT_SNAPSHOT_DIR (velas ajustadas).")
+@click.option("--from", "from_date", type=click.DateTime(formats=["%Y-%m-%d"]), default=None, help="Primera sesión.")
+@click.option("--to", "to_date", type=click.DateTime(formats=["%Y-%m-%d"]), default=None, help="Última sesión.")
+@click.option("--costos", type=click.Choice(sorted(COSTOS_PERFILES)), default=None, help="Perfil de costos.")
+@click.option("--tamano-posicion", "tamano_posicion", type=click.FloatRange(min=0.0, max=1.0, min_open=True), default=1.0)
+@click.option("--regla-tamano", "regla_tamano", type=click.Choice(PositionSizer.REGLAS), default=None)
+@click.option("--abrir-reserva", "abrir_reserva", is_flag=True, help="Permite abrir la reserva.")
+@click.option("--out", "out_path", required=True, type=click.Path(dir_okay=False, writable=True), help="CSV de salida.")
+@click.option("--trades-dir", "trades_dir", type=click.Path(file_okay=False, writable=True), default=None)
+def compare_backtests(
+    strategies: str, symbols: str, snapshot_name: str, from_date: Optional[datetime],
+    to_date: Optional[datetime], costos: Optional[str], tamano_posicion: Optional[float],
+    regla_tamano: Optional[str], abrir_reserva: bool, out_path: str, trades_dir: Optional[str],
+) -> None:
+    reserva = _reserva_desde()
+    abriendo = False
+    if to_date is None:
+        to_date = reserva - timedelta(days=1)
+    elif to_date >= reserva:
+        if not abrir_reserva:
+            raise click.ClickException(
+                f"--to {to_date:%Y-%m-%d} cae en la reserva, que empieza el {reserva:%Y-%m-%d}: "
+                "ninguna corrida la lee. Para abrirla, --abrir-reserva (queda registrado)."
+            )
+        abriendo = True
+
+    strats = [s.strip() for s in strategies.split(",") if s.strip()]
+    syms = [s.strip().upper() for s in symbols.split(",") if s.strip()]
+    if not strats:
+        raise click.UsageError("--strategies requiere al menos una estrategia.")
+    if not syms:
+        raise click.UsageError("--symbols requiere al menos un símbolo.")
+
+    aliases = cli_aliases()
+    for s in strats:
+        if s not in aliases:
+            raise click.UsageError(f"Estrategia desconocida: '{s}'. Opciones: {', '.join(sorted(aliases))}")
+
+    if abriendo:
+        partes = [f"backtest compare --strategies {strategies} --symbols {symbols} --snapshot {snapshot_name}"]
+        if from_date:
+            partes.append(f"--from {from_date:%Y-%m-%d}")
+        partes.append(f"--to {to_date:%Y-%m-%d} --abrir-reserva")
+        _registrar_apertura(" ".join(partes))
+
+    config = _engine_config(None, costos, tamano_posicion, regla_tamano)
+    if trades_dir:
+        os.makedirs(trades_dir, exist_ok=True)
+
+    rows = []
+    for strat in strats:
+        for sym in syms:
+            try:
+                meta = snapshot_metadata(snapshot_name, sym, from_date, to_date)
+            except (SnapshotError, ValueError, FileNotFoundError) as exc:
+                raise click.ClickException(str(exc)) from exc
+
+            with _isolated_sqlite_db():
+                r = correr_par(
+                    strat, meta, config, costos, None, snapshot_name, sym,
+                    from_date, to_date, con_filas=bool(trades_dir),
+                )
+
+            if trades_dir:
+                with open(os.path.join(trades_dir, f"{strat}-{sym}.csv"), "w", newline="") as f:
+                    f.write(trades_to_csv(r["filas"]))
+
+            pf = "" if r["profit_factor"] is None or math.isinf(r["profit_factor"]) else round(r["profit_factor"], 2)
+            f4 = lambda v: "" if v is None else round(v, 4)
+            f2 = lambda v: "" if v is None else round(v, 2)
+            rows.append({
+                "estrategia": strat, "activo": sym, "desde": f"{meta.start_date:%Y-%m-%d}",
+                "hasta": f"{meta.end_date:%Y-%m-%d}", "trades": r["trades"],
+                "win_rate": round(r["win_rate"], 4), "profit_factor": pf,
+                "sharpe": round(r["sharpe"], 2), "pnl": round(r["pnl"], 2),
+                "max_drawdown": round(r["max_drawdown"], 6), "bh_pnl": round(r["bh_pnl"], 2),
+                "bh_sharpe": round(r["bh_sharpe"], 2), "bh_max_drawdown": round(r["bh_max_drawdown"], 6),
+                "retorno_anualizado": f4(r["retorno_anualizado"]),
+                "exceso_sobre_referencia": f4(r["exceso_sobre_referencia"]),
+                "tiempo_en_mercado": f4(r["tiempo_en_mercado"]),
+                "capital_invertido_medio": f4(r["capital_invertido_medio"]),
+                "sharpe_tasa_0": f2(r["sharpe_tasa_0"]),
+            })
+
+    with open(out_path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=COMPARE_COLUMNS)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    table_data = [[row[col] for col in COMPARE_COLUMNS] for row in rows]
+    click.echo(tabulate(table_data, headers=COMPARE_COLUMNS, tablefmt="github"))
