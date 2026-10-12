@@ -399,3 +399,23 @@ def test_sin_to_con_reserva_fijada_sin_prueba_termina_en_2018(snap_env, monkeypa
         last = max(row.timestamp for row in session.query(MarketData))
     assert last == datetime(2018, 12, 31)
 
+
+def test_sin_to_con_prueba_tardia_y_reserva_temprana_no_lee_reserva(snap_env, monkeypatch, tmp_path):
+    runner, engine = snap_env
+    monkeypatch.setenv("QUANTAGENT_PRUEBA_DESDE", "2030-01-01")
+    monkeypatch.setenv("QUANTAGENT_RESERVA_DESDE", "2019-06-01")
+    write_snapshot("p", {"SPY": _multiyear_frame()})
+    log = tmp_path / "snaps" / LOG
+
+    res = _run(runner, "--snapshot", "p", "--symbol", "SPY")
+    assert res.exit_code == 0, res.output
+    assert "Aviso: sin --to" in res.stderr
+    assert "2019-05-31" in res.stderr
+    with Session(engine) as session:
+        velas_reserva = session.query(MarketData).filter(MarketData.timestamp >= datetime(2019, 6, 1)).count()
+        last = max(row.timestamp for row in session.query(MarketData))
+    assert velas_reserva == 0
+    assert last == datetime(2019, 5, 31)
+    assert not log.exists()
+
+

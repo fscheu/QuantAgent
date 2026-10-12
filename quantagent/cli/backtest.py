@@ -112,11 +112,16 @@ def _resolve_source_and_meta(
     if snapshot_name:
         reserva = _reserva_desde()
         prueba = _prueba_desde()
+        tope = min(prueba, reserva)
         if to_date is None:
-            to_date = prueba - timedelta(days=1)
+            to_date = tope - timedelta(days=1)
+            motivo = (
+                f"el tramo de prueba empieza el {prueba:%Y-%m-%d}"
+                if prueba <= reserva
+                else f"la reserva empieza el {reserva:%Y-%m-%d}"
+            )
             click.echo(
-                f"Aviso: sin --to, se asume fin en {to_date:%Y-%m-%d} "
-                f"(el tramo de prueba empieza el {prueba:%Y-%m-%d}).",
+                f"Aviso: sin --to, se asume fin en {to_date:%Y-%m-%d} ({motivo}).",
                 err=True,
             )
         elif to_date >= reserva:
@@ -751,13 +756,18 @@ def compare_backtests(
 ) -> None:
     reserva = _reserva_desde()
     prueba = _prueba_desde()
+    tope = min(prueba, reserva)
     abriendo_reserva = False
     abriendo_prueba = False
     if to_date is None:
-        to_date = prueba - timedelta(days=1)
+        to_date = tope - timedelta(days=1)
+        motivo = (
+            f"el tramo de prueba empieza el {prueba:%Y-%m-%d}"
+            if prueba <= reserva
+            else f"la reserva empieza el {reserva:%Y-%m-%d}"
+        )
         click.echo(
-            f"Aviso: sin --to, se asume fin en {to_date:%Y-%m-%d} "
-            f"(el tramo de prueba empieza el {prueba:%Y-%m-%d}).",
+            f"Aviso: sin --to, se asume fin en {to_date:%Y-%m-%d} ({motivo}).",
             err=True,
         )
     elif to_date >= reserva:
