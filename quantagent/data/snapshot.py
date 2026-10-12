@@ -1,6 +1,6 @@
 """Snapshots de datos de mercado: un Parquet por símbolo y un manifiesto con hashes.
 
-Los datos viven en `data/local/<nombre>/` o en `$QUANTAGENT_SNAPSHOT_DIR/<nombre>/`.
+Los datos viven en `local-data/<nombre>/` o en `$QUANTAGENT_SNAPSHOT_DIR/<nombre>/`.
 Adentro del repo solo va el manifiesto, en `tests/fixtures/snapshots/<nombre>.json`.
 Un snapshot se congela: `write_snapshot` no pisa un nombre que ya existe (iuf D6).
 """
@@ -32,7 +32,7 @@ def snapshot_root(base_dir: Optional[Path] = None) -> Path:
         return Path(base_dir)
     value = os.environ.get(SNAPSHOT_DIR_ENV)
     if not value:
-        raise SnapshotError(f"{SNAPSHOT_DIR_ENV} no está definida (debe apuntar a data/local/)")
+        raise SnapshotError(f"{SNAPSHOT_DIR_ENV} no está definida (debe apuntar a local-data/)")
     return Path(value)
 
 

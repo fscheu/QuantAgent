@@ -76,8 +76,8 @@ fi
 source "$REPO/.venv/bin/activate"
 # Tests that need Postgres run against the loop's own DB, never the dev DB (same layout as CI).
 export DATABASE_URL="$LOOP_TEST_DATABASE_URL"
-# Frozen market-data snapshots (M2): read-only data under data/local (ignored by git).
-export QUANTAGENT_SNAPSHOT_DIR="${LOOP_SNAPSHOT_DIR:-/home/azureuser/repos/projects/QuantAgent/data/local}"
+# Frozen market-data snapshots (M2): read-only data under local-data (ignored by git).
+export QUANTAGENT_SNAPSHOT_DIR="${LOOP_SNAPSHOT_DIR:-/home/azureuser/repos/projects/QuantAgent/local-data}"
 python -m alembic upgrade head >>"$LOG" 2>&1 || { echo "⚠ QuantAgent loop: alembic upgrade falló sobre la base de tests. Log: $LOG"; exit 0; }
 PROMPT="$(cat loop/PROMPT.md)
 
