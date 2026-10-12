@@ -7,8 +7,6 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-
-pytest.importorskip("backtesting")
 from click.testing import CliRunner
 from sqlalchemy import create_engine
 
