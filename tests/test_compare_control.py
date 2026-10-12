@@ -46,6 +46,7 @@ def snap_env(monkeypatch, tmp_path):
     monkeypatch.setenv("DATABASE_URL", db_url)
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path / "snaps"))
     monkeypatch.setenv("QUANTAGENT_RESERVA_DESDE", "2030-01-01")
+    monkeypatch.setenv("QUANTAGENT_PRUEBA_DESDE", "2030-01-01")
     engine = create_engine(db_url, connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
     original_database_url = settings.DATABASE_URL
