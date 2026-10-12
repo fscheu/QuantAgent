@@ -266,14 +266,15 @@ de Fede ni una `R:`.
 2. `scripts/loop/gate.py` desde `origin/main`. WAIT: imprimir la línea y salir.
 3. Crear worktree `/tmp/ai-loop/<RUN>` desde la rama del lote que informa el gate (`base`), o desde la rama del
    PR en modo `cambio`. Si `base` no empieza con `lote/`, no se lanza nada.
-4. Agente según `LOOP_AGENT` (`claude` | `agy`; el archivo `next-agent` del directorio de estado lo cambia
+4. Agente según `LOOP_AGENT` (`claude` | `agy` | `codex`; el archivo `next-agent` del directorio de estado lo cambia
    por una corrida), con `loop/PROMPT.md` más el contexto del gate (modo, PR previo, texto de la `R:`) y
    timeout `LOOP_TIMEOUT_MIN`. `claude -p` usa `--permission-mode acceptEdits` y
    `--disallowedTools "Bash(git push origin main*)" "Bash(git push -f*)" "Bash(git push --force*)"`;
-   `agy -p` usa `--mode accept-edits` y sus reglas allow/deny (`docs/loop/SETUP-HERMES.md`). Para los dos,
-   el hook `scripts/loop/push_guard.sh` rechaza push a main, borrado de ramas y push forzado.
-   El PR entregado recibe el label `agent:<agente>` y, con `agy`, `model:<modelo>`.
-   El modelo de `agy` es `LOOP_AGY_MODEL`; el archivo `next-model` del directorio de estado lo cambia por una
+   `agy -p` usa `--mode accept-edits` y sus reglas allow/deny (`docs/loop/SETUP-HERMES.md`); `codex exec` usa
+   el aislamiento `workspace-write` con red y con el `.git` y el `.beads` del checkout principal como
+   escribibles. Para los tres, el hook `scripts/loop/push_guard.sh` rechaza push a main, borrado de ramas y push forzado.
+   El PR entregado recibe el label `agent:<agente>` y, con `agy` o `codex`, `model:<modelo>`.
+   El modelo de `agy` es `LOOP_AGY_MODEL` y el de `codex`, `LOOP_CODEX_MODEL`; el archivo `next-model` del directorio de estado lo cambia por una
    corrida. Lo escribe el PM según la tarea: el modelo por defecto para tickets acotados, uno más fuerte para
    diagnóstico o cambios en semántica de plata, mirando el cupo (medido el 2026-10-07: Sonnet 5.5 alto gasta
    cerca de 15% del cupo semanal por corrida; Gemini 3.8 Flash alto, cerca de 3%).

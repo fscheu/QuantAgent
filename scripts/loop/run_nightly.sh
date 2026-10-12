@@ -2,7 +2,7 @@
 # Nightly loop wrapper (PLAN-CONTINUACION.md §3.5). Launched by a Hermes cron in --no-agent mode;
 # its stdout is delivered to Telegram verbatim, so it prints only short status lines.
 # Order: pause flag -> review gate (open lot + reviewed delivery) -> fresh worktree on the lot branch ->
-# headless agent (claude | agy) -> size check -> cleanup.
+# headless agent (claude | agy | codex) -> size check -> cleanup.
 set -uo pipefail
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="${LOOP_REPO:-/home/azureuser/repos/projects/QuantAgent}"
@@ -41,21 +41,28 @@ if [ -s "$LOOP_LOG_DIR/next-agent" ]; then
   AGENT="$(tr -d '[:space:]' <"$LOOP_LOG_DIR/next-agent")"
   rm -f "$LOOP_LOG_DIR/next-agent"
 fi
-# Model for this run (agy only): the one-shot override file wins over LOOP_AGY_MODEL and is consumed here.
-# The PM writes it to pick a stronger model for one ticket without a commit; the next run uses the default.
-AGY_MODEL="$LOOP_AGY_MODEL"
+# Model for this run (agy and codex): the one-shot override file wins over the agent's default
+# (LOOP_AGY_MODEL, LOOP_CODEX_MODEL) and is consumed here. The PM writes it to pick a stronger model for one
+# ticket without a commit; the next run uses the default.
+case "$AGENT" in codex) MODEL="$LOOP_CODEX_MODEL" ;; *) MODEL="$LOOP_AGY_MODEL" ;; esac
 if [ -s "$LOOP_LOG_DIR/next-model" ]; then
-  AGY_MODEL="$(tr -d '[:space:]' <"$LOOP_LOG_DIR/next-model")"
+  MODEL="$(tr -d '[:space:]' <"$LOOP_LOG_DIR/next-model")"
   rm -f "$LOOP_LOG_DIR/next-model"
-  if [ "$AGENT" = "agy" ] && ! agy models 2>/dev/null | cut -f1 | grep -qxF -- "$AGY_MODEL"; then
-    echo "⚠ QuantAgent loop: modelo desconocido '$AGY_MODEL' (ver \`agy models\`). No se lanzó nada."
+  if [ "$AGENT" = "agy" ] && ! agy models 2>/dev/null | cut -f1 | grep -qxF -- "$MODEL"; then
+    echo "⚠ QuantAgent loop: modelo desconocido '$MODEL' (ver \`agy models\`). No se lanzó nada."
     exit 0
+  fi
+  if [ "$AGENT" = "codex" ]; then
+    case " $LOOP_CODEX_MODELS " in
+      *" $MODEL "*) ;;
+      *) echo "⚠ QuantAgent loop: modelo desconocido '$MODEL' (válidos: $LOOP_CODEX_MODELS). No se lanzó nada."; exit 0 ;;
+    esac
   fi
 fi
 case "$AGENT" in
   claude) AGENT_DESC="claude" ;;
-  agy) AGENT_DESC="agy/$AGY_MODEL" ;;
-  *) echo "⚠ QuantAgent loop: agente desconocido '$AGENT' (válidos: claude, agy). No se lanzó nada."; exit 0 ;;
+  agy | codex) AGENT_DESC="$AGENT/$MODEL" ;;
+  *) echo "⚠ QuantAgent loop: agente desconocido '$AGENT' (válidos: claude, agy, codex). No se lanzó nada."; exit 0 ;;
 esac
 
 MODE="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("mode",""))' "$GATE")"
@@ -111,8 +118,15 @@ case "$AGENT" in
     # No --dangerously-skip-permissions: what agy may run comes from the allow/deny rules in
     # ~/.gemini/antigravity-cli/settings.json (docs/loop/SETUP-HERMES.md). A command outside them is
     # auto-denied in headless mode and the run ends without a delivery.
-    timeout "${LOOP_TIMEOUT_MIN}m" agy -p "$PROMPT" --model "$AGY_MODEL" --mode accept-edits \
+    timeout "${LOOP_TIMEOUT_MIN}m" agy -p "$PROMPT" --model "$MODEL" --mode accept-edits \
       --print-timeout "${LOOP_TIMEOUT_MIN}m" >"$LOG" 2>&1 ;;
+  codex)
+    # Same sandbox as the reviewer (workspace-write), plus what a delivery needs and a review does not:
+    # network (push, gh, the test DB) and write access to the main checkout's .git and .beads, which is
+    # where a worktree's commits and the shared BEADS database live.
+    timeout "${LOOP_TIMEOUT_MIN}m" "${LOOP_CODEX_BIN:-codex}" exec -m "$MODEL" -s workspace-write \
+      -c sandbox_workspace_write.network_access=true -c shell_environment_policy.inherit=all \
+      --add-dir "$REPO/.git" --add-dir "$REPO/.beads" - <<<"$PROMPT" >"$LOG" 2>&1 ;;
 esac
 crc=$?
 unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0
@@ -131,9 +145,9 @@ fi
 # Label the delivery with the agent that produced it, to compare agents across PRs.
 gh label create "agent:$AGENT" -R "$LOOP_GITHUB_REPO" --color ededed >/dev/null 2>&1
 gh pr edit -R "$LOOP_GITHUB_REPO" "$NEW" --add-label "agent:$AGENT" >/dev/null 2>&1
-if [ "$AGENT" = "agy" ]; then
-  gh label create "model:$AGY_MODEL" -R "$LOOP_GITHUB_REPO" --color ededed >/dev/null 2>&1
-  gh pr edit -R "$LOOP_GITHUB_REPO" "$NEW" --add-label "model:$AGY_MODEL" >/dev/null 2>&1
+if [ "$AGENT" != "claude" ]; then
+  gh label create "model:$MODEL" -R "$LOOP_GITHUB_REPO" --color ededed >/dev/null 2>&1
+  gh pr edit -R "$LOOP_GITHUB_REPO" "$NEW" --add-label "model:$MODEL" >/dev/null 2>&1
 fi
 
 git fetch -q origin "$NEW" && git checkout -q --detach "origin/$NEW"
