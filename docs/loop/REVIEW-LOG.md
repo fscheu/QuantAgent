@@ -122,4 +122,5 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-12 · #121 · PM: im48 vi: el PR quedó en conflicto con el lote tras #120, #122 y #123, solo en .beads/issues.jsonl, y por eso el CI no corría. Fede: pedir el cambio. decido: cambio (traer el lote a la rama). El gate solo mira el PR loop más nuevo y no habría tomado este cambio: lo aplicó el PM con autorización de Fede (13cfa2f3).
 2026-10-12 · #121 · PM: im48 vi: tercera revisión sobre 13cfa2f3; CI verde por primera vez en el PR, mismos 10 archivos contra el lote (+18 −15); en la notebook, snapshot, golden real y CLI: 23 passed. decido: escalo (el conflicto lo resolvió el PM, aprueba Fede)
 2026-10-12 · #121 · R: im48 vi: archivos ok en local-data decido: merge
+2026-10-12 · #116 · R: 7nle vi: leí el documento; de acuerdo con todas las propuestas: Alpaca SIP con end a 15 min (Yahoo de respaldo), proveedor abstracto CandleSource (opción A), columna source en market_data (incluye filtrar source en las dos consultas del backtest), adjustment=split y UTC sin zona en la base. decido: merge
 ```
