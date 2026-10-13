@@ -1,6 +1,11 @@
 # QuantConnect y LEAN: qué ofrecen, dónde se cruzan con QuantAgent y si conviene construir encima
 
-Ticket: sin asignar (propuesta en §12). Fecha: 2026-10-12. Estado: **análisis, falta decisión de Fede** (§11).
+Ticket del spike: `QuantAgent-ryaw`. Fecha: 2026-10-12. Estado: **decidido en parte por Fede el 2026-10-13** (ver abajo).
+
+**Decisiones de Fede (2026-10-13, sesión del PM):** (1) el spike de §9 se hace ya, en paralelo al lote 4 y fuera del loop
+(`QuantAgent-ryaw`, rama `spike/lean`); (2) el pivot NO se decide antes del lote 4: se define al cierre del lote 4, con el
+resultado del spike; (3) las ideas de §4 que entran al veredicto (significancia, Monte Carlo y crisis) quedan en
+`QuantAgent-7ssw`, en espera del spike: si hay pivot no se implementan. Las decisiones 3 a 6 de §11 siguen abiertas.
 
 Fuentes: la documentación de QuantConnect leída desde su repositorio fuente (`QuantConnect/Documentation` @ `6ec9b23`,
 2026-10-08), que es lo que publica https://www.quantconnect.com/docs/v2/, y el código de `QuantConnect/Lean` @ `80e7843`
