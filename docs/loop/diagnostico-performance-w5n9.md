@@ -4,9 +4,18 @@ Medición realizada en la VM del loop (2 CPUs, Linux, PostgreSQL para suite/orá
 
 ## 1. Corrida única: backtest run (rsi, SPY, 1d 2007-2018)
 Comando: `python -m quantagent.cli backtest run --strategy rsi --snapshot etf-1d-2026-10 --symbol SPY --costos etf --tamano-posicion 1.0`
-- Reloj: 26.97 s | CPU usuario: 14.74 s | Sistema: 1.18 s | CPU: 59% | Trades: 187, PnL: -9141.21.
 
-### Perfil cProfile (15 funciones con mayor tiempo acumulado)
+### Tiempos según base de datos (reproducidos en la VM)
+- **PostgreSQL** (`quantagent_loop_test`, base de tests del loop):
+  - Reloj: 26.97 s | CPU usuario: 14.74 s | Sistema: 1.18 s | CPU: 59% | Trades: 187, PnL: -9141.21.
+- **SQLite en disco** (`/tmp/test_disk.db` en ext4, comportamiento actual de `_isolated_sqlite_db()`):
+  - Reloj: 53.02 s | CPU usuario: 15.39 s | Sistema: 1.44 s | CPU: 31% | Trades: 187, PnL: -9141.21.
+  - Métricas `/usr/bin/time -v`: 19,170 context switches voluntarios, 368,272 fs outputs. Pasa ~36 s bloqueado esperando al disco por cada commit con fsync.
+- **SQLite en `/dev/shm`** (`/dev/shm/test_shm.db` en tmpfs / RAM):
+  - Reloj: 13.28 s | CPU usuario: 12.36 s | Sistema: 0.95 s | CPU: 100% | Trades: 187, PnL: -9141.21.
+  - Métricas `/usr/bin/time -v`: 39 context switches voluntarios, 0 fs outputs. Ahorro de ~40 s por corrida (~75% de reducción de reloj).
+
+### Perfil cProfile (15 funciones con mayor tiempo acumulado, medido sobre PostgreSQL)
 1. `backtest.py:run`: 29.81 s
 2. `backtest.py:_analyze_and_trade` (3020 llamadas): 29.64 s
 3. `sqlalchemy...state_changes:_go`: 10.52 s
@@ -23,7 +32,7 @@ Comando: `python -m quantagent.cli backtest run --strategy rsi --snapshot etf-1d
 14. `paper_broker.py:execute_order`: 1.95 s
 15. `buy_and_hold.py:worst_day`: 0.35 s
 
-**Desglose:** Base de datos (SQLAlchemy / psycopg2): 7.71 s directos (tottime), >16 s acumulados (commits por vela y queries). Indicadores / estrategia: 6.87 s directos. Bucle del motor sin DB: 0.79 s directos.
+**Desglose:** En PostgreSQL, DB toma 7.71 s directos y >16 s acumulados (commits por vela y queries). En SQLite sobre disco, esos mismos commits generan fsyncs bloqueantes que elevan el tiempo a 53 s. En SQLite sobre `/dev/shm`, el cuello de botella de I/O desaparece y todo corre en 13.28 s a 100% CPU.
 
 ## 2. Duraciones de la suite y de los oráculos
 
@@ -97,12 +106,45 @@ Comando: `python -m quantagent.cli backtest run --strategy rsi --snapshot etf-1d
 - Oráculos: No pueden correr en paralelo sobre Postgres porque colisionan en las tablas de la base de datos única y `conftest.py` lo bloquea. Para paralelizarse requieren bases SQLite independientes por worker o bases Postgres dedicadas (`_gw0`, `_gw1`).
 
 ## 5. Comando exacto para la notebook (hipótesis Trellix)
-`/usr/bin/time -v python -m quantagent.cli backtest run --strategy rsi --snapshot etf-1d-2026-10 --symbol SPY --costos etf --tamano-posicion 1.0`
-Si en la notebook el tiempo de usuario es similar (~15 s) pero el tiempo transcurrido (wall clock) supera ampliamente los 40 s con elevado context switching o I/O wait, se confirma la demora por Trellix.
+Para contrastar el impacto del antivirus en el acceso a disco vs memoria, correr ambos en la notebook:
 
-## 6. Propuesta de tickets (ordenados por ahorro sobre compare, cada uno ≤100 líneas)
-1. **Paralelizar pares de `compare` con `ProcessPoolExecutor`** en `quantagent/cli/backtest.py`: cada par corre en un proceso worker con su SQLite aislado. Ahorro estimado: ~22 min en VM (2 cores, ~48%) y ~30-33 min en notebook (4-6 cores, ~70%). (~40 líneas).
-2. **Eliminar `db.commit()` por vela en `PositionMonitor.update_candle_tracking`**: diferir el commit al cierre de posición o fin de corrida en backtest. Ahorro estimado: ~9.5 s por par = ~7.6 min sobre compare secuencial (16% de compare). (~20 líneas).
-3. **Lectura directa en memoria de velas de snapshot en `_get_history_df`**: evitar 3020 consultas `SELECT` a `MarketData` y conversiones fila a fila cuando los datos provienen de snapshot. Ahorro estimado: ~5 s por par = ~4 min sobre compare. (~35 líneas).
-4. **Compartir corrida base en fixture de `test_crossval_compare.py`**: evitar re-ejecutar 5 veces el motor completo en subprocesos. Ahorro estimado: ~200 s en oráculos. (~40 líneas).
-5. **Reutilizar corrida en fixture para `test_correr_par_devuelve_los_numeros...`**: validar claves con fixture reducido o corrida compartida en vez de 2160 velas contra Postgres. Ahorro estimado: ~100 s en suite rápida. (~25 líneas).
+1. **Sobre SQLite en disco:**
+```bash
+rm -f /tmp/test_disk.db && python -c "import os; os.environ['DATABASE_URL']='sqlite:////tmp/test_disk.db'; from quantagent import database; database.init_db()" && DATABASE_URL=sqlite:////tmp/test_disk.db /usr/bin/time -v python -m quantagent.cli backtest run --strategy rsi --snapshot etf-1d-2026-10 --symbol SPY --costos etf --tamano-posicion 1.0
+```
+
+2. **Sobre SQLite en `/dev/shm`:**
+```bash
+rm -f /dev/shm/test_shm.db && python -c "import os; os.environ['DATABASE_URL']='sqlite:////dev/shm/test_shm.db'; from quantagent import database; database.init_db()" && DATABASE_URL=sqlite:////dev/shm/test_shm.db /usr/bin/time -v python -m quantagent.cli backtest run --strategy rsi --snapshot etf-1d-2026-10 --symbol SPY --costos etf --tamano-posicion 1.0
+```
+
+Si en la notebook el tiempo de usuario se mantiene en ~12-15 s pero en disco el tiempo de reloj supera ampliamente los 50 s con alto context switching voluntario, mientras que en `/dev/shm` baja a ~13 s con 100% CPU, se confirma que el antivirus demora las sincronizaciones a disco (`fsync`).
+
+## 6. Propuesta de tickets (ordenados por ahorro real sobre compare, cada uno ≤100 líneas)
+
+1. **Evitar fsync a disco en `_isolated_sqlite_db()`** (`quantagent/cli/backtest.py`):
+   - **Qué hacer:** Configurar SQLite para evitar sincronización a disco mediante `PRAGMA synchronous=OFF` (vía connect hook de SQLAlchemy o connect_args) y crear la base en `tempfile.TemporaryDirectory(dir="/dev/shm" if os.path.isdir("/dev/shm") and os.access("/dev/shm", os.W_OK) else None)`.
+   - **Por qué `PRAGMA synchronous=OFF`:** Es universal e independiente del sistema operativo (funciona en Linux, WSL, macOS y Windows nativo). Le indica a SQLite no bloquear en cada `commit` esperando `fsync` del filesystem. Dado que `_isolated_sqlite_db()` es una base efímera descartada al finalizar cada par o verificación, la durabilidad ante cortes de energía es prescindible.
+   - **Qué pasa si `/dev/shm` no existe:** Si `/dev/shm` no existe (ej. en macOS, Windows o contenedores sin shm), `tempfile` usa el directorio temporal del sistema; gracias a `synchronous=OFF`, la base en disco no emite fsyncs y rinde prácticamente igual que en memoria.
+   - **Ahorro estimado:** ~40 s por par (de 53 s a ~13.3 s). En los 48 pares de `compare`, el tiempo baja de ~42.4 min a ~10.6 min. **Ahorro real: ~32 a 35 minutos sobre compare (~75%)**. (~15 líneas).
+
+2. **Paralelizar pares de `compare` con `ProcessPoolExecutor`** (`quantagent/cli/backtest.py`):
+   - Sobre la nueva base de ~13.3 s por par conseguida en el Ticket 1:
+   - En la VM (2 cores a 100% CPU): reduce los 10.6 min a ~5.5-6 min (**ahorro adicional: ~5 min**).
+   - En la notebook (4-6 cores): reduce los 10.6 min a ~2-3 min (**ahorro adicional: ~7-8 min**). (~40 líneas).
+
+3. **Diferir `db.commit()` por vela en `PositionMonitor.update_candle_tracking`**:
+   - Evitar `commit()` por cada una de las 1736 llamadas por par; comitear únicamente al cierre de posición o al finalizar el backtest.
+   - Ahorro estimado: sobre la base en memoria/shm, ahorra ~2 s de CPU por par = **~1.5 min sobre compare**. (~20 líneas).
+
+4. **Lectura directa de snapshot en `_get_history_df`** (evitar queries repetidas a `MarketData`):
+   - Reutilizar el DataFrame ya cargado en memoria en vez de consultar y convertir 3020 filas por par.
+   - Ahorro estimado: ~1.5 s de CPU por par = **~1 min sobre compare**. (~35 líneas).
+
+5. **Compartir corrida base en fixture de `test_crossval_compare.py`**:
+   - Evitar re-ejecutar 5 veces el motor completo en subprocesos en la suite de oráculos.
+   - Ahorro estimado: **~200 s en oráculos**. (~40 líneas).
+
+6. **Reutilizar corrida en fixture para `test_correr_par_devuelve_los_numeros...`**:
+   - Validar claves del resumen con un fixture sintético chico en vez de correr 2160 velas contra Postgres.
+   - Ahorro estimado: **~100 s en suite rápida**. (~25 líneas).
