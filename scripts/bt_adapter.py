@@ -73,10 +73,34 @@ class StrategyAdapter(Strategy):
         self.bars = pd.DataFrame({"timestamp": df.index, **cols})  # precios reales, columnas del motor
         self.pos = None  # ActivePosition de la posicion abierta (o con orden de entrada pendiente)
         self.info = {}  # vela de entrada -> {"stop", "reason"} para el CSV
-        if not self.fill_close:
-            process_orders = self._broker._process_orders
+        process_orders = self._broker._process_orders
 
+        # QuantAgent-ws3d: regla de salto en la apertura del motor (quantagent/backtesting/backtest.py).
+        # Si la vela abre mas alla del take profit o stop, la posicion sale en la apertura con ese motivo.
+        def apply_opening_gap():
+            open_val = float(self._broker._data._current_value("Open"))
+            for trade in list(self._broker.trades):
+                if self._broker._i <= trade.entry_bar:
+                    continue
+                sl, tp = trade.sl, trade.tp
+                reason = None
+                if trade.is_long:
+                    if sl is not None and open_val <= sl:
+                        reason = "STOP_LOSS"
+                    elif tp is not None and open_val >= tp:
+                        reason = "TAKE_PROFIT"
+                else:
+                    if sl is not None and open_val >= sl:
+                        reason = "STOP_LOSS"
+                    elif tp is not None and open_val <= tp:
+                        reason = "TAKE_PROFIT"
+                if reason:
+                    self.info[trade.entry_bar]["reason"] = reason
+                    self._broker._close_trade(trade, open_val, self._broker._i)
+
+        if not self.fill_close:
             def cap_open_entries():
+                apply_opening_gap()
                 broker = self._broker
                 entries = [o for o in broker.orders if not o.parent_trade]
                 broker.orders[:] = [o for o in broker.orders if o.parent_trade]
@@ -94,6 +118,13 @@ class StrategyAdapter(Strategy):
                 process_orders()
 
             self._broker._process_orders = cap_open_entries
+        else:
+            def process_orders_gap():
+                apply_opening_gap()
+                process_orders()
+
+            self._broker._process_orders = process_orders_gap
+
         if self.slippage:  # cerrar un largo es vender (precio * (1 - s)); cerrar un corto es comprar (* (1 + s))
             close_trade = self._broker._close_trade
             self._broker._close_trade = lambda trade, price, i: close_trade(
@@ -106,9 +137,10 @@ class StrategyAdapter(Strategy):
         if self.pos is not None and not self.position:
             last = self.closed_trades[-1] if self.closed_trades else None
             if last is not None and last.entry_bar == self.key:  # la libreria cerro por sl=/tp=
-                stop = self.info[self.key]["stop"] / SCALE
-                hit_stop = last.exit_price <= stop if last.is_long else last.exit_price >= stop
-                self.info[self.key]["reason"] = "STOP_LOSS" if hit_stop else "TAKE_PROFIT"
+                if self.info[self.key]["reason"] == "backtest_end":
+                    stop = self.info[self.key]["stop"] / SCALE
+                    hit_stop = last.exit_price <= stop if last.is_long else last.exit_price >= stop
+                    self.info[self.key]["reason"] = "STOP_LOSS" if hit_stop else "TAKE_PROFIT"
             self.pos = None  # (si no hay trade, la libreria cancelo la orden por falta de efectivo)
         history = self.strategy.required_history_bars
         history = history if history > 0 else 30

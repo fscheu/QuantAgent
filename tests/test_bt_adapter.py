@@ -29,6 +29,13 @@ CANDLES = [
     (5, 96.0, 97.0, 95.5, 96.0, 2),  # senal: stop 91.2
     (6, 96.0, 97.0, 95.5, 96.0, 1),  # ultima vela
 ]
+# QuantAgent-ws3d: la vela 3 abre en 115 (> take profit 110) y luego el minimo 90 toca el stop 95
+CANDLES_OPENING_GAP = [
+    (1, 100.0, 101.0, 99.0, 100.0, 1),
+    (2, 100.0, 101.0, 99.0, 100.0, 2),  # senal: entrada en 100, stop 95, take profit 110
+    (3, 115.0, 115.0, 90.0, 95.0, 1),  # gap alcista > tp y minimo < sl
+    (4, 95.0, 96.0, 94.0, 95.0, 1),
+]
 SCENARIOS = {
     "default": {},
     "exit_after_1": {"exit_after": 1},
@@ -97,6 +104,17 @@ def _run_scenarios(workdir: Path) -> dict:
         rows = [{**vars(r), "entry_time": r.entry_time.isoformat(), "exit_time": r.exit_time.isoformat()}
                 for r in bt_adapter.trade_rows(stats, "XYZ")]
         out[name] = {"rows": rows, "signal_calls": strategy.signal_calls, "exit_calls": strategy.exit_calls}
+
+    # QuantAgent-ws3d: corrida con apertura que supera el take profit y minimo que toca el stop
+    gap_path = workdir / "gap.csv"
+    gap_lines = ["timestamp,open,high,low,close,volume"] + [f"{day(d)},{o},{h},{lo},{c},{v}" for d, o, h, lo, c, v in CANDLES_OPENING_GAP]
+    gap_path.write_text("\n".join(gap_lines) + "\n")
+    gap_strat = MiniStrategy()
+    bt_adapter.settings.TRADING_BASE_POSITION_PCT = 0.05
+    gap_stats = bt_adapter.run_adapter(gap_strat, crossval_rsi.load_fixture(gap_path), symbol="XYZ", timeframe="1d")
+    out["opening_gap"] = [{**vars(r), "entry_time": r.entry_time.isoformat(), "exit_time": r.exit_time.isoformat()}
+                          for r in bt_adapter.trade_rows(gap_stats, "XYZ")]
+
     return out
 
 
@@ -107,6 +125,16 @@ def results(tmp_path_factory):
                           cwd=ROOT, capture_output=True, text=True, timeout=120)
     assert proc.returncode == 0, proc.stderr
     return json.loads(proc.stdout.splitlines()[-1])
+
+
+def test_salto_en_apertura_sale_por_take_profit_antes_del_stop(results):
+    """QuantAgent-ws3d: si la vela abre por encima del take profit y toca el stop, sale en la apertura con TAKE_PROFIT."""
+    rows = results["opening_gap"]
+    assert len(rows) == 1
+    trade = rows[0]
+    assert (trade["entry_time"], trade["entry_price"]) == (day(2), 100.0)
+    assert (trade["exit_time"], trade["exit_price"], trade["exit_reason"]) == (day(3), 115.0, "TAKE_PROFIT")
+    assert trade["pnl"] == pytest.approx(25.0 * (115.0 - 100.0))
 
 
 def test_entrada_al_cierre_y_stop_tocado_dentro_de_la_vela(results):
