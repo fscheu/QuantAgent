@@ -1,0 +1,30 @@
+{
+  "environment": "backtesting",
+  "algorithm-type-name": "SmaCrossSpike",
+  "algorithm-language": "Python",
+  "algorithm-location": "/spike/algos/lean_algos.py",
+  "data-folder": "/spike/data/",
+  "results-destination-folder": "/spike/results",
+  "debugging": false,
+  "show-missing-data-logs": true,
+  "job-user-id": "0",
+  "api-access-token": "",
+  "job-organization-id": "",
+  "parameters": {
+    "cuenta": "cash",
+    "slippage": "0.0005",
+    "comision": "0",
+    "fraccion": "1.0"
+  },
+  "environments": {
+    "backtesting": {
+      "live-mode": false,
+      "setup-handler": "QuantConnect.Lean.Engine.Setup.BacktestingSetupHandler",
+      "result-handler": "QuantConnect.Lean.Engine.Results.BacktestingResultHandler",
+      "data-feed-handler": "QuantConnect.Lean.Engine.DataFeeds.FileSystemDataFeed",
+      "real-time-handler": "QuantConnect.Lean.Engine.RealTime.BacktestingRealTimeHandler",
+      "history-provider": ["QuantConnect.Lean.Engine.HistoricalData.SubscriptionDataReaderHistoryProvider"],
+      "transaction-handler": "QuantConnect.Lean.Engine.TransactionHandlers.BacktestingTransactionHandler"
+    }
+  }
+}
