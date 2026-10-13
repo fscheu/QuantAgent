@@ -32,6 +32,7 @@ from quantagent import settings  # noqa: E402
 
 settings.TRADING_SLIPPAGE_PCT = float(os.getenv("TRADING_SLIPPAGE_PCT", "0.0005"))
 from quantagent.backtesting.export import trades_to_csv  # noqa: E402
+from quantagent.cli.backtest import generar_markdown_compare  # noqa: E402
 from quantagent.data.snapshot import load_manifest  # noqa: E402
 from quantagent.strategy.registry import build_strategy, cli_aliases  # noqa: E402
 
@@ -71,7 +72,9 @@ def main(argv=None) -> int:
     ap.add_argument("--snapshot", required=True, help="Nombre del snapshot")
     ap.add_argument("--costos", choices=sorted(settings.COSTOS_PERFILES), help="Perfil de costos")
     ap.add_argument("--tamano-posicion", type=float, default=1.0, help="Tamaño de posición (default 1.0)")
+    ap.add_argument("--regla-tamano", choices=["confianza", "fijo"], default="confianza", help="Regla de tamaño (default confianza)")
     ap.add_argument("--out", help="CSV de salida (default: sobrescribe --tabla)")
+    ap.add_argument("--md", help="Documento Markdown de salida")
     args = ap.parse_args(argv)
 
     with open(args.tabla, newline="") as f:
@@ -129,6 +132,18 @@ def main(argv=None) -> int:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
+
+    if args.md:
+        md_text = generar_markdown_compare(
+            rows,
+            snapshot_name=args.snapshot,
+            costos=args.costos,
+            tamano_posicion=args.tamano_posicion,
+            regla_tamano=args.regla_tamano,
+            columns=fieldnames,
+        )
+        with open(args.md, "w", encoding="utf-8") as f:
+            f.write(md_text)
 
     table_data = [[r.get(c, "") for c in fieldnames] for r in rows]
     print(tabulate(table_data, headers=fieldnames, tablefmt="github"))

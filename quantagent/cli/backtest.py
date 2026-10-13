@@ -26,10 +26,10 @@ from quantagent.backtesting.fixtures import (
     load_snapshot,
     snapshot_metadata,
 )
-from quantagent.data.snapshot import SnapshotError, snapshot_root
+from quantagent.data.snapshot import SnapshotError, load_manifest, snapshot_root
 from quantagent.models import ActivePosition, MarketData, Trade
 from quantagent.settings import COSTOS_PERFILES
-from quantagent.strategy.registry import build_strategy, cli_aliases
+from quantagent.strategy.registry import STRATEGY_REGISTRY, build_strategy, cli_aliases
 from quantagent.trading.position_sizer import PositionSizer
 
 from . import utils
@@ -736,6 +736,85 @@ COMPARE_COLUMNS = [
 ]
 
 
+def generar_markdown_compare(
+    rows: list[dict],
+    snapshot_name: str,
+    costos: Optional[str] = None,
+    tamano_posicion: Optional[float] = 1.0,
+    regla_tamano: Optional[str] = None,
+    columns: Optional[list[str]] = None,
+) -> str:
+    """Genera el documento Markdown de compare con encabezado de auditoría y tabla."""
+    cols = columns or (list(rows[0].keys()) if rows else COMPARE_COLUMNS)
+    desde = min((r["desde"] for r in rows), default="")
+    hasta = max((r["hasta"] for r in rows), default="")
+
+    manifest = load_manifest(snapshot_name)
+    syms = sorted({r["activo"] for r in rows})
+    manifest_syms = manifest.get("symbols", {})
+
+    if costos and costos in COSTOS_PERFILES:
+        c_cfg = COSTOS_PERFILES[costos]
+        comm, slip = c_cfg.get("commission_pct", 0.0), c_cfg.get("slippage_pct", 0.0)
+        costos_desc = f"{costos} (comisión: {comm * 100:g}%, slippage: {slip * 100:g}%)"
+    else:
+        comm, slip = settings.TRADING_COMMISSION_PCT, settings.TRADING_SLIPPAGE_PCT
+        costos_desc = f"ninguno (comisión: {comm * 100:g}%, slippage: {slip * 100:g}%)"
+
+    tamano = 1.0 if tamano_posicion is None else tamano_posicion
+    regla = regla_tamano or "confianza"
+    tamano_desc = f"{tamano * 100:g}% del capital, regla {regla}"
+
+    aliases = cli_aliases()
+    strats = sorted({r["estrategia"] for r in rows})
+    strat_lines = []
+    for s in strats:
+        reg_name = aliases.get(s, s)
+        params_info = STRATEGY_REGISTRY.get(reg_name, {}).get("params", {})
+        p_str = ", ".join(f"{k}={v['default']}" for k, v in params_info.items()) if params_info else "sin parámetros"
+        strat_lines.append(f"- **{s}**: {p_str}")
+
+    hash_lines = [
+        f"- **{sym}**: `{manifest_syms.get(sym, {}).get('sha256', 'n/a')}`"
+        for sym in syms
+    ]
+
+    table_data = []
+    for r in rows:
+        row_vals = []
+        trades_count = int(r.get("trades") or 0)
+        for c in cols:
+            val = r.get(c, "")
+            if c == "profit_factor" and (val == "" or val is None) and trades_count > 0:
+                val = "sin pérdidas"
+            row_vals.append(val)
+        table_data.append(row_vals)
+
+    table_md = tabulate(table_data, headers=cols, tablefmt="github")
+
+    lines = [
+        "# Comparación de estrategias",
+        "",
+        "## Configuración",
+        f"- **Rango:** {desde} a {hasta}",
+        f"- **Snapshot:** {snapshot_name}",
+        f"- **Costos:** {costos_desc}",
+        f"- **Posición:** {tamano_desc}",
+        "",
+        "## Símbolos y hashes (SHA-256)",
+        *hash_lines,
+        "",
+        "## Parámetros de estrategias",
+        *strat_lines,
+        "",
+        "## Resultados",
+        "",
+        table_md,
+        "",
+    ]
+    return "\n".join(lines)
+
+
 @backtest_group.command("compare", help="Compare multiple strategies across symbols against a snapshot.")
 @click.option("--strategies", required=True, help="Estrategias separadas por coma (ej: rsi,sma-cross).")
 @click.option("--symbols", required=True, help="Símbolos separados por coma (ej: SPY,IWM).")
@@ -749,10 +828,12 @@ COMPARE_COLUMNS = [
 @click.option("--abrir-prueba", "abrir_prueba", is_flag=True, help="Permite abrir el tramo de prueba.")
 @click.option("--out", "out_path", required=True, type=click.Path(dir_okay=False, writable=True), help="CSV de salida.")
 @click.option("--trades-dir", "trades_dir", type=click.Path(file_okay=False, writable=True), default=None)
+@click.option("--md", "md_path", type=click.Path(dir_okay=False, writable=True), default=None, help="Documento Markdown de salida.")
 def compare_backtests(
     strategies: str, symbols: str, snapshot_name: str, from_date: Optional[datetime],
     to_date: Optional[datetime], costos: Optional[str], tamano_posicion: Optional[float],
     regla_tamano: Optional[str], abrir_reserva: bool, abrir_prueba: bool, out_path: str, trades_dir: Optional[str],
+    md_path: Optional[str] = None,
 ) -> None:
     reserva = _reserva_desde()
     prueba = _prueba_desde()
@@ -854,6 +935,18 @@ def compare_backtests(
         writer = csv.DictWriter(f, fieldnames=COMPARE_COLUMNS)
         writer.writeheader()
         writer.writerows(rows)
+
+    if md_path:
+        md_text = generar_markdown_compare(
+            rows,
+            snapshot_name=snapshot_name,
+            costos=costos,
+            tamano_posicion=tamano_posicion,
+            regla_tamano=regla_tamano,
+            columns=COMPARE_COLUMNS,
+        )
+        with open(md_path, "w", encoding="utf-8") as f:
+            f.write(md_text)
 
     table_data = [[row[col] for col in COMPARE_COLUMNS] for row in rows]
     click.echo(tabulate(table_data, headers=COMPARE_COLUMNS, tablefmt="github"))
