@@ -729,7 +729,10 @@ class Backtest:
             },
             environment=Environment.BACKTEST,
         )
-        return {**StrategyAssembler.config_snapshot(resolved), "regla_tamano": resolved.regla_tamano}
+        snapshot = {**StrategyAssembler.config_snapshot(resolved), "regla_tamano": resolved.regla_tamano}
+        if "strategy_params" in self.config:
+            snapshot["strategy_params"] = self.config["strategy_params"]
+        return snapshot
 
     def _get_date_range(self) -> List[datetime]:
         """

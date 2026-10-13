@@ -11,6 +11,7 @@ import os
 import sys
 from pathlib import Path
 
+import click
 from tabulate import tabulate
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -32,7 +33,7 @@ from quantagent import settings  # noqa: E402
 
 settings.TRADING_SLIPPAGE_PCT = float(os.getenv("TRADING_SLIPPAGE_PCT", "0.0005"))
 from quantagent.backtesting.export import trades_to_csv  # noqa: E402
-from quantagent.cli.backtest import generar_markdown_compare  # noqa: E402
+from quantagent.cli.backtest import cargar_params, generar_markdown_compare  # noqa: E402
 from quantagent.data.snapshot import load_manifest  # noqa: E402
 from quantagent.strategy.registry import build_strategy, cli_aliases  # noqa: E402
 
@@ -75,7 +76,12 @@ def main(argv=None) -> int:
     ap.add_argument("--regla-tamano", choices=["confianza", "fijo"], default="confianza", help="Regla de tamaño (default confianza)")
     ap.add_argument("--out", help="CSV de salida (default: sobrescribe --tabla)")
     ap.add_argument("--md", help="Documento Markdown de salida")
+    ap.add_argument("--params", help="JSON de parámetros de estrategia, el mismo que se pasó a backtest compare")
     args = ap.parse_args(argv)
+    try:
+        params = cargar_params(args.params)
+    except click.ClickException as exc:
+        ap.error(exc.message)
 
     with open(args.tabla, newline="") as f:
         rows = list(csv.DictReader(f))
@@ -105,7 +111,7 @@ def main(argv=None) -> int:
             df = _load_snapshot_df(args.snapshot, sym, row.get("desde"), row.get("hasta")).copy()
             settings.TRADING_BASE_POSITION_PCT = args.tamano_posicion
             bt_adapter.settings.TRADING_BASE_POSITION_PCT = args.tamano_posicion
-            stats = bt_adapter.run_adapter(build_strategy(aliases[strat]), df, symbol=sym, timeframe=timeframe, fill="close", **costos)
+            stats = bt_adapter.run_adapter(build_strategy(aliases[strat], **params.get(strat, {})), df, symbol=sym, timeframe=timeframe, fill="close", **costos)
             prt_rows = list(csv.DictReader(io.StringIO(trades_to_csv(bt_adapter.trade_rows(stats, sym)))))
             row["control"] = compare_trades_with_reasons(eng_rows, prt_rows)
         except Exception as exc:
@@ -115,7 +121,7 @@ def main(argv=None) -> int:
             df_open = _load_snapshot_df(args.snapshot, sym, row.get("desde"), row.get("hasta")).copy()
             settings.TRADING_BASE_POSITION_PCT = args.tamano_posicion
             bt_adapter.settings.TRADING_BASE_POSITION_PCT = args.tamano_posicion
-            stats_open = bt_adapter.run_adapter(build_strategy(aliases[strat]), df_open, symbol=sym, timeframe=timeframe, fill="next-open", **costos)
+            stats_open = bt_adapter.run_adapter(build_strategy(aliases[strat], **params.get(strat, {})), df_open, symbol=sym, timeframe=timeframe, fill="next-open", **costos)
             open_rows = bt_adapter.trade_rows(stats_open, sym)
             row["pnl_apertura_siguiente"] = round(sum(r.pnl for r in open_rows), 2)
             row["trades_apertura_siguiente"] = len(open_rows)
@@ -141,6 +147,7 @@ def main(argv=None) -> int:
             tamano_posicion=args.tamano_posicion,
             regla_tamano=args.regla_tamano,
             columns=fieldnames,
+            params=params,
         )
         with open(args.md, "w", encoding="utf-8") as f:
             f.write(md_text)

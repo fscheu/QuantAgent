@@ -58,13 +58,14 @@ def snap_env(monkeypatch, tmp_path):
         database._SessionLocal = None
 
 
-def _run_control(tabla: Path, trades_dir: Path, snapshot: str, md: Path | None = None) -> None:
+def _run_control(tabla: Path, trades_dir: Path, snapshot: str, md: Path | None = None, *extra: str) -> None:
     cmd = [
         sys.executable,
         str(SCRIPT),
         "--tabla", str(tabla),
         "--trades-dir", str(trades_dir),
         "--snapshot", snapshot,
+        *extra,
     ]
     if md:
         cmd.extend(["--md", str(md)])
@@ -198,3 +199,24 @@ def test_compare_control_sensibilidad_apertura_siguiente_gap(snap_env):
     effective_gap = gap * (1.0 + slippage)
     expected_diff = round(effective_gap * qty, 2)
     assert round(pnl_cierre - pnl_apertura, 2) == pytest.approx(expected_diff, abs=0.01)
+
+
+def test_compare_control_con_params_valida_contra_las_mismas_estrategias(snap_env):
+    runner, tmp_path = snap_env
+    write_snapshot("t", {"SPY": _daily_frame()})
+    params = tmp_path / "p.json"
+    params.write_text('{"fifty-two-week-high": {"stop_loss_pct": 0.01, "take_profit_pct": 0.02, "trailing_stop_pct": 0.02}}')
+    out_csv, trades_dir, out_md = tmp_path / "cmp.csv", tmp_path / "trades", tmp_path / "ctrl.md"
+    cmd = ["compare", "--strategies", "fifty-two-week-high", "--symbols", "SPY", "--snapshot", "t", "--out", str(out_csv)]
+    res = runner.invoke(backtest_group, [*cmd, "--trades-dir", str(trades_dir), "--params", str(params)])
+    assert res.exit_code == 0, res.output
+
+    def control() -> str:
+        with open(out_csv, newline="") as f:
+            return next(csv.DictReader(f))["control"]
+
+    _run_control(out_csv, trades_dir, "t")
+    assert control().startswith("sin validar")
+    _run_control(out_csv, trades_dir, "t", out_md, "--params", str(params))
+    assert control().startswith("coinciden")
+    assert "take_profit_pct=0.02," in out_md.read_text(encoding="utf-8")
