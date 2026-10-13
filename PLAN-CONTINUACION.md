@@ -489,6 +489,7 @@ Los primeros 5 son los más fáciles de revisar.
 | V25 | `QuantAgent-bz3z` | Parámetros de estrategia desde un archivo JSON | Dos archivos dan dos filas distintas en `compare` | leer | L6 |
 | V26 | `QuantAgent-j2rt` | Agregar una estrategia = un archivo + una línea de registro | Test que registra una sin tocar `quantagent/backtesting/` ni el CLI | leer | L6 |
 | V27d | `QuantAgent-w5n9` | Diagnóstico: por qué tardan la suite, los oráculos y cada corrida de `compare` (adelantado por Fede antes del barrido) | Doc en `docs/loop/` con duraciones, perfil de una corrida y tickets propuestos con ahorro estimado | leer | L7 |
+| V27e | `QuantAgent-06yj` | La base SQLite aislada de `compare` y `verify` no espera al disco (primer ticket del diagnóstico w5n9) | (VM) CSV de `compare` idéntico byte a byte; el PR informa el tiempo antes y después | probar | L7 |
 | V27a | `QuantAgent-ws3d` | El adaptador de `backtesting.py` replica la regla de salto en la apertura del motor (decisión de Fede en #113) | (VM) rsi/EFA, rsi/XLE y rsi/XLF pasan a `coinciden N de N`; ninguna celda deja de coincidir | probar | L7 |
 | V27b | `QuantAgent-24qm` | Piso absoluto de 5e-9 en la tolerancia de cantidad del control (decisión de Fede en #113) | (VM) rsi/IWM `coinciden 236 de 236`; rsi/SPY sigue 187 de 187 | probar | L7 |
 | V27c | `QuantAgent-u8lf` | Diagnóstico: rsi/GLD da 243 trades al cierre y 242 con apertura siguiente | Doc con el primer trade que diverge y la regla del código que lo explica | leer | L7 |
