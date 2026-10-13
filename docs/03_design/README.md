@@ -39,6 +39,7 @@ These documents represent the current technical design of the system. When imple
 
 ## Active Per-Change Design
 
+- [QuantAgent-j2rt-DS-como-agregar-una-estrategia.md](./QuantAgent-j2rt-DS-como-agregar-una-estrategia.md) - Cómo agregar una estrategia: un archivo más una línea de registro; contrato de `TradingStrategy` y tests mínimos (QuantAgent-j2rt)
 - [QuantAgent-beo-DS-regla-de-salida-duplicada.md](./QuantAgent-beo-DS-regla-de-salida-duplicada.md) - Diagnóstico: la regla de salida está duplicada entre backtest (`should_exit`) y paper (scheduler); tabla de diferencias y propuesta de unificación (QuantAgent-beo)
 - [QuantAgent-vfd-DS-suite-performance-diagnosis.md](./QuantAgent-vfd-DS-suite-performance-diagnosis.md) - Suite performance diagnosis, bottleneck analysis and improvement plan (QuantAgent-vfd)
 - [QuantAgent-um8-DS-batch-processing.md](./QuantAgent-um8-DS-batch-processing.md) - Batch processing design: concurrent (LangGraph .batch()) and provider_batch (Anthropic/OpenAI async APIs) modes, BatchSignalCollector, BatchProvider protocol, error handling

@@ -1,6 +1,8 @@
 """`backtest run --snapshot` (V07). Usa un snapshot armado en tmp_path a partir de un fixture; sin red ni snapshot real."""
 
 import csv
+import json
+import math
 from datetime import datetime, timezone
 
 import pandas as pd
@@ -44,6 +46,7 @@ def snap_env(monkeypatch, tmp_path):
     monkeypatch.setenv("DATABASE_URL", db_url)
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path / "snaps"))
     monkeypatch.setenv("QUANTAGENT_RESERVA_DESDE", "2030-01-01")  # los datos del fixture son de 2024-2025
+    monkeypatch.setenv("QUANTAGENT_PRUEBA_DESDE", "2030-01-01")
     engine = create_engine(db_url, connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
     original_database_url = settings.DATABASE_URL
@@ -69,8 +72,8 @@ def test_snapshot_da_lo_mismo_que_el_fixture_del_que_sale(snap_env):
     write_snapshot("t", {"SPY": _daily_frame()})
     by_snapshot = _run(runner, "--snapshot", "t", "--symbol", "SPY")
     assert by_snapshot.exit_code == 0, by_snapshot.output
-    assert len(by_snapshot.output.strip().splitlines()) == 8
-    assert _metrics(by_snapshot.output) == ("Trades: 6", "Total PnL: -249.35")
+    assert len(by_snapshot.stdout.strip().splitlines()) == 14
+    assert _metrics(by_snapshot.stdout) == ("Trades: 6", "Total PnL: -249.35")
 
 
 def test_carga_velas_ajustadas_y_solo_las_del_rango(snap_env):
@@ -128,6 +131,7 @@ LOG = "reserva-accesos.log"
 
 def _con_reserva(snap_env, monkeypatch, tmp_path, desde=RESERVA):
     monkeypatch.setenv("QUANTAGENT_RESERVA_DESDE", desde)
+    monkeypatch.setenv("QUANTAGENT_PRUEBA_DESDE", desde)
     write_snapshot("t", {"SPY": _daily_frame()})
     return snap_env[0], snap_env[1], tmp_path / "snaps" / LOG
 
@@ -182,6 +186,7 @@ def test_abrir_reserva_con_to_anterior_no_es_una_apertura(snap_env, monkeypatch,
 
 def test_abrir_reserva_con_fixture_es_error_de_uso(snap_env):
     assert _run(snap_env[0], "--fixture", DAILY, "--abrir-reserva").exit_code == 2
+    assert _run(snap_env[0], "--fixture", DAILY, "--abrir-prueba").exit_code == 2
 
 
 def _verify(runner, *args):
@@ -193,7 +198,7 @@ def test_verify_snapshot_imprime_ok_reproducible(snap_env):
     write_snapshot("t", {"SPY": _daily_frame()})
     result = _verify(runner, "--snapshot", "t", "--symbol", "SPY")
     assert result.exit_code == 0, result.output
-    assert result.output.strip() == "OK reproducible"
+    assert result.stdout.strip() == "OK reproducible"
 
 
 def test_verify_snapshot_respeta_reserva_y_registra_apertura(snap_env, monkeypatch, tmp_path):
@@ -217,3 +222,291 @@ def test_verify_fixture_y_snapshot_son_excluyentes(snap_env):
     both = _verify(runner, "--fixture", DAILY, "--snapshot", "t", "--symbol", "SPY")
     assert both.exit_code == 2 and "exactamente uno" in both.output
     assert _verify(runner).exit_code == 2
+
+
+def _compare(runner, *args):
+    return runner.invoke(backtest_group, ["compare", *args])
+
+
+def test_compare_snapshot_arma_csv_e_imprime_tabla(snap_env, tmp_path):
+    from quantagent.backtesting.export import trades_to_csv
+    from quantagent.backtesting.fixtures import snapshot_metadata
+    from quantagent.cli.backtest import _engine_config, correr_par
+
+    runner, _ = snap_env
+    spy_frame = _daily_frame()
+    iwm_frame = _daily_frame().iloc[20:].copy()
+    iwm_frame[["open", "high", "low", "close", "adj_close"]] += 50.0
+    write_snapshot("t", {"SPY": spy_frame, "IWM": iwm_frame})
+    out_csv = tmp_path / "cmp.csv"
+    trades_dir = tmp_path / "trades"
+    res = _compare(
+        runner,
+        "--strategies", "rsi,fifty-two-week-high",
+        "--symbols", "SPY,IWM",
+        "--snapshot", "t",
+        "--to", "2024-09-30",
+        "--out", str(out_csv),
+        "--trades-dir", str(trades_dir),
+    )
+    assert res.exit_code == 0, res.output
+    with out_csv.open() as f:
+        rows = list(csv.DictReader(f))
+    assert len(rows) == 4
+    assert (trades_dir / "rsi-SPY.csv").exists()
+    assert (trades_dir / "fifty-two-week-high-IWM.csv").exists()
+
+    spy_rows = {r["estrategia"]: r for r in rows if r["activo"] == "SPY"}
+    iwm_rows = {r["estrategia"]: r for r in rows if r["activo"] == "IWM"}
+    for strat in ["rsi", "fifty-two-week-high"]:
+        assert {k: v for k, v in spy_rows[strat].items() if k != "activo"} != {
+            k: v for k, v in iwm_rows[strat].items() if k != "activo"
+        }
+        assert spy_rows[strat]["desde"] != iwm_rows[strat]["desde"]
+        assert spy_rows[strat]["bh_pnl"] != iwm_rows[strat]["bh_pnl"]
+
+    to_dt = datetime(2024, 9, 30)
+    redondeos = {
+        "win_rate": 4, "sharpe": 2, "pnl": 2, "max_drawdown": 6,
+        "bh_pnl": 2, "bh_sharpe": 2, "bh_max_drawdown": 6,
+        "retorno_anualizado": 4, "exceso_sobre_referencia": 4,
+        "tiempo_en_mercado": 4, "capital_invertido_medio": 4,
+        "sharpe_tasa_0": 2,
+    }
+    for row in rows:
+        meta = snapshot_metadata("t", row["activo"], None, to_dt)
+        r = correr_par(
+            row["estrategia"], meta, _engine_config(None, None, 1.0), None,
+            None, "t", row["activo"], None, to_dt, con_filas=True,
+        )
+        assert row["desde"] == f"{meta.start_date:%Y-%m-%d}"
+        assert row["hasta"] == f"{meta.end_date:%Y-%m-%d}"
+        assert int(row["trades"]) == r["trades"]
+        for col, dec in redondeos.items():
+            val = r[col]
+            if val is None:
+                assert row[col] == ""
+            else:
+                assert float(row[col]) == round(val, dec)
+        pf = r["profit_factor"]
+        if pf is None or math.isinf(pf):
+            assert row["profit_factor"] == ""
+        else:
+            assert float(row["profit_factor"]) == round(pf, 2)
+
+        trades_file = trades_dir / f"{row['estrategia']}-{row['activo']}.csv"
+        assert trades_file.read_bytes().decode() == trades_to_csv(r["filas"])
+
+
+def test_compare_reserva_bloquea_y_no_escribe_csv(snap_env, monkeypatch, tmp_path):
+    runner, _, log = _con_reserva(snap_env, monkeypatch, tmp_path)
+    out_csv = tmp_path / "cmp.csv"
+    res = _compare(
+        runner,
+        "--strategies", "rsi",
+        "--symbols", "SPY",
+        "--snapshot", "t",
+        "--to", "2024-09-30",
+        "--out", str(out_csv),
+    )
+    assert res.exit_code == 1 and "reserva" in res.output
+    assert not out_csv.exists()
+
+
+LOG_PRUEBA = "prueba-accesos.log"
+
+
+def _multiyear_frame() -> pd.DataFrame:
+    df = pd.concat([_daily_frame(), _daily_frame()]).iloc[:600].copy()
+    df.index = pd.date_range("2018-01-01", periods=len(df), freq="B")
+    return df
+
+
+def test_sin_to_no_lee_desde_prueba_y_stderr_trae_aviso(snap_env, monkeypatch, tmp_path):
+    runner, engine = snap_env
+    monkeypatch.delenv("QUANTAGENT_PRUEBA_DESDE", raising=False)
+    monkeypatch.delenv("QUANTAGENT_RESERVA_DESDE", raising=False)
+    write_snapshot("p", {"SPY": _multiyear_frame()})
+
+    res_run = _run(runner, "--snapshot", "p", "--symbol", "SPY")
+    assert res_run.exit_code == 0, res_run.output
+    assert "Aviso: sin --to" in res_run.stderr
+    assert "2018-12-31" in res_run.stderr
+    with Session(engine) as session:
+        last = max(row.timestamp for row in session.query(MarketData))
+    assert last == datetime(2018, 12, 31)
+
+    out_csv = tmp_path / "cmp_p.csv"
+    res_cmp = _compare(
+        runner,
+        "--strategies", "fifty-two-week-high",
+        "--symbols", "SPY",
+        "--snapshot", "p",
+        "--out", str(out_csv),
+    )
+    assert res_cmp.exit_code == 0, res_cmp.output
+    assert "Aviso: sin --to" in res_cmp.stderr
+    assert "2018-12-31" in res_cmp.stderr
+    with out_csv.open() as f:
+        rows = list(csv.DictReader(f))
+    assert rows[0]["hasta"] == "2018-12-31"
+
+
+def test_to_en_prueba_sin_flag_sale_con_1_y_con_flag_registra(snap_env, monkeypatch, tmp_path):
+    runner, engine = snap_env
+    monkeypatch.delenv("QUANTAGENT_PRUEBA_DESDE", raising=False)
+    monkeypatch.delenv("QUANTAGENT_RESERVA_DESDE", raising=False)
+    write_snapshot("p", {"SPY": _multiyear_frame()})
+    log = tmp_path / "snaps" / LOG_PRUEBA
+
+    blocked = _run(runner, "--snapshot", "p", "--symbol", "SPY", "--to", "2020-01-01")
+    assert blocked.exit_code == 1
+    assert "2020-01-01" in blocked.output and "prueba" in blocked.output
+    assert not log.exists()
+
+    opened = _run(runner, "--snapshot", "p", "--symbol", "SPY", "--to", "2020-01-01", "--abrir-prueba")
+    assert opened.exit_code == 0, opened.output
+    assert log.exists()
+    lines = log.read_text().splitlines()
+    assert len(lines) == 1
+    fecha, comando = lines[0].split("\t")
+    assert abs((datetime.now(timezone.utc) - datetime.fromisoformat(fecha)).total_seconds()) < 300
+    assert "--snapshot p --symbol SPY --to 2020-01-01 --abrir-prueba" in comando
+
+
+def test_salida_estandar_sin_aviso_cuando_se_pasa_to(snap_env, monkeypatch):
+    runner, _ = snap_env
+    monkeypatch.delenv("QUANTAGENT_PRUEBA_DESDE", raising=False)
+    monkeypatch.delenv("QUANTAGENT_RESERVA_DESDE", raising=False)
+    write_snapshot("p", {"SPY": _multiyear_frame()})
+
+    res = _run(runner, "--snapshot", "p", "--symbol", "SPY", "--to", "2018-12-31")
+    assert res.exit_code == 0, res.output
+    assert "Aviso: sin --to" not in res.stderr
+    assert "Aviso: sin --to" not in res.stdout
+
+
+def test_sin_to_con_reserva_fijada_sin_prueba_termina_en_2018(snap_env, monkeypatch):
+    runner, engine = snap_env
+    monkeypatch.setenv("QUANTAGENT_RESERVA_DESDE", "2024-01-01")
+    monkeypatch.delenv("QUANTAGENT_PRUEBA_DESDE", raising=False)
+    write_snapshot("p", {"SPY": _multiyear_frame()})
+
+    res = _run(runner, "--snapshot", "p", "--symbol", "SPY")
+    assert res.exit_code == 0, res.output
+    assert "Aviso: sin --to" in res.stderr
+    assert "2018-12-31" in res.stderr
+    with Session(engine) as session:
+        last = max(row.timestamp for row in session.query(MarketData))
+    assert last == datetime(2018, 12, 31)
+
+
+def test_sin_to_con_prueba_tardia_y_reserva_temprana_no_lee_reserva(snap_env, monkeypatch, tmp_path):
+    runner, engine = snap_env
+    monkeypatch.setenv("QUANTAGENT_PRUEBA_DESDE", "2030-01-01")
+    monkeypatch.setenv("QUANTAGENT_RESERVA_DESDE", "2019-06-01")
+    write_snapshot("p", {"SPY": _multiyear_frame()})
+    log = tmp_path / "snaps" / LOG
+
+    res = _run(runner, "--snapshot", "p", "--symbol", "SPY")
+    assert res.exit_code == 0, res.output
+    assert "Aviso: sin --to" in res.stderr
+    assert "2019-05-31" in res.stderr
+    with Session(engine) as session:
+        velas_reserva = session.query(MarketData).filter(MarketData.timestamp >= datetime(2019, 6, 1)).count()
+        last = max(row.timestamp for row in session.query(MarketData))
+    assert velas_reserva == 0
+    assert last == datetime(2019, 5, 31)
+    assert not log.exists()
+
+
+def test_compare_snapshot_markdown_escribe_metadatos_y_tabla(snap_env, tmp_path):
+    from quantagent.cli.backtest import generar_markdown_compare
+
+    runner, _ = snap_env
+    write_snapshot("t", {"SPY": _daily_frame()})
+    out1_csv, out2_csv = tmp_path / "cmp1.csv", tmp_path / "cmp2.csv"
+    out1_md, out2_md = tmp_path / "cmp1.md", tmp_path / "cmp2.md"
+    args = [
+        "--strategies", "rsi,fifty-two-week-high",
+        "--symbols", "SPY",
+        "--snapshot", "t",
+        "--to", "2024-09-30",
+        "--costos", "etf",
+    ]
+    res1 = _compare(runner, *args, "--out", str(out1_csv), "--md", str(out1_md))
+    res2 = _compare(runner, *args, "--out", str(out2_csv), "--md", str(out2_md))
+    assert res1.exit_code == 0 and res2.exit_code == 0
+    assert out1_md.read_bytes() == out2_md.read_bytes()
+
+    content = out1_md.read_text(encoding="utf-8")
+    assert "- **Rango:**" in content and "2024-09-30" in content
+    assert "- **Snapshot:** t" in content
+    assert "- **SPY**:" in content and len(content.split("`")[1]) == 64
+    assert "- **Costos:** etf (comisión: 0%, slippage: 0.05%)" in content
+    assert "- **Posición:** 100% del capital, regla confianza" in content
+    assert "rsi_period=14" in content and "lookback_days=252" in content
+    assert "## Resultados" in content
+
+    row_no_loss = [{"estrategia": "rsi", "activo": "SPY", "desde": "2024-01-01", "hasta": "2024-09-30", "trades": 5, "profit_factor": ""}]
+    md_no_loss = generar_markdown_compare(row_no_loss, "t")
+    assert "sin pérdidas" in md_no_loss
+
+
+def _params_file(tmp_path, nombre, contenido):
+    path = tmp_path / nombre
+    path.write_text(json.dumps(contenido))
+    return str(path)
+
+
+def test_compare_params_dos_archivos_dan_dos_filas_y_el_markdown_muestra_los_usados(snap_env, tmp_path):
+    runner, _ = snap_env
+    write_snapshot("t", {"SPY": _daily_frame()})
+    filas, mds = {}, {}
+    for periodo in (2, 14):
+        params = _params_file(tmp_path, f"p{periodo}.json", {"rsi": {"rsi_period": periodo}})
+        out, md = tmp_path / f"c{periodo}.csv", tmp_path / f"c{periodo}.md"
+        res = _compare(
+            runner, "--strategies", "rsi", "--symbols", "SPY", "--snapshot", "t", "--to", "2024-09-30",
+            "--params", params, "--out", str(out), "--md", str(md),
+        )
+        assert res.exit_code == 0, res.output
+        with out.open() as f:
+            filas[periodo] = next(csv.DictReader(f))
+        mds[periodo] = md.read_text(encoding="utf-8")
+    assert filas[2] != filas[14]
+    assert "rsi_period=2," in mds[2] and "rsi_period=14," in mds[14]
+    assert "oversold_threshold=30.0" in mds[2]
+
+
+def test_run_params_quedan_en_el_config_guardado_y_sin_params_son_los_defaults(snap_env, tmp_path):
+    from quantagent.models import BacktestRun
+
+    runner, engine = snap_env
+    write_snapshot("t", {"SPY": _daily_frame()})
+    base = ["run", "--strategy", "rsi", "--snapshot", "t", "--symbol", "SPY", "--to", "2024-09-30"]
+    assert runner.invoke(backtest_group, base).exit_code == 0
+    params = _params_file(tmp_path, "p.json", {"rsi": {"rsi_period": 5}})
+    assert runner.invoke(backtest_group, [*base, "--params", params]).exit_code == 0
+    with Session(engine) as session:
+        guardados = [r.config_snapshot["strategy_params"] for r in session.query(BacktestRun).order_by(BacktestRun.id)]
+    assert guardados[0]["rsi_period"] == 14 and guardados[1]["rsi_period"] == 5
+    assert guardados[1]["stop_loss_pct"] == guardados[0]["stop_loss_pct"]
+
+
+@pytest.mark.parametrize(
+    "contenido, esperado",
+    [
+        ({"rsi": {"rsi_perido": 5}}, ("rsi", "rsi_perido")),
+        ({"rsii": {"rsi_period": 5}}, ("rsii",)),
+    ],
+)
+def test_params_desconocido_sale_con_1_y_nombra_estrategia_y_parametro(snap_env, tmp_path, contenido, esperado):
+    runner, _ = snap_env
+    write_snapshot("t", {"SPY": _daily_frame()})
+    params = _params_file(tmp_path, "p.json", contenido)
+    res = runner.invoke(
+        backtest_group, ["run", "--strategy", "rsi", "--snapshot", "t", "--symbol", "SPY", "--params", params],
+    )
+    assert res.exit_code == 1
+    assert all(f"'{nombre}'" in res.output for nombre in esperado)

@@ -14,6 +14,7 @@ STRATEGY_REGISTRY: dict[str, dict[str, Any]] = {
     "RSIMeanReversionStrategy": {
         "cls": RSIMeanReversionStrategy,
         "type": "deterministic",
+        "cli_alias": "rsi",
         "display_name": RSIMeanReversionStrategy.describe()["display_name"],
         "description": RSIMeanReversionStrategy.describe()["description"],
         "min_bars": 15,
@@ -53,6 +54,7 @@ STRATEGY_REGISTRY: dict[str, dict[str, Any]] = {
     "FiftyTwoWeekHighStrategy": {
         "cls": FiftyTwoWeekHighStrategy,
         "type": "deterministic",
+        "cli_alias": "fifty-two-week-high",
         "display_name": FiftyTwoWeekHighStrategy.describe()["display_name"],
         "description": FiftyTwoWeekHighStrategy.describe()["description"],
         "min_bars": 303,
@@ -102,6 +104,7 @@ STRATEGY_REGISTRY: dict[str, dict[str, Any]] = {
     "TripleScreenStrategy": {
         "cls": TripleScreenStrategy,
         "type": "deterministic",
+        "cli_alias": "triple-screen",
         "display_name": TripleScreenStrategy.describe()["display_name"],
         "description": TripleScreenStrategy.describe()["description"],
         "min_bars": 73,
@@ -156,6 +159,7 @@ STRATEGY_REGISTRY: dict[str, dict[str, Any]] = {
     "SmaCrossStrategy": {
         "cls": SmaCrossStrategy,
         "type": "deterministic",
+        "cli_alias": "sma-cross",
         "display_name": SmaCrossStrategy.describe()["display_name"],
         "description": SmaCrossStrategy.describe()["description"],
         "min_bars": 201,
@@ -175,6 +179,7 @@ STRATEGY_REGISTRY: dict[str, dict[str, Any]] = {
     "Momentum12mStrategy": {
         "cls": Momentum12mStrategy,
         "type": "deterministic",
+        "cli_alias": "momentum-12m",
         "display_name": Momentum12mStrategy.describe()["display_name"],
         "description": Momentum12mStrategy.describe()["description"],
         "min_bars": 253,
@@ -210,3 +215,34 @@ def get_strategy_names() -> list[str]:
 def build_strategy(name: str, **kwargs: Any) -> TradingStrategy:
     """Instantiate a registered strategy with optional constructor params."""
     return STRATEGY_REGISTRY[name]["cls"](**kwargs)
+
+
+def effective_params(name: str, overrides: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Return the registered defaults of `name` updated with `overrides`."""
+    defaults = {k: v["default"] for k, v in STRATEGY_REGISTRY[name]["params"].items()}
+    return {**defaults, **(overrides or {})}
+
+
+def register_strategy(
+    cls: type[TradingStrategy],
+    *,
+    min_bars: int,
+    cli_alias: str | None = None,
+    params: dict[str, dict[str, Any]] | None = None,
+) -> None:
+    """Register `cls` under its class name; `cli_alias` makes it available in `backtest run`."""
+    meta = cls.describe()
+    STRATEGY_REGISTRY[cls.__name__] = {
+        "cls": cls,
+        "type": meta["type"],
+        "display_name": meta["display_name"],
+        "description": meta["description"],
+        "min_bars": min_bars,
+        "params": params or {},
+        **({"cli_alias": cli_alias} if cli_alias else {}),
+    }
+
+
+def cli_aliases() -> dict[str, str]:
+    """Return {CLI short name: registry name} for every strategy with a `cli_alias`."""
+    return {e["cli_alias"]: name for name, e in STRATEGY_REGISTRY.items() if "cli_alias" in e}

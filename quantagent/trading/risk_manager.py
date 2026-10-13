@@ -15,7 +15,7 @@ If validation fails, order is rejected and never reaches broker.
 
 import logging
 from datetime import date, datetime
-from typing import Dict, Optional, Tuple
+from typing import Callable, Dict, Optional, Tuple, Union
 
 from sqlalchemy.orm import Session
 
@@ -33,6 +33,8 @@ class RiskManager:
         max_daily_loss_pct: float = 0.05,  # 5% daily loss limit
         max_position_pct: float = 0.10,  # 10% max position size
         db: Optional[Session] = None,
+        clock: Optional[Callable[[], date]] = None,
+        timeframe: Optional[str] = None,
     ):
         """
         Initialize Risk Manager.
@@ -42,14 +44,41 @@ class RiskManager:
             max_daily_loss_pct: Maximum daily loss percentage (default 5%)
             max_position_pct: Maximum position size percentage (default 10%)
             db: SQLAlchemy session for querying trades
+            clock: Callable returning date; defaults to date.today (wall-clock)
+            timeframe: Timeframe string (e.g. '1d', '1h', '4h')
         """
         self.portfolio = portfolio_manager
         self.max_daily_loss_pct = max_daily_loss_pct
         self.max_position_pct = max_position_pct
         self.db = db
+        self.clock = clock or date.today
+        self.timeframe = timeframe
         self.circuit_breaker_triggered = False
         self.daily_pnl_tracker: Dict[date, float] = {}  # Reset daily
+        self._current_date: Optional[date] = None
         self._position_epsilon = 1e-8
+
+    def set_date(self, current_date: Union[date, datetime, None]) -> None:
+        """Set current simulation date for daily P&L tracking."""
+        if isinstance(current_date, datetime):
+            self._current_date = current_date.date()
+        else:
+            self._current_date = current_date
+
+    def _get_date(self) -> date:
+        """Get effective date: set date, or clock, or wall-clock today."""
+        if self._current_date is not None:
+            return self._current_date
+        d = self.clock() if callable(self.clock) else self.clock
+        return d.date() if isinstance(d, datetime) else d
+
+    @property
+    def _is_daily_loss_disabled(self) -> bool:
+        """En backtest diario (1d), el limite de perdida diaria y circuit breaker quedan apagados."""
+        env = getattr(self.portfolio, "environment", None)
+        env_val = getattr(env, "value", env)
+        is_backtest = env_val == "backtest" or getattr(self.portfolio, "backtest_run_id", None) is not None
+        return bool(is_backtest and self.timeframe in ("1d", "1D"))
 
     def validate_trade(
         self,
@@ -121,7 +150,7 @@ class RiskManager:
         # Check 3: Daily loss limit not exceeded
         daily_pnl = self.get_daily_pnl()
         max_daily_loss = -(portfolio_value * self.max_daily_loss_pct)
-        if not reduces and daily_pnl < max_daily_loss:
+        if not self._is_daily_loss_disabled and not reduces and daily_pnl < max_daily_loss:
             reason = f"Daily loss limit exceeded: ${daily_pnl:.2f} < max loss ${max_daily_loss:.2f} (5% limit)"
             logger.warning(
                 f"Order rejected - {reason}",
@@ -138,7 +167,7 @@ class RiskManager:
             return (False, reason)
 
         # Check 4: Circuit breaker not triggered
-        if not reduces and self.circuit_breaker_triggered:
+        if not self._is_daily_loss_disabled and not reduces and self.circuit_breaker_triggered:
             reason = "Circuit breaker is active - no more trades allowed today"
             logger.warning(
                 f"Order rejected - {reason}",
@@ -212,7 +241,7 @@ class RiskManager:
         Returns:
             Total P&L for today (sum of realized trades + unrealized positions)
         """
-        today = date.today()
+        today = self._get_date()
 
         # If no DB, use in-memory tracker
         if not self.db:
@@ -222,7 +251,8 @@ class RiskManager:
         # (if any) so a prior run's trades don't count against this one's
         # daily loss limit -- see QuantAgent-plan30-D09.
         query = self.db.query(Trade).filter(
-            Trade.closed_at >= datetime.combine(today, datetime.min.time())
+            Trade.closed_at >= datetime.combine(today, datetime.min.time()),
+            Trade.closed_at <= datetime.combine(today, datetime.max.time()),
         )
         backtest_run_id = getattr(self.portfolio, "backtest_run_id", None)
         if backtest_run_id is not None:
@@ -243,7 +273,7 @@ class RiskManager:
         Args:
             trade: Executed Trade object
         """
-        today = date.today()
+        today = self._get_date()
 
         # Update daily P&L tracker
         current_daily_pnl = self.daily_pnl_tracker.get(today, 0.0)
@@ -251,16 +281,17 @@ class RiskManager:
         self.daily_pnl_tracker[today] = current_daily_pnl + trade_pnl
 
         # Check if daily loss limit is now exceeded
-        portfolio_value = self.portfolio.get_total_value()
-        max_daily_loss = -(portfolio_value * self.max_daily_loss_pct)
+        if not self._is_daily_loss_disabled:
+            portfolio_value = self.portfolio.get_total_value()
+            max_daily_loss = -(portfolio_value * self.max_daily_loss_pct)
 
-        if self.daily_pnl_tracker[today] < max_daily_loss:
-            self.circuit_breaker_triggered = True
+            if self.daily_pnl_tracker[today] < max_daily_loss:
+                self.circuit_breaker_triggered = True
 
-    def reset_daily_tracker(self) -> None:
+    def reset_daily_tracker(self, current_date: Optional[date] = None) -> None:
         """Reset daily P&L tracker (call at start of each day)."""
         self.circuit_breaker_triggered = False
-        today = date.today()
+        today = current_date or self._get_date()
         self.daily_pnl_tracker[today] = 0.0
 
     def check_circuit_breaker(self) -> Tuple[bool, Optional[str]]:
@@ -270,6 +301,8 @@ class RiskManager:
         Returns:
             Tuple of (is_active, reason_if_active)
         """
+        if self._is_daily_loss_disabled:
+            return (False, None)
         if self.circuit_breaker_triggered:
             return (
                 True,

@@ -15,8 +15,8 @@ cd "$WT"
 # shellcheck disable=SC1091
 source "$REPO/.venv/bin/activate"
 export DATABASE_URL="sqlite:///$WT/try.db"
-# Frozen market-data snapshots live outside the repo (M2). Keep the caller's value if it is already set.
-export QUANTAGENT_SNAPSHOT_DIR="${QUANTAGENT_SNAPSHOT_DIR:-$HOME/data/quantagent-snapshots}"
+# Datos locales ignorados por git (M2). Apunta al checkout principal porque el worktree no ve archivos ignorados.
+export QUANTAGENT_SNAPSHOT_DIR="${QUANTAGENT_SNAPSHOT_DIR:-$REPO/local-data}"
 python -c "from quantagent.database import init_db; init_db()"
 echo "── $branch @ $(git rev-parse --short HEAD) ──"
 bash -c "$*"

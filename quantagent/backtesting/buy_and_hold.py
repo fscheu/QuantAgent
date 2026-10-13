@@ -7,6 +7,21 @@ from datetime import datetime
 from typing import Sequence
 
 
+def annual_return(first: float, last: float, t0: datetime, t1: datetime) -> float:
+    """(last / first) ** (1 / años) - 1, con años = (t1 - t0) / 365.25 días; 0.0 si la ventana no dura nada."""
+    years = (t1 - t0).total_seconds() / (365.25 * 86400.0)
+    return (last / first) ** (1 / years) - 1 if years > 0 else 0.0
+
+
+def exposure(curve: Sequence[dict]) -> tuple:
+    """(fracción de velas con posición, media de |positions_value| / equity) sobre la curva de equity del engine."""
+    n = len(curve)
+    return (
+        sum(p["positions_value"] != 0 for p in curve) / n,
+        sum(abs(p["positions_value"]) / p["equity"] for p in curve) / n,
+    )
+
+
 def buy_and_hold(
     timestamps: Sequence[datetime],
     closes: Sequence[float],
@@ -33,4 +48,26 @@ def buy_and_hold(
     if len(returns) > 1 and years > 0 and statistics.stdev(returns) > 0:
         n = len(returns) / years
         sharpe = (statistics.mean(returns) - risk_free_rate / n) / statistics.stdev(returns) * math.sqrt(n)
-    return {"pnl": proceeds - initial_capital, "sharpe": sharpe, "max_drawdown": max_drawdown}
+    return {
+        "pnl": proceeds - initial_capital, "sharpe": sharpe, "max_drawdown": max_drawdown,
+        "annual_return": annual_return(initial_capital, proceeds, timestamps[0], timestamps[-1]),
+    }
+
+
+def worst_day(curve: Sequence[dict]) -> tuple:
+    """(menor retorno diario entre días de calendario, fecha AAAA-MM-DD); (0.0, None) si ningún día cae."""
+    daily = {}
+    for p in curve:
+        ts = p.get("date") or p.get("timestamp")
+        day = ts.strftime("%Y-%m-%d") if hasattr(ts, "strftime") else str(ts)[:10]
+        daily[day] = float(p["equity"])
+    days = list(daily.items())
+    drops = [
+        ((curr - prev) / prev, day)
+        for (_, prev), (day, curr) in zip(days, days[1:])
+        if prev > 0 and curr < prev
+    ]
+    if not drops:
+        return 0.0, None
+    return min(drops, key=lambda x: x[0])
+

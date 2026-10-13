@@ -5,7 +5,13 @@ import json
 import pandas as pd
 import pytest
 
-from quantagent.data.snapshot import SnapshotError, read_snapshot, verify_snapshot, write_snapshot
+from quantagent.data.snapshot import (
+    SnapshotError,
+    read_snapshot,
+    snapshot_root,
+    verify_snapshot,
+    write_snapshot,
+)
 
 
 def _frame(offset: float = 0.0) -> pd.DataFrame:
@@ -111,3 +117,11 @@ def test_ajuste_por_dividendo_sin_salto_en_el_split(tmp_path):
     # El volumen no se toca y adj_close se descarta.
     assert df["volume"].tolist() == raw["volume"].tolist()
     assert "adj_close" not in df.columns
+
+
+def test_snapshot_root_sin_env_var_falla_nombrando_local_data(monkeypatch):
+    monkeypatch.delenv("QUANTAGENT_SNAPSHOT_DIR", raising=False)
+    with pytest.raises(SnapshotError) as exc:
+        snapshot_root()
+    assert "local-data/" in str(exc.value)
+

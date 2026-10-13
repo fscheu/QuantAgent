@@ -1,8 +1,8 @@
 """Portfolio Manager for tracking positions, capital, and P&L."""
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Dict, Optional
+from typing import Callable, Dict, Optional, Union
 
 from sqlalchemy.orm import Session
 
@@ -32,6 +32,7 @@ class PortfolioManager:
         environment: Environment = Environment.PAPER,
         db: Optional[Session] = None,
         backtest_run_id: Optional[int] = None,
+        clock: Optional[Callable[[], date]] = None,
     ):
         """Initialize portfolio manager.
 
@@ -41,16 +42,33 @@ class PortfolioManager:
             db: SQLAlchemy session (uses SessionLocal if not provided)
             backtest_run_id: BacktestRun to stamp on trades created by this
                 manager. NULL for live/paper trading.
+            clock: Callable returning date; defaults to date.today (wall-clock).
         """
         self.initial_cash = float(initial_cash)
         self.cash = float(initial_cash)
         self.environment = environment
         self.db = db or SessionLocal()
         self.backtest_run_id = backtest_run_id
+        self.clock = clock or date.today
+        self._current_date: Optional[date] = None
         self.positions: Dict[str, Dict] = (
             {}
         )  # symbol → {qty, avg_cost, current_price, pnl}
         self._qty_epsilon = 1e-8
+
+    def set_date(self, current_date: Union[date, datetime, None]) -> None:
+        """Set current simulation date for daily P&L queries."""
+        if isinstance(current_date, datetime):
+            self._current_date = current_date.date()
+        else:
+            self._current_date = current_date
+
+    def _get_date(self) -> date:
+        """Get effective date: set date, or clock, or wall-clock today."""
+        if self._current_date is not None:
+            return self._current_date
+        d = self.clock() if callable(self.clock) else self.clock
+        return d.date() if isinstance(d, datetime) else d
 
     def _normalize_position_quantity(self, pos: Dict) -> None:
         """Collapse float dust to flat so risk/order logic doesn't keep zombie positions alive."""
@@ -350,19 +368,20 @@ class PortfolioManager:
         Returns:
             Total P&L for today (realized trades + unrealized positions)
         """
-        from datetime import date
-
-        today = date.today()
+        today = self._get_date()
 
         # Query trades from today
-        trades_today = (
-            self.db.query(Trade)
-            .filter(
+        trades_today = []
+        if self.db:
+            query = self.db.query(Trade).filter(
                 Trade.closed_at >= datetime.combine(today, datetime.min.time()),
+                Trade.closed_at <= datetime.combine(today, datetime.max.time()),
                 Trade.environment == self.environment,
             )
-            .all()
-        )
+            backtest_run_id = getattr(self, "backtest_run_id", None)
+            if backtest_run_id is not None:
+                query = query.filter(Trade.backtest_run_id == backtest_run_id)
+            trades_today = query.all()
 
         realized_pnl = sum(float(t.pnl) if t.pnl else 0.0 for t in trades_today)
         unrealized_pnl = self.get_unrealized_pnl()

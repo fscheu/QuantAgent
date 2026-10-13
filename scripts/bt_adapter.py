@@ -51,10 +51,9 @@ from quantagent import settings  # noqa: E402
 from quantagent.backtesting.backtest import Backtest as ProjectBacktest  # noqa: E402
 from quantagent.backtesting.export import TradeRow, trades_to_csv  # noqa: E402
 from quantagent.backtesting.fixtures import fixture_metadata  # noqa: E402
-from quantagent.cli.backtest import STRATEGY_ALIASES  # noqa: E402
 from quantagent.data.snapshot import load_manifest  # noqa: E402
 from quantagent.models import ActivePosition, OrderSide  # noqa: E402
-from quantagent.strategy.registry import build_strategy  # noqa: E402
+from quantagent.strategy.registry import build_strategy, cli_aliases  # noqa: E402
 
 SCALE = port.SCALE
 INITIAL_CASH = inspect.signature(ProjectBacktest.__init__).parameters["initial_capital"].default
@@ -74,6 +73,27 @@ class StrategyAdapter(Strategy):
         self.bars = pd.DataFrame({"timestamp": df.index, **cols})  # precios reales, columnas del motor
         self.pos = None  # ActivePosition de la posicion abierta (o con orden de entrada pendiente)
         self.info = {}  # vela de entrada -> {"stop", "reason"} para el CSV
+        if not self.fill_close:
+            process_orders = self._broker._process_orders
+
+            def cap_open_entries():
+                broker = self._broker
+                entries = [o for o in broker.orders if not o.parent_trade]
+                broker.orders[:] = [o for o in broker.orders if o.parent_trade]
+                process_orders()  # primero los cierres pendientes, con sus costos
+                broker.orders.extend(entries)
+                price = float(self.data.Open[-1])
+                for order in entries:
+                    if order.is_long:
+                        # El efectivo y la apertura son los de ejecucion, no los de la senal.
+                        units = int(broker._cash / (price * (1 + self.slippage) * (1 + self.commission)))
+                        if units < 1:
+                            order.cancel()
+                        elif order.size > units:
+                            order._replace(size=units)
+                process_orders()
+
+            self._broker._process_orders = cap_open_entries
         if self.slippage:  # cerrar un largo es vender (precio * (1 - s)); cerrar un corto es comprar (* (1 + s))
             close_trade = self._broker._close_trade
             self._broker._close_trade = lambda trade, price, i: close_trade(
@@ -178,7 +198,7 @@ def trade_rows(stats, symbol: str) -> list[TradeRow]:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--strategy", required=True, choices=sorted(STRATEGY_ALIASES))
+    ap.add_argument("--strategy", required=True, choices=sorted(cli_aliases()))
     ap.add_argument("--fixture", help="fixture bajo tests/fixtures/ (sin .csv)")
     ap.add_argument("--snapshot", help="Snapshot en $QUANTAGENT_SNAPSHOT_DIR (requiere --symbol)")
     ap.add_argument("--symbol", help="Simbolo del snapshot")
@@ -205,7 +225,7 @@ def main(argv=None) -> int:
         meta = fixture_metadata(args.fixture)
         symbol, timeframe = meta.symbol, meta.timeframe
         df = port.load_fixture(port.FIXTURES_DIR / f"{args.fixture}.csv")
-    stats = run_adapter(build_strategy(STRATEGY_ALIASES[args.strategy]), df, symbol=symbol, timeframe=timeframe,
+    stats = run_adapter(build_strategy(cli_aliases()[args.strategy]), df, symbol=symbol, timeframe=timeframe,
                         fill=args.fill, **costos)
     rows = trade_rows(stats, symbol)
     if args.out:

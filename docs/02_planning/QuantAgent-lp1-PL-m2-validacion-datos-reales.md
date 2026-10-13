@@ -210,6 +210,10 @@ usuario (`docs/user-manual/`, último cambio el 2026-07-01; `backtesting.md:452`
 Cada comando se corre en la VM con `scripts/loop/try.sh lote/<rama> -- '<comando>'`. Después del lote 4 hay un corte de
 control: con la herramienta completa y los primeros veredictos, Fede decide si siguen los lotes 5, 6 y 7, y en qué orden.
 
+**Actualización 2026-10-11 (Fede):** el corte después del lote 4 es informativo y no frena nada. Los lotes 5, 6 y 7 se hacen
+sea cual sea el veredicto: el objetivo de la etapa es construir el motor y el ejercicio de análisis, no encontrar una
+estrategia ganadora con las primeras candidatas. Triple Screen sale de la comparación diaria y se evalúa en el lote de 4h.
+
 **Lote 1 · `lote/datos-reales-diarios` · V01–V10.** Las 3 estrategias de M1 corren sobre SPY diario real 2007–2018 desde
 un snapshot con manifiesto. El engine avanza por las velas del dato y backtesting.py coincide con RSI.
 - Probar: `python -m quantagent.cli data snapshot check --name etf-1d-2026-10 && python scripts/crossval_compare.py --snapshot etf-1d-2026-10 --symbol SPY --from 2007-01-03 --to 2018-12-31 --intrabar | tail -3 && for s in rsi fifty-two-week-high triple-screen; do python -m quantagent.cli backtest verify --strategy $s --snapshot etf-1d-2026-10 --symbol SPY --from 2007-01-03 --to 2018-12-31; done`

@@ -36,6 +36,8 @@ SCENARIOS = {
     "next_open": {"fill": "next-open", "commission_pct": 0.001},
     "slippage": {"exit_after": 0, "always": True, "slippage_pct": 0.01},  # QuantAgent-xyf6
     "recorte": {"confidence": 1.0, "pct": 1.0, "slippage_pct": 0.01, "commission_pct": 0.001},  # QuantAgent-gti6
+    "recorte_next_open": {"fill": "next-open", "confidence": 1.0, "pct": 1.0,
+                          "slippage_pct": 0.01, "commission_pct": 0.001},
 }
 
 
@@ -184,6 +186,19 @@ def test_recorte_de_la_compra_al_efectivo_con_slippage_y_comision(results):
     # la regla de OrderManager._cap_entry_qty: efectivo / (precio * (1 + slippage) * (1 + comision))
     assert first["qty"] == pytest.approx(100000 / (100.0 * 1.01 * 1.001), abs=1e-7)
     assert (first["entry_time"], first["entry_price"]) == (day(2), pytest.approx(101.0))
+
+
+def test_recorte_en_apertura_con_gap_y_costos(results):
+    """El gap de 100 a 100.5 ya no cancela la compra al 100 %; la segunda usa el efectivo restante."""
+    first, second = results["recorte_next_open"]["rows"]
+    qty = 100000 / (100.5 * 1.01 * 1.001)
+    assert (first["entry_time"], first["entry_price"]) == (day(3), pytest.approx(100.5 * 1.01))
+    assert first["qty"] == pytest.approx(qty, abs=1e-8)
+    assert first["qty"] * first["entry_price"] * 1.001 <= 100000
+    pnl = first["qty"] * (95 * 0.99 - 100.5 * 1.01) - 0.001 * first["qty"] * (100.5 * 1.01 + 95 * 0.99)
+    assert first["pnl"] == pytest.approx(pnl)
+    assert second["entry_time"] == day(6)
+    assert second["qty"] == pytest.approx((100000 + pnl) / (96 * 1.01 * 1.001), abs=1e-8)
 
 
 @pytest.mark.parametrize("strategy, fixture, pct, expected", [

@@ -3,7 +3,7 @@
 import logging
 import math
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -288,6 +288,17 @@ class Backtest:
         # Trading components
         self.portfolio = components.portfolio_manager
         self.order_manager = components.order_manager
+        self.order_manager.risk_manager.timeframe = self.timeframe
+
+        def candle_clock():
+            if not self.current_date:
+                return date.today()
+            if isinstance(self.current_date, datetime):
+                return self.current_date.date()
+            return self.current_date
+
+        self.order_manager.risk_manager.clock = candle_clock
+        self.portfolio.clock = candle_clock
 
         # Backtest state
         self.current_date = start_date
@@ -373,10 +384,13 @@ class Backtest:
 
             for i, current_date in enumerate(asset_dates):
                 self.current_date = current_date
+                candle_date = current_date.date()
+                self.order_manager.risk_manager.set_date(candle_date)
+                self.portfolio.set_date(candle_date)
 
                 # Reset daily P&L tracking at start of each day
-                if i == 0 or current_date.date() != asset_dates[i - 1].date():
-                    self.order_manager.reset_daily_tracker()
+                if i == 0 or candle_date != asset_dates[i - 1].date():
+                    self.order_manager.reset_daily_tracker(candle_date)
 
                 try:
                     self._analyze_and_trade(asset, current_date)
@@ -507,9 +521,12 @@ class Backtest:
 
             for i, current_date in enumerate(asset_dates):
                 self.current_date = current_date
+                candle_date = current_date.date()
+                self.order_manager.risk_manager.set_date(candle_date)
+                self.portfolio.set_date(candle_date)
 
-                if i == 0 or current_date.date() != asset_dates[i - 1].date():
-                    self.order_manager.reset_daily_tracker()
+                if i == 0 or candle_date != asset_dates[i - 1].date():
+                    self.order_manager.reset_daily_tracker(candle_date)
 
                 try:
                     self._replay_and_trade(asset, current_date, signal_map)
@@ -712,7 +729,10 @@ class Backtest:
             },
             environment=Environment.BACKTEST,
         )
-        return {**StrategyAssembler.config_snapshot(resolved), "regla_tamano": resolved.regla_tamano}
+        snapshot = {**StrategyAssembler.config_snapshot(resolved), "regla_tamano": resolved.regla_tamano}
+        if "strategy_params" in self.config:
+            snapshot["strategy_params"] = self.config["strategy_params"]
+        return snapshot
 
     def _get_date_range(self) -> List[datetime]:
         """
