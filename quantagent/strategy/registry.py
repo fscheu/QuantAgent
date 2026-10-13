@@ -217,6 +217,12 @@ def build_strategy(name: str, **kwargs: Any) -> TradingStrategy:
     return STRATEGY_REGISTRY[name]["cls"](**kwargs)
 
 
+def effective_params(name: str, overrides: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Return the registered defaults of `name` updated with `overrides`."""
+    defaults = {k: v["default"] for k, v in STRATEGY_REGISTRY[name]["params"].items()}
+    return {**defaults, **(overrides or {})}
+
+
 def register_strategy(
     cls: type[TradingStrategy],
     *,

@@ -1,6 +1,7 @@
 """`backtest run --snapshot` (V07). Usa un snapshot armado en tmp_path a partir de un fixture; sin red ni snapshot real."""
 
 import csv
+import json
 import math
 from datetime import datetime, timezone
 
@@ -450,3 +451,62 @@ def test_compare_snapshot_markdown_escribe_metadatos_y_tabla(snap_env, tmp_path)
     row_no_loss = [{"estrategia": "rsi", "activo": "SPY", "desde": "2024-01-01", "hasta": "2024-09-30", "trades": 5, "profit_factor": ""}]
     md_no_loss = generar_markdown_compare(row_no_loss, "t")
     assert "sin pérdidas" in md_no_loss
+
+
+def _params_file(tmp_path, nombre, contenido):
+    path = tmp_path / nombre
+    path.write_text(json.dumps(contenido))
+    return str(path)
+
+
+def test_compare_params_dos_archivos_dan_dos_filas_y_el_markdown_muestra_los_usados(snap_env, tmp_path):
+    runner, _ = snap_env
+    write_snapshot("t", {"SPY": _daily_frame()})
+    filas, mds = {}, {}
+    for periodo in (2, 14):
+        params = _params_file(tmp_path, f"p{periodo}.json", {"rsi": {"rsi_period": periodo}})
+        out, md = tmp_path / f"c{periodo}.csv", tmp_path / f"c{periodo}.md"
+        res = _compare(
+            runner, "--strategies", "rsi", "--symbols", "SPY", "--snapshot", "t", "--to", "2024-09-30",
+            "--params", params, "--out", str(out), "--md", str(md),
+        )
+        assert res.exit_code == 0, res.output
+        with out.open() as f:
+            filas[periodo] = next(csv.DictReader(f))
+        mds[periodo] = md.read_text(encoding="utf-8")
+    assert filas[2] != filas[14]
+    assert "rsi_period=2," in mds[2] and "rsi_period=14," in mds[14]
+    assert "oversold_threshold=30.0" in mds[2]
+
+
+def test_run_params_quedan_en_el_config_guardado_y_sin_params_son_los_defaults(snap_env, tmp_path):
+    from quantagent.models import BacktestRun
+
+    runner, engine = snap_env
+    write_snapshot("t", {"SPY": _daily_frame()})
+    base = ["run", "--strategy", "rsi", "--snapshot", "t", "--symbol", "SPY", "--to", "2024-09-30"]
+    assert runner.invoke(backtest_group, base).exit_code == 0
+    params = _params_file(tmp_path, "p.json", {"rsi": {"rsi_period": 5}})
+    assert runner.invoke(backtest_group, [*base, "--params", params]).exit_code == 0
+    with Session(engine) as session:
+        guardados = [r.config_snapshot["strategy_params"] for r in session.query(BacktestRun).order_by(BacktestRun.id)]
+    assert guardados[0]["rsi_period"] == 14 and guardados[1]["rsi_period"] == 5
+    assert guardados[1]["stop_loss_pct"] == guardados[0]["stop_loss_pct"]
+
+
+@pytest.mark.parametrize(
+    "contenido, esperado",
+    [
+        ({"rsi": {"rsi_perido": 5}}, ("rsi", "rsi_perido")),
+        ({"rsii": {"rsi_period": 5}}, ("rsii",)),
+    ],
+)
+def test_params_desconocido_sale_con_1_y_nombra_estrategia_y_parametro(snap_env, tmp_path, contenido, esperado):
+    runner, _ = snap_env
+    write_snapshot("t", {"SPY": _daily_frame()})
+    params = _params_file(tmp_path, "p.json", contenido)
+    res = runner.invoke(
+        backtest_group, ["run", "--strategy", "rsi", "--snapshot", "t", "--symbol", "SPY", "--params", params],
+    )
+    assert res.exit_code == 1
+    assert all(f"'{nombre}'" in res.output for nombre in esperado)

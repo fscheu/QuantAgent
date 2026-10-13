@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import json
 import logging
 import math
 import os
@@ -29,7 +30,7 @@ from quantagent.backtesting.fixtures import (
 from quantagent.data.snapshot import SnapshotError, load_manifest, snapshot_root
 from quantagent.models import ActivePosition, MarketData, Trade
 from quantagent.settings import COSTOS_PERFILES
-from quantagent.strategy.registry import STRATEGY_REGISTRY, build_strategy, cli_aliases
+from quantagent.strategy.registry import STRATEGY_REGISTRY, build_strategy, cli_aliases, effective_params
 from quantagent.trading.position_sizer import PositionSizer
 
 from . import utils
@@ -197,6 +198,28 @@ def _echo_tamano(config: dict) -> None:
         click.echo(f"Tamaño: {pct * 100:g}% del capital, regla {config.get('regla_tamano', 'confianza')}")
 
 
+def cargar_params(path: Optional[str]) -> dict:
+    """Lee {"<alias>": {"<parámetro>": valor}} y corta si nombra una estrategia o parámetro que no existe."""
+    if path is None:
+        return {}
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    aliases = cli_aliases()
+    for strat, valores in data.items():
+        if strat not in aliases:
+            raise click.ClickException(f"--params: estrategia desconocida '{strat}'. Opciones: {', '.join(sorted(aliases))}")
+        for nombre in valores:
+            if nombre not in STRATEGY_REGISTRY[aliases[strat]]["params"]:
+                raise click.ClickException(f"--params: la estrategia '{strat}' no tiene el parámetro '{nombre}'")
+    return data
+
+
+_params_option = click.option(
+    "--params", "params", type=click.Path(exists=True, dir_okay=False), default=None, callback=lambda ctx, p, v: cargar_params(v),
+    help='JSON {"<estrategia>": {"<parámetro>": valor}} con parámetros de estrategia (default: los del registro).',
+)
+
+
 def _hide_data_warnings(record: logging.LogRecord) -> bool:
     return getattr(record, "event_type", None) != "backtest_data_warning"
 
@@ -243,6 +266,7 @@ def correr_par(
     intrabar_stops: bool = True,
     verbose: bool = False,
     con_filas: bool = False,
+    params: Optional[dict] = None,
 ) -> dict:
     """Corre un par estrategia/activo y devuelve los números del resumen de `backtest run`.
 
@@ -252,7 +276,9 @@ def correr_par(
     retorno_anualizado, exceso_sobre_referencia, tiempo_en_mercado, capital_invertido_medio,
     sharpe_tasa_0, peor_dia (estas seis son None si no hay curva de equity), max_drawdown,
     equity_curve y filas (TradeRow; vacía salvo con con_filas=True).
+    `params` son los parámetros del constructor de la estrategia (el resto, los defaults del registro).
     """
+    reg_name = cli_aliases()[strategy_name]
     with utils.session_scope() as session:
         existing_count = (
             session.query(MarketData)
@@ -286,9 +312,9 @@ def correr_par(
             # offline_data avoids live yfinance calls for the lookback window before the
             # fixture's first row -- the whole point of a fixture-based run is to be
             # deterministic and network-free.
-            config=config,
+            config={**config, "strategy_params": effective_params(reg_name, params)},
             db_session=session,
-            strategy=build_strategy(cli_aliases()[strategy_name]),
+            strategy=build_strategy(reg_name, **(params or {})),
             intrabar_stops=intrabar_stops,
         )
         # The lookback warm-up logs one "Insufficient data" warning per candle; keep the
@@ -425,6 +451,7 @@ def backtest_group() -> None:
     help="Perfil de costos (slippage y comisión por lado). Excluyente con --commission-pct.",
 )
 @_tamano_options
+@_params_option
 @click.option(
     "--intrabar-stops/--no-intrabar-stops",
     default=True,
@@ -447,6 +474,7 @@ def run_backtest(
     costos: Optional[str],
     tamano_posicion: Optional[float],
     regla_tamano: Optional[str],
+    params: dict,
 ) -> None:
     config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano)
     meta, symbol, to_date = _resolve_source_and_meta(
@@ -464,6 +492,7 @@ def run_backtest(
     r = correr_par(
         strategy_name, meta, config, costos, fixture_name, snapshot_name, symbol,
         from_date, to_date, intrabar_stops, verbose, con_filas=bool(out_path),
+        params=params.get(strategy_name),
     )
     rows = r["filas"]
 
@@ -743,6 +772,7 @@ def generar_markdown_compare(
     tamano_posicion: Optional[float] = 1.0,
     regla_tamano: Optional[str] = None,
     columns: Optional[list[str]] = None,
+    params: Optional[dict] = None,
 ) -> str:
     """Genera el documento Markdown de compare con encabezado de auditoría y tabla."""
     cols = columns or (list(rows[0].keys()) if rows else COMPARE_COLUMNS)
@@ -770,8 +800,8 @@ def generar_markdown_compare(
     strat_lines = []
     for s in strats:
         reg_name = aliases.get(s, s)
-        params_info = STRATEGY_REGISTRY.get(reg_name, {}).get("params", {})
-        p_str = ", ".join(f"{k}={v['default']}" for k, v in params_info.items()) if params_info else "sin parámetros"
+        params_info = effective_params(reg_name, (params or {}).get(s)) if reg_name in STRATEGY_REGISTRY else {}
+        p_str = ", ".join(f"{k}={v}" for k, v in params_info.items()) if params_info else "sin parámetros"
         strat_lines.append(f"- **{s}**: {p_str}")
 
     hash_lines = [
@@ -829,11 +859,12 @@ def generar_markdown_compare(
 @click.option("--out", "out_path", required=True, type=click.Path(dir_okay=False, writable=True), help="CSV de salida.")
 @click.option("--trades-dir", "trades_dir", type=click.Path(file_okay=False, writable=True), default=None)
 @click.option("--md", "md_path", type=click.Path(dir_okay=False, writable=True), default=None, help="Documento Markdown de salida.")
+@_params_option
 def compare_backtests(
     strategies: str, symbols: str, snapshot_name: str, from_date: Optional[datetime],
     to_date: Optional[datetime], costos: Optional[str], tamano_posicion: Optional[float],
     regla_tamano: Optional[str], abrir_reserva: bool, abrir_prueba: bool, out_path: str, trades_dir: Optional[str],
-    md_path: Optional[str] = None,
+    params: dict, md_path: Optional[str] = None,
 ) -> None:
     reserva = _reserva_desde()
     prueba = _prueba_desde()
@@ -906,7 +937,7 @@ def compare_backtests(
             with _isolated_sqlite_db():
                 r = correr_par(
                     strat, meta, config, costos, None, snapshot_name, sym,
-                    from_date, to_date, con_filas=bool(trades_dir),
+                    from_date, to_date, con_filas=bool(trades_dir), params=params.get(strat),
                 )
 
             if trades_dir:
@@ -944,6 +975,7 @@ def compare_backtests(
             tamano_posicion=tamano_posicion,
             regla_tamano=regla_tamano,
             columns=COMPARE_COLUMNS,
+            params=params,
         )
         with open(md_path, "w", encoding="utf-8") as f:
             f.write(md_text)
