@@ -63,15 +63,22 @@ PASO 4 — Implementar
 - Solo lo que pide "Cambio requerido". Nada fuera de "Archivos relevantes".
 - Tests que fallan si la lógica real se rompe. Sin mocks excesivos ni asserts triviales.
 - Corré la suite y `scripts/loop/smoke.sh`. Corré el comando de verificación del ticket y guardá la salida real.
+- Todo comando se corre en PRIMER PLANO y esperás su salida, aunque tarde 30 minutos (usá `timeout`). Nunca lo
+  dejes en segundo plano ni termines un turno "esperando" un proceso: la corrida es no interactiva y, si el
+  turno termina, se pierde todo lo que no esté commiteado.
 - Si el diff supera el límite: descartá el código y hacé una entrega de partición.
 - Si no llegás a verde: `git push -u origin loop/<ID>:loop-wip/<ID>` y hacé una entrega de bloqueo en una rama
   limpia desde origin/<base> con solo docs/loop/bloqueos/<ID>.md (≤40 líneas: qué intentaste, qué falló,
   qué decisión destraba). En todo este prompt, "rama limpia" y los diffs son contra origin/<base>.
 
 PASO 5 — Verificación independiente
+- Antes de verificar, commiteá el trabajo en `loop/<ID>` (commit local, sin push): si la corrida se corta, el
+  PM lo puede recuperar.
 - Lanzá un subagente sin tu historial. Pasale solo la salida de `bd show <ID>` y `git diff origin/<base>...HEAD`.
   Pedile PASS/FAIL por cada criterio de aceptación con evidencia, y que marque cambios fuera de alcance.
 - Si hay FAIL: corregí una vez y repetí. Si sigue FAIL: entrega de bloqueo.
+- Si no podés lanzar el subagente o no responde en 10 minutos, no esperes más: seguí al paso 6 y anotá en el
+  PR "Verificador independiente: no corrió". El PM revisa igual cada entrega.
 
 PASO 6 — Entregar
 - Commit con mensaje `<tipo>(<ID>): <qué>`. `git push -u origin loop/<ID>`.
