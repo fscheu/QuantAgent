@@ -544,9 +544,12 @@ def _isolated_sqlite_db():
     import os
     import tempfile
 
+    from sqlalchemy import event
+
     from quantagent import database, settings
 
-    with tempfile.TemporaryDirectory() as tmp_dir:
+    shm_dir = "/dev/shm" if os.path.isdir("/dev/shm") and os.access("/dev/shm", os.W_OK) else None
+    with tempfile.TemporaryDirectory(dir=shm_dir) as tmp_dir:
         db_path = os.path.join(tmp_dir, "verify.db")
         db_url = f"sqlite:///{db_path}"
         old_env = os.environ.get("DATABASE_URL")
@@ -558,6 +561,14 @@ def _isolated_sqlite_db():
         if hasattr(database, "_SessionLocal"):
             database._SessionLocal = None
         try:
+            eng = database._get_engine()
+
+            def _set_sync_off(dbapi_con, _):
+                cursor = dbapi_con.cursor()
+                cursor.execute("PRAGMA synchronous=OFF")
+                cursor.close()
+
+            event.listen(eng, "connect", _set_sync_off)
             database.init_db()
             yield
         finally:
@@ -567,6 +578,8 @@ def _isolated_sqlite_db():
                 os.environ.pop("DATABASE_URL", None)
             settings.DATABASE_URL = old_settings_url
             if hasattr(database, "_engine"):
+                if database._engine is not None:
+                    database._engine.dispose()
                 database._engine = None
             if hasattr(database, "_SessionLocal"):
                 database._SessionLocal = None

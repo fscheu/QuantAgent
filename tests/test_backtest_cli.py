@@ -684,3 +684,51 @@ def test_worst_day_on_a_hand_curve_and_edge_cases():
     # Empty and single point
     assert worst_day([]) == (0.0, None)
     assert worst_day([{"date": datetime(2025, 1, 1), "equity": 100.0}]) == (0.0, None)
+
+
+def test_isolated_sqlite_db_synchronous_off_and_external_default():
+    """Dentro de _isolated_sqlite_db() PRAGMA synchronous = 0; fuera, una SQLite común conserva su valor (QuantAgent-06yj)."""
+    from quantagent.cli.backtest import _isolated_sqlite_db
+    import quantagent.database as db
+
+    with _isolated_sqlite_db():
+        with db.engine.connect() as conn:
+            assert conn.execute(text("PRAGMA synchronous")).scalar() == 0
+
+    other_engine = create_engine("sqlite:///:memory:")
+    with other_engine.connect() as conn:
+        assert conn.execute(text("PRAGMA synchronous")).scalar() == 2
+
+
+def test_isolated_sqlite_db_fallback_without_shm(monkeypatch):
+    """Con /dev/shm no disponible (simulado), la base se crea igual y la corrida termina (QuantAgent-06yj)."""
+    import os
+    from quantagent.cli.backtest import _isolated_sqlite_db
+    import quantagent.database as db
+
+    original_isdir = os.path.isdir
+    monkeypatch.setattr(os.path, "isdir", lambda path: False if path == "/dev/shm" else original_isdir(path))
+
+    with _isolated_sqlite_db():
+        with db.engine.connect() as conn:
+            assert conn.execute(text("PRAGMA synchronous")).scalar() == 0
+            assert "/dev/shm" not in db.settings.DATABASE_URL
+
+
+def test_isolated_sqlite_db_no_leftover_files_in_shm():
+    """No quedan archivos en /dev/shm al terminar, tampoco si una corrida falla (QuantAgent-06yj)."""
+    import os
+    from quantagent.cli.backtest import _isolated_sqlite_db
+
+    if not (os.path.isdir("/dev/shm") and os.access("/dev/shm", os.W_OK)):
+        pytest.skip("/dev/shm no está disponible")
+
+    before = set(os.listdir("/dev/shm"))
+    with _isolated_sqlite_db():
+        pass
+    assert set(os.listdir("/dev/shm")) == before
+
+    with pytest.raises(RuntimeError):
+        with _isolated_sqlite_db():
+            raise RuntimeError("error simulado")
+    assert set(os.listdir("/dev/shm")) == before
