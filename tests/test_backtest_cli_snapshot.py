@@ -419,3 +419,34 @@ def test_sin_to_con_prueba_tardia_y_reserva_temprana_no_lee_reserva(snap_env, mo
     assert not log.exists()
 
 
+def test_compare_snapshot_markdown_escribe_metadatos_y_tabla(snap_env, tmp_path):
+    from quantagent.cli.backtest import generar_markdown_compare
+
+    runner, _ = snap_env
+    write_snapshot("t", {"SPY": _daily_frame()})
+    out1_csv, out2_csv = tmp_path / "cmp1.csv", tmp_path / "cmp2.csv"
+    out1_md, out2_md = tmp_path / "cmp1.md", tmp_path / "cmp2.md"
+    args = [
+        "--strategies", "rsi,fifty-two-week-high",
+        "--symbols", "SPY",
+        "--snapshot", "t",
+        "--to", "2024-09-30",
+        "--costos", "etf",
+    ]
+    res1 = _compare(runner, *args, "--out", str(out1_csv), "--md", str(out1_md))
+    res2 = _compare(runner, *args, "--out", str(out2_csv), "--md", str(out2_md))
+    assert res1.exit_code == 0 and res2.exit_code == 0
+    assert out1_md.read_bytes() == out2_md.read_bytes()
+
+    content = out1_md.read_text(encoding="utf-8")
+    assert "- **Rango:**" in content and "2024-09-30" in content
+    assert "- **Snapshot:** t" in content
+    assert "- **SPY**:" in content and len(content.split("`")[1]) == 64
+    assert "- **Costos:** etf (comisión: 0%, slippage: 0.05%)" in content
+    assert "- **Posición:** 100% del capital, regla confianza" in content
+    assert "rsi_period=14" in content and "lookback_days=252" in content
+    assert "## Resultados" in content
+
+    row_no_loss = [{"estrategia": "rsi", "activo": "SPY", "desde": "2024-01-01", "hasta": "2024-09-30", "trades": 5, "profit_factor": ""}]
+    md_no_loss = generar_markdown_compare(row_no_loss, "t")
+    assert "sin pérdidas" in md_no_loss

@@ -58,15 +58,18 @@ def snap_env(monkeypatch, tmp_path):
         database._SessionLocal = None
 
 
-def _run_control(tabla: Path, trades_dir: Path, snapshot: str) -> None:
+def _run_control(tabla: Path, trades_dir: Path, snapshot: str, md: Path | None = None) -> None:
+    cmd = [
+        sys.executable,
+        str(SCRIPT),
+        "--tabla", str(tabla),
+        "--trades-dir", str(trades_dir),
+        "--snapshot", snapshot,
+    ]
+    if md:
+        cmd.extend(["--md", str(md)])
     subprocess.run(
-        [
-            sys.executable,
-            str(SCRIPT),
-            "--tabla", str(tabla),
-            "--trades-dir", str(trades_dir),
-            "--snapshot", snapshot,
-        ],
+        cmd,
         check=True,
         capture_output=True,
         text=True,
@@ -92,11 +95,16 @@ def test_compare_control_coincide_y_falla_si_se_altera_un_trade(snap_env):
     )
     assert res.exit_code == 0, res.output
 
-    # Caso 1: corrida normal coincide N de N
-    _run_control(out_csv, trades_dir, "t")
+    # Caso 1: corrida normal coincide N de N y genera markdown si se pide
+    out_md = tmp_path / "ctrl.md"
+    _run_control(out_csv, trades_dir, "t", md=out_md)
     with open(out_csv, newline="") as f:
         rows = list(csv.DictReader(f))
     assert rows[0]["control"] == "coinciden 6 de 6"
+    assert out_md.exists()
+    ctrl_md_text = out_md.read_text(encoding="utf-8")
+    assert "coinciden 6 de 6" in ctrl_md_text
+    assert "- **Snapshot:** t" in ctrl_md_text
 
     # Caso 2: alterando un trade del motor (pnl en fila 1) da sin validar nombrando fila y columna
     motor_file = trades_dir / "fifty-two-week-high-SPY.csv"
