@@ -3,8 +3,8 @@
 
 Uso:  python scripts/lean_spike/closed_trades_to_csv.py <resultado.json> --out trades.csv
 
-NO PROBADO contra un JSON real: los nombres de campo salen de la documentacion de LEAN y se buscan sin
-distinguir mayusculas (las versiones viejas escriben PascalCase y las nuevas camelCase).
+Probado contra el JSON de un arranque fallido: rechaza state.RuntimeError en vez de exportar cero trades.
+La conversion de fills queda pendiente de una corrida exitosa. Los campos se buscan sin distinguir mayusculas.
 
 Columnas: las de quantagent/backtesting/export.py::COLUMNS. entry_time y exit_time son la sesion de Nueva
 York del fill a las 00:00, como en los CSV del motor y de bt_adapter.py. stop_loss y exit_reason salen de
@@ -72,7 +72,11 @@ def main(argv=None) -> int:
     ap.add_argument("resultado", help="JSON de resultados de LEAN (<algoritmo>.json)")
     ap.add_argument("--out", required=True, help="CSV de trades")
     args = ap.parse_args(argv)
-    rows = filas(json.loads(Path(args.resultado).read_text()))
+    resultado = json.loads(Path(args.resultado).read_text())
+    estado = campo(resultado, "state") or {}
+    if campo(estado, "runtimeError"):
+        raise SystemExit(f"LEAN fallo: {campo(estado, 'runtimeError')}")
+    rows = filas(resultado)
     Path(args.out).write_text(trades_to_csv(rows))
     print(f"Trades cerrados: {len(rows)} -> {args.out}")
     return 0

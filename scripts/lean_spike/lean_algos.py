@@ -1,6 +1,6 @@
 """QuantAgent-ryaw (spike): port de sma-cross y rsi a QCAlgorithm. Corre dentro de LEAN (Python 3.11).
 
-NO EJECUTADO todavia: escrito contra la API de LEAN sin tener el motor a mano.
+Port para el Launcher local compilado desde fuente.
 
 Replica lo que hace scripts/bt_adapter.py --fill next-open con las estrategias del proyecto:
 - la senal se evalua con el cierre de cada vela diaria y la orden de mercado llena en la apertura siguiente;
@@ -76,7 +76,7 @@ class SpikeBase(QCAlgorithm):
 
     def cerrar(self, motivo):
         self.transactions.cancel_open_orders(self.spy)
-        self.liquidate(self.spy, tag=motivo)
+        self.market_on_open_order(self.spy, -self.portfolio[self.spy].quantity, tag=motivo)
         self.pos = None
 
     def entrar(self, largo, confianza, cierre, stop, take):
@@ -86,7 +86,7 @@ class SpikeBase(QCAlgorithm):
             cantidad = min(cantidad, int(equity / (cierre * (1 + self.slippage) * (1 + self.comision))))
         if cantidad < 1:
             return
-        ticket = self.market_order(self.spy, cantidad if largo else -cantidad, tag=f"stop={stop:.8f}")
+        ticket = self.market_on_open_order(self.spy, cantidad if largo else -cantidad, tag=f"stop={stop:.8f}")
         self.pos = {"largo": largo, "cantidad": cantidad, "stop": stop, "take": take, "velas": 0,
                     "extremo": None, "entrada": ticket.order_id}
 
