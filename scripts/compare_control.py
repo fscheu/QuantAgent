@@ -38,6 +38,7 @@ from quantagent.data.snapshot import load_manifest  # noqa: E402
 from quantagent.strategy.registry import build_strategy, cli_aliases  # noqa: E402
 
 QTY_RTOL = crossval_compare.QTY_RTOL
+QTY_ATOL = getattr(crossval_compare, "QTY_ATOL", 5e-9)
 PRICE_TOL = crossval_compare.PRICE_TOL
 NUMERIC = crossval_compare.NUMERIC
 pnl_tol = crossval_compare.pnl_tol
@@ -53,7 +54,7 @@ def compare_trades_with_reasons(eng: list[dict], prt: list[dict]) -> str:
         return f"sin validar: distinta cantidad de trades (motor={len(eng)}, port={len(prt)})"
     for i, (e, p) in enumerate(zip(eng, prt)):
         bad = [c for c in ("entry_time", "exit_time", "symbol", "side", "exit_reason") if e.get(c) != p.get(c)]
-        tols = {"qty": QTY_RTOL * abs(float(e["qty"])), "entry_price": PRICE_TOL, "exit_price": PRICE_TOL, "pnl": pnl_tol(e)}
+        tols = {"qty": max(QTY_RTOL * abs(float(e["qty"])), QTY_ATOL), "entry_price": PRICE_TOL, "exit_price": PRICE_TOL, "pnl": pnl_tol(e)}
         for c in NUMERIC:
             ve, vp = e.get(c, ""), p.get(c, "")
             if ve == "" or vp == "":

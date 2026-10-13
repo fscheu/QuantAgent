@@ -53,11 +53,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import crossval_rsi as port  # noqa: E402  (sale con un mensaje si falta backtesting.py)
 import recalc_metrics  # noqa: E402
 
-QTY_RTOL, PRICE_TOL, PNL_TOL = 1.5e-6, 2e-8, 1e-8
+QTY_RTOL, QTY_ATOL, PRICE_TOL, PNL_TOL = 1.5e-6, 5e-9, 2e-8, 1e-8
 PNL_QTY_TOL = 1e-6  # acciones; solo para la tolerancia de pnl (no cambio con QuantAgent-zd9n)
 PF_RTOL, DD_TOL, EQUITY_TOL = 1e-6, 1e-6, 1e-3
 NUMERIC = ("qty", "entry_price", "exit_price", "pnl")
-LABELS = {"qty": "1.5e-6*qty", "pnl": "1e-6*|mov|+1e-8"}
+LABELS = {"qty": "max(1.5e-6*qty, 5e-9)", "pnl": "1e-6*|mov|+1e-8"}
 
 # Mide, sin tocar el motor, los rechazos del RiskManager (los rechazos no se persisten ni se loguean en el
 # CLI): envuelve validate_trade / get_daily_pnl / on_trade_executed y corre el mismo CLI.
@@ -212,7 +212,7 @@ def compare_trades(eng: list[dict], prt: list[dict]) -> tuple[list[str], bool]:
     for i, (e, p) in enumerate(zip(eng, prt)):
         bad = [c for c in ("entry_time", "exit_time", "symbol", "side") if e[c] != p[c]]
         qty_rel = max(qty_rel, abs(float(e["qty"]) - float(p["qty"])) / abs(float(e["qty"])))
-        tols = {"qty": QTY_RTOL * abs(float(e["qty"])), "entry_price": PRICE_TOL, "exit_price": PRICE_TOL,
+        tols = {"qty": max(QTY_RTOL * abs(float(e["qty"])), QTY_ATOL), "entry_price": PRICE_TOL, "exit_price": PRICE_TOL,
                 "pnl": pnl_tol(e)}
         for c in NUMERIC:
             diff = abs(float(e[c]) - float(p[c]))
