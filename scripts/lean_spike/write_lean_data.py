@@ -11,7 +11,8 @@ Escribe bajo <carpeta-data>/equity/usa/:
 
 Por defecto el precio escalado lleva 4 decimales (8 decimales del precio, los mismos que usan el motor
 y bt_adapter.py, QuantAgent-bwqb). `--enteros` redondea a entero, que es lo que traen los datos de
-QuantConnect. NO VERIFICADO sin LEAN: que su lector acepte decimales en esas columnas.
+QuantConnect. El Launcher local aceptó los decimales, factor 1 y map file sin cambios
+en las corridas completas de SMA y RSI; no fue necesario usar --enteros.
 
 El rango esta fijo en 2007-01-03..2018-12-31 (tramo de desarrollo): este script no lee mas alla.
 La carpeta de salida va fuera del repo; los datos del snapshot no se commitean.

@@ -1,37 +1,68 @@
 # QuantAgent-ryaw: spike de LEAN compilado desde fuente
 
-Fecha: 2026-10-13. Resultado negativo por bloqueo de Python.NET; pendiente de revisión del PM.
+Fecha: 2026-10-13. Segunda corrida: backtests completos, paridad insuficiente para aprobar P1.
 Contexto: [decisión del pivot, §§7–10](./2026-10-12-DC-quantconnect-y-pivot-lean.md).
-Comandos y estado de los scripts: [README del spike](../../scripts/lean_spike/README.md).
+Reproducción: [README del spike](../../scripts/lean_spike/README.md).
 
 | Criterio binario | Resultado | Evidencia |
 |---|---|---|
-| (a) SMA 5/5 y RSI 187/187, o cada diferencia de RSI explicada | **No** | Los controles tienen 5 y 187 trades; LEAN falla antes de inicializar el algoritmo. No hay trades válidos de LEAN para comparar ni clasificar. |
-| (b) Completa el backtest sin cuenta de QuantConnect | **No, no verificado** | El Launcher arranca sin cuenta, login ni token, pero ningún backtest completa. En los tres arranques, `strace` registra cero llamadas AF_INET/AF_INET6. |
-| (c) Disco y tiempos, incluida una corrida completa | **No, parcial** | Instalación y build medidos; arranques fallidos medidos. Falta el tiempo de una corrida completa. |
+| (a) SMA 5/5 y RSI 187/187, o cada diferencia de RSI explicada | **No** | SMA 3/5; dos entradas rechazadas por poder de compra. RSI 140/187; los 47 desajustes están clasificados individualmente. |
+| (b) Completa el backtest sin cuenta de QuantConnect | **Sí, con limitación de cierre** | Ambos JSON tienen Status Completed y RuntimeError vacío, hasta 2018-12-31, sin cuenta/token/login. Cero llamadas AF_INET/AF_INET6 en strace de cada ejecución completa. El proceso aborta después de guardar los resultados, en Shutdown de Python (salida 134). |
+| (c) Disco y tiempos, incluida una corrida completa | **Sí** | Se conservan instalación/build; SMA 17.74 s y RSI 24.03 s con strace y cierre incluido. Al finalizar, / tiene 49G libres; nunca bajó de 30G. |
 
-No se demostró que LEAN necesite una cuenta: el bloqueo observado es de inicialización de Python. Esta ejecución no aporta evidencia suficiente para aprobar P1 ni para recomendar P2 por un problema de credenciales. Conforme a la puerta del spike, P1 queda sin aprobar; el PM decide el siguiente paso. Se respetó el límite de tres intentos, sin probar variantes adicionales.
+El bloqueo de inicialización quedó resuelto. Los resultados permiten medir el comportamiento por defecto de LEAN, pero SMA no pasa la puerta 5/5. No se recomienda aprobar P1 con estos datos. La excepción de cierre del proceso sigue pendiente; Completed describe el backtest, no una salida limpia del Launcher.
 
-## Alcance y controles
+## Alcance y resultados
 
-Se usó el entorno `/home/azureuser/repos/projects/QuantAgent/.venv`, con `PYTHONPATH` apuntando a este worktree. Se verificó que `quantagent.__file__` apunta a `/home/azureuser/repos/projects/QuantAgent-spike-lean/quantagent/__init__.py`. La base SQLite está en W/try.db y se creó con `quantagent.database.init_db()`.
+W = `/home/azureuser/spike-lean-work`. Se reutilizaron SDK, build Release, Python, datos y controles de la primera corrida. No se usaron git, sudo, Docker, LEAN CLI ni cuentas. No hubo rebuild ni descargas. Los scripts del proyecto corrieron con `/home/azureuser/repos/projects/QuantAgent/.venv`, PYTHONPATH en este worktree y SQLite W/try.db; LEAN usa W/py311.
 
-SPY, snapshot `etf-1d-2026-10`, 2007-01-03..2018-12-31, 100% del capital, perfil `etf` vigente: slippage 0.0005 por lado y comisión 0. El escritor exportó 3020 velas. Los únicos datos de precios preparados para LEAN son los del snapshot; de su carpeta Data se copiaron solamente market-hours y symbol-properties. No se leyó un tramo posterior a 2018-12-31 para los controles ni la exportación.
+SPY, snapshot `etf-1d-2026-10`, 2007-01-03..2018-12-31, 100% del capital, perfil etf: slippage 0.0005 por lado y comisión 0. No se leyó ningún precio posterior al límite. Se reutilizaron 3020 velas; LEAN informa 3021 puntos procesados (no equivale a 3021 velas de precios). SMA: cash; RSI: margen y leverage 1. BrokerageName.DEFAULT, EquityFillModel por defecto, sin modelo de llenado propio. Alpaca, usado inicialmente por el port, rechazaba MarketOnOpen al cierre por su ventana horaria 07:00–09:28; se reemplazó por el brokerage predeterminado.
 
-Los cuatro controles están en W/control/. El motor propio conserva su llenado al cierre; el adaptador usa `--fill next-open`. Por eso tener el mismo conteo no significa tener las mismas fechas.
+Las coincidencias exigen misma sesión de Nueva York de entrada y salida, y mismo lado. No exigen cantidades ni precios iguales. El adaptador next-open es el control principal; el motor llena al cierre.
 
-| Estrategia | Control | Trades del control | Coincidencias LEAN por entrada, salida y lado | Desvío relativo del PnL total de LEAN |
-|---|---|---:|---|---|
-| sma-cross | bt_adapter next-open | 5 | No evaluable de 5 | No evaluable |
-| sma-cross | motor propio | 5 | No evaluable de 5 | No evaluable |
-| rsi | bt_adapter next-open | 187 | No evaluable de 187 | No evaluable |
-| rsi | motor propio | 187 | No evaluable de 187 | No evaluable |
+| Estrategia | Control | Trades LEAN | Coincidencias N de M | Desvío relativo del PnL total |
+|---|---|---:|---:|---:|
+| sma-cross | bt_adapter next-open | 3 | 3 de 5 | -15.1746% |
+| sma-cross | motor propio | 3 | 0 de 5 | -18.4163% |
+| rsi | bt_adapter next-open | 176 | 140 de 187 | +69.0487% |
+| rsi | motor propio | 176 | 12 de 187 | +47.1116% |
 
-Como comprobación independiente, se ejecutó `compare_trades.py` entre ambos controles. SMA: 0/5 coincidencias por ambas fechas y lado; RSI: 0/187, con 27 entradas del mismo día y lado. El desvío relativo del PnL total del motor contra el adaptador es +3.9734% para SMA y +41.4781% para RSI. Son diferencias entre controles, no resultados de LEAN. En el adaptador hay 5 largos para SMA y 82 largos/105 cortos para RSI.
+Desvío = (PnL LEAN − PnL control) / abs(PnL control). Los porcentajes positivos de RSI indican una pérdida menor, no rentabilidad positiva. Las cantidades difieren en los 3 trades coincidentes de SMA y los 140 de RSI. Además del truncamiento a acciones enteras, cambian el capital disponible y los precios de ejecución: el fill model de LEAN redondea los niveles a centavos, no aplica slippage a LimitFill y calcula el slippage de stops con el precio del security. La paridad temporal no implica paridad de PnL.
 
-Clasificación de RSI: **no evaluable**. No hay trades candidatos de LEAN; no se atribuyeron diferencias a redondeo, activación del stop desde la vela siguiente ni otras causas. Los 187 trades del control siguen sin comparación. Cero trades generados por un error de inicialización no constituye una estrategia con cero operaciones.
+Comparaciones guardadas en W/compare_{adapter,motor}_{sma-cross,rsi}.log; CSV de LEAN en W/lean_{sma-cross,rsi}.csv. No se regeneraron controles.
 
-## Instalación y mediciones
+## Diferencias por causa contra next-open
+
+Se cuenta cada trade del control que no coincide una sola vez, por causa principal. El desglose individual con fechas, lado y evidencia está en W/differences_sma-cross.csv y W/differences_rsi.csv; el script de auditoría y su resumen están en W/classify_differences.py y W/classification-summary.txt. No son un modelo alternativo de llenado.
+
+| Causa principal | SMA | RSI |
+|---|---:|---:|
+| Redondeo a acciones enteras: señal menor que una acción | 0 | 1 |
+| Stop/take activo desde la vela siguiente a la entrada, incluidos efectos en reentradas | 0 | 41 |
+| Entrada rechazada por poder de compra | 2 | 2 |
+| Otra: stop redondeado a centavos, incluida reentrada desplazada | 0 | 2 |
+| Otra: posición abierta al terminar, sin cierre forzado | 0 | 1 |
+| **Total de trades del control sin coincidencia** | **2** | **47** |
+
+SMA: entradas de 2009-06-19 y 2015-12-10 rechazadas (órdenes 1 y 6). El port dimensiona al cierre de señal; el gap de apertura supera el efectivo. El adaptador recorta la compra al efectivo disponible usando la apertura de ejecución. No se introdujo ese recorte en el fill model de LEAN.
+
+RSI: 32 trades comparten entrada pero difieren en salida; faltan 15 entradas del control y sobran 4 entradas candidatas. De los 41 atribuidos a activación diferida, 31 comparten entrada y 10 son reentradas alteradas por la trayectoria previa. EquityFillModel.GetBestEffortTradeBar descarta barras cuyo EndTime <= order.Time. Como las órdenes de protección se envían al recibir el fill diario de entrada, no actúan sobre esa misma barra; el adaptador sí puede cerrar en ella. Las cuatro entradas extra corresponden a esas trayectorias (tres) y al stop redondeado (una).
+
+La señal del 2014-06-04 da menos de una acción: el port la omite y entra después, desplazando el trade del control del 2014-06-05. Para el corto del 2014-02-25, el máximo del 2014-03-06 alcanza el stop original pero no el redondeado de la orden 377: salida al día siguiente y reentrada desplazada del 2014-03-07 al 2014-03-10. Esos son los dos trades de la categoría centavos.
+
+Las órdenes de entrada 531 y 552 son Invalid por buying power, con el cierre MarketOnOpen de la posición anterior todavía pendiente: faltan los trades del control del 2018-10-12 y 2018-12-26. El del 2018-12-27 sí entra (orden 553), pero queda abierto con protecciones 554/555: no aparece en closedTrades, a diferencia de finalize_trades del adaptador. Esta categoría separa una posición abierta de una entrada ausente.
+
+## Python, selección del algoritmo y datos aceptados
+
+Primer intento de esta segunda corrida: `uv pip uninstall --python W/py311/bin/python pythonnet clr-loader` eliminó pythonnet 3.2.1 y clr-loader 0.3.1. No se reemplazó el ensamblado Python.Runtime 2.0.66 de QuantConnect.pythonnet. PandasConverter inicializó inmediatamente; no hizo falta un segundo arreglo de Python ni especular con otra versión de numpy. Se conservaron Python 3.11.14, pandas 2.3.3, numpy 1.26.4, PYTHONHOME al base_prefix, PYTHONNET_PYDLL a libpython3.11 y PYTHONPATH a site-packages. El clr provisto por LEAN dejó de quedar eclipsado por el módulo de pip.
+
+El siguiente fallo literal fue `'SpikeBase' object has no attribute 'evaluar_entrada'`. AlgorithmPythonWrapper enumera e instancia todas las clases QCAlgorithm definidas en el módulo, sin seleccionar por algorithm-type-name. El runner ahora exporta LEAN_SPIKE_ALGORITHM y el módulo elimina de sus atributos la clase base y la estrategia no seleccionada antes de que el cargador lo inspeccione.
+
+El formato original se leyó sin cambiar datos: zip equity/usa/daily/spy.zip con spy.csv sin encabezado, fecha YYYYMMDD 00:00 y OHLC multiplicados por 10000 con cuatro decimales; volumen entero. Factor file con factor de precio/split 1 y map file sin cambio de ticker, ambos con extremos 19980102 y 20501231. Esas fechas son metadatos de identidad, no precios leídos después del límite. Normalización RAW. No hizo falta --enteros. write_lean_data.py solo actualiza su descripción de validación.
+
+El parser pasó de symbol a symbols[0] y usa orderIds para obtener los tags de entrada/salida: los orders reales no traen lastFillTime. Los fills se exportan con Z (UTC); se convierten a sesión America/New_York y luego a medianoche, como los controles. direction 0 es buy y 1 sell. compare_trades.py funcionó sin cambios.
+
+## Instalación y mediciones conservadas
 
 Todo se descargó o compiló dentro de W = `/home/azureuser/spike-lean-work`. No se usaron git, sudo, Docker, LEAN CLI ni instalaciones de sistema. La prohibición de git impidió realizar un clon superficial literal: se descargó el archivo de fuente de GitHub, fijado a la revisión `80e7843f645673bcbeaab963049f76f20f6785e1`, y se extrajo en W/Lean. La revisión está también en W/lean-revision.txt.
 
@@ -51,47 +82,34 @@ Mediciones de tamaño con `du -sh` (MiB, redondeados), tiempos de pared con `/us
 | Primer arranque fallido de SMA | Resultados y trazas en W/sma-attempt-1-results | 11.55 s |
 | Segundo arranque fallido de SMA | Resultados y trazas en W/sma-attempt-2-results | 8.59 s |
 | Tercer arranque fallido de SMA | Resultados y trazas en W/results/SmaCrossSpike | 8.12 s |
-| Backtest completo | No disponible | No disponible |
+| SMA completo, segunda corrida, con strace | W/results/SmaCrossSpike | 17.74 s de pared; algoritmo 2.13 s |
+| RSI completo, segunda corrida, con strace | W/results/RsiSpike | 24.03 s de pared; algoritmo 6.07 s |
 
-Los tiempos de arranque incluyen `strace`, no son tiempos de ejecución de una estrategia. Se ejecutó `df -h /` antes de las descargas/build y después de cada paso grande: 50G inicialmente, luego 49G y 48G. Nunca bajó de 30G. Final: **48G libres**, 50,607,628,288 bytes en la última medición previa a documentar.
+Los tiempos de pared finales incluyen strace y el aborto de cierre; no son una medición sin instrumentación. Hubo un breve solapamiento entre el cierre del Launcher SMA y el arranque del Launcher RSI; los comandos permanecieron en primer plano. Las mediciones no aíslan rendimiento en los dos núcleos compartidos. No se repitieron instalación/build. La primera corrida terminó con 48G libres; durante esta segunda se observaron 48G, 52G y al final 49G (51,586,236,416 bytes disponibles). No se atribuye el cambio de espacio a este spike. W/py311 mide ahora 129 MiB y W/results 6.2 MiB; los tamaños anteriores se conservan como mediciones históricas.
 
-Python base disponible: 3.11.14 de uv. Se creó W/py311 con pandas 2.3.3, numpy y pythonnet. LEAN carga su ensamblado `Python.Runtime` 2.0.66, provisto por el paquete NuGet `QuantConnect.pythonnet`; el paquete Python pythonnet 3.2.1 también está instalado, pero no demuestra compatibilidad con ese ensamblado. En el tercer intento se fijó numpy 1.26.4, versión de DockerfileLeanFoundation de la revisión descargada. Las dependencias exactas iniciales están en W/python-install.log y el ajuste en W/python-pin.log. `PYTHONNET_PYDLL` apunta a la libpython3.11.so del Python base disponible; no se descargó otro Python.
+## Bloqueo de la primera corrida (historia)
 
-## Bloqueo y límite de intentos
+Los tres intentos anteriores fallaron antes del algoritmo en `The type initializer for 'QuantConnect.Python.PandasConverter' threw an exception.` Primero se configuró el venv/libpython; luego PYTHONHOME; finalmente numpy 1.26.4 y PYTHONPATH. Ninguno expuso la excepción interna. Sus tiempos y cero llamadas IP corresponden a arranques fallidos, no a backtests. La pista posterior del PM identificó el import clr de pip que intentaba crear su propio runtime mono. La desinstalación de ambos paquetes resolvió el inicializador en esta corrida.
 
-1. Runner local con `python-venv` y `PYTHONNET_PYDLL`: falla en `PandasConverter`. Además aparece `Could not find platform dependent libraries <exec_prefix>`.
-2. Se fija `PYTHONHOME` al `sys.base_prefix` del Python 3.11: desaparece ese aviso, persiste el mismo fallo.
-3. Se fija numpy 1.26.4 según la fuente y se apunta `PYTHONPATH` a site-packages de W/py311: persiste el fallo. Se termina el spike sin un cuarto intento ni ejecutar RSI, que depende del mismo inicializador.
+## Costos de implementación y límites
 
-Error literal recortado del tercer intento:
+Lo que costó trabajo fue separar inicialización, selección de clase, rechazos del brokerage y resultados reales: el JSON existía incluso tras fallos. Se corrigió el port y el parser con los logs y campos reales, y se investigaron las diferencias con órdenes, eventos, OHLC exportado y EquityFillModel. No se corrigió LEAN upstream ni se ajustó un fill model para forzar paridad.
 
-```text
-Loader.TryCreatePythonAlgorithm(): System.Exception: AlgorithmPythonWrapper():
-The type initializer for 'QuantConnect.Python.PandasConverter' threw an exception.
-in AlgorithmPythonWrapper.cs:line 123
-```
-
-Al finalizar los tres intentos también ocurre:
+Después de guardar Completed, ambos procesos abortan con el mismo error literal:
 
 ```text
-Unhandled exception. System.InvalidOperationException:
-GIL must always be released, and it must be released from the same thread that acquired it.
+PythonInitializer.Shutdown(): calling engine shutdown...
+Unhandled exception. System.InvalidOperationException: GIL must always be released, and it must be released from the same thread that acquired it.
    at Python.Runtime.Py.GILState.Finalize()
    at System.GC.RunFinalizers()
 ```
 
-El proceso sale con 134. LEAN escribe un JSON igualmente: `state.Status = RuntimeError`, `state.OrderCount = 0`, `totalPerformance.closedTrades` vacío. El log no expone la excepción interna de la importación de pandas; no se identificó su causa raíz y no se afirma que numpy o pythonnet sean por sí solos el problema.
+PythonInitializer.Shutdown del fuente conserva un Py.GIL local al llamar PythonEngine.Shutdown. No se modificó ni recompiló ese código. El runner conserva salida 134; no oculta el aborto ni lo transforma en éxito.
 
-## Cambios del spike y validación
+No se verificaron: salida limpia del proceso; capacidad de producción/HFT; datos sin ajustar, splits/dividendos reales, cambios de ticker, otros símbolos, benchmarks, ejecución live, slippage intradiario real, intereses/costos de préstamo ni equivalencia exacta de precios/PnL. Falta alternative/interest-rate/usa/interest-rate.csv: RSI registra una solicitud local fallida y ambos logs advierten que no se cargaron tasas; no se descargaron datos adicionales. La evidencia de ausencia de red corresponde a estas dos ejecuciones concretas, desde el arranque hasta el aborto de cierre.
 
-Se agregó `run_lean_local.sh`, que genera config en W, activa el entorno Python para el Launcher y registra tiempo/red. Se completaron los handlers locales en config.json. Las entradas y salidas por regla de lean_algos.py solicitan MarketOnOpen para el supuesto next-open; no se agregó un modelo de llenado. Este cambio no llegó a ejecutarse dentro del algoritmo por el bloqueo.
-
-El parser original exportaba un CSV vacío del JSON fallido. Se corrigió para rechazar `state.RuntimeError` con salida 1; el CSV vacío fue eliminado de W. Se comprobó esa corrección con la salida real de LEAN. No se validó la conversión de fills, los tags ni la zona horaria contra trades reales.
-
-Validación realizada: los cuatro controles; comparaciones entre controles; build Release; tres arranques instrumentados; rechazo del parser sobre el JSON fallido; sintaxis de Python mediante ast.parse, JSON mediante json.loads y shell mediante `bash -n scripts/lean_spike/run_lean_local.sh`. No se tocaron motor, CLI ni tests.
-
-Queda sin verificar: lectura de precios decimales/factor files/map files por LEAN; ejecución de SMA y RSI; restricciones cash/margen y leverage 1; tamaño entero y rechazos por buying power; activación intrabar de stops y OCO; paridad por fechas/lado; PnL; ausencia de solicitudes de red durante un backtest completo. En los arranques fallidos, las trazas de red no contienen AF_INET ni AF_INET6: no hubo solicitudes IP observadas. Eso no prueba el comportamiento posterior a la inicialización.
+Validación: dos resultados Completed con RuntimeError vacío, conversión de closedTrades, cuatro compare_trades (salida 1 por diferencias), auditoría de los 2 y 47 desajustes, cero AF_INET/AF_INET6 en las trazas finales, sintaxis Python/JSON/shell y control de disco. CSV y logs quedan en W; no se publican precios ni filas de trades aquí.
 
 ## Handoff al PM
 
-`bd show QuantAgent-ryaw` falló con `sqlite3: unable to open database file`; no se modificó .beads porque está fuera del alcance autorizado. El PM debe registrar el resultado negativo y decidir el estado del issue. No hubo commits ni integración. Propuesta de commit del PM: `docs(spike): record source-built LEAN Python initialization blocker`, con los seis archivos del spike/reporte listados en el README. El runner queda como reproducción del bloqueo, no como comando validado para completar backtests. La revisión e integración quedan en el gate humano.
+La integración sigue pendiente del gate humano. Beads no se modificó porque queda fuera del alcance autorizado; en la primera corrida bd no pudo abrir la base. El PM debe actualizar QuantAgent-ryaw con el resultado: inicialización resuelta, backtests completos, criterio (a) no cumplido y cierre del proceso pendiente. No hubo commits. Plan de commit: `fix(spike): run local LEAN and record measured trade differences`, con los seis archivos tocados en esta corrida; validación reproducible en el README. El reporte anterior se reescribe por instrucción explícita del PM/usuario, conservando su historia y mediciones.

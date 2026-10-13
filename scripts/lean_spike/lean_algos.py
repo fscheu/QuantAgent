@@ -15,6 +15,7 @@ salida. closed_trades_to_csv.py los lee.
 """
 
 from collections import deque
+import os
 
 from AlgorithmImports import *
 
@@ -44,7 +45,7 @@ class SpikeBase(QCAlgorithm):
         self.comision = float(self.get_parameter("comision", 0.0))
         self.fraccion = float(self.get_parameter("fraccion", 1.0))
         self.set_brokerage_model(
-            BrokerageName.ALPACA, AccountType.CASH if cuenta == "cash" else AccountType.MARGIN)
+            BrokerageName.DEFAULT, AccountType.CASH if cuenta == "cash" else AccountType.MARGIN)
         equity = self.add_equity("SPY", Resolution.DAILY, data_normalization_mode=DataNormalizationMode.RAW)
         equity.set_fee_model(ComisionPorcentual(self.comision))
         equity.set_slippage_model(ConstantSlippageModel(self.slippage))
@@ -176,3 +177,11 @@ class RsiSpike(SpikeBase):
         elif event.order_id in p.get("ordenes", []) and event.status == OrderStatus.FILLED:
             self.transactions.cancel_open_orders(self.spy)
             self.pos = None
+
+
+# El cargador Python instancia todas las clases QCAlgorithm del módulo.
+if os.environ["LEAN_SPIKE_ALGORITHM"] == "SmaCrossSpike":
+    del RsiSpike
+else:
+    del SmaCrossSpike
+del SpikeBase

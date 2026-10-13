@@ -8,6 +8,7 @@ export DOTNET_ROOT="$WORK/dotnet" DOTNET_CLI_HOME="$WORK/dotnet-home"
 export NUGET_PACKAGES="$WORK/nuget" TMPDIR="$WORK/tmp"
 export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_PROCESSOR_COUNT=2
 export PYTHONDONTWRITEBYTECODE=1
+export LEAN_SPIKE_ALGORITHM="$ALGO"
 export PYTHONNET_PYDLL="${PYTHONNET_PYDLL:-$("$WORK/py311/bin/python" -c 'import sysconfig; print(sysconfig.get_config_var("LIBDIR")+"/"+sysconfig.get_config_var("LDLIBRARY"))')}"
 export PYTHONHOME="$("$WORK/py311/bin/python" -c 'import sys; print(sys.base_prefix)')"
 export PYTHONPATH="$WORK/py311/lib/python3.11/site-packages"

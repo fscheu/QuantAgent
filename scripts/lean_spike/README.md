@@ -1,25 +1,26 @@
 # Spike de LEAN (QuantAgent-ryaw)
 
-Estado al 2026-10-13: **resultado negativo por bloqueo de Python.NET**. LEAN se compiló desde fuente sin Docker,
-CLI, cuenta ni login. Los tres arranques fallaron al inicializar PandasConverter y al cerrar el GIL; no se
-completaron backtests. Se detuvo el trabajo al tercer intento. No hay resultados de trades de LEAN válidos.
+Segunda corrida, 2026-10-13: Python inicializa y ambos backtests terminan hasta 2018-12-31.
+Contra next-open: SMA 3/5, RSI 140/187 (176 trades LEAN). Las diferencias están clasificadas;
+SMA no cumple el criterio 5/5. Los JSON tienen Status Completed, pero el Launcher aborta
+con salida 134 durante PythonInitializer.Shutdown, después de guardar resultados.
 
-Evidencia, mediciones y criterios: [reporte del spike](../../docs/04_decisions/QuantAgent-ryaw-DC-spike-lean.md).
+Resultados, causas y limitaciones: [reporte](../../docs/04_decisions/QuantAgent-ryaw-DC-spike-lean.md).
 Contexto: [decisión, §§7–10](../../docs/04_decisions/2026-10-12-DC-quantconnect-y-pivot-lean.md).
 
-| Archivo | Estado real |
+| Archivo | Estado validado |
 |---|---|
-| write_lean_data.py | Exportó 3020 velas; lectura por LEAN pendiente |
-| lean_algos.py | Port SMA/RSI; MarketOnOpen y fill model por defecto; inicialización bloqueada |
-| config.json | Handlers locales; el runner sustituye rutas y parámetros |
-| run_lean_local.sh | Ejecuta Launcher Release y registra tiempo/red; reproduce el fallo, no completa backtests |
-| run_lean.sh | Runner Docker anterior, no usado ni validado en esta ejecución |
-| closed_trades_to_csv.py | Rechaza state.RuntimeError; conversión de trades reales pendiente |
-| compare_trades.py | Probado entre los controles; paridad con LEAN pendiente |
+| write_lean_data.py | 3020 velas; LEAN aceptó precios escalados decimales, factor 1 y map sin cambios |
+| lean_algos.py | SMA cash / RSI margen leverage 1; brokerage y fill model predeterminados; selección explícita del módulo |
+| config.json | Handlers locales; runner sustituye rutas y parámetros; sin cambios en segunda corrida |
+| run_lean_local.sh | Launcher Release + tiempo + strace; backtests Completed, aborto de cierre visible |
+| run_lean.sh | Runner Docker histórico; no usado |
+| closed_trades_to_csv.py | Validado con symbols, direction, orderIds y sesiones NY; rechaza RuntimeError |
+| compare_trades.py | Cuatro comparaciones LEAN/control ejecutadas; sin cambios |
 
-Todo lo generado está en W = `/home/azureuser/spike-lean-work`. Se modificaron README.md, lean_algos.py,
-config.json, closed_trades_to_csv.py y se agregó run_lean_local.sh, además del reporte enlazado.
-No se usó git ni se modificaron motor, CLI o tests. Beads no pudo abrir su base; el PM debe actualizar el issue.
+Se tocaron lean_algos.py, run_lean_local.sh, closed_trades_to_csv.py, write_lean_data.py,
+este README y el reporte. Todo nuevo resultado y diagnóstico queda en W. No hubo commits;
+el PM debe actualizar Beads e integrar tras revisar.
 
 ## Entorno y controles: comandos que funcionaron
 
@@ -73,48 +74,80 @@ df -h /
 
 SDK instalado: 10.0.401. Build: 0 errores, 4446 advertencias upstream. Logs completos en W/build-1.log.
 
-## Python y datos: preparación que funcionó
+## Python y datos: estado reutilizado y arreglo validado
+
+No repetir instalación, build, controles ni exportación en este entorno. Los comandos anteriores
+son el registro de la primera corrida. En W/py311 ya están Python 3.11.14, pandas 2.3.3 y numpy 1.26.4.
+No instalar el paquete pip pythonnet: eclipsa el clr embebido de QuantConnect.pythonnet (Python.Runtime 2.0.66).
+El arreglo que destrabó PandasConverter fue:
 
 ```bash
+export W=/home/azureuser/spike-lean-work
+export UV_CACHE_DIR=$W/uv-cache TMPDIR=$W/tmp
 df -h /
-uv venv --python /home/azureuser/.local/bin/python3.11 "$W/py311"
-uv pip install --python "$W/py311/bin/python" pandas==2.3.3 numpy==1.26.4 pythonnet==3.2.1
+uv pip uninstall --python "$W/py311/bin/python" pythonnet clr-loader
+```
+
+Datos ya exportados en W/data: daily/spy.zip, factor_files/spy.csv y map_files/spy.csv bajo equity/usa.
+OHLC * 10000 con cuatro decimales aceptados; no se usó --enteros. Los archivos market-hours y
+symbol-properties vienen de la fuente local. Nada de precios después de 2018-12-31.
+
+## Corridas completas y comparaciones: comandos validados
+
+El runner configura PYTHONHOME, PYTHONNET_PYDLL, PYTHONPATH y LEAN_SPIKE_ALGORITHM.
+Esta última variable deja una sola clase QCAlgorithm visible al cargador Python. No usa un fill model propio.
+Requiere strace y /usr/bin/time ya presentes. Ejecutar secuencialmente y esperar cada salida.
+Detenerse si / tiene menos de 30G libres.
+
+```bash
+export W=/home/azureuser/spike-lean-work
 df -h /
-python scripts/lean_spike/write_lean_data.py --out "$W/data"
-cp -r "$W/Lean/Data/market-hours" "$W/Lean/Data/symbol-properties" "$W/data/"
+scripts/lean_spike/run_lean_local.sh SmaCrossSpike cash "$W" > "$W/sma-final.log" 2>&1
+# Salida 134 en Shutdown; verificar Completed y RuntimeError vacío antes de convertir.
+scripts/lean_spike/run_lean_local.sh RsiSpike margin "$W" > "$W/rsi-final.log" 2>&1
+# Mismo aborto posterior a guardar Completed.
+
+export PYTHONPATH=/home/azureuser/repos/projects/QuantAgent-spike-lean
+export PYTHONDONTWRITEBYTECODE=1 MPLCONFIGDIR=$W/matplotlib
+export DATABASE_URL=sqlite:///$W/try.db
+PY=/home/azureuser/repos/projects/QuantAgent/.venv/bin/python
+"$PY" scripts/lean_spike/closed_trades_to_csv.py "$W/results/SmaCrossSpike/SmaCrossSpike.json" --out "$W/lean_sma-cross.csv"
+"$PY" scripts/lean_spike/closed_trades_to_csv.py "$W/results/RsiSpike/RsiSpike.json" --out "$W/lean_rsi.csv"
+for strategy in sma-cross rsi; do
+  for control in adapter motor; do
+    "$PY" scripts/lean_spike/compare_trades.py "$W/control/${control}_$strategy.csv" "$W/lean_$strategy.csv"       > "$W/compare_${control}_$strategy.log"
+    # Salida 1 esperada: hay diferencias reales.
+  done
+done
+"$W/py311/bin/python" "$W/classify_differences.py"
 ```
 
-El entorno quedó con Python 3.11.14. numpy se fijó a 1.26.4 en el tercer intento, siguiendo
-DockerfileLeanFoundation. LEAN carga Python.Runtime 2.0.66 desde NuGet. Que los paquetes Python importen
-fuera de LEAN no verifica su inicialización embebida.
+Resultados: SMA 3/5 next-open, 0/5 motor; RSI 140/187 next-open, 12/187 motor.
+Tiempos de pared instrumentados: SMA 17.74 s, RSI 24.03 s, incluido el aborto de cierre.
+El parser usa symbols[0] y orderIds para tags; convierte UTC a sesión NY. No depende de lastFillTime.
+Clasificación por trade del control: W/differences_{sma-cross,rsi}.csv. Las órdenes/eventos y trazas
+completas están en W/results/<algoritmo>/. La clasificación es una auditoría de estas corridas.
 
-## Reproducción del fallo: no es un backtest validado
-
-El runner establece PYTHONHOME, PYTHONNET_PYDLL y el entorno virtual; usa los handlers locales y token vacío.
-Requiere el `strace` y `/usr/bin/time` ya disponibles en esta VM, sin instalar herramientas de sistema.
+Verificación de red y estado, sin publicar precios ni trades:
 
 ```bash
-scripts/lean_spike/run_lean_local.sh SmaCrossSpike cash "$W"
-# Falla con salida 134: PandasConverter y GIL. No volver a intentar en esta sesión.
+"$W/py311/bin/python" - <<'CHECK'
+import json, os, re
+from pathlib import Path
+w = Path(os.environ['W'])
+for algo in ('SmaCrossSpike', 'RsiSpike'):
+    folder = w / 'results' / algo
+    state = json.loads((folder / f'{algo}.json').read_text())['state']
+    assert state['Status'] == 'Completed' and not state['RuntimeError'], state
+    calls = len(re.findall(r'AF_INET6?\b', (folder / 'network.log').read_text()))
+    print(algo, state['Status'], 'llamadas IP:', calls)
+    assert calls == 0
+CHECK
+bash -n scripts/lean_spike/run_lean_local.sh
+df -h /
 ```
 
-No se ejecutó RsiSpike porque usa el mismo inicializador bloqueado. Las trazas `network.log` de los tres
-arranques no contienen llamadas AF_INET/AF_INET6. Falta verificar la red durante una corrida completa.
-
-El JSON de SMA tiene state.Status RuntimeError y closedTrades vacío. El parser ahora lo rechaza con salida 1:
-
-```bash
-python scripts/lean_spike/closed_trades_to_csv.py \
-  "$W/results/SmaCrossSpike/SmaCrossSpike.json" --out "$W/lean_sma-cross.csv"
-```
-
-No exportar ni comparar ese resultado como si fuera un backtest de cero trades. Para revisar los controles:
-
-```bash
-python scripts/lean_spike/compare_trades.py "$W/control/adapter_sma-cross.csv" "$W/control/motor_sma-cross.csv"
-python scripts/lean_spike/compare_trades.py "$W/control/adapter_rsi.csv" "$W/control/motor_rsi.csv"
-# Salida 1 esperada: tienen fechas distintas por cierre versus apertura siguiente.
-```
-
-Las comparaciones LEAN/control, PnL de LEAN y clasificación de diferencias de RSI quedan sin verificar.
-No se publican precios ni filas de trades en documentación; CSV y logs quedan en W.
+Las dos trazas finales tienen cero llamadas AF_INET/AF_INET6 desde el arranque hasta la terminación.
+RSI registra una lectura local fallida de alternative/interest-rate/usa/interest-rate.csv; no se descargó
+ese archivo ni se verificaron intereses. El cierre limpio de Python sigue pendiente. No interpretar
+el aborto de Shutdown como RuntimeError del algoritmo, ni un JSON de un arranque fallido como cero trades válidos.

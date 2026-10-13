@@ -3,13 +3,13 @@
 
 Uso:  python scripts/lean_spike/closed_trades_to_csv.py <resultado.json> --out trades.csv
 
-Probado contra el JSON de un arranque fallido: rechaza state.RuntimeError en vez de exportar cero trades.
-La conversion de fills queda pendiente de una corrida exitosa. Los campos se buscan sin distinguir mayusculas.
+Probado contra los resultados completos de SMA y RSI. Rechaza state.RuntimeError.
+Los campos se buscan sin distinguir mayusculas.
 
 Columnas: las de quantagent/backtesting/export.py::COLUMNS. entry_time y exit_time son la sesion de Nueva
 York del fill a las 00:00, como en los CSV del motor y de bt_adapter.py. stop_loss y exit_reason salen de
-los tags que pone lean_algos.py en las ordenes (entrada `stop=<nivel>`, salida el motivo), buscando la
-orden que lleno en el mismo instante que el trade.
+los tags que pone lean_algos.py en las ordenes (entrada `stop=<nivel>`, salida el motivo), mediante
+los orderIds de cada trade. LEAN exporta symbols como una lista y fechas de fills en UTC.
 """
 
 from __future__ import annotations
@@ -44,25 +44,22 @@ def sesion(texto: str) -> datetime:
     return datetime.combine(instante(texto).astimezone(NY).date(), datetime.min.time())
 
 
-def tag_por_fill(ordenes: list[dict]) -> dict:
-    return {instante(campo(o, "lastFillTime")): campo(o, "tag") or "" for o in ordenes if campo(o, "lastFillTime")}
-
-
 def filas(resultado: dict) -> list[TradeRow]:
     trades = campo(campo(resultado, "totalPerformance"), "closedTrades")
-    tags = tag_por_fill(list(campo(resultado, "orders").values()))
+    ordenes = campo(resultado, "orders")
     out = []
     for t in trades:
-        simbolo = campo(t, "symbol")
+        simbolo = campo(t, "symbols")[0]
         simbolo = campo(simbolo, "value") if isinstance(simbolo, dict) else simbolo
         largo = str(campo(t, "direction")).lower() in ("0", "long")
-        tag_entrada = tags.get(instante(campo(t, "entryTime")), "")
+        ids = campo(t, "orderIds")
+        tag_entrada = campo(ordenes[str(ids[0])], "tag") or ""
         stop = float(tag_entrada.split("=", 1)[1]) if tag_entrada.startswith("stop=") else None
         out.append(TradeRow(
             sesion(campo(t, "entryTime")), sesion(campo(t, "exitTime")), simbolo.split()[0],
             "buy" if largo else "sell", abs(float(campo(t, "quantity"))), float(campo(t, "entryPrice")),
             float(campo(t, "exitPrice")), stop, float(campo(t, "profitLoss")),
-            tags.get(instante(campo(t, "exitTime")), ""),
+            campo(ordenes[str(ids[-1])], "tag") or "",
         ))
     return sorted(out, key=lambda r: r.entry_time)
 
