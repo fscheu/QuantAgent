@@ -1,9 +1,14 @@
 """Ventanas por año calendario y selección de parámetros para walk-forward."""
 
+import csv
+import json
 from datetime import datetime, timedelta
 from typing import Any
 
 import click
+
+from quantagent.settings import COSTOS_PERFILES
+from quantagent.trading.position_sizer import PositionSizer
 
 
 def preparar_walkforward(
@@ -27,17 +32,67 @@ def preparar_walkforward(
         )
         click.echo(f"Aviso: sin --to, se asume fin en {to_date:%Y-%m-%d} ({motivo}).", err=True)
     elif to_date >= reserva:
-        raise click.ClickException("--to cae en la reserva; walkforward no abre la prueba ni la reserva")
+        raise click.ClickException(f"--to {to_date:%Y-%m-%d} cae en la reserva, que empieza el {reserva:%Y-%m-%d}; walkforward no abre la prueba ni la reserva")
     elif to_date >= prueba:
-        raise click.ClickException("--to cae en el tramo de prueba; walkforward no abre la prueba ni la reserva")
+        raise click.ClickException(f"--to {to_date:%Y-%m-%d} cae en el tramo de prueba, que empieza el {prueba:%Y-%m-%d}; walkforward no abre la prueba ni la reserva")
     try:
         meta = snapshot_metadata(snapshot_name, symbol.upper(), from_date, to_date)
     except (SnapshotError, ValueError, FileNotFoundError) as exc:
         raise click.ClickException(str(exc)) from exc
     ventanas = construir_ventanas(meta.start_date, meta.end_date, train_years, test_years)
-    ventanas = [(a, b, c, min(d, to_date)) for a, b, c, d in ventanas]
+    ventanas = [(a, b, c, min(d, meta.end_date)) for a, b, c, d in ventanas]
     config = _engine_config(None, costos, tamano_posicion, regla_tamano, orden_minima)
     return combos, meta, config, ventanas
+
+
+@click.command("walkforward", help="Elegir parámetros en ajuste y medir el ganador en la ventana siguiente.")
+@click.option("--strategy", "strategy_name", required=True)
+@click.option("--symbol", required=True)
+@click.option("--snapshot", "snapshot_name", required=True)
+@click.option("--grid", "grid_path", required=True, type=click.Path(dir_okay=False))
+@click.option("--out", "out_path", required=True, type=click.Path(dir_okay=False, writable=True))
+@click.option("--from", "from_date", type=click.DateTime(formats=["%Y-%m-%d"]))
+@click.option("--to", "to_date", type=click.DateTime(formats=["%Y-%m-%d"]))
+@click.option("--train-years", default=4, type=click.IntRange(min=1))
+@click.option("--test-years", default=2, type=click.IntRange(min=1))
+@click.option("--costos", type=click.Choice(sorted(COSTOS_PERFILES)))
+@click.option("--tamano-posicion", default=1.0, type=click.FloatRange(min=0.0, max=1.0, min_open=True))
+@click.option("--regla-tamano", type=click.Choice(PositionSizer.REGLAS))
+@click.option("--orden-minima", type=click.FloatRange(min=0.0, min_open=True))
+def walkforward_command(strategy_name, symbol, snapshot_name, grid_path, out_path, **options):
+    from quantagent.backtesting.fixtures import snapshot_metadata
+    from quantagent.cli.backtest import _isolated_sqlite_db, correr_par
+    from quantagent.cli.sweep import registrar_intento
+
+    combos, _, config, ventanas = preparar_walkforward(strategy_name, symbol, snapshot_name, grid_path, **options)
+    symbol = symbol.upper()
+    rows = []
+    for a, b, c, d in ventanas:
+        resultados = []
+        for desde, hasta, parametros in ((a, b, combos), (c, d, None)):
+            if parametros is None:
+                ganador = seleccionar_ganador(resultados)
+                parametros = [ganador["params"]]
+            meta = snapshot_metadata(snapshot_name, symbol, desde, hasta)
+            for combo in parametros:
+                with _isolated_sqlite_db():
+                    r = correr_par(strategy_name, meta, config, options["costos"], None,
+                                   snapshot_name, symbol, desde, hasta, params=combo)
+                if desde == a:
+                    registrar_intento(strategy_name, symbol, snapshot_name, options["costos"],
+                                      options["tamano_posicion"], combo,
+                                      {**r, "desde": f"{meta.start_date:%Y-%m-%d}", "hasta": f"{meta.end_date:%Y-%m-%d}"})
+                    resultados.append({**r, "params": combo})
+        rows.append(dict(ajuste_desde=f"{a:%Y-%m-%d}", ajuste_hasta=f"{b:%Y-%m-%d}",
+                         prueba_desde=f"{c:%Y-%m-%d}", prueba_hasta=f"{d:%Y-%m-%d}",
+                         params=json.dumps(ganador["params"], sort_keys=True),
+                         ajuste_sharpe_tasa_0=ganador["sharpe_tasa_0"],
+                         trades=r["trades"], pnl=r["pnl"], sharpe_tasa_0=r["sharpe_tasa_0"]))
+    with open(out_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+    click.echo(f"Ventanas: {len(rows)}; CSV: {out_path}")
 
 
 def construir_ventanas(

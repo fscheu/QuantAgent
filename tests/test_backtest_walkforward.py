@@ -1,9 +1,45 @@
+import csv
+import json
 from datetime import datetime
 
 import click
 import pytest
 
 from quantagent.cli.walkforward import construir_ventanas, preparar_walkforward, seleccionar_ganador
+
+
+@pytest.mark.parametrize("hasta", ["2012-12-23", "2019-01-01", "2023-01-01", "2016-12-30", "2016-12-31"])
+def test_comando_csv_y_rechazos(snapshot_walkforward, hasta):
+    from click.testing import CliRunner
+    from quantagent.cli.backtest import backtest_group
+
+    grid, out = snapshot_walkforward / "grid.json", snapshot_walkforward / "out.csv"
+    grid.write_text(json.dumps({"rsi_period": [7, 14]}))
+    runner = CliRunner()
+    help_result = runner.invoke(backtest_group, ["walkforward", "--help"])
+    assert help_result.exit_code == 0 and "--train-years" in help_result.output
+    assert "--abrir-" not in help_result.output
+    antes = {p: p.read_bytes() for p in snapshot_walkforward.rglob("*") if p.is_file()}
+    res = runner.invoke(backtest_group, ["walkforward", "--strategy", "rsi", "--symbol", "spy",
+                        "--snapshot", "wf", "--grid", str(grid), "--out", str(out),
+                        "--from", "2011-01-03", "--to", hasta])
+    if hasta[:4] != "2016":
+        assert res.exit_code == 1, res.output
+        assert ("ventana completa" if hasta[:4] == "2012" else hasta) in res.output
+        assert {p: p.read_bytes() for p in snapshot_walkforward.rglob("*") if p.is_file()} == antes
+        return
+    assert res.exit_code == 0, res.output
+    with out.open() as f:
+        rows = list(csv.DictReader(f))
+    assert len(rows) == 1
+    assert rows[0] == dict(ajuste_desde="2011-01-03", ajuste_hasta="2014-12-31",
+                           prueba_desde="2015-01-01", prueba_hasta="2016-12-30",
+                           params='{"rsi_period": 7}', ajuste_sharpe_tasa_0="-0.7081740842923033",
+                           trades="1", pnl="-99.95002499", sharpe_tasa_0="-1.0019921641686198")
+    with (snapshot_walkforward / "intentos.csv").open() as f:
+        intentos = list(csv.DictReader(f))
+    assert [json.loads(r["params"]) for r in intentos] == [{"rsi_period": 7}, {"rsi_period": 14}]
+    assert all(r["hasta"] == "2014-12-31" and r["activo"] == "SPY" for r in intentos)
 
 
 @pytest.fixture
