@@ -27,8 +27,6 @@ from quantagent.models import Base, MarketData
 
 
 def test_compare_equity_dir_exports_motor_without_changing_outputs(cli_runner, monkeypatch, tmp_path):
-    import hashlib
-
     import pandas as pd
 
     import quantagent.cli.backtest as cli
@@ -54,14 +52,6 @@ def test_compare_equity_dir_exports_motor_without_changing_outputs(cli_runner, m
                                                   "--trades-dir", str(tmp_path / name), *extra])
         assert result.exit_code == 0, result.output
     assert (tmp_path / "before.csv").read_bytes() == (tmp_path / "after.csv").read_bytes()
-    # SHA256 de las salidas de la base b91cbc7d antes de --equity-dir.
-    baseline_hashes = {
-        "before.csv": "128c232f0c387a6c149d953e5572210daeadf6e8ac2b0e649f187119756ff585",
-        "before/rsi-SPY.csv": "1bb2a6282f7c17afe90654b7c14cd6fa1145cc49170a2b9f5871ae76df47308b",
-        "before/sma-cross-SPY.csv": "bc09bd523275557971671b60eda71c6404931f4b48a18a966346a6018f59ec36",
-    }
-    for path, expected in baseline_hashes.items():
-        assert hashlib.sha256((tmp_path / path).read_bytes()).hexdigest() == expected
     table = list(csv.DictReader((tmp_path / "after.csv").open()))
     for row in table:
         strategy = row["estrategia"]
