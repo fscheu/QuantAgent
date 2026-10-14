@@ -66,8 +66,10 @@ class StrategyAdapter(Strategy):
     n_real_bars = 0  # sin la vela centinela
     fill_close = True
     slippage = commission = 0.0  # fracciones por lado
+    orden_minima = None
 
     def init(self):
+        self.entradas_descartadas_orden_minima = 0
         df = self.data.df
         cols = {c.lower(): df[c].values * (1.0 if c == "Volume" else SCALE) for c in df.columns}
         self.bars = pd.DataFrame({"timestamp": df.index, **cols})  # precios reales, columnas del motor
@@ -182,6 +184,9 @@ class StrategyAdapter(Strategy):
         # si se cerro en esta misma vela, la libreria todavia no desconto el slippage de esa salida
         equity = self.equity - sum(abs(t.size) for t in self.trades) / SCALE * price * self.slippage
         qty = equity * settings.TRADING_BASE_POSITION_PCT * signal.confidence / price
+        if self.orden_minima is not None and (qty <= 0 or (qty * price) < self.orden_minima - 1e-9):
+            self.entradas_descartadas_orden_minima += 1
+            return
         units = int(round(qty * SCALE))
         # QuantAgent-gti6: el recorte de OrderManager._cap_entry_qty (quantagent/trading/order_manager.py:57-76).
         # Solo compras cuyo nocional entra en el efectivo: se achican a lo que alcanza a pagar con slippage y
@@ -209,14 +214,15 @@ class StrategyAdapter(Strategy):
 
 
 def run_adapter(strategy, df: pd.DataFrame, *, symbol: str, timeframe: str, fill: str = "close",
-                commission_pct: float = 0.0, slippage_pct: float = 0.0, cash: float = INITIAL_CASH):
+                commission_pct: float = 0.0, slippage_pct: float = 0.0, cash: float = INITIAL_CASH,
+                orden_minima: float | None = None):
     """Corre `strategy` sobre `df` (el de crossval_rsi.load_fixture: escalado y con vela centinela)."""
     close = fill == "close"
     bt = Backtest(df if close else df.iloc[:-1], StrategyAdapter, cash=cash, commission=commission_pct, margin=1.0,
                   spread=slippage_pct,
                   trade_on_close=close, hedging=False, exclusive_orders=False, finalize_trades=not close)
     return bt.run(strategy=strategy, symbol=symbol, timeframe=timeframe, n_real_bars=len(df) - 1, fill_close=close,
-                  slippage=slippage_pct, commission=commission_pct)
+                  slippage=slippage_pct, commission=commission_pct, orden_minima=orden_minima)
 
 
 def trade_rows(stats, symbol: str) -> list[TradeRow]:
@@ -241,6 +247,8 @@ def main(argv=None) -> int:
     ap.add_argument("--slippage-pct", type=float, help="fraccion del precio por lado (0.0005 = 0.05 %%). Default 0")
     ap.add_argument("--costos", choices=sorted(settings.COSTOS_PERFILES),
                     help="perfil de costos (slippage y comision), como el CLI. Excluyente con las dos anteriores")
+    ap.add_argument("--orden-minima", type=float, default=None,
+                    help="monto mínimo en USD por orden de entrada. Default None")
     ap.add_argument("--out", help="CSV de trades")
     args = ap.parse_args(argv)
     if bool(args.fixture) == bool(args.snapshot) or (args.snapshot and not args.symbol):
@@ -258,7 +266,7 @@ def main(argv=None) -> int:
         symbol, timeframe = meta.symbol, meta.timeframe
         df = port.load_fixture(port.FIXTURES_DIR / f"{args.fixture}.csv")
     stats = run_adapter(build_strategy(cli_aliases()[args.strategy]), df, symbol=symbol, timeframe=timeframe,
-                        fill=args.fill, **costos)
+                        fill=args.fill, orden_minima=args.orden_minima, **costos)
     rows = trade_rows(stats, symbol)
     if args.out:
         Path(args.out).write_text(trades_to_csv(rows))
@@ -269,6 +277,8 @@ def main(argv=None) -> int:
     print("Profit factor: n/a" if math.isnan(pf) or math.isinf(pf) else f"Profit factor: {pf:.2f}")
     print(f"Sharpe ratio: {stats['Sharpe Ratio']:.2f}")
     print(f"Total PnL: {sum(r.pnl for r in rows):.2f}")
+    if args.orden_minima is not None:
+        print(f"Entradas descartadas por orden mínima: {stats['_strategy'].entradas_descartadas_orden_minima}")
     return 0
 
 

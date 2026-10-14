@@ -75,6 +75,7 @@ def main(argv=None) -> int:
     ap.add_argument("--costos", choices=sorted(settings.COSTOS_PERFILES), help="Perfil de costos")
     ap.add_argument("--tamano-posicion", type=float, default=1.0, help="Tamaño de posición (default 1.0)")
     ap.add_argument("--regla-tamano", choices=["confianza", "fijo"], default="confianza", help="Regla de tamaño (default confianza)")
+    ap.add_argument("--orden-minima", type=float, default=None, help="Monto mínimo en USD por orden de entrada")
     ap.add_argument("--out", help="CSV de salida (default: sobrescribe --tabla)")
     ap.add_argument("--md", help="Documento Markdown de salida")
     ap.add_argument("--params", help="JSON de parámetros de estrategia, el mismo que se pasó a backtest compare")
@@ -112,7 +113,15 @@ def main(argv=None) -> int:
             df = _load_snapshot_df(args.snapshot, sym, row.get("desde"), row.get("hasta")).copy()
             settings.TRADING_BASE_POSITION_PCT = args.tamano_posicion
             bt_adapter.settings.TRADING_BASE_POSITION_PCT = args.tamano_posicion
-            stats = bt_adapter.run_adapter(build_strategy(aliases[strat], **params.get(strat, {})), df, symbol=sym, timeframe=timeframe, fill="close", **costos)
+            stats = bt_adapter.run_adapter(
+                build_strategy(aliases[strat], **params.get(strat, {})),
+                df,
+                symbol=sym,
+                timeframe=timeframe,
+                fill="close",
+                orden_minima=args.orden_minima,
+                **costos,
+            )
             prt_rows = list(csv.DictReader(io.StringIO(trades_to_csv(bt_adapter.trade_rows(stats, sym)))))
             row["control"] = compare_trades_with_reasons(eng_rows, prt_rows)
         except Exception as exc:
@@ -122,7 +131,15 @@ def main(argv=None) -> int:
             df_open = _load_snapshot_df(args.snapshot, sym, row.get("desde"), row.get("hasta")).copy()
             settings.TRADING_BASE_POSITION_PCT = args.tamano_posicion
             bt_adapter.settings.TRADING_BASE_POSITION_PCT = args.tamano_posicion
-            stats_open = bt_adapter.run_adapter(build_strategy(aliases[strat], **params.get(strat, {})), df_open, symbol=sym, timeframe=timeframe, fill="next-open", **costos)
+            stats_open = bt_adapter.run_adapter(
+                build_strategy(aliases[strat], **params.get(strat, {})),
+                df_open,
+                symbol=sym,
+                timeframe=timeframe,
+                fill="next-open",
+                orden_minima=args.orden_minima,
+                **costos,
+            )
             open_rows = bt_adapter.trade_rows(stats_open, sym)
             row["pnl_apertura_siguiente"] = round(sum(r.pnl for r in open_rows), 2)
             row["trades_apertura_siguiente"] = len(open_rows)
