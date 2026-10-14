@@ -76,6 +76,41 @@ load_grid = cargar_grilla
 validate_grid = validar_grilla
 
 
+def registrar_intento(
+    strategy_name: str,
+    symbol: str,
+    snapshot_name: str,
+    costos: Optional[str],
+    tamano_posicion: Optional[float],
+    combo: dict[str, Any],
+    row: dict[str, Any],
+) -> None:
+    """Agrega una corrida de ajuste al registro, conservando sus valores."""
+    from quantagent.data.snapshot import snapshot_root
+
+    intentos_path = snapshot_root() / "intentos.csv"
+    intento = {
+        "fecha_utc": datetime.now(timezone.utc).isoformat(),
+        "estrategia": strategy_name,
+        "activo": symbol,
+        "snapshot": snapshot_name,
+        "desde": row["desde"],
+        "hasta": row["hasta"],
+        "costos": costos or "",
+        "tamano": tamano_posicion,
+        "params": json.dumps(combo, sort_keys=True),
+        "trades": row["trades"],
+        "pnl": row["pnl"],
+        "sharpe": row["sharpe"],
+    }
+    nuevo = not intentos_path.exists()
+    with intentos_path.open("a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=list(intento))
+        if nuevo:
+            writer.writeheader()
+        writer.writerow(intento)
+
+
 @click.command("attempts", help="Contar corridas y combinaciones registradas por sweep.")
 @click.option("--strategy", "strategy_name", required=True)
 @click.option("--symbol", default=None)
@@ -143,7 +178,7 @@ def sweep_command(
         _reserva_desde,
         correr_par,
     )
-    from quantagent.data.snapshot import SnapshotError, snapshot_root
+    from quantagent.data.snapshot import SnapshotError
 
     combos = cargar_grilla(grid_path, strategy_name)
 
@@ -225,27 +260,7 @@ def sweep_command(
             "sharpe_tasa_0": _fmt(r["sharpe_tasa_0"], 2),
         }
         rows.append(row)
-        intentos_path = snapshot_root() / "intentos.csv"
-        intento = {
-            "fecha_utc": datetime.now(timezone.utc).isoformat(),
-            "estrategia": strategy_name,
-            "activo": sym,
-            "snapshot": snapshot_name,
-            "desde": row["desde"],
-            "hasta": row["hasta"],
-            "costos": costos or "",
-            "tamano": tamano_posicion,
-            "params": json.dumps(combo, sort_keys=True),
-            "trades": row["trades"],
-            "pnl": row["pnl"],
-            "sharpe": row["sharpe"],
-        }
-        nuevo = not intentos_path.exists()
-        with intentos_path.open("a", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=list(intento))
-            if nuevo:
-                writer.writeheader()
-            writer.writerow(intento)
+        registrar_intento(strategy_name, sym, snapshot_name, costos, tamano_posicion, combo, row)
 
     with open(out_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
