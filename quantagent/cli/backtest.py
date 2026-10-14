@@ -34,6 +34,7 @@ from quantagent.strategy.registry import STRATEGY_REGISTRY, build_strategy, cli_
 from quantagent.trading.position_sizer import PositionSizer
 
 from . import utils
+from .sweep import sweep_command
 
 
 class _AliasChoice(click.Choice):
@@ -1010,6 +1011,5 @@ def compare_backtests(
     click.echo(tabulate(table_data, headers=COMPARE_COLUMNS, tablefmt="github"))
 
 
-from .sweep import sweep_command
-
 backtest_group.add_command(sweep_command, name="sweep")
+
