@@ -74,6 +74,7 @@ def test_cli_help_expone_sweep_sin_abrir_prueba_ni_reserva():
     res_root = runner.invoke(backtest_group, ["--help"])
     assert res_root.exit_code == 0
     assert "sweep" in res_root.output
+    assert "attempts" in res_root.output
 
     res_sweep = runner.invoke(backtest_group, ["sweep", "--help"])
     assert res_sweep.exit_code == 0
@@ -256,6 +257,11 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
         ]
         intentos_rows = list(reader)
     assert len(intentos_rows) == 8
+    antes = intentos.read_bytes()
+    consulta = runner.invoke(backtest_group, ["attempts", "--strategy", "rsi"])
+    assert consulta.exit_code == 0, consulta.output
+    assert consulta.output == "Corridas: 8\nCombinaciones distintas: 4\n"
+    assert intentos.read_bytes() == antes
     from datetime import datetime, timezone
     for intento, salida in zip(intentos_rows, out_rows * 2):
         assert datetime.fromisoformat(intento["fecha_utc"]).utcoffset() == timezone.utc.utcoffset(None)
@@ -303,4 +309,47 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
         assert (int(f7["trades"]) != int(f14["trades"])) or (float(f7["pnl"]) != float(f14["pnl"]))
 
 
+def test_attempts_filtra_alias_y_activo_sin_modificar(monkeypatch, tmp_path):
+    import csv
+    from click.testing import CliRunner
+    from quantagent.cli.backtest import backtest_group
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    path = tmp_path / "intentos.csv"
+    with path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["estrategia", "activo", "params"])
+        writer.writerows([
+            ["rsi", "SPY", '{"rsi_period": 14, "oversold_threshold": 30}'],
+            ["RSIMeanReversionStrategy", "SPY", '{"oversold_threshold":30,"rsi_period":14}'],
+            ["rsi", "TLT", '{"rsi_period": 7}'],
+            ["sma-cross", "SPY", '{"fast": 50}'],
+        ])
+    antes = path.read_bytes()
+    runner = CliRunner()
+    for strategy, symbol, expected in [
+        ("rsi", None, (3, 2)), ("RSIMeanReversionStrategy", "spy", (2, 1)),
+        ("rsi", "TLT", (1, 1)), ("sma-cross", "SPY", (1, 1)), ("rsi", "QQQ", (0, 0)),
+    ]:
+        args = ["attempts", "--strategy", strategy] + (["--symbol", symbol] if symbol else [])
+        res = runner.invoke(backtest_group, args)
+        assert res.exit_code == 0, res.output
+        assert res.output == f"Corridas: {expected[0]}\nCombinaciones distintas: {expected[1]}\n"
+        assert path.read_bytes() == antes
+
+
+def test_attempts_registro_ausente_o_encabezado_invalido(monkeypatch, tmp_path):
+    from click.testing import CliRunner
+    from quantagent.cli.backtest import backtest_group
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    runner = CliRunner()
+    args = ["attempts", "--strategy", "rsi"]
+    assert runner.invoke(backtest_group, args).output == "Corridas: 0\nCombinaciones distintas: 0\n"
+    path = tmp_path / "intentos.csv"
+    path.write_text("otra,columna\n", encoding="utf-8")
+    res = runner.invoke(backtest_group, args)
+    assert res.exit_code == 1
+    assert "Encabezado inválido" in res.output
+    assert path.read_text() == "otra,columna\n"
 
