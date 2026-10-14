@@ -14,15 +14,19 @@ REGLAS DURAS
 - Tamaño: el objetivo es ≤100 líneas agregadas+borradas. El límite duro es 400 líneas y 10 archivos, excluyendo
   .beads/**, tests/fixtures/** y docs/loop/REVIEW-LOG.md. Medí con `scripts/loop/diff_size.sh origin/<base>`
   (exit 1 = excede). El límite duro no es permiso para hacer tickets grandes: ver PASO 3.
-- Cada entrega deja el proyecto funcionando: `python -m pytest -q -m "not slow and not api and not oraculo"` en 0 failed
-  y `scripts/loop/smoke.sh` con exit 0 (el modo paralelo con `-n 4` solo es seguro con SQLite; con Postgres corre en serie). Los oráculos corren en el CI de cada PR y el PM los corre en cada revisión que toque `quantagent/backtesting/`, `quantagent/trading/`, `quantagent/portfolio/` o `quantagent/strategy/`, y en el punto de control de cada lote, con `python -m pytest -q -m oraculo`. DATABASE_URL ya apunta a la base de tests del loop (migrada); no la
+- Cada entrega deja el proyecto funcionando: los TESTS DIRIGIDOS en 0 failed y `scripts/loop/smoke.sh` con exit 0.
+  Tests dirigidos = la línea "Tests a correr:" del ticket (manda el comentario más nuevo), más los archivos de
+  `tests/` que creaste o modificaste. Si el ticket no trae esa línea: los archivos de `tests/` que importan los
+  módulos que tocaste (`grep -rl "<módulo>" tests/`) más los que modificaste. NO corras la suite completa: la corre
+  el CI de cada PR y el CI verde es condición de merge (PASO 6). El modo paralelo con `-n 4` solo es seguro con
+  SQLite; con Postgres corre en serie. Los oráculos corren en el CI de cada PR y el PM los corre en cada revisión que toque `quantagent/backtesting/`, `quantagent/trading/`, `quantagent/portfolio/` o `quantagent/strategy/`, y en el punto de control de cada lote, con `python -m pytest -q -m oraculo`. DATABASE_URL ya apunta a la base de tests del loop (migrada); no la
   cambies. Si un test falla por la base, es un bloqueo, no algo a ignorar.
 - Respetá AGENTS.md y CLAUDE.md del repo, salvo la regla de pedir confirmación: acá no hay humano, así que
   ante una duda real hacés una entrega de bloqueo en vez de preguntar.
-- Corré todos los comandos en primer plano y esperá su salida: la suite, el smoke, los backtests y `try.sh`.
+- Corré todos los comandos en primer plano y esperá su salida: los tests, el smoke, los backtests y `try.sh`.
   No lances nada en segundo plano ni delegues comandos largos a una tarea aparte: si te quedás esperando una
   tarea de fondo, la corrida termina sola y se pierde la entrega (pasó dos veces el 2026-10-06 con hx0.2).
-  La suite tarda unos 4 minutos; es esperable.
+  Un archivo de tests del motor puede tardar 3 minutos; es esperable.
 - Cada comando de terminal va en UNA sola línea. Nada de heredocs (`<<'EOF'`), ni `python - <<...`, ni
   `cat > archivo <<...`: un comando con saltos de línea no pasa la regla de permisos del modo desatendido, se
   rechaza y la corrida termina sin entrega (pasó dos veces el 2026-10-07 con hx0.11). Para crear o modificar
@@ -62,16 +66,23 @@ PASO 3 — Estimar antes de escribir código
 PASO 4 — Implementar
 - Solo lo que pide "Cambio requerido". Nada fuera de "Archivos relevantes".
 - Tests que fallan si la lógica real se rompe. Sin mocks excesivos ni asserts triviales.
-- Corré la suite y `scripts/loop/smoke.sh`. Corré el comando de verificación del ticket y guardá la salida real.
+- Corré los tests dirigidos y `scripts/loop/smoke.sh`. Corré el comando de verificación del ticket y guardá la salida real.
+- Todo comando se corre en PRIMER PLANO y esperás su salida, aunque tarde 30 minutos (usá `timeout`). Nunca lo
+  dejes en segundo plano ni termines un turno "esperando" un proceso: la corrida es no interactiva y, si el
+  turno termina, se pierde todo lo que no esté commiteado.
 - Si el diff supera el límite: descartá el código y hacé una entrega de partición.
 - Si no llegás a verde: `git push -u origin loop/<ID>:loop-wip/<ID>` y hacé una entrega de bloqueo en una rama
   limpia desde origin/<base> con solo docs/loop/bloqueos/<ID>.md (≤40 líneas: qué intentaste, qué falló,
   qué decisión destraba). En todo este prompt, "rama limpia" y los diffs son contra origin/<base>.
 
 PASO 5 — Verificación independiente
+- Antes de verificar, commiteá el trabajo en `loop/<ID>` (commit local, sin push): si la corrida se corta, el
+  PM lo puede recuperar.
 - Lanzá un subagente sin tu historial. Pasale solo la salida de `bd show <ID>` y `git diff origin/<base>...HEAD`.
   Pedile PASS/FAIL por cada criterio de aceptación con evidencia, y que marque cambios fuera de alcance.
 - Si hay FAIL: corregí una vez y repetí. Si sigue FAIL: entrega de bloqueo.
+- Si no podés lanzar el subagente o no responde en 10 minutos, no esperes más: seguí al paso 6 y anotá en el
+  PR "Verificador independiente: no corrió". El PM revisa igual cada entrega.
 
 PASO 6 — Entregar
 - Commit con mensaje `<tipo>(<ID>): <qué>`. `git push -u origin loop/<ID>`.
