@@ -177,4 +177,6 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-14 PM: ghdf #168 rsi/SPY vecinos-20: 13 vecinos, default 187 / -9141.21; intentos real sin cambios. decido: merge
 2026-10-14 PM: 7ssw.1 #169 cambio: sacar hashes SHA256 fijos del test. decido: cambio
 2026-10-14 PM: 7ssw.1 #169 hashes fuera; mutación (sin última vela) rompe el test. decido: merge
+2026-10-14 PM: n51l #170 (nube) cortos al 100% cancelados por margen con comisión > slippage; fix en lba3 (solo cortos). decido: merge
+2026-10-14 PM: 7ssw.2 #171 SPY p 0.7724, XLU p 0.1381 (PASA pero no significativo al 5%: a Fede en el lote). decido: merge
 ```
