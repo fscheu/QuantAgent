@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QuantAgent con y sin LEAN</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: una columna; cada diagrama ocupa el ancho, con su lectura debajo y la tabla de cambios al final. */
+:root{
+  --bg:#f3f5f7; --panel:#ffffff; --fg:#17212b; --muted:#566573; --line:#d5dbe1;
+  --keep:#1f7a5a; --new:#a8620a; --gone:#a23b4a; --accent:#1d5fa8;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#10161c; --panel:#18212a; --fg:#e4eaf0; --muted:#9aa8b5; --line:#2c3945;
+  --keep:#5cc49c; --new:#e0a04a; --gone:#e58a97; --accent:#7db4ee; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#10161c; --panel:#18212a; --fg:#e4eaf0; --muted:#9aa8b5; --line:#2c3945;
+  --keep:#5cc49c; --new:#e0a04a; --gone:#e58a97; --accent:#7db4ee; color-scheme:dark }
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.5;padding-inline:16px;padding-block:20px 40px}
+main{max-width:1180px;margin-inline:auto;display:flex;flex-direction:column;gap:28px}
+h1{font-size:1.5rem;font-weight:600;margin:0;text-wrap:balance}
+h2{font-size:1.1rem;font-weight:600;margin:0}
+p{margin:0;max-width:68ch}
+.lead{color:var(--muted)}
+section{display:flex;flex-direction:column;gap:10px}
+.frame{border:1px solid var(--line);background:var(--panel);border-radius:6px;overflow:hidden}
+iframe{display:block;width:100%;height:78vh;min-height:420px;border:0;background:var(--panel)}
+a{color:var(--accent)}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.open{font-size:.9rem}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:.92rem}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:.78rem;letter-spacing:.05em;text-transform:uppercase}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.k{font-weight:600}.keep{color:var(--keep)}.new{color:var(--new)}.gone{color:var(--gone)}
+.note{color:var(--muted);font-size:.88rem}
+.comp{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.c{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.c h3{font-size:1rem;font-weight:600;margin:0}
+.c dl{margin:0;display:flex;flex-direction:column;gap:8px}
+.c dt{font-size:.74rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.c dd{margin:0}
+.c dt.keep{color:var(--keep)}.c dt.gone{color:var(--gone)}.c dt.op{color:var(--accent)}
+code{font-family:var(--mono);font-size:.88em}
+ul.plain{margin:0;padding-left:1.1em;max-width:68ch;display:flex;flex-direction:column;gap:6px}
+</style>
+</head><body style="margin:0">
+<main>
+  <header>
+    <h1>QuantAgent con y sin LEAN</h1>
+    <p class="lead">Dos diagramas de componentes: lo que hay hoy y lo que quedaría con LEAN compilado en la VM (opción P1 del documento de decisión).</p>
+  </header>
+
+  <section>
+    <h2>Hoy: motor propio</h2>
+    <p>El CLI corre nuestro motor sobre el snapshot. El motor recibe señales de las estrategias y delega órdenes, riesgo y cartera en código nuestro. El recuadro marca lo que LEAN reemplazaría.</p>
+    <div class="frame"><iframe src="actual.html" title="Arquitectura actual de QuantAgent" loading="eager"></iframe></div>
+    <a class="open" href="actual.html">Abrir este diagrama solo</a>
+  </section>
+
+  <section>
+    <h2>Propuesta: sobre LEAN</h2>
+    <p>LEAN pasa a ser el motor. Lo nuestro queda alrededor: un escritor que le da los datos en su formato y un parser que devuelve el CSV de hoy, para que la validación siga igual.</p>
+    <div class="frame"><iframe src="lean.html" title="Arquitectura propuesta con LEAN" loading="eager"></iframe></div>
+    <a class="open" href="lean.html">Abrir este diagrama solo</a>
+  </section>
+
+  <section>
+    <h2>Las cuatro piezas que se reemplazan, en detalle</h2>
+    <p>Las cuatro existen y corren en cada backtest del lote. Lo que no existe es la conexión a un broker real. Lo de LEAN es su diseño general más lo que usó el spike, que no usó todo.</p>
+    <div class="comp">
+      <div class="c">
+        <h3>Estrategia</h3>
+        <dl>
+          <dt>Lo nuestro</dt><dd>Una clase por estrategia con <code>generate_signal</code> (dirección, confianza, stop, take profit) y <code>should_exit</code>, con trailing stop. Cuatro estrategias más la de agentes LLM. Un ensamblador conecta estrategia, tamaño, riesgo, órdenes y cartera.</dd>
+          <dt>En LEAN</dt><dd>Un algoritmo con <code>initialize</code> y <code>on_data</code>. Encima, un framework opcional en etapas: señales, cartera, riesgo y ejecución. El spike usó la forma simple.</dd>
+          <dt class="keep">Ganamos</dt><dd>Carteras de varios activos y el mismo algoritmo para backtest, papel y vivo.</dd>
+          <dt class="gone">Perdemos</dt><dd>Hay que portar las estrategias a Python 3.11 dentro de LEAN y rehacer goldens y controles. La señal con confianza no tiene equivalente directo fuera del framework.</dd>
+          <dt class="op">Opinión</dt><dd>Neutro. Es costo de migración, no una mejora ni una pérdida de fondo. El spike portó dos en un día.</dd>
+        </dl>
+      </div>
+      <div class="c">
+        <h3>Tamaño</h3>
+        <dl>
+          <dt>Lo nuestro</dt><dd><code>PositionSizer</code>, 83 líneas. Dos reglas: fijo (cartera × porcentaje) y confianza (lo mismo × la confianza de la señal). Acepta fracciones de acción y no tiene mínimo: de ahí la posición de 19 centavos.</dd>
+          <dt>En LEAN</dt><dd>Lo pide el algoritmo (<code>set_holdings</code> con un porcentaje) o lo decide el modelo de cartera; uno pondera por el peso de la señal. En acciones opera unidades enteras y rechaza la orden si no alcanza el poder de compra.</dd>
+          <dt class="keep">Ganamos</dt><dd>El rechazo por poder de compra es lo que haría un broker. El mínimo de una acción elimina las posiciones de centavos.</dd>
+          <dt class="gone">Perdemos</dt><dd>Las fracciones. Con capital mínimo en vivo, una acción de SPY puede ser un porcentaje grande de la cuenta y la regla de confianza pierde resolución.</dd>
+          <dt class="op">Opinión</dt><dd>Pérdida chica hoy y posible problema en M5. Antes de decidir conviene verificar si LEAN permite fracciones con Alpaca; no lo comprobé.</dd>
+        </dl>
+      </div>
+      <div class="c">
+        <h3>Riesgo</h3>
+        <dl>
+          <dt>Lo nuestro</dt><dd><code>RiskManager</code>, 311 líneas. Valida cada orden antes de enviarla: efectivo, tope por posición, pérdida diaria, corte automático y no sumar a una posición abierta. Nunca frena una orden que reduce o cierra.</dd>
+          <dt>En LEAN</dt><dd>El efectivo lo valida el motor. El resto son modelos del framework que ajustan o liquidan posiciones: caída máxima por activo o de cartera, trailing stop.</dd>
+          <dt class="keep">Ganamos</dt><dd>Modelos de caída máxima ya hechos y probados por otros.</dd>
+          <dt class="gone">Perdemos</dt><dd>El veto previo a la orden y el límite de pérdida diaria con corte, que no conozco en LEAN: hay que escribirlo. Los rechazos que hoy medimos en los controles cambian de forma.</dd>
+          <dt class="op">Opinión</dt><dd>Neutro tirando a pérdida. Nuestras reglas son pocas y las entendemos; hay que reescribirlas en el molde de LEAN y volver a probarlas. Es semántica de riesgo: lo que se porte lo aprobás vos.</dd>
+        </dl>
+      </div>
+      <div class="c">
+        <h3>Órdenes</h3>
+        <dl>
+          <dt>Lo nuestro</dt><dd><code>OrderManager</code> (580 líneas) pasa la señal por riesgo y la manda a <code>PaperBroker</code>, que llena al instante la orden completa con slippage y comisión. Un solo tipo de orden. Stop y take profit no son órdenes: los revisa el motor vela por vela.</dd>
+          <dt>En LEAN</dt><dd>Tipos de orden reales (mercado, límite, stop, a la apertura, al cierre, trailing) con ciclo de vida, y modelos de llenado, slippage y comisión por broker. Stop y take profit quedan vivos como órdenes.</dd>
+          <dt class="keep">Ganamos</dt><dd>Lo que más nos falta para M3: órdenes parciales, rechazadas y pendientes, y el plugin de Alpaca. Backtest y vivo dejan de ser dos caminos de código.</dd>
+          <dt class="gone">Perdemos</dt><dd>La simpleza: hoy un trade se explica leyendo una función. En LEAN el stop actúa desde la vela siguiente (41 trades de diferencia en rsi) y el proceso aborta al cerrar Python después de guardar.</dd>
+          <dt class="op">Opinión</dt><dd>Ganancia clara. Es la pieza donde construir lo propio cuesta más y aporta menos.</dd>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Balance, con opinión</h2>
+    <ul class="plain">
+      <li><strong>Lo que teníamos pensado construir y LEAN ya trae:</strong> interfaz de broker, Alpaca, órdenes parciales y rechazadas, reinicios, cartera de varios activos, optimizador y reporte. Es casi todo M3 y parte de M4.</li>
+      <li><strong>Lo que tenemos y habría que rehacer:</strong> las cuatro estrategias, los goldens, los controles del lote 3 y las reglas de riesgo. La evidencia de M1 y M2 sobre el motor propio no se traslada sola.</li>
+      <li><strong>Lo que se pierde sin reemplazo:</strong> fracciones de acción (a verificar), el veto de riesgo previo a la orden, y poder leer el motor entero en Python.</li>
+      <li><strong>Lo que no cambia:</strong> snapshots, candado de la reserva, recálculo independiente y control contra backtesting.py. Es lo más propio del proyecto y sigue siendo nuestro.</li>
+    </ul>
+    <p>Mi lectura: para backtest solo, LEAN no gana lo suficiente para justificar la migración. Gana para operar: órdenes, broker y el mismo código en papel y en vivo. Por eso recomiendo terminar M2 con el motor propio y decidir el pivot para M3, con una condición previa: verificar fracciones y el plugin de Alpaca en papel, que el spike no probó.</p>
+  </section>
+
+  <section>
+    <h2>Qué cambia, pieza por pieza</h2>
+    <div class="tw"><table>
+      <thead><tr><th>Pieza</th><th>Líneas hoy</th><th>Con LEAN</th></tr></thead>
+      <tbody>
+        <tr><td>Motor de backtest</td><td class="n">1.978</td><td><span class="k gone">Se reemplaza.</span> Comprar y mantener queda como referencia propia.</td></tr>
+        <tr><td>Órdenes, broker de papel, riesgo, tamaño</td><td class="n">1.961</td><td><span class="k gone">Se reemplaza.</span></td></tr>
+        <tr><td>Cartera</td><td class="n">469</td><td><span class="k gone">Se reemplaza.</span></td></tr>
+        <tr><td>Ensamblador de estrategia</td><td class="n">318</td><td><span class="k gone">Se reemplaza.</span></td></tr>
+        <tr><td>Estrategias</td><td class="n">1.075</td><td><span class="k new">Se portan</span> a algoritmos de LEAN en Python 3.11. El spike portó dos.</td></tr>
+        <tr><td>Snapshots y candado de la reserva</td><td class="n">—</td><td><span class="k keep">Se queda.</span></td></tr>
+        <tr><td>Validación y control contra backtesting.py</td><td class="n">—</td><td><span class="k keep">Se queda</span> y pasa a validar a LEAN.</td></tr>
+        <tr><td>CLI backtest</td><td class="n">—</td><td><span class="k new">Cambia:</span> arma la configuración, corre LEAN y parsea.</td></tr>
+        <tr><td>Escritor de datos y parser</td><td class="n">—</td><td><span class="k new">Nuevo.</span> El spike los tiene andando para SPY diario.</td></tr>
+        <tr><td>Avisos y reconciliación</td><td class="n">—</td><td><span class="k new">Nuevo.</span> LEAN autoalojado no notifica.</td></tr>
+        <tr><td>Broker Alpaca (M3)</td><td class="n">—</td><td>Hoy hay que construirlo. Con LEAN es un plugin que ya existe; no lo probamos.</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">Las cifras de líneas salen del documento de decisión del 12 de octubre. El diagrama propuesto describe un diseño, no código que exista: del lado de LEAN solo está probado el spike (dos estrategias, SPY diario, 2007–2018).</p>
+  </section>
+</main>
+</body></html>

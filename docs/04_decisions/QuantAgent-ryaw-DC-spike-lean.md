@@ -113,3 +113,9 @@ Validación: dos resultados Completed con RuntimeError vacío, conversión de cl
 ## Handoff al PM
 
 La integración sigue pendiente del gate humano. Beads no se modificó porque queda fuera del alcance autorizado; en la primera corrida bd no pudo abrir la base. El PM debe actualizar QuantAgent-ryaw con el resultado: inicialización resuelta, backtests completos, criterio (a) no cumplido y cierre del proceso pendiente. No hubo commits. Plan de commit: `fix(spike): run local LEAN and record measured trade differences`, con los seis archivos tocados en esta corrida; validación reproducible en el README. El reporte anterior se reescribe por instrucción explícita del PM/usuario, conservando su historia y mediciones.
+
+## Decisión de Fede (2026-10-13)
+
+Las diferencias contra el motor propio son diferencias de criterio de ejecución, no un bloqueo. El desarrollo sigue como estaba planeado, con el motor propio, y el pivot a LEAN se decide en M3. Antes de esa decisión falta verificar lo que este spike no probó: fracciones de acción y el plugin de Alpaca en papel.
+
+Diagramas de componentes (arquitectura actual y propuesta con LEAN), detalle de las piezas que se reemplazarían y balance del PM: [QuantAgent-ryaw-arquitectura/index.html](./QuantAgent-ryaw-arquitectura/index.html). Abrir el archivo en un navegador; GitHub muestra el HTML como código.
