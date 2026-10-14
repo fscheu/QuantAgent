@@ -1,4 +1,5 @@
 import csv
+import json
 from math import sqrt
 from statistics import NormalDist
 
@@ -8,6 +9,41 @@ from click.testing import CliRunner
 from quantagent.backtesting.verdict import evaluar, sharpe_deflactado
 from quantagent.cli.backtest import backtest_group
 from quantagent.cli.verdict import COLUMNAS
+
+
+def test_verdict_robustez_desde_trades(tmp_path):
+    tabla, salida = tmp_path / "tabla.csv", tmp_path / "salida.csv"
+    filas = [dict.fromkeys(COLUMNAS, "") for _ in range(5)]
+    for i, fila in enumerate(filas):
+        fila.update(estrategia="rsi", activo=f"ETF{i}")
+    with tabla.open("w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=COLUMNAS)
+        writer.writeheader()
+        writer.writerows(filas)
+    for i, pnls in enumerate(([0, -12, 0], [3, 3, 3], [], [0, 0, 0])):
+        with (tmp_path / f"rsi-ETF{i}.csv").open("w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["exit_time", "pnl"])
+            writer.writerows(zip(["2020-01-01", "2019-12-31T23:59:59", "2020-06-01"], pnls))
+    args = ["verdict", "--tabla", str(tabla), "--out", str(salida)]
+    runner = CliRunner()
+    original = runner.invoke(backtest_group, args)
+    assert original.exit_code == 0, original.output
+    sin_trades = salida.read_text()
+    assert next(csv.reader(sin_trades.splitlines())) == COLUMNAS
+    resultado = runner.invoke(backtest_group, args + ["--trades-dir", str(tmp_path)])
+    assert resultado.exit_code == 0, resultado.output
+    with salida.open() as f:
+        obtenidas = list(csv.DictReader(f))
+    assert [f["concentracion_pnl"] for f in obtenidas] == ["1.0", "0.3333", "", "", ""]
+    assert obtenidas[0]["pnl_por_anio"] == '{"2019": -12.00, "2020": 0.00}'
+    assert json.loads(obtenidas[1]["pnl_por_anio"]) == {"2019": 3, "2020": 6}
+    assert obtenidas[2]["pnl_por_anio"] == obtenidas[4]["pnl_por_anio"] == ""
+    assert json.loads(obtenidas[3]["pnl_por_anio"]) == {"2019": 0, "2020": 0}
+    assert [{c: f[c] for c in COLUMNAS} for f in obtenidas] == list(csv.DictReader(sin_trades.splitlines()))
+    repetido = runner.invoke(backtest_group, args)
+    assert repetido.output == original.output
+    assert salida.read_text() == sin_trades
 
 
 @pytest.mark.parametrize("sin_columna", [False, True])
