@@ -7,6 +7,41 @@ import pytest
 from quantagent.cli.sweep import MAX_SWEEP_COMBINATIONS, cargar_grilla, validar_grilla
 
 
+def test_vecinos_rsi_un_parametro_por_vez():
+    from quantagent.cli.sweep import grilla_vecinos
+    combos, labels = grilla_vecinos("rsi")
+    default = combos[0]
+    assert len(combos) == len(labels) == 13
+    assert labels[0] == "default" and combos.count(default) == 1
+    assert [c["rsi_period"] for c, label in zip(combos, labels) if label.startswith("rsi_period")] == [11, 17]
+    for combo, label in zip(combos[1:], labels[1:]):
+        param, factor = label.split("x")
+        assert [p for p in default if combo[p] != default[p]] == [param]
+        expected = default[param] * float(factor)
+        assert combo[param] == (round(expected) if isinstance(default[param], int) else expected)
+
+
+def test_vecinos_fijos_redondeo_y_tope(monkeypatch):
+    from quantagent.cli.sweep import grilla_vecinos, STRATEGY_REGISTRY
+    params = {k: {"default": v} for k, v in {"zero": 0, "bool": True, "text": "x", "one": 1}.items()}
+    monkeypatch.setitem(STRATEGY_REGISTRY, "Test", {"params": params})
+    assert grilla_vecinos("Test") == ([{k: v["default"] for k, v in params.items()}], ["default"])
+    params.update({f"p{i}": {"default": 10} for i in range(25)})
+    with pytest.raises(click.ClickException, match="límite máximo de 50"):
+        grilla_vecinos("Test")
+
+
+def test_cli_vecinos_excluye_grid(tmp_path):
+    from click.testing import CliRunner
+    from quantagent.cli.backtest import backtest_group
+    out = tmp_path / "out.csv"
+    args = ["sweep", "--strategy", "rsi", "--symbol", "SPY", "--snapshot", "missing", "--out", str(out)]
+    for options in ([], ["--vecinos-20", "--grid", "missing.json"]):
+        result = CliRunner().invoke(backtest_group, args + options)
+        assert result.exit_code == 1 and "exactamente una" in result.output
+        assert not out.exists()
+
+
 def test_grilla_rsi_2x2_devuelve_cuatro_combinaciones_deterministas(tmp_path: Path):
     grid = {"rsi_period": [7, 14], "oversold_threshold": [25.0, 30.0]}
     f = tmp_path / "grid.json"
@@ -307,6 +342,18 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
         f7 = filas_por_combo[(ot, 7)]
         f14 = filas_por_combo[(ot, 14)]
         assert (int(f7["trades"]) != int(f14["trades"])) or (float(f7["pnl"]) != float(f14["pnl"]))
+
+    res = runner.invoke(backtest_group, [
+        "sweep", "--strategy", "rsi", "--symbol", "SPY", "--snapshot", "snap_rsi",
+        "--vecinos-20", "--out", str(out_csv),
+    ])
+    assert res.exit_code == 0, res.output
+    with out_csv.open() as f:
+        vecinos = list(csv.DictReader(f))
+    with intentos.open() as f:
+        assert len(list(csv.DictReader(f))) == len(vecinos) == 13
+    assert vecinos[0]["vecino"] == "default"
+    assert (int(vecinos[0]["trades"]), float(vecinos[0]["pnl"])) == (baseline["trades"], round(baseline["pnl"], 2))
 
 
 def test_attempts_filtra_alias_y_activo_sin_modificar(monkeypatch, tmp_path):

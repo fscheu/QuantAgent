@@ -76,6 +76,28 @@ load_grid = cargar_grilla
 validate_grid = validar_grilla
 
 
+def grilla_vecinos(strategy: str) -> tuple[list[dict[str, Any]], list[str]]:
+    """Default y vecinos de ±20%, variando un parámetro por vez."""
+    name = cli_aliases().get(strategy, strategy)
+    if name not in STRATEGY_REGISTRY:
+        raise click.ClickException(f"Estrategia desconocida '{strategy}'")
+    defaults = {k: v["default"] for k, v in STRATEGY_REGISTRY[name]["params"].items()}
+    combos, labels = [defaults], ["default"]
+    for param, value in sorted(defaults.items()):
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or value == 0:
+            continue
+        seen = {value}
+        for factor in (0.8, 1.2):
+            vecino = round(value * factor) if isinstance(value, int) else value * factor
+            if vecino not in seen:
+                combos.append({**defaults, param: vecino})
+                labels.append(f"{param}x{factor}")
+                seen.add(vecino)
+    if len(combos) > MAX_SWEEP_COMBINATIONS:
+        raise click.ClickException(f"La grilla supera el límite máximo de {MAX_SWEEP_COMBINATIONS}")
+    return combos, labels
+
+
 def registrar_intento(
     strategy_name: str,
     symbol: str,
@@ -148,7 +170,8 @@ def attempts_command(strategy_name: str, symbol: Optional[str]) -> None:
 @click.option("--strategy", "strategy_name", required=True, help="Estrategia a optimizar.")
 @click.option("--symbol", "symbol", required=True, help="Símbolo del activo (ej: SPY).")
 @click.option("--snapshot", "snapshot_name", required=True, help="Snapshot en $QUANTAGENT_SNAPSHOT_DIR (velas ajustadas).")
-@click.option("--grid", "grid_path", required=True, type=click.Path(dir_okay=False), help="Archivo JSON con la grilla de parámetros.")
+@click.option("--grid", "grid_path", type=click.Path(dir_okay=False), help="Archivo JSON con la grilla de parámetros.")
+@click.option("--vecinos-20", is_flag=True, help="Default y ±20% por parámetro, uno por vez; excluye --grid.")
 @click.option("--out", "out_path", required=True, type=click.Path(dir_okay=False, writable=True), help="CSV de salida.")
 @click.option("--from", "from_date", type=click.DateTime(formats=["%Y-%m-%d"]), default=None, help="Primera sesión.")
 @click.option("--to", "to_date", type=click.DateTime(formats=["%Y-%m-%d"]), default=None, help="Última sesión.")
@@ -160,7 +183,8 @@ def sweep_command(
     strategy_name: str,
     symbol: str,
     snapshot_name: str,
-    grid_path: str,
+    grid_path: Optional[str],
+    vecinos_20: bool,
     out_path: str,
     from_date: Optional[datetime],
     to_date: Optional[datetime],
@@ -180,7 +204,9 @@ def sweep_command(
     )
     from quantagent.data.snapshot import SnapshotError
 
-    combos = cargar_grilla(grid_path, strategy_name)
+    if vecinos_20 == (grid_path is not None):
+        raise click.ClickException("Elegí exactamente una opción: --grid o --vecinos-20")
+    combos, vecinos = grilla_vecinos(strategy_name) if vecinos_20 else (cargar_grilla(grid_path, strategy_name), [])
 
     reserva = _reserva_desde()
     prueba = _prueba_desde()
@@ -217,7 +243,7 @@ def sweep_command(
 
     param_cols = sorted(combos[0].keys())
     metric_cols = [c for c in COMPARE_COLUMNS if c not in ("estrategia", "activo")]
-    fieldnames = param_cols + metric_cols
+    fieldnames = (["vecino"] if vecinos_20 else []) + param_cols + metric_cols
 
     rows = []
     for combo in combos:
@@ -260,6 +286,8 @@ def sweep_command(
             "sharpe_tasa_0": _fmt(r["sharpe_tasa_0"], 2),
         }
         rows.append(row)
+        if vecinos_20:
+            row["vecino"] = vecinos[len(rows) - 1]
         registrar_intento(strategy_name, sym, snapshot_name, costos, tamano_posicion, combo, row)
 
     with open(out_path, "w", newline="", encoding="utf-8") as f:
