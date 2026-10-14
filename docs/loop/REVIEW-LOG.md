@@ -170,4 +170,5 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-14 PM: jzb6 #163 (nube) causa: backtesting.py anota el costo del llenado al cierre una vela tarde; corregido, Sharpe -4.6756 igual al motor. Fix en mxy7 (V33.2e). decido: merge
 2026-10-14 PM: 0oqm #164 (nube) coinciden 4 de 4; mutación de límite da 3 de 4 y exit 1. decido: merge
 2026-10-14 PM: gfs1 creado (M3, decidir): llenado por defecto del motor en la vela siguiente.
+2026-10-14 PM: 0z29 #165 rsi 12 ETFs 2007–2018 PASA 2 de 12 (EEM, XLU); recalc_verdict coinciden 12 de 12. decido: merge
 ```
