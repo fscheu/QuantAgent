@@ -3,13 +3,39 @@ import json
 from math import sqrt
 from statistics import NormalDist, mean, stdev
 
+import numpy as np
 import pytest
 from click.testing import CliRunner
 from scipy.stats import t
 
-from quantagent.backtesting.verdict import evaluar, p_valor_retornos, sharpe_deflactado
+from quantagent.backtesting.verdict import evaluar, montecarlo_bloques, p_valor_retornos, sharpe_deflactado
 from quantagent.cli.backtest import backtest_group
 from quantagent.cli.verdict import COLUMNAS
+
+
+def test_montecarlo_bloques_semilla_y_caida_concentrada():
+    equity = np.r_[1, np.cumprod(1 + np.r_[np.full(400, .01), np.full(100, -.01), np.full(400, .01)])]
+    resultado = montecarlo_bloques(equity)
+    assert resultado == montecarlo_bloques(equity)
+    assert resultado != montecarlo_bloques(equity, semilla=1)
+    assert 0 <= resultado[0] <= 1
+    assert 0 < resultado[1] < 1 - .99**100
+
+
+def test_montecarlo_constantes_y_largo_minimo():
+    equity = 100 * 1.01**np.arange(42)
+    assert montecarlo_bloques(equity) == (1.0, 0.0)
+    assert montecarlo_bloques(equity[:40]) is None
+    assert montecarlo_bloques(equity[:41]) == (1.0, 0.0)
+    assert montecarlo_bloques([]) is None
+    assert montecarlo_bloques([100] * 42) == (1.0, 0.0)
+
+
+def test_montecarlo_recorta_ultimo_bloque_contra_cuenta_a_mano():
+    equity = np.r_[1, np.cumprod(1 + np.array([-.1, .2, -.3, .4, .5]))]
+    # Semilla 0 elige inicios 3, 2, 2: retornos .4, .5, -.3, .4, -.3.
+    # Final 1.4406 <= real 1.5876; máximo 2.1, mínimo posterior 1.4406.
+    assert montecarlo_bloques(equity, n=1, bloque=2) == pytest.approx((1.0, .314))
 
 
 @pytest.mark.parametrize("signo", [1, -1])
@@ -45,10 +71,21 @@ def test_verdict_equity_dir_informativo(tmp_path):
     obtenidas = list(csv.DictReader(salida.read_text().splitlines()))
     esperado = t.sf(mean([.01, .03, -.02, .04]) / (stdev([.01, .03, -.02, .04]) / 2), 3)
     assert [f["p_valor"] for f in obtenidas] == [f"{esperado:.4f}", "", ""]
+    assert [(f["mc_percentil_final"], f["mc_dd_p95"]) for f in obtenidas] == [("", "")] * 3
     assert [{c: f[c] for c in COLUMNAS} for f in obtenidas] == list(csv.DictReader(sin_equity.splitlines()))
     repetido = runner.invoke(backtest_group, args)
     assert repetido.output == original.output
     assert salida.read_text() == sin_equity
+    equity = 100 * 1.01**np.arange(42)
+    with (tmp_path / "rsi-ETF0.csv").open("w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["date", "equity"])
+        writer.writerows(enumerate(equity))
+    resultado = runner.invoke(backtest_group, args + ["--equity-dir", str(tmp_path)])
+    assert resultado.exit_code == 0, resultado.output
+    obtenidas = list(csv.DictReader(salida.read_text().splitlines()))
+    assert [(f["mc_percentil_final"], f["mc_dd_p95"]) for f in obtenidas] == [("1.0000", "0.0000"), ("", ""), ("", "")]
+    assert [{c: f[c] for c in COLUMNAS} for f in obtenidas] == list(csv.DictReader(sin_equity.splitlines()))
 
 
 def test_verdict_robustez_desde_trades(tmp_path):

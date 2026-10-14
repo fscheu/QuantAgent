@@ -7,7 +7,7 @@ from pathlib import Path
 import click
 from tabulate import tabulate
 
-from quantagent.backtesting.verdict import evaluar, p_valor_retornos
+from quantagent.backtesting.verdict import evaluar, montecarlo_bloques, p_valor_retornos
 
 METRICAS = ("trades", "pnl", "sharpe_tasa_0", "max_drawdown")
 LLENADOS = (("cierre", ""), ("apertura", "_apertura_siguiente"))
@@ -21,10 +21,10 @@ COLUMNAS += [campo + sufijo for _, sufijo in LLENADOS for campo in METRICAS]
 @click.option("--trades-dir", type=click.Path(exists=True, file_okay=False),
               help="Agrega concentración del PnL y PnL por año desde los CSV de trades.")
 @click.option("--equity-dir", type=click.Path(exists=True, file_okay=False),
-              help="Agrega el p-valor informativo del t-test de retornos diarios.")
+              help="Agrega p-valor, percentil final Monte Carlo y drawdown p95 informativos.")
 def verdict_command(tabla, out, trades_dir, equity_dir):
     columnas = COLUMNAS + (["concentracion_pnl", "pnl_por_anio"] if trades_dir else [])
-    columnas += ["p_valor"] if equity_dir else []
+    columnas += ["p_valor", "mc_percentil_final", "mc_dd_p95"] if equity_dir else []
     with open(tabla, newline="") as f:
         reader = csv.DictReader(f)
         requeridas = [c for c in COLUMNAS if c not in ("veredicto", "motivos")]
@@ -47,13 +47,17 @@ def verdict_command(tabla, out, trades_dir, equity_dir):
         fila["veredicto"] = "NO PASA" if motivos else "PASA"
         fila["motivos"] = "; ".join(motivos)
         if equity_dir:
-            fila["p_valor"] = ""
+            fila.update(p_valor="", mc_percentil_final="", mc_dd_p95="")
             archivo = Path(equity_dir) / f"{fila['estrategia']}-{fila['activo']}.csv"
             if archivo.exists():
                 with archivo.open(newline="") as f:
-                    p_valor = p_valor_retornos([float(r["equity"]) for r in csv.DictReader(f)])
+                    equity = [float(r["equity"]) for r in csv.DictReader(f)]
+                p_valor = p_valor_retornos(equity)
                 if p_valor is not None:
                     fila["p_valor"] = f"{p_valor:.4f}"
+                mc = montecarlo_bloques(equity)
+                if mc is not None:
+                    fila.update(mc_percentil_final=f"{mc[0]:.4f}", mc_dd_p95=f"{mc[1]:.4f}")
         if trades_dir:
             fila.update(concentracion_pnl="", pnl_por_anio="")
             archivo = Path(trades_dir) / f"{fila['estrategia']}-{fila['activo']}.csv"

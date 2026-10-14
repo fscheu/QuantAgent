@@ -11,6 +11,24 @@ MIN_SHARPE_TASA_0 = 0.10
 MAX_DRAWDOWN = 0.35
 
 
+def montecarlo_bloques(equity, n=1000, bloque=20, semilla=0) -> tuple[float, float] | None:
+    """Bootstrap de bloques completos solapados; DD como fracción desde el máximo."""
+    curva = np.asarray(equity, dtype=float)
+    retornos = curva[1:] / curva[:-1] - 1
+    largo = len(retornos)
+    if largo < 2 * bloque:
+        return None
+    rng = np.random.default_rng(semilla)
+    inicios = rng.integers(0, largo - bloque + 1, size=(n, (largo + bloque - 1) // bloque))
+    indices = (inicios[..., None] + np.arange(bloque)).reshape(n, -1)[:, :largo]
+    simuladas = np.column_stack((np.ones(n), np.cumprod(1 + retornos[indices], axis=1)))
+    finales, real = simuladas[:, -1], curva[-1] / curva[0]
+    # Los empates incluyen las diferencias de redondeo del producto de retornos.
+    percentil = np.mean((finales <= real) | np.isclose(finales, real, rtol=1e-12, atol=1e-12))
+    drawdowns = np.max(1 - simuladas / np.maximum.accumulate(simuladas, axis=1), axis=1)
+    return float(percentil), float(np.percentile(drawdowns, 95))
+
+
 def p_valor_retornos(equity) -> float | None:
     """T-test a una cola de retornos simples diarios, con tasa de referencia 0."""
     curva = np.asarray(equity, dtype=float)
