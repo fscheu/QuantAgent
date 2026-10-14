@@ -3,7 +3,43 @@ from datetime import datetime
 import click
 import pytest
 
-from quantagent.cli.walkforward import construir_ventanas, seleccionar_ganador
+from quantagent.cli.walkforward import construir_ventanas, preparar_walkforward, seleccionar_ganador
+
+
+@pytest.fixture
+def snapshot_walkforward(monkeypatch, tmp_path):
+    import pandas as pd
+    from quantagent.data.snapshot import write_snapshot
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    monkeypatch.setenv("QUANTAGENT_PRUEBA_DESDE", "2019-01-01")
+    monkeypatch.setenv("QUANTAGENT_RESERVA_DESDE", "2023-01-01")
+    df = pd.DataFrame({"open": 100., "high": 101., "low": 99., "close": 100., "adj_close": 100., "volume": 1000},
+                      index=pd.bdate_range("2007-01-03", "2024-01-01"))
+    write_snapshot("wf", {"SPY": df})
+    return tmp_path
+
+
+def test_preparacion_default_y_recorte(snapshot_walkforward, capsys):
+    combos, meta, config, ventanas = preparar_walkforward("rsi", "spy", "wf", {"rsi_period": [7, 14]})
+    assert combos == [{"rsi_period": 7}, {"rsi_period": 14}]
+    assert meta.end_date == ventanas[-1][3] == datetime(2018, 12, 31)
+    assert config["offline_data"] and config["base_position_pct"] == 1.0
+    assert "sin --to, se asume fin en 2018-12-31" in capsys.readouterr().err
+    _, meta, _, ventanas = preparar_walkforward(
+        "rsi", "SPY", "wf", {"rsi_period": [14]}, to_date=datetime(2016, 12, 30))
+    assert len(ventanas) == 3
+    assert meta.end_date == ventanas[-1][3] == datetime(2016, 12, 30)
+    assert not (snapshot_walkforward / "intentos.csv").exists()
+
+
+@pytest.mark.parametrize("fecha,mensaje", [("2012-12-23", "ventana completa"),
+                                           ("2019-01-01", "tramo de prueba"), ("2023-01-01", "reserva")])
+def test_preparacion_rechaza_rangos_sin_escribir(snapshot_walkforward, fecha, mensaje):
+    archivos = {p: p.read_bytes() for p in snapshot_walkforward.rglob("*") if p.is_file()}
+    with pytest.raises(click.ClickException, match=mensaje):
+        preparar_walkforward("rsi", "SPY", "wf", {"rsi_period": [14]}, to_date=datetime.fromisoformat(fecha))
+    assert {p: p.read_bytes() for p in snapshot_walkforward.rglob("*") if p.is_file()} == archivos
 
 
 def test_cuatro_ventanas_calendario_sin_solapamiento():
