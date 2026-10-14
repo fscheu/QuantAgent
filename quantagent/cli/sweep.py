@@ -131,12 +131,12 @@ def sweep_command(
     elif to_date >= reserva:
         raise click.ClickException(
             f"--to {to_date:%Y-%m-%d} cae en la reserva, que empieza el {reserva:%Y-%m-%d}: "
-            "ninguna corrida la lee. Para abrirla, --abrir-reserva (queda registrado)."
+            "sweep no abre la prueba ni la reserva (usar compare con la opción)."
         )
     elif to_date >= prueba:
         raise click.ClickException(
             f"--to {to_date:%Y-%m-%d} cae en el tramo de prueba, que empieza el {prueba:%Y-%m-%d}: "
-            "para abrirlo, --abrir-prueba (queda registrado)."
+            "sweep no abre la prueba ni la reserva (usar compare con la opción)."
         )
 
     sym = symbol.upper()

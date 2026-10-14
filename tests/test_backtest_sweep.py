@@ -142,7 +142,23 @@ def test_cli_to_en_tramo_prueba_sale_1_sin_csv(tmp_path: Path):
     ])
     assert res.exit_code == 1
     assert "cae en el tramo de prueba" in res.output
+    assert "--abrir-" not in res.output
+    assert "sweep no abre la prueba ni la reserva" in res.output
     assert not out_csv.exists()
+
+    res_reserva = runner.invoke(backtest_group, [
+        "sweep",
+        "--strategy", "rsi",
+        "--symbol", "SPY",
+        "--snapshot", "etf-1d-2026-10",
+        "--grid", str(grid_file),
+        "--out", str(out_csv),
+        "--to", "2024-01-01",
+    ])
+    assert res_reserva.exit_code == 1
+    assert "cae en la reserva" in res_reserva.output
+    assert "--abrir-" not in res_reserva.output
+    assert "sweep no abre la prueba ni la reserva" in res_reserva.output
 
 
 def test_cli_valores_duplicados_sale_1_sin_csv(tmp_path: Path):
@@ -164,4 +180,76 @@ def test_cli_valores_duplicados_sale_1_sin_csv(tmp_path: Path):
     assert res.exit_code == 1
     assert "valores duplicados" in res.output
     assert not out_csv.exists()
+
+
+def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Path):
+    import csv
+    import pandas as pd
+    from click.testing import CliRunner
+    from quantagent.backtesting.fixtures import FIXTURES_DIR, snapshot_metadata
+    from quantagent.cli.backtest import (
+        COMPARE_COLUMNS,
+        _engine_config,
+        _isolated_sqlite_db,
+        backtest_group,
+        correr_par,
+    )
+    from quantagent.data.snapshot import write_snapshot
+
+    snap_dir = tmp_path / "snaps"
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(snap_dir))
+
+    with (FIXTURES_DIR / "spy-2y-1d.csv").open(newline="") as f:
+        rows = list(csv.DictReader(f))
+    df = pd.DataFrame(
+        {
+            "open": [float(r["open"]) for r in rows],
+            "high": [float(r["high"]) for r in rows],
+            "low": [float(r["low"]) for r in rows],
+            "close": [float(r["close"]) for r in rows],
+            "volume": [int(r["volume"]) for r in rows],
+        },
+        index=pd.bdate_range("2017-01-03", periods=len(rows), name="timestamp"),
+    )
+    df.insert(4, "adj_close", df["close"])
+    write_snapshot("snap_rsi", {"SPY": df})
+
+    grid_file = tmp_path / "grid_rsi.json"
+    grid_file.write_text(json.dumps({"rsi_period": [7, 14], "oversold_threshold": [25.0, 30.0]}), encoding="utf-8")
+    out_csv = tmp_path / "out_rsi.csv"
+
+    runner = CliRunner()
+    res = runner.invoke(backtest_group, [
+        "sweep",
+        "--strategy", "rsi",
+        "--symbol", "SPY",
+        "--snapshot", "snap_rsi",
+        "--grid", str(grid_file),
+        "--out", str(out_csv),
+    ])
+    assert res.exit_code == 0, res.output
+
+    with out_csv.open(newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        header = reader.fieldnames
+        out_rows = list(reader)
+
+    expected_cols = ["oversold_threshold", "rsi_period"] + [
+        c for c in COMPARE_COLUMNS if c not in ("estrategia", "activo")
+    ]
+    assert header == expected_cols
+    assert len(out_rows) == 4
+
+    meta = snapshot_metadata("snap_rsi", "SPY", None, None)
+    config = _engine_config(None, None, 1.0, None, None)
+    with _isolated_sqlite_db():
+        baseline = correr_par("rsi", meta, config, None, None, "snap_rsi", "SPY", None, None)
+
+    default_row = next(
+        r for r in out_rows
+        if float(r["oversold_threshold"]) == 30.0 and int(r["rsi_period"]) == 14
+    )
+    assert int(default_row["trades"]) == baseline["trades"]
+    assert float(default_row["pnl"]) == round(baseline["pnl"], 2)
+
 
