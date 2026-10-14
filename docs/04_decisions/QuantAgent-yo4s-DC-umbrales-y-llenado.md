@@ -27,7 +27,7 @@ python scripts/compare_control.py --tabla $QUANTAGENT_SNAPSHOT_DIR/punto-de-cont
   - Global: en 33 de 48 celdas (68,8%) el PnL empeora al pasar a la apertura siguiente (mediana global: -715,36 USD).
 - **Implicancias de elegir B:**
   - *Implementación:* la apertura siguiente hoy solo existe en el adaptador de `backtesting.py` (`scripts/bt_adapter.py --fill next-open`), no en el motor de QuantAgent. Si se elige B, debe definirse si el número oficial saldría del adaptador externo o si hace falta un cambio en el motor propio (ticket aparte en M2 o M3).
-  - *Control:* **0 de 48 celdas** tienen control cruzado en ese modo. El control actual de `compare_control.py` valida trade a trade motor vs. adaptador ambos con llenado al cierre. Para apertura siguiente no existe control motor/adaptador (y en 1 celda de 48, `rsi`/GLD, la cantidad de trades difiere: 186 en adaptador vs. 187 en motor por una orden cancelada por gap al alza al dimensionar al 100%).
+  - *Control:* **0 de 48 celdas** tienen control cruzado en ese modo. El control actual de `compare_control.py` valida trade a trade motor vs. adaptador ambos con llenado al cierre. Para apertura siguiente no existe control motor/adaptador (y en 1 celda de 48, `rsi`/GLD, la cantidad de trades difiere: 243 al cierre y 242 con apertura siguiente, porque la señal cae en la última vela del rango y la orden no llega a ejecutarse; diagnóstico en `QuantAgent-u8lf`).
 - **Recomendación:** **B** (apertura siguiente) como número oficial porque refleja la ejecución factible de órdenes diarias (requiriendo ticket para el motor o adoptando el adaptador); o **A** con la regla de que el signo no cambie en B.
 - **Elección de Fede:** `Fede elige: [ ]`
 
