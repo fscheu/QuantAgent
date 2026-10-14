@@ -1,6 +1,8 @@
 """Veredictos sobre una tabla controlada, sin ejecutar backtests."""
 
 import csv
+import json
+from pathlib import Path
 
 import click
 from tabulate import tabulate
@@ -16,7 +18,10 @@ COLUMNAS += [campo + sufijo for _, sufijo in LLENADOS for campo in METRICAS]
 @click.command("verdict")
 @click.option("--tabla", required=True, type=click.Path(exists=True, dir_okay=False))
 @click.option("--out", required=True, type=click.Path(dir_okay=False, writable=True))
-def verdict_command(tabla, out):
+@click.option("--trades-dir", type=click.Path(exists=True, file_okay=False),
+              help="Agrega concentración del PnL y PnL por año desde los CSV de trades.")
+def verdict_command(tabla, out, trades_dir):
+    columnas = COLUMNAS + (["concentracion_pnl", "pnl_por_anio"] if trades_dir else [])
     with open(tabla, newline="") as f:
         reader = csv.DictReader(f)
         requeridas = [c for c in COLUMNAS if c not in ("veredicto", "motivos")]
@@ -38,9 +43,26 @@ def verdict_command(tabla, out):
             motivos.extend(f"{prefijo}: {m}" for m in fallas)
         fila["veredicto"] = "NO PASA" if motivos else "PASA"
         fila["motivos"] = "; ".join(motivos)
+        if trades_dir:
+            fila.update(concentracion_pnl="", pnl_por_anio="")
+            archivo = Path(trades_dir) / f"{fila['estrategia']}-{fila['activo']}.csv"
+            if archivo.exists():
+                with archivo.open(newline="") as f:
+                    trades = list(csv.DictReader(f))
+                if trades:
+                    pnls = [float(t["pnl"]) for t in trades]
+                    total = sum(abs(p) for p in pnls)
+                    fila["concentracion_pnl"] = round(max(abs(p) for p in pnls) / total, 4) if total else ""
+                    anios = {}
+                    for trade, pnl in zip(trades, pnls):
+                        anio = trade["exit_time"][:4]
+                        anios[anio] = anios.get(anio, 0) + pnl
+                    fila["pnl_por_anio"] = "{" + ", ".join(
+                        f"{json.dumps(anio)}: {anios[anio]:.2f}" for anio in sorted(anios)
+                    ) + "}"
     with open(out, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=COLUMNAS, extrasaction="ignore")
+        writer = csv.DictWriter(f, fieldnames=columnas, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(filas)
-    click.echo(tabulate([[f[c] for c in COLUMNAS] for f in filas], headers=COLUMNAS, tablefmt="github"))
+    click.echo(tabulate([[f[c] for c in columnas] for f in filas], headers=columnas, tablefmt="github"))
     click.echo(f"PASA: {sum(f['veredicto'] == 'PASA' for f in filas)} de {len(filas)}")
