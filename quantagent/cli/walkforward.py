@@ -17,7 +17,7 @@ def construir_ventanas(
     while True:
         prueba_inicio = datetime(inicio.year + train_years, 1, 1)
         prueba_fin = datetime(prueba_inicio.year + test_years, 1, 1) - timedelta(days=1)
-        if prueba_fin > hasta:
+        if datetime(prueba_fin.year, 12, 24) > hasta:
             break
         ventanas.append((inicio, prueba_inicio - timedelta(days=1), prueba_inicio, prueba_fin))
         inicio = datetime(inicio.year + test_years, 1, 1)
@@ -28,4 +28,7 @@ def construir_ventanas(
 
 def seleccionar_ganador(resultados: list[dict[str, Any]]) -> dict[str, Any]:
     """Devuelve el mayor Sharpe de ajuste; un empate conserva el orden de grilla."""
-    return max(resultados, key=lambda resultado: resultado["sharpe_tasa_0"])
+    return max(resultados, key=lambda resultado: (
+        resultado["sharpe_tasa_0"] is not None,
+        resultado["sharpe_tasa_0"] if resultado["sharpe_tasa_0"] is not None else 0,
+    ))

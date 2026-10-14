@@ -19,7 +19,7 @@ def test_cuatro_ventanas_calendario_sin_solapamiento():
 
 
 def test_fecha_bisiesta_y_descarta_ultima_ventana_incompleta():
-    ventanas = construir_ventanas(datetime(2008, 2, 29), datetime(2015, 12, 30), 4, 2)
+    ventanas = construir_ventanas(datetime(2008, 2, 29), datetime(2015, 12, 23), 4, 2)
     assert ventanas == [
         (datetime(2008, 2, 29), datetime(2011, 12, 31), datetime(2012, 1, 1), datetime(2013, 12, 31)),
     ]
@@ -33,7 +33,18 @@ def test_rechaza_anios_no_positivos(train, test):
 
 def test_rango_insuficiente():
     with pytest.raises(click.ClickException, match="ventana completa"):
-        construir_ventanas(datetime(2007, 1, 3), datetime(2012, 12, 30), 4, 2)
+        construir_ventanas(datetime(2007, 1, 3), datetime(2012, 12, 23), 4, 2)
+
+
+@pytest.mark.parametrize("dia,cantidad", [(30, 3), (24, 3), (23, 2)])
+def test_ultima_semana_del_anio_completa_la_ventana(dia, cantidad):
+    assert len(construir_ventanas(datetime(2007, 1, 3), datetime(2016, 12, dia), 4, 2)) == cantidad
+
+
+@pytest.mark.parametrize("sharpes,ganador", [([None, -0.5, None], 1), ([-0.5, None], 0), ([None, None], 0)])
+def test_sharpe_ausente_pierde_y_empate_conserva_el_primero(sharpes, ganador):
+    resultados = [{"sharpe_tasa_0": sharpe} for sharpe in sharpes]
+    assert seleccionar_ganador(resultados) is resultados[ganador]
 
 
 def test_maximo_y_empate_conservan_orden_de_grilla():
