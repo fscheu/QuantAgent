@@ -159,4 +159,5 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-14 · #154 · PM: 36y1.2 vi: extracción de registrar_intento idéntica al bloque que reemplaza; el test de integración de V31b pasa sin tocarlo; 28 passed, CI verde. decido: merge
 2026-10-14 · #155 · PM: 36y1.3 vi: partición de 150 líneas en .3.1 (75) y .3.2 (90), cadena .3.1 -> .3.2 -> .4; el recorte de la prueba en --to quedó en el criterio de .3.1. decido: merge
 2026-10-14 · #156 · PM: 36y1.3.1 vi: snapshot real rsi/SPY [7,14,21] sin --to: 4 ventanas con pruebas 2011-12 a 2017-18 y nada escrito; 32 passed, CI verde. Menor: recorte a --to y no al fin de datos, pasado a .3.2. decido: merge
+2026-10-14 · #157 · PM: 36y1.3.2 vi: walkforward real rsi/SPY [7,14,21] 4/2: 4 ventanas en 51 s, ganadores 7, 7, 14, 14; 12 intentos registrados, solo ajustes; 37 passed, CI verde. Menor: pnl y sharpe sin redondear, pasado a .4. decido: merge
 ```
