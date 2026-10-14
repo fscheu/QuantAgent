@@ -2,12 +2,22 @@
 
 from math import e, sqrt
 
-from scipy.stats import norm
+import numpy as np
+from scipy.stats import norm, ttest_1samp
 
 # Umbrales fijados por Fede en el PR #140 (V30).
 MIN_TRADES = 2
 MIN_SHARPE_TASA_0 = 0.10
 MAX_DRAWDOWN = 0.35
+
+
+def p_valor_retornos(equity) -> float | None:
+    """T-test a una cola de retornos simples diarios, con tasa de referencia 0."""
+    curva = np.asarray(equity, dtype=float)
+    retornos = curva[1:] / curva[:-1] - 1
+    if len(retornos) < 3 or np.std(retornos, ddof=1) == 0:
+        return None
+    return float(ttest_1samp(retornos, 0, alternative="greater").pvalue)
 
 
 def evaluar(trades, pnl, sharpe_tasa_0, max_drawdown) -> tuple[bool, list[str]]:

@@ -1,14 +1,54 @@
 import csv
 import json
 from math import sqrt
-from statistics import NormalDist
+from statistics import NormalDist, mean, stdev
 
 import pytest
 from click.testing import CliRunner
+from scipy.stats import t
 
-from quantagent.backtesting.verdict import evaluar, sharpe_deflactado
+from quantagent.backtesting.verdict import evaluar, p_valor_retornos, sharpe_deflactado
 from quantagent.cli.backtest import backtest_group
 from quantagent.cli.verdict import COLUMNAS
+
+
+@pytest.mark.parametrize("signo", [1, -1])
+def test_p_valor_retornos_contra_student(signo):
+    retornos = [signo * r for r in (0.01, 0.03, -0.02, 0.04)]
+    equity = [100.0]
+    for retorno in retornos:
+        equity.append(equity[-1] * (1 + retorno))
+    estadistico = mean(retornos) / (stdev(retornos) / sqrt(len(retornos)))
+    assert p_valor_retornos(equity) == pytest.approx(t.sf(estadistico, 3), abs=1e-9)
+    assert p_valor_retornos(equity[:3]) is None
+    assert p_valor_retornos([100] * 5) is None
+
+
+def test_verdict_equity_dir_informativo(tmp_path):
+    tabla, salida = tmp_path / "tabla.csv", tmp_path / "salida.csv"
+    filas = [dict.fromkeys(COLUMNAS, "") for _ in range(3)]
+    for i, fila in enumerate(filas):
+        fila.update(estrategia="rsi", activo=f"ETF{i}")
+    with tabla.open("w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=COLUMNAS)
+        writer.writeheader()
+        writer.writerows(filas)
+    (tmp_path / "rsi-ETF0.csv").write_text("timestamp,equity\n2020-01-01,100\n2020-01-02,101\n2020-01-03,104.03\n2020-01-04,101.9494\n2020-01-05,106.027376\n")
+    (tmp_path / "rsi-ETF1.csv").write_text("timestamp,equity\n2020-01-01,100\n2020-01-02,100\n2020-01-03,100\n2020-01-04,100\n")
+    args = ["verdict", "--tabla", str(tabla), "--out", str(salida)]
+    runner = CliRunner()
+    original = runner.invoke(backtest_group, args)
+    assert original.exit_code == 0, original.output
+    sin_equity = salida.read_text()
+    resultado = runner.invoke(backtest_group, args + ["--equity-dir", str(tmp_path)])
+    assert resultado.exit_code == 0, resultado.output
+    obtenidas = list(csv.DictReader(salida.read_text().splitlines()))
+    esperado = t.sf(mean([.01, .03, -.02, .04]) / (stdev([.01, .03, -.02, .04]) / 2), 3)
+    assert [f["p_valor"] for f in obtenidas] == [f"{esperado:.4f}", "", ""]
+    assert [{c: f[c] for c in COLUMNAS} for f in obtenidas] == list(csv.DictReader(sin_equity.splitlines()))
+    repetido = runner.invoke(backtest_group, args)
+    assert repetido.output == original.output
+    assert salida.read_text() == sin_equity
 
 
 def test_verdict_robustez_desde_trades(tmp_path):
