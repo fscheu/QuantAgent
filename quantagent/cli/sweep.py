@@ -76,6 +76,39 @@ load_grid = cargar_grilla
 validate_grid = validar_grilla
 
 
+@click.command("attempts", help="Contar corridas y combinaciones registradas por sweep.")
+@click.option("--strategy", "strategy_name", required=True)
+@click.option("--symbol", default=None)
+def attempts_command(strategy_name: str, symbol: Optional[str]) -> None:
+    from quantagent.data.snapshot import snapshot_root
+
+    aliases = cli_aliases()
+    strategy = aliases.get(strategy_name, strategy_name)
+    if strategy not in STRATEGY_REGISTRY:
+        raise click.ClickException(f"Estrategia desconocida '{strategy_name}'")
+    path = snapshot_root() / "intentos.csv"
+    corridas = 0
+    combinaciones = set()
+    if path.exists():
+        with path.open(newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            if not {"estrategia", "activo", "params"}.issubset(reader.fieldnames or []):
+                raise click.ClickException("Encabezado inválido en intentos.csv")
+            for row in reader:
+                if aliases.get(row["estrategia"], row["estrategia"]) != strategy:
+                    continue
+                if symbol is not None and row["activo"] != symbol.upper():
+                    continue
+                try:
+                    params = json.dumps(json.loads(row["params"]), sort_keys=True)
+                except (ValueError, TypeError) as exc:
+                    raise click.ClickException("params JSON inválido en intentos.csv") from exc
+                corridas += 1
+                combinaciones.add(params)
+    click.echo(f"Corridas: {corridas}")
+    click.echo(f"Combinaciones distintas: {len(combinaciones)}")
+
+
 @click.command("sweep", help="Correr una grilla de parámetros de una estrategia sobre un activo.")
 @click.option("--strategy", "strategy_name", required=True, help="Estrategia a optimizar.")
 @click.option("--symbol", "symbol", required=True, help="Símbolo del activo (ej: SPY).")
