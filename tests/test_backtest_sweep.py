@@ -240,6 +240,45 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
     assert header == expected_cols
     assert len(out_rows) == 4
 
+    intentos = snap_dir / "intentos.csv"
+    prefijo = intentos.read_bytes()
+    res = runner.invoke(backtest_group, [
+        "sweep", "--strategy", "rsi", "--symbol", "spy",
+        "--snapshot", "snap_rsi", "--grid", str(grid_file), "--out", str(out_csv),
+    ])
+    assert res.exit_code == 0, res.output
+    assert intentos.read_bytes().startswith(prefijo)
+    with intentos.open(newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        assert reader.fieldnames == [
+            "fecha_utc", "estrategia", "activo", "snapshot", "desde", "hasta",
+            "costos", "tamano", "params", "trades", "pnl", "sharpe",
+        ]
+        intentos_rows = list(reader)
+    assert len(intentos_rows) == 8
+    from datetime import datetime, timezone
+    for intento, salida in zip(intentos_rows, out_rows * 2):
+        assert datetime.fromisoformat(intento["fecha_utc"]).utcoffset() == timezone.utc.utcoffset(None)
+        assert (intento["estrategia"], intento["activo"], intento["snapshot"]) == ("rsi", "SPY", "snap_rsi")
+        assert (intento["costos"], intento["tamano"]) == ("", "1.0")
+        assert intento["params"] == json.dumps({
+            "oversold_threshold": float(salida["oversold_threshold"]),
+            "rsi_period": int(salida["rsi_period"]),
+        }, sort_keys=True)
+        for campo in ("desde", "hasta", "trades", "pnl", "sharpe"):
+            assert intento[campo] == salida[campo]
+    for existente in (True, False):
+        if not existente:
+            intentos.unlink()
+        anterior = intentos.read_bytes() if existente else None
+        grid_file.write_text(json.dumps({"inexistente": [1]}), encoding="utf-8")
+        res = runner.invoke(backtest_group, [
+            "sweep", "--strategy", "rsi", "--symbol", "SPY",
+            "--snapshot", "snap_rsi", "--grid", str(grid_file), "--out", str(out_csv),
+        ])
+        assert res.exit_code == 1
+        assert (intentos.read_bytes() if intentos.exists() else None) == anterior
+
     meta = snapshot_metadata("snap_rsi", "SPY", None, None)
     config = _engine_config(None, None, 1.0, None, None)
     with _isolated_sqlite_db():

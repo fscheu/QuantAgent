@@ -4,7 +4,7 @@ import csv
 import itertools
 import json
 import math
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -110,7 +110,7 @@ def sweep_command(
         _reserva_desde,
         correr_par,
     )
-    from quantagent.data.snapshot import SnapshotError
+    from quantagent.data.snapshot import SnapshotError, snapshot_root
 
     combos = cargar_grilla(grid_path, strategy_name)
 
@@ -192,6 +192,27 @@ def sweep_command(
             "sharpe_tasa_0": _fmt(r["sharpe_tasa_0"], 2),
         }
         rows.append(row)
+        intentos_path = snapshot_root() / "intentos.csv"
+        intento = {
+            "fecha_utc": datetime.now(timezone.utc).isoformat(),
+            "estrategia": strategy_name,
+            "activo": sym,
+            "snapshot": snapshot_name,
+            "desde": row["desde"],
+            "hasta": row["hasta"],
+            "costos": costos or "",
+            "tamano": tamano_posicion,
+            "params": json.dumps(combo, sort_keys=True),
+            "trades": row["trades"],
+            "pnl": row["pnl"],
+            "sharpe": row["sharpe"],
+        }
+        nuevo = not intentos_path.exists()
+        with intentos_path.open("a", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=list(intento))
+            if nuevo:
+                writer.writeheader()
+            writer.writerow(intento)
 
     with open(out_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
