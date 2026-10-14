@@ -26,6 +26,62 @@ from quantagent.cli.backtest import backtest_group
 from quantagent.models import Base, MarketData
 
 
+def test_compare_equity_dir_exports_motor_without_changing_outputs(cli_runner, monkeypatch, tmp_path):
+    import hashlib
+
+    import pandas as pd
+
+    import quantagent.cli.backtest as cli
+    from quantagent.data.snapshot import write_snapshot
+
+    frame = pd.read_csv(FIXTURES_DIR / "spy-smoke.csv")
+    frame.index = pd.date_range("2018-01-01", periods=len(frame), name="timestamp")
+    frame["adj_close"] = frame["close"]
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path / "snapshots"))
+    write_snapshot("synthetic", {"SPY": frame.drop(columns=["timestamp"])})
+    curves = {}
+    real_run = cli.correr_par
+
+    def capture_curve(*args, **kwargs):
+        result = real_run(*args, **kwargs)
+        curves[args[0]] = result["equity_curve"]
+        return result
+
+    monkeypatch.setattr(cli, "correr_par", capture_curve)
+    command = ["compare", "--strategies", "rsi,sma-cross", "--symbols", "SPY", "--snapshot", "synthetic"]
+    for name, extra in [("before", []), ("after", ["--equity-dir", str(tmp_path / "equity")])]:
+        result = cli_runner.invoke(backtest_group, [*command, "--out", str(tmp_path / f"{name}.csv"),
+                                                  "--trades-dir", str(tmp_path / name), *extra])
+        assert result.exit_code == 0, result.output
+    assert (tmp_path / "before.csv").read_bytes() == (tmp_path / "after.csv").read_bytes()
+    # SHA256 de las salidas de la base b91cbc7d antes de --equity-dir.
+    baseline_hashes = {
+        "before.csv": "128c232f0c387a6c149d953e5572210daeadf6e8ac2b0e649f187119756ff585",
+        "before/rsi-SPY.csv": "1bb2a6282f7c17afe90654b7c14cd6fa1145cc49170a2b9f5871ae76df47308b",
+        "before/sma-cross-SPY.csv": "bc09bd523275557971671b60eda71c6404931f4b48a18a966346a6018f59ec36",
+    }
+    for path, expected in baseline_hashes.items():
+        assert hashlib.sha256((tmp_path / path).read_bytes()).hexdigest() == expected
+    table = list(csv.DictReader((tmp_path / "after.csv").open()))
+    for row in table:
+        strategy = row["estrategia"]
+        filename = f"{strategy}-SPY.csv"
+        assert (tmp_path / "before" / filename).read_bytes() == (tmp_path / "after" / filename).read_bytes()
+        with (tmp_path / "equity" / filename).open() as f:
+            reader = csv.DictReader(f)
+            assert reader.fieldnames == ["date", "equity"]
+            points = list(reader)
+        assert len(points) == len(curves[strategy]) == len(frame)
+        assert points == [{"date": p["date"].isoformat(), "equity": f'{p["equity"]:.2f}'} for p in curves[strategy]]
+        assert float(points[0]["equity"]) == 100000
+        assert float(points[-1]["equity"]) == pytest.approx(100000 + float(row["pnl"]), abs=0.01, rel=0)
+
+    rejected = cli_runner.invoke(backtest_group, [*command, "--to", "2019-01-01", "--out", str(tmp_path / "blocked.csv"),
+                                                "--equity-dir", str(tmp_path / "blocked")])
+    assert rejected.exit_code == 1
+    assert not (tmp_path / "blocked").exists()
+
+
 @pytest.fixture
 def cli_runner(monkeypatch, tmp_path):
     """Provide CliRunner with an isolated, fully-migrated SQLite database.
