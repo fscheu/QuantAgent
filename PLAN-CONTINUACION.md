@@ -518,7 +518,10 @@ Los primeros 5 son los más fáciles de revisar.
 | V34.2 | `QuantAgent-ghdf` | `sweep --vecinos-20`: default y ±20% por parámetro, dentro del ajuste; depende de V34.1 | rsi_period 11 y 17; (VM) la fila default da 187 / -9141.21 | probar | L7 |
 | V35 | `QuantAgent-750o` | Sharpe deflactado (Bailey y López de Prado) como función pura; depende de V33.3 | Valor a mano con tolerancia 1e-6; más intentos, menor DSR | leer | L7 |
 | V36 | `QuantAgent-0oqm` | `scripts/recalc_verdict.py` sin importar `quantagent`; depende de V33.3 | `coinciden 4 de 4`; un veredicto cambiado a mano da exit 1 | probar | L7 |
-| V36a | `QuantAgent-7ssw` | Significancia, Monte Carlo y tabla de crisis sobre el veredicto (activado por Fede el 2026-10-13; tres tickets después de V33) | Los escribe el PM con V33 integrado | probar | L7 |
+| V36a.1 | `QuantAgent-7ssw.1` | `compare --equity-dir`: curva de equity del motor por celda | Filas = curva del motor; última equity = capital + pnl; sin opción, salida idéntica | leer | L7 |
+| V36a.2 | `QuantAgent-7ssw.2` | `verdict --equity-dir`: p-valor del t-test de retornos diarios (informativo); depende de V36a.1 | p-valor a mano 1e-9; None con 2 retornos o curva constante | leer | L7 |
+| V36a.3 | `QuantAgent-7ssw.3` | `verdict --equity-dir`: Monte Carlo por bloques, percentil final y DD p95 (informativo); depende de V36a.1 | Semilla determinista; retornos constantes dan 1.0 / 0.0 | leer | L7 |
+| V36a.4 | `QuantAgent-7ssw.4` | `compare --crisis`: 2008, 2020 y 2022 contra comprar y mantener (informativo); depende de V36a.1 | Valor a mano 1e-6; año incompleto vacío; (VM) rsi/SPY crisis_2008 | leer | L7 |
 | V33.2d | `QuantAgent-jzb6` | Diagnóstico de la diferencia entre la curva de equity del motor y la del adaptador con los mismos trades; no bloquea el veredicto | Primera fecha de diferencia y causa, o lo descartado; sin cambios de código | leer | L7 |
 | V33.2e | `QuantAgent-mxy7` | `bt_adapter.equity_curve(stats)`: con llenado al cierre, el costo del llenado en su vela; `compare_control` la usa (fix de jzb6) | La curva del adaptador iguala a la del motor (1e-4 USD) con entradas y salidas por regla; (VM) ajustes de rsi/SPY antes y después | probar | L7 |
 
