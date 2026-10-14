@@ -524,6 +524,7 @@ Los primeros 5 son los más fáciles de revisar.
 | V36a.4 | `QuantAgent-7ssw.4` | `compare --crisis`: 2008, 2020 y 2022 contra comprar y mantener (informativo); depende de V36a.1 | Valor a mano 1e-6; año incompleto vacío; (VM) rsi/SPY crisis_2008 | leer | L7 |
 | V33.2d | `QuantAgent-jzb6` | Diagnóstico de la diferencia entre la curva de equity del motor y la del adaptador con los mismos trades; no bloquea el veredicto | Primera fecha de diferencia y causa, o lo descartado; sin cambios de código | leer | L7 |
 | V33.2e | `QuantAgent-mxy7` | `bt_adapter.equity_curve(stats)`: con llenado al cierre, el costo del llenado en su vela; `compare_control` la usa (fix de jzb6) | La curva del adaptador iguala a la del motor (1e-4 USD) con entradas y salidas por regla; (VM) ajustes de rsi/SPY antes y después | probar | L7 |
+| V33.2f | `QuantAgent-lba3` | Adaptador acepta entradas en corto al 100% con comisión > slippage, como el motor (fix de n51l) | rsi spy-2y-1d `--costos cripto` coinciden 46 de 46; largos sin cambio | leer | L7 |
 
 V08b y V23d se agregaron el 2026-10-12 al revisar V23c (#127): la corrida del agente leyó el tramo de prueba 2019–2022 porque el CLI solo protege la reserva, y con llenado en la apertura siguiente el adaptador cancela órdenes al 100% del capital (21 de 48 celdas). Van antes de V24 para que el markdown salga con la sensibilidad corregida.
 
