@@ -42,6 +42,19 @@ QTY_ATOL = getattr(crossval_compare, "QTY_ATOL", 5e-9)
 PRICE_TOL = crossval_compare.PRICE_TOL
 NUMERIC = crossval_compare.NUMERIC
 pnl_tol = crossval_compare.pnl_tol
+METRIC_COLUMNS = ("ajuste_sharpe_apertura", "ajuste_drawdown_apertura",
+                  "sharpe_tasa_0_apertura_siguiente", "max_drawdown_apertura_siguiente")
+
+
+def metricas_curva(equity) -> tuple[float, float]:
+    if len(equity) < 2:
+        return 0.0, 0.0
+    returns = equity.pct_change().dropna()
+    years = (equity.index[-1] - equity.index[0]).total_seconds() / (365.25 * 86400)
+    periods = (len(equity) - 1) / years if years > 0 else 0.0
+    sharpe = float(returns.mean() / returns.std() * periods ** 0.5) if len(returns) and returns.std() != 0 and periods > 0 else 0.0
+    peaks = equity.expanding().max()
+    return sharpe, float(abs(((equity - peaks) / peaks).min()))
 
 
 @functools.lru_cache(maxsize=32)
@@ -100,6 +113,7 @@ def main(argv=None) -> int:
     aliases = cli_aliases()
 
     for row in rows:
+        row.update(dict.fromkeys(METRIC_COLUMNS, ""))
         strat, sym = row["estrategia"], row["activo"]
         motor_file = Path(args.trades_dir) / f"{strat}-{sym}.csv"
         if not motor_file.exists():
@@ -143,12 +157,18 @@ def main(argv=None) -> int:
             open_rows = bt_adapter.trade_rows(stats_open, sym)
             row["pnl_apertura_siguiente"] = round(sum(r.pnl for r in open_rows), 2)
             row["trades_apertura_siguiente"] = len(open_rows)
+            if row["control"].startswith("coinciden ") and all(row.get(c) not in (None, "") for c in ("sharpe_tasa_0", "max_drawdown")):
+                s, d = metricas_curva(stats["_equity_curve"]["Equity"].iloc[:stats["_strategy"].n_real_bars])
+                so, do = metricas_curva(stats_open["_equity_curve"]["Equity"].iloc[:stats_open["_strategy"].n_real_bars])
+                row.update(zip(METRIC_COLUMNS, (round(so - s, 2), round(do - d, 6),
+                           round(float(row["sharpe_tasa_0"]) + so - s, 2),
+                           round(max(0.0, float(row["max_drawdown"]) + do - d), 6))))
         except Exception:
             row["pnl_apertura_siguiente"] = ""
             row["trades_apertura_siguiente"] = ""
 
-    fieldnames = list(rows[0].keys())
-    for col in ("control", "pnl_apertura_siguiente", "trades_apertura_siguiente"):
+    fieldnames = [c for c in rows[0] if c not in METRIC_COLUMNS]
+    for col in ("control", "pnl_apertura_siguiente", "trades_apertura_siguiente", *METRIC_COLUMNS):
         if col not in fieldnames:
             fieldnames.append(col)
     out_path = args.out or args.tabla
