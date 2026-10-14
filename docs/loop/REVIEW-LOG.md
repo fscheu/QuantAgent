@@ -151,4 +151,5 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-14 · #148 · PM: av3i.3 vi: con sweep roto a propósito (params={}, la grilla se ignora) el test de integración sigue pasando: solo compara la fila de defaults. Mensaje del candado bien. decido: cambio verificar que rsi_period 7 y 14 difieren y que cada fila coincide con correr_par de su combinación.
 2026-10-14 · #148 · PM: av3i.3 vi: con la misma rotura (params={}) el test de integración ahora falla; 12 passed con el código real; cada fila coincide con correr_par de su combinación. decido: merge
 2026-10-14 · #149 · PM: 8cry vi: partición en .1 (registro append, 80 líneas) y .2 (attempts, 70) con dependencia .2 -> .1, sin código; .2 puede registrar el comando en backtest.py. Codex corrió la suite completa (630 s) porque el lote tenía el PROMPT.md anterior a #145; el PM trajo main al lote. decido: merge
+2026-10-14 · #150 · PM: 8cry.1 vi: con 'w' en vez de append el test falla (4 filas, no 8); 12 passed, CI verde; prefijo byte a byte y grilla inválida cubiertos. Menor: 'estrategia' tal como se tipeó, pasado a .2. Codex con tests dirigidos: ~3 min. decido: merge
 ```
