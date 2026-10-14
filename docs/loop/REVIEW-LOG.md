@@ -175,4 +175,6 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-14 PM: mxy7 #166 (nube) rsi/SPY ajuste -0.24 / 0.058456 → -0.24 / 0.058074; curva = motor < 1e-5 USD. decido: merge
 2026-10-14 PM: n51l creado: con costos cripto el adaptador cancela entradas por margen (no bloquea L7).
 2026-10-14 PM: ghdf #168 rsi/SPY vecinos-20: 13 vecinos, default 187 / -9141.21; intentos real sin cambios. decido: merge
+2026-10-14 PM: 7ssw.1 #169 cambio: sacar hashes SHA256 fijos del test. decido: cambio
+2026-10-14 PM: 7ssw.1 #169 hashes fuera; mutación (sin última vela) rompe el test. decido: merge
 ```
