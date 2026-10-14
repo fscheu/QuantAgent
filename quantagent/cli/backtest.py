@@ -1008,3 +1008,8 @@ def compare_backtests(
 
     table_data = [[row[col] for col in COMPARE_COLUMNS] for row in rows]
     click.echo(tabulate(table_data, headers=COMPARE_COLUMNS, tablefmt="github"))
+
+
+from .sweep import sweep_command
+
+backtest_group.add_command(sweep_command, name="sweep")
