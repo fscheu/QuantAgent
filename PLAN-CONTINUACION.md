@@ -624,3 +624,9 @@ revisado
 - `docs/loop/REVIEW-LOG.md` es el historial: una línea por entrega revisada, con su prefijo `PM:` o `R:`.
 - Hasta el 2026-10-06 la copiaba el agente en la entrega siguiente. Con un PR escalado abierto y otro en curso,
   los dos agregaban una línea en el mismo lugar y el segundo merge chocaba (#24 y #25). Ahora escribe uno solo.
+
+## 6. Ideas registradas para M3 y siguientes
+
+| Idea | Ticket | Documento | Cuándo |
+|---|---|---|---|
+| Elegir el tipo de estrategia técnica según el régimen de mercado (y más adelante la macro), en lugar de probar todas en todos los activos. Primer paso: medir en 2007–2018 si el resultado de cada estrategia cambia con la volatilidad y la tendencia de SPY | `QuantAgent-ljoj` (decidir) | [`docs/02_planning/QuantAgent-ljoj-PL-regimenes-y-macro.md`](docs/02_planning/QuantAgent-ljoj-PL-regimenes-y-macro.md): análisis, riesgos y referencias comerciales y académicas (JPMaQS, Hedgeye, Fidelity, Two Sigma, meta-labeling, ALFRED) | M3, después de cerrar L7 |
