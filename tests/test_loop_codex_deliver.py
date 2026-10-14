@@ -64,3 +64,10 @@ def test_incomplete_or_invalid_delivery_pushes_nothing(wt, breaker):
     assert r.returncode == 1
     assert run("git", "branch", "-r", "--list", "origin/loop/*").stdout.strip() == ""
     assert not (tmp / "gh.args").exists()
+
+
+def test_missing_repo_variable_fails_before_pushing(wt):
+    run, tmp = wt
+    r = run("env", "-u", "LOOP_GITHUB_REPO", "bash", str(SCRIPT), "lote/x", "nuevo")
+    assert r.returncode != 0
+    assert run("git", "branch", "-r", "--list", "origin/loop/*").stdout.strip() == ""

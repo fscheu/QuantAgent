@@ -5,6 +5,7 @@
 # Usage (cwd = the run's worktree): codex_deliver.sh <base-branch> <mode: nuevo|cambio>
 set -u
 BASE="$1"; MODE="$2"; D=.loop-delivery
+: "${LOOP_GITHUB_REPO:?codex_deliver: falta LOOP_GITHUB_REPO}"  # checked before any push
 fail() { echo "codex_deliver: $1"; exit 1; }
 [ -s "$D/commit-msg" ] || fail "sin $D/commit-msg: Codex no dejó entrega"
 MSG="$(cat "$D/commit-msg")"

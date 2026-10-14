@@ -129,7 +129,7 @@ case "$AGENT" in
       --add-dir "$REPO/.beads" - <<<"$PROMPT
 
 $(cat "$SELF_DIR/codex_addendum.md")" >"$LOG" 2>&1
-    "$SELF_DIR/codex_deliver.sh" "$BASE" "$MODE" >>"$LOG" 2>&1 ;;
+    LOOP_GITHUB_REPO="$LOOP_GITHUB_REPO" "$SELF_DIR/codex_deliver.sh" "$BASE" "$MODE" >>"$LOG" 2>&1 ;;
 esac
 crc=$?
 unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0
