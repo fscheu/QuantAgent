@@ -162,4 +162,5 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-14 · #157 · PM: 36y1.3.2 vi: walkforward real rsi/SPY [7,14,21] 4/2: 4 ventanas en 51 s, ganadores 7, 7, 14, 14; 12 intentos registrados, solo ajustes; 37 passed, CI verde. Menor: pnl y sharpe sin redondear, pasado a .4. decido: merge
 2026-10-14 · #159 · PM: 36y1.4 vi: el test intercepta correr_par y exige 3 ajustes + 1 prueba con el ganador por ventana; tabla VM igual a la de #157 (7, 7, 14, 14); 38 passed, CI verde; el verificador independiente no ejecutó tests. Cierra V32. decido: merge
 2026-10-14 · #160 · PM: 8sn3 vi: umbrales iguales a la R: de #140, bordes inclusivos y ausentes cubiertos, 16 passed, CI verde; NaN falla con motivo; texto del CSV tira TypeError, pasado a V33.3. decido: merge
+2026-10-14 · #161 · PM: hnlg vi: bloqueo correcto por error del PM en el ticket (252 por año contra la frecuencia observada que usa el motor). decido: cambio implementar con la frecuencia observada del motor y borrar el doc de bloqueo.
 ```
