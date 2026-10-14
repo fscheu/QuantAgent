@@ -81,13 +81,15 @@ def walkforward_command(strategy_name, symbol, snapshot_name, grid_path, out_pat
                 if desde == a:
                     registrar_intento(strategy_name, symbol, snapshot_name, options["costos"],
                                       options["tamano_posicion"], combo,
-                                      {**r, "desde": f"{meta.start_date:%Y-%m-%d}", "hasta": f"{meta.end_date:%Y-%m-%d}"})
+                                      {**r, "pnl": round(r["pnl"], 2), "sharpe": round(r["sharpe"], 2),
+                                       "desde": f"{meta.start_date:%Y-%m-%d}", "hasta": f"{meta.end_date:%Y-%m-%d}"})
                     resultados.append({**r, "params": combo})
         rows.append(dict(ajuste_desde=f"{a:%Y-%m-%d}", ajuste_hasta=f"{b:%Y-%m-%d}",
                          prueba_desde=f"{c:%Y-%m-%d}", prueba_hasta=f"{d:%Y-%m-%d}",
                          params=json.dumps(ganador["params"], sort_keys=True),
-                         ajuste_sharpe_tasa_0=ganador["sharpe_tasa_0"],
-                         trades=r["trades"], pnl=r["pnl"], sharpe_tasa_0=r["sharpe_tasa_0"]))
+                         ajuste_sharpe_tasa_0="" if ganador["sharpe_tasa_0"] is None else round(ganador["sharpe_tasa_0"], 2),
+                         trades=r["trades"], pnl=round(r["pnl"], 2),
+                         sharpe_tasa_0="" if r["sharpe_tasa_0"] is None else round(r["sharpe_tasa_0"], 2)))
     with open(out_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=list(rows[0]))
         writer.writeheader()

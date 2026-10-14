@@ -11,6 +11,7 @@ from quantagent.cli.walkforward import construir_ventanas, preparar_walkforward,
 @pytest.mark.parametrize("hasta", ["2012-12-23", "2019-01-01", "2023-01-01", "2016-12-30", "2016-12-31"])
 def test_comando_csv_y_rechazos(snapshot_walkforward, hasta):
     from click.testing import CliRunner
+
     from quantagent.cli.backtest import backtest_group
 
     grid, out = snapshot_walkforward / "grid.json", snapshot_walkforward / "out.csv"
@@ -34,17 +35,91 @@ def test_comando_csv_y_rechazos(snapshot_walkforward, hasta):
     assert len(rows) == 1
     assert rows[0] == dict(ajuste_desde="2011-01-03", ajuste_hasta="2014-12-31",
                            prueba_desde="2015-01-01", prueba_hasta="2016-12-30",
-                           params='{"rsi_period": 7}', ajuste_sharpe_tasa_0="-0.7081740842923033",
-                           trades="1", pnl="-99.95002499", sharpe_tasa_0="-1.0019921641686198")
+                           params='{"rsi_period": 7}', ajuste_sharpe_tasa_0="-0.71",
+                           trades="1", pnl="-99.95", sharpe_tasa_0="-1.0")
     with (snapshot_walkforward / "intentos.csv").open() as f:
         intentos = list(csv.DictReader(f))
     assert [json.loads(r["params"]) for r in intentos] == [{"rsi_period": 7}, {"rsi_period": 14}]
     assert all(r["hasta"] == "2014-12-31" and r["activo"] == "SPY" for r in intentos)
 
 
+def test_seleccion_motor_real_y_registro_solo_ajustes(snapshot_walkforward, monkeypatch):
+    import numpy as np
+    import pandas as pd
+    from click.testing import CliRunner
+
+    from quantagent.backtesting.fixtures import snapshot_metadata
+    from quantagent.cli import backtest
+    from quantagent.cli.sweep import registrar_intento
+    from quantagent.data.snapshot import write_snapshot
+
+    fechas = pd.date_range("2007-01-05", "2010-12-31", freq="W-FRI")
+    precios = 100 + 15 * np.sin(np.arange(len(fechas)) / 4)
+    df = pd.DataFrame(dict(open=precios, high=precios + 1, low=precios - 1,
+                           close=precios, adj_close=precios, volume=1000), index=fechas)
+    write_snapshot("real", {"SPY": df})
+    grid, out = snapshot_walkforward / "grid.json", snapshot_walkforward / "out.csv"
+    combos = [{"rsi_period": p} for p in [7, 14, 21]]
+    grid.write_text(json.dumps({"rsi_period": [7, 14, 21]}))
+    args = ["walkforward", "--strategy", "rsi", "--symbol", "SPY", "--snapshot", "real",
+            "--grid", str(grid), "--out", str(out), "--train-years", "2", "--test-years", "1",
+            "--costos", "etf", "--orden-minima", "50"]
+    _, _, config, ventanas = preparar_walkforward(
+        "rsi", "SPY", "real", grid, train_years=2, test_years=1, costos="etf", orden_minima=50)
+    motor = backtest.correr_par
+    esperados, llamadas = [], []
+    for a, b, c, d in ventanas:
+        ajustes = []
+        for inicio, fin, params in [(a, b, p) for p in combos]:
+            with backtest._isolated_sqlite_db():
+                ajustes.append(motor("rsi", snapshot_metadata("real", "SPY", inicio, fin), config,
+                                     "etf", None, "real", "SPY", inicio, fin, params=params))
+        indice = max(range(len(combos)), key=lambda i: ajustes[i]["sharpe_tasa_0"])
+        with backtest._isolated_sqlite_db():
+            prueba = motor("rsi", snapshot_metadata("real", "SPY", c, d), config,
+                           "etf", None, "real", "SPY", c, d, params=combos[indice])
+        esperados.append((combos[indice], ajustes, prueba))
+
+    def observar(*args, **kwargs):
+        llamadas.append((args[7], args[8], kwargs["params"]))
+        return motor(*args, **kwargs)
+
+    monkeypatch.setattr(backtest, "correr_par", observar)
+    registro = snapshot_walkforward / "intentos.csv"
+    previo = esperados[0][1][0]
+    registrar_intento("rsi", "SPY", "real", "etf", 1.0, combos[0],
+                      {**previo, "desde": "2007-01-05", "hasta": "2008-12-26"})
+    prefijo = registro.read_bytes()
+    result = CliRunner().invoke(backtest.backtest_group, args)
+    assert result.exit_code == 0, result.output
+    assert registro.read_bytes().startswith(prefijo)
+    with out.open() as f:
+        filas = list(csv.DictReader(f))
+    with registro.open() as f:
+        intentos = list(csv.DictReader(f))[1:]
+    assert len(filas) == len(ventanas) == 2 and len(intentos) == 6
+    assert all(a < b < c <= d for a, b, c, d in ventanas) and ventanas[0][3] < ventanas[1][2]
+    assert any(r["trades"] > 0 for _, _, r in esperados)
+    assert any(len({r["sharpe_tasa_0"] for r in ajustes}) > 1 for _, ajustes, _ in esperados)
+    for i, ((a, b, c, d), fila, (ganador, ajustes, prueba)) in enumerate(zip(ventanas, filas, esperados)):
+        assert llamadas[i * 4:i * 4 + 4] == [(a, b, p) for p in combos] + [(c, d, ganador)]
+        assert json.loads(fila["params"]) == ganador
+        assert float(fila["ajuste_sharpe_tasa_0"]) == round(max(r["sharpe_tasa_0"] for r in ajustes), 2)
+        for campo in ("trades", "pnl", "sharpe_tasa_0"):
+            assert float(fila[campo]) == round(prueba[campo], 2)
+        for intento, combo, ajuste in zip(intentos[i * 3:i * 3 + 3], combos, ajustes):
+            assert json.loads(intento["params"]) == combo
+            assert intento["desde"] == f"{snapshot_metadata('real', 'SPY', a, b).start_date:%Y-%m-%d}"
+            assert intento["hasta"] == f"{snapshot_metadata('real', 'SPY', a, b).end_date:%Y-%m-%d}"
+            assert int(intento["trades"]) == ajuste["trades"]
+            assert float(intento["pnl"]) == round(ajuste["pnl"], 2)
+            assert float(intento["sharpe"]) == round(ajuste["sharpe"], 2)
+
+
 @pytest.fixture
 def snapshot_walkforward(monkeypatch, tmp_path):
     import pandas as pd
+
     from quantagent.data.snapshot import write_snapshot
 
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
