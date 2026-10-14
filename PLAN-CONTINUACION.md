@@ -506,7 +506,10 @@ Los primeros 5 son los más fáciles de revisar.
 | V31a.3 | `QuantAgent-av3i.3` | Integración real de sweep; depende de V31a.2 | RSI 2x2 coincide con defaults; (VM) periodos 14 y 7: 187 / -9141.21 y 325 / -14560.44 | probar | L7 |
 | V31b.1 | `QuantAgent-8cry.1` | Registro de cada combinación de sweep en `intentos.csv`, sin reescribir (padre `QuantAgent-8cry`) | Dos sweeps de 4 dejan 8 filas; prefijo intacto; grilla inválida no modifica el registro | probar | L7 |
 | V31b.2 | `QuantAgent-8cry.2` | `backtest attempts`: contar corridas y combinaciones; depende de V31b.1 | 8 corridas / 4 combinaciones distintas; filtros por estrategia y activo; lectura sin cambios | probar | L7 |
-| V32 | `QuantAgent-36y1` | `backtest walkforward`: elegir parámetros en una ventana y medir en la siguiente, dentro del ajuste | Test con serie conocida: ninguna ventana de prueba elige parámetros | probar | L7 |
+| V32.1 | `QuantAgent-36y1.1` | Ventanas de ajuste/prueba y selección por Sharpe (padre `QuantAgent-36y1`) | 4 ventanas 4/2 años; sin solapamiento; empate elige primero | leer | L7 |
+| V32.2 | `QuantAgent-36y1.2` | Extraer el registro append de sweep para reutilizarlo; depende de V32.1 | Dos sweeps mantienen 8 filas y prefijo intacto | probar | L7 |
+| V32.3 | `QuantAgent-36y1.3` | Comando walkforward aislado con candado; depende de V32.2 | Rango insuficiente sale 1 sin CSV; no abre prueba ni reserva | probar | L7 |
+| V32.4 | `QuantAgent-36y1.4` | Selección real por ventana y evidencia VM; depende de V32.3 | Una combinación ganadora por prueba; (VM) tabla de 4 ventanas | probar | L7 |
 | V36a | `QuantAgent-7ssw` | Significancia, Monte Carlo y tabla de crisis sobre el veredicto (activado por Fede el 2026-10-13; tres tickets después de V33) | Los escribe el PM con V33 integrado | probar | L7 |
 
 V08b y V23d se agregaron el 2026-10-12 al revisar V23c (#127): la corrida del agente leyó el tramo de prueba 2019–2022 porque el CLI solo protege la reserva, y con llenado en la apertura siguiente el adaptador cancela órdenes al 100% del capital (21 de 48 celdas). Van antes de V24 para que el markdown salga con la sensibilidad corregida.
