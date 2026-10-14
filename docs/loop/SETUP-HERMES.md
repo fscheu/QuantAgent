@@ -141,9 +141,16 @@ y 10% del de 5 horas del grupo Gemini. Se ve con `/usage` en una sesión interac
 
 `LOOP_AGENT=codex`, o `next-agent` para una sola corrida, lanza `codex exec` con el modelo `LOOP_CODEX_MODEL`
 (`next-model` lo cambia por una corrida y tiene que estar en `LOOP_CODEX_MODELS`). Usa el mismo aislamiento que el
-revisor, `workspace-write`, con dos agregados que una entrega necesita y una revisión no: red (`git push`, `gh`,
-la base de tests) y escritura en el `.git` y el `.beads` del checkout principal, porque los commits de un worktree
-y la base de BEADS viven ahí. Lee todo el disco y escribe solo en el worktree, en esos dos directorios y en `/tmp`.
+revisor, `workspace-write`, con dos agregados que una entrega necesita y una revisión no: red (`gh`, la base de
+tests) y escritura en el `.beads` del checkout principal. Lee todo el disco y escribe solo en el worktree, en
+`.beads` y en `/tmp`.
+
+Codex no puede escribir en `.git`: su aislamiento lo deja en solo lectura aunque se pase con `--add-dir`
+(primera corrida real, 2026-10-12). Por eso no hace la parte de git. El wrapper le agrega al prompt
+`scripts/loop/codex_addendum.md`, que le pide dejar en el worktree la carpeta `.loop-delivery/` (`ticket`,
+`commit-msg`, `pr-body.md` y `labels` opcional), y al terminar corre `scripts/loop/codex_deliver.sh`, que crea la
+rama `loop/<ID>`, commitea, pushea y abre el PR contra el lote (en modo cambio pushea a la rama del PR y comenta).
+Si falta `commit-msg` o el ticket no tiene forma de ID, no pushea nada y la corrida termina sin entrega.
 
 La barrera de push (`push_guard.sh`) es la misma que para los otros agentes. Igual que con ellos, no cubre
 `gh pr merge`, y Codex no tiene reglas deny como las de `agy`: la protección es que el prompt lo prohíbe y que

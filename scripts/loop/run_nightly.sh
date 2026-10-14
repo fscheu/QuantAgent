@@ -121,12 +121,15 @@ case "$AGENT" in
     timeout "${LOOP_TIMEOUT_MIN}m" agy -p "$PROMPT" --model "$MODEL" --mode accept-edits \
       --print-timeout "${LOOP_TIMEOUT_MIN}m" >"$LOG" 2>&1 ;;
   codex)
-    # Same sandbox as the reviewer (workspace-write), plus what a delivery needs and a review does not:
-    # network (push, gh, the test DB) and write access to the main checkout's .git and .beads, which is
-    # where a worktree's commits and the shared BEADS database live.
+    # Same sandbox as the reviewer (workspace-write), plus network (gh, the test DB) and write access to the
+    # shared BEADS database. The sandbox keeps .git read-only even with --add-dir (QuantAgent-dhlu), so
+    # Codex leaves .loop-delivery/ and codex_deliver.sh does branch, commit, push and PR under the guard.
     timeout "${LOOP_TIMEOUT_MIN}m" "${LOOP_CODEX_BIN:-codex}" exec -m "$MODEL" -s workspace-write \
       -c sandbox_workspace_write.network_access=true -c shell_environment_policy.inherit=all \
-      --add-dir "$REPO/.git" --add-dir "$REPO/.beads" - <<<"$PROMPT" >"$LOG" 2>&1 ;;
+      --add-dir "$REPO/.beads" - <<<"$PROMPT
+
+$(cat "$SELF_DIR/codex_addendum.md")" >"$LOG" 2>&1
+    "$SELF_DIR/codex_deliver.sh" "$BASE" "$MODE" >>"$LOG" 2>&1 ;;
 esac
 crc=$?
 unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0
