@@ -119,3 +119,27 @@ La integración sigue pendiente del gate humano. Beads no se modificó porque qu
 Las diferencias contra el motor propio son diferencias de criterio de ejecución, no un bloqueo. El desarrollo sigue como estaba planeado, con el motor propio, y el pivot a LEAN se decide en M3. Antes de esa decisión falta verificar lo que este spike no probó: fracciones de acción y el plugin de Alpaca en papel.
 
 Diagramas de componentes (arquitectura actual y propuesta con LEAN), detalle de las piezas que se reemplazarían y balance del PM: [QuantAgent-ryaw-arquitectura/index.html](./QuantAgent-ryaw-arquitectura/index.html). Abrir el archivo en un navegador; GitHub muestra el HTML como código.
+
+## Criterios para la decisión de M3 (PM, 2026-10-14)
+
+Además del resultado (sma-cross 3 de 5, rsi 140 de 187) y de los tiempos medidos, la decisión de M3 mira estas aristas. Las planteó Fede al ver el tamaño de la solución.
+
+Tamaño medido en la VM: LEAN son unas 756 mil líneas de C# en 4.405 archivos (690 MB compilado), más el SDK de .NET (624 MB) y un entorno Python 3.11 propio (129 MB). El código Python de `quantagent/` son unas 12 mil líneas.
+
+1. **Código que no sabemos qué hace.** La mayor parte no corre en un backtest diario (opciones, futuros, cripto, brokers). Se mitiga con un commit fijo, compilado propio, corrida sin red (verificada en las dos corridas de este spike) y licencia Apache 2.0. Riesgo menor.
+2. **Diagnóstico.** Cuando un trade no coincide, la causa está en C#, que no es el lenguaje del proyecto ni de los agentes del loop. Cerrar la brecha medida aquí es el primer costo real.
+3. **Puente con Python.** LEAN trae su propio pythonnet y fija la versión de Python. Python no inicializó hasta sacar el pythonnet de pip, y el proceso aborta al cerrar (GIL). Cada actualización de LEAN o de Python puede romperlo de nuevo.
+4. **Actualizaciones.** Un cambio de LEAN en el modelo de llenado movería números de referencia sin tocar nuestro código. Hace falta decidir cada cuánto se actualiza el commit fijo y con qué control.
+5. **Validación.** Los oráculos de M1 y el control con `backtesting.py` están en Python. Hay que decidir qué queda como referencia y si el motor propio sigue como control.
+6. **Paper y live.** Fracciones de acción y el plugin de Alpaca en papel (pendientes desde la decisión del 2026-10-13). Es donde LEAN aporta más.
+7. **Recursos de la VM.** El build y las corridas compiten con el loop y los tests en 2 núcleos.
+8. **Salida.** El costo de dejar LEAN depende de que las estrategias sigan escritas contra nuestra interfaz de señales y no contra la API de LEAN. Condición del PM para cualquier pivot.
+
+### Escenario: LEAN como segundo motor de control
+
+Propuesta de Fede: mantener LEAN como hoy se usa `backtesting.py`, un motor aparte que corre las mismas estrategias y confirma los resultados propios, sin reemplazar el motor.
+
+- **Fork.** Es posible (Apache 2.0). Se recomienda un fork sin cambios propios, usado solo para fijar el commit y compilar desde ahí. Un fork con parches propios obliga a mantenerlos contra cada actualización. Si hiciera falta un cambio de comportamiento, va como modelo de llenado propio dentro del algoritmo, no como parche al motor.
+- **Lo que cuesta.** Un adaptador como `scripts/bt_adapter.py` (señales nuestras hacia órdenes de LEAN, escritura de datos y lectura de trades), que en buena parte ya existe en `scripts/lean_spike/`. Para que el control sirva, cada diferencia tiene que tener causa escrita, como pasó con `backtesting.py` en L5 y L6.
+- **Lo que aporta.** Un segundo control con un modelo de ejecución distinto y probado en producción por terceros, sin acoplar las estrategias a LEAN. Si en M3 se decide el pivot, ese adaptador es el primer paso. Si no, queda como control.
+- **Cuándo correrlo.** Por su costo en la VM, en el punto de control de cada lote y no en cada entrega.
