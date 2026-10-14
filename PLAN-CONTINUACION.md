@@ -508,8 +508,9 @@ Los primeros 5 son los más fáciles de revisar.
 | V31b.2 | `QuantAgent-8cry.2` | `backtest attempts`: contar corridas y combinaciones; depende de V31b.1 | 8 corridas / 4 combinaciones distintas; filtros por estrategia y activo; lectura sin cambios | probar | L7 |
 | V32.1 | `QuantAgent-36y1.1` | Ventanas de ajuste/prueba y selección por Sharpe (padre `QuantAgent-36y1`) | 4 ventanas 4/2 años; sin solapamiento; empate elige primero | leer | L7 |
 | V32.2 | `QuantAgent-36y1.2` | Extraer el registro append de sweep para reutilizarlo; depende de V32.1 | Dos sweeps mantienen 8 filas y prefijo intacto | probar | L7 |
-| V32.3 | `QuantAgent-36y1.3` | Comando walkforward aislado con candado; depende de V32.2 | Rango insuficiente sale 1 sin CSV; no abre prueba ni reserva | probar | L7 |
-| V32.4 | `QuantAgent-36y1.4` | Selección real por ventana y evidencia VM; depende de V32.3 | Una combinación ganadora por prueba; (VM) tabla de 4 ventanas | probar | L7 |
+| V32.3a | `QuantAgent-36y1.3.1` | Preparar grilla, rango protegido y ventanas; depende de V32.2 | Validación antes de ejecutar; fin de prueba recortado a --to | leer | L7 |
+| V32.3b | `QuantAgent-36y1.3.2` | Comando walkforward aislado y CSV; depende de V32.3a | Rango insuficiente sale 1 sin CSV ni intentos; sin flags de apertura; fila por ventana | probar | L7 |
+| V32.4 | `QuantAgent-36y1.4` | Selección real por ventana y evidencia VM; depende de V32.3b | Una combinación ganadora por prueba; (VM) tabla de 4 ventanas | probar | L7 |
 | V33.1 | `QuantAgent-8sn3` | Regla del Juego 2 (V30) como función pura `verdict.evaluar`; depende de V32.4 | Bordes 0.10 / 0.35 / 2 trades pasan; cada falla da su motivo; valores ausentes no rompen | leer | L7 |
 | V33.2 | `QuantAgent-hnlg` | `compare_control.py` agrega Sharpe a tasa 0 y max drawdown con apertura siguiente; depende de V33.1 | Al cierre, la misma fórmula sobre la curva del adaptador da lo mismo que el motor | probar | L7 |
 | V33.3 | `QuantAgent-0z29` | `backtest verdict --tabla`: PASA / NO PASA por celda, al cierre y con apertura siguiente; depende de V33.2 | Tabla a mano de 4 filas con veredictos y motivos exactos; (VM) rsi 12 ETFs 2007–2018 `PASA: N de 12` | probar | L7 |
