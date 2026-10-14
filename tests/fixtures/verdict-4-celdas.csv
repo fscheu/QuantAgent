@@ -1,0 +1,5 @@
+estrategia,activo,desde,hasta,veredicto,motivos,control,trades,pnl,sharpe_tasa_0,max_drawdown,trades_apertura_siguiente,pnl_apertura_siguiente,sharpe_tasa_0_apertura_siguiente,max_drawdown_apertura_siguiente
+rsi,SPY,2007-01-01,2018-12-31,PASA,,ok,12,1500.5,0.42,0.18,12,1320.0,0.37,0.2
+rsi,QQQ,2007-01-01,2018-12-31,NO PASA,apertura: pnl <= 0; apertura: sharpe_tasa_0 < 0.10,ok,9,210.0,0.10,0.35,9,-15.0,0.02,0.30
+rsi,IWM,2007-01-01,2018-12-31,NO PASA,cierre: trades < 2; cierre: max_drawdown > 0.35; apertura: trades < 2,ok,1,80.0,0.15,0.41,1,60.0,0.12,0.3
+rsi,EFA,2007-01-01,2018-12-31,NO PASA,apertura: sin trades; apertura: sin pnl; apertura: sin sharpe_tasa_0; apertura: sin max_drawdown,ok,5,300.0,0.25,0.12,,,,
