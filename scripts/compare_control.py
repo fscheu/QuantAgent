@@ -158,8 +158,8 @@ def main(argv=None) -> int:
             row["pnl_apertura_siguiente"] = round(sum(r.pnl for r in open_rows), 2)
             row["trades_apertura_siguiente"] = len(open_rows)
             if row["control"].startswith("coinciden ") and all(row.get(c) not in (None, "") for c in ("sharpe_tasa_0", "max_drawdown")):
-                s, d = metricas_curva(stats["_equity_curve"]["Equity"].iloc[:stats["_strategy"].n_real_bars])
-                so, do = metricas_curva(stats_open["_equity_curve"]["Equity"].iloc[:stats_open["_strategy"].n_real_bars])
+                s, d = metricas_curva(bt_adapter.equity_curve(stats))
+                so, do = metricas_curva(bt_adapter.equity_curve(stats_open))
                 row.update(zip(METRIC_COLUMNS, (round(so - s, 2), round(do - d, 6),
                            round(float(row["sharpe_tasa_0"]) + so - s, 2),
                            round(max(0.0, float(row["max_drawdown"]) + do - d), 6))))
