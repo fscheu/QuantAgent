@@ -158,4 +158,5 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-14 · #153 · PM: 36y1.1 vi: con --to 2016-12-30 ahora da 3 ventanas (2 con 12-23), 2007-2018 sigue en 4; Sharpe None pierde y con todos None gana el primero; 28 passed, CI verde. Corte de la prueba en --to pasado a .3. decido: merge
 2026-10-14 · #154 · PM: 36y1.2 vi: extracción de registrar_intento idéntica al bloque que reemplaza; el test de integración de V31b pasa sin tocarlo; 28 passed, CI verde. decido: merge
 2026-10-14 · #155 · PM: 36y1.3 vi: partición de 150 líneas en .3.1 (75) y .3.2 (90), cadena .3.1 -> .3.2 -> .4; el recorte de la prueba en --to quedó en el criterio de .3.1. decido: merge
+2026-10-14 · #156 · PM: 36y1.3.1 vi: snapshot real rsi/SPY [7,14,21] sin --to: 4 ventanas con pruebas 2011-12 a 2017-18 y nada escrito; 32 passed, CI verde. Menor: recorte a --to y no al fin de datos, pasado a .3.2. decido: merge
 ```
