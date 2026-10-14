@@ -21,6 +21,16 @@ from quantagent.models import Base
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "compare_control.py"
+sys.path.insert(0, str(ROOT / "scripts"))
+import compare_control as control
+
+
+def test_metricas_curva_calculo_manual():
+    equity = pd.Series([100.0, 110.0, 99.0, 108.9], index=pd.date_range("2020-01-01", periods=4))
+    # Retornos 0.1, -0.1, 0.1; media 1/30, varianza muestral 1/75.
+    sharpe, drawdown = control.metricas_curva(equity)
+    assert sharpe == pytest.approx((1 / 30) / (1 / 75) ** 0.5 * 365.25 ** 0.5, abs=1e-9, rel=0)
+    assert drawdown == pytest.approx(0.1, abs=1e-9, rel=0)
 
 
 def _daily_frame() -> pd.DataFrame:
@@ -121,6 +131,7 @@ def test_compare_control_coincide_y_falla_si_se_altera_un_trade(snap_env):
     with open(out_csv, newline="") as f:
         rows = list(csv.DictReader(f))
     assert rows[0]["control"] == "sin validar: fila 1, columna pnl"
+    assert all(rows[0][c] == "" for c in control.METRIC_COLUMNS)
 
     # Caso 3: alterando exit_reason en fila 2
     trade_rows[0]["pnl"] = str(float(trade_rows[0]["pnl"]) - 100.0)  # restaurar fila 1
@@ -154,7 +165,7 @@ def test_compare_control_coincide_y_falla_si_se_altera_un_trade(snap_env):
     assert rows[0]["control"] == "sin validar: falta archivo fifty-two-week-high-SPY.csv"
 
 
-def test_compare_control_sensibilidad_apertura_siguiente_gap(snap_env):
+def test_compare_control_sensibilidad_apertura_siguiente_gap(snap_env, monkeypatch):
     runner, tmp_path = snap_env
     df = _daily_frame().iloc[:330].copy()
     close_signal = df.loc[df.index[320], "close"]
@@ -199,6 +210,46 @@ def test_compare_control_sensibilidad_apertura_siguiente_gap(snap_env):
     effective_gap = gap * (1.0 + slippage)
     expected_diff = round(effective_gap * qty, 2)
     assert round(pnl_cierre - pnl_apertura, 2) == pytest.approx(expected_diff, abs=0.01)
+
+    metrics = []
+    adapter_df = control.port.load_fixture(snapshot="t_gap", symbol="SPY")
+    monkeypatch.setattr(settings, "TRADING_BASE_POSITION_PCT", 1.0)
+    for fill in ("close", "next-open"):
+        stats = control.bt_adapter.run_adapter(control.build_strategy("FiftyTwoWeekHighStrategy"), adapter_df.copy(), symbol="SPY", timeframe="1d", fill=fill, commission_pct=settings.TRADING_COMMISSION_PCT, slippage_pct=settings.TRADING_SLIPPAGE_PCT)
+        equity = stats["_equity_curve"]["Equity"].iloc[:stats["_strategy"].n_real_bars]
+        returns = equity.pct_change().dropna()
+        periods = (len(equity) - 1) * 365.25 * 86400 / (equity.index[-1] - equity.index[0]).total_seconds()
+        metrics.append((float(returns.mean() / returns.std() * periods ** 0.5), float((1 - equity / equity.cummax()).max())))
+    ds, dd = (metrics[1][i] - metrics[0][i] for i in (0, 1))
+    row = rows[0]
+    assert list(row)[-4:] == list(control.METRIC_COLUMNS)
+    assert float(row["ajuste_sharpe_apertura"]) == round(ds, 2)
+    assert float(row["ajuste_drawdown_apertura"]) == round(dd, 6)
+    assert float(row["sharpe_tasa_0_apertura_siguiente"]) == round(float(row["sharpe_tasa_0"]) + ds, 2)
+    assert float(row["max_drawdown_apertura_siguiente"]) == round(max(0, float(row["max_drawdown"]) + dd), 6)
+    row["sharpe_tasa_0"] = ""
+    with out_csv.open("w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=list(row))
+        writer.writeheader()
+        writer.writerow(row)
+    _run_control(out_csv, trades_dir, "t_gap")
+    with out_csv.open(newline="") as f:
+        assert all(next_row[c] == "" for next_row in csv.DictReader(f) for c in control.METRIC_COLUMNS)
+    row["sharpe_tasa_0"] = "0.5"
+    run_adapter = control.bt_adapter.run_adapter
+    for failed_fill in ("close", "next-open"):
+        with out_csv.open("w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=list(row))
+            writer.writeheader()
+            writer.writerow(row)
+        def fail_run(*args, **kwargs):
+            if kwargs["fill"] == failed_fill:
+                raise RuntimeError("corrida fallida")
+            return run_adapter(*args, **kwargs)
+        monkeypatch.setattr(control.bt_adapter, "run_adapter", fail_run)
+        assert control.main(["--tabla", str(out_csv), "--trades-dir", str(trades_dir), "--snapshot", "t_gap"]) == 0
+        with out_csv.open(newline="") as f:
+            assert all(next_row[c] == "" for next_row in csv.DictReader(f) for c in control.METRIC_COLUMNS)
 
 
 def test_compare_control_con_params_valida_contra_las_mismas_estrategias(snap_env):
