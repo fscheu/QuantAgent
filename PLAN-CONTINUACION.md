@@ -512,13 +512,14 @@ Los primeros 5 son los más fáciles de revisar.
 | V32.3b | `QuantAgent-36y1.3.2` | Comando walkforward aislado y CSV; depende de V32.3a | Rango insuficiente sale 1 sin CSV ni intentos; sin flags de apertura; fila por ventana | probar | L7 |
 | V32.4 | `QuantAgent-36y1.4` | Selección real por ventana y evidencia VM; depende de V32.3b | Una combinación ganadora por prueba; (VM) tabla de 4 ventanas | probar | L7 |
 | V33.1 | `QuantAgent-8sn3` | Regla del Juego 2 (V30) como función pura `verdict.evaluar`; depende de V32.4 | Bordes 0.10 / 0.35 / 2 trades pasan; cada falla da su motivo; valores ausentes no rompen | leer | L7 |
-| V33.2 | `QuantAgent-hnlg` | `compare_control.py` agrega Sharpe a tasa 0 y max drawdown con apertura siguiente; depende de V33.1 | Al cierre, la misma fórmula sobre la curva del adaptador da lo mismo que el motor | probar | L7 |
+| V33.2 | `QuantAgent-hnlg` | `compare_control.py` agrega Sharpe y drawdown con apertura siguiente = motor + (adaptador next-open − adaptador close) (opción D de Fede, 2026-10-14); depende de V33.1 | Curva a mano con Sharpe y drawdown exactos; columnas vacías si el control no coincide | probar | L7 |
 | V33.3 | `QuantAgent-0z29` | `backtest verdict --tabla`: PASA / NO PASA por celda, al cierre y con apertura siguiente; depende de V33.2 | Tabla a mano de 4 filas con veredictos y motivos exactos; (VM) rsi 12 ETFs 2007–2018 `PASA: N de 12` | probar | L7 |
 | V34.1 | `QuantAgent-8xcd` | Robustez en el veredicto: concentración del PnL y PnL por año desde los trades; depende de V33.3 | Un trade que explica todo da 1.0; sin `--trades-dir` la salida no cambia | leer | L7 |
 | V34.2 | `QuantAgent-ghdf` | `sweep --vecinos-20`: default y ±20% por parámetro, dentro del ajuste; depende de V34.1 | rsi_period 11 y 17; (VM) la fila default da 187 / -9141.21 | probar | L7 |
 | V35 | `QuantAgent-750o` | Sharpe deflactado (Bailey y López de Prado) como función pura; depende de V33.3 | Valor a mano con tolerancia 1e-6; más intentos, menor DSR | leer | L7 |
 | V36 | `QuantAgent-0oqm` | `scripts/recalc_verdict.py` sin importar `quantagent`; depende de V33.3 | `coinciden 4 de 4`; un veredicto cambiado a mano da exit 1 | probar | L7 |
 | V36a | `QuantAgent-7ssw` | Significancia, Monte Carlo y tabla de crisis sobre el veredicto (activado por Fede el 2026-10-13; tres tickets después de V33) | Los escribe el PM con V33 integrado | probar | L7 |
+| V33.2d | `QuantAgent-jzb6` | Diagnóstico de la diferencia entre la curva de equity del motor y la del adaptador con los mismos trades; no bloquea el veredicto | Primera fecha de diferencia y causa, o lo descartado; sin cambios de código | leer | L7 |
 
 V08b y V23d se agregaron el 2026-10-12 al revisar V23c (#127): la corrida del agente leyó el tramo de prueba 2019–2022 porque el CLI solo protege la reserva, y con llenado en la apertura siguiente el adaptador cancela órdenes al 100% del capital (21 de 48 celdas). Van antes de V24 para que el markdown salga con la sensibilidad corregida.
 
