@@ -35,6 +35,7 @@ from quantagent.trading.position_sizer import PositionSizer
 
 from . import utils
 from .sweep import attempts_command, sweep_command
+from .verdict import verdict_command
 from .walkforward import walkforward_command
 
 
@@ -1015,4 +1016,5 @@ def compare_backtests(
 backtest_group.add_command(sweep_command, name="sweep")
 backtest_group.add_command(attempts_command, name="attempts")
 backtest_group.add_command(walkforward_command, name="walkforward")
+backtest_group.add_command(verdict_command)
 

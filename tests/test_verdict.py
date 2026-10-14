@@ -1,9 +1,51 @@
+import csv
 from math import sqrt
 from statistics import NormalDist
 
 import pytest
+from click.testing import CliRunner
 
 from quantagent.backtesting.verdict import evaluar, sharpe_deflactado
+from quantagent.cli.backtest import backtest_group
+from quantagent.cli.verdict import COLUMNAS
+
+
+@pytest.mark.parametrize("sin_columna", [False, True])
+def test_verdict_csv_real(tmp_path, sin_columna):
+    tabla, salida = tmp_path / "tabla.csv", tmp_path / "salida.csv"
+    columnas = [c for c in COLUMNAS if c not in ("veredicto", "motivos")]
+    filas = []
+    for i in range(4):
+        fila = dict.fromkeys(columnas, "")
+        fila.update(estrategia="rsi", activo=f"ETF{i}", desde="2007-01-01", hasta="2018-12-31", control="coinciden 2 de 2")
+        for sufijo in ("", "_apertura_siguiente"):
+            fila.update({c + sufijo: v for c, v in zip(("trades", "pnl", "sharpe_tasa_0", "max_drawdown"), (2, 10, 0.10, 0.35))})
+        filas.append(fila)
+    filas[1]["pnl_apertura_siguiente"] = 0
+    filas[2]["trades"] = 1
+    for c in columnas:
+        if c.endswith("_apertura_siguiente"):
+            filas[3][c] = ""
+    if sin_columna:
+        columnas.remove("sharpe_tasa_0_apertura_siguiente")
+    with tabla.open("w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=columnas, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(filas)
+    resultado = CliRunner().invoke(backtest_group, ["verdict", "--tabla", str(tabla), "--out", str(salida)])
+    if sin_columna:
+        assert resultado.exit_code == 1
+        assert "sharpe_tasa_0_apertura_siguiente" in resultado.output
+        assert not salida.exists()
+    else:
+        assert resultado.exit_code == 0, resultado.output
+        assert "PASA: 1 de 4" in resultado.output
+        with salida.open() as f:
+            obtenidas = list(csv.DictReader(f))
+        assert [(f["veredicto"], f["motivos"]) for f in obtenidas] == [
+            ("PASA", ""), ("NO PASA", "apertura: pnl <= 0"), ("NO PASA", "cierre: trades < 2"),
+            ("NO PASA", "apertura: sin trades; apertura: sin pnl; apertura: sin sharpe_tasa_0; apertura: sin max_drawdown"),
+        ]
 
 
 def test_limites_inclusivos_y_pnl_positivo():
