@@ -19,6 +19,7 @@ Agents working in this repository should read planning documents in this order:
    - [2026-09-17_plan_mes_2_loop_ai.md](./2026-09-17_plan_mes_2_loop_ai.md) - Mes 2 (21/09–16/10): calendario noche a noche de tickets `plan-20260921`, cadena crítica, checklist
    - [2026-09-17_borrador_routine_nocturna.md](./2026-09-17_borrador_routine_nocturna.md) - Borrador de la routine nocturna del loop AI (prompt, entorno, JSON, checklist de Fede)
    - [2026-09-17_borrador_skill_revision_macro_semanal.md](./2026-09-17_borrador_skill_revision_macro_semanal.md) - Borrador del skill Hermes de revisión macro semanal (capa L1)
+   - [QuantAgent-ljoj-PL-regimenes-y-macro.md](./QuantAgent-ljoj-PL-regimenes-y-macro.md) - Idea de Fede (2026-10-14): régimen de mercado y macro para elegir el tipo de estrategia; análisis, riesgos, referencias comerciales y ticket de investigación de M3
 
 ## Current Truth
 
