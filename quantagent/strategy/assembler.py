@@ -38,6 +38,7 @@ class ResolvedConfig:
     extras: Optional[Dict] = None
     commission_pct: float = 0.0
     regla_tamano: str = "confianza"
+    orden_minima: Optional[float] = None
 
 
 @dataclass
@@ -69,6 +70,7 @@ class StrategyAssembler:
             "temperature": settings.AGENT_LLM_TEMPERATURE,
             "use_checkpointing": settings.TRADING_USE_CHECKPOINTING,
             "universe": settings.get_trading_universe(),
+            "orden_minima": None,
         }
 
     @staticmethod
@@ -169,7 +171,11 @@ class StrategyAssembler:
             environment=resolved.environment,
             db=db_session,
         )
-        ps = PositionSizer(base_position_pct=resolved.base_position_pct, regla=resolved.regla_tamano)
+        ps = PositionSizer(
+            base_position_pct=resolved.base_position_pct,
+            regla=resolved.regla_tamano,
+            orden_minima=resolved.orden_minima,
+        )
         rm = RiskManager(
             portfolio_manager=pm,
             max_daily_loss_pct=resolved.max_daily_loss_pct,
@@ -315,4 +321,9 @@ class StrategyAssembler:
                 merged.get("commission_pct", StrategyAssembler.DEFAULTS()["commission_pct"])
             ),
             regla_tamano=merged.get("regla_tamano", "confianza"),
+            orden_minima=(
+                float(merged["orden_minima"])
+                if merged.get("orden_minima") is not None
+                else None
+            ),
         )

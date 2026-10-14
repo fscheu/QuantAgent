@@ -52,6 +52,22 @@ class TestPositionSizer:
         assert fijo == pytest.approx(equity * pct / precio)
         assert (con_confianza, fijo) == pytest.approx({0.05: (40.0, 100.0), 1.0: (800.0, 2000.0)}[pct])
 
+    def test_init_orden_minima(self):
+        """orden_minima debe ser positivo si se especifica."""
+        assert PositionSizer(orden_minima=50.0).orden_minima == 50.0
+        with pytest.raises(ValueError, match="orden_minima must be positive"):
+            PositionSizer(orden_minima=0.0)
+        with pytest.raises(ValueError, match="orden_minima must be positive"):
+            PositionSizer(orden_minima=-10.0)
+
+    def test_calculate_size_orden_minima(self):
+        """calculate_size devuelve 0.0 si el valor nocional de la posición queda por debajo de orden_minima."""
+        sizer = PositionSizer(base_position_pct=0.05, orden_minima=50.0)
+        qty_low = sizer.calculate_size("SPY", signal_confidence=1.0, current_price=10.0, portfolio_value=999.8)
+        assert qty_low == 0.0
+        qty_exact = sizer.calculate_size("SPY", signal_confidence=1.0, current_price=10.0, portfolio_value=1000.0)
+        assert qty_exact == pytest.approx(5.0)
+
     def test_build_components_lleva_la_regla(self):
         """ResolvedConfig lleva la regla hasta el PositionSizer; sin indicarla queda 'confianza'."""
         from quantagent.strategy.assembler import StrategyAssembler
@@ -426,6 +442,58 @@ class TestOrderManager:
 
         assert result is not None
         assert result.side == OrderSide.SELL
+
+    def test_orden_minima_entrada_y_cierre(self):
+        """Una entrada de 49.99 USD se descarta y una de 50.00 se ejecuta; un cierre de menos de 50 USD se ejecuta igual."""
+        self.order_manager.orden_minima = 50.0
+
+        trade_mock = Mock()
+        trade_mock.pnl = Decimal("0.00")
+        self.portfolio.execute_trade.return_value = trade_mock
+
+        # 1. Entrada de 49.99 USD (49.99 / 100.0 = 0.4999 acciones a 100.0 USD)
+        self.order_manager.position_sizer = Mock()
+        self.order_manager.position_sizer.calculate_size.return_value = 0.4999
+
+        res_desc = self.order_manager.execute_decision(
+            symbol="SPY",
+            decision="LONG",
+            confidence=1.0,
+            current_price=100.0,
+        )
+        assert res_desc is None
+        assert self.order_manager.entradas_descartadas_orden_minima == 1
+
+        # 2. Entrada de 50.00 USD (50.00 / 100.0 = 0.5 acciones a 100.0 USD)
+        self.order_manager.position_sizer.calculate_size.return_value = 0.50
+
+        res_exec = self.order_manager.execute_decision(
+            symbol="SPY",
+            decision="LONG",
+            confidence=1.0,
+            current_price=100.0,
+        )
+        assert res_exec is not None
+        assert res_exec.side == OrderSide.BUY
+        assert self.order_manager.entradas_descartadas_orden_minima == 1  # no incrementa
+
+        # 3. Cierre de menos de 50 USD (trade de 0.2 acciones a 100 USD = 20 USD)
+        db_trade = Mock()
+        db_trade.id = 123
+        db_trade.symbol = "SPY"
+        db_trade.side = OrderSide.BUY
+        db_trade.quantity = Decimal("0.2")
+
+        self.db.query.return_value.filter.return_value.first.return_value = db_trade
+        self.portfolio.positions = {"SPY": {"qty": 0.2}}
+
+        close_order = self.order_manager.close_trade(
+            trade_id=123,
+            current_price=100.0,
+        )
+        assert close_order is not None
+        assert close_order.side == OrderSide.SELL
+        assert self.order_manager.entradas_descartadas_orden_minima == 1
 
     def test_execute_decision_insufficient_capital(self):
         """Test decision is rejected if insufficient capital."""

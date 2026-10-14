@@ -732,3 +732,30 @@ def test_isolated_sqlite_db_no_leftover_files_in_shm():
         with _isolated_sqlite_db():
             raise RuntimeError("error simulado")
     assert set(os.listdir("/dev/shm")) == before
+
+
+def test_backtest_run_orden_minima_sin_opcion_no_imprime_linea(cli_runner):
+    """Sin --orden-minima, no se imprime la línea de descartadas y el resultado es idéntico (QuantAgent-wquk)."""
+    base = cli_runner.invoke(backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"])
+    assert base.exit_code == 0, base.output
+    assert "Entradas descartadas por orden mínima:" not in base.output
+
+    con_min = cli_runner.invoke(backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke", "--orden-minima", "50"])
+    assert con_min.exit_code == 0, con_min.output
+    assert "Entradas descartadas por orden mínima: 0" in con_min.output
+
+    out_base = dict(line.split(": ", 1) for line in base.output.splitlines() if ": " in line)
+    out_min = dict(line.split(": ", 1) for line in con_min.output.splitlines() if ": " in line)
+    assert out_base["Trades"] == out_min["Trades"]
+    assert out_base["Total PnL"] == out_min["Total PnL"]
+
+
+def test_backtest_run_orden_minima_descarta_entradas(cli_runner):
+    """Con --orden-minima superior al tamaño de las órdenes, las entradas se descartan (QuantAgent-wquk)."""
+    # En spy-smoke el capital es 100k y base 5% -> órdenes de ~2500 a 5000 USD
+    # Con --orden-minima 10000 se descartan todas las entradas
+    res = cli_runner.invoke(backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke", "--orden-minima", "10000"])
+    assert res.exit_code == 0, res.output
+    out = dict(line.split(": ", 1) for line in res.output.splitlines() if ": " in line)
+    assert int(out["Trades"]) == 0
+    assert int(out["Entradas descartadas por orden mínima"]) > 0
