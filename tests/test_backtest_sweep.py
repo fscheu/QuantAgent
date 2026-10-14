@@ -245,11 +245,23 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
     with _isolated_sqlite_db():
         baseline = correr_par("rsi", meta, config, None, None, "snap_rsi", "SPY", None, None)
 
-    default_row = next(
-        r for r in out_rows
-        if float(r["oversold_threshold"]) == 30.0 and int(r["rsi_period"]) == 14
-    )
+    filas_por_combo = {}
+    for r in out_rows:
+        combo = {"oversold_threshold": float(r["oversold_threshold"]), "rsi_period": int(r["rsi_period"])}
+        with _isolated_sqlite_db():
+            esperado = correr_par("rsi", meta, config, None, None, "snap_rsi", "SPY", None, None, params=combo)
+        assert int(r["trades"]) == esperado["trades"]
+        assert float(r["pnl"]) == round(esperado["pnl"], 2)
+        filas_por_combo[(combo["oversold_threshold"], combo["rsi_period"])] = r
+
+    default_row = filas_por_combo[(30.0, 14)]
     assert int(default_row["trades"]) == baseline["trades"]
     assert float(default_row["pnl"]) == round(baseline["pnl"], 2)
+
+    for ot in [25.0, 30.0]:
+        f7 = filas_por_combo[(ot, 7)]
+        f14 = filas_por_combo[(ot, 14)]
+        assert (int(f7["trades"]) != int(f14["trades"])) or (float(f7["pnl"]) != float(f14["pnl"]))
+
 
 
