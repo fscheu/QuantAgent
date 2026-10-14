@@ -1,5 +1,9 @@
 """Regla del Juego 2 para una celda estrategia × activo."""
 
+from math import e, sqrt
+
+from scipy.stats import norm
+
 # Umbrales fijados por Fede en el PR #140 (V30).
 MIN_TRADES = 2
 MIN_SHARPE_TASA_0 = 0.10
@@ -20,3 +24,25 @@ def evaluar(trades, pnl, sharpe_tasa_0, max_drawdown) -> tuple[bool, list[str]]:
         elif not cumple(valor):
             motivos.append(motivo)
     return not motivos, motivos
+
+
+EULER_MASCHERONI = 0.5772156649015329
+
+
+def sharpe_deflactado(sr, n_intentos, var_sr_intentos, n_obs, asimetria, curtosis) -> float:
+    """Probabilidad de que `sr` supere al máximo Sharpe esperado por azar entre N intentos.
+
+    Bailey y López de Prado (2014), "The Deflated Sharpe Ratio". `sr` es el Sharpe por
+    vela, sin anualizar; `var_sr_intentos` es la varianza de esos Sharpe por vela entre
+    los intentos y `n_obs` es T, la cantidad de velas. `curtosis` es la curtosis de los
+    retornos sin restar 3 (normal = 3). Con un solo intento SR0 = 0.
+    """
+    if n_intentos == 1:
+        sr0 = 0.0
+    else:
+        sr0 = sqrt(var_sr_intentos) * (
+            (1 - EULER_MASCHERONI) * norm.ppf(1 - 1 / n_intentos)
+            + EULER_MASCHERONI * norm.ppf(1 - 1 / (n_intentos * e))
+        )
+    denominador = sqrt(1 - asimetria * sr + (curtosis - 1) / 4 * sr**2)
+    return float(norm.cdf((sr - sr0) * sqrt(n_obs - 1) / denominador))
