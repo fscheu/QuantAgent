@@ -165,4 +165,9 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-14 · #161 · PM: hnlg vi: bloqueo correcto por error del PM en el ticket (252 por año contra la frecuencia observada que usa el motor). decido: cambio implementar con la frecuencia observada del motor y borrar el doc de bloqueo.
 2026-10-14 · #161 · PM: hnlg vi: con la frecuencia observada, motor y adaptador dan Sharpe distinto con los mismos trades (-4.68 contra -4.63); segunda entrega seguida sin merge, el PM frena el lote. decido: escalo Fede elige cómo medir la condición con apertura siguiente: curva del adaptador con fórmula verificada aparte, cerrar antes la diferencia de curvas, o solo PnL y trades.
 2026-10-14 PM: hnlg #161 Fede decide opción D: apertura siguiente = métrica del motor + delta del adaptador (next-open − close). Ticket reescrito; diagnóstico de curvas en jzb6 (V33.2d, no bloquea). decido: cambio
+2026-10-14 PM: hnlg #161 rsi/SPY coinciden 187 de 187; apertura siguiente Sharpe -0.46 DD 0.178138 (ajuste -0.24 / 0.058456); mutación rompe test. decido: merge
+2026-10-14 PM: 750o #162 (nube) 19 passed; ejemplo del paper da 0.9004. decido: merge
+2026-10-14 PM: jzb6 #163 (nube) causa: backtesting.py anota el costo del llenado al cierre una vela tarde; corregido, Sharpe -4.6756 igual al motor. Fix en mxy7 (V33.2e). decido: merge
+2026-10-14 PM: 0oqm #164 (nube) coinciden 4 de 4; mutación de límite da 3 de 4 y exit 1. decido: merge
+2026-10-14 PM: gfs1 creado (M3, decidir): llenado por defecto del motor en la vela siguiente.
 ```

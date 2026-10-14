@@ -520,6 +520,7 @@ Los primeros 5 son los más fáciles de revisar.
 | V36 | `QuantAgent-0oqm` | `scripts/recalc_verdict.py` sin importar `quantagent`; depende de V33.3 | `coinciden 4 de 4`; un veredicto cambiado a mano da exit 1 | probar | L7 |
 | V36a | `QuantAgent-7ssw` | Significancia, Monte Carlo y tabla de crisis sobre el veredicto (activado por Fede el 2026-10-13; tres tickets después de V33) | Los escribe el PM con V33 integrado | probar | L7 |
 | V33.2d | `QuantAgent-jzb6` | Diagnóstico de la diferencia entre la curva de equity del motor y la del adaptador con los mismos trades; no bloquea el veredicto | Primera fecha de diferencia y causa, o lo descartado; sin cambios de código | leer | L7 |
+| V33.2e | `QuantAgent-mxy7` | `bt_adapter.equity_curve(stats)`: con llenado al cierre, el costo del llenado en su vela; `compare_control` la usa (fix de jzb6) | La curva del adaptador iguala a la del motor (1e-4 USD) con entradas y salidas por regla; (VM) ajustes de rsi/SPY antes y después | probar | L7 |
 
 V08b y V23d se agregaron el 2026-10-12 al revisar V23c (#127): la corrida del agente leyó el tramo de prueba 2019–2022 porque el CLI solo protege la reserva, y con llenado en la apertura siguiente el adaptador cancela órdenes al 100% del capital (21 de 48 celdas). Van antes de V24 para que el markdown salga con la sensibilidad corregida.
 
