@@ -220,3 +220,25 @@ def test_compare_control_con_params_valida_contra_las_mismas_estrategias(snap_en
     _run_control(out_csv, trades_dir, "t", out_md, "--params", str(params))
     assert control().startswith("coinciden")
     assert "take_profit_pct=0.02," in out_md.read_text(encoding="utf-8")
+
+
+def test_compare_control_con_orden_minima(snap_env):
+    runner, tmp_path = snap_env
+    write_snapshot("t", {"SPY": _daily_frame()})
+    out_csv, trades_dir = tmp_path / "cmp.csv", tmp_path / "trades"
+    cmd = [
+        "compare",
+        "--strategies", "fifty-two-week-high",
+        "--symbols", "SPY",
+        "--snapshot", "t",
+        "--orden-minima", "50",
+        "--out", str(out_csv),
+        "--trades-dir", str(trades_dir),
+    ]
+    res = runner.invoke(backtest_group, cmd)
+    assert res.exit_code == 0, res.output
+
+    _run_control(out_csv, trades_dir, "t", None, "--orden-minima", "50")
+    with open(out_csv, newline="") as f:
+        row = next(csv.DictReader(f))
+    assert row["control"] == "coinciden 6 de 6"
