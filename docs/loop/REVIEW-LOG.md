@@ -180,4 +180,6 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-14 PM: n51l #170 (nube) cortos al 100% cancelados por margen con comisión > slippage; fix en lba3 (solo cortos). decido: merge
 2026-10-14 PM: 7ssw.2 #171 SPY p 0.7724, XLU p 0.1381 (PASA pero no significativo al 5%: a Fede en el lote). decido: merge
 2026-10-14 PM: 7ssw.3 #172 SPY MC 0.5040 / dd_p95 0.2594, XLU 0.5330 / 0.1626; 4 s. decido: merge
+2026-10-14 PM: 7ssw.4 #173 (nube) rsi/SPY crisis_2008 0.332; 2020/2022 vacías. decido: merge
+2026-10-14 PM: lba3 #174 rsi 12 ETFs control coinciden en las 12 celdas; cripto 46 de 46. decido: merge
 ```
