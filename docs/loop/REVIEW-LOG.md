@@ -149,4 +149,5 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-14 · #146 · PM: av3i.1 vi: 5 tests; sma-cross fast x slow 2x3 da 6, nombre equivocado y estrategia desconocida dan error claro. Menor: valores repetidos duplican combinaciones; pasado a av3i.2. decido: merge
 2026-10-14 · #147 · PM: av3i.2 vi: sweep real rsi/SPY rsi_period [7,14] da 325 / -14560.44 y 187 / -9141.21; --to 2020 sale 1 sin CSV; 52 tests en 3 min (primera corrida con tests dirigidos: 46 min en total). Menores: el mensaje del candado sugiere --abrir-prueba, que sweep no tiene (pasado a av3i.3); 256 líneas contra 95 estimadas por copiar formateo y candado de compare. decido: merge
 2026-10-14 · #148 · PM: av3i.3 vi: con sweep roto a propósito (params={}, la grilla se ignora) el test de integración sigue pasando: solo compara la fila de defaults. Mensaje del candado bien. decido: cambio verificar que rsi_period 7 y 14 difieren y que cada fila coincide con correr_par de su combinación.
+2026-10-14 · #148 · PM: av3i.3 vi: con la misma rotura (params={}) el test de integración ahora falla; 12 passed con el código real; cada fila coincide con correr_par de su combinación. decido: merge
 ```
