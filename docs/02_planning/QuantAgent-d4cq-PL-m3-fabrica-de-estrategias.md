@@ -27,6 +27,21 @@ Propuesta: M3 pasa a ser la fábrica de estrategias y la conexión con Alpaca en
 
 Cada etapa escribe una fila en `intentos.csv` con el id de la hipótesis y la etapa. Los umbrales de las etapas 0 y 1 son una propuesta del PM. Tienen que quedar fijados antes de correr la primera hipótesis real, y eso lo decidís vos (L9).
 
+## Sesgos: mirar el futuro y otros (pedido de Fede, 2026-10-14)
+
+Un backtest vectorizado calcula todo de una vez sobre la serie completa. Por eso mirar el futuro es más fácil que en el motor propio, que le pasa a la estrategia solo las velas hasta la actual. Estas son las formas concretas en que puede pasar y el control que la detecta. Todos los controles son automáticos y van en L8 y L9, antes de la primera hipótesis real.
+
+| Riesgo | Cómo pasa | Control |
+|---|---|---|
+| Operar en la misma vela de la señal | La señal usa el cierre de hoy y la orden se llena al cierre de hoy | El adaptador de `vectorbt` llena en la apertura siguiente (señal desplazada una vela) y no tiene modo al cierre |
+| Indicador calculado con toda la serie | Normalizar con la media o el desvío de todo el período, percentiles o regresiones ajustados sobre todo el período, `rolling(center=True)`, `shift(-k)`, `bfill` | **Prueba de truncamiento** para cada hipótesis: se corre con los datos hasta una fecha T y con los datos completos, y las señales hasta T tienen que ser idénticas. Cualquier diferencia es mirar el futuro. Además, un chequeo que rechaza esas construcciones en el código de la estrategia |
+| Precios ajustados | El cierre ajustado de 2010 depende de dividendos y splits posteriores. Los retornos se conservan, pero un nivel absoluto ("precio > 100", stops o tamaños en dólares sobre el precio ajustado) usa información futura. Además, cada dividendo nuevo reescribe la historia | Las estrategias solo usan relaciones (retornos, cocientes, cruces), y la admisión rechaza umbrales de precio absolutos. El snapshot es fijo durante una corrida. El ajuste retroactivo ya tiene ticket (`QuantAgent-01kb`) |
+| Stops dentro de la vela | Con un stop y un take profit en la misma vela, el motor vectorizado puede asumir el orden favorable | Se usa la regla del motor propio: si toca los dos, gana el stop. Lo verifica el control contra el motor propio en la etapa 2 |
+| Elección de parámetros | Elegir el mejor parámetro mirando el período donde se evalúa | El walk-forward elige solo con la ventana de ajuste. La prueba y la reserva se abren una vez por hipótesis |
+| Supervivencia y selección | Los 12 ETFs se eligieron hoy y son activos que sobrevivieron | No es mirar el futuro en el código, pero sí en la elección. Se declara en cada informe, y ampliar el universo a activos que dejaron de cotizar es un lote propio |
+
+El control de fondo es la etapa 2: toda hipótesis que pasa el filtro se vuelve a correr en el motor propio, que procesa vela por vela. Si `vectorbt` da mucho mejor que el motor propio en la misma celda, eso es una alarma y se investiga antes de seguir.
+
 ## Lotes
 
 Cada ticket es de 100 líneas o menos, como hasta ahora. Los tickets se escriben en BEADS cuando apruebes este plan.
@@ -34,12 +49,14 @@ Cada ticket es de 100 líneas o menos, como hasta ahora. Los tickets se escriben
 **L8 · `lote/motor-del-filtro`.** Punto de control: las dos condiciones de la decisión de motor, medidas en la VM.
 - Perfilar la estrategia que tarda 115 s por celda y corregir su cuello de botella, con oráculos sin cambios.
 - Adaptador de `vectorbt` para las 4 estrategias de M2 (señales nuestras → entradas y salidas de `vectorbt`).
+- Prueba de truncamiento genérica (señales hasta T idénticas con datos cortados en T y con datos completos), aplicada a las 4 estrategias en los dos motores. Incluye un test que la hace fallar a propósito con un indicador que mira el futuro.
+- Llenado en la apertura siguiente fijo en el adaptador de `vectorbt`.
 - Medición: tiempo total de 48 celdas y Spearman del orden por Sharpe contra el motor propio.
 - Decisión de Fede con los números: B o A.
 
 **L9 · `lote/hipotesis`.** Punto de control: dos hipótesis escritas como archivo corren de punta a punta en la etapa 1.
 - Esquema del archivo de hipótesis (YAML): id, autor, justificación económica, clase de estrategia, rango de cada parámetro, activos y timeframe.
-- Cargador y admisión (etapa 0), con el tope de parámetros.
+- Cargador y admisión (etapa 0): tope de parámetros, prueba de truncamiento obligatoria y rechazo de construcciones que miran el futuro y de umbrales de precio absolutos.
 - `backtest hipotesis filtrar <archivo>`: etapa 1 con walk-forward por activo, más un registro de intentos con el id de hipótesis.
 - Candado por hipótesis: la prueba y la reserva se abren una sola vez por id y la segunda vez falla.
 - Decisión de Fede: umbrales de las etapas 0 y 1.
