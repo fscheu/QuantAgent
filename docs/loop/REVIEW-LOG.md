@@ -155,4 +155,5 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-14 · #151 · PM: 8cry.2 vi: sin la normalización de alias el test de filtros falla; 14 passed, CI verde; dos sweeps 2x2 dan 8 corridas / 4 combinaciones sin cambiar bytes. Menor: 30 y 30.0 cuentan como combinaciones distintas. decido: merge
 2026-10-14 · #152 · PM: 36y1 vi: partición de 360 líneas en .1 a .4 (80/90/100/90) con cadena .4 -> .3 -> .2 -> .1; los cuatro criterios del padre cubiertos; .3 puede registrar el comando en backtest.py. decido: merge
 2026-10-14 · #153 · PM: 36y1.1 vi: con --to en la última sesión de 2016 (12-30) se pierde la última ventana (2 en vez de 3); un sharpe_tasa_0 None hace fallar la selección con TypeError. decido: cambio ventana completa si hasta >= 24/12 de su último año; None pierde contra cualquier número.
+2026-10-14 · #153 · PM: 36y1.1 vi: con --to 2016-12-30 ahora da 3 ventanas (2 con 12-23), 2007-2018 sigue en 4; Sharpe None pierde y con todos None gana el primero; 28 passed, CI verde. Corte de la prueba en --to pasado a .3. decido: merge
 ```
