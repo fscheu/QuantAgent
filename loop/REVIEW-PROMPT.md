@@ -16,7 +16,9 @@ PASOS
    relevantes" o del "Cambio requerido".
 3. Corré el comando de "Probar" del PR (está en "CUERPO DEL PR", al final de este prompt), sin el prefijo de try.sh: ya
    estás en un worktree de la rama, con el entorno activado y una base SQLite propia.
-4. Corré `python -m pytest -q -n 2 -m "not slow and not api and not oraculo"` y, sola, `python -m pytest -q -m oraculo`.
+4. Corré los tests dirigidos: la línea "Tests a correr:" del TICKET más los archivos de `tests/` que el diff toca.
+   La suite completa no: la corre el CI; anotá su estado con `gh pr checks <n>`. Si el diff toca
+   `quantagent/backtesting/`, `trading/`, `portfolio/` o `strategy/`, corré además, sola, `python -m pytest -q -m oraculo`.
 5. Corré las tres referencias de M1 y verificá que no cambian: rsi/spy-90d 340 trades y PnL 4571.27;
    fifty-two-week-high/spy-2y-1d 6 / -249.35; triple-screen/spy-1y-4h 6 / 174.34.
 6. Hacé UNA comprobación que el PR no trae: otro fixture u otra estrategia, un caso borde, un valor recalculado

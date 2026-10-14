@@ -234,7 +234,11 @@ decidir está en el cuerpo del PR.
 
 Todo PR `loop` cumple, antes de abrirse:
 
-1. `python -m pytest -q -m "not slow and not api and not oraculo"` → 0 failed.
+1. Tests dirigidos → 0 failed: la línea "Tests a correr:" que el PM escribe en cada ticket (los archivos de
+   `tests/` de los módulos que toca), más los tests que la entrega crea o modifica. Desde el 2026-10-14 (pedido
+   de Fede, QuantAgent-1vj7) el agente ya no corre la suite completa: `-m "not slow and not api and not oraculo"`
+   la corre el CI de cada PR, y el CI verde (punto 3) es condición de merge. Si el CI rompe en algo que la lista
+   no cubría, la entrega vuelve como `cambio` y el PM amplía la lista de ese módulo.
    Los oráculos corren en el CI de cada PR y el PM los corre en cada revisión que toque `quantagent/backtesting/`, `quantagent/trading/`, `quantagent/portfolio/` o `quantagent/strategy/`, y en el punto de control de cada lote, con `python -m pytest -q -m oraculo`.
 2. `scripts/loop/smoke.sh` → exit 0 (SQLite temporal, sin tocar la base de desarrollo).
 3. CI verde en el PR (el workflow corre en PRs hacia `main` y hacia `lote/**`; lo verifica el PM).
@@ -313,7 +317,8 @@ es señal de que los tickets están mal definidos, no de que falte velocidad.
 1. Leer el ticket (`bd show`) antes que el cuerpo del PR: el criterio de aceptación es del ticket, no del
    resumen del implementador.
 2. Leer el diff completo. Marcar todo lo que esté fuera de "Archivos relevantes" o del cambio pedido.
-3. Correr él mismo el comando de "Probar" con `scripts/loop/try.sh` y la suite. No vale la salida pegada en el PR.
+3. Correr él mismo el comando de "Probar" con `scripts/loop/try.sh` y los tests dirigidos del ticket, y confirmar
+   el CI verde (la suite completa). No vale la salida pegada en el PR.
 4. Buscar el hueco con al menos una comprobación que el PR no trae: otro fixture u otra estrategia, un caso
    borde, un valor recalculado por otro camino, un test que debería fallar si se rompe la lógica y no falla.
 5. Decidir y comentar la línea `PM:`. En `vi:` va el dato de la comprobación propia del paso 4.
