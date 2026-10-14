@@ -20,25 +20,37 @@ Example:
 """
 
 
+from typing import Optional
+
+
 class PositionSizer:
     """Calculates position size based on capital and signal confidence."""
 
     REGLAS = ("confianza", "fijo")
 
-    def __init__(self, base_position_pct: float = 0.05, regla: str = "confianza"):
+    def __init__(
+        self,
+        base_position_pct: float = 0.05,
+        regla: str = "confianza",
+        orden_minima: Optional[float] = None,
+    ):
         """
         Initialize Position Sizer.
 
         Args:
             base_position_pct: Base percentage of portfolio per trade (default 5%, max 100%: no leverage)
             regla: "confianza" (portfolio × base % × confidence) or "fijo" (portfolio × base %)
+            orden_minima: Minimum order value in USD (optional)
         """
         if not 0 < base_position_pct <= 1.0:
             raise ValueError("base_position_pct must be between 0% and 100%")
         if regla not in self.REGLAS:
             raise ValueError(f"regla must be one of {self.REGLAS}, got {regla!r}")
+        if orden_minima is not None and orden_minima <= 0:
+            raise ValueError("orden_minima must be positive")
         self.base_position_pct = base_position_pct
         self.regla = regla
+        self.orden_minima = orden_minima
 
     def calculate_size(
         self,
@@ -76,6 +88,9 @@ class PositionSizer:
         position_value = portfolio_value * self.base_position_pct
         if self.regla == "confianza":
             position_value *= signal_confidence
+
+        if self.orden_minima is not None and position_value < self.orden_minima:
+            return 0.0
 
         # Calculate quantity: position_value / current_price
         qty = position_value / current_price

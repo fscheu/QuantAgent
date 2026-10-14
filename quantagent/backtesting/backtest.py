@@ -255,6 +255,7 @@ class Backtest:
                 "slippage_pct": self.config.get("slippage_pct", settings.TRADING_SLIPPAGE_PCT),
                 "commission_pct": self.config.get("commission_pct", settings.TRADING_COMMISSION_PCT),
                 "regla_tamano": self.config.get("regla_tamano", "confianza"),
+                "orden_minima": self.config.get("orden_minima"),
                 # Normalize model fields into generic ones; accept both
                 "model_provider": self.config.get(
                     "agent_llm_provider", self.config.get("model_provider", settings.AGENT_LLM_PROVIDER)
@@ -715,6 +716,7 @@ class Backtest:
                 "slippage_pct": self.config.get("slippage_pct", settings.TRADING_SLIPPAGE_PCT),
                 "commission_pct": self.config.get("commission_pct", settings.TRADING_COMMISSION_PCT),
                 "regla_tamano": self.config.get("regla_tamano", "confianza"),
+                "orden_minima": self.config.get("orden_minima"),
                 "model_provider": self.config.get(
                     "agent_llm_provider", self.config.get("model_provider", settings.AGENT_LLM_PROVIDER)
                 ),
@@ -730,6 +732,8 @@ class Backtest:
             environment=Environment.BACKTEST,
         )
         snapshot = {**StrategyAssembler.config_snapshot(resolved), "regla_tamano": resolved.regla_tamano}
+        if resolved.orden_minima is not None:
+            snapshot["orden_minima"] = resolved.orden_minima
         if "strategy_params" in self.config:
             snapshot["strategy_params"] = self.config["strategy_params"]
         return snapshot

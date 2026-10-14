@@ -165,12 +165,15 @@ def _resolve_source_and_meta(
 
 
 def _engine_config(commission_pct: Optional[float], costos: Optional[str] = None,
-                   tamano_posicion: Optional[float] = None, regla_tamano: Optional[str] = None) -> dict:
+                   tamano_posicion: Optional[float] = None, regla_tamano: Optional[str] = None,
+                   orden_minima: Optional[float] = None) -> dict:
     config = {"market_hours_filter": False, "offline_data": True}
     if tamano_posicion is not None:
         config["base_position_pct"] = config["max_position_pct"] = tamano_posicion
     if regla_tamano is not None:
         config["regla_tamano"] = regla_tamano
+    if orden_minima is not None:
+        config["orden_minima"] = orden_minima
     if costos is not None:
         if commission_pct is not None:
             raise click.UsageError("--costos y --commission-pct son excluyentes: elegí uno.")
@@ -181,6 +184,10 @@ def _engine_config(commission_pct: Optional[float], costos: Optional[str] = None
 
 
 def _tamano_options(f):
+    f = click.option(
+        "--orden-minima", "orden_minima", type=click.FloatRange(min=0.0, min_open=True), default=None,
+        help="Monto mínimo en USD por orden de entrada.",
+    )(f)
     f = click.option(
         "--regla-tamano", "regla_tamano", type=click.Choice(PositionSizer.REGLAS), default=None,
         help="Regla de tamaño: confianza (capital × fracción × confianza de la señal) o fijo. Default: confianza.",
@@ -275,7 +282,7 @@ def correr_par(
     pidió tamaño), regla_tamano (None si no se pidió), bh_pnl, bh_sharpe, bh_max_drawdown,
     retorno_anualizado, exceso_sobre_referencia, tiempo_en_mercado, capital_invertido_medio,
     sharpe_tasa_0, peor_dia (estas seis son None si no hay curva de equity), max_drawdown,
-    equity_curve y filas (TradeRow; vacía salvo con con_filas=True).
+    equity_curve, entradas_descartadas_orden_minima y filas (TradeRow; vacía salvo con con_filas=True).
     `params` son los parámetros del constructor de la estrategia (el resto, los defaults del registro).
     """
     reg_name = cli_aliases()[strategy_name]
@@ -370,6 +377,7 @@ def correr_par(
         "max_drawdown": metrics.max_drawdown,
         "equity_curve": curve,
         "filas": rows,
+        "entradas_descartadas_orden_minima": bt.order_manager.entradas_descartadas_orden_minima,
     }
     if "base_position_pct" in config or "regla_tamano" in config:
         r["tamano_pct"] = config.get("base_position_pct", settings.TRADING_BASE_POSITION_PCT)
@@ -474,9 +482,10 @@ def run_backtest(
     costos: Optional[str],
     tamano_posicion: Optional[float],
     regla_tamano: Optional[str],
+    orden_minima: Optional[float],
     params: dict,
 ) -> None:
-    config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano)
+    config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano, orden_minima)
     meta, symbol, to_date = _resolve_source_and_meta(
         "run",
         strategy_name,
@@ -509,6 +518,8 @@ def run_backtest(
     if costos:
         click.echo(f"Costos: {costos}")
     _echo_tamano(config)
+    if "orden_minima" in config:
+        click.echo(f"Entradas descartadas por orden mínima: {r['entradas_descartadas_orden_minima']}")
     click.echo(
         f"Comprar y mantener: PnL {r['bh_pnl']:.2f}, Sharpe {r['bh_sharpe']:.2f}, "
         f"max drawdown {r['bh_max_drawdown']:.6f}"
@@ -693,10 +704,11 @@ def verify_backtest(
     costos: Optional[str],
     tamano_posicion: Optional[float],
     regla_tamano: Optional[str],
+    orden_minima: Optional[float],
 ) -> None:
     import difflib
 
-    config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano)
+    config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano, orden_minima)
     meta, symbol, to_date = _resolve_source_and_meta(
         "verify",
         strategy_name,
@@ -867,6 +879,7 @@ def generar_markdown_compare(
 @click.option("--costos", type=click.Choice(sorted(COSTOS_PERFILES)), default=None, help="Perfil de costos.")
 @click.option("--tamano-posicion", "tamano_posicion", type=click.FloatRange(min=0.0, max=1.0, min_open=True), default=1.0)
 @click.option("--regla-tamano", "regla_tamano", type=click.Choice(PositionSizer.REGLAS), default=None)
+@click.option("--orden-minima", "orden_minima", type=click.FloatRange(min=0.0, min_open=True), default=None, help="Monto mínimo en USD por orden de entrada.")
 @click.option("--abrir-reserva", "abrir_reserva", is_flag=True, help="Permite abrir la reserva.")
 @click.option("--abrir-prueba", "abrir_prueba", is_flag=True, help="Permite abrir el tramo de prueba.")
 @click.option("--out", "out_path", required=True, type=click.Path(dir_okay=False, writable=True), help="CSV de salida.")
@@ -877,7 +890,7 @@ def compare_backtests(
     strategies: str, symbols: str, snapshot_name: str, from_date: Optional[datetime],
     to_date: Optional[datetime], costos: Optional[str], tamano_posicion: Optional[float],
     regla_tamano: Optional[str], abrir_reserva: bool, abrir_prueba: bool, out_path: str, trades_dir: Optional[str],
-    params: dict, md_path: Optional[str] = None,
+    params: dict, md_path: Optional[str] = None, orden_minima: Optional[float] = None,
 ) -> None:
     reserva = _reserva_desde()
     prueba = _prueba_desde()
@@ -935,7 +948,7 @@ def compare_backtests(
         partes.append(f"--to {to_date:%Y-%m-%d} --abrir-prueba")
         _registrar_apertura_prueba(" ".join(partes))
 
-    config = _engine_config(None, costos, tamano_posicion, regla_tamano)
+    config = _engine_config(None, costos, tamano_posicion, regla_tamano, orden_minima)
     if trades_dir:
         os.makedirs(trades_dir, exist_ok=True)
 
