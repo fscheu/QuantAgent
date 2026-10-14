@@ -494,7 +494,9 @@ Los primeros 5 son los más fáciles de revisar.
 | V27b | `QuantAgent-24qm` | Piso absoluto de 5e-9 en la tolerancia de cantidad del control (decisión de Fede en #113) | (VM) rsi/IWM `coinciden 236 de 236`; rsi/SPY sigue 187 de 187 | probar | L7 |
 | V27c | `QuantAgent-u8lf` | Diagnóstico: rsi/GLD da 243 trades al cierre y 242 con apertura siguiente | Doc con el primer trade que diverge y la regla del código que lo explica | leer | L7 |
 | V30 | `QuantAgent-yo4s` | Decisión: umbrales del veredicto, supuesto de llenado, tamaño mínimo de orden y costo de cortos, antes de abrir 2019–2022 | Doc con las cuatro decisiones: opciones, dato medido sobre 2007–2018 y recomendación | decidir | L7 |
-| V31a | `QuantAgent-av3i` | `backtest sweep`: grilla de parámetros de una estrategia sobre un activo, sin poder abrir prueba ni reserva | (VM) rsi/SPY con `rsi_period` 14 da 187 / -9141.21 y con 7 da 325 / -14560.44 | probar | L7 |
+| V31a.1 | `QuantAgent-av3i.1` | Cargar y validar grilla de sweep (padre `QuantAgent-av3i`) | RSI 2x2: cuatro combinaciones; rechaza parámetro desconocido y más de 50 | leer | L7 |
+| V31a.2 | `QuantAgent-av3i.2` | Comando sweep con base aislada y candado; depende de V31a.1 | CLI inválido sale 1 sin CSV; sin flags para abrir prueba ni reserva | probar | L7 |
+| V31a.3 | `QuantAgent-av3i.3` | Integración real de sweep; depende de V31a.2 | RSI 2x2 coincide con defaults; (VM) periodos 14 y 7: 187 / -9141.21 y 325 / -14560.44 | probar | L7 |
 | V31b | `QuantAgent-8cry` | Registro de intentos que solo crece (`intentos.csv`) y `backtest attempts` | Dos sweeps de 4 combinaciones dejan 8 filas; 4 combinaciones distintas | probar | L7 |
 | V32 | `QuantAgent-36y1` | `backtest walkforward`: elegir parámetros en una ventana y medir en la siguiente, dentro del ajuste | Test con serie conocida: ninguna ventana de prueba elige parámetros | probar | L7 |
 | V36a | `QuantAgent-7ssw` | Significancia, Monte Carlo y tabla de crisis sobre el veredicto (activado por Fede el 2026-10-13; tres tickets después de V33) | Los escribe el PM con V33 integrado | probar | L7 |
