@@ -167,6 +167,7 @@ class StrategyAdapter(Strategy):
     def _close(self, reason):
         self.info[self.key]["reason"] = reason
         if self.fill_close:
+            self.info[self.key]["salida_al_cierre"] = True  # orden de mercado: equity_curve resta su costo
             # La orden opuesta llena a este cierre. Sin cancelar sl/tp, un stop tocado en la vela
             # siguiente se procesaria antes y la orden opuesta abriria una posicion contraria.
             for trade in self.trades:
@@ -223,6 +224,29 @@ def run_adapter(strategy, df: pd.DataFrame, *, symbol: str, timeframe: str, fill
                   trade_on_close=close, hedging=False, exclusive_orders=False, finalize_trades=not close)
     return bt.run(strategy=strategy, symbol=symbol, timeframe=timeframe, n_real_bars=len(df) - 1, fill_close=close,
                   slippage=slippage_pct, commission=commission_pct, orden_minima=orden_minima)
+
+
+def equity_curve(stats) -> pd.Series:
+    """QuantAgent-mxy7: Equity de la libreria por vela real, con el costo del llenado en la vela de la orden.
+
+    Con trade_on_close la libreria escribe Equity[i] antes de llenar la orden de mercado puesta en la vela i
+    (la llena al procesar la i+1, a Close[i]), asi que Equity[i] no descuenta su slippage ni su comision y el
+    motor si. Se resta ese costo en la vela i para cada entrada y cada salida por regla o backtest_end; los
+    stops y take profit los llena la libreria dentro de la vela, ya descontados. Con next-open, sin cambios.
+    """
+    strat = stats["_strategy"]
+    equity = stats["_equity_curve"]["Equity"].iloc[:strat.n_real_bars].copy()
+    if not strat.fill_close:
+        return equity
+    close = strat.bars["close"].to_numpy() / SCALE  # referencia en la escala de la libreria
+    costo = [0.0] * len(equity)
+    for t in stats["_trades"].itertuples():
+        fills = [(t.EntryBar, t.EntryPrice)]
+        if strat.info[t.EntryBar].get("salida_al_cierre"):
+            fills.append((t.ExitBar, t.ExitPrice))
+        for bar, price in fills:  # nocional por |precio de llenado - referencia| mas la comision nativa
+            costo[bar] += abs(t.Size) * (abs(price - close[bar]) + price * strat.commission)
+    return equity - costo
 
 
 def trade_rows(stats, symbol: str) -> list[TradeRow]:

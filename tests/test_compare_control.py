@@ -216,7 +216,7 @@ def test_compare_control_sensibilidad_apertura_siguiente_gap(snap_env, monkeypat
     monkeypatch.setattr(settings, "TRADING_BASE_POSITION_PCT", 1.0)
     for fill in ("close", "next-open"):
         stats = control.bt_adapter.run_adapter(control.build_strategy("FiftyTwoWeekHighStrategy"), adapter_df.copy(), symbol="SPY", timeframe="1d", fill=fill, commission_pct=settings.TRADING_COMMISSION_PCT, slippage_pct=settings.TRADING_SLIPPAGE_PCT)
-        equity = stats["_equity_curve"]["Equity"].iloc[:stats["_strategy"].n_real_bars]
+        equity = control.bt_adapter.equity_curve(stats)
         returns = equity.pct_change().dropna()
         periods = (len(equity) - 1) * 365.25 * 86400 / (equity.index[-1] - equity.index[0]).total_seconds()
         metrics.append((float(returns.mean() / returns.std() * periods ** 0.5), float((1 - equity / equity.cummax()).max())))
@@ -293,3 +293,44 @@ def test_compare_control_con_orden_minima(snap_env):
     with open(out_csv, newline="") as f:
         row = next(csv.DictReader(f))
     assert row["control"] == "coinciden 6 de 6"
+
+
+@pytest.mark.parametrize("alias, costos", [
+    ("fifty-two-week-high", None),  # solo entradas al cierre; las salidas son STOP_LOSS (QuantAgent-jzb6)
+    ("sma-cross", "cripto"),  # salida por regla (SMA_CROSS_DOWN) y backtest_end, con comision
+])
+def test_equity_curve_del_adaptador_iguala_la_del_motor(snap_env, monkeypatch, alias, costos):
+    """QuantAgent-mxy7: con llenado al cierre, equity_curve descuenta el costo en la vela de la orden, como el motor."""
+    from quantagent.backtesting import backtest as motor
+
+    runner, tmp_path = snap_env
+    write_snapshot("t", {"SPY": _daily_frame()})
+    motores = []
+    run = motor.Backtest.run
+    monkeypatch.setattr(motor.Backtest, "run", lambda self, *a, **k: (motores.append(self), run(self, *a, **k))[1])
+    extra = ["--costos", costos] if costos else []
+    res = runner.invoke(backtest_group, ["compare", "--strategies", alias, "--symbols", "SPY", "--snapshot", "t",
+                                         "--out", str(tmp_path / "cmp.csv"), "--trades-dir", str(tmp_path / "tr"), *extra])
+    assert res.exit_code == 0, res.output
+    with open(tmp_path / "cmp.csv", newline="") as f:
+        sharpe_motor = float(next(csv.DictReader(f))["sharpe_tasa_0"])
+    curva_motor = motores[-1].get_equity_curve()["equity"].to_numpy()
+
+    monkeypatch.setattr(settings, "TRADING_BASE_POSITION_PCT", 1.0)
+    tasas = settings.COSTOS_PERFILES[costos] if costos else {
+        "commission_pct": settings.TRADING_COMMISSION_PCT, "slippage_pct": settings.TRADING_SLIPPAGE_PCT}
+    df = control.port.load_fixture(snapshot="t", symbol="SPY")
+    stats = {fill: control.bt_adapter.run_adapter(control.build_strategy(control.cli_aliases()[alias]), df.copy(),
+                                                  symbol="SPY", timeframe="1d", fill=fill, **tasas)
+             for fill in ("close", "next-open")}
+
+    curva = control.bt_adapter.equity_curve(stats["close"])
+    sin_corregir = stats["close"]["_equity_curve"]["Equity"].iloc[:len(curva)].to_numpy()
+    assert len(curva) == len(curva_motor) == 520
+    assert abs(sin_corregir - curva_motor).max() > 1.0  # el corrimiento existe en esta celda
+    assert abs(curva.to_numpy() - curva_motor).max() < 1e-4
+    assert round(control.metricas_curva(curva)[0], 2) == sharpe_motor
+
+    abierta = stats["next-open"]
+    curva_open = control.bt_adapter.equity_curve(abierta)
+    pd.testing.assert_series_equal(curva_open, abierta["_equity_curve"]["Equity"].iloc[:abierta["_strategy"].n_real_bars])
