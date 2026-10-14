@@ -76,6 +76,22 @@ class StrategyAdapter(Strategy):
         self.pos = None  # ActivePosition de la posicion abierta (o con orden de entrada pendiente)
         self.info = {}  # vela de entrada -> {"stop", "reason"} para el CSV
         process_orders = self._broker._process_orders
+        adjusted_price = self._broker._adjusted_price
+
+        # QuantAgent-n51l: el motor acepta cortos al 100% aun con comision > slippage.
+        # La libreria llama _adjusted_price por orden independiente, antes de comprobar margen.
+        def price_with_short_margin(size=None, price=None):
+            self._broker._leverage = 1 + self.commission if size < 0 else 1.0
+            return adjusted_price(size, price)
+
+        self._broker._adjusted_price = price_with_short_margin
+        original_process_orders = process_orders
+
+        def process_orders():
+            try:
+                original_process_orders()
+            finally:
+                self._broker._leverage = 1.0
 
         # QuantAgent-ws3d: regla de salto en la apertura del motor (quantagent/backtesting/backtest.py).
         # Si la vela abre mas alla del take profit o stop, la posicion sale en la apertura con ese motivo.

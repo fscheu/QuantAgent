@@ -33,6 +33,47 @@ def test_metricas_curva_calculo_manual():
     assert drawdown == pytest.approx(0.1, abs=1e-9, rel=0)
 
 
+@pytest.mark.parametrize("alias,costos,expected", [
+    ("rsi", "cripto", 46), ("rsi", "etf", 46), ("fifty-two-week-high", "etf", 6),
+])
+def test_control_cortos_al_cien_por_ciento(snap_env, alias, costos, expected):
+    runner, tmp_path = snap_env
+    write_snapshot("t", {"SPY": _daily_frame()})
+    tabla, trades = tmp_path / "cmp.csv", tmp_path / "trades"
+    result = runner.invoke(backtest_group, [
+        "compare", "--strategies", alias, "--symbols", "SPY", "--snapshot", "t",
+        "--costos", costos, "--tamano-posicion", "1.0", "--out", str(tabla), "--trades-dir", str(trades),
+    ])
+    assert result.exit_code == 0, result.output
+    _run_control(tabla, trades, "t", None, "--costos", costos)
+    with tabla.open(newline="") as f:
+        assert next(csv.DictReader(f))["control"] == f"coinciden {expected} de {expected}"
+
+
+def test_largo_mayor_que_efectivo_sigue_cancelado(monkeypatch):
+    from quantagent.strategy.base import TradingSignal
+
+    class LongOverCash:
+        required_history_bars = 30
+        sent = False
+
+        def generate_signal(self, window, symbol, timeframe, price):
+            if self.sent:
+                return None
+            self.sent = True
+            return TradingSignal(decision="LONG", confidence=1.0,
+                                 entry_price=price, stop_loss=price * 0.5, take_profit=price * 2)
+
+    monkeypatch.setattr(settings, "TRADING_BASE_POSITION_PCT", 1.0001)
+    df = control.port.load_fixture(FIXTURES_DIR / "spy-2y-1d.csv").iloc[:32].copy()
+    with pytest.warns(UserWarning, match="insufficient margin"):
+        stats = control.bt_adapter.run_adapter(LongOverCash(), df, symbol="SPY", timeframe="1d",
+                                               commission_pct=0.001, slippage_pct=0.0005)
+    assert stats["# Trades"] == 0
+    assert not stats["_strategy"].trades
+    assert stats["_strategy"]._broker._cash == control.bt_adapter.INITIAL_CASH
+
+
 def _daily_frame() -> pd.DataFrame:
     with (FIXTURES_DIR / "spy-2y-1d.csv").open(newline="") as f:
         rows = list(csv.DictReader(f))
