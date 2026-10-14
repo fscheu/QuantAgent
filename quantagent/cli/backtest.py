@@ -285,7 +285,7 @@ def correr_par(
     pidió tamaño), regla_tamano (None si no se pidió), bh_pnl, bh_sharpe, bh_max_drawdown,
     retorno_anualizado, exceso_sobre_referencia, tiempo_en_mercado, capital_invertido_medio,
     sharpe_tasa_0, peor_dia (estas seis son None si no hay curva de equity), max_drawdown,
-    equity_curve, entradas_descartadas_orden_minima y filas (TradeRow; vacía salvo con con_filas=True).
+    equity_curve, cierres (timestamp, cierre ajustado de cada vela), entradas_descartadas_orden_minima y filas (TradeRow; vacía salvo con con_filas=True).
     `params` son los parámetros del constructor de la estrategia (el resto, los defaults del registro).
     """
     reg_name = cli_aliases()[strategy_name]
@@ -358,6 +358,7 @@ def correr_par(
 
     curve = bt.equity_curve
     r = {
+        "cierres": [(c.timestamp, float(c.close)) for c in candles],
         "trades": metrics.total_trades,
         "win_rate": metrics.win_rate,
         "profit_factor": metrics.profit_factor,
@@ -792,6 +793,27 @@ COMPARE_COLUMNS = [
     "capital_invertido_medio", "sharpe_tasa_0",
 ]
 
+CRISIS_ANIOS = (2008, 2020, 2022)
+
+
+def _retorno_anio(puntos: list[tuple[datetime, float]], anio: int) -> float:
+    """Último valor del año / último valor del año anterior, menos 1."""
+    previo = [v for d, v in puntos if d.year == anio - 1][-1]
+    return [v for d, v in puntos if d.year == anio][-1] / previo - 1
+
+
+def crisis_columnas(curve: list[dict], cierres: list[tuple[datetime, float]], to_date: datetime) -> dict:
+    """crisis_<año>: retorno de la estrategia en el año menos el de comprar y mantener; vacía si el año no está completo."""
+    out = {}
+    puntos = [(p["date"], p["equity"]) for p in curve]
+    for anio in CRISIS_ANIOS:
+        completo = (
+            bool(curve) and curve[0]["date"].year < anio <= curve[-1]["date"].year
+            and to_date >= datetime(anio, 12, 31)
+        )
+        out[f"crisis_{anio}"] = round(_retorno_anio(puntos, anio) - _retorno_anio(cierres, anio), 4) if completo else ""
+    return out
+
 
 def generar_markdown_compare(
     rows: list[dict],
@@ -889,13 +911,16 @@ def generar_markdown_compare(
 @click.option("--trades-dir", "trades_dir", type=click.Path(file_okay=False, writable=True), default=None)
 @click.option("--equity-dir", type=click.Path(file_okay=False, writable=True), default=None, help="CSV date,equity del motor por celda (equity con 2 decimales).")
 @click.option("--md", "md_path", type=click.Path(dir_okay=False, writable=True), default=None, help="Documento Markdown de salida.")
+@click.option("--crisis", is_flag=True, help="Suma crisis_2008/2020/2022: retorno del año menos comprar y mantener (informativo).")
 @_params_option
 def compare_backtests(
     strategies: str, symbols: str, snapshot_name: str, from_date: Optional[datetime],
     to_date: Optional[datetime], costos: Optional[str], tamano_posicion: Optional[float],
     regla_tamano: Optional[str], abrir_reserva: bool, abrir_prueba: bool, out_path: str, trades_dir: Optional[str],
     params: dict, md_path: Optional[str] = None, orden_minima: Optional[float] = None, equity_dir: Optional[str] = None,
+    crisis: bool = False,
 ) -> None:
+    columns = COMPARE_COLUMNS + [f"crisis_{a}" for a in CRISIS_ANIOS] if crisis else COMPARE_COLUMNS
     reserva = _reserva_desde()
     prueba = _prueba_desde()
     tope = min(prueba, reserva)
@@ -997,10 +1022,11 @@ def compare_backtests(
                 "tiempo_en_mercado": _fmt(r["tiempo_en_mercado"], 4),
                 "capital_invertido_medio": _fmt(r["capital_invertido_medio"], 4),
                 "sharpe_tasa_0": _fmt(r["sharpe_tasa_0"], 2),
+                **(crisis_columnas(r["equity_curve"], r["cierres"], to_date) if crisis else {}),
             })
 
     with open(out_path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=COMPARE_COLUMNS)
+        writer = csv.DictWriter(f, fieldnames=columns)
         writer.writeheader()
         writer.writerows(rows)
 
@@ -1011,14 +1037,14 @@ def compare_backtests(
             costos=costos,
             tamano_posicion=tamano_posicion,
             regla_tamano=regla_tamano,
-            columns=COMPARE_COLUMNS,
+            columns=columns,
             params=params,
         )
         with open(md_path, "w", encoding="utf-8") as f:
             f.write(md_text)
 
-    table_data = [[row[col] for col in COMPARE_COLUMNS] for row in rows]
-    click.echo(tabulate(table_data, headers=COMPARE_COLUMNS, tablefmt="github"))
+    table_data = [[row[col] for col in columns] for row in rows]
+    click.echo(tabulate(table_data, headers=columns, tablefmt="github"))
 
 
 backtest_group.add_command(sweep_command, name="sweep")

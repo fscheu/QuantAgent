@@ -72,6 +72,57 @@ def test_compare_equity_dir_exports_motor_without_changing_outputs(cli_runner, m
     assert not (tmp_path / "blocked").exists()
 
 
+def test_compare_crisis_columns_match_hand_computed_year_returns(cli_runner, monkeypatch, tmp_path):
+    """crisis_2008 = retorno 2008 de la curva del motor menos el de los cierres ajustados; año incompleto o fuera del rango, vacía."""
+    import numpy as np
+    import pandas as pd
+
+    import quantagent.cli.backtest as cli
+    from quantagent.data.snapshot import write_snapshot
+
+    index = pd.bdate_range("2007-10-01", "2009-02-27", name="timestamp")
+    close = 100 + 10 * np.sin(np.arange(len(index)) / 6) - np.arange(len(index)) * 0.05
+    frame = pd.DataFrame({"open": close - 0.5, "high": close + 1, "low": close - 1, "close": close,
+                          "volume": 1000}, index=index)
+    frame["adj_close"] = close * np.linspace(0.9, 1.0, len(index))  # distinto de close: el test exige el ajustado
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path / "snapshots"))
+    write_snapshot("synthetic", {"SPY": frame})
+    curves = []
+    real_run = cli.correr_par
+
+    def capture_curve(*args, **kwargs):
+        result = real_run(*args, **kwargs)
+        curves.append(result["equity_curve"])
+        return result
+
+    monkeypatch.setattr(cli, "correr_par", capture_curve)
+    command = ["compare", "--strategies", "rsi", "--symbols", "SPY", "--snapshot", "synthetic"]
+
+    def run(name, *extra):
+        result = cli_runner.invoke(backtest_group, [*command, "--out", str(tmp_path / f"{name}.csv"), *extra])
+        assert result.exit_code == 0, result.output
+        return list(csv.DictReader((tmp_path / f"{name}.csv").open()))
+
+    plain = run("plain")
+    [row] = run("crisis", "--crisis")
+    curve = curves[-1]
+    assert curve[0]["equity"] != curve[-1]["equity"]
+
+    def year_return(points, year):
+        return [v for d, v in points if d.year == year][-1] / [v for d, v in points if d.year == year - 1][-1] - 1
+
+    engine = year_return([(p["date"], p["equity"]) for p in curve], 2008)
+    hold = year_return(list(zip(index, frame["adj_close"])), 2008)
+    assert float(row["crisis_2008"]) == pytest.approx(round(engine - hold, 4), abs=1e-6)
+    assert row["crisis_2020"] == row["crisis_2022"] == ""
+
+    assert list(plain[0]) == cli.COMPARE_COLUMNS
+    assert plain == [{k: v for k, v in row.items() if not k.startswith("crisis_")}]
+
+    [partial] = run("partial", "--crisis", "--to", "2008-12-15")
+    assert partial["crisis_2008"] == ""
+
+
 @pytest.fixture
 def cli_runner(monkeypatch, tmp_path):
     """Provide CliRunner with an isolated, fully-migrated SQLite database.
