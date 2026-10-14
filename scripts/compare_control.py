@@ -38,9 +38,23 @@ from quantagent.data.snapshot import load_manifest  # noqa: E402
 from quantagent.strategy.registry import build_strategy, cli_aliases  # noqa: E402
 
 QTY_RTOL = crossval_compare.QTY_RTOL
+QTY_ATOL = getattr(crossval_compare, "QTY_ATOL", 5e-9)
 PRICE_TOL = crossval_compare.PRICE_TOL
 NUMERIC = crossval_compare.NUMERIC
 pnl_tol = crossval_compare.pnl_tol
+METRIC_COLUMNS = ("ajuste_sharpe_apertura", "ajuste_drawdown_apertura",
+                  "sharpe_tasa_0_apertura_siguiente", "max_drawdown_apertura_siguiente")
+
+
+def metricas_curva(equity) -> tuple[float, float]:
+    if len(equity) < 2:
+        return 0.0, 0.0
+    returns = equity.pct_change().dropna()
+    years = (equity.index[-1] - equity.index[0]).total_seconds() / (365.25 * 86400)
+    periods = (len(equity) - 1) / years if years > 0 else 0.0
+    sharpe = float(returns.mean() / returns.std() * periods ** 0.5) if len(returns) and returns.std() != 0 and periods > 0 else 0.0
+    peaks = equity.expanding().max()
+    return sharpe, float(abs(((equity - peaks) / peaks).min()))
 
 
 @functools.lru_cache(maxsize=32)
@@ -53,7 +67,7 @@ def compare_trades_with_reasons(eng: list[dict], prt: list[dict]) -> str:
         return f"sin validar: distinta cantidad de trades (motor={len(eng)}, port={len(prt)})"
     for i, (e, p) in enumerate(zip(eng, prt)):
         bad = [c for c in ("entry_time", "exit_time", "symbol", "side", "exit_reason") if e.get(c) != p.get(c)]
-        tols = {"qty": QTY_RTOL * abs(float(e["qty"])), "entry_price": PRICE_TOL, "exit_price": PRICE_TOL, "pnl": pnl_tol(e)}
+        tols = {"qty": max(QTY_RTOL * abs(float(e["qty"])), QTY_ATOL), "entry_price": PRICE_TOL, "exit_price": PRICE_TOL, "pnl": pnl_tol(e)}
         for c in NUMERIC:
             ve, vp = e.get(c, ""), p.get(c, "")
             if ve == "" or vp == "":
@@ -74,6 +88,7 @@ def main(argv=None) -> int:
     ap.add_argument("--costos", choices=sorted(settings.COSTOS_PERFILES), help="Perfil de costos")
     ap.add_argument("--tamano-posicion", type=float, default=1.0, help="Tamaño de posición (default 1.0)")
     ap.add_argument("--regla-tamano", choices=["confianza", "fijo"], default="confianza", help="Regla de tamaño (default confianza)")
+    ap.add_argument("--orden-minima", type=float, default=None, help="Monto mínimo en USD por orden de entrada")
     ap.add_argument("--out", help="CSV de salida (default: sobrescribe --tabla)")
     ap.add_argument("--md", help="Documento Markdown de salida")
     ap.add_argument("--params", help="JSON de parámetros de estrategia, el mismo que se pasó a backtest compare")
@@ -98,6 +113,7 @@ def main(argv=None) -> int:
     aliases = cli_aliases()
 
     for row in rows:
+        row.update(dict.fromkeys(METRIC_COLUMNS, ""))
         strat, sym = row["estrategia"], row["activo"]
         motor_file = Path(args.trades_dir) / f"{strat}-{sym}.csv"
         if not motor_file.exists():
@@ -111,7 +127,15 @@ def main(argv=None) -> int:
             df = _load_snapshot_df(args.snapshot, sym, row.get("desde"), row.get("hasta")).copy()
             settings.TRADING_BASE_POSITION_PCT = args.tamano_posicion
             bt_adapter.settings.TRADING_BASE_POSITION_PCT = args.tamano_posicion
-            stats = bt_adapter.run_adapter(build_strategy(aliases[strat], **params.get(strat, {})), df, symbol=sym, timeframe=timeframe, fill="close", **costos)
+            stats = bt_adapter.run_adapter(
+                build_strategy(aliases[strat], **params.get(strat, {})),
+                df,
+                symbol=sym,
+                timeframe=timeframe,
+                fill="close",
+                orden_minima=args.orden_minima,
+                **costos,
+            )
             prt_rows = list(csv.DictReader(io.StringIO(trades_to_csv(bt_adapter.trade_rows(stats, sym)))))
             row["control"] = compare_trades_with_reasons(eng_rows, prt_rows)
         except Exception as exc:
@@ -121,16 +145,30 @@ def main(argv=None) -> int:
             df_open = _load_snapshot_df(args.snapshot, sym, row.get("desde"), row.get("hasta")).copy()
             settings.TRADING_BASE_POSITION_PCT = args.tamano_posicion
             bt_adapter.settings.TRADING_BASE_POSITION_PCT = args.tamano_posicion
-            stats_open = bt_adapter.run_adapter(build_strategy(aliases[strat], **params.get(strat, {})), df_open, symbol=sym, timeframe=timeframe, fill="next-open", **costos)
+            stats_open = bt_adapter.run_adapter(
+                build_strategy(aliases[strat], **params.get(strat, {})),
+                df_open,
+                symbol=sym,
+                timeframe=timeframe,
+                fill="next-open",
+                orden_minima=args.orden_minima,
+                **costos,
+            )
             open_rows = bt_adapter.trade_rows(stats_open, sym)
             row["pnl_apertura_siguiente"] = round(sum(r.pnl for r in open_rows), 2)
             row["trades_apertura_siguiente"] = len(open_rows)
+            if row["control"].startswith("coinciden ") and all(row.get(c) not in (None, "") for c in ("sharpe_tasa_0", "max_drawdown")):
+                s, d = metricas_curva(bt_adapter.equity_curve(stats))
+                so, do = metricas_curva(bt_adapter.equity_curve(stats_open))
+                row.update(zip(METRIC_COLUMNS, (round(so - s, 2), round(do - d, 6),
+                           round(float(row["sharpe_tasa_0"]) + so - s, 2),
+                           round(max(0.0, float(row["max_drawdown"]) + do - d), 6))))
         except Exception:
             row["pnl_apertura_siguiente"] = ""
             row["trades_apertura_siguiente"] = ""
 
-    fieldnames = list(rows[0].keys())
-    for col in ("control", "pnl_apertura_siguiente", "trades_apertura_siguiente"):
+    fieldnames = [c for c in rows[0] if c not in METRIC_COLUMNS]
+    for col in ("control", "pnl_apertura_siguiente", "trades_apertura_siguiente", *METRIC_COLUMNS):
         if col not in fieldnames:
             fieldnames.append(col)
     out_path = args.out or args.tabla

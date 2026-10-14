@@ -37,6 +37,7 @@ class OrderManager:
         broker,  # PaperBroker instance
         portfolio_manager,  # PortfolioManager instance
         db: Session,
+        orden_minima: Optional[float] = None,
     ):
         """
         Initialize Order Manager.
@@ -47,12 +48,19 @@ class OrderManager:
             broker: Broker instance (PaperBroker)
             portfolio_manager: PortfolioManager instance
             db: SQLAlchemy session
+            orden_minima: Minimum order value in USD for entries (optional)
         """
         self.position_sizer = position_sizer
         self.risk_manager = risk_manager
         self.broker = broker
         self.portfolio = portfolio_manager
         self.db = db
+        self.orden_minima = (
+            orden_minima
+            if orden_minima is not None
+            else getattr(position_sizer, "orden_minima", None)
+        )
+        self.entradas_descartadas_orden_minima = 0
 
     def _cap_entry_qty(self, side: OrderSide, qty: float, price: float) -> float:
         """Recorta una entrada que compra a lo que el efectivo alcanza a pagar con slippage y comisión (sin apalancar).
@@ -155,6 +163,14 @@ class OrderManager:
                 trigger_signal_id=trigger_signal_id,
                 timestamp=timestamp,
             )
+
+        if self.orden_minima is not None and (qty <= 0 or (qty * current_price) < self.orden_minima - 1e-9):
+            self.entradas_descartadas_orden_minima += 1
+            logger.info(
+                f"{symbol}: Entry discarded due to min order size {self.orden_minima} USD "
+                f"(qty: {qty:.6f}, value: ${qty * current_price:.2f})"
+            )
+            return None
 
         qty = self._cap_entry_qty(side, qty, current_price)
 
@@ -417,6 +433,14 @@ class OrderManager:
         )
 
         # Validate new trade (the opening leg is an entry: cap it to the cash left after the close)
+        if self.orden_minima is not None and (new_qty <= 0 or (new_qty * current_price) < self.orden_minima - 1e-9):
+            self.entradas_descartadas_orden_minima += 1
+            logger.info(
+                f"{symbol}: Reversal new entry discarded due to min order size {self.orden_minima} USD "
+                f"(qty: {new_qty:.6f}, value: ${new_qty * current_price:.2f})"
+            )
+            return None
+
         new_qty = self._cap_entry_qty(new_side, new_qty, current_price)
         is_valid, reason = self.risk_manager.validate_trade(
             symbol, new_side, new_qty, current_price

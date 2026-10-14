@@ -66,17 +66,59 @@ class StrategyAdapter(Strategy):
     n_real_bars = 0  # sin la vela centinela
     fill_close = True
     slippage = commission = 0.0  # fracciones por lado
+    orden_minima = None
 
     def init(self):
+        self.entradas_descartadas_orden_minima = 0
         df = self.data.df
         cols = {c.lower(): df[c].values * (1.0 if c == "Volume" else SCALE) for c in df.columns}
         self.bars = pd.DataFrame({"timestamp": df.index, **cols})  # precios reales, columnas del motor
         self.pos = None  # ActivePosition de la posicion abierta (o con orden de entrada pendiente)
         self.info = {}  # vela de entrada -> {"stop", "reason"} para el CSV
-        if not self.fill_close:
-            process_orders = self._broker._process_orders
+        process_orders = self._broker._process_orders
+        adjusted_price = self._broker._adjusted_price
 
+        # QuantAgent-n51l: el motor acepta cortos al 100% aun con comision > slippage.
+        # La libreria llama _adjusted_price por orden independiente, antes de comprobar margen.
+        def price_with_short_margin(size=None, price=None):
+            self._broker._leverage = 1 + self.commission if size < 0 else 1.0
+            return adjusted_price(size, price)
+
+        self._broker._adjusted_price = price_with_short_margin
+        original_process_orders = process_orders
+
+        def process_orders():
+            try:
+                original_process_orders()
+            finally:
+                self._broker._leverage = 1.0
+
+        # QuantAgent-ws3d: regla de salto en la apertura del motor (quantagent/backtesting/backtest.py).
+        # Si la vela abre mas alla del take profit o stop, la posicion sale en la apertura con ese motivo.
+        def apply_opening_gap():
+            open_val = float(self._broker._data._current_value("Open"))
+            for trade in list(self._broker.trades):
+                if self._broker._i <= trade.entry_bar:
+                    continue
+                sl, tp = trade.sl, trade.tp
+                reason = None
+                if trade.is_long:
+                    if sl is not None and open_val <= sl:
+                        reason = "STOP_LOSS"
+                    elif tp is not None and open_val >= tp:
+                        reason = "TAKE_PROFIT"
+                else:
+                    if sl is not None and open_val >= sl:
+                        reason = "STOP_LOSS"
+                    elif tp is not None and open_val <= tp:
+                        reason = "TAKE_PROFIT"
+                if reason:
+                    self.info[trade.entry_bar]["reason"] = reason
+                    self._broker._close_trade(trade, open_val, self._broker._i)
+
+        if not self.fill_close:
             def cap_open_entries():
+                apply_opening_gap()
                 broker = self._broker
                 entries = [o for o in broker.orders if not o.parent_trade]
                 broker.orders[:] = [o for o in broker.orders if o.parent_trade]
@@ -94,6 +136,13 @@ class StrategyAdapter(Strategy):
                 process_orders()
 
             self._broker._process_orders = cap_open_entries
+        else:
+            def process_orders_gap():
+                apply_opening_gap()
+                process_orders()
+
+            self._broker._process_orders = process_orders_gap
+
         if self.slippage:  # cerrar un largo es vender (precio * (1 - s)); cerrar un corto es comprar (* (1 + s))
             close_trade = self._broker._close_trade
             self._broker._close_trade = lambda trade, price, i: close_trade(
@@ -106,9 +155,10 @@ class StrategyAdapter(Strategy):
         if self.pos is not None and not self.position:
             last = self.closed_trades[-1] if self.closed_trades else None
             if last is not None and last.entry_bar == self.key:  # la libreria cerro por sl=/tp=
-                stop = self.info[self.key]["stop"] / SCALE
-                hit_stop = last.exit_price <= stop if last.is_long else last.exit_price >= stop
-                self.info[self.key]["reason"] = "STOP_LOSS" if hit_stop else "TAKE_PROFIT"
+                if self.info[self.key]["reason"] == "backtest_end":
+                    stop = self.info[self.key]["stop"] / SCALE
+                    hit_stop = last.exit_price <= stop if last.is_long else last.exit_price >= stop
+                    self.info[self.key]["reason"] = "STOP_LOSS" if hit_stop else "TAKE_PROFIT"
             self.pos = None  # (si no hay trade, la libreria cancelo la orden por falta de efectivo)
         history = self.strategy.required_history_bars
         history = history if history > 0 else 30
@@ -133,6 +183,7 @@ class StrategyAdapter(Strategy):
     def _close(self, reason):
         self.info[self.key]["reason"] = reason
         if self.fill_close:
+            self.info[self.key]["salida_al_cierre"] = True  # orden de mercado: equity_curve resta su costo
             # La orden opuesta llena a este cierre. Sin cancelar sl/tp, un stop tocado en la vela
             # siguiente se procesaria antes y la orden opuesta abriria una posicion contraria.
             for trade in self.trades:
@@ -150,6 +201,9 @@ class StrategyAdapter(Strategy):
         # si se cerro en esta misma vela, la libreria todavia no desconto el slippage de esa salida
         equity = self.equity - sum(abs(t.size) for t in self.trades) / SCALE * price * self.slippage
         qty = equity * settings.TRADING_BASE_POSITION_PCT * signal.confidence / price
+        if self.orden_minima is not None and (qty <= 0 or (qty * price) < self.orden_minima - 1e-9):
+            self.entradas_descartadas_orden_minima += 1
+            return
         units = int(round(qty * SCALE))
         # QuantAgent-gti6: el recorte de OrderManager._cap_entry_qty (quantagent/trading/order_manager.py:57-76).
         # Solo compras cuyo nocional entra en el efectivo: se achican a lo que alcanza a pagar con slippage y
@@ -177,14 +231,38 @@ class StrategyAdapter(Strategy):
 
 
 def run_adapter(strategy, df: pd.DataFrame, *, symbol: str, timeframe: str, fill: str = "close",
-                commission_pct: float = 0.0, slippage_pct: float = 0.0, cash: float = INITIAL_CASH):
+                commission_pct: float = 0.0, slippage_pct: float = 0.0, cash: float = INITIAL_CASH,
+                orden_minima: float | None = None):
     """Corre `strategy` sobre `df` (el de crossval_rsi.load_fixture: escalado y con vela centinela)."""
     close = fill == "close"
     bt = Backtest(df if close else df.iloc[:-1], StrategyAdapter, cash=cash, commission=commission_pct, margin=1.0,
                   spread=slippage_pct,
                   trade_on_close=close, hedging=False, exclusive_orders=False, finalize_trades=not close)
     return bt.run(strategy=strategy, symbol=symbol, timeframe=timeframe, n_real_bars=len(df) - 1, fill_close=close,
-                  slippage=slippage_pct, commission=commission_pct)
+                  slippage=slippage_pct, commission=commission_pct, orden_minima=orden_minima)
+
+
+def equity_curve(stats) -> pd.Series:
+    """QuantAgent-mxy7: Equity de la libreria por vela real, con el costo del llenado en la vela de la orden.
+
+    Con trade_on_close la libreria escribe Equity[i] antes de llenar la orden de mercado puesta en la vela i
+    (la llena al procesar la i+1, a Close[i]), asi que Equity[i] no descuenta su slippage ni su comision y el
+    motor si. Se resta ese costo en la vela i para cada entrada y cada salida por regla o backtest_end; los
+    stops y take profit los llena la libreria dentro de la vela, ya descontados. Con next-open, sin cambios.
+    """
+    strat = stats["_strategy"]
+    equity = stats["_equity_curve"]["Equity"].iloc[:strat.n_real_bars].copy()
+    if not strat.fill_close:
+        return equity
+    close = strat.bars["close"].to_numpy() / SCALE  # referencia en la escala de la libreria
+    costo = [0.0] * len(equity)
+    for t in stats["_trades"].itertuples():
+        fills = [(t.EntryBar, t.EntryPrice)]
+        if strat.info[t.EntryBar].get("salida_al_cierre"):
+            fills.append((t.ExitBar, t.ExitPrice))
+        for bar, price in fills:  # nocional por |precio de llenado - referencia| mas la comision nativa
+            costo[bar] += abs(t.Size) * (abs(price - close[bar]) + price * strat.commission)
+    return equity - costo
 
 
 def trade_rows(stats, symbol: str) -> list[TradeRow]:
@@ -209,6 +287,8 @@ def main(argv=None) -> int:
     ap.add_argument("--slippage-pct", type=float, help="fraccion del precio por lado (0.0005 = 0.05 %%). Default 0")
     ap.add_argument("--costos", choices=sorted(settings.COSTOS_PERFILES),
                     help="perfil de costos (slippage y comision), como el CLI. Excluyente con las dos anteriores")
+    ap.add_argument("--orden-minima", type=float, default=None,
+                    help="monto mínimo en USD por orden de entrada. Default None")
     ap.add_argument("--out", help="CSV de trades")
     args = ap.parse_args(argv)
     if bool(args.fixture) == bool(args.snapshot) or (args.snapshot and not args.symbol):
@@ -226,7 +306,7 @@ def main(argv=None) -> int:
         symbol, timeframe = meta.symbol, meta.timeframe
         df = port.load_fixture(port.FIXTURES_DIR / f"{args.fixture}.csv")
     stats = run_adapter(build_strategy(cli_aliases()[args.strategy]), df, symbol=symbol, timeframe=timeframe,
-                        fill=args.fill, **costos)
+                        fill=args.fill, orden_minima=args.orden_minima, **costos)
     rows = trade_rows(stats, symbol)
     if args.out:
         Path(args.out).write_text(trades_to_csv(rows))
@@ -237,6 +317,8 @@ def main(argv=None) -> int:
     print("Profit factor: n/a" if math.isnan(pf) or math.isinf(pf) else f"Profit factor: {pf:.2f}")
     print(f"Sharpe ratio: {stats['Sharpe Ratio']:.2f}")
     print(f"Total PnL: {sum(r.pnl for r in rows):.2f}")
+    if args.orden_minima is not None:
+        print(f"Entradas descartadas por orden mínima: {stats['_strategy'].entradas_descartadas_orden_minima}")
     return 0
 
 

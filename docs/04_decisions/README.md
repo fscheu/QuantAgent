@@ -14,6 +14,7 @@ Agents working in this repository should review decision documents chronological
 - [QuantAgent-80x-DC-motor-oficial-m2.md](./QuantAgent-80x-DC-motor-oficial-m2.md) - Qué motor da el número oficial de M2: cinco estrategias sobre SPY 2007–2018 en el motor propio y en backtesting.py, trade por trade (propuesta, decide Fede)
 - [QuantAgent-cbp-DC-tamano-posicion-m2.md](./QuantAgent-cbp-DC-tamano-posicion-m2.md) - Tamaño de posición y límite diario en las comparaciones de M2: 5% con referencia escalada, 100% del capital asignado o tamaño fijo sin confianza, con corridas de rsi/SPY (propuesta, V18)
 - [QuantAgent-7nle-DC-datos-para-operar-m3.md](./QuantAgent-7nle-DC-datos-para-operar-m3.md) - Fuente de velas para paper en M3 (Alpaca gratis o Yahoo), proveedor abstracto con dos implementaciones, convivencia con snapshots, ajuste y zona horaria, 9 tickets (decidido por Fede el 2026-10-12)
+- [2026-10-12-DC-quantconnect-y-pivot-lean.md](./2026-10-12-DC-quantconnect-y-pivot-lean.md) - QuantConnect y LEAN: comparación con QuantAgent, piezas no contempladas y pivot a LEAN autoalojado (spike `QuantAgent-ryaw` en curso; Fede define el pivot al cierre del lote 4)
 
 ## Current Truth
 
@@ -37,6 +38,9 @@ Decision documents should include:
 
 - [QuantAgent-69d-DC-reuse-logs-for-llm-telemetry.md](./QuantAgent-69d-DC-reuse-logs-for-llm-telemetry.md) - Choose existing `logs` over new metrics tables for this P3 feature
 - [QuantAgent-hx0.7-DC-sharpe-annualization.md](./QuantAgent-hx0.7-DC-sharpe-annualization.md) - Sharpe ratio annualization periods for 24/7 fixtures
+- [QuantAgent-u8lf-DC-diagnostico-rsi-gld-apertura-siguiente.md](./QuantAgent-u8lf-DC-diagnostico-rsi-gld-apertura-siguiente.md) - Diagnóstico: rsi/GLD 243 trades al cierre vs 242 en apertura siguiente (V27c)
+- [QuantAgent-yo4s-DC-umbrales-y-llenado.md](./QuantAgent-yo4s-DC-umbrales-y-llenado.md) - Decisión: umbrales del veredicto, llenado, tamaño mínimo y costo de cortos antes de abrir 2019–2022 (V30)
+
 
 ## Per-Change Decision Documents
 

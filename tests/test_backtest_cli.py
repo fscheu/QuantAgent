@@ -26,6 +26,103 @@ from quantagent.cli.backtest import backtest_group
 from quantagent.models import Base, MarketData
 
 
+def test_compare_equity_dir_exports_motor_without_changing_outputs(cli_runner, monkeypatch, tmp_path):
+    import pandas as pd
+
+    import quantagent.cli.backtest as cli
+    from quantagent.data.snapshot import write_snapshot
+
+    frame = pd.read_csv(FIXTURES_DIR / "spy-smoke.csv")
+    frame.index = pd.date_range("2018-01-01", periods=len(frame), name="timestamp")
+    frame["adj_close"] = frame["close"]
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path / "snapshots"))
+    write_snapshot("synthetic", {"SPY": frame.drop(columns=["timestamp"])})
+    curves = {}
+    real_run = cli.correr_par
+
+    def capture_curve(*args, **kwargs):
+        result = real_run(*args, **kwargs)
+        curves[args[0]] = result["equity_curve"]
+        return result
+
+    monkeypatch.setattr(cli, "correr_par", capture_curve)
+    command = ["compare", "--strategies", "rsi,sma-cross", "--symbols", "SPY", "--snapshot", "synthetic"]
+    for name, extra in [("before", []), ("after", ["--equity-dir", str(tmp_path / "equity")])]:
+        result = cli_runner.invoke(backtest_group, [*command, "--out", str(tmp_path / f"{name}.csv"),
+                                                  "--trades-dir", str(tmp_path / name), *extra])
+        assert result.exit_code == 0, result.output
+    assert (tmp_path / "before.csv").read_bytes() == (tmp_path / "after.csv").read_bytes()
+    table = list(csv.DictReader((tmp_path / "after.csv").open()))
+    for row in table:
+        strategy = row["estrategia"]
+        filename = f"{strategy}-SPY.csv"
+        assert (tmp_path / "before" / filename).read_bytes() == (tmp_path / "after" / filename).read_bytes()
+        with (tmp_path / "equity" / filename).open() as f:
+            reader = csv.DictReader(f)
+            assert reader.fieldnames == ["date", "equity"]
+            points = list(reader)
+        assert len(points) == len(curves[strategy]) == len(frame)
+        assert points == [{"date": p["date"].isoformat(), "equity": f'{p["equity"]:.2f}'} for p in curves[strategy]]
+        assert float(points[0]["equity"]) == 100000
+        assert float(points[-1]["equity"]) == pytest.approx(100000 + float(row["pnl"]), abs=0.01, rel=0)
+
+    rejected = cli_runner.invoke(backtest_group, [*command, "--to", "2019-01-01", "--out", str(tmp_path / "blocked.csv"),
+                                                "--equity-dir", str(tmp_path / "blocked")])
+    assert rejected.exit_code == 1
+    assert not (tmp_path / "blocked").exists()
+
+
+def test_compare_crisis_columns_match_hand_computed_year_returns(cli_runner, monkeypatch, tmp_path):
+    """crisis_2008 = retorno 2008 de la curva del motor menos el de los cierres ajustados; año incompleto o fuera del rango, vacía."""
+    import numpy as np
+    import pandas as pd
+
+    import quantagent.cli.backtest as cli
+    from quantagent.data.snapshot import write_snapshot
+
+    index = pd.bdate_range("2007-10-01", "2009-02-27", name="timestamp")
+    close = 100 + 10 * np.sin(np.arange(len(index)) / 6) - np.arange(len(index)) * 0.05
+    frame = pd.DataFrame({"open": close - 0.5, "high": close + 1, "low": close - 1, "close": close,
+                          "volume": 1000}, index=index)
+    frame["adj_close"] = close * np.linspace(0.9, 1.0, len(index))  # distinto de close: el test exige el ajustado
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path / "snapshots"))
+    write_snapshot("synthetic", {"SPY": frame})
+    curves = []
+    real_run = cli.correr_par
+
+    def capture_curve(*args, **kwargs):
+        result = real_run(*args, **kwargs)
+        curves.append(result["equity_curve"])
+        return result
+
+    monkeypatch.setattr(cli, "correr_par", capture_curve)
+    command = ["compare", "--strategies", "rsi", "--symbols", "SPY", "--snapshot", "synthetic"]
+
+    def run(name, *extra):
+        result = cli_runner.invoke(backtest_group, [*command, "--out", str(tmp_path / f"{name}.csv"), *extra])
+        assert result.exit_code == 0, result.output
+        return list(csv.DictReader((tmp_path / f"{name}.csv").open()))
+
+    plain = run("plain")
+    [row] = run("crisis", "--crisis")
+    curve = curves[-1]
+    assert curve[0]["equity"] != curve[-1]["equity"]
+
+    def year_return(points, year):
+        return [v for d, v in points if d.year == year][-1] / [v for d, v in points if d.year == year - 1][-1] - 1
+
+    engine = year_return([(p["date"], p["equity"]) for p in curve], 2008)
+    hold = year_return(list(zip(index, frame["adj_close"])), 2008)
+    assert float(row["crisis_2008"]) == pytest.approx(round(engine - hold, 4), abs=1e-6)
+    assert row["crisis_2020"] == row["crisis_2022"] == ""
+
+    assert list(plain[0]) == cli.COMPARE_COLUMNS
+    assert plain == [{k: v for k, v in row.items() if not k.startswith("crisis_")}]
+
+    [partial] = run("partial", "--crisis", "--to", "2008-12-15")
+    assert partial["crisis_2008"] == ""
+
+
 @pytest.fixture
 def cli_runner(monkeypatch, tmp_path):
     """Provide CliRunner with an isolated, fully-migrated SQLite database.
@@ -684,3 +781,78 @@ def test_worst_day_on_a_hand_curve_and_edge_cases():
     # Empty and single point
     assert worst_day([]) == (0.0, None)
     assert worst_day([{"date": datetime(2025, 1, 1), "equity": 100.0}]) == (0.0, None)
+
+
+def test_isolated_sqlite_db_synchronous_off_and_external_default():
+    """Dentro de _isolated_sqlite_db() PRAGMA synchronous = 0; fuera, una SQLite común conserva su valor (QuantAgent-06yj)."""
+    from quantagent.cli.backtest import _isolated_sqlite_db
+    import quantagent.database as db
+
+    with _isolated_sqlite_db():
+        with db.engine.connect() as conn:
+            assert conn.execute(text("PRAGMA synchronous")).scalar() == 0
+
+    other_engine = create_engine("sqlite:///:memory:")
+    with other_engine.connect() as conn:
+        assert conn.execute(text("PRAGMA synchronous")).scalar() == 2
+
+
+def test_isolated_sqlite_db_fallback_without_shm(monkeypatch):
+    """Con /dev/shm no disponible (simulado), la base se crea igual y la corrida termina (QuantAgent-06yj)."""
+    import os
+    from quantagent.cli.backtest import _isolated_sqlite_db
+    import quantagent.database as db
+
+    original_isdir = os.path.isdir
+    monkeypatch.setattr(os.path, "isdir", lambda path: False if path == "/dev/shm" else original_isdir(path))
+
+    with _isolated_sqlite_db():
+        with db.engine.connect() as conn:
+            assert conn.execute(text("PRAGMA synchronous")).scalar() == 0
+            assert "/dev/shm" not in db.settings.DATABASE_URL
+
+
+def test_isolated_sqlite_db_no_leftover_files_in_shm():
+    """No quedan archivos en /dev/shm al terminar, tampoco si una corrida falla (QuantAgent-06yj)."""
+    import os
+    from quantagent.cli.backtest import _isolated_sqlite_db
+
+    if not (os.path.isdir("/dev/shm") and os.access("/dev/shm", os.W_OK)):
+        pytest.skip("/dev/shm no está disponible")
+
+    before = set(os.listdir("/dev/shm"))
+    with _isolated_sqlite_db():
+        pass
+    assert set(os.listdir("/dev/shm")) == before
+
+    with pytest.raises(RuntimeError):
+        with _isolated_sqlite_db():
+            raise RuntimeError("error simulado")
+    assert set(os.listdir("/dev/shm")) == before
+
+
+def test_backtest_run_orden_minima_sin_opcion_no_imprime_linea(cli_runner):
+    """Sin --orden-minima, no se imprime la línea de descartadas y el resultado es idéntico (QuantAgent-wquk)."""
+    base = cli_runner.invoke(backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke"])
+    assert base.exit_code == 0, base.output
+    assert "Entradas descartadas por orden mínima:" not in base.output
+
+    con_min = cli_runner.invoke(backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke", "--orden-minima", "50"])
+    assert con_min.exit_code == 0, con_min.output
+    assert "Entradas descartadas por orden mínima: 0" in con_min.output
+
+    out_base = dict(line.split(": ", 1) for line in base.output.splitlines() if ": " in line)
+    out_min = dict(line.split(": ", 1) for line in con_min.output.splitlines() if ": " in line)
+    assert out_base["Trades"] == out_min["Trades"]
+    assert out_base["Total PnL"] == out_min["Total PnL"]
+
+
+def test_backtest_run_orden_minima_descarta_entradas(cli_runner):
+    """Con --orden-minima superior al tamaño de las órdenes, las entradas se descartan (QuantAgent-wquk)."""
+    # En spy-smoke el capital es 100k y base 5% -> órdenes de ~2500 a 5000 USD
+    # Con --orden-minima 10000 se descartan todas las entradas
+    res = cli_runner.invoke(backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke", "--orden-minima", "10000"])
+    assert res.exit_code == 0, res.output
+    out = dict(line.split(": ", 1) for line in res.output.splitlines() if ": " in line)
+    assert int(out["Trades"]) == 0
+    assert int(out["Entradas descartadas por orden mínima"]) > 0

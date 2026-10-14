@@ -29,6 +29,13 @@ CANDLES = [
     (5, 96.0, 97.0, 95.5, 96.0, 2),  # senal: stop 91.2
     (6, 96.0, 97.0, 95.5, 96.0, 1),  # ultima vela
 ]
+# QuantAgent-ws3d: la vela 3 abre en 115 (> take profit 110) y luego el minimo 90 toca el stop 95
+CANDLES_OPENING_GAP = [
+    (1, 100.0, 101.0, 99.0, 100.0, 1),
+    (2, 100.0, 101.0, 99.0, 100.0, 2),  # senal: entrada en 100, stop 95, take profit 110
+    (3, 115.0, 115.0, 90.0, 95.0, 1),  # gap alcista > tp y minimo < sl
+    (4, 95.0, 96.0, 94.0, 95.0, 1),
+]
 SCENARIOS = {
     "default": {},
     "exit_after_1": {"exit_after": 1},
@@ -38,6 +45,9 @@ SCENARIOS = {
     "recorte": {"confidence": 1.0, "pct": 1.0, "slippage_pct": 0.01, "commission_pct": 0.001},  # QuantAgent-gti6
     "recorte_next_open": {"fill": "next-open", "confidence": 1.0, "pct": 1.0,
                           "slippage_pct": 0.01, "commission_pct": 0.001},
+    "orden_minima_descarta": {"orden_minima": 3000.0},  # QuantAgent-p3yg: entradas de 2500 < 3000 USD
+    "orden_minima_ejecuta": {"orden_minima": 2000.0},   # 2500 >= 2000 USD
+    "orden_minima_next_open_descarta": {"fill": "next-open", "orden_minima": 3000.0},
 }
 
 
@@ -96,7 +106,23 @@ def _run_scenarios(workdir: Path) -> dict:
         stats = bt_adapter.run_adapter(strategy, crossval_rsi.load_fixture(path), symbol="XYZ", timeframe="1d", **kwargs)
         rows = [{**vars(r), "entry_time": r.entry_time.isoformat(), "exit_time": r.exit_time.isoformat()}
                 for r in bt_adapter.trade_rows(stats, "XYZ")]
-        out[name] = {"rows": rows, "signal_calls": strategy.signal_calls, "exit_calls": strategy.exit_calls}
+        out[name] = {
+            "rows": rows,
+            "signal_calls": strategy.signal_calls,
+            "exit_calls": strategy.exit_calls,
+            "descartadas": stats["_strategy"].entradas_descartadas_orden_minima,
+        }
+
+    # QuantAgent-ws3d: corrida con apertura que supera el take profit y minimo que toca el stop
+    gap_path = workdir / "gap.csv"
+    gap_lines = ["timestamp,open,high,low,close,volume"] + [f"{day(d)},{o},{h},{lo},{c},{v}" for d, o, h, lo, c, v in CANDLES_OPENING_GAP]
+    gap_path.write_text("\n".join(gap_lines) + "\n")
+    gap_strat = MiniStrategy()
+    bt_adapter.settings.TRADING_BASE_POSITION_PCT = 0.05
+    gap_stats = bt_adapter.run_adapter(gap_strat, crossval_rsi.load_fixture(gap_path), symbol="XYZ", timeframe="1d")
+    out["opening_gap"] = [{**vars(r), "entry_time": r.entry_time.isoformat(), "exit_time": r.exit_time.isoformat()}
+                          for r in bt_adapter.trade_rows(gap_stats, "XYZ")]
+
     return out
 
 
@@ -107,6 +133,16 @@ def results(tmp_path_factory):
                           cwd=ROOT, capture_output=True, text=True, timeout=120)
     assert proc.returncode == 0, proc.stderr
     return json.loads(proc.stdout.splitlines()[-1])
+
+
+def test_salto_en_apertura_sale_por_take_profit_antes_del_stop(results):
+    """QuantAgent-ws3d: si la vela abre por encima del take profit y toca el stop, sale en la apertura con TAKE_PROFIT."""
+    rows = results["opening_gap"]
+    assert len(rows) == 1
+    trade = rows[0]
+    assert (trade["entry_time"], trade["entry_price"]) == (day(2), 100.0)
+    assert (trade["exit_time"], trade["exit_price"], trade["exit_reason"]) == (day(3), 115.0, "TAKE_PROFIT")
+    assert trade["pnl"] == pytest.approx(25.0 * (115.0 - 100.0))
 
 
 def test_entrada_al_cierre_y_stop_tocado_dentro_de_la_vela(results):
@@ -199,6 +235,41 @@ def test_recorte_en_apertura_con_gap_y_costos(results):
     assert first["pnl"] == pytest.approx(pnl)
     assert second["entry_time"] == day(6)
     assert second["qty"] == pytest.approx((100000 + pnl) / (96 * 1.01 * 1.001), abs=1e-8)
+
+
+def test_orden_minima_descarta_entrada_por_debajo_del_monto_y_preserva_sin_opcion(results):
+    """QuantAgent-p3yg: con orden mínima mayor al nocional no abre trade; menor o igual o sin opción ejecuta igual."""
+    # Con orden mínima de 3000 USD (las entradas de 2500 USD quedan por debajo), no abre trades y cuenta descartadas
+    desc = results["orden_minima_descarta"]
+    assert len(desc["rows"]) == 0
+    assert desc["descartadas"] == 2
+
+    # Con orden mínima de 2000 USD (menor a 2500 USD), ejecuta exactamente igual que default
+    ejec = results["orden_minima_ejecuta"]
+    assert len(ejec["rows"]) == 2
+    assert ejec["descartadas"] == 0
+    assert [(r["entry_time"], r["qty"], r["pnl"]) for r in ejec["rows"]] == [
+        (r["entry_time"], r["qty"], r["pnl"]) for r in results["default"]["rows"]
+    ]
+
+    # En next-open también descarta antes de enviar la orden a la apertura
+    desc_open = results["orden_minima_next_open_descarta"]
+    assert len(desc_open["rows"]) == 0
+    assert desc_open["descartadas"] == 2
+
+
+def test_cli_orden_minima_imprime_descartadas():
+    """El CLI de bt_adapter.py imprime la línea de entradas descartadas solo con --orden-minima."""
+    pytest.importorskip("backtesting")
+    cmd = [sys.executable, str(ROOT / "scripts" / "bt_adapter.py"), "--strategy", "rsi", "--fixture", "spy-90d", "--orden-minima", "50"]
+    proc = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=60)
+    assert proc.returncode == 0, proc.stderr
+    assert "Entradas descartadas por orden mínima: 3" in proc.stdout
+
+    cmd_sin = [sys.executable, str(ROOT / "scripts" / "bt_adapter.py"), "--strategy", "rsi", "--fixture", "spy-90d"]
+    proc_sin = subprocess.run(cmd_sin, cwd=ROOT, capture_output=True, text=True, timeout=60)
+    assert proc_sin.returncode == 0, proc_sin.stderr
+    assert "Entradas descartadas por orden mínima:" not in proc_sin.stdout
 
 
 @pytest.mark.parametrize("strategy, fixture, pct, expected", [

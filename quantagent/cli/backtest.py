@@ -34,6 +34,9 @@ from quantagent.strategy.registry import STRATEGY_REGISTRY, build_strategy, cli_
 from quantagent.trading.position_sizer import PositionSizer
 
 from . import utils
+from .sweep import attempts_command, sweep_command
+from .verdict import verdict_command
+from .walkforward import walkforward_command
 
 
 class _AliasChoice(click.Choice):
@@ -165,12 +168,15 @@ def _resolve_source_and_meta(
 
 
 def _engine_config(commission_pct: Optional[float], costos: Optional[str] = None,
-                   tamano_posicion: Optional[float] = None, regla_tamano: Optional[str] = None) -> dict:
+                   tamano_posicion: Optional[float] = None, regla_tamano: Optional[str] = None,
+                   orden_minima: Optional[float] = None) -> dict:
     config = {"market_hours_filter": False, "offline_data": True}
     if tamano_posicion is not None:
         config["base_position_pct"] = config["max_position_pct"] = tamano_posicion
     if regla_tamano is not None:
         config["regla_tamano"] = regla_tamano
+    if orden_minima is not None:
+        config["orden_minima"] = orden_minima
     if costos is not None:
         if commission_pct is not None:
             raise click.UsageError("--costos y --commission-pct son excluyentes: elegí uno.")
@@ -181,6 +187,10 @@ def _engine_config(commission_pct: Optional[float], costos: Optional[str] = None
 
 
 def _tamano_options(f):
+    f = click.option(
+        "--orden-minima", "orden_minima", type=click.FloatRange(min=0.0, min_open=True), default=None,
+        help="Monto mínimo en USD por orden de entrada.",
+    )(f)
     f = click.option(
         "--regla-tamano", "regla_tamano", type=click.Choice(PositionSizer.REGLAS), default=None,
         help="Regla de tamaño: confianza (capital × fracción × confianza de la señal) o fijo. Default: confianza.",
@@ -275,7 +285,7 @@ def correr_par(
     pidió tamaño), regla_tamano (None si no se pidió), bh_pnl, bh_sharpe, bh_max_drawdown,
     retorno_anualizado, exceso_sobre_referencia, tiempo_en_mercado, capital_invertido_medio,
     sharpe_tasa_0, peor_dia (estas seis son None si no hay curva de equity), max_drawdown,
-    equity_curve y filas (TradeRow; vacía salvo con con_filas=True).
+    equity_curve, cierres (timestamp, cierre ajustado de cada vela), entradas_descartadas_orden_minima y filas (TradeRow; vacía salvo con con_filas=True).
     `params` son los parámetros del constructor de la estrategia (el resto, los defaults del registro).
     """
     reg_name = cli_aliases()[strategy_name]
@@ -348,6 +358,7 @@ def correr_par(
 
     curve = bt.equity_curve
     r = {
+        "cierres": [(c.timestamp, float(c.close)) for c in candles],
         "trades": metrics.total_trades,
         "win_rate": metrics.win_rate,
         "profit_factor": metrics.profit_factor,
@@ -370,6 +381,7 @@ def correr_par(
         "max_drawdown": metrics.max_drawdown,
         "equity_curve": curve,
         "filas": rows,
+        "entradas_descartadas_orden_minima": bt.order_manager.entradas_descartadas_orden_minima,
     }
     if "base_position_pct" in config or "regla_tamano" in config:
         r["tamano_pct"] = config.get("base_position_pct", settings.TRADING_BASE_POSITION_PCT)
@@ -474,9 +486,10 @@ def run_backtest(
     costos: Optional[str],
     tamano_posicion: Optional[float],
     regla_tamano: Optional[str],
+    orden_minima: Optional[float],
     params: dict,
 ) -> None:
-    config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano)
+    config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano, orden_minima)
     meta, symbol, to_date = _resolve_source_and_meta(
         "run",
         strategy_name,
@@ -509,6 +522,8 @@ def run_backtest(
     if costos:
         click.echo(f"Costos: {costos}")
     _echo_tamano(config)
+    if "orden_minima" in config:
+        click.echo(f"Entradas descartadas por orden mínima: {r['entradas_descartadas_orden_minima']}")
     click.echo(
         f"Comprar y mantener: PnL {r['bh_pnl']:.2f}, Sharpe {r['bh_sharpe']:.2f}, "
         f"max drawdown {r['bh_max_drawdown']:.6f}"
@@ -544,9 +559,12 @@ def _isolated_sqlite_db():
     import os
     import tempfile
 
+    from sqlalchemy import event
+
     from quantagent import database, settings
 
-    with tempfile.TemporaryDirectory() as tmp_dir:
+    shm_dir = "/dev/shm" if os.path.isdir("/dev/shm") and os.access("/dev/shm", os.W_OK) else None
+    with tempfile.TemporaryDirectory(dir=shm_dir) as tmp_dir:
         db_path = os.path.join(tmp_dir, "verify.db")
         db_url = f"sqlite:///{db_path}"
         old_env = os.environ.get("DATABASE_URL")
@@ -558,6 +576,14 @@ def _isolated_sqlite_db():
         if hasattr(database, "_SessionLocal"):
             database._SessionLocal = None
         try:
+            eng = database._get_engine()
+
+            def _set_sync_off(dbapi_con, _):
+                cursor = dbapi_con.cursor()
+                cursor.execute("PRAGMA synchronous=OFF")
+                cursor.close()
+
+            event.listen(eng, "connect", _set_sync_off)
             database.init_db()
             yield
         finally:
@@ -567,6 +593,8 @@ def _isolated_sqlite_db():
                 os.environ.pop("DATABASE_URL", None)
             settings.DATABASE_URL = old_settings_url
             if hasattr(database, "_engine"):
+                if database._engine is not None:
+                    database._engine.dispose()
                 database._engine = None
             if hasattr(database, "_SessionLocal"):
                 database._SessionLocal = None
@@ -680,10 +708,11 @@ def verify_backtest(
     costos: Optional[str],
     tamano_posicion: Optional[float],
     regla_tamano: Optional[str],
+    orden_minima: Optional[float],
 ) -> None:
     import difflib
 
-    config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano)
+    config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano, orden_minima)
     meta, symbol, to_date = _resolve_source_and_meta(
         "verify",
         strategy_name,
@@ -763,6 +792,27 @@ COMPARE_COLUMNS = [
     "retorno_anualizado", "exceso_sobre_referencia", "tiempo_en_mercado",
     "capital_invertido_medio", "sharpe_tasa_0",
 ]
+
+CRISIS_ANIOS = (2008, 2020, 2022)
+
+
+def _retorno_anio(puntos: list[tuple[datetime, float]], anio: int) -> float:
+    """Último valor del año / último valor del año anterior, menos 1."""
+    previo = [v for d, v in puntos if d.year == anio - 1][-1]
+    return [v for d, v in puntos if d.year == anio][-1] / previo - 1
+
+
+def crisis_columnas(curve: list[dict], cierres: list[tuple[datetime, float]], to_date: datetime) -> dict:
+    """crisis_<año>: retorno de la estrategia en el año menos el de comprar y mantener; vacía si el año no está completo."""
+    out = {}
+    puntos = [(p["date"], p["equity"]) for p in curve]
+    for anio in CRISIS_ANIOS:
+        completo = (
+            bool(curve) and curve[0]["date"].year < anio <= curve[-1]["date"].year
+            and to_date >= datetime(anio, 12, 31)
+        )
+        out[f"crisis_{anio}"] = round(_retorno_anio(puntos, anio) - _retorno_anio(cierres, anio), 4) if completo else ""
+    return out
 
 
 def generar_markdown_compare(
@@ -854,18 +904,23 @@ def generar_markdown_compare(
 @click.option("--costos", type=click.Choice(sorted(COSTOS_PERFILES)), default=None, help="Perfil de costos.")
 @click.option("--tamano-posicion", "tamano_posicion", type=click.FloatRange(min=0.0, max=1.0, min_open=True), default=1.0)
 @click.option("--regla-tamano", "regla_tamano", type=click.Choice(PositionSizer.REGLAS), default=None)
+@click.option("--orden-minima", "orden_minima", type=click.FloatRange(min=0.0, min_open=True), default=None, help="Monto mínimo en USD por orden de entrada.")
 @click.option("--abrir-reserva", "abrir_reserva", is_flag=True, help="Permite abrir la reserva.")
 @click.option("--abrir-prueba", "abrir_prueba", is_flag=True, help="Permite abrir el tramo de prueba.")
 @click.option("--out", "out_path", required=True, type=click.Path(dir_okay=False, writable=True), help="CSV de salida.")
 @click.option("--trades-dir", "trades_dir", type=click.Path(file_okay=False, writable=True), default=None)
+@click.option("--equity-dir", type=click.Path(file_okay=False, writable=True), default=None, help="CSV date,equity del motor por celda (equity con 2 decimales).")
 @click.option("--md", "md_path", type=click.Path(dir_okay=False, writable=True), default=None, help="Documento Markdown de salida.")
+@click.option("--crisis", is_flag=True, help="Suma crisis_2008/2020/2022: retorno del año menos comprar y mantener (informativo).")
 @_params_option
 def compare_backtests(
     strategies: str, symbols: str, snapshot_name: str, from_date: Optional[datetime],
     to_date: Optional[datetime], costos: Optional[str], tamano_posicion: Optional[float],
     regla_tamano: Optional[str], abrir_reserva: bool, abrir_prueba: bool, out_path: str, trades_dir: Optional[str],
-    params: dict, md_path: Optional[str] = None,
+    params: dict, md_path: Optional[str] = None, orden_minima: Optional[float] = None, equity_dir: Optional[str] = None,
+    crisis: bool = False,
 ) -> None:
+    columns = COMPARE_COLUMNS + [f"crisis_{a}" for a in CRISIS_ANIOS] if crisis else COMPARE_COLUMNS
     reserva = _reserva_desde()
     prueba = _prueba_desde()
     tope = min(prueba, reserva)
@@ -922,9 +977,11 @@ def compare_backtests(
         partes.append(f"--to {to_date:%Y-%m-%d} --abrir-prueba")
         _registrar_apertura_prueba(" ".join(partes))
 
-    config = _engine_config(None, costos, tamano_posicion, regla_tamano)
+    config = _engine_config(None, costos, tamano_posicion, regla_tamano, orden_minima)
     if trades_dir:
         os.makedirs(trades_dir, exist_ok=True)
+    if equity_dir:
+        os.makedirs(equity_dir, exist_ok=True)
 
     rows = []
     for strat in strats:
@@ -943,6 +1000,11 @@ def compare_backtests(
             if trades_dir:
                 with open(os.path.join(trades_dir, f"{strat}-{sym}.csv"), "w", newline="") as f:
                     f.write(trades_to_csv(r["filas"]))
+            if equity_dir:
+                with open(os.path.join(equity_dir, f"{strat}-{sym}.csv"), "w", newline="") as f:
+                    writer = csv.writer(f)
+                    writer.writerow(["date", "equity"])
+                    writer.writerows((p["date"].isoformat(), f'{p["equity"]:.2f}') for p in r["equity_curve"])
 
             def _fmt(v: Optional[float], digits: int) -> object:
                 return "" if v is None else round(v, digits)
@@ -960,10 +1022,11 @@ def compare_backtests(
                 "tiempo_en_mercado": _fmt(r["tiempo_en_mercado"], 4),
                 "capital_invertido_medio": _fmt(r["capital_invertido_medio"], 4),
                 "sharpe_tasa_0": _fmt(r["sharpe_tasa_0"], 2),
+                **(crisis_columnas(r["equity_curve"], r["cierres"], to_date) if crisis else {}),
             })
 
     with open(out_path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=COMPARE_COLUMNS)
+        writer = csv.DictWriter(f, fieldnames=columns)
         writer.writeheader()
         writer.writerows(rows)
 
@@ -974,11 +1037,18 @@ def compare_backtests(
             costos=costos,
             tamano_posicion=tamano_posicion,
             regla_tamano=regla_tamano,
-            columns=COMPARE_COLUMNS,
+            columns=columns,
             params=params,
         )
         with open(md_path, "w", encoding="utf-8") as f:
             f.write(md_text)
 
-    table_data = [[row[col] for col in COMPARE_COLUMNS] for row in rows]
-    click.echo(tabulate(table_data, headers=COMPARE_COLUMNS, tablefmt="github"))
+    table_data = [[row[col] for col in columns] for row in rows]
+    click.echo(tabulate(table_data, headers=columns, tablefmt="github"))
+
+
+backtest_group.add_command(sweep_command, name="sweep")
+backtest_group.add_command(attempts_command, name="attempts")
+backtest_group.add_command(walkforward_command, name="walkforward")
+backtest_group.add_command(verdict_command)
+
