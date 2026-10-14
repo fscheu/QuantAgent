@@ -887,13 +887,14 @@ def generar_markdown_compare(
 @click.option("--abrir-prueba", "abrir_prueba", is_flag=True, help="Permite abrir el tramo de prueba.")
 @click.option("--out", "out_path", required=True, type=click.Path(dir_okay=False, writable=True), help="CSV de salida.")
 @click.option("--trades-dir", "trades_dir", type=click.Path(file_okay=False, writable=True), default=None)
+@click.option("--equity-dir", type=click.Path(file_okay=False, writable=True), default=None, help="CSV date,equity del motor por celda (equity con 2 decimales).")
 @click.option("--md", "md_path", type=click.Path(dir_okay=False, writable=True), default=None, help="Documento Markdown de salida.")
 @_params_option
 def compare_backtests(
     strategies: str, symbols: str, snapshot_name: str, from_date: Optional[datetime],
     to_date: Optional[datetime], costos: Optional[str], tamano_posicion: Optional[float],
     regla_tamano: Optional[str], abrir_reserva: bool, abrir_prueba: bool, out_path: str, trades_dir: Optional[str],
-    params: dict, md_path: Optional[str] = None, orden_minima: Optional[float] = None,
+    params: dict, md_path: Optional[str] = None, orden_minima: Optional[float] = None, equity_dir: Optional[str] = None,
 ) -> None:
     reserva = _reserva_desde()
     prueba = _prueba_desde()
@@ -954,6 +955,8 @@ def compare_backtests(
     config = _engine_config(None, costos, tamano_posicion, regla_tamano, orden_minima)
     if trades_dir:
         os.makedirs(trades_dir, exist_ok=True)
+    if equity_dir:
+        os.makedirs(equity_dir, exist_ok=True)
 
     rows = []
     for strat in strats:
@@ -972,6 +975,11 @@ def compare_backtests(
             if trades_dir:
                 with open(os.path.join(trades_dir, f"{strat}-{sym}.csv"), "w", newline="") as f:
                     f.write(trades_to_csv(r["filas"]))
+            if equity_dir:
+                with open(os.path.join(equity_dir, f"{strat}-{sym}.csv"), "w", newline="") as f:
+                    writer = csv.writer(f)
+                    writer.writerow(["date", "equity"])
+                    writer.writerows((p["date"].isoformat(), f'{p["equity"]:.2f}') for p in r["equity_curve"])
 
             def _fmt(v: Optional[float], digits: int) -> object:
                 return "" if v is None else round(v, digits)
