@@ -147,8 +147,7 @@ def test_fixed_stop_inside_candle_wins_over_trailing():
 
 
 def test_trailing_mark_of_later_trade_does_not_close_reentered_trade():
-    # A (trailing 5%) sale en la 4; la entrada de la 5 abre A2 (trailing 20%), que antes era ignorada.
-    # La marca de trailing de B (entrada 9, 5%) cae en la 13: no debe cerrar a A2, que no tocó su 20%.
+    # A sale en la 4 (5%); la señal de la 5 abre A2 (20%). La marca de B (señal 9, 5%) cae en la 13: no debe cerrar a A2.
     closes = [100.0, 100, 110, 120, 112, 112, 112, 112, 112, 112, 112, 130, 140, 130, 130, 150, 150]
     idx = pd.date_range("2020-01-01", periods=len(closes), freq="D")
     c = pd.DataFrame({"open": [closes[0]] + closes[:-1], "close": closes}, index=idx)
@@ -156,12 +155,11 @@ def test_trailing_mark_of_later_trade_does_not_close_reentered_trade():
     c["low"] = c[["open", "close"]].min(axis=1) - 0.5
     c.iloc[7, c.columns.get_loc("low")] = 97.0  # stop fijo de A en la 7 (A2 no tiene stop)
     s = _signals(c, {0: 1, 5: 1, 9: 1})
-    s["stop_loss_pct"] = float("nan")
-    s["trailing_stop_pct"] = 0.05
-    s.iloc[0, s.columns.get_loc("stop_loss_pct")] = 0.02
-    s.iloc[5, s.columns.get_loc("trailing_stop_pct")] = 0.20
+    s["stop_loss_pct"] = [0.02] + [float("nan")] * 16
+    s["trailing_stop_pct"] = [0.05] * 5 + [0.20] + [0.05] * 11
     r = _run(s, c)
-    cash = CAPITAL / (c["open"].iloc[1] * (1 + SLIPPAGE) * (1 + COMMISSION)) * c["open"].iloc[5] * (1 - SLIPPAGE) * (1 - COMMISSION)
-    equity = cash / (c["open"].iloc[6] * (1 + SLIPPAGE) * (1 + COMMISSION)) * closes[-1]  # A2 abierta hasta el final
+    o = c["open"]
+    cash = CAPITAL / (o.iloc[1] * (1 + SLIPPAGE) * (1 + COMMISSION)) * o.iloc[5] * (1 - SLIPPAGE) * (1 - COMMISSION)
+    equity = cash / (o.iloc[6] * (1 + SLIPPAGE) * (1 + COMMISSION)) * closes[-1]  # A2 abierta hasta el final
     assert r["trades"] == 2
     assert r["pnl"] == pytest.approx(equity - CAPITAL, abs=0.01)
