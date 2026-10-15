@@ -58,7 +58,11 @@ print(json.dumps([
     [[sized(pct, conf, conf, factor) for factor in (1.0, 1.00001, 0.99999)] for pct in (0.05, 1.0) for conf, _ in CONFS],
     loaded(sys.argv[1]),
     altered("qty", 3.5e-9, qty="0.0019284"),
-    altered("qty", 1e-8, qty="0.0019284"),
+    altered("qty", 2e-8, qty="0.0019284"),
+    altered("pnl", 6e-6, qty="555.30995189"),
+    altered("pnl", 1e-3, qty="555.30995189"),
+    altered("qty", 0.00192706287 - 0.00192707, qty="0.00192707"),
+    altered("qty", 0.0019271 - 0.00192707, qty="0.00192707"),
 ]))
 """.replace("__CONFS__", repr(CONFS))
 # Precios con mas de 8 decimales, como los ajustados de un snapshot (QuantAgent-bwqb).
@@ -150,7 +154,16 @@ def test_port_prices_are_rounded_to_8_decimals_like_the_engine(runs):
 def test_qty_tolerance_absolute_floor_on_thousandths(runs):
     # Valida QuantAgent-24qm: en posiciones de milésimas (como rsi/IWM fila 156, qty 0.0019284),
     # el redondeo a 8 decimales del CSV (hasta 5e-9) excede QTY_RTOL (1.5e-6 * 0.0019284 = 2.89e-9).
-    # Con el piso absoluto de 5e-9 una diferencia de 3.5e-9 pasa; y una de 1e-8 sigue fallando.
+    # Con el piso absoluto de 1e-8 una diferencia de 3.5e-9 pasa; y una de 2e-8 sigue fallando.
     assert runs[13]["ok"] is True, runs[13]["out"]
     assert runs[14]["ok"] is False, runs[14]["out"]
-    assert "qty (|dif|=1e-08 > tol 5e-09)" in runs[14]["out"]
+    assert "qty (|dif|=2e-08 > tol 1e-08)" in runs[14]["out"]
+
+
+def test_crossval_rounding_tolerances_accept_roundoff_but_reject_larger_changes(runs):
+    assert runs[15]["ok"] is True, runs[15]["out"]
+    assert runs[16]["ok"] is False, runs[16]["out"]
+    assert "columnas: pnl" in runs[16]["out"]
+    assert runs[17]["ok"] is True, runs[17]["out"]
+    assert runs[18]["ok"] is False, runs[18]["out"]
+    assert "columnas: qty" in runs[18]["out"]
