@@ -542,7 +542,9 @@ Los primeros 5 son los más fáciles de revisar.
 | F03a.2i | `QuantAgent-gfs1.1.2.9` | Motor con apertura: stop y take profit desde el precio llenado (decisión A de Fede, 2026-10-15) | Niveles reescalados a mano; cierre sin cambio; oráculos pasan | probar | L8 |
 | F03a.2j | `QuantAgent-gfs1.1.2.10` | Adaptador con apertura: stop y take profit reescalados como el motor; depende de F03a.2i | Mismo caso a mano; 48 celdas sin retroceso | leer | L8 |
 | F03a.2k | `QuantAgent-gfs1.1.2.11` | Control: tolerancia de pnl escalada por qty y `QTY_ATOL` 1e-8 por el redondeo a 8 decimales con apertura; depende de F03a.2j | 48 celdas: apertura 48 de 48 y cierre 48 de 48 | leer | L8 |
-| F03b | `QuantAgent-gfs1.2` | Regenerar oráculos y números de referencia con el default nuevo; depende de F03a | Oráculos pasan; un test `cierre` exige 187 / -9141.21; tabla viejo → nuevo | decidir | L8 |
+| F03b.1 | `QuantAgent-gfs1.2.1` | Golden spy-90d en apertura (padre gfs1.2) | CSV exacto y métricas regeneradas; comando documentado | probar | L8 |
+| F03b.2 | `QuantAgent-gfs1.2.2` | Golden SPY 2007–2018, cierre explícito y recálculo; depende de F03b.1 | Apertura control 48/48; cierre 187 / -9141.21; recálculo coincide; tabla viejo → nuevo | probar | L8 |
+| F03b.3 | `QuantAgent-gfs1.2.3` | Resolver alcance de oráculos legacy; depende de F03b.2 | Inventario completo, oráculos verdes y decisión explícita sobre referencias al cierre | decidir | L8 |
 | F05 | `QuantAgent-d4cq.3` | `bar_signals`: señales por vela desde una estrategia, solo con velas hasta la actual | La estrategia recibe i+1 velas en la vela i; cruce de sma-cross a mano | leer | L8 |
 | F06 | `QuantAgent-d4cq.4` | `check_no_lookahead`: prueba de truncamiento; depende de F05 | 4 estrategias sin diferencias; `shift(-1)` y media global detectados | leer | L8 |
 | F07 | `QuantAgent-d4cq.5` | `run_filter` en `vectorbt`: apertura siguiente fija y costos; depende de F05 | Llenado al `open` de la vela siguiente, PnL a mano 1e-9; sin modo al cierre | leer | L8 |
