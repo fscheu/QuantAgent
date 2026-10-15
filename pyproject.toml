@@ -53,6 +53,7 @@ dev = [
     "mypy>=1.5",
     "types-requests>=2.31",
     "backtesting>=0.6.6,<0.7",  # solo scripts/crossval_rsi.py (oraculo de cross-validation)
+    "vectorbt==1.1.2",  # motor del filtro (quantagent/backtesting/vbt_filter.py)
 ]
 
 [tool.setuptools]
