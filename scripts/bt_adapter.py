@@ -98,7 +98,7 @@ class StrategyAdapter(Strategy):
         def apply_opening_gap():
             open_val = float(self._broker._data._current_value("Open"))
             for trade in list(self._broker.trades):
-                if self._broker._i <= trade.entry_bar:
+                if self.fill_close and self._broker._i <= trade.entry_bar:
                     continue
                 sl, tp = trade.sl, trade.tp
                 reason = None
