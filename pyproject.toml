@@ -40,6 +40,7 @@ dependencies = [
     "streamlit",
     "pandas_market_calendars>=4.0.0,<5.0.0",
     "pyarrow>=14",
+    "vectorbt==1.1.2",  # motor del filtro (quantagent/backtesting/vbt_filter.py)
 ]
 
 [project.optional-dependencies]
@@ -53,7 +54,6 @@ dev = [
     "mypy>=1.5",
     "types-requests>=2.31",
     "backtesting>=0.6.6,<0.7",  # solo scripts/crossval_rsi.py (oraculo de cross-validation)
-    "vectorbt==1.1.2",  # motor del filtro (quantagent/backtesting/vbt_filter.py)
 ]
 
 [tool.setuptools]
