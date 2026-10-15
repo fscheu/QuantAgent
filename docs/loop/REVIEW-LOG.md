@@ -206,4 +206,5 @@ PM: QuantAgent-gfs1.1.2.4 vi: bloqueo correcto (test de sensibilidad supone igua
 PM: QuantAgent-gfs1.1.2.4 vi: adaptador dimensiona en la apertura; rsi/SPY coinciden 187 de 187 al cierre, pnl_apertura_siguiente -15619.09 = motor; CI verde decido: merge — #189
 PM: QuantAgent-d4cq.6 vi: sl_trail reemplaza al stop fijo; en el motor conviven (fijo dentro de la vela, trailing por cierres) decido: cambio solo fijo y TP; trailing en QuantAgent-d4cq.8 — #190 (nube)
 PM: QuantAgent-gfs1.1.2.5 vi: control con apertura; sma-cross/XLK coinciden 6 de 6 y PnL 168244.35 = vectorbt; momentum-12m/XLK sin validar fila 2 (aparte) decido: merge — #191
+PM: QuantAgent-gfs1.1.2.6 vi: reproducido: última fila = finalize_trades liquida al open (motor al close); intermedias = gap en la vela de entrada que el adaptador omite decido: merge — #192; fixes QuantAgent-gfs1.1.2.7 y QuantAgent-gfs1.1.2.8
 ```
