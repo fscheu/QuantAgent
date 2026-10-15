@@ -212,4 +212,5 @@ PM: QuantAgent-gfs1.1.2.7 vi: 48 celdas en la rama: apertura 45 de 48 (antes 32)
 PM: QuantAgent-gfs1.1.2.8 vi: 48 celdas apertura 48 de 48 (antes 45), cierre 48 de 48; mutación detectada por el test de TP decido: merge — #195 (agy)
 PM: QuantAgent-d4cq.8 vi: trailing igual al motor en 52wh/IWM; el bucle fija todas las salidas nuevas por pasada y puede cerrar un trade re-entrado decido: cambio solo la más temprana por pasada + test de re-entrada — #194 (nube)
 PM: QuantAgent-d4cq.8 vi: min(new) aplicado; mutación detectada por el test de re-entrada; 52wh IWM igual al motor; 107 líneas decido: merge — #194 (nube)
+PM: QuantAgent-gfs1.1.2.9 vi: rsi/SPY apertura 187/-15619.09 → 181/-21841.01, cierre sin cambio; oráculos 31 passed; mutación detectada; 160 líneas (tests) decido: merge — #196 (agy)
 ```
