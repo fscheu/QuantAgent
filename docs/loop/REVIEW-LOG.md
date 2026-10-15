@@ -188,4 +188,5 @@ PM: QuantAgent-d4cq.1 vi: momentum-12m 519.43 s, 92% en is_last_session_of_month
 PM: QuantAgent-d4cq.3 vi: bar_signals iloc[:i+1]; XLK 2007-2018 ajustado, sma-cross 6 entradas/salidas iguales a los trades del motor, momentum 2 trades; CI verde decido: merge — #178 (nube) en lote/motor-del-filtro
 PM: QuantAgent-d4cq.2 vi: calendario NYSE compartido; momentum-12m XLK 2007-2018 antes/después 2 trades, PnL 8318.46, Sharpe -1.21 idénticos, 46 s con try.sh; CI verde decido: merge — #180 en lote/motor-del-filtro
 PM: QuantAgent-gfs1.1 vi: bloqueo correcto por error del PM en el ticket (tests/test_backtest*.py incluye los 8 api rotos de TradingGraph, que el CI excluye); partición en gfs1.1.1 / gfs1.1.2 aceptada decido: cambio implementar gfs1.1.1 en este PR con -m "not api" y borrar el doc de bloqueo — #181
+PM: QuantAgent-gfs1.1 vi: segundo bloqueo, error del PM (pedí un merge y Codex tiene .git en solo lectura); el PM integró la base en la rama decido: cambio implementar gfs1.1.1 y borrar el doc de bloqueo — #181. Dos seguidas: loop frenado hasta que Fede diga.
 ```
