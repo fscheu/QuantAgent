@@ -186,4 +186,5 @@ Formato: `PLAN-CONTINUACION.md` §5.
 PM: QuantAgent-gfs1 vi: tabla de 48 celdas cierre/apertura; reproduje sma-cross/XLK 6 / 175355.22 / 0.7 y apertura 167247.35 / 0.68, coinciden 6 de 6; Fede eligió A el 2026-10-14 decido: merge — #177 en lote/motor-del-filtro
 PM: QuantAgent-d4cq.1 vi: momentum-12m 519.43 s, 92% en is_last_session_of_month (get_calendar NYSE por fecha, confirmado en el código); rsi, 52wh y sma-cross 37-39 s decido: merge — #179 en lote/motor-del-filtro
 PM: QuantAgent-d4cq.3 vi: bar_signals iloc[:i+1]; XLK 2007-2018 ajustado, sma-cross 6 entradas/salidas iguales a los trades del motor, momentum 2 trades; CI verde decido: merge — #178 (nube) en lote/motor-del-filtro
+PM: QuantAgent-d4cq.2 vi: calendario NYSE compartido; momentum-12m XLK 2007-2018 antes/después 2 trades, PnL 8318.46, Sharpe -1.21 idénticos, 46 s con try.sh; CI verde decido: merge — #180 en lote/motor-del-filtro
 ```
