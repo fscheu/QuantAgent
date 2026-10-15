@@ -250,15 +250,18 @@ def test_compare_control_sensibilidad_apertura_siguiente_gap(snap_env, monkeypat
     slippage = float(settings.TRADING_SLIPPAGE_PCT)
     high_52w = df["high"].iloc[320 - 252:320].max()
     confidence = max(0.1, min(1.0, (close_signal - high_52w) / (high_52w + 1e-10) * 10))
-    manual_pnl = []
-    for reference in (close_signal, open_next):
-        qty = round(100000 * 1.0 * confidence / reference * 2**27) / 2**27
-        entry = reference * (1 + slippage)
-        exit_price = float(trade["exit_price"])
-        manual_pnl.append(qty * (exit_price - entry) - settings.TRADING_COMMISSION_PCT * qty * (entry + exit_price))
+    qty_cierre = round(100000 * 1.0 * confidence / close_signal * 2**27) / 2**27
+    entry_cierre = close_signal * (1 + slippage)
+    exit_cierre = float(trade["exit_price"])
+    pnl_cierre_manual = qty_cierre * (exit_cierre - entry_cierre) - settings.TRADING_COMMISSION_PCT * qty_cierre * (entry_cierre + exit_cierre)
+    stop_apertura = round(open_next * float(trade["stop_loss"]) / close_signal, 8)
+    exit_apertura = float(df.loc[df.index[323], "open"]) * (1 - slippage)
+    qty_apertura = round(100000 * 1.0 * confidence / open_next * 2**27) / 2**27
+    entry_apertura = open_next * (1 + slippage)
+    pnl_apertura_manual = qty_apertura * (exit_apertura - entry_apertura) - settings.TRADING_COMMISSION_PCT * qty_apertura * (entry_apertura + exit_apertura)
     assert float(trade["qty"]) == pytest.approx(100000 * confidence / close_signal, abs=1e-8)
-    assert pnl_cierre == pytest.approx(round(manual_pnl[0], 2), abs=0.01)
-    assert pnl_apertura == pytest.approx(round(manual_pnl[1], 2), abs=0.01)
+    assert pnl_cierre == pytest.approx(round(pnl_cierre_manual, 2), abs=0.01)
+    assert pnl_apertura == pytest.approx(round(pnl_apertura_manual, 2), abs=0.01)
 
     metrics = []
     adapter_df = control.port.load_fixture(snapshot="t_gap", symbol="SPY")

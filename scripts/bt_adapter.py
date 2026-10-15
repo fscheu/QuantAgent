@@ -126,13 +126,22 @@ class StrategyAdapter(Strategy):
                 broker.orders.extend(entries)
                 price = float(self.data.Open[-1])
                 for order in entries:
-                    confidence, fraction = order.tag
+                    confidence, fraction = order.tag[:2]
+                    ref_price = order.tag[2] if len(order.tag) > 2 else price * SCALE
                     equity = broker._cash + sum(t.size * (price - t.entry_price) for t in broker.trades)
                     units = round(equity * fraction * confidence / price)
                     if units < 1:
                         order.cancel()
                         continue
-                    order._replace(size=units if order.is_long else -units)
+                    open_real = price * SCALE
+                    new_stop = round(open_real * (order.sl * SCALE) / ref_price, 8)
+                    new_take = round(open_real * (order.tp * SCALE) / ref_price, 8)
+                    order._replace(size=units if order.is_long else -units, sl_price=new_stop / SCALE, tp_price=new_take / SCALE)
+                    self.info[self.key]["stop"] = new_stop
+                    if self.pos is not None:
+                        self.pos.entry_price = open_real
+                        self.pos.stop_loss = new_stop
+                        self.pos.take_profit = new_take
                     if order.is_long:
                         # El efectivo y la apertura son los de ejecucion, no los de la senal.
                         units = int(broker._cash / (price * (1 + self.slippage) * (1 + self.commission)))
@@ -231,7 +240,8 @@ class StrategyAdapter(Strategy):
         stop = round(signal.stop_loss or price * (0.98 if long else 1.02), 8)
         take = round(signal.take_profit or price * (1.03 if long else 0.97), 8)
         (self.buy if long else self.sell)(size=units, sl=stop / SCALE, tp=take / SCALE,
-                                        tag=(signal.confidence, settings.TRADING_BASE_POSITION_PCT))
+                                        tag=(signal.confidence, settings.TRADING_BASE_POSITION_PCT,
+                                             signal.entry_price or price))
         self.units = units if long else -units
         self.key = n - 1 if self.fill_close else n  # indice de la vela en la que la libreria llena la orden
         self.info[self.key] = {"stop": stop, "reason": "backtest_end"}
