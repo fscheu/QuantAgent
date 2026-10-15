@@ -552,7 +552,9 @@ Los primeros 5 son los más fáciles de revisar.
 | F07 | `QuantAgent-d4cq.5` | `run_filter` en `vectorbt`: apertura siguiente fija y costos; depende de F05 | Llenado al `open` de la vela siguiente, PnL a mano 1e-9; sin modo al cierre | leer | L8 |
 | F08 | `QuantAgent-d4cq.6` | Stops dentro de la vela en `run_filter`; gana el stop; depende de F07 | Stop, gap, stop+TP en la misma vela y trailing a mano | leer | L8 |
 | F08b | `QuantAgent-d4cq.8` | Trailing stop de `run_filter` con la regla del motor: máximo de cierres, salida en la apertura siguiente; depende de F08 | Trailing y stop fijo a mano; rsi/SPY contra el motor en el resumen | leer | L8 |
-| F09 | `QuantAgent-d4cq.7` | Medición de las 48 celdas: tiempo y Spearman contra el motor propio; depende de F03, F03b, F06, F08, F08b | Doc con tiempo total, Spearman con los dos llenados; el PM reproduce | decidir | L8 |
+| F09.1 | `QuantAgent-d4cq.7.1` | Script de medición del filtro, 48 celdas; partición de F09 | CSV con métricas y tiempos de señales/simulación; test excluye fechas posteriores a 2018 | leer | L8 |
+| F09.2 | `QuantAgent-d4cq.7.2` | Spearman contra compare apertura y cierre; depende de F09.1 | Spearman +1/-1 y empates; 48 claves iguales; top cinco por llenado | leer | L8 |
+| F09.3 | `QuantAgent-d4cq.7.3` | Medición VM y decisión B o A; depende de F09.2 | Pared motor apertura y filtro, ambos Spearman y top cinco reproducibles; regla vigente de Fede | decidir | L8 |
 | H01 | `QuantAgent-d4cq.9` | Archivo de hipótesis YAML y cargador (nube) | YAML válido carga; campo faltante o id inválido falla nombrando el campo | leer | L9 |
 | H02 | `QuantAgent-d4cq.10` | Admisión etapa 0: justificación, máx. 6 parámetros libres, universo, truncamiento (nube); depende de H01 | Motivos juntos; estrategia que mira el futuro rechazada | leer | L9 |
 | H03 | `QuantAgent-d4cq.11` | `intentos.csv` con columnas `hipotesis` y `etapa`, compatible con el encabezado viejo (nube) | Filas viejas intactas; conteo por hipótesis | leer | L9 |
