@@ -178,14 +178,20 @@ class StrategyAdapter(Strategy):
                 self.pos.entry_price = float(self.bars["close" if self.fill_close else "open"].iloc[trade.entry_bar])
                 self.pos.quantity = abs(trade.size) / SCALE
                 should_exit, reason = self.strategy.should_exit(self.pos, price, window)
-                if should_exit:
+                if should_exit and (self.fill_close or n < self.n_real_bars):
                     self._close(reason)
-                else:
+                elif not should_exit:
                     self.pos.candles_since_entry += 1
-            if self.pos is None:
+            if self.pos is None and (self.fill_close or n < self.n_real_bars):
                 self._maybe_enter(window, price, n)
         if self.fill_close and n == self.n_real_bars and self.pos is not None:
-            self._close("backtest_end")  # next-open: lo hace la libreria (finalize_trades=True)
+            self._close("backtest_end")
+        elif not self.fill_close and n == self.n_real_bars:
+            for trade in list(self._broker.trades):
+                self.info[trade.entry_bar]["reason"] = "backtest_end"
+                self._broker._close_trade(trade, float(self.data.Close[-1]), self._broker._i)
+            self._broker.orders.clear()
+            self.pos = None
 
     def _close(self, reason):
         self.info[self.key]["reason"] = reason
@@ -245,7 +251,7 @@ def run_adapter(strategy, df: pd.DataFrame, *, symbol: str, timeframe: str, fill
     close = fill == "close"
     bt = Backtest(df if close else df.iloc[:-1], StrategyAdapter, cash=cash, commission=commission_pct, margin=1.0,
                   spread=slippage_pct,
-                  trade_on_close=close, hedging=False, exclusive_orders=False, finalize_trades=not close)
+                  trade_on_close=close, hedging=False, exclusive_orders=False, finalize_trades=False)
     return bt.run(strategy=strategy, symbol=symbol, timeframe=timeframe, n_real_bars=len(df) - 1, fill_close=close,
                   slippage=slippage_pct, commission=commission_pct, orden_minima=orden_minima)
 
