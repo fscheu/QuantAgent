@@ -59,11 +59,11 @@ def run_filter(signals: pd.DataFrame, candles: pd.DataFrame, *, commission_pct: 
         )
 
     pf = simulate()
-    while np.isfinite(trail).any():  # cada pasada fija un trailing más; las trades siguientes cambian al fijarlo
+    while np.isfinite(trail).any():  # cada pasada fija un trailing más; fijarlo cambia las trades siguientes
         new = [t for t in _trailing_exit_bars(pf.trades.values, close, trail) if not trail_exit[t]]
         if not new:
             break
-        trail_exit[new] = True
+        trail_exit[min(new)] = True  # solo la más temprana: las marcas fijadas siempre son de trades que ya no cambian
         pf = simulate()
     equity = pf.value()
     m = equity_metrics(equity)
