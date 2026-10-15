@@ -198,4 +198,6 @@ PM: QuantAgent-gfs1.1.2.2 vi: bloqueo correcto (profundidad 3 de BEADS, 75 Backt
 PM: QuantAgent-gfs1.1.2.2 vi: default de --llenado = apertura en run y compare; rsi/SPY sin flag 187 / -15619.09 / -0.45; golden en cierre intacto; smoke 642.50; CI verde decido: escalo a Fede (semántica de llenado) — #186
 PM: QuantAgent-y89w vi: bloqueo correcto (el fix cancela la entrada válida final: motor=46, port=45) decido: descarto sale de L8; caso solo con tamaño > 100% — #187
 PM: QuantAgent-gfs1.1.2.2 vi: aprobado por Fede en el chat ("Apruebo el #186"); apertura por defecto en run y compare decido: merge — #186
+PM: QuantAgent-d4cq.5 vi: run_filter en vectorbt con frecuencia observada; sma-cross/XLK 2007-2018: 6 / 168244.35 / 0.68 contra motor apertura 6 / 167247.35 / 0.68; CI verde decido: merge — #183 (nube)
+PM: QuantAgent-gfs1.1.2.3 vi: bloqueo correcto: con apertura 187 trades en motor y adaptador, PnL -15619.09 / -15620.14, pero difiere qty desde la fila 1 (el motor dimensiona con el cierre de la señal y llena al open) decido: escalo a Fede: dimensionar con el precio de llenado (A) o comparar sin qty (B) — #188. Dos seguidas (#187 descarto, #188 bloqueo): loop frenado.
 ```
