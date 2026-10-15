@@ -216,4 +216,5 @@ PM: QuantAgent-gfs1.1.2.9 vi: rsi/SPY apertura 187/-15619.09 → 181/-21841.01, 
 PM: QuantAgent-gfs1.1.2.10 vi: bloqueo correcto: test de sensibilidad reutiliza exit_price de cierre; base roja en test_control_mismo_llenado_motor[None] tras #196 decido: cambio implementar y reescribir el test, alcance ampliado a test_compare_control.py — #197
 PM: QuantAgent-gfs1.1.2.10 vi: apertura 32 de 48 por redondeo de pnl (4e-6 USD) con qty, precios y fechas iguales; con pnl_tol escalada por qty 47 de 48, la restante es qty de 0.0019 acciones decido: merge; tolerancias en QuantAgent-gfs1.1.2.11 (F03a.2k) — #197 (agy)
 PM: QuantAgent-gfs1.1.2.11 vi: apertura 48 de 48 en la rama (antes 32); tests de los dos lados decido: merge — #198 (codex)
+PM: QuantAgent-gfs1.2 vi: partición en 3 hijos (65/95/45 líneas), filas F03b.1–3 decido: merge — #199 (codex)
 ```
