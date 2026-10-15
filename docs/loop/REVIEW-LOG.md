@@ -214,4 +214,5 @@ PM: QuantAgent-d4cq.8 vi: trailing igual al motor en 52wh/IWM; el bucle fija tod
 PM: QuantAgent-d4cq.8 vi: min(new) aplicado; mutación detectada por el test de re-entrada; 52wh IWM igual al motor; 107 líneas decido: merge — #194 (nube)
 PM: QuantAgent-gfs1.1.2.9 vi: rsi/SPY apertura 187/-15619.09 → 181/-21841.01, cierre sin cambio; oráculos 31 passed; mutación detectada; 160 líneas (tests) decido: merge — #196 (agy)
 PM: QuantAgent-gfs1.1.2.10 vi: bloqueo correcto: test de sensibilidad reutiliza exit_price de cierre; base roja en test_control_mismo_llenado_motor[None] tras #196 decido: cambio implementar y reescribir el test, alcance ampliado a test_compare_control.py — #197
+PM: QuantAgent-gfs1.1.2.10 vi: apertura 32 de 48 por redondeo de pnl (4e-6 USD) con qty, precios y fechas iguales; con pnl_tol escalada por qty 47 de 48, la restante es qty de 0.0019 acciones decido: merge; tolerancias en QuantAgent-gfs1.1.2.11 (F03a.2k) — #197 (agy)
 ```
