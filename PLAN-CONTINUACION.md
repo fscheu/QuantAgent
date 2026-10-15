@@ -530,7 +530,9 @@ Los primeros 5 son los más fáciles de revisar.
 | F02 | `QuantAgent-d4cq.1` | Perfil de las 4 estrategias en el motor propio, SPY 2007–2018 (diagnóstico) | Top 10 por estrategia; causa en el top 10; sin cambios en `quantagent/` | leer | L8 |
 | F03 | `QuantAgent-d4cq.2` | Corregir el cuello de botella del perfil; depende de F02 | Oráculos y métricas sin cambio; la más lenta 3 veces más rápida | probar | L8 |
 | F03a | `QuantAgent-gfs1.1` | Motor: llenado por defecto en la apertura siguiente, `--llenado cierre` como opción (decisión A de Fede en F01) | Entrada y salida al `open` de t+1 a mano; con `cierre`, 187 / -9141.21 | probar | L8 |
-| F03a.2 | `QuantAgent-gfs1.1.2` | Motor y CLI: apertura por defecto y `--llenado cierre`; oráculos fijados en cierre hasta F03b; depende de F03a (partición: F03a implementa gfs1.1.1) | `run`/`compare` sin flag usan apertura; con `cierre`, 187 / -9141.21 | probar | L8 |
+| F03a.2a | `QuantAgent-gfs1.1.2.1` | CLI: `--llenado apertura\|cierre` explícito; todavía cierre por defecto | Ambos comandos propagan fill; inválido sale 2; snapshot conserva fill | probar | L8 |
+| F03a.2b | `QuantAgent-gfs1.1.2.2` | Fijar cierre en tests y referencias; depende de F03a.2a | Oráculos sin números nuevos; golden RSI/SPY en cierre 187 / -9141.21 | probar | L8 |
+| F03a.2c | `QuantAgent-gfs1.1.2.3` | Activar apertura por defecto en motor y CLI; depende de F03a.2b | Sin flag usan apertura; cierre conserva referencia; última señal no abre | probar | L8 |
 | F03b | `QuantAgent-gfs1.2` | Regenerar oráculos y números de referencia con el default nuevo; depende de F03a | Oráculos pasan; un test `cierre` exige 187 / -9141.21; tabla viejo → nuevo | decidir | L8 |
 | F04 | `QuantAgent-y89w` | Adaptador: `_close` sin posición llenada no abre un corto | Test de la reproducción sin corto abierto; `coinciden` sin cambio | leer | L8 |
 | F05 | `QuantAgent-d4cq.3` | `bar_signals`: señales por vela desde una estrategia, solo con velas hasta la actual | La estrategia recibe i+1 velas en la vela i; cruce de sma-cross a mano | leer | L8 |
