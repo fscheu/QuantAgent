@@ -190,4 +190,6 @@ PM: QuantAgent-d4cq.2 vi: calendario NYSE compartido; momentum-12m XLK 2007-2018
 PM: QuantAgent-gfs1.1 vi: bloqueo correcto por error del PM en el ticket (tests/test_backtest*.py incluye los 8 api rotos de TradingGraph, que el CI excluye); partición en gfs1.1.1 / gfs1.1.2 aceptada decido: cambio implementar gfs1.1.1 en este PR con -m "not api" y borrar el doc de bloqueo — #181
 PM: QuantAgent-gfs1.1 vi: segundo bloqueo, error del PM (pedí un merge y Codex tiene .git en solo lectura); el PM integró la base en la rama decido: cambio implementar gfs1.1.1 y borrar el doc de bloqueo — #181. Dos seguidas: loop frenado hasta que Fede diga.
 PM: QuantAgent-gfs1.1 vi: gfs1.1.1 implementado; rsi/SPY 2007-2018 cierre 187 / -9141.21 sin cambio, apertura 187 / -15619.09 / -0.45 contra -15620.14 / -0.46 estimado en F01; CI verde decido: merge — #181 en lote/motor-del-filtro
+PM: QuantAgent-d4cq.4 vi: check_no_lookahead; mutación iloc[:i+2] detectada por el test de las 4 estrategias; CI verde decido: merge — #182 (nube)
+PM: QuantAgent-d4cq.5 vi: run_filter apertura siguiente, 5 passed; CI falla sin vectorbt (extra dev) decido: cambio vectorbt a dependencies, Sharpe con frecuencia observada (error del PM: 252), sharpe_tasa_0 y max_drawdown en fracción — #183 (nube)
 ```

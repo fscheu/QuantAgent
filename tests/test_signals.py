@@ -2,7 +2,11 @@
 
 import pandas as pd
 
-from quantagent.backtesting.signals import bar_signals
+import numpy as np
+
+from quantagent.backtesting.signals import bar_signals, check_no_lookahead
+from quantagent.strategy.fifty_two_week_high_strategy import FiftyTwoWeekHighStrategy
+from quantagent.strategy.momentum_12m_strategy import Momentum12mStrategy
 from quantagent.strategy.rsi_strategy import RSIMeanReversionStrategy
 from quantagent.strategy.sma_cross_strategy import SmaCrossStrategy
 
@@ -53,3 +57,39 @@ def test_rsi_produce_entradas_cortas_con_rsi_sobre_70():
     assert sig["trailing_stop_pct"].iloc[14] == 0.05
     assert abs(sig["stop_loss_pct"].iloc[14] - 0.02) < 1e-9
     assert not sig["exit"].any()  # la regla por defecto con niveles inalcanzables nunca sale
+
+
+def _serie_indexada(n=600):
+    closes = 100 + np.cumsum(np.random.default_rng(7).normal(0, 1, n))
+    c = _candles(closes)
+    c["volume"] = np.random.default_rng(8).uniform(1, 3, n)
+    return c.set_index("timestamp", drop=False)
+
+
+def test_las_4_estrategias_de_m2_no_miran_el_futuro():
+    candles = _serie_indexada()
+    cuts = [candles.index[299], candles.index[449], candles.index[549]]
+    estrategias = [
+        RSIMeanReversionStrategy(), FiftyTwoWeekHighStrategy(lookback_days=60),
+        SmaCrossStrategy(fast=10, slow=30), Momentum12mStrategy(lookback=60),
+    ]
+    for est in estrategias:
+        assert check_no_lookahead(lambda c: bar_signals(est, c, "SPY", "1d"), candles, cuts) == [], type(est).__name__
+
+
+def test_detecta_shift_negativo_y_normalizacion_con_toda_la_serie():
+    candles = _serie_indexada(100)
+    cuts = [candles.index[49], candles.index[79]]
+    futuro = lambda c: pd.DataFrame({"s": (c["close"].shift(-1) > c["close"]).astype(int)})  # noqa: E731
+    global_ = lambda c: pd.DataFrame({"z": (c["close"] - c["close"].mean()) / c["close"].std()})  # noqa: E731
+    d1 = check_no_lookahead(futuro, candles, cuts)
+    d2 = check_no_lookahead(global_, candles, cuts)
+    assert d1 and d1[0].startswith("s:") and str(candles.index[49]) in d1[0]
+    assert d2 and d2[0].startswith("z:")
+
+
+def test_media_movil_sin_centrar_no_difiere():
+    candles = _serie_indexada(100)
+    cuts = [candles.index[49], candles.index[79]]
+    causal = lambda c: pd.DataFrame({"m": c["close"].rolling(20).mean()})  # noqa: E731
+    assert check_no_lookahead(causal, candles, cuts) == []
