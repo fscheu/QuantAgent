@@ -13,7 +13,8 @@ OPEN = [100, 101, 102, 104, 103, 105, 110, 108, 107, 106]
 
 def _candles():
     idx = pd.date_range("2020-01-01", periods=10, freq="D")
-    return pd.DataFrame({"open": [float(x) for x in OPEN], "close": [float(x) + 0.5 for x in OPEN]}, index=idx)
+    o = [float(x) for x in OPEN]
+    return pd.DataFrame({"open": o, "high": [x + 1 for x in o], "low": [x - 1 for x in o], "close": [x + 0.5 for x in o]}, index=idx)
 
 def _signals(candles, entry=None, exits=()):
     s = pd.DataFrame({"entry": 0, "exit": False}, index=candles.index)
@@ -76,3 +77,30 @@ def test_sharpe_and_drawdown_by_hand_on_small_curve():
     assert m["max_drawdown"] == pytest.approx((110 - 99) / 110, abs=1e-12)
     assert m["sharpe"] == pytest.approx((mean - 0.02 / ppy) / sd * math.sqrt(ppy), abs=1e-9)
     assert m0["sharpe"] == pytest.approx(mean / sd * math.sqrt(ppy), abs=1e-9)
+
+
+def _ohlc(rows):
+    idx = pd.date_range("2020-01-01", periods=len(rows), freq="D")
+    return pd.DataFrame(rows, columns=["open", "high", "low", "close"], index=idx).astype(float)
+
+def _stop_run(rows, side=1, **pcts):
+    c = _ohlc(rows)
+    s = _signals(c, {0: side})
+    for k, v in pcts.items():
+        s[k] = float("nan")
+        s.iloc[0, s.columns.get_loc(k)] = v
+    r = run_filter(s, c, commission_pct=0.0, slippage_pct=0.0, capital=CAPITAL)
+    return r["pnl"], CAPITAL / c["open"].iloc[1]  # (pnl, cantidad) con entrada al open de la vela 1
+
+def test_stop_loss_exits_at_stop_level_on_crossing_candle():
+    pnl, qty = _stop_run([(100, 100, 100, 100), (100, 101, 99, 100), (100, 100, 90, 92), (92, 93, 80, 85)], stop_loss_pct=0.05)
+    assert pnl == pytest.approx(qty * (95 - 100))  # sale a 95 en la vela 2, no al close ni al low
+
+def test_candle_touching_stop_and_take_profit_exits_by_stop():
+    pnl, qty = _stop_run([(100, 100, 100, 100), (100, 101, 99, 100), (100, 112, 94, 110), (110, 111, 109, 110)],
+                         stop_loss_pct=0.05, take_profit_pct=0.10)
+    assert pnl == pytest.approx(qty * (95 - 100))
+
+def test_gap_below_stop_exits_at_open():
+    pnl, qty = _stop_run([(100, 100, 100, 100), (100, 101, 99, 100), (90, 91, 88, 89), (89, 90, 85, 86)], stop_loss_pct=0.05)
+    assert pnl == pytest.approx(qty * (90 - 100))
