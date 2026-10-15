@@ -116,6 +116,7 @@ def _run_control(tabla: Path, trades_dir: Path, snapshot: str, md: Path | None =
         "--tabla", str(tabla),
         "--trades-dir", str(trades_dir),
         "--snapshot", snapshot,
+        "--llenado", "cierre",
         *extra,
     ]
     if md:
@@ -295,7 +296,7 @@ def test_compare_control_sensibilidad_apertura_siguiente_gap(snap_env, monkeypat
                 raise RuntimeError("corrida fallida")
             return run_adapter(*args, **kwargs)
         monkeypatch.setattr(control.bt_adapter, "run_adapter", fail_run)
-        assert control.main(["--tabla", str(out_csv), "--trades-dir", str(trades_dir), "--snapshot", "t_gap"]) == 0
+        assert control.main(["--tabla", str(out_csv), "--trades-dir", str(trades_dir), "--snapshot", "t_gap", "--llenado", "cierre"]) == 0
         with out_csv.open(newline="") as f:
             assert all(next_row[c] == "" for next_row in csv.DictReader(f) for c in control.METRIC_COLUMNS)
 
@@ -319,6 +320,33 @@ def test_compare_control_con_params_valida_contra_las_mismas_estrategias(snap_en
     _run_control(out_csv, trades_dir, "t", out_md, "--params", str(params))
     assert control().startswith("coinciden")
     assert "take_profit_pct=0.02," in out_md.read_text(encoding="utf-8")
+
+
+def test_llenado_invalido():
+    result = subprocess.run([sys.executable, str(SCRIPT), "--tabla", "x", "--trades-dir", "x",
+                             "--snapshot", "x", "--llenado", "otro"], capture_output=True, text=True)
+    assert result.returncode == 2
+    assert "invalid choice" in result.stderr
+
+
+@pytest.mark.parametrize("llenado", [None, "cierre"])
+def test_control_mismo_llenado_motor(snap_env, llenado):
+    runner, tmp_path = snap_env
+    write_snapshot("t", {"SPY": _daily_frame()})
+    tabla, trades = tmp_path / "cmp.csv", tmp_path / "trades"
+    extra = ["--llenado", llenado] if llenado else []
+    result = runner.invoke(backtest_group, ["compare", "--strategies", "fifty-two-week-high",
+        "--symbols", "SPY", "--snapshot", "t", "--costos", "etf",
+        "--out", str(tabla), "--trades-dir", str(trades), *extra])
+    assert result.exit_code == 0, result.output
+    assert control.main(["--tabla", str(tabla), "--trades-dir", str(trades),
+                         "--snapshot", "t", "--costos", "etf", *extra]) == 0
+    with tabla.open(newline="") as f:
+        row = next(csv.DictReader(f))
+    assert row["control"] == "coinciden 6 de 6"
+    if llenado is None:
+        assert row["sharpe_tasa_0_apertura_siguiente"] == row["sharpe_tasa_0"]
+        assert float(row["max_drawdown_apertura_siguiente"]) == float(row["max_drawdown"])
 
 
 def test_compare_control_con_orden_minima(snap_env):
