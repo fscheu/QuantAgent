@@ -246,11 +246,18 @@ def test_compare_control_sensibilidad_apertura_siguiente_gap(snap_env, monkeypat
 
     with open(trades_dir / "fifty-two-week-high-SPY.csv", newline="") as f:
         trade = next(csv.DictReader(f))
-    qty = float(trade["qty"])
     slippage = float(settings.TRADING_SLIPPAGE_PCT)
-    effective_gap = gap * (1.0 + slippage)
-    expected_diff = round(effective_gap * qty, 2)
-    assert round(pnl_cierre - pnl_apertura, 2) == pytest.approx(expected_diff, abs=0.01)
+    high_52w = df["high"].iloc[320 - 252:320].max()
+    confidence = max(0.1, min(1.0, (close_signal - high_52w) / (high_52w + 1e-10) * 10))
+    manual_pnl = []
+    for reference in (close_signal, open_next):
+        qty = round(100000 * 1.0 * confidence / reference * 2**27) / 2**27
+        entry = reference * (1 + slippage)
+        exit_price = float(trade["exit_price"])
+        manual_pnl.append(qty * (exit_price - entry) - settings.TRADING_COMMISSION_PCT * qty * (entry + exit_price))
+    assert float(trade["qty"]) == pytest.approx(100000 * confidence / close_signal, abs=1e-8)
+    assert pnl_cierre == pytest.approx(round(manual_pnl[0], 2), abs=0.01)
+    assert pnl_apertura == pytest.approx(round(manual_pnl[1], 2), abs=0.01)
 
     metrics = []
     adapter_df = control.port.load_fixture(snapshot="t_gap", symbol="SPY")
