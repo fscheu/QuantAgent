@@ -195,4 +195,5 @@ PM: QuantAgent-d4cq.5 vi: run_filter apertura siguiente, 5 passed; CI falla sin 
 PM: QuantAgent-gfs1.1.2 vi: partición en tres (CLI explícito 85, fijar cierre en referencias 95, activar apertura 80), filas F03a.2a–c decido: merge — #184
 PM: QuantAgent-gfs1.1.2.1 vi: --llenado en run y compare; rsi/SPY 2007-2018 --llenado apertura 187 / -15619.09 / -0.45; CI verde decido: merge — #185
 PM: QuantAgent-gfs1.1.2.2 vi: bloqueo correcto (profundidad 3 de BEADS, 75 Backtest en tests) decido: cambio solo el default de --llenado del CLI pasa a apertura; Backtest y correr_par quedan en cierre — #186
+PM: QuantAgent-gfs1.1.2.2 vi: default de --llenado = apertura en run y compare; rsi/SPY sin flag 187 / -15619.09 / -0.45; golden en cierre intacto; smoke 642.50; CI verde decido: escalo a Fede (semántica de llenado) — #186
 ```
