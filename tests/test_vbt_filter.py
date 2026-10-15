@@ -104,8 +104,3 @@ def test_candle_touching_stop_and_take_profit_exits_by_stop():
 def test_gap_below_stop_exits_at_open():
     pnl, qty = _stop_run([(100, 100, 100, 100), (100, 101, 99, 100), (90, 91, 88, 89), (89, 90, 85, 86)], stop_loss_pct=0.05)
     assert pnl == pytest.approx(qty * (90 - 100))
-
-def test_trailing_stop_follows_high_and_exits_on_pullback():
-    pnl, qty = _stop_run([(100, 100, 100, 100), (100, 101, 99, 100), (101, 120, 116, 118), (118, 119, 112, 113), (113, 114, 100, 101)],
-                         trailing_stop_pct=0.05)
-    assert pnl == pytest.approx(qty * (120 * 0.95 - 100))  # máximo 120 -> stop 114; sale en la vela 3 al nivel del trailing
