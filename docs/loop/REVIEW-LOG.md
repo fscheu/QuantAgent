@@ -185,4 +185,5 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-14 PM: punto de control L7: prueba 2019–2022 abierta una vez; PASA 14 de 48; control 48 de 48; recalc 48 de 48; oráculos 26 passed; Sharpe deflactado (N=48) máx 0.25. PR #132 listo para Fede.
 PM: QuantAgent-gfs1 vi: tabla de 48 celdas cierre/apertura; reproduje sma-cross/XLK 6 / 175355.22 / 0.7 y apertura 167247.35 / 0.68, coinciden 6 de 6; Fede eligió A el 2026-10-14 decido: merge — #177 en lote/motor-del-filtro
 PM: QuantAgent-d4cq.1 vi: momentum-12m 519.43 s, 92% en is_last_session_of_month (get_calendar NYSE por fecha, confirmado en el código); rsi, 52wh y sma-cross 37-39 s decido: merge — #179 en lote/motor-del-filtro
+PM: QuantAgent-d4cq.3 vi: bar_signals iloc[:i+1]; XLK 2007-2018 ajustado, sma-cross 6 entradas/salidas iguales a los trades del motor, momentum 2 trades; CI verde decido: merge — #178 (nube) en lote/motor-del-filtro
 ```
