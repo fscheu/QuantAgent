@@ -71,6 +71,16 @@ def test_comparison_ranks_keys_and_top_five(comparison_csvs, capsys):
     assert "Spearman apertura: 0.866213" in capsys.readouterr().out
 
 
+def test_comparison_accepts_motor_first_candle(comparison_csvs, capsys):
+    for path in comparison_csvs[1:]:
+        table = pd.read_csv(path)
+        table.assign(desde="2007-01-03").to_csv(path, index=False)
+    script.comparar(*comparison_csvs)
+    output = capsys.readouterr().out
+    assert "Spearman apertura: 1.000000" in output
+    assert "Spearman cierre: -1.000000" in output
+
+
 @pytest.mark.parametrize("position", range(3))
 @pytest.mark.parametrize("damage", ["missing", "duplicate", "early", "late"])
 def test_reject_invalid_comparison(comparison_csvs, position, damage):

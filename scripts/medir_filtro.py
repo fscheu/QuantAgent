@@ -45,7 +45,7 @@ def comparar(filtro, apertura, cierre):
         keys = list(zip(table.strategy, table.symbol))
         if len(keys) != 48 or set(keys) != expected:
             raise ValueError(f"{path}: se requieren las mismas 48 claves únicas")
-        if not ((table.desde == "2007-01-01") & (table.hasta == "2018-12-31")).all():
+        if not ((table.desde >= "2007-01-01") & (table.hasta <= "2018-12-31")).all():
             raise ValueError(f"{path}: período requerido 2007-01-01 a 2018-12-31")
         tables.append(table.set_index(["strategy", "symbol"]).sort_index())
     for fill, motor in zip(("apertura", "cierre"), tables[1:]):
