@@ -130,7 +130,7 @@ def run_engine(
            "PROBE_OUT": str(d / "probe.json")}
     subprocess.run([sys.executable, "-c", "from quantagent.database import init_db; init_db()"],
                    cwd=ROOT, env=env, check=True, capture_output=True, text=True)
-    args = ["backtest", "run", "--strategy", "rsi",
+    args = ["backtest", "run", "--llenado", "cierre", "--strategy", "rsi",
             "--out", str(d / "trades.csv"), "--equity-out", str(d / "equity.csv")]
     if snapshot:
         args += ["--snapshot", snapshot, "--symbol", symbol]

@@ -41,7 +41,7 @@ def test_control_cortos_al_cien_por_ciento(snap_env, alias, costos, expected):
     write_snapshot("t", {"SPY": _daily_frame()})
     tabla, trades = tmp_path / "cmp.csv", tmp_path / "trades"
     result = runner.invoke(backtest_group, [
-        "compare", "--strategies", alias, "--symbols", "SPY", "--snapshot", "t",
+        "compare", "--llenado", "cierre", "--strategies", alias, "--symbols", "SPY", "--snapshot", "t",
         "--costos", costos, "--tamano-posicion", "1.0", "--out", str(tabla), "--trades-dir", str(trades),
     ])
     assert result.exit_code == 0, result.output
@@ -137,7 +137,7 @@ def test_compare_control_coincide_y_falla_si_se_altera_un_trade(snap_env):
     res = runner.invoke(
         backtest_group,
         [
-            "compare",
+            "compare", "--llenado", "cierre",
             "--strategies", "fifty-two-week-high",
             "--symbols", "SPY",
             "--snapshot", "t",
@@ -222,7 +222,7 @@ def test_compare_control_sensibilidad_apertura_siguiente_gap(snap_env, monkeypat
     res = runner.invoke(
         backtest_group,
         [
-            "compare",
+            "compare", "--llenado", "cierre",
             "--strategies", "fifty-two-week-high",
             "--symbols", "SPY",
             "--snapshot", "t_gap",
@@ -299,7 +299,7 @@ def test_compare_control_con_params_valida_contra_las_mismas_estrategias(snap_en
     params = tmp_path / "p.json"
     params.write_text('{"fifty-two-week-high": {"stop_loss_pct": 0.01, "take_profit_pct": 0.02, "trailing_stop_pct": 0.02}}')
     out_csv, trades_dir, out_md = tmp_path / "cmp.csv", tmp_path / "trades", tmp_path / "ctrl.md"
-    cmd = ["compare", "--strategies", "fifty-two-week-high", "--symbols", "SPY", "--snapshot", "t", "--out", str(out_csv)]
+    cmd = ["compare", "--llenado", "cierre", "--strategies", "fifty-two-week-high", "--symbols", "SPY", "--snapshot", "t", "--out", str(out_csv)]
     res = runner.invoke(backtest_group, [*cmd, "--trades-dir", str(trades_dir), "--params", str(params)])
     assert res.exit_code == 0, res.output
 
@@ -319,7 +319,7 @@ def test_compare_control_con_orden_minima(snap_env):
     write_snapshot("t", {"SPY": _daily_frame()})
     out_csv, trades_dir = tmp_path / "cmp.csv", tmp_path / "trades"
     cmd = [
-        "compare",
+        "compare", "--llenado", "cierre",
         "--strategies", "fifty-two-week-high",
         "--symbols", "SPY",
         "--snapshot", "t",
@@ -350,7 +350,7 @@ def test_equity_curve_del_adaptador_iguala_la_del_motor(snap_env, monkeypatch, a
     run = motor.Backtest.run
     monkeypatch.setattr(motor.Backtest, "run", lambda self, *a, **k: (motores.append(self), run(self, *a, **k))[1])
     extra = ["--costos", costos] if costos else []
-    res = runner.invoke(backtest_group, ["compare", "--strategies", alias, "--symbols", "SPY", "--snapshot", "t",
+    res = runner.invoke(backtest_group, ["compare", "--llenado", "cierre", "--strategies", alias, "--symbols", "SPY", "--snapshot", "t",
                                          "--out", str(tmp_path / "cmp.csv"), "--trades-dir", str(tmp_path / "tr"), *extra])
     assert res.exit_code == 0, res.output
     with open(tmp_path / "cmp.csv", newline="") as f:

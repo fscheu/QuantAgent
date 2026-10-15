@@ -6,7 +6,7 @@ DATABASE_URL apuntando a una base SQLite inicializada con init_db():
 
     mkdir -p $QUANTAGENT_SNAPSHOT_DIR/golden/etf-1d-2026-10
     python -m quantagent.cli backtest run --strategy rsi --snapshot etf-1d-2026-10 --symbol SPY \
-        --from 2007-01-03 --to 2018-12-31 --costos etf --tamano-posicion 1.0 \
+        --from 2007-01-03 --to 2018-12-31 --costos etf --tamano-posicion 1.0 --llenado cierre \
         --out $QUANTAGENT_SNAPSHOT_DIR/golden/etf-1d-2026-10/rsi-SPY-2007-2018-etf-100.csv
 
 Los mensajes de falla dicen linea y columna pero no muestran filas: los precios no deben salir en un log.
@@ -36,7 +36,7 @@ if not (Path(SNAPSHOT_DIR) / SNAPSHOT).exists():
 GOLDEN = Path(SNAPSHOT_DIR) / GOLDEN_REL
 if not GOLDEN.exists():
     pytest.skip(f"Falta el golden {GOLDEN}. Generarlo: mkdir -p {GOLDEN.parent} && python -m quantagent.cli backtest "
-                f"run {' '.join(RUN)} --tamano-posicion 1.0 --out {GOLDEN}", allow_module_level=True)
+                f"run {' '.join(RUN)} --llenado cierre --tamano-posicion 1.0 --out {GOLDEN}", allow_module_level=True)
 
 # Imprime solo los renglones de compare_trades sin filas, y cuantos motivos de salida coinciden.
 COMPARE = ("import sys; sys.path.insert(0, 'scripts'); import crossval_compare as c; "
@@ -65,7 +65,7 @@ def test_motor_igual_al_golden_y_al_adaptador(tmp_path):
     env = {**os.environ, "DATABASE_URL": f"sqlite:///{tmp_path / 'engine.db'}", "TRADING_BASE_POSITION_PCT": "1.0"}
     motor, adaptador = str(tmp_path / "motor.csv"), str(tmp_path / "adaptador.csv")
     for cmd in (["-c", "from quantagent.database import init_db; init_db()"],
-                ["-m", "quantagent.cli", "backtest", "run", *RUN, "--tamano-posicion", "1.0", "--out", motor],
+                ["-m", "quantagent.cli", "backtest", "run", *RUN, "--llenado", "cierre", "--tamano-posicion", "1.0", "--out", motor],
                 ["scripts/bt_adapter.py", *RUN, "--fill", "close", "--out", adaptador],
                 ["-c", COMPARE, motor, adaptador]):
         proc = subprocess.run([sys.executable, *cmd], cwd=ROOT, env=env, capture_output=True, text=True, timeout=900)

@@ -290,7 +290,7 @@ def test_motor_y_adaptador_coinciden_con_slippage(tmp_path, strategy, fixture, p
                "print(*lines, sep='\\n'); "
                "sys.exit(not ok or [r['exit_reason'] for r in e] != [r['exit_reason'] for r in a])")
     for cmd in (["-c", "from quantagent.database import init_db; init_db()"],
-                ["-m", "quantagent.cli", "backtest", "run", "--strategy", strategy, "--fixture", fixture, *size,
+                ["-m", "quantagent.cli", "backtest", "run", "--llenado", "cierre", "--strategy", strategy, "--fixture", fixture, *size,
                  "--out", "motor.csv"],
                 ["scripts/bt_adapter.py", "--strategy", strategy, "--fixture", fixture, "--slippage-pct", "0.0005",
                  "--out", "adaptador.csv"],

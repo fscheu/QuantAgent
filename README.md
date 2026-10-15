@@ -142,11 +142,12 @@ python -m quantagent.cli backtest run --strategy rsi --fixture spy-90d --out run
 ```
 
 `backtest run` and `backtest compare` accept `--llenado cierre|apertura` (default:
-`cierre`). `apertura` fills at the next candle's open; a reversal after an opposite
+`apertura`). Use `--llenado cierre` to reproduce close-based references.
+`apertura` fills at the next candle's open; a reversal after an opposite
 signal takes one more candle than with `cierre`. The run's config snapshot records
 the selected fill. This option does not change replay or paper trading.
 
-Expected output (exact numbers depend on the strategy/fixture combination, but
+Close-based reference with `--llenado cierre` (numbers depend on the strategy/fixture, but
 the shape is always these 8 lines plus the `--out` line):
 
 ```
