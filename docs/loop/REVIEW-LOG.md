@@ -183,4 +183,5 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-14 PM: 7ssw.4 #173 (nube) rsi/SPY crisis_2008 0.332; 2020/2022 vacías. decido: merge
 2026-10-14 PM: lba3 #174 rsi 12 ETFs control coinciden en las 12 celdas; cripto 46 de 46. decido: merge
 2026-10-14 PM: punto de control L7: prueba 2019–2022 abierta una vez; PASA 14 de 48; control 48 de 48; recalc 48 de 48; oráculos 26 passed; Sharpe deflactado (N=48) máx 0.25. PR #132 listo para Fede.
+PM: QuantAgent-gfs1 vi: tabla de 48 celdas cierre/apertura; reproduje sma-cross/XLK 6 / 175355.22 / 0.7 y apertura 167247.35 / 0.68, coinciden 6 de 6; Fede eligió A el 2026-10-14 decido: merge — #177 en lote/motor-del-filtro
 ```
