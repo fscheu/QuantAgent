@@ -90,6 +90,31 @@ def test_last_session_of_month_follows_the_market_calendar():
     assert is_last_session_of_month(pd.Timestamp("2018-12-31"))
 
 
+def test_month_ends_2007_2018_match_fixed_nyse_dates():
+    # Días de última sesión, enero a diciembre por año. Incluye Sandy
+    # (29–30/10/2012), Viernes Santo y fines de semana, sin usar velas futuras.
+    month_ends = [
+        [31, 28, 30, 30, 31, 29, 31, 31, 28, 31, 30, 31],
+        [31, 29, 31, 30, 30, 30, 31, 29, 30, 31, 28, 31],
+        [30, 27, 31, 30, 29, 30, 31, 31, 30, 30, 30, 31],
+        [29, 26, 31, 30, 28, 30, 30, 31, 30, 29, 30, 31],
+        [31, 28, 31, 29, 31, 30, 29, 31, 30, 31, 30, 30],
+        [31, 29, 30, 30, 31, 29, 31, 31, 28, 31, 30, 31],
+        [31, 28, 28, 30, 31, 28, 31, 30, 30, 31, 29, 31],
+        [31, 28, 31, 30, 30, 30, 31, 29, 30, 31, 28, 31],
+        [30, 27, 31, 30, 29, 30, 31, 31, 30, 30, 30, 31],
+        [29, 29, 31, 29, 31, 30, 29, 31, 30, 31, 30, 30],
+        [31, 28, 31, 28, 31, 30, 31, 31, 29, 31, 30, 29],
+        [31, 28, 29, 30, 31, 29, 31, 31, 28, 31, 30, 31],
+    ]
+    is_last_session_of_month.cache_clear()
+    for day in pd.bdate_range("2007-01-01", "2018-12-31"):
+        last = month_ends[day.year - 2007][day.month - 1]
+        # Conserva también la semántica previa si se consulta un feriado
+        # posterior a la última sesión (p. ej. Viernes Santo 2013-03-29).
+        assert is_last_session_of_month(day) == (day.day >= last), day
+
+
 def test_entry_only_on_last_session_of_month_with_positive_return():
     """Entrada: LONG a fin de mes con retorno positivo; ningún otro día genera señal."""
     strategy = Momentum12mStrategy(lookback=5)
