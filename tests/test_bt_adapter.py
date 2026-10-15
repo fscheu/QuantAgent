@@ -147,6 +147,35 @@ def _run_scenarios(workdir: Path) -> dict:
     out["fin_regla_descartada"] = [{**vars(r), "entry_time": r.entry_time.isoformat(), "exit_time": r.exit_time.isoformat()}
                                    for r in bt_adapter.trade_rows(regla_stats, "XYZ")]
 
+    # QuantAgent-gfs1.1.2.8: entrada con apertura que supera take profit o perfora stop loss
+    gap_entry_tp_path = workdir / "gap_entry_tp.csv"
+    gap_entry_tp_lines = [
+        "timestamp,open,high,low,close,volume",
+        f"{day(1)},100.0,101.0,99.0,100.0,1",
+        f"{day(2)},100.0,101.0,99.0,100.0,2",
+        f"{day(3)},115.0,116.0,90.0,112.0,1",
+        f"{day(4)},112.0,113.0,111.0,112.0,1",
+    ]
+    gap_entry_tp_path.write_text("\n".join(gap_entry_tp_lines) + "\n")
+    gap_entry_tp_stats = bt_adapter.run_adapter(MiniStrategy(), crossval_rsi.load_fixture(gap_entry_tp_path),
+                                               symbol="XYZ", timeframe="1d", fill="next-open", slippage_pct=0.01)
+    out["gap_entrada_tp"] = [{**vars(r), "entry_time": r.entry_time.isoformat(), "exit_time": r.exit_time.isoformat()}
+                             for r in bt_adapter.trade_rows(gap_entry_tp_stats, "XYZ")]
+
+    gap_entry_sl_path = workdir / "gap_entry_sl.csv"
+    gap_entry_sl_lines = [
+        "timestamp,open,high,low,close,volume",
+        f"{day(1)},100.0,101.0,99.0,100.0,1",
+        f"{day(2)},100.0,101.0,99.0,100.0,2",
+        f"{day(3)},92.0,112.0,91.0,93.0,1",
+        f"{day(4)},93.0,94.0,92.0,93.0,1",
+    ]
+    gap_entry_sl_path.write_text("\n".join(gap_entry_sl_lines) + "\n")
+    gap_entry_sl_stats = bt_adapter.run_adapter(MiniStrategy(), crossval_rsi.load_fixture(gap_entry_sl_path),
+                                               symbol="XYZ", timeframe="1d", fill="next-open", slippage_pct=0.01)
+    out["gap_entrada_sl"] = [{**vars(r), "entry_time": r.entry_time.isoformat(), "exit_time": r.exit_time.isoformat()}
+                             for r in bt_adapter.trade_rows(gap_entry_sl_stats, "XYZ")]
+
     return out
 
 
@@ -176,6 +205,24 @@ def test_salida_por_regla_en_ultima_vela_descarta_regla_y_sale_backtest_end_al_c
     trade = rows[0]
     assert (trade["exit_time"], trade["exit_reason"]) == (day(3), "backtest_end")
     assert trade["exit_price"] == pytest.approx(104.0 * 0.99)
+
+
+def test_entrada_con_apertura_por_encima_del_take_profit_sale_take_profit_al_open(results):
+    """QuantAgent-gfs1.1.2.8: entrada con apertura > take profit sale TAKE_PROFIT al open * (1 - slippage)."""
+    rows = results["gap_entrada_tp"]
+    assert len(rows) == 1
+    trade = rows[0]
+    assert (trade["entry_time"], trade["exit_time"]) == (day(3), day(3))
+    assert (trade["exit_reason"], trade["exit_price"]) == ("TAKE_PROFIT", pytest.approx(115.0 * 0.99))
+
+
+def test_entrada_con_apertura_debajo_del_stop_sale_stop_loss_al_open(results):
+    """QuantAgent-gfs1.1.2.8: entrada con apertura < stop sale STOP_LOSS al open * (1 - slippage)."""
+    rows = results["gap_entrada_sl"]
+    assert len(rows) == 1
+    trade = rows[0]
+    assert (trade["entry_time"], trade["exit_time"]) == (day(3), day(3))
+    assert (trade["exit_reason"], trade["exit_price"]) == ("STOP_LOSS", pytest.approx(92.0 * 0.99))
 
 
 def test_salto_en_apertura_sale_por_take_profit_antes_del_stop(results):
