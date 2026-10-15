@@ -1,5 +1,6 @@
 """Puente estrategia -> columnas de señales por vela (QuantAgent-d4cq.3)."""
 
+from collections.abc import Callable
 from datetime import datetime
 
 import numpy as np
@@ -43,3 +44,27 @@ def bar_signals(strategy: TradingStrategy, candles: pd.DataFrame, symbol: str, t
         )
         out.iloc[i, out.columns.get_loc("exit")] = bool(strategy.should_exit(probe, price, window)[0])
     return out
+
+
+def check_no_lookahead(signal_fn: Callable[[pd.DataFrame], pd.DataFrame], candles: pd.DataFrame, cuts) -> list[str]:
+    """Prueba de truncamiento (QuantAgent-d4cq.4): lista vacía = `signal_fn` no mira el futuro.
+
+    Para cada T de `cuts` compara `signal_fn(candles.loc[:T])` con `signal_fn(candles).loc[:T]`; `candles` debe
+    tener índice de fechas. Devuelve un texto por cada (corte, columna) que difiere, con la primera fecha distinta.
+    """
+    full = signal_fn(candles)
+    diffs = []
+    for cut in cuts:
+        truncated = signal_fn(candles.loc[:cut])
+        expected = full.loc[:cut]
+        for col in expected.columns:
+            if col not in truncated.columns:
+                diffs.append(f"{col}: falta en la señal truncada en {cut}")
+                continue
+            a, b = truncated[col], expected[col]
+            same = (a == b) | (a.isna() & b.isna())
+            if pd.api.types.is_float_dtype(a) and pd.api.types.is_float_dtype(b):
+                same |= np.isclose(a, b, equal_nan=True)
+            if not same.all():
+                diffs.append(f"{col}: difiere con corte en {cut}, primera fecha {same.index[~same][0]}")
+    return diffs
