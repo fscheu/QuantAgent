@@ -202,4 +202,5 @@ PM: QuantAgent-d4cq.5 vi: run_filter en vectorbt con frecuencia observada; sma-c
 PM: QuantAgent-gfs1.1.2.3 vi: bloqueo correcto: con apertura 187 trades en motor y adaptador, PnL -15619.09 / -15620.14, pero difiere qty desde la fila 1 (el motor dimensiona con el cierre de la señal y llena al open) decido: escalo a Fede: dimensionar con el precio de llenado (A) o comparar sin qty (B) — #188. Dos seguidas (#187 descarto, #188 bloqueo): loop frenado.
 PM: QuantAgent-gfs1.1.2.3 vi: Fede eligió A (dimensionar con el precio de apertura), pero el motor ya lo hace: error del PM en el diagnóstico de #188 decido: cambio diagnosticar la diferencia de qty de la fila 1 (base de capital, precio, costos, redondeo) en docs/06_implementation, sin código — #188
 PM: QuantAgent-gfs1.1.2.3 vi: diagnóstico reproducido: qty 97.62982523 / 97.67004638910294, cociente O/C; el adaptador dimensiona al cierre de la señal decido: merge — #188; siguen gfs1.1.2.4 (adaptador) y gfs1.1.2.5 (control)
+PM: QuantAgent-gfs1.1.2.4 vi: bloqueo correcto (test de sensibilidad supone igual qty: 462.70 != 500.65) decido: cambio implementar y reescribir el test con la qty de cada llenado — #189
 ```
