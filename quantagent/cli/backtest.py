@@ -464,7 +464,7 @@ def backtest_group() -> None:
     default=None,
     help="Perfil de costos (slippage y comisión por lado). Excluyente con --commission-pct.",
 )
-@click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="cierre", show_default=True)
+@click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="apertura", show_default=True)
 @_tamano_options
 @_params_option
 @click.option(
@@ -917,7 +917,7 @@ def generar_markdown_compare(
 @click.option("--equity-dir", type=click.Path(file_okay=False, writable=True), default=None, help="CSV date,equity del motor por celda (equity con 2 decimales).")
 @click.option("--md", "md_path", type=click.Path(dir_okay=False, writable=True), default=None, help="Documento Markdown de salida.")
 @click.option("--crisis", is_flag=True, help="Suma crisis_2008/2020/2022: retorno del año menos comprar y mantener (informativo).")
-@click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="cierre", show_default=True)
+@click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="apertura", show_default=True)
 @_params_option
 def compare_backtests(
     strategies: str, symbols: str, snapshot_name: str, from_date: Optional[datetime],
@@ -925,7 +925,7 @@ def compare_backtests(
     regla_tamano: Optional[str], abrir_reserva: bool, abrir_prueba: bool, out_path: str, trades_dir: Optional[str],
     params: dict, md_path: Optional[str] = None, orden_minima: Optional[float] = None, equity_dir: Optional[str] = None,
     crisis: bool = False,
-    llenado: str = "cierre",
+    llenado: str = "apertura",
 ) -> None:
     columns = COMPARE_COLUMNS + [f"crisis_{a}" for a in CRISIS_ANIOS] if crisis else COMPARE_COLUMNS
     reserva = _reserva_desde()

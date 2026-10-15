@@ -47,7 +47,7 @@ def test_golden_rsi_spy_90d_metrics_and_trades(tmp_path):
     out_equity = tmp_path / "equity.csv"
     cmd = [
         sys.executable, "-m", "quantagent.cli", "backtest", "run",
-        "--strategy", "rsi", "--fixture", "spy-90d",
+        "--strategy", "rsi", "--fixture", "spy-90d", "--llenado", "cierre",
         "--out", str(out_trades), "--equity-out", str(out_equity),
     ]
     env = {**os.environ, "DATABASE_URL": db_url, "OPENAI_API_KEY": ""}

@@ -55,10 +55,14 @@ def test_cli_llenado_real_y_snapshot(cli_runner, monkeypatch, tmp_path, command,
     def capture(self, *a, **kw):
         metrics = real_run(self, *a, **kw)
         snapshot = self.db.get(BacktestRun, self.backtest_run_id).config_snapshot
-        assert snapshot["fill"] == (fill or "cierre")
+        assert snapshot["fill"] == (fill or "apertura")
         signal = self.db.query(Signal).filter(Signal.backtest_run_id == self.backtest_run_id).order_by(Signal.generated_at).first()
         trade = self.db.query(Trade).filter(Trade.backtest_run_id == self.backtest_run_id).order_by(Trade.opened_at).first()
-        assert trade.opened_at == signal.generated_at + (delta if fill == "apertura" else timedelta())
+        assert trade.opened_at == signal.generated_at + (timedelta() if fill == "cierre" else delta)
+        if fill != "cierre":
+            candle = self.db.query(MarketData).filter_by(symbol="SPY", timestamp=trade.opened_at).one()
+            direction = 1 if trade.side.value == "buy" else -1
+            assert float(trade.entry_price) == pytest.approx(float(candle.open) * (1 + direction * settings.TRADING_SLIPPAGE_PCT))
         observed.append(metrics.total_trades)
         return metrics
 
@@ -291,7 +295,7 @@ def test_backtest_run_fifty_two_week_high_trades_on_daily_fixture(cli_runner, tm
 
     result = cli_runner.invoke(
         backtest_group,
-        ["run", "--strategy", "fifty-two-week-high", "--fixture", "spy-2y-1d", "--out", str(out_path)],
+        ["run", "--llenado", "cierre", "--strategy", "fifty-two-week-high", "--fixture", "spy-2y-1d", "--out", str(out_path)],
     )
 
     assert result.exit_code == 0, result.output
@@ -314,7 +318,7 @@ def test_backtest_run_triple_screen_trades_on_4h_fixture(cli_runner, tmp_path):
 
     result = cli_runner.invoke(
         backtest_group,
-        ["run", "--strategy", "triple-screen", "--fixture", "spy-1y-4h", "--out", str(out_path)],
+        ["run", "--llenado", "cierre", "--strategy", "triple-screen", "--fixture", "spy-1y-4h", "--out", str(out_path)],
     )
 
     assert result.exit_code == 0, result.output
@@ -732,7 +736,7 @@ def test_backtest_run_tamano_posicion_y_regla_dimensionan_cada_entrada(cli_runne
     qty = equity al entrar × fracción (× confianza de la señal, salvo regla fijo) / precio de entrada."""
     monkeypatch.setattr(settings, "TRADING_SLIPPAGE_PCT", 0.0)  # sin slippage, precio de entrada = precio de la señal
     out = tmp_path / "trades.csv"
-    result = cli_runner.invoke(backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke", "--out", str(out), *extra])
+    result = cli_runner.invoke(backtest_group, ["run", "--llenado", "cierre", "--strategy", "rsi", "--fixture", "spy-smoke", "--out", str(out), *extra])
     assert result.exit_code == 0, result.output
     lines = result.output.strip().splitlines()
     assert len(lines) == 16
