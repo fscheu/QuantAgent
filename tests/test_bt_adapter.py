@@ -126,6 +126,27 @@ def _run_scenarios(workdir: Path) -> dict:
     out["opening_gap"] = [{**vars(r), "entry_time": r.entry_time.isoformat(), "exit_time": r.exit_time.isoformat()}
                           for r in bt_adapter.trade_rows(gap_stats, "XYZ")]
 
+    # QuantAgent-gfs1.1.2.7: liquidación al cierre de la última vela con slippage y motivo backtest_end
+    fin_path = workdir / "fin.csv"
+    fin_lines = [
+        "timestamp,open,high,low,close,volume",
+        f"{day(1)},100.0,101.0,99.0,100.0,1",
+        f"{day(2)},100.0,101.0,99.0,100.0,2",
+        f"{day(3)},102.0,105.0,101.0,104.0,1",
+    ]
+    fin_path.write_text("\n".join(fin_lines) + "\n")
+    fin_strat = MiniStrategy()
+    fin_stats = bt_adapter.run_adapter(fin_strat, crossval_rsi.load_fixture(fin_path), symbol="XYZ",
+                                       timeframe="1d", fill="next-open", slippage_pct=0.01)
+    out["fin_backtest_end"] = [{**vars(r), "entry_time": r.entry_time.isoformat(), "exit_time": r.exit_time.isoformat()}
+                               for r in bt_adapter.trade_rows(fin_stats, "XYZ")]
+
+    regla_strat = MiniStrategy(exit_after=0)
+    regla_stats = bt_adapter.run_adapter(regla_strat, crossval_rsi.load_fixture(fin_path), symbol="XYZ",
+                                         timeframe="1d", fill="next-open", slippage_pct=0.01)
+    out["fin_regla_descartada"] = [{**vars(r), "entry_time": r.entry_time.isoformat(), "exit_time": r.exit_time.isoformat()}
+                                   for r in bt_adapter.trade_rows(regla_stats, "XYZ")]
+
     return out
 
 
@@ -136,6 +157,25 @@ def results(tmp_path_factory):
                           cwd=ROOT, capture_output=True, text=True, timeout=120)
     assert proc.returncode == 0, proc.stderr
     return json.loads(proc.stdout.splitlines()[-1])
+
+
+def test_posicion_abierta_al_final_sale_al_cierre_con_slippage_y_backtest_end(results):
+    """QuantAgent-gfs1.1.2.7: posición abierta al final sale al cierre de la última vela * (1 - slippage) con backtest_end."""
+    rows = results["fin_backtest_end"]
+    assert len(rows) == 1
+    trade = rows[0]
+    assert (trade["entry_time"], trade["entry_price"]) == (day(3), pytest.approx(102.0 * 1.01))
+    assert (trade["exit_time"], trade["exit_reason"]) == (day(3), "backtest_end")
+    assert trade["exit_price"] == pytest.approx(104.0 * 0.99)
+
+
+def test_salida_por_regla_en_ultima_vela_descarta_regla_y_sale_backtest_end_al_cierre(results):
+    """QuantAgent-gfs1.1.2.7: salida por regla en la última vela se descarta y sale por backtest_end al cierre."""
+    rows = results["fin_regla_descartada"]
+    assert len(rows) == 1
+    trade = rows[0]
+    assert (trade["exit_time"], trade["exit_reason"]) == (day(3), "backtest_end")
+    assert trade["exit_price"] == pytest.approx(104.0 * 0.99)
 
 
 def test_salto_en_apertura_sale_por_take_profit_antes_del_stop(results):
