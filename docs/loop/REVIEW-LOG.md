@@ -222,4 +222,5 @@ PM: QuantAgent-gfs1.2.2 vi: apertura 181/-21841.01/-1.23, cierre 187/-9141.21; g
 PM: QuantAgent-d4cq.7 vi: partición en 3 hijos (90/90/60), reglas del padre copiadas decido: merge — #202 (codex)
 PM: QuantAgent-d4cq.7.1 vi: script 48 celdas, sin calentamiento antes de 2007 igual que el motor, test de fechas protegidas decido: merge — #203 (codex)
 PM: QuantAgent-d4cq.7.2 vi: comparar exige desde == 2007-01-01 y compare real escribe 2007-01-03 decido: cambio desde >= 2007-01-01 y hasta <= 2018-12-31 con test de tablas reales — #204 (codex)
+PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 passed decido: merge — #204 (codex)
 ```
