@@ -209,4 +209,6 @@ PM: QuantAgent-gfs1.1.2.5 vi: control con apertura; sma-cross/XLK coinciden 6 de
 PM: QuantAgent-gfs1.1.2.6 vi: reproducido: última fila = finalize_trades liquida al open (motor al close); intermedias = gap en la vela de entrada que el adaptador omite decido: merge — #192; fixes QuantAgent-gfs1.1.2.7 y QuantAgent-gfs1.1.2.8
 PM: QuantAgent-d4cq.6 vi: stop fijo y TP dentro de la vela en vectorbt; stop+TP misma vela sale por stop; gap al open; CI verde decido: merge — #190 (nube)
 PM: QuantAgent-gfs1.1.2.7 vi: 48 celdas en la rama: apertura 45 de 48 (antes 32), cierre 48 de 48; CI verde decido: merge — #193 (agy)
+PM: QuantAgent-gfs1.1.2.8 vi: 48 celdas apertura 48 de 48 (antes 45), cierre 48 de 48; mutación detectada por el test de TP decido: merge — #195 (agy)
+PM: QuantAgent-d4cq.8 vi: trailing igual al motor en 52wh/IWM; el bucle fija todas las salidas nuevas por pasada y puede cerrar un trade re-entrado decido: cambio solo la más temprana por pasada + test de re-entrada — #194 (nube)
 ```
