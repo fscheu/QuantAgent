@@ -104,3 +104,43 @@ def test_candle_touching_stop_and_take_profit_exits_by_stop():
 def test_gap_below_stop_exits_at_open():
     pnl, qty = _stop_run([(100, 100, 100, 100), (100, 101, 99, 100), (90, 91, 88, 89), (89, 90, 85, 86)], stop_loss_pct=0.05)
     assert pnl == pytest.approx(qty * (90 - 100))
+
+
+def _trail_candles(low_dip_bar=None):
+    closes = [100.0, 100.0, 110.0, 120.0, 112.0, 111.0, 109.0, 108.0]
+    opens = [closes[0]] + closes[:-1]
+    idx = pd.date_range("2020-01-01", periods=len(closes), freq="D")
+    c = pd.DataFrame({"open": opens, "close": closes}, index=idx)
+    c["high"] = c[["open", "close"]].max(axis=1) + 0.5
+    c["low"] = c[["open", "close"]].min(axis=1) - 0.5
+    if low_dip_bar is not None:
+        c.iloc[low_dip_bar, c.columns.get_loc("low")] = 97.0  # toca el stop fijo de 2%
+    return c
+
+
+def _trail_signals(c, side=1):
+    s = _signals(c, {0: side})
+    s["stop_loss_pct"], s["trailing_stop_pct"] = 0.02, 0.05
+    return s
+
+
+def test_trailing_exits_next_open_after_close_below_max_close():
+    c = _trail_candles()
+    r = _run(_trail_signals(c), c)
+    # máximo cierre 120 (vela 3); el cierre 112 de la vela 4 < 120*0.95 -> sale en el open de la 5 (=112)
+    buy = c["open"].iloc[1] * (1 + SLIPPAGE)
+    sell = c["open"].iloc[5] * (1 - SLIPPAGE)
+    qty = CAPITAL / (buy * (1 + COMMISSION))
+    assert r["trades"] == 1
+    assert r["pnl"] == pytest.approx(qty * sell * (1 - COMMISSION) - CAPITAL, abs=1e-6)
+
+
+def test_fixed_stop_inside_candle_wins_over_trailing():
+    c = _trail_candles(low_dip_bar=2)
+    r = _run(_trail_signals(c), c)
+    buy = c["open"].iloc[1] * (1 + SLIPPAGE)
+    assert r["trades"] == 1
+    assert r["pnl"] < 0  # salió por el stop 2% en la vela 2, antes del trailing
+    qty = CAPITAL / (buy * (1 + COMMISSION))
+    assert r["pnl"] == pytest.approx(qty * buy * 0.98 * (1 - SLIPPAGE) * (1 - COMMISSION) - CAPITAL, abs=0.01)
+
