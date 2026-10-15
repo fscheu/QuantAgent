@@ -193,4 +193,5 @@ PM: QuantAgent-gfs1.1 vi: gfs1.1.1 implementado; rsi/SPY 2007-2018 cierre 187 / 
 PM: QuantAgent-d4cq.4 vi: check_no_lookahead; mutación iloc[:i+2] detectada por el test de las 4 estrategias; CI verde decido: merge — #182 (nube)
 PM: QuantAgent-d4cq.5 vi: run_filter apertura siguiente, 5 passed; CI falla sin vectorbt (extra dev) decido: cambio vectorbt a dependencies, Sharpe con frecuencia observada (error del PM: 252), sharpe_tasa_0 y max_drawdown en fracción — #183 (nube)
 PM: QuantAgent-gfs1.1.2 vi: partición en tres (CLI explícito 85, fijar cierre en referencias 95, activar apertura 80), filas F03a.2a–c decido: merge — #184
+PM: QuantAgent-gfs1.1.2.1 vi: --llenado en run y compare; rsi/SPY 2007-2018 --llenado apertura 187 / -15619.09 / -0.45; CI verde decido: merge — #185
 ```
