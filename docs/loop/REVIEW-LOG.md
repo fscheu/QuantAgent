@@ -196,4 +196,5 @@ PM: QuantAgent-gfs1.1.2 vi: partición en tres (CLI explícito 85, fijar cierre 
 PM: QuantAgent-gfs1.1.2.1 vi: --llenado en run y compare; rsi/SPY 2007-2018 --llenado apertura 187 / -15619.09 / -0.45; CI verde decido: merge — #185
 PM: QuantAgent-gfs1.1.2.2 vi: bloqueo correcto (profundidad 3 de BEADS, 75 Backtest en tests) decido: cambio solo el default de --llenado del CLI pasa a apertura; Backtest y correr_par quedan en cierre — #186
 PM: QuantAgent-gfs1.1.2.2 vi: default de --llenado = apertura en run y compare; rsi/SPY sin flag 187 / -15619.09 / -0.45; golden en cierre intacto; smoke 642.50; CI verde decido: escalo a Fede (semántica de llenado) — #186
+PM: QuantAgent-y89w vi: bloqueo correcto (el fix cancela la entrada válida final: motor=46, port=45) decido: descarto sale de L8; caso solo con tamaño > 100% — #187
 ```
