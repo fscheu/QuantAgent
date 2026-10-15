@@ -116,6 +116,7 @@ def _run_control(tabla: Path, trades_dir: Path, snapshot: str, md: Path | None =
         "--tabla", str(tabla),
         "--trades-dir", str(trades_dir),
         "--snapshot", snapshot,
+        "--llenado", "cierre",
         *extra,
     ]
     if md:
@@ -246,11 +247,18 @@ def test_compare_control_sensibilidad_apertura_siguiente_gap(snap_env, monkeypat
 
     with open(trades_dir / "fifty-two-week-high-SPY.csv", newline="") as f:
         trade = next(csv.DictReader(f))
-    qty = float(trade["qty"])
     slippage = float(settings.TRADING_SLIPPAGE_PCT)
-    effective_gap = gap * (1.0 + slippage)
-    expected_diff = round(effective_gap * qty, 2)
-    assert round(pnl_cierre - pnl_apertura, 2) == pytest.approx(expected_diff, abs=0.01)
+    high_52w = df["high"].iloc[320 - 252:320].max()
+    confidence = max(0.1, min(1.0, (close_signal - high_52w) / (high_52w + 1e-10) * 10))
+    manual_pnl = []
+    for reference in (close_signal, open_next):
+        qty = round(100000 * 1.0 * confidence / reference * 2**27) / 2**27
+        entry = reference * (1 + slippage)
+        exit_price = float(trade["exit_price"])
+        manual_pnl.append(qty * (exit_price - entry) - settings.TRADING_COMMISSION_PCT * qty * (entry + exit_price))
+    assert float(trade["qty"]) == pytest.approx(100000 * confidence / close_signal, abs=1e-8)
+    assert pnl_cierre == pytest.approx(round(manual_pnl[0], 2), abs=0.01)
+    assert pnl_apertura == pytest.approx(round(manual_pnl[1], 2), abs=0.01)
 
     metrics = []
     adapter_df = control.port.load_fixture(snapshot="t_gap", symbol="SPY")
@@ -288,7 +296,7 @@ def test_compare_control_sensibilidad_apertura_siguiente_gap(snap_env, monkeypat
                 raise RuntimeError("corrida fallida")
             return run_adapter(*args, **kwargs)
         monkeypatch.setattr(control.bt_adapter, "run_adapter", fail_run)
-        assert control.main(["--tabla", str(out_csv), "--trades-dir", str(trades_dir), "--snapshot", "t_gap"]) == 0
+        assert control.main(["--tabla", str(out_csv), "--trades-dir", str(trades_dir), "--snapshot", "t_gap", "--llenado", "cierre"]) == 0
         with out_csv.open(newline="") as f:
             assert all(next_row[c] == "" for next_row in csv.DictReader(f) for c in control.METRIC_COLUMNS)
 
@@ -312,6 +320,33 @@ def test_compare_control_con_params_valida_contra_las_mismas_estrategias(snap_en
     _run_control(out_csv, trades_dir, "t", out_md, "--params", str(params))
     assert control().startswith("coinciden")
     assert "take_profit_pct=0.02," in out_md.read_text(encoding="utf-8")
+
+
+def test_llenado_invalido():
+    result = subprocess.run([sys.executable, str(SCRIPT), "--tabla", "x", "--trades-dir", "x",
+                             "--snapshot", "x", "--llenado", "otro"], capture_output=True, text=True)
+    assert result.returncode == 2
+    assert "invalid choice" in result.stderr
+
+
+@pytest.mark.parametrize("llenado", [None, "cierre"])
+def test_control_mismo_llenado_motor(snap_env, llenado):
+    runner, tmp_path = snap_env
+    write_snapshot("t", {"SPY": _daily_frame()})
+    tabla, trades = tmp_path / "cmp.csv", tmp_path / "trades"
+    extra = ["--llenado", llenado] if llenado else []
+    result = runner.invoke(backtest_group, ["compare", "--strategies", "fifty-two-week-high",
+        "--symbols", "SPY", "--snapshot", "t", "--costos", "etf",
+        "--out", str(tabla), "--trades-dir", str(trades), *extra])
+    assert result.exit_code == 0, result.output
+    assert control.main(["--tabla", str(tabla), "--trades-dir", str(trades),
+                         "--snapshot", "t", "--costos", "etf", *extra]) == 0
+    with tabla.open(newline="") as f:
+        row = next(csv.DictReader(f))
+    assert row["control"] == "coinciden 6 de 6"
+    if llenado is None:
+        assert row["sharpe_tasa_0_apertura_siguiente"] == row["sharpe_tasa_0"]
+        assert float(row["max_drawdown_apertura_siguiente"]) == float(row["max_drawdown"])
 
 
 def test_compare_control_con_orden_minima(snap_env):

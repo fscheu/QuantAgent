@@ -41,6 +41,7 @@ SCENARIOS = {
     "exit_after_1": {"exit_after": 1},
     "exit_after_0": {"exit_after": 0},
     "next_open": {"fill": "next-open", "commission_pct": 0.001},
+    "short_next_open": {"fill": "next-open", "short": True},
     "slippage": {"exit_after": 0, "always": True, "slippage_pct": 0.01},  # QuantAgent-xyf6
     "recorte": {"confidence": 1.0, "pct": 1.0, "slippage_pct": 0.01, "commission_pct": 0.001},  # QuantAgent-gti6
     "recorte_next_open": {"fill": "next-open", "confidence": 1.0, "pct": 1.0,
@@ -64,7 +65,8 @@ def _run_scenarios(workdir: Path) -> dict:
     from quantagent.strategy.base import TradingSignal, TradingStrategy
 
     class MiniStrategy(TradingStrategy):
-        def __init__(self, exit_after=None, always=False, confidence=0.5):
+        def __init__(self, exit_after=None, always=False, confidence=0.5, short=False):
+            self.short = short
             self.confidence = confidence
             self.exit_after = exit_after  # None = should_exit por defecto de TradingStrategy
             self.always = always  # senal en todas las velas, no solo con volumen 2
@@ -80,8 +82,9 @@ def _run_scenarios(workdir: Path) -> dict:
                                       "price": current_price})
             if not self.always and kline_data[-1]["volume"] != 2:
                 return None
-            return TradingSignal(decision="LONG", confidence=self.confidence, stop_loss=current_price * 0.95,
-                                 take_profit=current_price * 1.10)
+            return TradingSignal(decision="SHORT" if self.short else "LONG", confidence=self.confidence,
+                                 stop_loss=current_price * (1.05 if self.short else 0.95),
+                                 take_profit=current_price * (0.90 if self.short else 1.10))
 
         def should_exit(self, position, current_price, ohlc_data):
             if self.exit_after is None:
@@ -102,7 +105,7 @@ def _run_scenarios(workdir: Path) -> dict:
         kwargs = dict(kwargs)
         bt_adapter.settings.TRADING_BASE_POSITION_PCT = kwargs.pop("pct", 0.05)
         strategy = MiniStrategy(exit_after=kwargs.pop("exit_after", None), always=kwargs.pop("always", False),
-                                confidence=kwargs.pop("confidence", 0.5))
+                                confidence=kwargs.pop("confidence", 0.5), short=kwargs.pop("short", False))
         stats = bt_adapter.run_adapter(strategy, crossval_rsi.load_fixture(path), symbol="XYZ", timeframe="1d", **kwargs)
         rows = [{**vars(r), "entry_time": r.entry_time.isoformat(), "exit_time": r.exit_time.isoformat()}
                 for r in bt_adapter.trade_rows(stats, "XYZ")]
@@ -187,11 +190,19 @@ def test_llenado_en_la_apertura_siguiente_y_comision_nativa(results):
     """--fill next-open entra al open de la vela siguiente a la senal; la comision de la libreria llega al PnL."""
     first, second = results["next_open"]["rows"]
 
-    assert (first["entry_time"], first["entry_price"], first["qty"]) == (day(3), 100.5, 25.0)  # tamano de la senal
+    qty = round(100000 * 0.05 * 0.5 / 100.5 * 2**27) / 2**27
+    assert (first["entry_time"], first["entry_price"], first["qty"]) == (day(3), 100.5, qty)
     assert (first["exit_time"], first["exit_price"], first["exit_reason"]) == (day(4), 95.0, "STOP_LOSS")
-    # 25 * (95 - 100.5) menos 0.1 % del nocional en la entrada y en la salida
-    assert first["pnl"] == pytest.approx(-137.5 - 0.001 * 25 * (100.5 + 95.0))
+    assert first["pnl"] == pytest.approx(qty * (95 - 100.5) - 0.001 * qty * (100.5 + 95.0))
+    assert second["qty"] == round((100000 + first["pnl"]) * 0.05 * 0.5 / 96 * 2**27) / 2**27
     assert (second["entry_time"], second["exit_time"], second["exit_reason"]) == (day(6), day(6), "backtest_end")
+
+
+def test_corto_dimensionado_en_apertura(results):
+    first = results["short_next_open"]["rows"][0]
+    assert first["side"] == "sell"
+    assert first["entry_price"] == 100.5
+    assert first["qty"] == round(100000 * 0.05 * 0.5 / 100.5 * 2**27) / 2**27
 
 
 def test_slippage_con_la_regla_del_paper_broker(results):
