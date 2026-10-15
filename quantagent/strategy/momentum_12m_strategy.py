@@ -4,10 +4,13 @@ from functools import lru_cache
 from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
+import pandas_market_calendars as mcal
 
 from ..models import ActivePosition, ExitPolicy
 from .base import TradingSignal, TradingStrategy
 from .sma_cross_strategy import UNREACHABLE_STOP_LOSS, UNREACHABLE_TAKE_PROFIT
+
+_NYSE = mcal.get_calendar("NYSE")
 
 
 @lru_cache(maxsize=None)
@@ -17,10 +20,8 @@ def is_last_session_of_month(day: pd.Timestamp) -> bool:
     Se resuelve solo con la fecha de la vela y el calendario del mercado (que se
     publica por adelantado): no hace falta ver la vela siguiente.
     """
-    import pandas_market_calendars as mcal
-
     day = pd.Timestamp(day).tz_localize(None).normalize()
-    sessions = mcal.get_calendar("NYSE").valid_days(day, day + pd.Timedelta(days=10))
+    sessions = _NYSE.valid_days(day, day + pd.Timedelta(days=10))
     following = [s for s in sessions.tz_localize(None) if s > day]
     return bool(following) and following[0].month != day.month
 
