@@ -220,4 +220,5 @@ PM: QuantAgent-gfs1.2 vi: partición en 3 hijos (65/95/45 líneas), filas F03b.1
 PM: QuantAgent-gfs1.2.1 vi: golden spy-90d byte a byte; 340 → 227 trades (STOP_LOSS 226 → 113: re-entrada en la misma vela con cierre, fixture sintético) decido: merge — #200 (codex)
 PM: QuantAgent-gfs1.2.2 vi: apertura 181/-21841.01/-1.23, cierre 187/-9141.21; golden en tmp_path compara el motor consigo mismo decido: merge; congelado externo en gfs1.2.4 y sweep/walkforward en gfs1.2.5 (L9) — #201 (codex)
 PM: QuantAgent-d4cq.7 vi: partición en 3 hijos (90/90/60), reglas del padre copiadas decido: merge — #202 (codex)
+PM: QuantAgent-d4cq.7.1 vi: script 48 celdas, sin calentamiento antes de 2007 igual que el motor, test de fechas protegidas decido: merge — #203 (codex)
 ```
