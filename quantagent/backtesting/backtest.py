@@ -948,11 +948,13 @@ class Backtest:
         )
 
         if self.fill == "apertura":
-            self._pending_orders[asset] = (signal, trading_signal, db_signal)
+            self._pending_orders[asset] = (signal, trading_signal, db_signal, signal.entry_price or current_price)
             return
         self._execute_strategy_signal(asset, current_date, current_price, signal, trading_signal, db_signal)
 
-    def _execute_strategy_signal(self, asset, current_date, current_price, signal, trading_signal, db_signal):
+    def _execute_strategy_signal(
+        self, asset, current_date, current_price, signal, trading_signal, db_signal, reference_price=None
+    ):
         # Shared execution for immediate close fills and pending open fills.
         order = self.order_manager.execute_decision(
             symbol=asset,
@@ -978,22 +980,35 @@ class Backtest:
                 if trade:
                     trade_id = trade.id
 
+            if self.fill == "apertura" and reference_price:
+                stop_loss = (
+                    current_price * signal.stop_loss / reference_price
+                    if signal.stop_loss
+                    else (current_price * 0.98 if side == OrderSide.BUY else current_price * 1.02)
+                )
+                take_profit = (
+                    current_price * signal.take_profit / reference_price
+                    if signal.take_profit
+                    else (current_price * 1.03 if side == OrderSide.BUY else current_price * 0.97)
+                )
+            else:
+                stop_loss = signal.stop_loss or (
+                    current_price * 0.98
+                    if side == OrderSide.BUY
+                    else current_price * 1.02
+                )
+                take_profit = signal.take_profit or (
+                    current_price * 1.03
+                    if side == OrderSide.BUY
+                    else current_price * 0.97
+                )
+
             self.position_monitor.open_position(
                 symbol=asset,
                 side=side,
                 entry_price=current_price if self.fill == "apertura" else signal.entry_price or current_price,
-                stop_loss=signal.stop_loss
-                or (
-                    current_price * 0.98
-                    if side == OrderSide.BUY
-                    else current_price * 1.02
-                ),
-                take_profit=signal.take_profit
-                or (
-                    current_price * 1.03
-                    if side == OrderSide.BUY
-                    else current_price * 0.97
-                ),
+                stop_loss=stop_loss,
+                take_profit=take_profit,
                 quantity=order.filled_quantity,
                 exit_policy=signal.exit_policy.value,
                 trade_id=trade_id,
