@@ -208,4 +208,5 @@ PM: QuantAgent-d4cq.6 vi: sl_trail reemplaza al stop fijo; en el motor conviven 
 PM: QuantAgent-gfs1.1.2.5 vi: control con apertura; sma-cross/XLK coinciden 6 de 6 y PnL 168244.35 = vectorbt; momentum-12m/XLK sin validar fila 2 (aparte) decido: merge — #191
 PM: QuantAgent-gfs1.1.2.6 vi: reproducido: última fila = finalize_trades liquida al open (motor al close); intermedias = gap en la vela de entrada que el adaptador omite decido: merge — #192; fixes QuantAgent-gfs1.1.2.7 y QuantAgent-gfs1.1.2.8
 PM: QuantAgent-d4cq.6 vi: stop fijo y TP dentro de la vela en vectorbt; stop+TP misma vela sale por stop; gap al open; CI verde decido: merge — #190 (nube)
+PM: QuantAgent-gfs1.1.2.7 vi: 48 celdas en la rama: apertura 45 de 48 (antes 32), cierre 48 de 48; CI verde decido: merge — #193 (agy)
 ```
