@@ -204,4 +204,5 @@ PM: QuantAgent-gfs1.1.2.3 vi: Fede eligió A (dimensionar con el precio de apert
 PM: QuantAgent-gfs1.1.2.3 vi: diagnóstico reproducido: qty 97.62982523 / 97.67004638910294, cociente O/C; el adaptador dimensiona al cierre de la señal decido: merge — #188; siguen gfs1.1.2.4 (adaptador) y gfs1.1.2.5 (control)
 PM: QuantAgent-gfs1.1.2.4 vi: bloqueo correcto (test de sensibilidad supone igual qty: 462.70 != 500.65) decido: cambio implementar y reescribir el test con la qty de cada llenado — #189
 PM: QuantAgent-gfs1.1.2.4 vi: adaptador dimensiona en la apertura; rsi/SPY coinciden 187 de 187 al cierre, pnl_apertura_siguiente -15619.09 = motor; CI verde decido: merge — #189
+PM: QuantAgent-d4cq.6 vi: sl_trail reemplaza al stop fijo; en el motor conviven (fijo dentro de la vela, trailing por cierres) decido: cambio solo fijo y TP; trailing en QuantAgent-d4cq.8 — #190 (nube)
 ```
