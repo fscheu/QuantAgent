@@ -104,3 +104,62 @@ def test_candle_touching_stop_and_take_profit_exits_by_stop():
 def test_gap_below_stop_exits_at_open():
     pnl, qty = _stop_run([(100, 100, 100, 100), (100, 101, 99, 100), (90, 91, 88, 89), (89, 90, 85, 86)], stop_loss_pct=0.05)
     assert pnl == pytest.approx(qty * (90 - 100))
+
+
+def _trail_candles(low_dip_bar=None):
+    closes = [100.0, 100.0, 110.0, 120.0, 112.0, 111.0, 109.0, 108.0]
+    opens = [closes[0]] + closes[:-1]
+    idx = pd.date_range("2020-01-01", periods=len(closes), freq="D")
+    c = pd.DataFrame({"open": opens, "close": closes}, index=idx)
+    c["high"] = c[["open", "close"]].max(axis=1) + 0.5
+    c["low"] = c[["open", "close"]].min(axis=1) - 0.5
+    if low_dip_bar is not None:
+        c.iloc[low_dip_bar, c.columns.get_loc("low")] = 97.0  # toca el stop fijo de 2%
+    return c
+
+
+def _trail_signals(c, side=1):
+    s = _signals(c, {0: side})
+    s["stop_loss_pct"], s["trailing_stop_pct"] = 0.02, 0.05
+    return s
+
+
+def test_trailing_exits_next_open_after_close_below_max_close():
+    c = _trail_candles()
+    r = _run(_trail_signals(c), c)
+    # máximo cierre 120 (vela 3); el cierre 112 de la vela 4 < 120*0.95 -> sale en el open de la 5 (=112)
+    buy = c["open"].iloc[1] * (1 + SLIPPAGE)
+    sell = c["open"].iloc[5] * (1 - SLIPPAGE)
+    qty = CAPITAL / (buy * (1 + COMMISSION))
+    assert r["trades"] == 1
+    assert r["pnl"] == pytest.approx(qty * sell * (1 - COMMISSION) - CAPITAL, abs=1e-6)
+
+
+def test_fixed_stop_inside_candle_wins_over_trailing():
+    c = _trail_candles(low_dip_bar=2)
+    r = _run(_trail_signals(c), c)
+    buy = c["open"].iloc[1] * (1 + SLIPPAGE)
+    assert r["trades"] == 1
+    assert r["pnl"] < 0  # salió por el stop 2% en la vela 2, antes del trailing
+    qty = CAPITAL / (buy * (1 + COMMISSION))
+    assert r["pnl"] == pytest.approx(qty * buy * 0.98 * (1 - SLIPPAGE) * (1 - COMMISSION) - CAPITAL, abs=0.01)
+
+
+
+def test_trailing_mark_of_later_trade_does_not_close_reentered_trade():
+    # A sale en la 4 (5%); la señal de la 5 abre A2 (20%). La marca de B (señal 9, 5%) cae en la 13: no debe cerrar a A2.
+    closes = [100.0, 100, 110, 120, 112, 112, 112, 112, 112, 112, 112, 130, 140, 130, 130, 150, 150]
+    idx = pd.date_range("2020-01-01", periods=len(closes), freq="D")
+    c = pd.DataFrame({"open": [closes[0]] + closes[:-1], "close": closes}, index=idx)
+    c["high"] = c[["open", "close"]].max(axis=1) + 0.5
+    c["low"] = c[["open", "close"]].min(axis=1) - 0.5
+    c.iloc[7, c.columns.get_loc("low")] = 97.0  # stop fijo de A en la 7 (A2 no tiene stop)
+    s = _signals(c, {0: 1, 5: 1, 9: 1})
+    s["stop_loss_pct"] = [0.02] + [float("nan")] * 16
+    s["trailing_stop_pct"] = [0.05] * 5 + [0.20] + [0.05] * 11
+    r = _run(s, c)
+    o = c["open"]
+    cash = CAPITAL / (o.iloc[1] * (1 + SLIPPAGE) * (1 + COMMISSION)) * o.iloc[5] * (1 - SLIPPAGE) * (1 - COMMISSION)
+    equity = cash / (o.iloc[6] * (1 + SLIPPAGE) * (1 + COMMISSION)) * closes[-1]  # A2 abierta hasta el final
+    assert r["trades"] == 2
+    assert r["pnl"] == pytest.approx(equity - CAPITAL, abs=0.01)
