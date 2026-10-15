@@ -531,8 +531,8 @@ Los primeros 5 son los más fáciles de revisar.
 | F03 | `QuantAgent-d4cq.2` | Corregir el cuello de botella del perfil; depende de F02 | Oráculos y métricas sin cambio; la más lenta 3 veces más rápida | probar | L8 |
 | F03a | `QuantAgent-gfs1.1` | Motor: llenado por defecto en la apertura siguiente, `--llenado cierre` como opción (decisión A de Fede en F01) | Entrada y salida al `open` de t+1 a mano; con `cierre`, 187 / -9141.21 | probar | L8 |
 | F03a.2a | `QuantAgent-gfs1.1.2.1` | CLI: `--llenado apertura\|cierre` explícito; todavía cierre por defecto | Ambos comandos propagan fill; inválido sale 2; snapshot conserva fill | probar | L8 |
-| F03a.2b | `QuantAgent-gfs1.1.2.2` | Fijar cierre en tests y referencias; depende de F03a.2a | Oráculos sin números nuevos; golden RSI/SPY en cierre 187 / -9141.21 | probar | L8 |
-| F03a.2c | `QuantAgent-gfs1.1.2.3` | Activar apertura por defecto en motor y CLI; depende de F03a.2b | Sin flag usan apertura; cierre conserva referencia; última señal no abre | probar | L8 |
+| F03a.2b | `QuantAgent-gfs1.1.2.2` | `--llenado` de run y compare pasa a apertura por defecto; `Backtest` y `correr_par` quedan en cierre; tests del CLI que dependen del cierre lo piden explícito | Run sin flag llena al open siguiente; oráculos sin números nuevos | probar | L8 |
+| F03a.2c | `QuantAgent-gfs1.1.2.3` | `compare_control` usa el mismo llenado que la corrida; depende de F03a.2b | rsi/SPY 2007–2018 con apertura: coinciden N de N | probar | L8 |
 | F03b | `QuantAgent-gfs1.2` | Regenerar oráculos y números de referencia con el default nuevo; depende de F03a | Oráculos pasan; un test `cierre` exige 187 / -9141.21; tabla viejo → nuevo | decidir | L8 |
 | F04 | `QuantAgent-y89w` | Adaptador: `_close` sin posición llenada no abre un corto | Test de la reproducción sin corto abierto; `coinciden` sin cambio | leer | L8 |
 | F05 | `QuantAgent-d4cq.3` | `bar_signals`: señales por vela desde una estrategia, solo con velas hasta la actual | La estrategia recibe i+1 velas en la vela i; cruce de sma-cross a mano | leer | L8 |
