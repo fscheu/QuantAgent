@@ -19,7 +19,9 @@ def filtrar_activo(h, velas: pd.DataFrame, *, costos: dict, capital: float, trai
     velas.index = pd.DatetimeIndex(velas["timestamp"])
     nombre = cli_aliases().get(h.clase) or h.clase
     señales = [(c, bar_signals(build_strategy(nombre, **c), velas, h.activos[0], h.timeframe)) for c in h.combinaciones()]
-    correr = lambda sig, a, b: run_filter(sig.loc[a:b], velas.loc[a:b], capital=capital, **costos)
+    def correr(sig, a, b):
+        return run_filter(sig.loc[a:b], velas.loc[a:b], capital=capital, **costos)
+
     ventanas = construir_ventanas(velas.index[0].to_pydatetime(), velas.index[-1].to_pydatetime(), train_years, test_years)
     ganadores, retornos, trades = [], [], 0
     for a, b, c, d in ventanas:
