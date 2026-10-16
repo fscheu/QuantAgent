@@ -1,21 +1,15 @@
 """CLI de admisión de hipótesis (QuantAgent-d4cq.14.1)."""
 
-from math import isnan
-
 import click
 from tabulate import tabulate
 
 from quantagent.data.snapshot import SnapshotError, read_snapshot
 from quantagent.fabrica.admision import admitir
-from quantagent.fabrica.filtro import filtrar_activo
+from quantagent.fabrica.filtro import filtrar_activo, veredicto_etapa1
 from quantagent.fabrica.hipotesis import cargar_hipotesis
 from quantagent.settings import COSTOS_PERFILES
 
 from .sweep import registrar_intento
-
-UMBRAL_SHARPE_ETAPA1 = 0.10
-MAX_ACTIVOS_BAJO_UMBRAL = 8
-
 
 
 @click.group("hipotesis", help="Evaluar hipótesis de la fábrica de estrategias.")
@@ -62,6 +56,5 @@ def filtrar_command(archivo, snapshot_name):
              "pnl": "", "sharpe": r["sharpe_tasa_0"]}, hipotesis=h.id, etapa="1",
         )
     click.echo(tabulate(resultados, headers=["activo", "sharpe_fuera_muestra", "trades"], tablefmt="github"))
-    bajos = sum(r[1] is None or isnan(r[1]) or r[1] < UMBRAL_SHARPE_ETAPA1 for r in resultados)
-    veredicto = "CORTA" if bajos > MAX_ACTIVOS_BAJO_UMBRAL else "PASA"
-    click.echo(f"{veredicto} ({bajos} de {len(resultados)} bajo 0,10)")
+    veredicto, bajos = veredicto_etapa1(resultados)
+    click.echo(f"{veredicto} ({bajos} de {len(resultados)} bajo 0,10 o con menos de 30 trades)")
