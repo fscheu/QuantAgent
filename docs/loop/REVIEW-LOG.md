@@ -240,4 +240,5 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-16 #220 QuantAgent-d4cq.14.2.2 H06.2b bordes del veredicto: merge. 3 mutaciones detectadas; NaN cuenta como bajo. Escalo a Fede: con 'más de 8' una hipótesis de <=8 activos nunca corta.
 2026-10-16 #221 QuantAgent-d4cq.14.3 H06.3 RSI en 12 ETFs: merge. Reproducido: PASA (4 de 12), 159 s, 12 intentos.
 2026-10-16 #222 QuantAgent-d4cq.15 H07 punto de control L9: merge. SMA reproducido: PASA (5 de 12), 157 s; SMA con 3-10 trades por activo → falta mínimo de trades (L10).
+2026-10-16 #224 QuantAgent-d4cq.16 E01 corte proporcional y mínimo 30 trades: merge. 2 mutaciones detectadas; real: rsi PASA (4 de 12), sma CORTA (12 de 12, 3-10 trades). CI: SIGABRT ajeno en test_recalc_metrics, verde al relanzar.
 ```
