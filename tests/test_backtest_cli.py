@@ -26,6 +26,52 @@ from quantagent.cli.backtest import backtest_group
 from quantagent.models import Base, MarketData
 
 
+@pytest.mark.parametrize("command", ["run", "compare"])
+@pytest.mark.parametrize("fill", [None, "cierre", "apertura"])
+def test_cli_llenado_real_y_snapshot(cli_runner, monkeypatch, tmp_path, command, fill):
+    import pandas as pd
+
+    from quantagent.backtesting.backtest import Backtest
+    from quantagent.data.snapshot import write_snapshot
+    from quantagent.models import BacktestRun, Signal, Trade
+
+    args = [command]
+    if command == "run":
+        args += ["--strategy", "rsi", "--fixture", "spy-smoke"]
+        delta = timedelta(hours=1)
+    else:
+        frame = pd.read_csv(FIXTURES_DIR / "spy-smoke.csv")
+        frame.index = pd.date_range("2018-01-01", periods=len(frame), name="timestamp")
+        frame["adj_close"] = frame["close"]
+        monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path / "snapshots"))
+        write_snapshot("synthetic", {"SPY": frame.drop(columns=["timestamp"])})
+        args += ["--strategies", "rsi", "--symbols", "SPY", "--snapshot", "synthetic",
+                 "--out", str(tmp_path / "compare.csv")]
+        delta = timedelta(days=1)
+    if fill:
+        args += ["--llenado", fill]
+    real_run, observed = Backtest.run, []
+
+    def capture(self, *a, **kw):
+        metrics = real_run(self, *a, **kw)
+        snapshot = self.db.get(BacktestRun, self.backtest_run_id).config_snapshot
+        assert snapshot["fill"] == (fill or "apertura")
+        signal = self.db.query(Signal).filter(Signal.backtest_run_id == self.backtest_run_id).order_by(Signal.generated_at).first()
+        trade = self.db.query(Trade).filter(Trade.backtest_run_id == self.backtest_run_id).order_by(Trade.opened_at).first()
+        assert trade.opened_at == signal.generated_at + (timedelta() if fill == "cierre" else delta)
+        if fill != "cierre":
+            candle = self.db.query(MarketData).filter_by(symbol="SPY", timestamp=trade.opened_at).one()
+            direction = 1 if trade.side.value == "buy" else -1
+            assert float(trade.entry_price) == pytest.approx(float(candle.open) * (1 + direction * settings.TRADING_SLIPPAGE_PCT))
+        observed.append(metrics.total_trades)
+        return metrics
+
+    monkeypatch.setattr(Backtest, "run", capture)
+    result = cli_runner.invoke(backtest_group, args)
+    assert result.exit_code == 0, (result.output, result.exception)
+    assert len(observed) == 1 and observed[0] > 0
+
+
 def test_compare_equity_dir_exports_motor_without_changing_outputs(cli_runner, monkeypatch, tmp_path):
     import pandas as pd
 
@@ -249,7 +295,7 @@ def test_backtest_run_fifty_two_week_high_trades_on_daily_fixture(cli_runner, tm
 
     result = cli_runner.invoke(
         backtest_group,
-        ["run", "--strategy", "fifty-two-week-high", "--fixture", "spy-2y-1d", "--out", str(out_path)],
+        ["run", "--llenado", "cierre", "--strategy", "fifty-two-week-high", "--fixture", "spy-2y-1d", "--out", str(out_path)],
     )
 
     assert result.exit_code == 0, result.output
@@ -272,7 +318,7 @@ def test_backtest_run_triple_screen_trades_on_4h_fixture(cli_runner, tmp_path):
 
     result = cli_runner.invoke(
         backtest_group,
-        ["run", "--strategy", "triple-screen", "--fixture", "spy-1y-4h", "--out", str(out_path)],
+        ["run", "--llenado", "cierre", "--strategy", "triple-screen", "--fixture", "spy-1y-4h", "--out", str(out_path)],
     )
 
     assert result.exit_code == 0, result.output
@@ -690,7 +736,7 @@ def test_backtest_run_tamano_posicion_y_regla_dimensionan_cada_entrada(cli_runne
     qty = equity al entrar × fracción (× confianza de la señal, salvo regla fijo) / precio de entrada."""
     monkeypatch.setattr(settings, "TRADING_SLIPPAGE_PCT", 0.0)  # sin slippage, precio de entrada = precio de la señal
     out = tmp_path / "trades.csv"
-    result = cli_runner.invoke(backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke", "--out", str(out), *extra])
+    result = cli_runner.invoke(backtest_group, ["run", "--llenado", "cierre", "--strategy", "rsi", "--fixture", "spy-smoke", "--out", str(out), *extra])
     assert result.exit_code == 0, result.output
     lines = result.output.strip().splitlines()
     assert len(lines) == 16

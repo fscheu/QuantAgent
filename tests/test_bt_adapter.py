@@ -41,6 +41,7 @@ SCENARIOS = {
     "exit_after_1": {"exit_after": 1},
     "exit_after_0": {"exit_after": 0},
     "next_open": {"fill": "next-open", "commission_pct": 0.001},
+    "short_next_open": {"fill": "next-open", "short": True},
     "slippage": {"exit_after": 0, "always": True, "slippage_pct": 0.01},  # QuantAgent-xyf6
     "recorte": {"confidence": 1.0, "pct": 1.0, "slippage_pct": 0.01, "commission_pct": 0.001},  # QuantAgent-gti6
     "recorte_next_open": {"fill": "next-open", "confidence": 1.0, "pct": 1.0,
@@ -64,7 +65,8 @@ def _run_scenarios(workdir: Path) -> dict:
     from quantagent.strategy.base import TradingSignal, TradingStrategy
 
     class MiniStrategy(TradingStrategy):
-        def __init__(self, exit_after=None, always=False, confidence=0.5):
+        def __init__(self, exit_after=None, always=False, confidence=0.5, short=False):
+            self.short = short
             self.confidence = confidence
             self.exit_after = exit_after  # None = should_exit por defecto de TradingStrategy
             self.always = always  # senal en todas las velas, no solo con volumen 2
@@ -80,8 +82,9 @@ def _run_scenarios(workdir: Path) -> dict:
                                       "price": current_price})
             if not self.always and kline_data[-1]["volume"] != 2:
                 return None
-            return TradingSignal(decision="LONG", confidence=self.confidence, stop_loss=current_price * 0.95,
-                                 take_profit=current_price * 1.10)
+            return TradingSignal(decision="SHORT" if self.short else "LONG", confidence=self.confidence,
+                                 stop_loss=current_price * (1.05 if self.short else 0.95),
+                                 take_profit=current_price * (0.90 if self.short else 1.10))
 
         def should_exit(self, position, current_price, ohlc_data):
             if self.exit_after is None:
@@ -102,7 +105,7 @@ def _run_scenarios(workdir: Path) -> dict:
         kwargs = dict(kwargs)
         bt_adapter.settings.TRADING_BASE_POSITION_PCT = kwargs.pop("pct", 0.05)
         strategy = MiniStrategy(exit_after=kwargs.pop("exit_after", None), always=kwargs.pop("always", False),
-                                confidence=kwargs.pop("confidence", 0.5))
+                                confidence=kwargs.pop("confidence", 0.5), short=kwargs.pop("short", False))
         stats = bt_adapter.run_adapter(strategy, crossval_rsi.load_fixture(path), symbol="XYZ", timeframe="1d", **kwargs)
         rows = [{**vars(r), "entry_time": r.entry_time.isoformat(), "exit_time": r.exit_time.isoformat()}
                 for r in bt_adapter.trade_rows(stats, "XYZ")]
@@ -123,6 +126,91 @@ def _run_scenarios(workdir: Path) -> dict:
     out["opening_gap"] = [{**vars(r), "entry_time": r.entry_time.isoformat(), "exit_time": r.exit_time.isoformat()}
                           for r in bt_adapter.trade_rows(gap_stats, "XYZ")]
 
+    # QuantAgent-gfs1.1.2.7: liquidación al cierre de la última vela con slippage y motivo backtest_end
+    fin_path = workdir / "fin.csv"
+    fin_lines = [
+        "timestamp,open,high,low,close,volume",
+        f"{day(1)},100.0,101.0,99.0,100.0,1",
+        f"{day(2)},100.0,101.0,99.0,100.0,2",
+        f"{day(3)},102.0,105.0,101.0,104.0,1",
+    ]
+    fin_path.write_text("\n".join(fin_lines) + "\n")
+    fin_strat = MiniStrategy()
+    fin_stats = bt_adapter.run_adapter(fin_strat, crossval_rsi.load_fixture(fin_path), symbol="XYZ",
+                                       timeframe="1d", fill="next-open", slippage_pct=0.01)
+    out["fin_backtest_end"] = [{**vars(r), "entry_time": r.entry_time.isoformat(), "exit_time": r.exit_time.isoformat()}
+                               for r in bt_adapter.trade_rows(fin_stats, "XYZ")]
+
+    regla_strat = MiniStrategy(exit_after=0)
+    regla_stats = bt_adapter.run_adapter(regla_strat, crossval_rsi.load_fixture(fin_path), symbol="XYZ",
+                                         timeframe="1d", fill="next-open", slippage_pct=0.01)
+    out["fin_regla_descartada"] = [{**vars(r), "entry_time": r.entry_time.isoformat(), "exit_time": r.exit_time.isoformat()}
+                                   for r in bt_adapter.trade_rows(regla_stats, "XYZ")]
+
+    # QuantAgent-gfs1.1.2.8: entrada con apertura que supera take profit o perfora stop loss
+    gap_entry_tp_path = workdir / "gap_entry_tp.csv"
+    gap_entry_tp_lines = [
+        "timestamp,open,high,low,close,volume",
+        f"{day(1)},100.0,101.0,99.0,100.0,1",
+        f"{day(2)},100.0,101.0,99.0,100.0,2",
+        f"{day(3)},115.0,116.0,90.0,112.0,1",
+        f"{day(4)},112.0,113.0,111.0,112.0,1",
+    ]
+    gap_entry_tp_path.write_text("\n".join(gap_entry_tp_lines) + "\n")
+    gap_entry_tp_stats = bt_adapter.run_adapter(MiniStrategy(), crossval_rsi.load_fixture(gap_entry_tp_path),
+                                               symbol="XYZ", timeframe="1d", fill="next-open", slippage_pct=0.01)
+    out["gap_entrada_tp"] = [{**vars(r), "entry_time": r.entry_time.isoformat(), "exit_time": r.exit_time.isoformat()}
+                             for r in bt_adapter.trade_rows(gap_entry_tp_stats, "XYZ")]
+
+    gap_entry_sl_path = workdir / "gap_entry_sl.csv"
+    gap_entry_sl_lines = [
+        "timestamp,open,high,low,close,volume",
+        f"{day(1)},100.0,101.0,99.0,100.0,1",
+        f"{day(2)},100.0,101.0,99.0,100.0,2",
+        f"{day(3)},92.0,112.0,91.0,93.0,1",
+        f"{day(4)},93.0,94.0,92.0,93.0,1",
+    ]
+    gap_entry_sl_path.write_text("\n".join(gap_entry_sl_lines) + "\n")
+    gap_entry_sl_stats = bt_adapter.run_adapter(MiniStrategy(), crossval_rsi.load_fixture(gap_entry_sl_path),
+                                               symbol="XYZ", timeframe="1d", fill="next-open", slippage_pct=0.01)
+    out["gap_entrada_sl"] = [{**vars(r), "entry_time": r.entry_time.isoformat(), "exit_time": r.exit_time.isoformat()}
+                             for r in bt_adapter.trade_rows(gap_entry_sl_stats, "XYZ")]
+
+    # QuantAgent-gfs1.1.2.10: reescalado de stop y take profit en apertura
+    class RescaleStrat(TradingStrategy):
+        required_history_bars = 2
+
+        def __init__(self, decision="LONG", stop_loss=98.0, take_profit=103.0):
+            self.decision, self.stop_loss, self.take_profit = decision, stop_loss, take_profit
+
+        def generate_signal(self, kline_data, symbol, timeframe, current_price):
+            if kline_data[-1]["volume"] == 2:
+                return TradingSignal(decision=self.decision, confidence=1.0,
+                                     stop_loss=self.stop_loss, take_profit=self.take_profit)
+            return None
+
+        def should_exit(self, position, current_price, ohlc_data):
+            return False, ""
+
+        def should_reevaluate(self, position, current_price):
+            return False
+
+    rescale_path = workdir / "rescale.csv"
+    rescale_lines = [
+        "timestamp,open,high,low,close,volume",
+        f"{day(1)},100.0,100.0,100.0,100.0,1",
+        f"{day(2)},100.0,100.0,100.0,100.0,2",
+        f"{day(3)},104.0,105.0,102.0,104.0,1",
+    ]
+    rescale_path.write_text("\n".join(rescale_lines) + "\n")
+    rescale_stats = bt_adapter.run_adapter(RescaleStrat(), crossval_rsi.load_fixture(rescale_path),
+                                           symbol="XYZ", timeframe="1d", fill="next-open")
+    out["rescale_open_long"] = {
+        "stop": rescale_stats["_strategy"].info[2]["stop"],
+        "trade_sl": rescale_stats["_trades"].iloc[0]["SL"] * bt_adapter.SCALE,
+        "trade_tp": rescale_stats["_trades"].iloc[0]["TP"] * bt_adapter.SCALE,
+    }
+
     return out
 
 
@@ -133,6 +221,51 @@ def results(tmp_path_factory):
                           cwd=ROOT, capture_output=True, text=True, timeout=120)
     assert proc.returncode == 0, proc.stderr
     return json.loads(proc.stdout.splitlines()[-1])
+
+
+def test_posicion_abierta_al_final_sale_al_cierre_con_slippage_y_backtest_end(results):
+    """QuantAgent-gfs1.1.2.7: posición abierta al final sale al cierre de la última vela * (1 - slippage) con backtest_end."""
+    rows = results["fin_backtest_end"]
+    assert len(rows) == 1
+    trade = rows[0]
+    assert (trade["entry_time"], trade["entry_price"]) == (day(3), pytest.approx(102.0 * 1.01))
+    assert (trade["exit_time"], trade["exit_reason"]) == (day(3), "backtest_end")
+    assert trade["exit_price"] == pytest.approx(104.0 * 0.99)
+
+
+def test_salida_por_regla_en_ultima_vela_descarta_regla_y_sale_backtest_end_al_cierre(results):
+    """QuantAgent-gfs1.1.2.7: salida por regla en la última vela se descarta y sale por backtest_end al cierre."""
+    rows = results["fin_regla_descartada"]
+    assert len(rows) == 1
+    trade = rows[0]
+    assert (trade["exit_time"], trade["exit_reason"]) == (day(3), "backtest_end")
+    assert trade["exit_price"] == pytest.approx(104.0 * 0.99)
+
+
+def test_entrada_con_apertura_por_encima_del_take_profit_sale_take_profit_al_open(results):
+    """QuantAgent-gfs1.1.2.8 / gfs1.1.2.10: niveles reescalados al open 115 (SL 109.25, TP 126.5); el mínimo 90 toca el stop reescalado."""
+    rows = results["gap_entrada_tp"]
+    assert len(rows) == 1
+    trade = rows[0]
+    assert (trade["entry_time"], trade["exit_time"]) == (day(3), day(3))
+    assert (trade["exit_reason"], trade["exit_price"]) == ("STOP_LOSS", pytest.approx(109.25 * 0.99))
+
+
+def test_entrada_con_apertura_debajo_del_stop_sale_stop_loss_al_open(results):
+    """QuantAgent-gfs1.1.2.8 / gfs1.1.2.10: niveles reescalados al open 92 (SL 87.4, TP 101.2); el máximo 112 toca el TP reescalado."""
+    rows = results["gap_entrada_sl"]
+    assert len(rows) == 1
+    trade = rows[0]
+    assert (trade["entry_time"], trade["exit_time"]) == (day(3), day(3))
+    assert (trade["exit_reason"], trade["exit_price"]) == ("TAKE_PROFIT", pytest.approx(101.2 * 0.99))
+
+
+def test_stop_y_take_profit_reescalados_en_apertura(results):
+    """QuantAgent-gfs1.1.2.10: con apertura, stop y take profit se miden desde el precio llenado."""
+    data = results["rescale_open_long"]
+    assert data["stop"] == pytest.approx(101.92)
+    assert data["trade_sl"] == pytest.approx(101.92)
+    assert data["trade_tp"] == pytest.approx(107.12)
 
 
 def test_salto_en_apertura_sale_por_take_profit_antes_del_stop(results):
@@ -187,11 +320,19 @@ def test_llenado_en_la_apertura_siguiente_y_comision_nativa(results):
     """--fill next-open entra al open de la vela siguiente a la senal; la comision de la libreria llega al PnL."""
     first, second = results["next_open"]["rows"]
 
-    assert (first["entry_time"], first["entry_price"], first["qty"]) == (day(3), 100.5, 25.0)  # tamano de la senal
-    assert (first["exit_time"], first["exit_price"], first["exit_reason"]) == (day(4), 95.0, "STOP_LOSS")
-    # 25 * (95 - 100.5) menos 0.1 % del nocional en la entrada y en la salida
-    assert first["pnl"] == pytest.approx(-137.5 - 0.001 * 25 * (100.5 + 95.0))
+    qty = round(100000 * 0.05 * 0.5 / 100.5 * 2**27) / 2**27
+    assert (first["entry_time"], first["entry_price"], first["qty"]) == (day(3), 100.5, qty)
+    assert (first["exit_time"], first["exit_price"], first["exit_reason"]) == (day(4), 95.475, "STOP_LOSS")
+    assert first["pnl"] == pytest.approx(qty * (95.475 - 100.5) - 0.001 * qty * (100.5 + 95.475))
+    assert second["qty"] == round((100000 + first["pnl"]) * 0.05 * 0.5 / 96 * 2**27) / 2**27
     assert (second["entry_time"], second["exit_time"], second["exit_reason"]) == (day(6), day(6), "backtest_end")
+
+
+def test_corto_dimensionado_en_apertura(results):
+    first = results["short_next_open"]["rows"][0]
+    assert first["side"] == "sell"
+    assert first["entry_price"] == 100.5
+    assert first["qty"] == round(100000 * 0.05 * 0.5 / 100.5 * 2**27) / 2**27
 
 
 def test_slippage_con_la_regla_del_paper_broker(results):
@@ -231,7 +372,7 @@ def test_recorte_en_apertura_con_gap_y_costos(results):
     assert (first["entry_time"], first["entry_price"]) == (day(3), pytest.approx(100.5 * 1.01))
     assert first["qty"] == pytest.approx(qty, abs=1e-8)
     assert first["qty"] * first["entry_price"] * 1.001 <= 100000
-    pnl = first["qty"] * (95 * 0.99 - 100.5 * 1.01) - 0.001 * first["qty"] * (100.5 * 1.01 + 95 * 0.99)
+    pnl = first["qty"] * (95.475 * 0.99 - 100.5 * 1.01) - 0.001 * first["qty"] * (100.5 * 1.01 + 95.475 * 0.99)
     assert first["pnl"] == pytest.approx(pnl)
     assert second["entry_time"] == day(6)
     assert second["qty"] == pytest.approx((100000 + pnl) / (96 * 1.01 * 1.001), abs=1e-8)
@@ -290,7 +431,7 @@ def test_motor_y_adaptador_coinciden_con_slippage(tmp_path, strategy, fixture, p
                "print(*lines, sep='\\n'); "
                "sys.exit(not ok or [r['exit_reason'] for r in e] != [r['exit_reason'] for r in a])")
     for cmd in (["-c", "from quantagent.database import init_db; init_db()"],
-                ["-m", "quantagent.cli", "backtest", "run", "--strategy", strategy, "--fixture", fixture, *size,
+                ["-m", "quantagent.cli", "backtest", "run", "--llenado", "cierre", "--strategy", strategy, "--fixture", fixture, *size,
                  "--out", "motor.csv"],
                 ["scripts/bt_adapter.py", "--strategy", strategy, "--fixture", fixture, "--slippage-pct", "0.0005",
                  "--out", "adaptador.csv"],

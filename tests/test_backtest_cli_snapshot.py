@@ -70,7 +70,7 @@ def _metrics(output: str) -> tuple[str, str]:
 def test_snapshot_da_lo_mismo_que_el_fixture_del_que_sale(snap_env):
     runner, _ = snap_env
     write_snapshot("t", {"SPY": _daily_frame()})
-    by_snapshot = _run(runner, "--snapshot", "t", "--symbol", "SPY")
+    by_snapshot = _run(runner, "--snapshot", "t", "--symbol", "SPY", "--llenado", "cierre")
     assert by_snapshot.exit_code == 0, by_snapshot.output
     assert len(by_snapshot.stdout.strip().splitlines()) == 14
     assert _metrics(by_snapshot.stdout) == ("Trades: 6", "Total PnL: -249.35")
@@ -243,6 +243,7 @@ def test_compare_snapshot_arma_csv_e_imprime_tabla(snap_env, tmp_path):
     res = _compare(
         runner,
         "--strategies", "rsi,fifty-two-week-high",
+        "--llenado", "cierre",
         "--symbols", "SPY,IWM",
         "--snapshot", "t",
         "--to", "2024-09-30",

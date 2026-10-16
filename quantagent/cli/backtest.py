@@ -277,6 +277,7 @@ def correr_par(
     verbose: bool = False,
     con_filas: bool = False,
     params: Optional[dict] = None,
+    fill: str = "cierre",
 ) -> dict:
     """Corre un par estrategia/activo y devuelve los números del resumen de `backtest run`.
 
@@ -326,6 +327,7 @@ def correr_par(
             db_session=session,
             strategy=build_strategy(reg_name, **(params or {})),
             intrabar_stops=intrabar_stops,
+            fill=fill,
         )
         # The lookback warm-up logs one "Insufficient data" warning per candle; keep the
         # output to the metric lines unless --verbose asks for them.
@@ -462,6 +464,7 @@ def backtest_group() -> None:
     default=None,
     help="Perfil de costos (slippage y comisión por lado). Excluyente con --commission-pct.",
 )
+@click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="apertura", show_default=True)
 @_tamano_options
 @_params_option
 @click.option(
@@ -488,6 +491,7 @@ def run_backtest(
     regla_tamano: Optional[str],
     orden_minima: Optional[float],
     params: dict,
+    llenado: str,
 ) -> None:
     config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano, orden_minima)
     meta, symbol, to_date = _resolve_source_and_meta(
@@ -506,6 +510,7 @@ def run_backtest(
         strategy_name, meta, config, costos, fixture_name, snapshot_name, symbol,
         from_date, to_date, intrabar_stops, verbose, con_filas=bool(out_path),
         params=params.get(strategy_name),
+        fill=llenado,
     )
     rows = r["filas"]
 
@@ -912,6 +917,7 @@ def generar_markdown_compare(
 @click.option("--equity-dir", type=click.Path(file_okay=False, writable=True), default=None, help="CSV date,equity del motor por celda (equity con 2 decimales).")
 @click.option("--md", "md_path", type=click.Path(dir_okay=False, writable=True), default=None, help="Documento Markdown de salida.")
 @click.option("--crisis", is_flag=True, help="Suma crisis_2008/2020/2022: retorno del año menos comprar y mantener (informativo).")
+@click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="apertura", show_default=True)
 @_params_option
 def compare_backtests(
     strategies: str, symbols: str, snapshot_name: str, from_date: Optional[datetime],
@@ -919,6 +925,7 @@ def compare_backtests(
     regla_tamano: Optional[str], abrir_reserva: bool, abrir_prueba: bool, out_path: str, trades_dir: Optional[str],
     params: dict, md_path: Optional[str] = None, orden_minima: Optional[float] = None, equity_dir: Optional[str] = None,
     crisis: bool = False,
+    llenado: str = "apertura",
 ) -> None:
     columns = COMPARE_COLUMNS + [f"crisis_{a}" for a in CRISIS_ANIOS] if crisis else COMPARE_COLUMNS
     reserva = _reserva_desde()
@@ -995,6 +1002,7 @@ def compare_backtests(
                 r = correr_par(
                     strat, meta, config, costos, None, snapshot_name, sym,
                     from_date, to_date, con_filas=bool(trades_dir), params=params.get(strat),
+                    fill=llenado,
                 )
 
             if trades_dir:

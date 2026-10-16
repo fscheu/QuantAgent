@@ -20,8 +20,8 @@ Tolerancias (el motor guarda Numeric(18,8): redondeo de hasta 5e-9 por valor):
   ya no existe: queda el redondeo del CSV (hasta 9e-9 acciones), 1.13e-7 relativo al 5% (sobre 0.03 acciones)
   y 7.8e-9 al 100%. La tolerancia no se bajo: en spy-90d --intrabar ese redondeo es 7.06e-7 de una cantidad.
 - entry_price, exit_price 2e-8: una unidad del octavo decimal (medido 1.0000008e-8 en SPY real) mas ruido de float.
-- pnl: 1e-6 * |exit - entry| + 1e-8 por trade (1e-6 acciones por el movimiento + redondeo; medido 6.44e-7).
-- total PnL: suma de 1e-8 * |exit - entry| + 1e-8 por trade (no cambio con QuantAgent-824).
+- pnl: 1e-6 * |exit - entry| + |qty| * 2 * PRICE_TOL + 1e-8 por trade (cantidad y dos precios redondeados).
+- total PnL: suma de 1e-8 * |exit - entry| + |qty| * 2 * PRICE_TOL + 1e-8 por trade.
 - max drawdown 1e-6; equity punto a punto 1e-3 USD (el CSV de equity del motor tiene 4 decimales).
 
 Max drawdown: cada lado con su PROPIA curva (motor: --equity-out; port: stats._equity_curve de
@@ -53,11 +53,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import crossval_rsi as port  # noqa: E402  (sale con un mensaje si falta backtesting.py)
 import recalc_metrics  # noqa: E402
 
-QTY_RTOL, QTY_ATOL, PRICE_TOL, PNL_TOL = 1.5e-6, 5e-9, 2e-8, 1e-8
+QTY_RTOL, QTY_ATOL, PRICE_TOL, PNL_TOL = 1.5e-6, 1e-8, 2e-8, 1e-8
 PNL_QTY_TOL = 1e-6  # acciones; solo para la tolerancia de pnl (no cambio con QuantAgent-zd9n)
 PF_RTOL, DD_TOL, EQUITY_TOL = 1e-6, 1e-6, 1e-3
 NUMERIC = ("qty", "entry_price", "exit_price", "pnl")
-LABELS = {"qty": "max(1.5e-6*qty, 5e-9)", "pnl": "1e-6*|mov|+1e-8"}
+LABELS = {"qty": "max(1.5e-6*qty, 1e-8)", "pnl": "1e-6*|mov|+|qty|*2*PRICE_TOL+1e-8"}
 
 # Mide, sin tocar el motor, los rechazos del RiskManager (los rechazos no se persisten ni se loguean en el
 # CLI): envuelve validate_trade / get_daily_pnl / on_trade_executed y corre el mismo CLI.
@@ -130,7 +130,7 @@ def run_engine(
            "PROBE_OUT": str(d / "probe.json")}
     subprocess.run([sys.executable, "-c", "from quantagent.database import init_db; init_db()"],
                    cwd=ROOT, env=env, check=True, capture_output=True, text=True)
-    args = ["backtest", "run", "--strategy", "rsi",
+    args = ["backtest", "run", "--llenado", "cierre", "--strategy", "rsi",
             "--out", str(d / "trades.csv"), "--equity-out", str(d / "equity.csv")]
     if snapshot:
         args += ["--snapshot", snapshot, "--symbol", symbol]
@@ -200,7 +200,7 @@ def metrics_of(rows: list[dict], tag: str) -> dict:
 
 
 def pnl_tol(row: dict, qty_tol: float = PNL_QTY_TOL) -> float:
-    return qty_tol * abs(float(row["exit_price"]) - float(row["entry_price"])) + PNL_TOL
+    return qty_tol * abs(float(row["exit_price"]) - float(row["entry_price"])) + abs(float(row["qty"])) * 2 * PRICE_TOL + PNL_TOL
 
 
 def compare_trades(eng: list[dict], prt: list[dict]) -> tuple[list[str], bool]:

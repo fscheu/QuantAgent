@@ -18,6 +18,7 @@
 
 # Declare files that should stay with CRLF (if any)
 *.bat text eol=crlf
+tests/fixtures/golden/rsi-spy-90d-trades.csv text eol=crlf
 
 # Binary files
 *.png binary

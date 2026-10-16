@@ -183,4 +183,45 @@ Formato: `PLAN-CONTINUACION.md` §5.
 2026-10-14 PM: 7ssw.4 #173 (nube) rsi/SPY crisis_2008 0.332; 2020/2022 vacías. decido: merge
 2026-10-14 PM: lba3 #174 rsi 12 ETFs control coinciden en las 12 celdas; cripto 46 de 46. decido: merge
 2026-10-14 PM: punto de control L7: prueba 2019–2022 abierta una vez; PASA 14 de 48; control 48 de 48; recalc 48 de 48; oráculos 26 passed; Sharpe deflactado (N=48) máx 0.25. PR #132 listo para Fede.
+PM: QuantAgent-gfs1 vi: tabla de 48 celdas cierre/apertura; reproduje sma-cross/XLK 6 / 175355.22 / 0.7 y apertura 167247.35 / 0.68, coinciden 6 de 6; Fede eligió A el 2026-10-14 decido: merge — #177 en lote/motor-del-filtro
+PM: QuantAgent-d4cq.1 vi: momentum-12m 519.43 s, 92% en is_last_session_of_month (get_calendar NYSE por fecha, confirmado en el código); rsi, 52wh y sma-cross 37-39 s decido: merge — #179 en lote/motor-del-filtro
+PM: QuantAgent-d4cq.3 vi: bar_signals iloc[:i+1]; XLK 2007-2018 ajustado, sma-cross 6 entradas/salidas iguales a los trades del motor, momentum 2 trades; CI verde decido: merge — #178 (nube) en lote/motor-del-filtro
+PM: QuantAgent-d4cq.2 vi: calendario NYSE compartido; momentum-12m XLK 2007-2018 antes/después 2 trades, PnL 8318.46, Sharpe -1.21 idénticos, 46 s con try.sh; CI verde decido: merge — #180 en lote/motor-del-filtro
+PM: QuantAgent-gfs1.1 vi: bloqueo correcto por error del PM en el ticket (tests/test_backtest*.py incluye los 8 api rotos de TradingGraph, que el CI excluye); partición en gfs1.1.1 / gfs1.1.2 aceptada decido: cambio implementar gfs1.1.1 en este PR con -m "not api" y borrar el doc de bloqueo — #181
+PM: QuantAgent-gfs1.1 vi: segundo bloqueo, error del PM (pedí un merge y Codex tiene .git en solo lectura); el PM integró la base en la rama decido: cambio implementar gfs1.1.1 y borrar el doc de bloqueo — #181. Dos seguidas: loop frenado hasta que Fede diga.
+PM: QuantAgent-gfs1.1 vi: gfs1.1.1 implementado; rsi/SPY 2007-2018 cierre 187 / -9141.21 sin cambio, apertura 187 / -15619.09 / -0.45 contra -15620.14 / -0.46 estimado en F01; CI verde decido: merge — #181 en lote/motor-del-filtro
+PM: QuantAgent-d4cq.4 vi: check_no_lookahead; mutación iloc[:i+2] detectada por el test de las 4 estrategias; CI verde decido: merge — #182 (nube)
+PM: QuantAgent-d4cq.5 vi: run_filter apertura siguiente, 5 passed; CI falla sin vectorbt (extra dev) decido: cambio vectorbt a dependencies, Sharpe con frecuencia observada (error del PM: 252), sharpe_tasa_0 y max_drawdown en fracción — #183 (nube)
+PM: QuantAgent-gfs1.1.2 vi: partición en tres (CLI explícito 85, fijar cierre en referencias 95, activar apertura 80), filas F03a.2a–c decido: merge — #184
+PM: QuantAgent-gfs1.1.2.1 vi: --llenado en run y compare; rsi/SPY 2007-2018 --llenado apertura 187 / -15619.09 / -0.45; CI verde decido: merge — #185
+PM: QuantAgent-gfs1.1.2.2 vi: bloqueo correcto (profundidad 3 de BEADS, 75 Backtest en tests) decido: cambio solo el default de --llenado del CLI pasa a apertura; Backtest y correr_par quedan en cierre — #186
+PM: QuantAgent-gfs1.1.2.2 vi: default de --llenado = apertura en run y compare; rsi/SPY sin flag 187 / -15619.09 / -0.45; golden en cierre intacto; smoke 642.50; CI verde decido: escalo a Fede (semántica de llenado) — #186
+PM: QuantAgent-y89w vi: bloqueo correcto (el fix cancela la entrada válida final: motor=46, port=45) decido: descarto sale de L8; caso solo con tamaño > 100% — #187
+PM: QuantAgent-gfs1.1.2.2 vi: aprobado por Fede en el chat ("Apruebo el #186"); apertura por defecto en run y compare decido: merge — #186
+PM: QuantAgent-d4cq.5 vi: run_filter en vectorbt con frecuencia observada; sma-cross/XLK 2007-2018: 6 / 168244.35 / 0.68 contra motor apertura 6 / 167247.35 / 0.68; CI verde decido: merge — #183 (nube)
+PM: QuantAgent-gfs1.1.2.3 vi: bloqueo correcto: con apertura 187 trades en motor y adaptador, PnL -15619.09 / -15620.14, pero difiere qty desde la fila 1 (el motor dimensiona con el cierre de la señal y llena al open) decido: escalo a Fede: dimensionar con el precio de llenado (A) o comparar sin qty (B) — #188. Dos seguidas (#187 descarto, #188 bloqueo): loop frenado.
+PM: QuantAgent-gfs1.1.2.3 vi: Fede eligió A (dimensionar con el precio de apertura), pero el motor ya lo hace: error del PM en el diagnóstico de #188 decido: cambio diagnosticar la diferencia de qty de la fila 1 (base de capital, precio, costos, redondeo) en docs/06_implementation, sin código — #188
+PM: QuantAgent-gfs1.1.2.3 vi: diagnóstico reproducido: qty 97.62982523 / 97.67004638910294, cociente O/C; el adaptador dimensiona al cierre de la señal decido: merge — #188; siguen gfs1.1.2.4 (adaptador) y gfs1.1.2.5 (control)
+PM: QuantAgent-gfs1.1.2.4 vi: bloqueo correcto (test de sensibilidad supone igual qty: 462.70 != 500.65) decido: cambio implementar y reescribir el test con la qty de cada llenado — #189
+PM: QuantAgent-gfs1.1.2.4 vi: adaptador dimensiona en la apertura; rsi/SPY coinciden 187 de 187 al cierre, pnl_apertura_siguiente -15619.09 = motor; CI verde decido: merge — #189
+PM: QuantAgent-d4cq.6 vi: sl_trail reemplaza al stop fijo; en el motor conviven (fijo dentro de la vela, trailing por cierres) decido: cambio solo fijo y TP; trailing en QuantAgent-d4cq.8 — #190 (nube)
+PM: QuantAgent-gfs1.1.2.5 vi: control con apertura; sma-cross/XLK coinciden 6 de 6 y PnL 168244.35 = vectorbt; momentum-12m/XLK sin validar fila 2 (aparte) decido: merge — #191
+PM: QuantAgent-gfs1.1.2.6 vi: reproducido: última fila = finalize_trades liquida al open (motor al close); intermedias = gap en la vela de entrada que el adaptador omite decido: merge — #192; fixes QuantAgent-gfs1.1.2.7 y QuantAgent-gfs1.1.2.8
+PM: QuantAgent-d4cq.6 vi: stop fijo y TP dentro de la vela en vectorbt; stop+TP misma vela sale por stop; gap al open; CI verde decido: merge — #190 (nube)
+PM: QuantAgent-gfs1.1.2.7 vi: 48 celdas en la rama: apertura 45 de 48 (antes 32), cierre 48 de 48; CI verde decido: merge — #193 (agy)
+PM: QuantAgent-gfs1.1.2.8 vi: 48 celdas apertura 48 de 48 (antes 45), cierre 48 de 48; mutación detectada por el test de TP decido: merge — #195 (agy)
+PM: QuantAgent-d4cq.8 vi: trailing igual al motor en 52wh/IWM; el bucle fija todas las salidas nuevas por pasada y puede cerrar un trade re-entrado decido: cambio solo la más temprana por pasada + test de re-entrada — #194 (nube)
+PM: QuantAgent-d4cq.8 vi: min(new) aplicado; mutación detectada por el test de re-entrada; 52wh IWM igual al motor; 107 líneas decido: merge — #194 (nube)
+PM: QuantAgent-gfs1.1.2.9 vi: rsi/SPY apertura 187/-15619.09 → 181/-21841.01, cierre sin cambio; oráculos 31 passed; mutación detectada; 160 líneas (tests) decido: merge — #196 (agy)
+PM: QuantAgent-gfs1.1.2.10 vi: bloqueo correcto: test de sensibilidad reutiliza exit_price de cierre; base roja en test_control_mismo_llenado_motor[None] tras #196 decido: cambio implementar y reescribir el test, alcance ampliado a test_compare_control.py — #197
+PM: QuantAgent-gfs1.1.2.10 vi: apertura 32 de 48 por redondeo de pnl (4e-6 USD) con qty, precios y fechas iguales; con pnl_tol escalada por qty 47 de 48, la restante es qty de 0.0019 acciones decido: merge; tolerancias en QuantAgent-gfs1.1.2.11 (F03a.2k) — #197 (agy)
+PM: QuantAgent-gfs1.1.2.11 vi: apertura 48 de 48 en la rama (antes 32); tests de los dos lados decido: merge — #198 (codex)
+PM: QuantAgent-gfs1.2 vi: partición en 3 hijos (65/95/45 líneas), filas F03b.1–3 decido: merge — #199 (codex)
+PM: QuantAgent-gfs1.2.1 vi: golden spy-90d byte a byte; 340 → 227 trades (STOP_LOSS 226 → 113: re-entrada en la misma vela con cierre, fixture sintético) decido: merge — #200 (codex)
+PM: QuantAgent-gfs1.2.2 vi: apertura 181/-21841.01/-1.23, cierre 187/-9141.21; golden en tmp_path compara el motor consigo mismo decido: merge; congelado externo en gfs1.2.4 y sweep/walkforward en gfs1.2.5 (L9) — #201 (codex)
+PM: QuantAgent-d4cq.7 vi: partición en 3 hijos (90/90/60), reglas del padre copiadas decido: merge — #202 (codex)
+PM: QuantAgent-d4cq.7.1 vi: script 48 celdas, sin calentamiento antes de 2007 igual que el motor, test de fechas protegidas decido: merge — #203 (codex)
+PM: QuantAgent-d4cq.7.2 vi: comparar exige desde == 2007-01-01 y compare real escribe 2007-01-03 decido: cambio desde >= 2007-01-01 y hasta <= 2018-12-31 con test de tablas reales — #204 (codex)
+PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 passed decido: merge — #204 (codex)
+2026-10-15 #205 QuantAgent-d4cq.7.3 F09.3 medición: escalo → Fede decide B condicionado a d4cq.7.4 (bar_signals con ventana required_history_bars; filtro < 764 s). Spearman apertura 0.893329 reproducido. merge en lote.
 ```

@@ -366,7 +366,7 @@ def test_new_cli_lines_equal_recalc_on_the_equity_out_of_rsi_spy_90d(tmp_path):
     subprocess.run([sys.executable, "-c", "from quantagent.database import init_db; init_db()"], env=env, check=True)
     eq = tmp_path / "eq.csv"
     cli = subprocess.run(
-        [sys.executable, "-m", "quantagent.cli", "backtest", "run", "--strategy", "rsi", "--fixture", "spy-90d",
+        [sys.executable, "-m", "quantagent.cli", "backtest", "run", "--llenado", "cierre", "--strategy", "rsi", "--fixture", "spy-90d",
          "--equity-out", str(eq)], env=env, capture_output=True, text=True, check=True).stdout.splitlines()
     fixture = Path(__file__).resolve().parent / "fixtures" / "spy-90d.csv"
     expected = _new_lines(eq, "--comprar-y-mantener", str(fixture), "--slippage-pct", "0.0005")

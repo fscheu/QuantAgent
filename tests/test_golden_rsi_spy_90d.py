@@ -1,9 +1,9 @@
 """Golden regression test for deterministic RSI strategy on spy-90d fixture (QuantAgent-piv, QuantAgent-al2.3).
 
-Freezes trades and audited metrics from M1 (with intrabar stops enabled by default):
-- 340 closed trades matching tests/fixtures/golden/rsi-spy-90d-trades.csv row-by-row
-- Reference metrics: Win rate 33.24%, Profit factor 1.35, Sharpe ratio 9.46,
-  Total PnL 4571.27, Slippage 0.05% por lado, Comisión 0.00% por lado, max drawdown 0.001414
+Freezes default next-open fills with intrabar stops (QuantAgent-gfs1.2.1):
+- 227 closed trades matching tests/fixtures/golden/rsi-spy-90d-trades.csv byte-for-byte
+- Win rate 49.78%, Profit factor 3.81, Sharpe ratio 32.48, Total PnL 13532.99,
+  Slippage 0.05% por lado, Comisión 0.00% por lado, max drawdown 0.000879
 """
 
 import csv
@@ -25,14 +25,14 @@ GOLDEN_CSV_PATH = (
 )
 
 EXPECTED_METRICS = {
-    "Trades": "340",
-    "Win rate": "33.24%",
-    "Profit factor": "1.35",
-    "Sharpe ratio": "9.46",
-    "Total PnL": "4571.27",
+    "Trades": "227",
+    "Win rate": "49.78%",
+    "Profit factor": "3.81",
+    "Sharpe ratio": "32.48",
+    "Total PnL": "13532.99",
     "Slippage": "0.05% por lado",
     "Comisión": "0.00% por lado",
-    "max drawdown": "0.001414",
+    "max drawdown": "0.000879",
 }
 
 
@@ -74,6 +74,7 @@ def test_golden_rsi_spy_90d_metrics_and_trades(tmp_path):
 
     # 2. Compare trade log row-by-row with golden fixture
     assert out_trades.exists(), "Output trades CSV was not generated"
+    assert out_trades.read_bytes() == GOLDEN_CSV_PATH.read_bytes()
     with GOLDEN_CSV_PATH.open(newline="", encoding="utf-8") as f_gold:
         golden_rows = list(csv.reader(f_gold))
     with out_trades.open(newline="", encoding="utf-8") as f_actual:

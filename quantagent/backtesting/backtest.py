@@ -206,6 +206,7 @@ class Backtest:
         use_checkpointing: bool = False,
         strategy: Optional[TradingStrategy] = None,
         intrabar_stops: bool = True,
+        fill: str = "cierre",
     ):
         """
         Initialize Backtest.
@@ -221,6 +222,7 @@ class Backtest:
             use_checkpointing: Enable LangGraph checkpointing for state persistence
             strategy: Optional TradingStrategy. If None, uses LLMAgentStrategy with TradingGraph
             intrabar_stops: Evaluate stop loss and take profit against intrabar high/low prices
+            fill: "cierre" (default) or "apertura" of the next candle; run only, not replay.
         """
         self.start_date = start_date
         self.end_date = end_date
@@ -230,6 +232,10 @@ class Backtest:
         self.config = config or {}
         self.use_checkpointing = use_checkpointing
         self.intrabar_stops = bool(self.config.get("intrabar_stops", intrabar_stops))
+        if fill not in ("cierre", "apertura"):
+            raise ValueError("fill must be cierre or apertura")
+        self.fill = fill
+        self._pending_orders = {}
 
         # Database
         self.db = db_session or SessionLocal()
@@ -351,6 +357,7 @@ class Backtest:
         )
 
         self._replay_trade_order_ids = None
+        self._pending_orders.clear()
 
         # NEW: Clean up any stale active positions BEFORE creating backtest run
         # This prevents contamination from previous incomplete runs
@@ -732,6 +739,7 @@ class Backtest:
             environment=Environment.BACKTEST,
         )
         snapshot = {**StrategyAssembler.config_snapshot(resolved), "regla_tamano": resolved.regla_tamano}
+        snapshot["fill"] = self.fill
         if resolved.orden_minima is not None:
             snapshot["orden_minima"] = resolved.orden_minima
         if "strategy_params" in self.config:
@@ -828,6 +836,15 @@ class Backtest:
             return
 
         current_price = float(df.iloc[-1]["close"])
+        pending = self._pending_orders.pop(asset, None)
+        if pending is not None:
+            opening_price = float(df.iloc[-1]["open"])
+            self.portfolio.update_prices({asset: opening_price})
+            if isinstance(pending, str):
+                pos = self.position_monitor.get_active_position(asset)
+                self._close_position_with_trade_sync(pos, pending, opening_price, timestamp=current_date)
+            else:
+                self._execute_strategy_signal(asset, current_date, opening_price, *pending)
         self.portfolio.update_prices({asset: current_price})
 
         # Check for active position
@@ -840,7 +857,7 @@ class Backtest:
             intrabar_exit = (
                 check_intrabar_stops(active_pos, df.iloc[-1])
                 if self.intrabar_stops
-                and _is_candle_after_entry(current_date, active_pos.decision_timestamp)
+                and (self.fill == "apertura" or _is_candle_after_entry(current_date, active_pos.decision_timestamp))
                 else None
             )
             if intrabar_exit is not None:
@@ -859,6 +876,9 @@ class Backtest:
                 )
 
                 if should_exit:
+                    if self.fill == "apertura":
+                        self._pending_orders[asset] = reason
+                        return
                     self._close_position_with_trade_sync(
                         active_pos, reason, current_price, timestamp=current_date
                     )
@@ -927,7 +947,15 @@ class Backtest:
             current_date=current_date,
         )
 
-        # Execute order
+        if self.fill == "apertura":
+            self._pending_orders[asset] = (signal, trading_signal, db_signal, signal.entry_price or current_price)
+            return
+        self._execute_strategy_signal(asset, current_date, current_price, signal, trading_signal, db_signal)
+
+    def _execute_strategy_signal(
+        self, asset, current_date, current_price, signal, trading_signal, db_signal, reference_price=None
+    ):
+        # Shared execution for immediate close fills and pending open fills.
         order = self.order_manager.execute_decision(
             symbol=asset,
             decision=trading_signal,
@@ -952,22 +980,35 @@ class Backtest:
                 if trade:
                     trade_id = trade.id
 
-            self.position_monitor.open_position(
-                symbol=asset,
-                side=side,
-                entry_price=signal.entry_price or current_price,
-                stop_loss=signal.stop_loss
-                or (
+            if self.fill == "apertura" and reference_price:
+                stop_loss = (
+                    current_price * signal.stop_loss / reference_price
+                    if signal.stop_loss
+                    else (current_price * 0.98 if side == OrderSide.BUY else current_price * 1.02)
+                )
+                take_profit = (
+                    current_price * signal.take_profit / reference_price
+                    if signal.take_profit
+                    else (current_price * 1.03 if side == OrderSide.BUY else current_price * 0.97)
+                )
+            else:
+                stop_loss = signal.stop_loss or (
                     current_price * 0.98
                     if side == OrderSide.BUY
                     else current_price * 1.02
-                ),
-                take_profit=signal.take_profit
-                or (
+                )
+                take_profit = signal.take_profit or (
                     current_price * 1.03
                     if side == OrderSide.BUY
                     else current_price * 0.97
-                ),
+                )
+
+            self.position_monitor.open_position(
+                symbol=asset,
+                side=side,
+                entry_price=current_price if self.fill == "apertura" else signal.entry_price or current_price,
+                stop_loss=stop_loss,
+                take_profit=take_profit,
                 quantity=order.filled_quantity,
                 exit_policy=signal.exit_policy.value,
                 trade_id=trade_id,

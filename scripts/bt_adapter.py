@@ -98,7 +98,7 @@ class StrategyAdapter(Strategy):
         def apply_opening_gap():
             open_val = float(self._broker._data._current_value("Open"))
             for trade in list(self._broker.trades):
-                if self._broker._i <= trade.entry_bar:
+                if self.fill_close and self._broker._i <= trade.entry_bar:
                     continue
                 sl, tp = trade.sl, trade.tp
                 reason = None
@@ -126,6 +126,22 @@ class StrategyAdapter(Strategy):
                 broker.orders.extend(entries)
                 price = float(self.data.Open[-1])
                 for order in entries:
+                    confidence, fraction = order.tag[:2]
+                    ref_price = order.tag[2] if len(order.tag) > 2 else price * SCALE
+                    equity = broker._cash + sum(t.size * (price - t.entry_price) for t in broker.trades)
+                    units = round(equity * fraction * confidence / price)
+                    if units < 1:
+                        order.cancel()
+                        continue
+                    open_real = price * SCALE
+                    new_stop = round(open_real * (order.sl * SCALE) / ref_price, 8)
+                    new_take = round(open_real * (order.tp * SCALE) / ref_price, 8)
+                    order._replace(size=units if order.is_long else -units, sl_price=new_stop / SCALE, tp_price=new_take / SCALE)
+                    self.info[self.key]["stop"] = new_stop
+                    if self.pos is not None:
+                        self.pos.entry_price = open_real
+                        self.pos.stop_loss = new_stop
+                        self.pos.take_profit = new_take
                     if order.is_long:
                         # El efectivo y la apertura son los de ejecucion, no los de la senal.
                         units = int(broker._cash / (price * (1 + self.slippage) * (1 + self.commission)))
@@ -171,14 +187,20 @@ class StrategyAdapter(Strategy):
                 self.pos.entry_price = float(self.bars["close" if self.fill_close else "open"].iloc[trade.entry_bar])
                 self.pos.quantity = abs(trade.size) / SCALE
                 should_exit, reason = self.strategy.should_exit(self.pos, price, window)
-                if should_exit:
+                if should_exit and (self.fill_close or n < self.n_real_bars):
                     self._close(reason)
-                else:
+                elif not should_exit:
                     self.pos.candles_since_entry += 1
-            if self.pos is None:
+            if self.pos is None and (self.fill_close or n < self.n_real_bars):
                 self._maybe_enter(window, price, n)
         if self.fill_close and n == self.n_real_bars and self.pos is not None:
-            self._close("backtest_end")  # next-open: lo hace la libreria (finalize_trades=True)
+            self._close("backtest_end")
+        elif not self.fill_close and n == self.n_real_bars:
+            for trade in list(self._broker.trades):
+                self.info[trade.entry_bar]["reason"] = "backtest_end"
+                self._broker._close_trade(trade, float(self.data.Close[-1]), self._broker._i)
+            self._broker.orders.clear()
+            self.pos = None
 
     def _close(self, reason):
         self.info[self.key]["reason"] = reason
@@ -217,7 +239,9 @@ class StrategyAdapter(Strategy):
             return
         stop = round(signal.stop_loss or price * (0.98 if long else 1.02), 8)
         take = round(signal.take_profit or price * (1.03 if long else 0.97), 8)
-        (self.buy if long else self.sell)(size=units, sl=stop / SCALE, tp=take / SCALE)
+        (self.buy if long else self.sell)(size=units, sl=stop / SCALE, tp=take / SCALE,
+                                        tag=(signal.confidence, settings.TRADING_BASE_POSITION_PCT,
+                                             signal.entry_price or price))
         self.units = units if long else -units
         self.key = n - 1 if self.fill_close else n  # indice de la vela en la que la libreria llena la orden
         self.info[self.key] = {"stop": stop, "reason": "backtest_end"}
@@ -237,7 +261,7 @@ def run_adapter(strategy, df: pd.DataFrame, *, symbol: str, timeframe: str, fill
     close = fill == "close"
     bt = Backtest(df if close else df.iloc[:-1], StrategyAdapter, cash=cash, commission=commission_pct, margin=1.0,
                   spread=slippage_pct,
-                  trade_on_close=close, hedging=False, exclusive_orders=False, finalize_trades=not close)
+                  trade_on_close=close, hedging=False, exclusive_orders=False, finalize_trades=False)
     return bt.run(strategy=strategy, symbol=symbol, timeframe=timeframe, n_real_bars=len(df) - 1, fill_close=close,
                   slippage=slippage_pct, commission=commission_pct, orden_minima=orden_minima)
 

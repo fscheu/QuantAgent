@@ -86,6 +86,7 @@ def main(argv=None) -> int:
     ap.add_argument("--trades-dir", required=True, help="Directorio con trades del motor")
     ap.add_argument("--snapshot", required=True, help="Nombre del snapshot")
     ap.add_argument("--costos", choices=sorted(settings.COSTOS_PERFILES), help="Perfil de costos")
+    ap.add_argument("--llenado", choices=["apertura", "cierre"], default="apertura", help="Llenado del motor a controlar (default apertura)")
     ap.add_argument("--tamano-posicion", type=float, default=1.0, help="Tamaño de posición (default 1.0)")
     ap.add_argument("--regla-tamano", choices=["confianza", "fijo"], default="confianza", help="Regla de tamaño (default confianza)")
     ap.add_argument("--orden-minima", type=float, default=None, help="Monto mínimo en USD por orden de entrada")
@@ -132,7 +133,7 @@ def main(argv=None) -> int:
                 df,
                 symbol=sym,
                 timeframe=timeframe,
-                fill="close",
+                fill="next-open" if args.llenado == "apertura" else "close",
                 orden_minima=args.orden_minima,
                 **costos,
             )
@@ -158,11 +159,17 @@ def main(argv=None) -> int:
             row["pnl_apertura_siguiente"] = round(sum(r.pnl for r in open_rows), 2)
             row["trades_apertura_siguiente"] = len(open_rows)
             if row["control"].startswith("coinciden ") and all(row.get(c) not in (None, "") for c in ("sharpe_tasa_0", "max_drawdown")):
-                s, d = metricas_curva(bt_adapter.equity_curve(stats))
+                stats_close = stats if args.llenado == "cierre" else bt_adapter.run_adapter(
+                    build_strategy(aliases[strat], **params.get(strat, {})),
+                    df.copy(), symbol=sym, timeframe=timeframe, fill="close",
+                    orden_minima=args.orden_minima, **costos,
+                )
+                s, d = metricas_curva(bt_adapter.equity_curve(stats_close))
                 so, do = metricas_curva(bt_adapter.equity_curve(stats_open))
+                base_s, base_d = (s, d) if args.llenado == "cierre" else (so, do)
                 row.update(zip(METRIC_COLUMNS, (round(so - s, 2), round(do - d, 6),
-                           round(float(row["sharpe_tasa_0"]) + so - s, 2),
-                           round(max(0.0, float(row["max_drawdown"]) + do - d), 6))))
+                           round(float(row["sharpe_tasa_0"]) + so - base_s, 2),
+                           round(max(0.0, float(row["max_drawdown"]) + do - base_d), 6))))
         except Exception:
             row["pnl_apertura_siguiente"] = ""
             row["trades_apertura_siguiente"] = ""

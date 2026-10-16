@@ -141,7 +141,13 @@ metrics. This is the fastest way to sanity-check a strategy change.
 python -m quantagent.cli backtest run --strategy rsi --fixture spy-90d --out run.csv
 ```
 
-Expected output (exact numbers depend on the strategy/fixture combination, but
+`backtest run` and `backtest compare` accept `--llenado cierre|apertura` (default:
+`apertura`). Use `--llenado cierre` to reproduce close-based references.
+`apertura` fills at the next candle's open; a reversal after an opposite
+signal takes one more candle than with `cierre`. The run's config snapshot records
+the selected fill. This option does not change replay or paper trading.
+
+Close-based reference with `--llenado cierre` (numbers depend on the strategy/fixture, but
 the shape is always these 8 lines plus the `--out` line):
 
 ```
