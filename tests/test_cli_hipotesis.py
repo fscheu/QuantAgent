@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 import yaml
 from click.testing import CliRunner
 
@@ -72,7 +73,7 @@ def test_filtro_real_dos_activos(tmp_path, monkeypatch):
     monkeypatch.setattr(hipotesis, "filtrar_activo", observar)
     result = CliRunner().invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico"])
     assert result.exit_code == 0, result.output
-    assert result.output.rstrip().endswith("PASA")
+    assert result.output.rstrip().endswith("PASA (2 de 2 bajo 0,10)")
     with (tmp_path / "intentos.csv").open() as f:
         filas = list(csv.DictReader(f))
     assert len(filas) == len(resultados) == 2
@@ -83,3 +84,42 @@ def test_filtro_real_dos_activos(tmp_path, monkeypatch):
         celdas = next(line for line in result.output.splitlines() if activo in line).split("|")
         assert float(celdas[2]) == float(format(r["sharpe_tasa_0"], ".6g"))
         assert int(celdas[3]) == r["trades"]
+
+
+@pytest.mark.parametrize("sharpes,final", [
+    ([0.09] * 9 + [0.10] * 3, "CORTA (9 de 12 bajo 0,10)"),
+    ([0.09] * 8 + [0.10] * 4, "PASA (8 de 12 bajo 0,10)"),
+    ([0.09] * 8 + [float("nan")] + [0.10] * 3, "CORTA (9 de 12 bajo 0,10)"),
+    ([0.09] * 8 + [None] + [0.10] * 3, "CORTA (9 de 12 bajo 0,10)"),
+])
+def test_bordes_veredicto_etapa1(tmp_path, monkeypatch, sharpes, final):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    activos = ["SPY", "IWM", "EFA", "EEM", "TLT", "SHY", "GLD", "DBC", "XLE", "XLF", "XLK", "XLU"]
+    fechas = pd.date_range("2007-01-01", periods=40)
+    velas = pd.DataFrame(
+        {c: 100.0 for c in ("open", "high", "low", "close", "adj_close", "volume")}, index=fechas,
+    )
+    write_snapshot("sintetico", dict.fromkeys(activos, velas), base_dir=tmp_path)
+    data = yaml.safe_load((Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml").read_text())
+    data.update(activos=activos, parametros={"rsi_period": [7], "oversold_threshold": [30.0]})
+    archivo = tmp_path / "h.yaml"
+    archivo.write_text(yaml.safe_dump(data))
+    resultados = iter({"sharpe_tasa_0": s, "trades": i} for i, s in enumerate(sharpes))
+    monkeypatch.setattr(hipotesis, "filtrar_activo", lambda *a, **kw: next(resultados))
+    result = CliRunner().invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico"])
+    assert result.exit_code == 0, result.output
+    assert result.output.rstrip().endswith(final)
+    with (tmp_path / "intentos.csv").open() as f:
+        filas = list(csv.DictReader(f))
+    tabla = [line.split("|") for line in result.output.splitlines()[2:-1]]
+    assert len(filas) == len(tabla) == 12
+    for i, (fila, celdas, activo, sharpe) in enumerate(zip(filas, tabla, activos, sharpes)):
+        assert fila["activo"] == celdas[1].strip() == activo
+        assert fila["etapa"] == "1" and fila["hipotesis"] == data["id"]
+        assert int(fila["trades"]) == int(celdas[3]) == i
+        if sharpe is None:
+            assert fila["sharpe"] == celdas[2].strip() == ""
+        elif np.isnan(sharpe):
+            assert np.isnan(float(fila["sharpe"])) and np.isnan(float(celdas[2]))
+        else:
+            assert float(fila["sharpe"]) == float(celdas[2]) == sharpe
