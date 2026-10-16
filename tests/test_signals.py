@@ -1,6 +1,7 @@
 """QuantAgent-d4cq.3: bar_signals convierte una estrategia en columnas de señales sin mirar el futuro."""
 
 import pandas as pd
+import pytest
 
 import numpy as np
 
@@ -29,24 +30,34 @@ def test_sma_cross_entry_solo_en_el_cruce_y_exit_cuando_rapida_debajo():
     assert sig["stop_loss_pct"].iloc[5] > 0 and sig["stop_loss_pct"].iloc[:5].isna().all()
 
 
-def test_la_estrategia_recibe_en_la_vela_i_exactamente_i_mas_1_velas():
+@pytest.mark.parametrize("required", [4, 0, -1])
+def test_la_estrategia_recibe_solo_la_ventana_requerida(required):
     class Espia(SmaCrossStrategy):
         def __init__(self):
             super().__init__(fast=2, slow=3)
             self.largos_signal, self.largos_exit = [], []
 
+        @property
+        def required_history_bars(self):
+            return required
+
         def generate_signal(self, kline_data, symbol, timeframe, current_price):
+            current_price = int(current_price)
             self.largos_signal.append(len(kline_data))
-            return super().generate_signal(kline_data, symbol, timeframe, current_price)
+            assert [r["close"] for r in kline_data] == list(range(max(1, current_price - n + 1), current_price + 1))
+            return None
 
         def should_exit(self, position, current_price, ohlc_data):
+            current_price = int(current_price)
             self.largos_exit.append(len(ohlc_data))
-            return super().should_exit(position, current_price, ohlc_data)
+            assert ohlc_data["close"].tolist() == list(range(max(1, current_price - n + 1), current_price + 1))
+            return False, ""
 
+    n = required if required > 0 else 30
     espia = Espia()
-    bar_signals(espia, _candles([1, 2, 3, 4, 5, 6, 7]), "SPY", "1d")
-    assert espia.largos_signal == [1, 2, 3, 4, 5, 6, 7]
-    assert espia.largos_exit == [1, 2, 3, 4, 5, 6, 7]
+    bar_signals(espia, _candles(list(range(1, 36))), "SPY", "1d")
+    assert espia.largos_signal == [min(i, n) for i in range(1, 36)]
+    assert espia.largos_exit == [min(i, n) for i in range(1, 36)]
 
 
 def test_rsi_produce_entradas_cortas_con_rsi_sobre_70():

@@ -46,6 +46,7 @@ def preparar_walkforward(
 
 
 @click.command("walkforward", help="Elegir parámetros en ajuste y medir el ganador en la ventana siguiente.")
+@click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="apertura", show_default=True)
 @click.option("--strategy", "strategy_name", required=True)
 @click.option("--symbol", required=True)
 @click.option("--snapshot", "snapshot_name", required=True)
@@ -59,7 +60,7 @@ def preparar_walkforward(
 @click.option("--tamano-posicion", default=1.0, type=click.FloatRange(min=0.0, max=1.0, min_open=True))
 @click.option("--regla-tamano", type=click.Choice(PositionSizer.REGLAS))
 @click.option("--orden-minima", type=click.FloatRange(min=0.0, min_open=True))
-def walkforward_command(strategy_name, symbol, snapshot_name, grid_path, out_path, **options):
+def walkforward_command(strategy_name, symbol, snapshot_name, grid_path, out_path, llenado, **options):
     from quantagent.backtesting.fixtures import snapshot_metadata
     from quantagent.cli.backtest import _isolated_sqlite_db, correr_par
     from quantagent.cli.sweep import registrar_intento
@@ -77,10 +78,10 @@ def walkforward_command(strategy_name, symbol, snapshot_name, grid_path, out_pat
             for combo in parametros:
                 with _isolated_sqlite_db():
                     r = correr_par(strategy_name, meta, config, options["costos"], None,
-                                   snapshot_name, symbol, desde, hasta, params=combo)
+                                   snapshot_name, symbol, desde, hasta, params=combo, fill=llenado)
                 if desde == a:
                     registrar_intento(strategy_name, symbol, snapshot_name, options["costos"],
-                                      options["tamano_posicion"], combo,
+                                      options["tamano_posicion"], {**combo, "llenado": llenado},
                                       {**r, "pnl": round(r["pnl"], 2), "sharpe": round(r["sharpe"], 2),
                                        "desde": f"{meta.start_date:%Y-%m-%d}", "hasta": f"{meta.end_date:%Y-%m-%d}"})
                     resultados.append({**r, "params": combo})

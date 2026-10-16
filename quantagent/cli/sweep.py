@@ -98,6 +98,23 @@ def grilla_vecinos(strategy: str) -> tuple[list[dict[str, Any]], list[str]]:
     return combos, labels
 
 
+CAMPOS_INTENTOS = [
+    "fecha_utc", "estrategia", "activo", "snapshot", "desde", "hasta", "costos",
+    "tamano", "params", "trades", "pnl", "sharpe", "hipotesis", "etapa",
+]
+
+
+def contar_intentos(hipotesis: Optional[str] = None) -> int:
+    """Cuenta filas de intentos.csv; con `hipotesis`, solo las de esa hipótesis."""
+    from quantagent.data.snapshot import snapshot_root
+
+    path = snapshot_root() / "intentos.csv"
+    if not path.exists():
+        return 0
+    with path.open(newline="", encoding="utf-8") as f:
+        return sum(1 for r in csv.DictReader(f) if hipotesis is None or r.get("hipotesis") == hipotesis)
+
+
 def registrar_intento(
     strategy_name: str,
     symbol: str,
@@ -106,8 +123,13 @@ def registrar_intento(
     tamano_posicion: Optional[float],
     combo: dict[str, Any],
     row: dict[str, Any],
+    hipotesis: Optional[str] = None,
+    etapa: Optional[str] = None,
 ) -> None:
-    """Agrega una corrida de ajuste al registro, conservando sus valores."""
+    """Agrega una corrida al registro, conservando sus valores.
+
+    Un archivo con encabezado viejo se reescribe con el nuevo (columnas faltantes vacías).
+    """
     from quantagent.data.snapshot import snapshot_root
 
     intentos_path = snapshot_root() / "intentos.csv"
@@ -124,12 +146,23 @@ def registrar_intento(
         "trades": row["trades"],
         "pnl": row["pnl"],
         "sharpe": row["sharpe"],
+        "hipotesis": hipotesis or "",
+        "etapa": etapa or "",
     }
-    nuevo = not intentos_path.exists()
-    with intentos_path.open("a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=list(intento))
+    previas = []
+    if intentos_path.exists():
+        with intentos_path.open(newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            if reader.fieldnames == CAMPOS_INTENTOS:
+                previas = None
+            else:
+                previas = list(reader)
+    nuevo = not intentos_path.exists() or previas is not None
+    with intentos_path.open("w" if nuevo else "a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=CAMPOS_INTENTOS, restval="", extrasaction="ignore")
         if nuevo:
             writer.writeheader()
+            writer.writerows(previas or [])
         writer.writerow(intento)
 
 
@@ -167,6 +200,7 @@ def attempts_command(strategy_name: str, symbol: Optional[str]) -> None:
 
 
 @click.command("sweep", help="Correr una grilla de parámetros de una estrategia sobre un activo.")
+@click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="apertura", show_default=True)
 @click.option("--strategy", "strategy_name", required=True, help="Estrategia a optimizar.")
 @click.option("--symbol", "symbol", required=True, help="Símbolo del activo (ej: SPY).")
 @click.option("--snapshot", "snapshot_name", required=True, help="Snapshot en $QUANTAGENT_SNAPSHOT_DIR (velas ajustadas).")
@@ -192,6 +226,7 @@ def sweep_command(
     tamano_posicion: Optional[float],
     regla_tamano: Optional[str],
     orden_minima: Optional[float],
+    llenado: str,
 ) -> None:
     from quantagent.backtesting.fixtures import snapshot_metadata
     from quantagent.cli.backtest import (
@@ -260,6 +295,7 @@ def sweep_command(
                 to_date,
                 con_filas=False,
                 params=combo,
+                fill=llenado,
             )
 
         def _fmt(v: Optional[float], digits: int) -> object:
@@ -288,7 +324,7 @@ def sweep_command(
         rows.append(row)
         if vecinos_20:
             row["vecino"] = vecinos[len(rows) - 1]
-        registrar_intento(strategy_name, sym, snapshot_name, costos, tamano_posicion, combo, row)
+        registrar_intento(strategy_name, sym, snapshot_name, costos, tamano_posicion, {**combo, "llenado": llenado}, row)
 
     with open(out_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)

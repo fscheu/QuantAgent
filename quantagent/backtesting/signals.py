@@ -23,8 +23,11 @@ def bar_signals(strategy: TradingStrategy, candles: pd.DataFrame, symbol: str, t
         {"entry": 0, "exit": False, "stop_loss_pct": np.nan, "take_profit_pct": np.nan, "trailing_stop_pct": np.nan},
         index=candles.index,
     )
+    n = strategy.required_history_bars
+    if n <= 0:
+        n = 30
     for i in range(len(candles)):
-        window = candles.iloc[: i + 1]
+        window = candles.iloc[max(0, i + 1 - n): i + 1]
         price = float(window["close"].iloc[-1])
         signal = strategy.generate_signal(window.to_dict(orient="records"), symbol, timeframe, price)
         if signal is not None and signal.decision in _DECISION:

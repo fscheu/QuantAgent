@@ -1,0 +1,10 @@
+id: rsi-dos-combinaciones-doce-etfs
+autor: fede
+justificacion: RSI corto en sobreventa revierte a la media en ETFs líquidos.
+clase: rsi
+parametros:
+  rsi_period: [7, 14]
+  oversold_threshold: [30.0]
+activos: [SPY, IWM, EFA, EEM, TLT, SHY, GLD, DBC, XLK, XLE, XLF, XLU]
+timeframe: 1d
+fuente: etf-1d-2026-10

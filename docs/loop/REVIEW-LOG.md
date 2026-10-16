@@ -224,4 +224,20 @@ PM: QuantAgent-d4cq.7.1 vi: script 48 celdas, sin calentamiento antes de 2007 ig
 PM: QuantAgent-d4cq.7.2 vi: comparar exige desde == 2007-01-01 y compare real escribe 2007-01-03 decido: cambio desde >= 2007-01-01 y hasta <= 2018-12-31 con test de tablas reales — #204 (codex)
 PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 passed decido: merge — #204 (codex)
 2026-10-15 #205 QuantAgent-d4cq.7.3 F09.3 medición: escalo → Fede decide B condicionado a d4cq.7.4 (bar_signals con ventana required_history_bars; filtro < 764 s). Spearman apertura 0.893329 reproducido. merge en lote.
+2026-10-16 #207 QuantAgent-d4cq.7.4 F09.4 ventana de bar_signals: merge. PM midió filtro 258 s (era 967) < motor 764 s, Spearman 0.893329, trades iguales. B confirmada; d4cq.7 cerrado.
+2026-10-16 #210 QuantAgent-gfs1.2.3 F03b.3 inventario oráculos: merge. PM ratifica conservar referencias al cierre como controles explícitos (crossval_rsi trade_on_close=True).
+2026-10-16 #208 QuantAgent-d4cq.11 H03 intentos.csv (nube): merge. Mutación sin filas previas detectada; 42 passed sweep+walkforward.
+2026-10-16 #209 QuantAgent-d4cq.12 H04 candado (nube): merge. 3 passed.
+2026-10-16 #211 QuantAgent-d4cq.9 H01 cargador de hipótesis (nube): merge. 4 entradas inválidas probadas; pyyaml sin declarar → sumado a H02.
+2026-10-16 #212 QuantAgent-gfs1.2.4 F03b.4 goldens externos: merge. PM generó el de apertura (181 / -21841.01); el de cierre regenerado es idéntico byte a byte. 3 passed.
+2026-10-16 #214 QuantAgent-d4cq.10 H02 admisión (nube): merge. 2 mutaciones detectadas; pyyaml declarado.
+2026-10-16 #215 QuantAgent-gfs1.2.5 F03b.5 --llenado en sweep/walkforward: merge. 43 passed; mutación detectada.
+2026-10-16 #213 QuantAgent-d4cq.13 H05 filtrar_activo (nube): cambio (ruff E731) → merge. SPY real 4 ventanas en 57 s; 2 mutaciones detectadas.
+2026-10-16 #216 QuantAgent-d4cq.14 H06 partición en 3: merge. Criterio de corte con 2 activos era incompatible con >8 de 12; se prueba con 12.
+2026-10-16 #217 QuantAgent-d4cq.14.1 H06.1 CLI y admisión: merge. Mutación sin recorte 2019 detectada; corrida real admitida.
+2026-10-16 #218 QuantAgent-d4cq.14.2 H06.2 partición en 2: merge.
+2026-10-16 #219 QuantAgent-d4cq.14.2.1 H06.2a filtro por activo: merge. SPY+SHY real 54 s, PASA. NaN como bajo y conteo en la línea final pasan a H06.2b.
+2026-10-16 #220 QuantAgent-d4cq.14.2.2 H06.2b bordes del veredicto: merge. 3 mutaciones detectadas; NaN cuenta como bajo. Escalo a Fede: con 'más de 8' una hipótesis de <=8 activos nunca corta.
+2026-10-16 #221 QuantAgent-d4cq.14.3 H06.3 RSI en 12 ETFs: merge. Reproducido: PASA (4 de 12), 159 s, 12 intentos.
+2026-10-16 #222 QuantAgent-d4cq.15 H07 punto de control L9: merge. SMA reproducido: PASA (5 de 12), 157 s; SMA con 3-10 trades por activo → falta mínimo de trades (L10).
 ```

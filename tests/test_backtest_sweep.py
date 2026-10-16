@@ -288,7 +288,7 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
         reader = csv.DictReader(f)
         assert reader.fieldnames == [
             "fecha_utc", "estrategia", "activo", "snapshot", "desde", "hasta",
-            "costos", "tamano", "params", "trades", "pnl", "sharpe",
+            "costos", "tamano", "params", "trades", "pnl", "sharpe", "hipotesis", "etapa",
         ]
         intentos_rows = list(reader)
     assert len(intentos_rows) == 8
@@ -303,6 +303,7 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
         assert (intento["estrategia"], intento["activo"], intento["snapshot"]) == ("rsi", "SPY", "snap_rsi")
         assert (intento["costos"], intento["tamano"]) == ("", "1.0")
         assert intento["params"] == json.dumps({
+            "llenado": "apertura",
             "oversold_threshold": float(salida["oversold_threshold"]),
             "rsi_period": int(salida["rsi_period"]),
         }, sort_keys=True)
@@ -323,13 +324,13 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
     meta = snapshot_metadata("snap_rsi", "SPY", None, None)
     config = _engine_config(None, None, 1.0, None, None)
     with _isolated_sqlite_db():
-        baseline = correr_par("rsi", meta, config, None, None, "snap_rsi", "SPY", None, None)
+        baseline = correr_par("rsi", meta, config, None, None, "snap_rsi", "SPY", None, None, fill="apertura")
 
     filas_por_combo = {}
     for r in out_rows:
         combo = {"oversold_threshold": float(r["oversold_threshold"]), "rsi_period": int(r["rsi_period"])}
         with _isolated_sqlite_db():
-            esperado = correr_par("rsi", meta, config, None, None, "snap_rsi", "SPY", None, None, params=combo)
+            esperado = correr_par("rsi", meta, config, None, None, "snap_rsi", "SPY", None, None, params=combo, fill="apertura")
         assert int(r["trades"]) == esperado["trades"]
         assert float(r["pnl"]) == round(esperado["pnl"], 2)
         filas_por_combo[(combo["oversold_threshold"], combo["rsi_period"])] = r
@@ -354,6 +355,28 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
         assert len(list(csv.DictReader(f))) == len(vecinos) == 13
     assert vecinos[0]["vecino"] == "default"
     assert (int(vecinos[0]["trades"]), float(vecinos[0]["pnl"])) == (baseline["trades"], round(baseline["pnl"], 2))
+
+    grid_file.write_text(json.dumps({"rsi_period": [7, 14]}))
+    resultados = []
+    for flags, fill in [([], "apertura"), (["--llenado", "apertura"], "apertura"),
+                        (["--llenado", "cierre"], "cierre")]:
+        res = runner.invoke(backtest_group, [
+            "sweep", "--strategy", "rsi", "--symbol", "SPY", "--snapshot", "snap_rsi",
+            "--grid", str(grid_file), "--out", str(out_csv), *flags])
+        assert res.exit_code == 0, res.output
+        with out_csv.open() as f:
+            resultados.append(list(csv.DictReader(f)))
+        with intentos.open() as f:
+            ultimos = list(csv.DictReader(f))[-2:]
+        assert [json.loads(r["params"]) for r in ultimos] == [
+            {"rsi_period": p, "llenado": fill} for p in [7, 14]]
+        for fila, p in zip(resultados[-1], [7, 14]):
+            with _isolated_sqlite_db():
+                esperado = correr_par("rsi", meta, config, None, None, "snap_rsi", "SPY",
+                                      None, None, params={"rsi_period": p}, fill=fill)
+            assert float(fila["pnl"]) == round(esperado["pnl"], 2)
+    assert resultados[0] == resultados[1]
+    assert [r["pnl"] for r in resultados[0]] != [r["pnl"] for r in resultados[2]]
 
 
 def test_attempts_filtra_alias_y_activo_sin_modificar(monkeypatch, tmp_path):
@@ -400,3 +423,33 @@ def test_attempts_registro_ausente_o_encabezado_invalido(monkeypatch, tmp_path):
     assert "Encabezado inválido" in res.output
     assert path.read_text() == "otra,columna\n"
 
+
+
+def test_registrar_intento_migra_encabezado_viejo_y_cuenta_por_hipotesis(monkeypatch, tmp_path):
+    import csv
+    from quantagent.cli.sweep import CAMPOS_INTENTOS, contar_intentos, registrar_intento
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    path = tmp_path / "intentos.csv"
+    viejo = CAMPOS_INTENTOS[:-2]
+    filas = [{c: f"{c}{i}" for c in viejo} for i in range(3)]
+    with path.open("w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=viejo)
+        w.writeheader()
+        w.writerows(filas)
+    assert contar_intentos() == 3 and contar_intentos("h1") == 0
+
+    row = {"desde": "2010-01-01", "hasta": "2012-01-01", "trades": 4, "pnl": 1.5, "sharpe": 0.3}
+    registrar_intento("rsi", "SPY", "snap", None, 1.0, {"a": 1}, row, hipotesis="h1", etapa="E1")
+    registrar_intento("rsi", "SPY", "snap", None, 1.0, {"a": 2}, row)
+
+    with path.open(newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        assert reader.fieldnames == CAMPOS_INTENTOS
+        rows = list(reader)
+    assert len(rows) == 5
+    for orig, nueva in zip(filas, rows[:3]):
+        assert {c: nueva[c] for c in viejo} == orig
+        assert (nueva["hipotesis"], nueva["etapa"]) == ("", "")
+    assert (rows[3]["hipotesis"], rows[3]["etapa"]) == ("h1", "E1")
+    assert contar_intentos() == 5 and contar_intentos("h1") == 1
