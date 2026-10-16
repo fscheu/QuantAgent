@@ -97,3 +97,50 @@ def test_etapa2(tmp_path, monkeypatch, caso):
         assert "TLT: sin validar: diferencia forzada" in filas[1]["motivos"]
     else:
         assert filas[1]["control"].startswith("coinciden")
+
+
+@pytest.mark.parametrize("dsr,pnl,esperado", [(0.95, 1, "PASA"), (0.94, 1, "CORTA"),
+                                          (0.99, -1, "CORTA"), (None, 1, "CORTA")])
+def test_etapa3_regla(tmp_path, monkeypatch, dsr, pnl, esperado):
+    h = cargar_hipotesis(Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml")
+    (tmp_path / "equity").mkdir()
+    for activo in ("SPY", "TLT"):
+        (tmp_path / "equity" / f"rsi-{activo}.csv").write_text("date,equity\n2019-01-01,100\n")
+    filas = [{"activo": a, "trades": "2", "pnl": str(p), "sharpe_tasa_0": "0.10",
+              "max_drawdown": "0.35"} for a, p in (("SPY", -1), ("TLT", pnl))]
+    monkeypatch.setattr(validacion, "correr_motor", lambda *args, **kwargs: filas)
+    monkeypatch.setattr(validacion, "dsr_contra_intentos", lambda *args: dsr)
+    veredicto, resultado = validacion.validar_etapa3(h, "sintetico", {}, tmp_path)
+    assert veredicto == esperado
+    assert resultado[0]["v30"] == "NO PASA" and resultado[0]["motivos"]
+    assert resultado[1]["v30"] == ("PASA" if pnl > 0 else "NO PASA")
+    assert resultado[1]["dsr"] == dsr
+    assert bool(resultado[1]["motivos"]) == (esperado == "CORTA")
+
+
+def test_etapa3_real(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fechas = pd.date_range("2018-12-01", "2023-01-31")
+    close = 100 + 10 * np.sin(np.arange(len(fechas)) / 5)
+    velas = pd.DataFrame({"open": close, "high": close + 1, "low": close - 1,
+                          "close": close, "adj_close": close, "volume": 1000.0}, index=fechas)
+    write_snapshot("sintetico", {"SPY": velas, "TLT": velas}, base_dir=tmp_path)
+    h = cargar_hipotesis(Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml")
+    carpeta = tmp_path / "salida"
+    veredicto, filas = validacion.validar_etapa3(
+        h, "sintetico", {"SPY": {"rsi_period": 7}, "TLT": {"rsi_period": 21}}, carpeta)
+    for fila in filas:
+        with (carpeta / "equity" / f"rsi-{fila['activo']}.csv").open() as f:
+            curva = list(csv.DictReader(f))
+        assert all("2019-01-01" <= r["date"][:10] <= "2022-12-31" for r in curva)
+        equity = [float(r["equity"]) for r in curva]
+        assert fila["dsr"] == validacion.dsr_contra_intentos(equity, tmp_path / "intentos.csv")
+        pasa, _ = validacion.evaluar(*(float(fila[c]) for c in
+                                     ("trades", "pnl", "sharpe_tasa_0", "max_drawdown")))
+        assert fila["v30"] == ("PASA" if pasa else "NO PASA")
+    assert filas[0]["dsr"] != filas[1]["dsr"]
+    assert veredicto == ("PASA" if any(not f["motivos"] for f in filas) else "CORTA")
+    with (tmp_path / "intentos.csv").open() as f:
+        intentos = list(csv.DictReader(f))
+    assert [(r["activo"], r["hipotesis"], r["etapa"]) for r in intentos] == [
+        (a, h.id, "3") for a in ("SPY", "TLT")]

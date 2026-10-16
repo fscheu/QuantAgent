@@ -6,8 +6,9 @@ import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from quantagent.backtesting.verdict import evaluar
+from quantagent.backtesting.verdict import dsr_contra_intentos, evaluar
 from quantagent.cli.sweep import registrar_intento
+from quantagent.data.snapshot import snapshot_root
 
 
 def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, abrir_prueba=False):
@@ -66,3 +67,21 @@ def validar_etapa2(h, snapshot, params_por_activo, carpeta):
             fila["motivos"] = [f"{activo}: {motivo}" for motivo in motivos]
     pasa = all(f["control"].startswith("coinciden") for f in filas) and any(f["v30"] == "PASA" for f in filas)
     return "PASA" if pasa else "CORTA", filas
+
+
+def validar_etapa3(h, snapshot, params_por_activo, carpeta):
+    """Valida la prueba; el llamador debe abrir el candado antes de invocar."""
+    filas = correr_motor(h, snapshot, params_por_activo, "2019-01-01", "2022-12-31",
+                         carpeta, "3", abrir_prueba=True)
+    for fila in filas:
+        activo = fila["activo"]
+        with (Path(carpeta) / "equity" / f"{h.clase}-{activo}.csv").open(newline="") as f:
+            equity = [float(r["equity"]) for r in csv.DictReader(f)]
+        pasa, motivos = evaluar(*(float(fila[c]) if fila[c] != "" else None
+                                  for c in ("trades", "pnl", "sharpe_tasa_0", "max_drawdown")))
+        fila["v30"] = "PASA" if pasa else "NO PASA"
+        fila["dsr"] = dsr_contra_intentos(equity, snapshot_root() / "intentos.csv")
+        if fila["dsr"] is None or not fila["dsr"] >= 0.95:
+            motivos.append("sin DSR" if fila["dsr"] is None else "DSR < 0.95")
+        fila["motivos"] = [f"{activo}: {motivo}" for motivo in motivos]
+    return "PASA" if any(not f["motivos"] for f in filas) else "CORTA", filas
