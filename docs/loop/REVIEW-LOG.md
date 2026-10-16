@@ -248,4 +248,5 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-16 #228 QuantAgent-d4cq.21 E06 dsr_contra_intentos (nube): merge. Mutación sin /√252 detectada.
 2026-10-16 #229 QuantAgent-d4cq.20 E05 etapa 2: cambio (CI sin backtesting.py → importorskip), luego merge. Real SPY+TLT desde /tmp: PASA, controles 181/181 y 198/198. Ojo: en CI test_etapa2 se saltea; solo la VM lo cubre.
 2026-10-16 #230 QuantAgent-d4cq.22 E07 partición en .22.1-.22.3: merge.
+2026-10-16 #231 QuantAgent-d4cq.22.1 E07a extraer admisión y filtro: merge. Salida real de filtrar (sma, 12 ETFs) idéntica por md5.
 ```
