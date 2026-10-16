@@ -52,19 +52,70 @@ def test_correr_corte_real_y_estado(tmp_path, monkeypatch, rechazo):
     assert [r["etapa"] for r in intentos] == ["0" if rechazo else "1"]
 
 
-def test_correr_pasa_etapa1(tmp_path, monkeypatch):
+@pytest.mark.parametrize("cortar", [False, True])
+def test_correr_control_real(tmp_path, monkeypatch, cortar):
+    pytest.importorskip("backtesting")
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
-    h = hipotesis.cargar_hipotesis(Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml")
-    monkeypatch.setattr(hipotesis, "admitir_hipotesis", lambda *a: (h, True, []))
-    monkeypatch.setattr(hipotesis, "filtrar_hipotesis", lambda *a: ([("SPY", 0.5, 30)], {}, "PASA", 0))
+    fechas = pd.date_range("2007-01-01", "2018-12-31", freq="2D")
+    snapshots = {}
+    for activo, periodo in [("SPY", 5), ("TLT", 9)]:
+        close = 100 + 10 * np.sin(np.arange(len(fechas)) / periodo)
+        snapshots[activo] = pd.DataFrame(
+            {"open": close, "high": close + 1, "low": close - 1,
+             "close": close, "adj_close": close, "volume": 1000.0}, index=fechas,
+        )
+    write_snapshot("sintetico", snapshots, base_dir=tmp_path)
+    data = yaml.safe_load((Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml").read_text())
+    data.update(activos=["SPY", "TLT"], parametros={"rsi_period": [7, 21], "oversold_threshold": [30.0]})
+    archivo = tmp_path / "h.yaml"
+    archivo.write_text(yaml.safe_dump(data))
+    real, controles = hipotesis.validar_etapa2, []
+    filtro, elegidos = hipotesis.filtrar_hipotesis, []
+
+    def observar_filtro(*args):
+        r = filtro(*args)
+        elegidos.append(r[1])
+        return r
+
+    monkeypatch.setattr(hipotesis, "filtrar_hipotesis", observar_filtro)
+
+    def observar(h, snapshot, params, carpeta):
+        controles.append((params, real(h, snapshot, params, carpeta)))
+        return controles[-1][1]
+
+    monkeypatch.setattr(hipotesis, "validar_etapa2", observar)
+    if cortar:
+        import subprocess
+        run = subprocess.run
+
+        def sin_validar(cmd, **kwargs):
+            resultado = run(cmd, **kwargs)
+            if "--tabla" in cmd:
+                tabla = Path(cmd[cmd.index("--tabla") + 1])
+                tabla.write_text(tabla.read_text().replace("coinciden", "sin validar"))
+            return resultado
+
+        monkeypatch.setattr(subprocess, "run", sin_validar)
     result = CliRunner().invoke(backtest_group, [
-        "hipotesis", "correr", str(Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml"),
-        "--snapshot", "sintetico", "--carpeta", str(tmp_path),
+        "hipotesis", "correr", str(archivo), "--snapshot", "sintetico", "--carpeta", str(tmp_path / "motor"),
     ])
-    assert result.exit_code == 0, result.output
-    assert result.output.rstrip().endswith("Llegó a la etapa 1: PASA (0 de 1 bajo 0,10 o con menos de 30 trades)")
+    assert result.exit_code == int(cortar), result.output
+    params, (veredicto, resultados) = controles[0]
+    assert params == elegidos[0] and set(params) == {"SPY", "TLT"}
+    assert veredicto == ("CORTA" if cortar else "PASA")
+    with (tmp_path / "intentos.csv").open() as f:
+        intentos = list(csv.DictReader(f))
+    assert [r["etapa"] for r in intentos] == ["1", "1", "2", "2"]
+    assert {r["activo"]: json.loads(r["params"]) for r in intentos[2:]} == params
+    assert all((tmp_path / "motor" / f"{a}.csv").exists() for a in params)
     with (tmp_path / "hipotesis.csv").open() as f:
-        assert [(r["etapa"], r["veredicto"]) for r in csv.DictReader(f)] == [("0", "PASA"), ("1", "PASA")]
+        filas = list(csv.DictReader(f))
+    assert [(r["etapa"], r["veredicto"]) for r in filas] == [("0", "PASA"), ("1", "PASA"), ("2", veredicto)]
+    assert all(m in filas[-1]["motivo"] for r in resultados for m in r["motivos"])
+    assert result.output.splitlines() == [
+        *[f"Etapa {r['etapa']}: {r['veredicto']} ({r['motivo']})" for r in filas],
+        f"Llegó a la etapa 2: {veredicto} ({filas[-1]['motivo']})",
+    ]
 
 
 def test_admision_rango_y_registro(tmp_path, monkeypatch):
