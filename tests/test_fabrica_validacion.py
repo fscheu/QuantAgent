@@ -7,8 +7,8 @@ import pandas as pd
 import pytest
 
 from quantagent.data.snapshot import write_snapshot
-from quantagent.fabrica.hipotesis import cargar_hipotesis
 from quantagent.fabrica import validacion
+from quantagent.fabrica.hipotesis import cargar_hipotesis
 
 
 @pytest.mark.parametrize("abrir_prueba,etapa,desde", [(False, "2", "2007-01-01"), (True, "3", "2019-01-01")])
@@ -50,3 +50,47 @@ def test_motor_dos_activos(tmp_path, monkeypatch, abrir_prueba, etapa, desde):
         validacion.correr_motor(h, "sintetico", {"AUSENTE": {}}, desde, fechas[-1].date(), carpeta, etapa, abrir_prueba)
     with (tmp_path / "intentos.csv").open() as f:
         assert list(csv.DictReader(f)) == intentos
+
+
+@pytest.mark.parametrize("caso", ["pasa", "sin validar", "ninguno pasa"])
+def test_etapa2(tmp_path, monkeypatch, caso):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fechas = pd.date_range("2007-01-01", periods=150)
+    close = 100 + 10 * np.sin(np.arange(150) / 5)
+    velas = pd.DataFrame({"open": close, "high": close + 1, "low": close - 1,
+                          "close": close, "adj_close": close, "volume": 1000.0}, index=fechas)
+    write_snapshot("sintetico", {"SPY": velas, "TLT": velas}, base_dir=tmp_path)
+    h = cargar_hipotesis(Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml")
+    params = {"SPY": {"rsi_period": 7}, "TLT": {"rsi_period": 21}}
+    if caso == "ninguno pasa":
+        params = {a: {"oversold_threshold": 0.0, "overbought_threshold": 100.0} for a in params}
+    real = validacion.subprocess.run
+
+    def sin_validar(cmd, **kwargs):
+        resultado = real(cmd, **kwargs)
+        if "--tabla" in cmd and cmd[cmd.index("--tabla") + 1].endswith("TLT.csv"):
+            tabla = Path(cmd[cmd.index("--tabla") + 1])
+            with tabla.open(newline="") as f:
+                reader = csv.DictReader(f)
+                campos, filas = reader.fieldnames, list(reader)
+            filas[0]["control"] = "sin validar: diferencia forzada"
+            with tabla.open("w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=campos)
+                writer.writeheader()
+                writer.writerows(filas)
+        return resultado
+
+    if caso == "sin validar":
+        monkeypatch.setattr(validacion.subprocess, "run", sin_validar)
+    veredicto, filas = validacion.validar_etapa2(h, "sintetico", params, tmp_path / "salida")
+    assert veredicto == ("PASA" if caso == "pasa" else "CORTA")
+    assert [f["activo"] for f in filas] == ["SPY", "TLT"]
+    assert filas[0]["control"].startswith("coinciden")
+    if caso == "ninguno pasa":
+        assert all(f["v30"] == "NO PASA" and f["motivos"] for f in filas)
+    else:
+        assert any(f["v30"] == "PASA" for f in filas)
+    if caso == "sin validar":
+        assert "TLT: sin validar: diferencia forzada" in filas[1]["motivos"]
+    else:
+        assert filas[1]["control"].startswith("coinciden")
