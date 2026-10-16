@@ -32,6 +32,14 @@ def test_admision_rango_y_registro(tmp_path, monkeypatch):
         return real(h, recibidas)
 
     monkeypatch.setattr(hipotesis, "admitir", observar)
+    admision, admisiones = hipotesis.admitir_hipotesis, []
+
+    def observar_admision(*args):
+        r = admision(*args)
+        admisiones.append(r)
+        return r
+
+    monkeypatch.setattr(hipotesis, "admitir_hipotesis", observar_admision)
     runner = CliRunner()
     out = tmp_path / "rechazada.csv"
     result = runner.invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico", "--out", str(out)])
@@ -39,6 +47,9 @@ def test_admision_rango_y_registro(tmp_path, monkeypatch):
     assert result.exit_code == int(rechazo), result.output
     assert vistos == list(fechas[1:4])
     assert "PASA" not in result.output
+    h, ok, motivos = admisiones[0]
+    assert h.id == data["id"] and not ok
+    assert motivos and all(motivo in result.output for motivo in motivos)
     if rechazo:
         assert "justificación" in result.output and "AAPL" in result.output
         with (tmp_path / "intentos.csv").open() as f:
@@ -75,6 +86,14 @@ def test_filtro_real_dos_activos(tmp_path, monkeypatch, exportar):
         return r
 
     monkeypatch.setattr(hipotesis, "filtrar_activo", observar)
+    filtro, filtros = hipotesis.filtrar_hipotesis, []
+
+    def observar_filtro(*args):
+        r = filtro(*args)
+        filtros.append(r)
+        return r
+
+    monkeypatch.setattr(hipotesis, "filtrar_hipotesis", observar_filtro)
     out = tmp_path / "filtro.csv"
     args = ["--out", str(out)] if exportar else []
     result = CliRunner().invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico", *args])
@@ -91,6 +110,10 @@ def test_filtro_real_dos_activos(tmp_path, monkeypatch, exportar):
         assert float(celdas[2]) == float(format(r["sharpe_tasa_0"], ".6g"))
         assert int(celdas[3]) == r["trades"]
     assert out.exists() == exportar
+    metricas, parametros, veredicto, bajos = filtros[0]
+    assert metricas == [[a, r["sharpe_tasa_0"], r["trades"]] for a, r in zip(data["activos"], resultados)]
+    assert veredicto == "CORTA" and bajos == 2
+    assert parametros == {a: hipotesis.parametros_elegidos(r["ganadores"]) for a, r in zip(data["activos"], resultados)}
     if exportar:
         with out.open() as f:
             filas = list(csv.DictReader(f))
@@ -101,6 +124,7 @@ def test_filtro_real_dos_activos(tmp_path, monkeypatch, exportar):
             assert float(fila["sharpe_fuera_muestra"]) == r["sharpe_tasa_0"]
             assert int(fila["trades"]) == r["trades"]
             assert fila["params"] == json.dumps(hipotesis.parametros_elegidos(r["ganadores"]), sort_keys=True)
+            assert json.loads(fila["params"]) == parametros[activo]
 
 
 @pytest.mark.parametrize("sharpes,final", [
@@ -121,7 +145,7 @@ def test_bordes_veredicto_etapa1(tmp_path, monkeypatch, sharpes, final):
     data.update(activos=activos, parametros={"rsi_period": [7], "oversold_threshold": [30.0]})
     archivo = tmp_path / "h.yaml"
     archivo.write_text(yaml.safe_dump(data))
-    resultados = iter({"sharpe_tasa_0": s, "trades": 30} for s in sharpes)
+    resultados = iter({"sharpe_tasa_0": s, "trades": 30, "ganadores": [{"params": {}, "prueba_desde": fechas[0]}]} for s in sharpes)
     monkeypatch.setattr(hipotesis, "filtrar_activo", lambda *a, **kw: next(resultados))
     result = CliRunner().invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico"])
     assert result.exit_code == 0, result.output
