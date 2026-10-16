@@ -1,4 +1,5 @@
 import csv
+import json
 from pathlib import Path
 
 import numpy as np
@@ -32,7 +33,9 @@ def test_admision_rango_y_registro(tmp_path, monkeypatch):
 
     monkeypatch.setattr(hipotesis, "admitir", observar)
     runner = CliRunner()
-    result = runner.invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico"])
+    out = tmp_path / "rechazada.csv"
+    result = runner.invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico", "--out", str(out)])
+    assert not out.exists()
     assert result.exit_code == int(rechazo), result.output
     assert vistos == list(fechas[1:4])
     assert "PASA" not in result.output
@@ -45,7 +48,8 @@ def test_admision_rango_y_registro(tmp_path, monkeypatch):
     assert ayuda.exit_code == 0 and "--snapshot" in ayuda.output and "ARCHIVO" in ayuda.output
 
 
-def test_filtro_real_dos_activos(tmp_path, monkeypatch):
+@pytest.mark.parametrize("exportar", [False, True])
+def test_filtro_real_dos_activos(tmp_path, monkeypatch, exportar):
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     fechas = pd.date_range("2006-12-01", "2019-02-01", freq="7D")
     snapshots = {}
@@ -71,7 +75,9 @@ def test_filtro_real_dos_activos(tmp_path, monkeypatch):
         return r
 
     monkeypatch.setattr(hipotesis, "filtrar_activo", observar)
-    result = CliRunner().invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico"])
+    out = tmp_path / "filtro.csv"
+    args = ["--out", str(out)] if exportar else []
+    result = CliRunner().invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico", *args])
     assert result.exit_code == 0, result.output
     assert result.output.rstrip().endswith("CORTA (2 de 2 bajo 0,10 o con menos de 30 trades)")
     with (tmp_path / "intentos.csv").open() as f:
@@ -84,6 +90,17 @@ def test_filtro_real_dos_activos(tmp_path, monkeypatch):
         celdas = next(line for line in result.output.splitlines() if activo in line).split("|")
         assert float(celdas[2]) == float(format(r["sharpe_tasa_0"], ".6g"))
         assert int(celdas[3]) == r["trades"]
+    assert out.exists() == exportar
+    if exportar:
+        with out.open() as f:
+            filas = list(csv.DictReader(f))
+        assert len(filas) == 2
+        for fila, activo, r in zip(filas, data["activos"], resultados):
+            assert list(fila) == ["activo", "sharpe_fuera_muestra", "trades", "params", "veredicto"]
+            assert fila["activo"] == activo and fila["veredicto"] == "CORTA"
+            assert float(fila["sharpe_fuera_muestra"]) == r["sharpe_tasa_0"]
+            assert int(fila["trades"]) == r["trades"]
+            assert fila["params"] == json.dumps(hipotesis.parametros_elegidos(r["ganadores"]), sort_keys=True)
 
 
 @pytest.mark.parametrize("sharpes,final", [

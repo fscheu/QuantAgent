@@ -10,6 +10,14 @@ from quantagent.fabrica.hipotesis import Hipotesis
 COSTOS = {"commission_pct": 0.0, "slippage_pct": 0.0}
 
 
+@pytest.mark.parametrize("valores,elegido", [([1, 2, 1], 1), ([1, 2], 2), ([1, 1, 2], 1)])
+def test_parametros_elegidos(valores, elegido):
+    ganadores = [{"prueba_desde": pd.Timestamp(2010 + i, 1, 1),
+                  "params": {"fast": valor, "slow": 20}} for i, valor in enumerate(valores)]
+    assert filtro.parametros_elegidos(ganadores) == {"fast": elegido, "slow": 20}
+    assert filtro.parametros_elegidos(ganadores[::-1]) == {"fast": elegido, "slow": 20}
+
+
 @pytest.mark.parametrize("total,bajos,esperado", [
     (12, 8, "PASA"), (12, 9, "CORTA"),
     (6, 4, "PASA"), (6, 5, "CORTA"),
