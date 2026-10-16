@@ -8,6 +8,7 @@ from tabulate import tabulate
 
 from quantagent.data.snapshot import SnapshotError, read_snapshot
 from quantagent.fabrica.admision import admitir
+from quantagent.fabrica.estado import registrar_estado
 from quantagent.fabrica.filtro import filtrar_activo, parametros_elegidos, veredicto_etapa1
 from quantagent.fabrica.hipotesis import cargar_hipotesis
 from quantagent.settings import COSTOS_PERFILES
@@ -83,3 +84,23 @@ def filtrar_command(archivo, snapshot_name, out):
                 [*fila, json.dumps(parametros[fila[0]], sort_keys=True), veredicto] for fila in resultados
             )
     click.echo(f"{veredicto} ({bajos} de {len(resultados)} bajo 0,10 o con menos de 30 trades)")
+
+
+@hipotesis_group.command("correr", help="Ejecutar las etapas 0 y 1, con corte temprano y estado.")
+@click.argument("archivo", type=click.Path(exists=True, dir_okay=False))
+@click.option("--snapshot", "snapshot_name", required=True)
+@click.option("--carpeta", type=click.Path(file_okay=False), required=True)
+def correr_command(archivo, snapshot_name, carpeta):
+    h, ok, motivos = admitir_hipotesis(archivo, snapshot_name)
+    etapa, veredicto = "0", "PASA" if ok else "CORTA"
+    motivo = "; ".join(motivos) if motivos else "admisión aceptada"
+    registrar_estado(h.id, etapa, veredicto, motivo)
+    click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
+    if ok:
+        resultados, parametros, veredicto, bajos = filtrar_hipotesis(h, snapshot_name)
+        etapa = "1"
+        motivo = f"{bajos} de {len(resultados)} bajo 0,10 o con menos de 30 trades"
+        registrar_estado(h.id, etapa, veredicto, motivo)
+        click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
+    click.echo(f"Llegó a la etapa {etapa}: {veredicto} ({motivo})")
+    raise click.exceptions.Exit(int(veredicto == "CORTA"))
