@@ -244,4 +244,6 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-16 #225 QuantAgent-d4cq.17 E02 parámetros elegidos y filtrar --out: merge. Mutación del empate detectada; real SPY+TLT: CSV con params por activo.
 2026-10-16 #226 QuantAgent-d4cq.18 E03 estado en hipotesis.csv (nube): merge. 5 tests, inválidos no escriben.
 2026-10-16 #227 QuantAgent-d4cq.19 E04 correr_motor: merge. Real rsi/SPY 2007-2018 = golden 181 / -21841.01. Nota: h.clase como alias de compare; intento sin 'llenado'.
+2026-10-16 #229 QuantAgent-d4cq.20 E05 etapa 2: cambio. Ruta relativa a scripts/compare_control.py falla fuera de la raíz del repo.
+2026-10-16 #228 QuantAgent-d4cq.21 E06 dsr_contra_intentos (nube): merge. Mutación sin /√252 detectada.
 ```
