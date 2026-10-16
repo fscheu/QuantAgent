@@ -242,4 +242,6 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-16 #222 QuantAgent-d4cq.15 H07 punto de control L9: merge. SMA reproducido: PASA (5 de 12), 157 s; SMA con 3-10 trades por activo → falta mínimo de trades (L10).
 2026-10-16 #224 QuantAgent-d4cq.16 E01 corte proporcional y mínimo 30 trades: merge. 2 mutaciones detectadas; real: rsi PASA (4 de 12), sma CORTA (12 de 12, 3-10 trades). CI: SIGABRT ajeno en test_recalc_metrics, verde al relanzar.
 2026-10-16 #225 QuantAgent-d4cq.17 E02 parámetros elegidos y filtrar --out: merge. Mutación del empate detectada; real SPY+TLT: CSV con params por activo.
+2026-10-16 #226 QuantAgent-d4cq.18 E03 estado en hipotesis.csv (nube): merge. 5 tests, inválidos no escriben.
+2026-10-16 #227 QuantAgent-d4cq.19 E04 correr_motor: merge. Real rsi/SPY 2007-2018 = golden 181 / -21841.01. Nota: h.clase como alias de compare; intento sin 'llenado'.
 ```
