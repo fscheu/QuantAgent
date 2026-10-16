@@ -1,5 +1,7 @@
 """CLI de admisión de hipótesis (QuantAgent-d4cq.14.1)."""
 
+from math import isnan
+
 import click
 from tabulate import tabulate
 
@@ -60,5 +62,6 @@ def filtrar_command(archivo, snapshot_name):
              "pnl": "", "sharpe": r["sharpe_tasa_0"]}, hipotesis=h.id, etapa="1",
         )
     click.echo(tabulate(resultados, headers=["activo", "sharpe_fuera_muestra", "trades"], tablefmt="github"))
-    bajos = sum(r[1] < UMBRAL_SHARPE_ETAPA1 for r in resultados)
-    click.echo("CORTA" if bajos > MAX_ACTIVOS_BAJO_UMBRAL else "PASA")
+    bajos = sum(r[1] is None or isnan(r[1]) or r[1] < UMBRAL_SHARPE_ETAPA1 for r in resultados)
+    veredicto = "CORTA" if bajos > MAX_ACTIVOS_BAJO_UMBRAL else "PASA"
+    click.echo(f"{veredicto} ({bajos} de {len(resultados)} bajo 0,10)")
