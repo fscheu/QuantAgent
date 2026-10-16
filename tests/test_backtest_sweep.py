@@ -288,7 +288,7 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
         reader = csv.DictReader(f)
         assert reader.fieldnames == [
             "fecha_utc", "estrategia", "activo", "snapshot", "desde", "hasta",
-            "costos", "tamano", "params", "trades", "pnl", "sharpe",
+            "costos", "tamano", "params", "trades", "pnl", "sharpe", "hipotesis", "etapa",
         ]
         intentos_rows = list(reader)
     assert len(intentos_rows) == 8
@@ -400,3 +400,33 @@ def test_attempts_registro_ausente_o_encabezado_invalido(monkeypatch, tmp_path):
     assert "Encabezado inválido" in res.output
     assert path.read_text() == "otra,columna\n"
 
+
+
+def test_registrar_intento_migra_encabezado_viejo_y_cuenta_por_hipotesis(monkeypatch, tmp_path):
+    import csv
+    from quantagent.cli.sweep import CAMPOS_INTENTOS, contar_intentos, registrar_intento
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    path = tmp_path / "intentos.csv"
+    viejo = CAMPOS_INTENTOS[:-2]
+    filas = [{c: f"{c}{i}" for c in viejo} for i in range(3)]
+    with path.open("w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=viejo)
+        w.writeheader()
+        w.writerows(filas)
+    assert contar_intentos() == 3 and contar_intentos("h1") == 0
+
+    row = {"desde": "2010-01-01", "hasta": "2012-01-01", "trades": 4, "pnl": 1.5, "sharpe": 0.3}
+    registrar_intento("rsi", "SPY", "snap", None, 1.0, {"a": 1}, row, hipotesis="h1", etapa="E1")
+    registrar_intento("rsi", "SPY", "snap", None, 1.0, {"a": 2}, row)
+
+    with path.open(newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        assert reader.fieldnames == CAMPOS_INTENTOS
+        rows = list(reader)
+    assert len(rows) == 5
+    for orig, nueva in zip(filas, rows[:3]):
+        assert {c: nueva[c] for c in viejo} == orig
+        assert (nueva["hipotesis"], nueva["etapa"]) == ("", "")
+    assert (rows[3]["hipotesis"], rows[3]["etapa"]) == ("h1", "E1")
+    assert contar_intentos() == 5 and contar_intentos("h1") == 1
