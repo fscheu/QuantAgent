@@ -49,3 +49,7 @@ python -c 'import pandas as pd; print("Trades filtro / apertura / cierre:", [int
 ```
 
 Validación: `env MPLCONFIGDIR=/tmp/f09-mpl NUMBA_CACHE_DIR=/tmp/f09-numba python -m pytest -q tests/test_medir_filtro.py`: **15 passed**; `scripts/loop/smoke.sh` con el mismo entorno de caché: **exit 0**, 9 trades / PnL 561,18. Sin esas variables, este sandbox rechaza la caché de Numba en la venv de solo lectura.
+
+## Decisión de Fede (2026-10-15)
+
+**B.** El filtro de las 48 celdas corre en vectorbt. La simulación de vectorbt tarda 17 s; los 943 s de señales son de `bar_signals`, que le pasa a la estrategia toda la historia en cada vela. Condición: QuantAgent-d4cq.7.4 (L9) hace que `bar_signals` pase solo `required_history_bars` velas, como el motor, y con eso el filtro total tiene que quedar por debajo del motor con apertura (764 s) con Spearman apertura >= 0.8. Si no se cumple, se pasa a A sin volver a consultar.

@@ -223,4 +223,5 @@ PM: QuantAgent-d4cq.7 vi: partición en 3 hijos (90/90/60), reglas del padre cop
 PM: QuantAgent-d4cq.7.1 vi: script 48 celdas, sin calentamiento antes de 2007 igual que el motor, test de fechas protegidas decido: merge — #203 (codex)
 PM: QuantAgent-d4cq.7.2 vi: comparar exige desde == 2007-01-01 y compare real escribe 2007-01-03 decido: cambio desde >= 2007-01-01 y hasta <= 2018-12-31 con test de tablas reales — #204 (codex)
 PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 passed decido: merge — #204 (codex)
+2026-10-15 #205 QuantAgent-d4cq.7.3 F09.3 medición: escalo → Fede decide B condicionado a d4cq.7.4 (bar_signals con ventana required_history_bars; filtro < 764 s). Spearman apertura 0.893329 reproducido. merge en lote.
 ```
