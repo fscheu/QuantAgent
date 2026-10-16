@@ -228,4 +228,5 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-16 #210 QuantAgent-gfs1.2.3 F03b.3 inventario oráculos: merge. PM ratifica conservar referencias al cierre como controles explícitos (crossval_rsi trade_on_close=True).
 2026-10-16 #208 QuantAgent-d4cq.11 H03 intentos.csv (nube): merge. Mutación sin filas previas detectada; 42 passed sweep+walkforward.
 2026-10-16 #209 QuantAgent-d4cq.12 H04 candado (nube): merge. 3 passed.
+2026-10-16 #211 QuantAgent-d4cq.9 H01 cargador de hipótesis (nube): merge. 4 entradas inválidas probadas; pyyaml sin declarar → sumado a H02.
 ```
