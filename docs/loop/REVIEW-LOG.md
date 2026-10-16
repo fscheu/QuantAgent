@@ -252,4 +252,5 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-16 #232 QuantAgent-d4cq.22.2 E07b correr etapas 0-1: merge. Real sma: CORTA en etapa 1 (12 de 12), exit 1, 2 filas de estado.
 2026-10-16 #233 QuantAgent-d4cq.22.3 E07c etapa 2 en correr: cambio. Real rsi: PASA 0-1-2 en 499 s (V30 solo XLE y XLU), pero el motivo de PASA lista las fallas. Hallazgo: etapa 1 da Sharpe fuera de muestra positivo en 8 de 12 y el motor propio 2007-2018 da pnl <= 0 en 10 de 12; falta la alarma filtro vs motor del plan M3.
 2026-10-16 #233 QuantAgent-d4cq.22.3 E07c: merge tras el cambio del motivo de PASA. E07 cerrado.
+2026-10-16 #234 QuantAgent-d4cq.23 E08 partición en .23.1-.23.3: merge.
 ```
