@@ -1,0 +1,14 @@
+id: rsi-reversion-corta
+autor: fede
+justificacion: >-
+  La presión transitoria de venta puede alejar el precio de su equilibrio y
+  remunerar a quien aporta liquidez comprando sobreventa. Proponemos RSI corto
+  como aproximación a esa presión en ETFs líquidos; la evidencia de Cox y
+  Peterson sobre acciones motiva la hipótesis, sin demostrarla para estos ETFs.
+fuente: https://doi.org/10.1111/j.1540-6261.1994.tb04428.x
+clase: rsi
+parametros:
+  rsi_period: [7, 14]
+  oversold_threshold: [30.0]
+activos: [SPY, IWM, EFA, EEM, TLT, SHY, GLD, DBC, XLK, XLE, XLF, XLU]
+timeframe: 1d
