@@ -23,7 +23,7 @@ def test_comando_csv_y_rechazos(snapshot_walkforward, hasta):
     antes = {p: p.read_bytes() for p in snapshot_walkforward.rglob("*") if p.is_file()}
     res = runner.invoke(backtest_group, ["walkforward", "--strategy", "rsi", "--symbol", "spy",
                         "--snapshot", "wf", "--grid", str(grid), "--out", str(out),
-                        "--from", "2011-01-03", "--to", hasta])
+                        "--from", "2011-01-03", "--to", hasta, "--llenado", "cierre"])
     if hasta[:4] != "2016":
         assert res.exit_code == 1, res.output
         assert ("ventana completa" if hasta[:4] == "2012" else hasta) in res.output
@@ -39,11 +39,13 @@ def test_comando_csv_y_rechazos(snapshot_walkforward, hasta):
                            trades="1", pnl="-99.95", sharpe_tasa_0="-1.0")
     with (snapshot_walkforward / "intentos.csv").open() as f:
         intentos = list(csv.DictReader(f))
-    assert [json.loads(r["params"]) for r in intentos] == [{"rsi_period": 7}, {"rsi_period": 14}]
+    assert [json.loads(r["params"]) for r in intentos] == [
+        {"rsi_period": p, "llenado": "cierre"} for p in [7, 14]]
     assert all(r["hasta"] == "2014-12-31" and r["activo"] == "SPY" for r in intentos)
 
 
-def test_seleccion_motor_real_y_registro_solo_ajustes(snapshot_walkforward, monkeypatch):
+@pytest.mark.parametrize("fill", ["apertura", "cierre"])
+def test_seleccion_motor_real_y_registro_solo_ajustes(snapshot_walkforward, monkeypatch, fill):
     import numpy as np
     import pandas as pd
     from click.testing import CliRunner
@@ -64,6 +66,8 @@ def test_seleccion_motor_real_y_registro_solo_ajustes(snapshot_walkforward, monk
     args = ["walkforward", "--strategy", "rsi", "--symbol", "SPY", "--snapshot", "real",
             "--grid", str(grid), "--out", str(out), "--train-years", "2", "--test-years", "1",
             "--costos", "etf", "--orden-minima", "50"]
+    if fill == "cierre":
+        args += ["--llenado", fill]
     _, _, config, ventanas = preparar_walkforward(
         "rsi", "SPY", "real", grid, train_years=2, test_years=1, costos="etf", orden_minima=50)
     motor = backtest.correr_par
@@ -73,14 +77,15 @@ def test_seleccion_motor_real_y_registro_solo_ajustes(snapshot_walkforward, monk
         for inicio, fin, params in [(a, b, p) for p in combos]:
             with backtest._isolated_sqlite_db():
                 ajustes.append(motor("rsi", snapshot_metadata("real", "SPY", inicio, fin), config,
-                                     "etf", None, "real", "SPY", inicio, fin, params=params))
+                                     "etf", None, "real", "SPY", inicio, fin, params=params, fill=fill))
         indice = max(range(len(combos)), key=lambda i: ajustes[i]["sharpe_tasa_0"])
         with backtest._isolated_sqlite_db():
             prueba = motor("rsi", snapshot_metadata("real", "SPY", c, d), config,
-                           "etf", None, "real", "SPY", c, d, params=combos[indice])
+                           "etf", None, "real", "SPY", c, d, params=combos[indice], fill=fill)
         esperados.append((combos[indice], ajustes, prueba))
 
     def observar(*args, **kwargs):
+        assert kwargs["fill"] == fill
         llamadas.append((args[7], args[8], kwargs["params"]))
         return motor(*args, **kwargs)
 
@@ -108,7 +113,7 @@ def test_seleccion_motor_real_y_registro_solo_ajustes(snapshot_walkforward, monk
         for campo in ("trades", "pnl", "sharpe_tasa_0"):
             assert float(fila[campo]) == round(prueba[campo], 2)
         for intento, combo, ajuste in zip(intentos[i * 3:i * 3 + 3], combos, ajustes):
-            assert json.loads(intento["params"]) == combo
+            assert json.loads(intento["params"]) == {**combo, "llenado": fill}
             assert intento["desde"] == f"{snapshot_metadata('real', 'SPY', a, b).start_date:%Y-%m-%d}"
             assert intento["hasta"] == f"{snapshot_metadata('real', 'SPY', a, b).end_date:%Y-%m-%d}"
             assert int(intento["trades"]) == ajuste["trades"]
