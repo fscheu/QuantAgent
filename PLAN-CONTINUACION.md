@@ -576,7 +576,9 @@ Los primeros 5 son los más fáciles de revisar.
 | E07a | `QuantAgent-d4cq.22.1` | Extraer resultados reutilizables de admisión y filtro; partición de E07 | `filtrar` conserva salida, intentos y CSV; resultados reutilizables comprobados | leer | L10 |
 | E07b | `QuantAgent-d4cq.22.2` | `correr`, etapas 0 y 1 con estado; depende de E07a | Rechazo deja una fila; corte del filtro deja dos; sin compare | leer | L10 |
 | E07c | `QuantAgent-d4cq.22.3` | Encadenar etapa 2 con parámetros elegidos; depende de E07b | Control real, tres filas de estado y salida según veredicto | leer | L10 |
-| E08 | `QuantAgent-d4cq.23` | Etapa 3: candado de la prueba, V30 y DSR ≥ 0,95 (nube); depende de E06, E07 | Segunda corrida falla en el candado; nada desde 2023 | leer | L10 |
+| E08a | `QuantAgent-d4cq.23.1` | Validar etapa 3: motor 2019–2022, V30 y DSR por activo; partición de E08, depende de E06, E07 | V30 PASA y DSR ≥ 0,95; basta un activo; intentos etapa 3 | leer | L10 |
+| E08b | `QuantAgent-d4cq.23.2` | Conectar etapa 3 y candado al CLI; depende de E08a | Candado antes de leer prueba; tabla y cuarto estado; corte previo no abre | leer | L10 |
+| E08c | `QuantAgent-d4cq.23.3` | Integración real y segunda apertura; depende de E08b | Cuatro estados y candado; segunda corrida sin compare de prueba; nada desde 2023 | leer | L10 |
 | E09 | `QuantAgent-d4cq.24` | Punto de control L10: las dos hipótesis de L9 por el embudo (VM); depende de E08 | Doc con etapa, motivo, tiempos y conteos | probar | L10 |
 
 V08b y V23d se agregaron el 2026-10-12 al revisar V23c (#127): la corrida del agente leyó el tramo de prueba 2019–2022 porque el CLI solo protege la reserva, y con llenado en la apertura siguiente el adaptador cancela órdenes al 100% del capital (21 de 48 celdas). Van antes de V24 para que el markdown salga con la sensibilidad corregida.
