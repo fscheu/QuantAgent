@@ -229,4 +229,8 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-16 #208 QuantAgent-d4cq.11 H03 intentos.csv (nube): merge. Mutación sin filas previas detectada; 42 passed sweep+walkforward.
 2026-10-16 #209 QuantAgent-d4cq.12 H04 candado (nube): merge. 3 passed.
 2026-10-16 #211 QuantAgent-d4cq.9 H01 cargador de hipótesis (nube): merge. 4 entradas inválidas probadas; pyyaml sin declarar → sumado a H02.
+2026-10-16 #212 QuantAgent-gfs1.2.4 F03b.4 goldens externos: merge. PM generó el de apertura (181 / -21841.01); el de cierre regenerado es idéntico byte a byte. 3 passed.
+2026-10-16 #214 QuantAgent-d4cq.10 H02 admisión (nube): merge. 2 mutaciones detectadas; pyyaml declarado.
+2026-10-16 #215 QuantAgent-gfs1.2.5 F03b.5 --llenado en sweep/walkforward: merge. 43 passed; mutación detectada.
+2026-10-16 #213 QuantAgent-d4cq.13 H05 filtrar_activo (nube): cambio (ruff E731) → merge. SPY real 4 ventanas en 57 s; 2 mutaciones detectadas.
 ```
