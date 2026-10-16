@@ -256,4 +256,5 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-16 #235 QuantAgent-d4cq.23.1 E08a validar etapa 3: cambio. 2 mutaciones detectadas; CI falla porque test_etapa3_regla no fija QUANTAGENT_SNAPSHOT_DIR.
 2026-10-16 #235 QuantAgent-d4cq.23.1 E08a: merge tras fijar la variable en el test.
 2026-10-16 #236 QuantAgent-d4cq.23.2 E08b etapa 3 y candado en correr: merge. Mutación sin candado rompe 3 tests.
+2026-10-16 #237 QuantAgent-d4cq.23.3 E08c integración etapa 3 y reapertura: merge. Mutación a 2023 detectada. E08 cerrado. Queda E09 (VM, abre la prueba real): espera OK de Fede.
 ```
