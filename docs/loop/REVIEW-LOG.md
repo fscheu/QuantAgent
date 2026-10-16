@@ -255,4 +255,5 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-16 #234 QuantAgent-d4cq.23 E08 partición en .23.1-.23.3: merge.
 2026-10-16 #235 QuantAgent-d4cq.23.1 E08a validar etapa 3: cambio. 2 mutaciones detectadas; CI falla porque test_etapa3_regla no fija QUANTAGENT_SNAPSHOT_DIR.
 2026-10-16 #235 QuantAgent-d4cq.23.1 E08a: merge tras fijar la variable en el test.
+2026-10-16 #236 QuantAgent-d4cq.23.2 E08b etapa 3 y candado en correr: merge. Mutación sin candado rompe 3 tests.
 ```
