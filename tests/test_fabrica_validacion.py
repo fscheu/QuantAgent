@@ -54,6 +54,7 @@ def test_motor_dos_activos(tmp_path, monkeypatch, abrir_prueba, etapa, desde):
 
 @pytest.mark.parametrize("caso", ["pasa", "sin validar", "ninguno pasa", "otro directorio"])
 def test_etapa2(tmp_path, monkeypatch, caso):
+    pytest.importorskip("backtesting")
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     fechas = pd.date_range("2007-01-01", periods=150)
     close = 100 + 10 * np.sin(np.arange(150) / 5)
