@@ -561,7 +561,9 @@ Los primeros 5 son los más fáciles de revisar.
 | H03 | `QuantAgent-d4cq.11` | `intentos.csv` con columnas `hipotesis` y `etapa`, compatible con el encabezado viejo (nube) | Filas viejas intactas; conteo por hipótesis | leer | L9 |
 | H04 | `QuantAgent-d4cq.12` | Candado por hipótesis para prueba y reserva (nube) | Segunda apertura del mismo par falla | leer | L9 |
 | H05 | `QuantAgent-d4cq.13` | `filtrar_activo`: walk-forward por activo con `run_filter` (nube); depende de H01 y F09.4 | Ganador por ventana elegido en el ajuste; la prueba no ve la ventana siguiente | leer | L9 |
-| H06 | `QuantAgent-d4cq.14` | Comando `backtest hipotesis filtrar` con umbrales provisorios (loop, VM); depende de H02, H03, H05 | Tabla por activo, PASA/CORTA, intentos con etapa; tiempo de 12 ETFs en el resumen | probar | L9 |
+| H06.1 | `QuantAgent-d4cq.14.1` | CLI de hipótesis: carga, rango 2007–2018 y admisión; padre H06, depende de H02, H03, H05 | Rechazo sale 1 con motivos e intento etapa 0; no admite velas desde 2019 | leer | L9 |
+| H06.2 | `QuantAgent-d4cq.14.2` | Filtro por activo, intentos etapa 1 y tabla; depende de H06.1 | PASA con dos activos; CORTA con nueve de doce bajo 0,10; ocho pasan | probar | L9 |
+| H06.3 | `QuantAgent-d4cq.14.3` | Evidencia VM del CLI RSI con dos combinaciones; depende de H06.2 | Tabla de doce ETFs, veredicto, tiempo e incremento de doce intentos | probar | L9 |
 | H07 | `QuantAgent-d4cq.15` | Punto de control L9: dos hipótesis de punta a punta (loop, VM); depende de H06 | Doc con veredicto, tiempos y conteo de intentos | leer | L9 |
 
 V08b y V23d se agregaron el 2026-10-12 al revisar V23c (#127): la corrida del agente leyó el tramo de prueba 2019–2022 porque el CLI solo protege la reserva, y con llenado en la apertura siguiente el adaptador cancela órdenes al 100% del capital (21 de 48 celdas). Van antes de V24 para que el markdown salga con la sensibilidad corregida.
