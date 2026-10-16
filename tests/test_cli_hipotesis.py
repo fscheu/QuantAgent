@@ -50,6 +50,7 @@ def test_correr_corte_real_y_estado(tmp_path, monkeypatch, rechazo):
     with (tmp_path / "intentos.csv").open() as f:
         intentos = list(csv.DictReader(f))
     assert [r["etapa"] for r in intentos] == ["0" if rechazo else "1"]
+    assert not (tmp_path / "hipotesis-candado.csv").exists()
 
 
 @pytest.mark.parametrize("cortar", [False, True])
@@ -84,6 +85,9 @@ def test_correr_control_real(tmp_path, monkeypatch, cortar):
         return controles[-1][1]
 
     monkeypatch.setattr(hipotesis, "validar_etapa2", observar)
+    monkeypatch.setattr(hipotesis, "validar_etapa3", lambda *args: (
+        "PASA", [{"activo": "SPY", "v30": "PASA", "dsr": 0.95, "motivos": []}],
+    ))
     if cortar:
         import subprocess
         run = subprocess.run
@@ -110,16 +114,60 @@ def test_correr_control_real(tmp_path, monkeypatch, cortar):
     assert all((tmp_path / "motor" / f"{a}.csv").exists() for a in params)
     with (tmp_path / "hipotesis.csv").open() as f:
         filas = list(csv.DictReader(f))
-    assert [(r["etapa"], r["veredicto"]) for r in filas] == [("0", "PASA"), ("1", "PASA"), ("2", veredicto)]
+    assert [(r["etapa"], r["veredicto"]) for r in filas] == [
+        ("0", "PASA"), ("1", "PASA"), ("2", veredicto),
+    ] + ([] if cortar else [("3", "PASA")])
+    assert (tmp_path / "hipotesis-candado.csv").exists() == (not cortar)
     if cortar:
         assert all(m in filas[-1]["motivo"] for r in resultados for m in r["motivos"])
     else:
         activos = ", ".join(r["activo"] for r in resultados if r["v30"] == "PASA")
-        assert filas[-1]["motivo"] == f"pasan V30: {activos}; control coincide en 2 de 2"
-    assert result.output.splitlines() == [
+        assert filas[2]["motivo"] == f"pasan V30: {activos}; control coincide en 2 de 2"
+    assert [line for line in result.output.splitlines() if not line.startswith("|")] == [
         *[f"Etapa {r['etapa']}: {r['veredicto']} ({r['motivo']})" for r in filas],
-        f"Llegó a la etapa 2: {veredicto} ({filas[-1]['motivo']})",
+        f"Llegó a la etapa {filas[-1]['etapa']}: {veredicto} ({filas[-1]['motivo']})",
     ]
+
+
+@pytest.mark.parametrize("final", ["PASA", "CORTA", "candado"])
+def test_correr_etapa3(tmp_path, monkeypatch, final):
+    from quantagent.fabrica.candado import abierto
+    from quantagent.fabrica.hipotesis import cargar_hipotesis
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    archivo = Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml"
+    h = cargar_hipotesis(archivo)
+    params = {"SPY": {"rsi_period": 7}}
+    monkeypatch.setattr(hipotesis, "admitir_hipotesis", lambda *a: (h, True, []))
+    monkeypatch.setattr(hipotesis, "filtrar_hipotesis", lambda *a: ([["SPY", 1, 30]], params, "PASA", 0))
+    monkeypatch.setattr(hipotesis, "validar_etapa2", lambda *a: (
+        "PASA", [{"activo": "SPY", "v30": "PASA", "motivos": []}],
+    ))
+    vistos = []
+
+    def validar(h_recibida, snapshot, elegidos, carpeta):
+        assert final != "candado", "El candado debe impedir invocar el validador"
+        assert abierto(h.id, "prueba")
+        assert (h_recibida, snapshot, elegidos, carpeta) == (h, "sintetico", params, tmp_path / "motor/etapa3")
+        vistos.append(True)
+        return final, [{"activo": "SPY", "v30": "PASA", "dsr": 0.95 if final == "PASA" else 0.94,
+                        "motivos": [] if final == "PASA" else ["SPY: DSR < 0.95"]}]
+
+    monkeypatch.setattr(hipotesis, "validar_etapa3", validar)
+    if final == "candado":
+        hipotesis.abrir(h.id, "prueba")
+    result = CliRunner().invoke(backtest_group, ["hipotesis", "correr", str(archivo),
+        "--snapshot", "sintetico", "--carpeta", str(tmp_path / "motor")])
+    assert result.exit_code == int(final != "PASA"), result.output
+    with (tmp_path / "hipotesis.csv").open() as f:
+        filas = list(csv.DictReader(f))
+    assert [f["etapa"] for f in filas] == ["0", "1", "2", "3"]
+    assert filas[-1]["veredicto"] == ("PASA" if final == "PASA" else "CORTA")
+    assert f"Llegó a la etapa 3: {filas[-1]['veredicto']} ({filas[-1]['motivo']})" in result.output
+    assert vistos == ([] if final == "candado" else [True])
+    assert ("ya se abrió" in result.output) if final == "candado" else (
+        "V30" in result.output and "DSR" in result.output and ("0.95" if final == "PASA" else "0.94") in result.output
+    )
 
 
 def test_admision_rango_y_registro(tmp_path, monkeypatch):
