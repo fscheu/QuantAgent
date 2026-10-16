@@ -1,9 +1,10 @@
 """Regla del Juego 2 para una celda estrategia × activo."""
 
-from math import e, sqrt
+import csv
+from math import e, isfinite, sqrt
 
 import numpy as np
-from scipy.stats import norm, ttest_1samp
+from scipy.stats import kurtosis, norm, skew, ttest_1samp
 
 # Umbrales fijados por Fede en el PR #140 (V30).
 MIN_TRADES = 2
@@ -74,3 +75,27 @@ def sharpe_deflactado(sr, n_intentos, var_sr_intentos, n_obs, asimetria, curtosi
         )
     denominador = sqrt(1 - asimetria * sr + (curtosis - 1) / 4 * sr**2)
     return float(norm.cdf((sr - sr0) * sqrt(n_obs - 1) / denominador))
+
+
+def dsr_contra_intentos(equity, intentos_path) -> float | None:
+    """Sharpe deflactado de una curva contra el registro `intentos.csv` (N = todas sus filas)."""
+    curva = np.asarray(equity, dtype=float)
+    retornos = curva[1:] / curva[:-1] - 1
+    if len(retornos) < 3 or np.std(retornos, ddof=1) == 0:
+        return None
+    with open(intentos_path, newline="", encoding="utf-8") as f:
+        filas = list(csv.DictReader(f))
+    sharpes = []
+    for fila in filas:
+        try:
+            valor = float(fila["sharpe"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if isfinite(valor):
+            sharpes.append(valor / sqrt(252))
+    var_sr = float(np.var(sharpes, ddof=1)) if len(sharpes) >= 2 else 0.0
+    sr = float(np.mean(retornos) / np.std(retornos, ddof=1))
+    return sharpe_deflactado(
+        sr, max(len(filas), 1), var_sr, len(retornos),
+        float(skew(retornos)), float(kurtosis(retornos, fisher=False)),
+    )

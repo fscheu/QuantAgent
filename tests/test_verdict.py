@@ -8,7 +8,7 @@ import pytest
 from click.testing import CliRunner
 from scipy.stats import t
 
-from quantagent.backtesting.verdict import evaluar, montecarlo_bloques, p_valor_retornos, sharpe_deflactado
+from quantagent.backtesting.verdict import dsr_contra_intentos, evaluar, montecarlo_bloques, p_valor_retornos, sharpe_deflactado
 from quantagent.cli.backtest import backtest_group
 from quantagent.cli.verdict import COLUMNAS
 
@@ -227,3 +227,45 @@ def test_sharpe_deflactado_un_intento_tiene_sr0_cero():
     # Con N = 1 la varianza entre intentos no interviene.
     for var in (0.0, 0.0001, 1.0):
         assert sharpe_deflactado(sr, 1, var, t, asimetria, curtosis) == pytest.approx(esperado, abs=1e-12)
+
+
+EQUITY_DSR = [100, 101, 99.5, 102, 103.5, 102.8, 105]
+
+
+def _intentos(path, sharpes):
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["estrategia", "sharpe"])
+        w.writerows([["s", v] for v in sharpes])
+    return path
+
+
+def test_dsr_contra_intentos_coincide_con_calculo_a_mano(tmp_path):
+    ruta = _intentos(tmp_path / "intentos.csv", [0.5, 1.0, 1.5, ""])
+    r = np.diff(EQUITY_DSR) / np.array(EQUITY_DSR[:-1])
+    sr = r.mean() / r.std(ddof=1)
+    z = (r - r.mean()) / r.std()  # momentos poblacionales, como scipy por defecto
+    var_sr = np.var([0.5 / sqrt(252), 1.0 / sqrt(252), 1.5 / sqrt(252)], ddof=1)
+    esperado = sharpe_deflactado(sr, 4, var_sr, 6, (z**3).mean(), (z**4).mean())
+    assert dsr_contra_intentos(EQUITY_DSR, ruta) == pytest.approx(esperado, abs=1e-9)
+
+
+def test_dsr_contra_intentos_baja_con_mas_filas(tmp_path):
+    base = [0.5, 1.0, 1.5]
+    chico = dsr_contra_intentos(EQUITY_DSR, _intentos(tmp_path / "a.csv", base))
+    grande = dsr_contra_intentos(EQUITY_DSR, _intentos(tmp_path / "b.csv", base + [0.5, 1.5] * 5))
+    assert grande < chico
+
+
+def test_dsr_contra_intentos_curva_plana_y_filas_vacias(tmp_path):
+    ruta = _intentos(tmp_path / "intentos.csv", [0.5, 1.0, ""])
+    assert dsr_contra_intentos([100] * 7, ruta) is None
+    assert dsr_contra_intentos([100, 101, 102], ruta) is None  # solo 2 retornos
+    # La fila vacía cuenta en N (cambia SR0) pero no en la varianza.
+    con_vacia = dsr_contra_intentos(EQUITY_DSR, ruta)
+    r = np.diff(EQUITY_DSR) / np.array(EQUITY_DSR[:-1])
+    z = (r - r.mean()) / r.std()
+    var_sr = np.var([0.5 / sqrt(252), 1.0 / sqrt(252)], ddof=1)
+    args = (r.mean() / r.std(ddof=1), None, var_sr, 6, (z**3).mean(), (z**4).mean())
+    assert con_vacia == pytest.approx(sharpe_deflactado(args[0], 3, *args[2:]), abs=1e-9)
+    assert con_vacia != pytest.approx(sharpe_deflactado(args[0], 2, *args[2:]), abs=1e-9)
