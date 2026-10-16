@@ -573,7 +573,9 @@ Los primeros 5 son los más fáciles de revisar.
 | E04 | `QuantAgent-d4cq.19` | `correr_motor`: compare por activo con sus parámetros e intentos por etapa (nube); depende de E02 | Cada activo con sus parámetros; 2 intentos con hipótesis y etapa | leer | L10 |
 | E05 | `QuantAgent-d4cq.20` | Etapa 2: control contra `backtesting.py` y V30 por activo (nube); depende de E04 | `sin validar` corta; todos NO PASA corta | leer | L10 |
 | E06 | `QuantAgent-d4cq.21` | `dsr_contra_intentos` (nube) | Igual al cálculo a mano; más intentos, menor DSR | leer | L10 |
-| E07 | `QuantAgent-d4cq.22` | `backtest hipotesis correr`, etapas 0 a 2 con corte temprano (nube); depende de E02, E03, E05 | Corta en 0, en 1 o llega a 2, con las filas de estado | leer | L10 |
+| E07a | `QuantAgent-d4cq.22.1` | Extraer resultados reutilizables de admisión y filtro; partición de E07 | `filtrar` conserva salida, intentos y CSV; resultados reutilizables comprobados | leer | L10 |
+| E07b | `QuantAgent-d4cq.22.2` | `correr`, etapas 0 y 1 con estado; depende de E07a | Rechazo deja una fila; corte del filtro deja dos; sin compare | leer | L10 |
+| E07c | `QuantAgent-d4cq.22.3` | Encadenar etapa 2 con parámetros elegidos; depende de E07b | Control real, tres filas de estado y salida según veredicto | leer | L10 |
 | E08 | `QuantAgent-d4cq.23` | Etapa 3: candado de la prueba, V30 y DSR ≥ 0,95 (nube); depende de E06, E07 | Segunda corrida falla en el candado; nada desde 2023 | leer | L10 |
 | E09 | `QuantAgent-d4cq.24` | Punto de control L10: las dos hipótesis de L9 por el embudo (VM); depende de E08 | Doc con etapa, motivo, tiempos y conteos | probar | L10 |
 
