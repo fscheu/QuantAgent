@@ -225,4 +225,7 @@ PM: QuantAgent-d4cq.7.2 vi: comparar exige desde == 2007-01-01 y compare real es
 PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 passed decido: merge — #204 (codex)
 2026-10-15 #205 QuantAgent-d4cq.7.3 F09.3 medición: escalo → Fede decide B condicionado a d4cq.7.4 (bar_signals con ventana required_history_bars; filtro < 764 s). Spearman apertura 0.893329 reproducido. merge en lote.
 2026-10-16 #207 QuantAgent-d4cq.7.4 F09.4 ventana de bar_signals: merge. PM midió filtro 258 s (era 967) < motor 764 s, Spearman 0.893329, trades iguales. B confirmada; d4cq.7 cerrado.
+2026-10-16 #210 QuantAgent-gfs1.2.3 F03b.3 inventario oráculos: merge. PM ratifica conservar referencias al cierre como controles explícitos (crossval_rsi trade_on_close=True).
+2026-10-16 #208 QuantAgent-d4cq.11 H03 intentos.csv (nube): merge. Mutación sin filas previas detectada; 42 passed sweep+walkforward.
+2026-10-16 #209 QuantAgent-d4cq.12 H04 candado (nube): merge. 3 passed.
 ```
