@@ -1,8 +1,8 @@
 import csv
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
-import pytest
 import yaml
 from click.testing import CliRunner
 
@@ -11,8 +11,8 @@ from quantagent.cli import hipotesis
 from quantagent.data.snapshot import write_snapshot
 
 
-@pytest.mark.parametrize("rechazo", [False, True])
-def test_admision_rango_y_registro(tmp_path, monkeypatch, rechazo):
+def test_admision_rango_y_registro(tmp_path, monkeypatch):
+    rechazo = True
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     fechas = pd.to_datetime(["2006-12-31", "2007-01-01", "2010-06-01", "2018-12-31", "2019-01-01"])
     velas = pd.DataFrame({c: 100.0 for c in ("open", "high", "low", "close", "adj_close", "volume")}, index=fechas)
@@ -40,8 +40,46 @@ def test_admision_rango_y_registro(tmp_path, monkeypatch, rechazo):
         with (tmp_path / "intentos.csv").open() as f:
             filas = list(csv.DictReader(f))
         assert len(filas) == 1 and filas[0]["hipotesis"] == data["id"] and filas[0]["etapa"] == "0"
-    else:
-        assert "Admisión aprobada" in result.output
-        assert not (tmp_path / "intentos.csv").exists()
     ayuda = runner.invoke(backtest_group, ["hipotesis", "filtrar", "--help"])
     assert ayuda.exit_code == 0 and "--snapshot" in ayuda.output and "ARCHIVO" in ayuda.output
+
+
+def test_filtro_real_dos_activos(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fechas = pd.date_range("2006-12-01", "2019-02-01", freq="7D")
+    snapshots = {}
+    for activo, periodo in [("SPY", 5), ("TLT", 9)]:
+        close = 100 + 10 * np.sin(np.arange(len(fechas)) / periodo)
+        snapshots[activo] = pd.DataFrame(
+            {"open": close, "high": close + 1, "low": close - 1,
+             "close": close, "adj_close": close, "volume": 1000.0}, index=fechas,
+        )
+    write_snapshot("sintetico", snapshots, base_dir=tmp_path)
+    data = yaml.safe_load((Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml").read_text())
+    data.update(activos=["SPY", "TLT"], parametros={"rsi_period": [7], "oversold_threshold": [30.0]})
+    archivo = tmp_path / "h.yaml"
+    archivo.write_text(yaml.safe_dump(data))
+    real, resultados = hipotesis.filtrar_activo, []
+
+    def observar(h, velas, **kwargs):
+        esperado = snapshots[h.activos[len(resultados)]].loc["2007":"2018"]
+        assert list(velas.timestamp) == list(esperado.index)
+        assert kwargs == {"costos": hipotesis.COSTOS_PERFILES["etf"], "capital": 100_000.0}
+        r = real(h, velas, **kwargs)
+        resultados.append(r)
+        return r
+
+    monkeypatch.setattr(hipotesis, "filtrar_activo", observar)
+    result = CliRunner().invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico"])
+    assert result.exit_code == 0, result.output
+    assert result.output.rstrip().endswith("PASA")
+    with (tmp_path / "intentos.csv").open() as f:
+        filas = list(csv.DictReader(f))
+    assert len(filas) == len(resultados) == 2
+    for fila, activo, r in zip(filas, data["activos"], resultados):
+        assert fila["activo"] == activo and fila["hipotesis"] == data["id"] and fila["etapa"] == "1"
+        assert float(fila["sharpe"]) == r["sharpe_tasa_0"]
+        assert int(fila["trades"]) == r["trades"] > 0
+        celdas = next(line for line in result.output.splitlines() if activo in line).split("|")
+        assert float(celdas[2]) == float(format(r["sharpe_tasa_0"], ".6g"))
+        assert int(celdas[3]) == r["trades"]
