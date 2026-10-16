@@ -33,6 +33,7 @@ Implementation documents should include:
 
 ## Active Per-Change Implementation
 
+- [QuantAgent-d4cq.15-IM-punto-control-l9.md](./QuantAgent-d4cq.15-IM-punto-control-l9.md) - Dos hipótesis YAML: admisión, filtro, veredictos e intentos aislados en 2007–2018.
 - [QuantAgent-d4cq.14.3-IM-filtro-cli.md](./QuantAgent-d4cq.14.3-IM-filtro-cli.md) - RSI en doce ETFs: tabla, veredicto, tiempo e intentos de etapa 1.
 - [QuantAgent-gfs1.2.1-IM-golden-apertura.md](./QuantAgent-gfs1.2.1-IM-golden-apertura.md) - Golden RSI/spy-90d con apertura siguiente y comando de regeneración.
 - [QuantAgent-app-IM-qa-streamlit-cutover.md](./QuantAgent-app-IM-qa-streamlit-cutover.md) - QA Streamlit cutover, Cloudflare tunnel alignment, and deploy_finished -> qa_verified contract.

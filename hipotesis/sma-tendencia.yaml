@@ -1,0 +1,14 @@
+id: sma-tendencia
+autor: fede
+justificacion: >-
+  La incorporación gradual de información y los flujos persistentes pueden
+  sostener tendencias. Un cruce de medias busca capturar esa persistencia;
+  Hurst, Ooi y Pedersen documentan seguimiento de tendencias a largo plazo,
+  lo que motiva probarlo aquí sin garantizar que este cruce funcione en ETFs.
+fuente: https://www.aqr.com/Insights/Research/Journal-Article/A-Century-of-Evidence-on-Trend-Following-Investing
+clase: sma-cross
+parametros:
+  fast: [20, 50]
+  slow: [200]
+activos: [SPY, IWM, EFA, EEM, TLT, SHY, GLD, DBC, XLK, XLE, XLF, XLU]
+timeframe: 1d
