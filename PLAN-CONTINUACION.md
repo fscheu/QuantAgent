@@ -562,7 +562,8 @@ Los primeros 5 son los más fáciles de revisar.
 | H04 | `QuantAgent-d4cq.12` | Candado por hipótesis para prueba y reserva (nube) | Segunda apertura del mismo par falla | leer | L9 |
 | H05 | `QuantAgent-d4cq.13` | `filtrar_activo`: walk-forward por activo con `run_filter` (nube); depende de H01 y F09.4 | Ganador por ventana elegido en el ajuste; la prueba no ve la ventana siguiente | leer | L9 |
 | H06.1 | `QuantAgent-d4cq.14.1` | CLI de hipótesis: carga, rango 2007–2018 y admisión; padre H06, depende de H02, H03, H05 | Rechazo sale 1 con motivos e intento etapa 0; no admite velas desde 2019 | leer | L9 |
-| H06.2 | `QuantAgent-d4cq.14.2` | Filtro por activo, intentos etapa 1 y tabla; depende de H06.1 | PASA con dos activos; CORTA con nueve de doce bajo 0,10; ocho pasan | probar | L9 |
+| H06.2a | `QuantAgent-d4cq.14.2.1` | Filtro por activo, intentos etapa 1 y tabla; depende de H06.1 | Integración real de dos activos: PASA, tabla e intentos; solo 2007–2018 | probar | L9 |
+| H06.2b | `QuantAgent-d4cq.14.2.2` | Bordes del veredicto etapa 1; depende de H06.2a | Nueve de doce bajo 0,10 cortan; ocho pasan; 0,10 no cuenta como bajo | leer | L9 |
 | H06.3 | `QuantAgent-d4cq.14.3` | Evidencia VM del CLI RSI con dos combinaciones; depende de H06.2 | Tabla de doce ETFs, veredicto, tiempo e incremento de doce intentos | probar | L9 |
 | H07 | `QuantAgent-d4cq.15` | Punto de control L9: dos hipótesis de punta a punta (loop, VM); depende de H06 | Doc con veredicto, tiempos y conteo de intentos | leer | L9 |
 
