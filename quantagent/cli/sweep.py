@@ -98,6 +98,23 @@ def grilla_vecinos(strategy: str) -> tuple[list[dict[str, Any]], list[str]]:
     return combos, labels
 
 
+CAMPOS_INTENTOS = [
+    "fecha_utc", "estrategia", "activo", "snapshot", "desde", "hasta", "costos",
+    "tamano", "params", "trades", "pnl", "sharpe", "hipotesis", "etapa",
+]
+
+
+def contar_intentos(hipotesis: Optional[str] = None) -> int:
+    """Cuenta filas de intentos.csv; con `hipotesis`, solo las de esa hipótesis."""
+    from quantagent.data.snapshot import snapshot_root
+
+    path = snapshot_root() / "intentos.csv"
+    if not path.exists():
+        return 0
+    with path.open(newline="", encoding="utf-8") as f:
+        return sum(1 for r in csv.DictReader(f) if hipotesis is None or r.get("hipotesis") == hipotesis)
+
+
 def registrar_intento(
     strategy_name: str,
     symbol: str,
@@ -106,8 +123,13 @@ def registrar_intento(
     tamano_posicion: Optional[float],
     combo: dict[str, Any],
     row: dict[str, Any],
+    hipotesis: Optional[str] = None,
+    etapa: Optional[str] = None,
 ) -> None:
-    """Agrega una corrida de ajuste al registro, conservando sus valores."""
+    """Agrega una corrida al registro, conservando sus valores.
+
+    Un archivo con encabezado viejo se reescribe con el nuevo (columnas faltantes vacías).
+    """
     from quantagent.data.snapshot import snapshot_root
 
     intentos_path = snapshot_root() / "intentos.csv"
@@ -124,12 +146,23 @@ def registrar_intento(
         "trades": row["trades"],
         "pnl": row["pnl"],
         "sharpe": row["sharpe"],
+        "hipotesis": hipotesis or "",
+        "etapa": etapa or "",
     }
-    nuevo = not intentos_path.exists()
-    with intentos_path.open("a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=list(intento))
+    previas = []
+    if intentos_path.exists():
+        with intentos_path.open(newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            if reader.fieldnames == CAMPOS_INTENTOS:
+                previas = None
+            else:
+                previas = list(reader)
+    nuevo = not intentos_path.exists() or previas is not None
+    with intentos_path.open("w" if nuevo else "a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=CAMPOS_INTENTOS, restval="", extrasaction="ignore")
         if nuevo:
             writer.writeheader()
+            writer.writerows(previas or [])
         writer.writerow(intento)
 
 
