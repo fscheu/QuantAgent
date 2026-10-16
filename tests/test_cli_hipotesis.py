@@ -73,7 +73,7 @@ def test_filtro_real_dos_activos(tmp_path, monkeypatch):
     monkeypatch.setattr(hipotesis, "filtrar_activo", observar)
     result = CliRunner().invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico"])
     assert result.exit_code == 0, result.output
-    assert result.output.rstrip().endswith("PASA (2 de 2 bajo 0,10)")
+    assert result.output.rstrip().endswith("CORTA (2 de 2 bajo 0,10 o con menos de 30 trades)")
     with (tmp_path / "intentos.csv").open() as f:
         filas = list(csv.DictReader(f))
     assert len(filas) == len(resultados) == 2
@@ -104,11 +104,11 @@ def test_bordes_veredicto_etapa1(tmp_path, monkeypatch, sharpes, final):
     data.update(activos=activos, parametros={"rsi_period": [7], "oversold_threshold": [30.0]})
     archivo = tmp_path / "h.yaml"
     archivo.write_text(yaml.safe_dump(data))
-    resultados = iter({"sharpe_tasa_0": s, "trades": i} for i, s in enumerate(sharpes))
+    resultados = iter({"sharpe_tasa_0": s, "trades": 30} for s in sharpes)
     monkeypatch.setattr(hipotesis, "filtrar_activo", lambda *a, **kw: next(resultados))
     result = CliRunner().invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico"])
     assert result.exit_code == 0, result.output
-    assert result.output.rstrip().endswith(final)
+    assert result.output.rstrip().endswith(final.replace(")", " o con menos de 30 trades)"))
     with (tmp_path / "intentos.csv").open() as f:
         filas = list(csv.DictReader(f))
     tabla = [line.split("|") for line in result.output.splitlines()[2:-1]]
@@ -116,7 +116,7 @@ def test_bordes_veredicto_etapa1(tmp_path, monkeypatch, sharpes, final):
     for i, (fila, celdas, activo, sharpe) in enumerate(zip(filas, tabla, activos, sharpes)):
         assert fila["activo"] == celdas[1].strip() == activo
         assert fila["etapa"] == "1" and fila["hipotesis"] == data["id"]
-        assert int(fila["trades"]) == int(celdas[3]) == i
+        assert int(fila["trades"]) == int(celdas[3]) == 30
         if sharpe is None:
             assert fila["sharpe"] == celdas[2].strip() == ""
         elif np.isnan(sharpe):
