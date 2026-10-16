@@ -53,3 +53,7 @@ Validación: `env MPLCONFIGDIR=/tmp/f09-mpl NUMBA_CACHE_DIR=/tmp/f09-numba pytho
 ## Decisión de Fede (2026-10-15)
 
 **B.** El filtro de las 48 celdas corre en vectorbt. La simulación de vectorbt tarda 17 s; los 943 s de señales son de `bar_signals`, que le pasa a la estrategia toda la historia en cada vela. Condición: QuantAgent-d4cq.7.4 (L9) hace que `bar_signals` pase solo `required_history_bars` velas, como el motor, y con eso el filtro total tiene que quedar por debajo del motor con apertura (764 s) con Spearman apertura >= 0.8. Si no se cumple, se pasa a A sin volver a consultar.
+
+## Condición cumplida (2026-10-16, QuantAgent-d4cq.7.4)
+
+Con la ventana de `required_history_bars`, el filtro de las 48 celdas tarda 258 s (señales 247 s, simulación 4 s) contra 764 s del motor con apertura. Spearman apertura 0.893329, trades sin cambio. B queda confirmada.
