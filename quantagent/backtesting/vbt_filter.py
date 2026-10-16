@@ -40,7 +40,7 @@ def run_filter(signals: pd.DataFrame, candles: pd.DataFrame, *, commission_pct: 
     Stops por vela (`stop_loss_pct`, `take_profit_pct`, opcionales) de la señal, medidos
     desde el precio de entrada llenado y evaluados con high/low; si una vela toca stop y take profit sale por
     el stop; un gap más allá del stop sale al open. `trailing_stop_pct` (opcional): sale si el cierre cae bajo el
-    máximo cierre desde la entrada × (1 − pct) (cortos: mínimo × (1 + pct)); llena en el open siguiente, como `exit`. Devuelve trades, pnl, sharpe (tasa 2%), sharpe_tasa_0 y max_drawdown (fracción 0-1)."""
+    máximo cierre desde la entrada × (1 − pct) (cortos: mínimo × (1 + pct)); llena en el open siguiente, como `exit`. Devuelve trades, pnl, sharpe (tasa 2%), sharpe_tasa_0, max_drawdown (fracción 0-1) y la curva `equity`."""
     entry = signals["entry"].shift(1, fill_value=0)
     exit_ = signals["exit"].astype(bool).shift(1, fill_value=False)
     stops = {k: signals[k].shift(1) if k in signals else pd.Series(np.nan, index=signals.index) for k in STOP_COLUMNS}
@@ -73,4 +73,5 @@ def run_filter(signals: pd.DataFrame, candles: pd.DataFrame, *, commission_pct: 
         "sharpe": m["sharpe"],
         "sharpe_tasa_0": equity_metrics(equity, 0.0)["sharpe"],
         "max_drawdown": m["max_drawdown"],
+        "equity": equity,
     }
