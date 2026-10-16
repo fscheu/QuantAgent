@@ -8,9 +8,63 @@ import pytest
 import yaml
 from click.testing import CliRunner
 
-from quantagent.cli.backtest import backtest_group
 from quantagent.cli import hipotesis
+from quantagent.cli.backtest import backtest_group
 from quantagent.data.snapshot import write_snapshot
+
+
+@pytest.mark.parametrize("rechazo", [True, False])
+def test_correr_corte_real_y_estado(tmp_path, monkeypatch, rechazo):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fechas = pd.date_range("2007-01-01", "2018-12-31", freq="7D")
+    velas = pd.DataFrame(
+        {c: 100.0 for c in ("open", "high", "low", "close", "adj_close", "volume")}, index=fechas,
+    )
+    write_snapshot("sintetico", {"SPY": velas}, base_dir=tmp_path)
+    data = yaml.safe_load((Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml").read_text())
+    data["parametros"] = {"rsi_period": [7], "oversold_threshold": [30.0]}
+    if rechazo:
+        data["justificacion"] = "corta"
+    archivo = tmp_path / "h.yaml"
+    archivo.write_text(yaml.safe_dump(data))
+
+    def prohibido(*args, **kwargs):
+        pytest.fail("No debe ejecutar compare ni etapa 2")
+
+    monkeypatch.setattr("subprocess.run", prohibido)
+    result = CliRunner().invoke(backtest_group, [
+        "hipotesis", "correr", str(archivo), "--snapshot", "sintetico", "--carpeta", str(tmp_path / "salida"),
+    ])
+    assert result.exit_code == 1, result.output
+    with (tmp_path / "hipotesis.csv").open() as f:
+        filas = list(csv.DictReader(f))
+    assert [(r["etapa"], r["veredicto"]) for r in filas] == (
+        [("0", "CORTA")] if rechazo else [("0", "PASA"), ("1", "CORTA")]
+    )
+    assert all(r["hipotesis"] == data["id"] for r in filas)
+    assert result.output.splitlines() == [
+        *[f"Etapa {r['etapa']}: {r['veredicto']} ({r['motivo']})" for r in filas],
+        f"Llegó a la etapa {filas[-1]['etapa']}: CORTA ({filas[-1]['motivo']})",
+    ]
+    assert ("justificación" if rechazo else "1 de 1 bajo 0,10") in filas[-1]["motivo"]
+    with (tmp_path / "intentos.csv").open() as f:
+        intentos = list(csv.DictReader(f))
+    assert [r["etapa"] for r in intentos] == ["0" if rechazo else "1"]
+
+
+def test_correr_pasa_etapa1(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    h = hipotesis.cargar_hipotesis(Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml")
+    monkeypatch.setattr(hipotesis, "admitir_hipotesis", lambda *a: (h, True, []))
+    monkeypatch.setattr(hipotesis, "filtrar_hipotesis", lambda *a: ([("SPY", 0.5, 30)], {}, "PASA", 0))
+    result = CliRunner().invoke(backtest_group, [
+        "hipotesis", "correr", str(Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml"),
+        "--snapshot", "sintetico", "--carpeta", str(tmp_path),
+    ])
+    assert result.exit_code == 0, result.output
+    assert result.output.rstrip().endswith("Llegó a la etapa 1: PASA (0 de 1 bajo 0,10 o con menos de 30 trades)")
+    with (tmp_path / "hipotesis.csv").open() as f:
+        assert [(r["etapa"], r["veredicto"]) for r in csv.DictReader(f)] == [("0", "PASA"), ("1", "PASA")]
 
 
 def test_admision_rango_y_registro(tmp_path, monkeypatch):
