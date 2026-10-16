@@ -52,7 +52,7 @@ def test_motor_dos_activos(tmp_path, monkeypatch, abrir_prueba, etapa, desde):
         assert list(csv.DictReader(f)) == intentos
 
 
-@pytest.mark.parametrize("caso", ["pasa", "sin validar", "ninguno pasa"])
+@pytest.mark.parametrize("caso", ["pasa", "sin validar", "ninguno pasa", "otro directorio"])
 def test_etapa2(tmp_path, monkeypatch, caso):
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     fechas = pd.date_range("2007-01-01", periods=150)
@@ -82,8 +82,10 @@ def test_etapa2(tmp_path, monkeypatch, caso):
 
     if caso == "sin validar":
         monkeypatch.setattr(validacion.subprocess, "run", sin_validar)
+    if caso == "otro directorio":
+        monkeypatch.chdir(tmp_path)
     veredicto, filas = validacion.validar_etapa2(h, "sintetico", params, tmp_path / "salida")
-    assert veredicto == ("PASA" if caso == "pasa" else "CORTA")
+    assert veredicto == ("PASA" if caso in ("pasa", "otro directorio") else "CORTA")
     assert [f["activo"] for f in filas] == ["SPY", "TLT"]
     assert filas[0]["control"].startswith("coinciden")
     if caso == "ninguno pasa":

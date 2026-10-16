@@ -49,7 +49,8 @@ def validar_etapa2(h, snapshot, params_por_activo, carpeta):
             params_path.write_text(json.dumps({h.clase: params_por_activo[activo]}), encoding="utf-8")
             tabla = Path(carpeta) / f"{activo}.csv"
             resultado = subprocess.run([
-                sys.executable, "scripts/compare_control.py", "--tabla", str(tabla),
+                sys.executable, str(Path(__file__).resolve().parents[2] / "scripts" / "compare_control.py"),
+                "--tabla", str(tabla),
                 "--trades-dir", str(Path(carpeta) / "trades"), "--snapshot", snapshot,
                 "--costos", "etf", "--llenado", "apertura", "--params", str(params_path),
             ], capture_output=True, text=True)
