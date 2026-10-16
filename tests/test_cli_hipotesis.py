@@ -129,6 +129,83 @@ def test_correr_control_real(tmp_path, monkeypatch, cortar):
     ]
 
 
+def test_correr_prueba_real_y_reapertura(tmp_path, monkeypatch):
+    pytest.importorskip("backtesting")
+    import subprocess
+
+    from quantagent.fabrica.candado import abierto
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fechas = pd.date_range("2007-01-01", "2023-02-01", freq="2D")
+    close = 100 + 10 * np.sin(np.arange(len(fechas)) / 5)
+    close[fechas >= "2023-01-01"] = 1_000_000  # Centinelas fuera de la prueba.
+    velas = pd.DataFrame(
+        {"open": close, "high": close + 1, "low": close - 1,
+         "close": close, "adj_close": close, "volume": 1000.0}, index=fechas,
+    )
+    write_snapshot("sintetico", {"SPY": velas}, base_dir=tmp_path)
+    data = yaml.safe_load((Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml").read_text())
+    data.update(activos=["SPY"], parametros={"rsi_period": [7, 21], "oversold_threshold": [30.0]})
+    archivo = tmp_path / "h.yaml"
+    archivo.write_text(yaml.safe_dump(data))
+    run, comandos = subprocess.run, []
+
+    def observar(cmd, **kwargs):
+        if "compare" in cmd:
+            desde, hasta = (cmd[cmd.index(flag) + 1] for flag in ("--from", "--to"))
+            prueba = desde == "2019-01-01"
+            assert (desde, hasta) == (("2019-01-01", "2022-12-31") if prueba else
+                                      ("2007-01-01", "2018-12-31"))
+            assert ("--abrir-prueba" in cmd) == prueba
+            assert not prueba or abierto(data["id"], "prueba")
+            assert cmd[cmd.index("--symbols") + 1] == "SPY"
+            assert cmd[cmd.index("--llenado") + 1] == "apertura"
+            assert json.loads(Path(cmd[cmd.index("--params") + 1]).read_text()) == {
+                "rsi": {"rsi_period": 21, "oversold_threshold": 30.0},
+            }
+            comandos.append((desde, hasta))
+        return run(cmd, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", observar)
+    args = ["hipotesis", "correr", str(archivo), "--snapshot", "sintetico",
+            "--carpeta", str(tmp_path / "motor")]
+    runner = CliRunner()
+    primera = runner.invoke(backtest_group, args)
+    assert primera.exception is None or isinstance(primera.exception, SystemExit), primera.output
+    with (tmp_path / "hipotesis.csv").open() as f:
+        estados = list(csv.DictReader(f))
+    assert [(r["etapa"], r["veredicto"]) for r in estados[:3]] == [
+        ("0", "PASA"), ("1", "PASA"), ("2", "PASA"),
+    ]
+    assert len(estados) == 4 and estados[-1]["etapa"] == "3"
+    assert primera.exit_code == int(estados[-1]["veredicto"] == "CORTA"), primera.output
+    assert "V30" in primera.output and "DSR" in primera.output
+    candado = (tmp_path / "hipotesis-candado.csv").read_text()
+    assert [r[:2] for r in csv.reader(candado.splitlines())] == [[data["id"], "prueba"]]
+    with (tmp_path / "intentos.csv").open() as f:
+        intentos = list(csv.DictReader(f))
+    assert [r["etapa"] for r in intentos] == ["1", "2", "3"]
+    for carpeta, desde, hasta in [("motor", "2007-01-01", "2018-12-31"),
+                                 ("motor/etapa3", "2019-01-01", "2022-12-31")]:
+        curva = pd.read_csv(tmp_path / carpeta / "equity/rsi-SPY.csv")
+        assert list(pd.to_datetime(curva["date"])) == list(velas.loc[desde:hasta].index)
+    segunda = runner.invoke(backtest_group, args)
+    assert segunda.exit_code == 1 and "ya se abrió" in segunda.output
+    assert comandos == [("2007-01-01", "2018-12-31"), ("2019-01-01", "2022-12-31"),
+                        ("2007-01-01", "2018-12-31")]
+    assert (tmp_path / "hipotesis-candado.csv").read_text() == candado
+    with (tmp_path / "intentos.csv").open() as f:
+        nuevos = list(csv.DictReader(f))
+    assert nuevos[:3] == intentos and [r["etapa"] for r in nuevos[3:]] == ["1", "2"]
+    with (tmp_path / "hipotesis.csv").open() as f:
+        nuevos = list(csv.DictReader(f))
+    assert nuevos[:4] == estados and len(nuevos) == 8
+    assert [(r["etapa"], r["veredicto"]) for r in nuevos[4:]] == [
+        ("0", "PASA"), ("1", "PASA"), ("2", "PASA"), ("3", "CORTA"),
+    ]
+    assert "ya se abrió" in nuevos[-1]["motivo"]
+
+
 @pytest.mark.parametrize("final", ["PASA", "CORTA", "candado"])
 def test_correr_etapa3(tmp_path, monkeypatch, final):
     from quantagent.fabrica.candado import abierto
