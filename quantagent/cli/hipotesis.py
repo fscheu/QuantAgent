@@ -2,16 +2,18 @@
 
 import csv
 import json
+from pathlib import Path
 
 import click
 from tabulate import tabulate
 
 from quantagent.data.snapshot import SnapshotError, read_snapshot
 from quantagent.fabrica.admision import admitir
+from quantagent.fabrica.candado import CandadoError, abrir
 from quantagent.fabrica.estado import registrar_estado
 from quantagent.fabrica.filtro import filtrar_activo, parametros_elegidos, veredicto_etapa1
 from quantagent.fabrica.hipotesis import cargar_hipotesis
-from quantagent.fabrica.validacion import validar_etapa2
+from quantagent.fabrica.validacion import validar_etapa2, validar_etapa3
 from quantagent.settings import COSTOS_PERFILES
 
 from .sweep import registrar_intento
@@ -87,7 +89,7 @@ def filtrar_command(archivo, snapshot_name, out):
     click.echo(f"{veredicto} ({bajos} de {len(resultados)} bajo 0,10 o con menos de 30 trades)")
 
 
-@hipotesis_group.command("correr", help="Ejecutar las etapas 0 a 2, con corte temprano y estado.")
+@hipotesis_group.command("correr", help="Ejecutar las etapas 0 a 3, con corte temprano y estado.")
 @click.argument("archivo", type=click.Path(exists=True, dir_okay=False))
 @click.option("--snapshot", "snapshot_name", required=True)
 @click.option("--carpeta", type=click.Path(file_okay=False), required=True)
@@ -113,5 +115,20 @@ def correr_command(archivo, snapshot_name, carpeta):
                 motivo = f"pasan V30: {activos}; control coincide en {len(filas)} de {len(filas)}"
             registrar_estado(h.id, etapa, veredicto, motivo)
             click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
+            if veredicto == "PASA":
+                etapa = "3"
+                try:
+                    abrir(h.id, "prueba")
+                except CandadoError as exc:
+                    veredicto, motivo = "CORTA", str(exc)
+                else:
+                    veredicto, filas = validar_etapa3(h, snapshot_name, parametros, Path(carpeta) / "etapa3")
+                    click.echo(tabulate([[f["activo"], f["v30"], f["dsr"]] for f in filas],
+                                        headers=["activo", "V30", "DSR"], tablefmt="github"))
+                    motivo = "; ".join(m for f in filas for m in f["motivos"])
+                    if veredicto == "PASA":
+                        motivo = "pasan V30 y DSR: " + ", ".join(f["activo"] for f in filas if not f["motivos"])
+                registrar_estado(h.id, etapa, veredicto, motivo)
+                click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
     click.echo(f"Llegó a la etapa {etapa}: {veredicto} ({motivo})")
     raise click.exceptions.Exit(int(veredicto == "CORTA"))
