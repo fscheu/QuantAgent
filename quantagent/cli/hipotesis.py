@@ -108,6 +108,9 @@ def correr_command(archivo, snapshot_name, carpeta):
             etapa = "2"
             motivos = [m for fila in filas for m in fila["motivos"]]
             motivo = "; ".join(motivos) if motivos else "control coincide y al menos un activo pasa V30"
+            if veredicto == "PASA":
+                activos = ", ".join(f["activo"] for f in filas if f["v30"] == "PASA")
+                motivo = f"pasan V30: {activos}; control coincide en {len(filas)} de {len(filas)}"
             registrar_estado(h.id, etapa, veredicto, motivo)
             click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
     click.echo(f"Llegó a la etapa {etapa}: {veredicto} ({motivo})")

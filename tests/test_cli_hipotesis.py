@@ -111,7 +111,11 @@ def test_correr_control_real(tmp_path, monkeypatch, cortar):
     with (tmp_path / "hipotesis.csv").open() as f:
         filas = list(csv.DictReader(f))
     assert [(r["etapa"], r["veredicto"]) for r in filas] == [("0", "PASA"), ("1", "PASA"), ("2", veredicto)]
-    assert all(m in filas[-1]["motivo"] for r in resultados for m in r["motivos"])
+    if cortar:
+        assert all(m in filas[-1]["motivo"] for r in resultados for m in r["motivos"])
+    else:
+        activos = ", ".join(r["activo"] for r in resultados if r["v30"] == "PASA")
+        assert filas[-1]["motivo"] == f"pasan V30: {activos}; control coincide en 2 de 2"
     assert result.output.splitlines() == [
         *[f"Etapa {r['etapa']}: {r['veredicto']} ({r['motivo']})" for r in filas],
         f"Llegó a la etapa 2: {veredicto} ({filas[-1]['motivo']})",
