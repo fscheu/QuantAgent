@@ -102,6 +102,7 @@ def test_etapa2(tmp_path, monkeypatch, caso):
 @pytest.mark.parametrize("dsr,pnl,esperado", [(0.95, 1, "PASA"), (0.94, 1, "CORTA"),
                                           (0.99, -1, "CORTA"), (None, 1, "CORTA")])
 def test_etapa3_regla(tmp_path, monkeypatch, dsr, pnl, esperado):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     h = cargar_hipotesis(Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml")
     (tmp_path / "equity").mkdir()
     for activo in ("SPY", "TLT"):
