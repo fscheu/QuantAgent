@@ -303,6 +303,7 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
         assert (intento["estrategia"], intento["activo"], intento["snapshot"]) == ("rsi", "SPY", "snap_rsi")
         assert (intento["costos"], intento["tamano"]) == ("", "1.0")
         assert intento["params"] == json.dumps({
+            "llenado": "apertura",
             "oversold_threshold": float(salida["oversold_threshold"]),
             "rsi_period": int(salida["rsi_period"]),
         }, sort_keys=True)
@@ -323,13 +324,13 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
     meta = snapshot_metadata("snap_rsi", "SPY", None, None)
     config = _engine_config(None, None, 1.0, None, None)
     with _isolated_sqlite_db():
-        baseline = correr_par("rsi", meta, config, None, None, "snap_rsi", "SPY", None, None)
+        baseline = correr_par("rsi", meta, config, None, None, "snap_rsi", "SPY", None, None, fill="apertura")
 
     filas_por_combo = {}
     for r in out_rows:
         combo = {"oversold_threshold": float(r["oversold_threshold"]), "rsi_period": int(r["rsi_period"])}
         with _isolated_sqlite_db():
-            esperado = correr_par("rsi", meta, config, None, None, "snap_rsi", "SPY", None, None, params=combo)
+            esperado = correr_par("rsi", meta, config, None, None, "snap_rsi", "SPY", None, None, params=combo, fill="apertura")
         assert int(r["trades"]) == esperado["trades"]
         assert float(r["pnl"]) == round(esperado["pnl"], 2)
         filas_por_combo[(combo["oversold_threshold"], combo["rsi_period"])] = r
@@ -354,6 +355,28 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
         assert len(list(csv.DictReader(f))) == len(vecinos) == 13
     assert vecinos[0]["vecino"] == "default"
     assert (int(vecinos[0]["trades"]), float(vecinos[0]["pnl"])) == (baseline["trades"], round(baseline["pnl"], 2))
+
+    grid_file.write_text(json.dumps({"rsi_period": [7, 14]}))
+    resultados = []
+    for flags, fill in [([], "apertura"), (["--llenado", "apertura"], "apertura"),
+                        (["--llenado", "cierre"], "cierre")]:
+        res = runner.invoke(backtest_group, [
+            "sweep", "--strategy", "rsi", "--symbol", "SPY", "--snapshot", "snap_rsi",
+            "--grid", str(grid_file), "--out", str(out_csv), *flags])
+        assert res.exit_code == 0, res.output
+        with out_csv.open() as f:
+            resultados.append(list(csv.DictReader(f)))
+        with intentos.open() as f:
+            ultimos = list(csv.DictReader(f))[-2:]
+        assert [json.loads(r["params"]) for r in ultimos] == [
+            {"rsi_period": p, "llenado": fill} for p in [7, 14]]
+        for fila, p in zip(resultados[-1], [7, 14]):
+            with _isolated_sqlite_db():
+                esperado = correr_par("rsi", meta, config, None, None, "snap_rsi", "SPY",
+                                      None, None, params={"rsi_period": p}, fill=fill)
+            assert float(fila["pnl"]) == round(esperado["pnl"], 2)
+    assert resultados[0] == resultados[1]
+    assert [r["pnl"] for r in resultados[0]] != [r["pnl"] for r in resultados[2]]
 
 
 def test_attempts_filtra_alias_y_activo_sin_modificar(monkeypatch, tmp_path):

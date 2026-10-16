@@ -200,6 +200,7 @@ def attempts_command(strategy_name: str, symbol: Optional[str]) -> None:
 
 
 @click.command("sweep", help="Correr una grilla de parámetros de una estrategia sobre un activo.")
+@click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="apertura", show_default=True)
 @click.option("--strategy", "strategy_name", required=True, help="Estrategia a optimizar.")
 @click.option("--symbol", "symbol", required=True, help="Símbolo del activo (ej: SPY).")
 @click.option("--snapshot", "snapshot_name", required=True, help="Snapshot en $QUANTAGENT_SNAPSHOT_DIR (velas ajustadas).")
@@ -225,6 +226,7 @@ def sweep_command(
     tamano_posicion: Optional[float],
     regla_tamano: Optional[str],
     orden_minima: Optional[float],
+    llenado: str,
 ) -> None:
     from quantagent.backtesting.fixtures import snapshot_metadata
     from quantagent.cli.backtest import (
@@ -293,6 +295,7 @@ def sweep_command(
                 to_date,
                 con_filas=False,
                 params=combo,
+                fill=llenado,
             )
 
         def _fmt(v: Optional[float], digits: int) -> object:
@@ -321,7 +324,7 @@ def sweep_command(
         rows.append(row)
         if vecinos_20:
             row["vecino"] = vecinos[len(rows) - 1]
-        registrar_intento(strategy_name, sym, snapshot_name, costos, tamano_posicion, combo, row)
+        registrar_intento(strategy_name, sym, snapshot_name, costos, tamano_posicion, {**combo, "llenado": llenado}, row)
 
     with open(out_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
