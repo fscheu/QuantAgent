@@ -254,4 +254,5 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-16 #233 QuantAgent-d4cq.22.3 E07c: merge tras el cambio del motivo de PASA. E07 cerrado.
 2026-10-16 #234 QuantAgent-d4cq.23 E08 partición en .23.1-.23.3: merge.
 2026-10-16 #235 QuantAgent-d4cq.23.1 E08a validar etapa 3: cambio. 2 mutaciones detectadas; CI falla porque test_etapa3_regla no fija QUANTAGENT_SNAPSHOT_DIR.
+2026-10-16 #235 QuantAgent-d4cq.23.1 E08a: merge tras fijar la variable en el test.
 ```
