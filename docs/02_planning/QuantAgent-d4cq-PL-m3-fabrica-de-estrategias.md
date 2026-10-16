@@ -63,7 +63,7 @@ Cada ticket es de 100 líneas o menos, como hasta ahora. Los tickets se escriben
 - Candado por hipótesis: la prueba y la reserva se abren una sola vez por id y la segunda vez falla.
 - Decisión de Fede: umbrales de las etapas 0 y 1.
 
-**L10 · `lote/embudo`.** Punto de control: `fabrica correr <archivo>` lleva una hipótesis por las etapas 0 a 3 y se detiene donde corresponde.
+**L10 · `lote/embudo`.** Punto de control: `fabrica correr <archivo>` (quedó como `backtest hipotesis correr`) lleva una hipótesis por las etapas 0 a 3 y se detiene donde corresponde.
 - Orquestador de etapas con corte temprano.
 - La etapa 2 reutiliza `compare` + `compare_control` + `verdict`.
 - El Sharpe deflactado entra al veredicto de la etapa 3, con N = total de intentos de `intentos.csv`.
