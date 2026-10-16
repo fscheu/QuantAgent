@@ -20,11 +20,8 @@ def hipotesis_group():
     pass
 
 
-@hipotesis_group.command("filtrar", help="Cargar y admitir una hipótesis sobre 2007–2018.")
-@click.argument("archivo", type=click.Path(exists=True, dir_okay=False))
-@click.option("--snapshot", "snapshot_name", required=True)
-@click.option("--out", type=click.Path(dir_okay=False), help="CSV de resultados y parámetros por activo.")
-def filtrar_command(archivo, snapshot_name, out):
+def admitir_hipotesis(archivo, snapshot_name):
+    """Admitir y registrar el rechazo, devolviendo hipótesis y motivos."""
     try:
         h = cargar_hipotesis(archivo)
         velas = read_snapshot(snapshot_name, h.activos[0]).loc["2007-01-01":"2018-12-31"]
@@ -40,10 +37,12 @@ def filtrar_command(archivo, snapshot_name, out):
             {"desde": "2007-01-01", "hasta": "2018-12-31", "trades": 0, "pnl": "", "sharpe": ""},
             hipotesis=h.id, etapa="0",
         )
-        for motivo in motivos:
-            click.echo(motivo)
-        raise click.exceptions.Exit(1)
-    resultados, filas_csv = [], []
+    return h, ok, motivos
+
+
+def filtrar_hipotesis(h, snapshot_name):
+    """Filtrar y registrar intentos; devolver métricas y parámetros por activo."""
+    resultados, parametros = [], {}
     for activo in h.activos:
         try:
             velas = read_snapshot(snapshot_name, activo).loc["2007-01-01":"2018-12-31"]
@@ -54,18 +53,33 @@ def filtrar_command(archivo, snapshot_name, out):
         except (ValueError, SnapshotError) as exc:
             raise click.ClickException(str(exc)) from exc
         resultados.append([activo, r["sharpe_tasa_0"], r["trades"]])
-        if out:
-            filas_csv.append([*resultados[-1], json.dumps(parametros_elegidos(r["ganadores"]), sort_keys=True)])
+        parametros[activo] = parametros_elegidos(r["ganadores"])
         registrar_intento(
             h.clase, activo, snapshot_name, "etf", 1.0, h.parametros,
             {"desde": "2007-01-01", "hasta": "2018-12-31", "trades": r["trades"],
              "pnl": "", "sharpe": r["sharpe_tasa_0"]}, hipotesis=h.id, etapa="1",
         )
-    click.echo(tabulate(resultados, headers=["activo", "sharpe_fuera_muestra", "trades"], tablefmt="github"))
     veredicto, bajos = veredicto_etapa1(resultados)
+    return resultados, parametros, veredicto, bajos
+
+
+@hipotesis_group.command("filtrar", help="Cargar y admitir una hipótesis sobre 2007–2018.")
+@click.argument("archivo", type=click.Path(exists=True, dir_okay=False))
+@click.option("--snapshot", "snapshot_name", required=True)
+@click.option("--out", type=click.Path(dir_okay=False), help="CSV de resultados y parámetros por activo.")
+def filtrar_command(archivo, snapshot_name, out):
+    h, ok, motivos = admitir_hipotesis(archivo, snapshot_name)
+    if not ok:
+        for motivo in motivos:
+            click.echo(motivo)
+        raise click.exceptions.Exit(1)
+    resultados, parametros, veredicto, bajos = filtrar_hipotesis(h, snapshot_name)
+    click.echo(tabulate(resultados, headers=["activo", "sharpe_fuera_muestra", "trades"], tablefmt="github"))
     if out:
         with open(out, "w", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["activo", "sharpe_fuera_muestra", "trades", "params", "veredicto"])
-            writer.writerows([*fila, veredicto] for fila in filas_csv)
+            writer.writerows(
+                [*fila, json.dumps(parametros[fila[0]], sort_keys=True), veredicto] for fila in resultados
+            )
     click.echo(f"{veredicto} ({bajos} de {len(resultados)} bajo 0,10 o con menos de 30 trades)")
