@@ -7,9 +7,9 @@ from quantagent.fabrica.candado import abierto
 from quantagent.fabrica.estado import ESTADO_CSV
 
 GLOSARIO = (
-    ("Sharpe", "retorno ajustado por riesgo, fuera de muestra."),
-    ("V30", "control de robustez con al menos 30 operaciones."),
-    ("DSR", "Sharpe deflactado por la cantidad de intentos."),
+    ("Sharpe", "retorno sobre volatilidad; en la etapa 1 es del filtro fuera de muestra, en las etapas 2 y 3 es del motor propio."),
+    ("V30", "la regla de evaluar: al menos 2 trades, pnl > 0, Sharpe con tasa 0 >= 0,10 y caída máxima <= 35%."),
+    ("DSR", "probabilidad de que el Sharpe no sea suerte, dado el total de intentos; pasa con 0,95."),
     ("Intentos", "corridas registradas; más intentos, más riesgo de falso hallazgo."),
 )
 
@@ -39,7 +39,7 @@ def render_informe(d, hipotesis=None):
                  for e in d["etapas"])
     tr = "".join(f"<tr><td>{escape(a)}</td><td>{escape(i['sharpe'])}</td><td>{escape(i['trades'])}</td></tr>"
                  for a, i in d["activos"].items())
-    gl = "".join(f"<dt>{k}</dt><dd>{v}</dd>" for k, v in GLOSARIO)
+    gl = "".join(f"<dt>{k}</dt><dd>{escape(v)}</dd>" for k, v in GLOSARIO)
     extra = f"<p>{escape(hipotesis.justificacion)} ({escape(hipotesis.clase)})</p>" if hipotesis else ""
     return (
         f"<!doctype html><html lang='es'><meta charset='utf-8'><title>Informe {escape(d['id'])}</title>"

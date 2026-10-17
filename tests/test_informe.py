@@ -43,7 +43,8 @@ def test_corte_en_etapa_3_usa_solo_activos_de_esa_etapa(raiz):
     html = out.read_text()
     assert "CORTA en la etapa 3" in html and "DSR bajo en QQQ" in html
     assert "QQQ" in html and "EFA" in html and "<td>SPY</td>" not in html
-    assert "pnl" not in html.lower() and "123.4" not in html and "Prueba abierta: no" in html
+    assert "al menos 2 trades, pnl &gt; 0, Sharpe con tasa 0 &gt;= 0,10 y caída máxima &lt;= 35%" in html
+    assert "<th>pnl" not in html.lower() and "123.4" not in html and "Prueba abierta: no" in html
 
 
 def test_hipotesis_desconocida_falla(raiz):
