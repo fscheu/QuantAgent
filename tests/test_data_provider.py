@@ -7,7 +7,34 @@ import pandas as pd
 import pytest
 
 from quantagent.data.provider import DataProvider
+from quantagent.data.sources.yahoo import YahooSource
 from quantagent.models import MarketData
+
+COLUMNS = ["timestamp", "open", "high", "low", "close", "volume"]
+
+
+class FakeSource:
+    """Fuente falsa sin límites: sirve de a un hueco y registra los pedidos."""
+
+    name = "fake"
+
+    def __init__(self, earliest=None, latest=None):
+        self._earliest = earliest
+        self._latest = latest
+        self.calls = []
+
+    def earliest(self, timeframe, now):
+        return self._earliest
+
+    def latest(self, now):
+        return self._latest or now
+
+    def fetch(self, symbol, timeframe, start, end):
+        self.calls.append((symbol, timeframe, start, end))
+        ts = pd.date_range(start, end, freq="1h", tz="UTC")
+        return pd.DataFrame(
+            {"timestamp": ts, "open": 1.0, "high": 2.0, "low": 0.5, "close": 1.5, "volume": 10.0}
+        )
 
 
 class TestDataProvider:
@@ -16,7 +43,7 @@ class TestDataProvider:
     @pytest.fixture
     def provider(self, db_session):
         """Create DataProvider instance."""
-        return DataProvider(db_session)
+        return DataProvider(db_session, source=FakeSource())
 
     @pytest.fixture
     def sample_dates(self):
@@ -31,7 +58,7 @@ class TestDataProvider:
         """Verify get_ohlc returns DataFrame with correct columns."""
         start, end = sample_dates
 
-        with patch.object(provider, "_fetch_yfinance") as mock_fetch:
+        with patch.object(provider.source, "fetch") as mock_fetch:
             # Mock API response
             mock_fetch.return_value = pd.DataFrame(
                 {
@@ -58,7 +85,7 @@ class TestDataProvider:
         """Verify empty DataFrame returned when no data available."""
         start, end = sample_dates
 
-        with patch.object(provider, "_fetch_yfinance") as _mock_fetch:
+        with patch.object(provider.source, "fetch") as _mock_fetch:
             _mock_fetch.return_value = pd.DataFrame(
                 columns=["timestamp", "open", "high", "low", "close", "volume"]
             )
@@ -96,7 +123,7 @@ class TestDataProvider:
         db_session.add(cached_data)
         db_session.commit()
 
-        with patch.object(provider, "_fetch_yfinance") as _mock_fetch:
+        with patch.object(provider.source, "fetch") as _mock_fetch:
             result = provider.get_ohlc("BTC", "1h", start, start)
 
             # Should NOT call API if data is cached
@@ -108,7 +135,7 @@ class TestDataProvider:
         """Verify provider fetches from API when cache is empty."""
         start, end = sample_dates
 
-        with patch.object(provider, "_fetch_yfinance") as mock_fetch:
+        with patch.object(provider.source, "fetch") as mock_fetch:
             mock_fetch.return_value = pd.DataFrame(
                 {
                     "timestamp": [start],
@@ -130,7 +157,7 @@ class TestDataProvider:
         """Verify fetched data is stored in database."""
         start, end = sample_dates
 
-        with patch.object(provider, "_fetch_yfinance") as mock_fetch:
+        with patch.object(provider.source, "fetch") as mock_fetch:
             mock_fetch.return_value = pd.DataFrame(
                 {
                     "timestamp": [start],
@@ -155,23 +182,6 @@ class TestDataProvider:
             assert float(stored.close) == 102.0
 
     # Conversion & Transformation Tests
-
-    def test_to_yfinance_symbol_mapping(self, provider):
-        """Verify symbol mapping to yfinance format."""
-        assert provider._to_yfinance_symbol("BTC") == "BTC-USD"
-        assert provider._to_yfinance_symbol("SPX") == "SPY"
-        assert provider._to_yfinance_symbol("CL") == "CL=F"
-        # Unknown symbols pass through
-        assert provider._to_yfinance_symbol("AAPL") == "AAPL"
-
-    def test_to_yfinance_interval_mapping(self, provider):
-        """Verify timeframe mapping to yfinance interval."""
-        assert provider._to_yfinance_interval("1h") == "1h"
-        assert provider._to_yfinance_interval("4h") == "4h"
-        assert provider._to_yfinance_interval("1d") == "1d"
-        assert provider._to_yfinance_interval("1w") == "1wk"
-        # Unknown defaults to 1h
-        assert provider._to_yfinance_interval("unknown") == "1h"
 
     def test_rows_to_df_conversion(self, provider):
         """Verify SQLAlchemy rows convert to DataFrame correctly."""
@@ -367,7 +377,7 @@ class TestDataProvider:
         """Verify provider handles API errors without crashing."""
         start, end = sample_dates
 
-        with patch.object(provider, "_fetch_yfinance") as mock_fetch:
+        with patch.object(provider.source, "fetch") as mock_fetch:
             mock_fetch.side_effect = Exception("API Error")
 
             result = provider.get_ohlc("BTC", "1h", start, end)
@@ -404,66 +414,64 @@ class TestDataProvider:
         assert count == 1
 
 
-class TestYahooIntradayWindow:
-    """QuantAgent-3km: 1h/4h requests must respect Yahoo's 730-day intraday window.
+class TestSourceDelegation:
+    """DataProvider pide a la fuente solo el hueco y no la llama otra vez ni offline."""
 
-    Only `yf.Ticker` (the network boundary) is patched, so the real range
-    validation in `_fetch_yfinance` runs.
-    """
+    START = datetime(2024, 1, 1, 0)
+    END = datetime(2024, 1, 1, 10)
 
-    @pytest.fixture
-    def provider(self, db_session):
-        return DataProvider(db_session)
-
-    @pytest.mark.parametrize("timeframe", ["1h", "4h"])
-    def test_start_older_than_window_is_truncated_with_warning(
-        self, provider, caplog, timeframe
-    ):
-        """SPY intraday from 800 days ago: Yahoo is asked only for the valid recent part."""
-        now = datetime.now()
-        requested_start = now - timedelta(days=800)
-
-        with patch("quantagent.data.provider.yf.Ticker") as ticker:
-            ticker.return_value.history.return_value = pd.DataFrame()
-            with caplog.at_level("WARNING", logger="quantagent.data.provider"):
-                provider._fetch_yfinance("SPX", timeframe, requested_start, now)
-
-        sent = ticker.return_value.history.call_args.kwargs
-        assert now - timedelta(days=730) < sent["start"] <= now - timedelta(days=728)
-        assert sent["end"] == now
-        assert "730-day" in caplog.text and "truncating" in caplog.text
-        assert str(requested_start) in caplog.text
-
-    def test_range_entirely_outside_window_skips_api_with_warning(
-        self, provider, caplog
-    ):
-        """SPY 1h for a range that ended 800 days ago: no API call, explicit reason logged."""
-        now = datetime.now()
-
-        with patch("quantagent.data.provider.yf.Ticker") as ticker:
-            with caplog.at_level("WARNING", logger="quantagent.data.provider"):
-                result = provider._fetch_yfinance(
-                    "SPX", "1h", now - timedelta(days=900), now - timedelta(days=800)
+    def test_only_missing_gap_is_requested_and_repeat_call_hits_cache(self, db_session):
+        source = FakeSource()
+        provider = DataProvider(db_session, source=source)
+        for h in range(0, 5):  # cacheado 00:00..04:00
+            db_session.add(
+                MarketData(
+                    symbol="BTC", timeframe="1h", timestamp=self.START + timedelta(hours=h),
+                    open=1.0, high=2.0, low=0.5, close=1.5, volume=10.0,
                 )
+            )
+        db_session.commit()
 
-        ticker.assert_not_called()
+        provider.get_ohlc("BTC", "1h", self.START, self.END)
+        assert source.calls == [("BTC", "1h", self.START + timedelta(hours=4), self.END)]
+
+        second = provider.get_ohlc("BTC", "1h", self.START, self.END)
+        assert len(source.calls) == 1
+        assert len(second) == 11
+
+    def test_utc_aware_candles_are_stored_naive_utc(self, db_session):
+        provider = DataProvider(db_session, source=FakeSource())
+        provider.get_ohlc("BTC", "1h", self.START, self.END)
+
+        stored = db_session.query(MarketData).order_by(MarketData.timestamp).first()
+        assert stored.timestamp == self.START
+        assert stored.timestamp.tzinfo is None
+
+    def test_offline_never_calls_source(self, db_session):
+        source = FakeSource()
+        provider = DataProvider(db_session, source=source, offline=True)
+
+        result = provider.get_ohlc("BTC", "1h", self.START, self.END)
+
+        assert source.calls == []
         assert result.empty
-        assert "730-day" in caplog.text and "not calling the API" in caplog.text
 
-    @pytest.mark.parametrize(
-        "timeframe,days_back", [("1d", 800), ("1h", 700), ("4h", 700)]
-    )
-    def test_ranges_yahoo_accepts_are_sent_unchanged(
-        self, provider, caplog, timeframe, days_back
-    ):
-        """Daily data has no 730-day limit, and intraday inside the window is untouched."""
-        now = datetime.now()
-        start = now - timedelta(days=days_back)
+    def test_source_limits_clamp_the_request(self, db_session):
+        earliest = self.START + timedelta(hours=3)
+        latest = self.START + timedelta(hours=7)
+        source = FakeSource(earliest=earliest, latest=latest)
+        DataProvider(db_session, source=source).get_ohlc("BTC", "1h", self.START, self.END)
 
-        with patch("quantagent.data.provider.yf.Ticker") as ticker:
-            ticker.return_value.history.return_value = pd.DataFrame()
-            with caplog.at_level("WARNING", logger="quantagent.data.provider"):
-                provider._fetch_yfinance("SPX", timeframe, start, now)
+        assert source.calls == [("BTC", "1h", earliest, latest)]
 
-        assert ticker.return_value.history.call_args.kwargs["start"] == start
-        assert "730-day" not in caplog.text
+    def test_range_entirely_outside_source_limits_skips_source(self, db_session):
+        source = FakeSource(earliest=self.END + timedelta(days=1))
+        result = DataProvider(db_session, source=source).get_ohlc(
+            "BTC", "1h", self.START, self.END
+        )
+
+        assert source.calls == []
+        assert result.empty
+
+    def test_default_source_is_yahoo(self, db_session):
+        assert isinstance(DataProvider(db_session).source, YahooSource)
