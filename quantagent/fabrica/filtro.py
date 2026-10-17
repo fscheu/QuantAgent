@@ -18,11 +18,17 @@ def parametros_elegidos(ganadores) -> dict:
     ))["params"]
 
 
-def veredicto_etapa1(resultados) -> tuple[str, int]:
-    """Corta si más de dos tercios tienen Sharpe bajo o menos de 30 trades."""
-    bajos = sum(sharpe is None or isnan(sharpe) or sharpe < 0.10 or trades < 30
-                for _, sharpe, trades in resultados)
-    return ("CORTA" if 3 * bajos > 2 * len(resultados) else "PASA"), bajos
+def veredicto_etapa1(sharpe_cartera, trades_totales=None) -> tuple:
+    """Veredicto a nivel cartera (D3): mínimo 30 trades y Sharpe >= 0,10."""
+    if trades_totales is None and isinstance(sharpe_cartera, (list, tuple)):
+        bajos = sum(sharpe is None or isnan(sharpe) or sharpe < 0.10 or trades < 30
+                    for _, sharpe, trades in sharpe_cartera)
+        return ("CORTA" if 3 * bajos > 2 * len(sharpe_cartera) else "PASA"), bajos
+    if trades_totales < 30:
+        return "CORTA", "menos de 30 trades en la cartera"
+    if sharpe_cartera is None or isnan(sharpe_cartera) or sharpe_cartera < 0.10:
+        return "CORTA", "Sharpe de cartera bajo 0,10"
+    return "PASA", f"Sharpe de cartera {sharpe_cartera:.2f}"
 
 
 def filtrar_activo(h, velas: pd.DataFrame, *, costos: dict, capital: float, train_years: int = 4, test_years: int = 2) -> dict:
@@ -35,7 +41,8 @@ def filtrar_activo(h, velas: pd.DataFrame, *, costos: dict, capital: float, trai
     velas = velas.copy()
     velas.index = pd.DatetimeIndex(velas["timestamp"])
     nombre = cli_aliases().get(h.clase) or h.clase
-    señales = [(c, bar_signals(build_strategy(nombre, **c), velas, h.activos[0], h.timeframe)) for c in h.combinaciones()]
+    timeframe = getattr(h, "timeframe", "1d")
+    señales = [(c, bar_signals(build_strategy(nombre, **c), velas, h.activos[0], timeframe)) for c in h.combinaciones()]
     def correr(sig, a, b):
         return run_filter(sig.loc[a:b], velas.loc[a:b], capital=capital, **costos)
 
