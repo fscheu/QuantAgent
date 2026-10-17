@@ -79,7 +79,7 @@ def _versiones(nombre: str, serie: str, base_dir: Optional[Path]) -> pd.DataFram
 
 
 def _conocido(df: pd.DataFrame, al: pd.Timestamp) -> Optional[Tuple[pd.Timestamp, float]]:
-    vigentes = df[(df["realtime_start"] <= al) & (al < df["realtime_end"])]
+    vigentes = df[(df["realtime_start"] <= al) & (al <= df["realtime_end"])]
     if vigentes.empty:
         return None
     ultima = vigentes.iloc[-1]
@@ -87,7 +87,7 @@ def _conocido(df: pd.DataFrame, al: pd.Timestamp) -> Optional[Tuple[pd.Timestamp
 
 
 def valor_conocido(nombre: str, serie: str, al, base_dir: Optional[Path] = None) -> Optional[Tuple[pd.Timestamp, float]]:
-    """Observación más reciente cuya versión estaba vigente en `al` (`realtime_start <= al < realtime_end`), o None.
+    """Observación más reciente cuya versión estaba vigente en `al` (`realtime_start <= al <= realtime_end`, ambos extremos inclusivos como en FRED), o None.
 
     Una versión `.` (NaN) no cuenta como valor conocido.
     """
