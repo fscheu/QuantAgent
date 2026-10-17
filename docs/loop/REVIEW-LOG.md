@@ -261,4 +261,5 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-17 #242 QuantAgent-d4cq.25 I01 alarma filtro vs motor: merge. Con CSV reales de E09, rsi da alarma en 6 de 8.
 2026-10-17 #240 QuantAgent-d4cq.33 I09 (nube) hipótesis 52 semanas y momentum 12m: merge. DOIs verificados; admisión real en SPY y SHY.
 2026-10-17 #241 QuantAgent-d4cq.30 I06 (nube) informe HTML: cambio, glosario define mal V30 y Sharpe.
+2026-10-17 #243 QuantAgent-d4cq.26 I02 alarma en correr: merge. Mutación rompe el caso con alarma.
 ```
