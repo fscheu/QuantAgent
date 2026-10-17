@@ -6,8 +6,8 @@ import pandas as pd
 import pytest
 
 from quantagent.data.snapshot import (
-    SnapshotError,
     VERSIONED_DIR,
+    SnapshotError,
     read_snapshot,
     snapshot_root,
     verify_snapshot,
