@@ -30,13 +30,32 @@ def test_valida_con_velas_sinteticas(velas):
 def test_siete_parametros_libres(velas, monkeypatch):
     monkeypatch.setattr(admision, "_senales", lambda h, c, v: pd.DataFrame({"entry": 0}, index=v.index))
     grilla = {f"p{i}": [1, 2] for i in range(7)}
-    monkeypatch.setattr(type(H), "combinaciones", lambda self: [{}])
-    ok, motivos = admitir(replace(H, parametros=grilla), velas)
+    monkeypatch.setattr(admision.Pierna, "combinaciones", lambda self: [{}])
+    ok, motivos = admitir(replace(H, piernas=(replace(H.piernas[0], parametros=grilla),)), velas)
     assert not ok and len(motivos) == 1 and "7" in motivos[0] and "6" in motivos[0]
 
 
+def test_dos_piernas_cuatro_parametros_libres_corta(velas, monkeypatch):
+    monkeypatch.setattr(admision, "_senales", lambda h, c, v: pd.DataFrame({"entry": 0}, index=v.index))
+    monkeypatch.setattr(admision.Pierna, "combinaciones", lambda self: [{}])
+    p1 = replace(H.piernas[0], parametros={f"p{i}": [1, 2] for i in range(4)})
+    p2 = replace(H.piernas[0], parametros={f"q{i}": [1, 2] for i in range(4)})
+    h2 = replace(H, piernas=(p1, p2))
+    ok, motivos = admitir(h2, velas)
+    assert not ok
+    assert any("8 parámetros libres" in m for m in motivos)
+
+
+def test_clase_no_registrada(velas):
+    p_invalida = replace(H.piernas[0], clase="no-existe")
+    h = replace(H, piernas=(p_invalida,))
+    ok, motivos = admitir(h, velas)
+    assert not ok
+    assert any("clase no registrada" in m for m in motivos)
+
+
 def test_justificacion_corta_y_activo_ajeno_juntos(velas):
-    ok, motivos = admitir(replace(H, justificacion="corta", activos=("AAPL",)), velas)
+    ok, motivos = admitir(replace(H, justificacion="corta", piernas=(replace(H.piernas[0], activos=("AAPL",)),)), velas)
     assert not ok and len(motivos) == 2
     assert "justificación" in motivos[0] and "AAPL" in motivos[1]
 
