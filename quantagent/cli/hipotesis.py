@@ -13,7 +13,7 @@ from quantagent.fabrica.candado import CandadoError, abrir
 from quantagent.fabrica.estado import registrar_estado
 from quantagent.fabrica.filtro import filtrar_activo, parametros_elegidos, veredicto_etapa1
 from quantagent.fabrica.hipotesis import cargar_hipotesis
-from quantagent.fabrica.validacion import validar_etapa2, validar_etapa3
+from quantagent.fabrica.validacion import alarma_filtro_motor, validar_etapa2, validar_etapa3
 from quantagent.settings import COSTOS_PERFILES
 
 from .sweep import registrar_intento
@@ -113,6 +113,10 @@ def correr_command(archivo, snapshot_name, carpeta):
             if veredicto == "PASA":
                 activos = ", ".join(f["activo"] for f in filas if f["v30"] == "PASA")
                 motivo = f"pasan V30: {activos}; control coincide en {len(filas)} de {len(filas)}"
+                alarma, activos = alarma_filtro_motor(resultados, filas)
+                if alarma:
+                    veredicto = "ALARMA"
+                    motivo = "filtro optimista en " + ", ".join(activos)
             registrar_estado(h.id, etapa, veredicto, motivo)
             click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
             if veredicto == "PASA":
@@ -131,4 +135,4 @@ def correr_command(archivo, snapshot_name, carpeta):
                 registrar_estado(h.id, etapa, veredicto, motivo)
                 click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
     click.echo(f"Llegó a la etapa {etapa}: {veredicto} ({motivo})")
-    raise click.exceptions.Exit(int(veredicto == "CORTA"))
+    raise click.exceptions.Exit(int(veredicto != "PASA"))
