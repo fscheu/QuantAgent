@@ -104,3 +104,29 @@ Quedan para M4 (paper con Alpaca), porque la fábrica no los necesita: los de da
 1. Aprobar este plan, con cambios o sin cambios.
 2. La numeración de hitos: fábrica = M3 y Alpaca = M4 (recomendado) | otra.
 3. El motor del filtro (documento de decisión), o esperar a los números de L8 (recomendado).
+
+## Cambio de alcance del 2026-10-17: cartera de primas
+
+Fede decidió, a partir de [`2026-10-17-DC-cartera-de-primas.md`](../04_decisions/2026-10-17-DC-cartera-de-primas.md) (PR #252), dejar de buscar estrategias que ganen activo por activo y probar **carteras de primas de riesgo** documentadas. Este apartado reemplaza el punto de control de M3 y los lotes L12 en adelante. Lo escrito arriba para L8 a L11 queda como registro.
+
+**Punto de control de M3 (nuevo).** La primera cartera de primas, tendencia y momentum sobre unos 30 ETFs que cotizaban en 2007, tiene veredicto de la etapa 3 con informe, y el catálogo de primas aplicables con ETFs está corrido. Ya no son "50 hipótesis": con D1 cada intento sube la vara del Sharpe deflactado para todas, así que conviene probar pocas y con fundamento. Encontrar una ganadora sigue sin ser condición.
+
+**El embudo con carteras.**
+
+| Etapa | Cambia | No cambia |
+|---|---|---|
+| 0. Admisión | Una hipótesis es una cartera de piernas (clase, parámetros, universo con cita). Máximo 6 parámetros libres sumando las piernas | Truncamiento, justificación, fuente |
+| 1. Filtro | Se combinan los retornos fuera de muestra de las piernas con pesos por igual riesgo. Corta si el Sharpe de la cartera es < 0,10 o si hay menos de 30 trades en total | Walk-forward 2007–2018 con `vectorbt` |
+| 2. Validación | V30 y la alarma se aplican a la curva de la cartera | El control contra `backtesting.py` sigue por pierna y activo: todas las celdas tienen que coincidir |
+| 3. Prueba | PASA si la cartera cumple V30 y su DSR es ≥ 0,95 | Candado por id, 2019–2022 una sola vez |
+| 4. Reserva | — | 2023 en adelante, solo finalistas |
+
+**Decisión pendiente D7: cómo cuenta una cartera en `intentos.csv`.** La recomendación del PM es una fila por cartera y etapa (activo `cartera`), con el Sharpe de la cartera a tasa 0. Las celdas por activo no se registran como intentos, porque no son selecciones aparte. Las 86 filas existentes siguen contando en N, que es lo conservador. La alternativa es seguir registrando cada celda: N sube unas 30 veces por cartera y el DSR se vuelve casi inalcanzable, aunque las celdas no sean apuestas independientes. Se decide antes de C05b.
+
+**Lotes.**
+
+- **L12 · `lote/cartera`.** Punto de control: `backtest hipotesis correr` da veredicto a la cartera tendencia + momentum sobre el universo amplio. Tickets C01 a C10 (`QuantAgent-d4cq.37`, `.46` a `.55`): Sharpe a tasa 0, YAML de cartera, universo amplio, pesos por igual riesgo, etapas 1 a 3 de cartera, informe, primera cartera y punto de control.
+- **L13 · `lote/catalogo-de-primas`.** Catálogo de primas aplicables con ETFs (tendencia, momentum, momentum entre activos, carry de bonos por pendiente, baja volatilidad, estacionalidad documentada), cada una con su universo y su cita. El crítico rechaza duplicadas. El LLM pasa de "generador de 20 hipótesis" a investigador: propone primas con cita y universo, y el crítico y Fede las filtran. Tickets `d4cq.39` a `.44`, que se reescriben antes de lanzar.
+- **L14 · `lote/capa-macro`.** FRED/ALFRED punto en el tiempo, régimen medido en el mercado (`QuantAgent-ljoj`, `d4cq.38`) y la primera regla macro como hipótesis aparte, aceptada solo si mejora el DSR de la cartera núcleo.
+
+**Hitos.** M3 cierra con L13. M4 (paper con Alpaca) arranca con la cartera que pase la etapa 3 y la reserva, y puede correr en paralelo con L14: la capa macro y una capa de noticias con LLM solo se pueden evaluar hacia adelante, y el paper es justamente eso.

@@ -398,7 +398,9 @@ Lotes (definidos por el PM el 2026-10-06; cada uno se abre cuando Fede mergea el
 | L9 | `lote/hipotesis` | F09.4, F03b.3–5, H01–H07 | Dos hipótesis escritas como archivo YAML corren de punta a punta en la etapa 1 (`backtest hipotesis filtrar`), con admisión, intentos por hipótesis y candado | ninguna prevista: umbrales provisorios decididos por Fede el 2026-10-15 (máx. 6 parámetros libres; corta con Sharpe fuera de muestra < 0,10 en más de 8 de 12 activos) |
 | L10 | `lote/embudo` | E01–E09 | `backtest hipotesis correr` lleva una hipótesis por las etapas 0 a 3 y se detiene en la primera que corta, con estado en `hipotesis.csv`, control contra `backtesting.py` en la etapa 2 y Sharpe deflactado contra el total de intentos en la 3 | umbrales de la etapa 1 decididos por Fede el 2026-10-16 (más de 2/3 de los activos bajo 0,10; menos de 30 trades cuenta como bajo; Sharpe vacío cuenta como bajo); etapa 3 "al menos un activo pasa" y OK para abrir la prueba de las dos hipótesis de L9 (E09) |
 | L11 | `lote/informe-y-tanda` | I01–I10 | `backtest hipotesis tanda hipotesis/` procesa la carpeta entera sobre datos reales y deja un informe HTML por hipótesis y un resumen; la alarma filtro vs motor frena antes de abrir la prueba, un error deja estado y una hipótesis con la prueba ya abierta no suma intentos | decididas por Fede el 2026-10-16: regla de la alarma de I01 (filtro ≥ 0,10 y motor ≤ 0 en al menos la mitad) y punto de control con las 4 hipótesis disponibles en vez de 10 (el catálogo es de L12); falta el OK para abrir la prueba de las que pasen (I10) |
-| L12 | `lote/generador` | G01–G08 | `backtest hipotesis proponer` pide al LLM 20 hipótesis sobre el catálogo semilla de 30, el crítico rechaza duplicadas y la tanda las procesa sobre datos reales; la etapa 1 cuenta trades sumando activos y `intentos.csv` guarda Sharpe a tasa 0 en todas las etapas | decididas por Fede el 2026-10-17: trades sumando los activos (G01) y Sharpe único a tasa 0 (G02); falta el OK para abrir la prueba de las que pasen la etapa 2 (G08) |
+| L12 | `lote/cartera` | C01–C10 | `backtest hipotesis correr` da veredicto a la cartera tendencia + momentum sobre unos 30 ETFs que cotizaban en 2007, con pesos por igual riesgo, control por celda contra `backtesting.py` y DSR de la cartera | decididas por Fede el 2026-10-17: cartera de primas (DC `2026-10-17-DC-cartera-de-primas`, D1–D6) y Sharpe a tasa 0 (C01); pendiente D7 (cómo cuenta una cartera en `intentos.csv`, antes de C05b) y el OK para abrir la prueba en C10 |
+| L13 | `lote/catalogo-de-primas` | G04a, G04b, G05, G06a, G06b, G07 (se reescriben) | Catálogo de primas aplicables con ETFs corrido como carteras; el LLM propone primas con cita y universo, el crítico rechaza duplicadas | propuesto; se arma al mergear L12 |
+| L14 | `lote/capa-macro` | G03 y tickets nuevos | FRED/ALFRED punto en el tiempo y régimen de mercado como hipótesis aparte, aceptada solo si mejora el DSR del núcleo | propuesto; puede ir en paralelo con M4 |
 
 T13 se adelantó dentro de L1: es un documento de decisión que no depende del resto, así la respuesta de Fede
 llega mientras el lote avanza. T20 pasó a L1 porque congela los números que ese lote audita.
@@ -598,16 +600,24 @@ Los primeros 5 son los más fáciles de revisar.
 | I08b | `QuantAgent-d4cq.35` | `tanda` saltea hipótesis con veredicto final; depende de I08, agregado por el PM el 2026-10-17 al revisar #248 | CORTA/ALARMA/PASA etapa 3 se saltean; ERROR y sin estado corren | leer | L11 |
 | I09 | `QuantAgent-d4cq.33` | Hipótesis máximo de 52 semanas y momentum 12m | La admisión acepta las dos | leer | L11 |
 | I10 | `QuantAgent-d4cq.34` | Punto de control L11: tanda de `hipotesis/` (VM); depende de I01–I09 | Informe por hipótesis; rsi y sma sin intentos nuevos | probar | L11 |
-| G01 | `QuantAgent-d4cq.36` | Etapa 1: trades sumando activos; el activo es bajo solo por Sharpe (decisión de Fede) | 12×5 trades pasa, 12×2 corta | leer | L12 |
-| G02 | `QuantAgent-d4cq.37` | `sharpe_base` en `intentos.csv`; etapas 2 y 3 a tasa 0; varianza del DSR sobre filas tasa 0 (decisión de Fede) | Filas viejas intactas; N = total | leer | L12 |
-| G03 | `QuantAgent-d4cq.38` | Hipótesis RSI con régimen de volatilidad (familia ljoj) | Entra solo con volatilidad alta; no mira el futuro | leer | L12 |
-| G04a | `QuantAgent-d4cq.39` | Catálogo semilla: 15 de momentum, reversión y tendencia (nube) | Ids únicos, fuente verificable | leer | L12 |
-| G04b | `QuantAgent-d4cq.40` | Catálogo semilla: 15 de estacionalidad, volatilidad y régimen (nube); depende de G04a | Ídem; 30 en total | leer | L12 |
-| G05 | `QuantAgent-d4cq.41` | Crítico determinista y familia en `hipotesis.csv`; depende de G03 | Duplicada corta en etapa 0 sin intentos | leer | L12 |
-| G06a | `QuantAgent-d4cq.42` | Generador: pedido y lectura de respuesta, sin LLM | 3 válidos de 5 bloques; no pisa | leer | L12 |
-| G06b | `QuantAgent-d4cq.43` | `backtest hipotesis proponer` vía `QUANTAGENT_LLM_CMD` (VM); depende de G06a | Comando falso: 2 archivos y log | leer | L12 |
-| G07 | `QuantAgent-d4cq.44` | Resumen cuenta causas por hipótesis; ERROR con la última línea | 3 activos de una hipótesis cuentan 1 | leer | L12 |
-| G08 | `QuantAgent-d4cq.45` | Punto de control L12 (VM, lo corre el PM); depende de G01–G07 | 20 propuestas, ≥ 15 admitidas, informes y resumen | probar | L12 |
+| C01 | `QuantAgent-d4cq.37` | `sharpe_base` en `intentos.csv`; etapas 2 y 3 a tasa 0; varianza del DSR sobre filas tasa 0 (decisión de Fede) | Filas viejas intactas; N = total | leer | L12 |
+| C02 | `QuantAgent-d4cq.46` | YAML de cartera: piernas con clase, parámetros, activos y universo; formato viejo = 1 pierna | 2 piernas cargan; 8 parámetros libres cortan | leer | L12 |
+| C03 | `QuantAgent-d4cq.47` | Universo amplio: ETFs con primera vela ≤ 2007-01-03 (VM; el PM baja el snapshot antes) | `snapshot verify` del amplio pasa | leer | L12 |
+| C04 | `QuantAgent-d4cq.48` | Pesos por igual riesgo (1/σ de 60 sesiones, mensual) y retorno de cartera | 1% y 2% → 2/3 y 1/3; no mira el futuro | leer | L12 |
+| C05a | `QuantAgent-d4cq.49` | `filtrar_activo` devuelve los retornos fuera de muestra | Sharpe desde la serie = `sharpe_tasa_0` | leer | L12 |
+| C05b | `QuantAgent-d4cq.50` | Etapa 1 con veredicto de cartera; depende de C01, C02, C04, C05a y de D7 | 12 × 5 trades pasa; 24 en total corta | leer | L12 |
+| C06 | `QuantAgent-d4cq.51` | Etapa 2: control por celda, V30 y alarma de cartera (VM); depende de C05b | Una celda que no coincide corta | leer | L12 |
+| C07 | `QuantAgent-d4cq.52` | Etapa 3: V30 y DSR de cartera (VM); depende de C06 | DSR 0,96 pasa, 0,94 corta | leer | L12 |
+| C08 | `QuantAgent-d4cq.53` | Informe y resumen de cartera; causas por hipótesis; depende de C07 | Universos y fila de cartera; sin precios | leer | L12 |
+| C09 | `QuantAgent-d4cq.54` | Primera cartera: momentum-12m + tendencia de Faber sobre el universo amplio; depende de C02, C03 | Admisión acepta; 0 parámetros libres | leer | L12 |
+| C10 | `QuantAgent-d4cq.55` | Punto de control L12 (VM, lo corre el PM; etapa 3 con OK de Fede) | Veredicto e informe de la cartera | probar | L12 |
+| G03 | `QuantAgent-d4cq.38` | Hipótesis RSI con régimen de volatilidad (familia ljoj) | Entra solo con volatilidad alta; no mira el futuro | leer | L14 |
+| G04a | `QuantAgent-d4cq.39` | Catálogo semilla: 15 de momentum, reversión y tendencia (nube) | Ids únicos, fuente verificable | leer | L13 |
+| G04b | `QuantAgent-d4cq.40` | Catálogo semilla: 15 de estacionalidad, volatilidad y régimen (nube); depende de G04a | Ídem; 30 en total | leer | L13 |
+| G05 | `QuantAgent-d4cq.41` | Crítico determinista y familia en `hipotesis.csv`; depende de G03 | Duplicada corta en etapa 0 sin intentos | leer | L13 |
+| G06a | `QuantAgent-d4cq.42` | Generador: pedido y lectura de respuesta, sin LLM | 3 válidos de 5 bloques; no pisa | leer | L13 |
+| G06b | `QuantAgent-d4cq.43` | `backtest hipotesis proponer` vía `QUANTAGENT_LLM_CMD` (VM); depende de G06a | Comando falso: 2 archivos y log | leer | L13 |
+| G07 | `QuantAgent-d4cq.44` | Resumen cuenta causas por hipótesis; ERROR con la última línea | 3 activos de una hipótesis cuentan 1 | leer | L13 |
 
 V08b y V23d se agregaron el 2026-10-12 al revisar V23c (#127): la corrida del agente leyó el tramo de prueba 2019–2022 porque el CLI solo protege la reserva, y con llenado en la apertura siguiente el adaptador cancela órdenes al 100% del capital (21 de 48 celdas). Van antes de V24 para que el markdown salga con la sensibilidad corregida.
 
