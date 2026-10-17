@@ -401,6 +401,7 @@ Lotes (definidos por el PM el 2026-10-06; cada uno se abre cuando Fede mergea el
 | L12 | `lote/cartera` | C01–C10 | `backtest hipotesis correr` da veredicto a la cartera tendencia + momentum sobre unos 30 ETFs que cotizaban en 2007, con pesos por igual riesgo, control por celda contra `backtesting.py` y DSR de la cartera | decididas por Fede el 2026-10-17: cartera de primas (DC `2026-10-17-DC-cartera-de-primas`, D1–D6) y Sharpe a tasa 0 (C01) y D7 (una fila por cartera y etapa en `intentos.csv`); pendiente el OK para abrir la prueba en C10 |
 | L13 | `lote/catalogo-de-primas` | G04a, G04b, G05, G06a, G06b, G07 (se reescriben) | Catálogo de primas aplicables con ETFs corrido como carteras; el LLM propone primas con cita y universo, el crítico rechaza duplicadas | propuesto; se arma al mergear L12 |
 | L14 | `lote/capa-macro` | G03 y tickets nuevos | FRED/ALFRED punto en el tiempo y régimen de mercado como hipótesis aparte, aceptada solo si mejora el DSR del núcleo | propuesto; puede ir en paralelo con M4 |
+| LB1 | `lote/datos-externos` (carril B, label `carril-b`, PR #257) | B-F1–B-F4, B-T1, B-T2, B-T9, B-T8 | Snapshot macro `macro-2026-10` punto en el tiempo (10 series FRED/ALFRED) y `AlpacaSource` bajando SPY con claves reales | OK de Fede el 2026-10-17 para paralelizar la capa de datos de M4 y L14 (nube y notebook); fuera: broker y ejecución en paper hasta cerrar L12. Necesita `FRED_API_KEY` y claves de Alpaca paper en `~/secrets` (las pone Fede) |
 
 T13 se adelantó dentro de L1: es un documento de decisión que no depende del resto, así la respuesta de Fede
 llega mientras el lote avanza. T20 pasó a L1 porque congela los números que ese lote audita.
@@ -618,6 +619,14 @@ Los primeros 5 son los más fáciles de revisar.
 | G06a | `QuantAgent-d4cq.42` | Generador: pedido y lectura de respuesta, sin LLM | 3 válidos de 5 bloques; no pisa | leer | L13 |
 | G06b | `QuantAgent-d4cq.43` | `backtest hipotesis proponer` vía `QUANTAGENT_LLM_CMD` (VM); depende de G06a | Comando falso: 2 archivos y log | leer | L13 |
 | G07 | `QuantAgent-d4cq.44` | Resumen cuenta causas por hipótesis; ERROR con la última línea | 3 activos de una hipótesis cuentan 1 | leer | L13 |
+| B-F1 | `QuantAgent-pdxx` | Cliente FRED/ALFRED con todas las versiones (nube) | 2 páginas; la clave nunca aparece | leer | LB1 |
+| B-F2 | `QuantAgent-vj37` | Snapshot macro congelado con manifiesto (nube); depende de B-F1 | `verify` detecta un parquet alterado | leer | LB1 |
+| B-F3 | `QuantAgent-okp9` | Lectura punto en el tiempo (nube); depende de B-F2 | Revisión de mayo no se ve en abril | leer | LB1 |
+| B-F4 | `QuantAgent-2oaf` | Primer snapshot `macro-2026-10` (VM o notebook; lo baja el PM con la clave de Fede) | `verify` pasa; CPI con varias versiones | leer | LB1 |
+| B-T1 | `QuantAgent-qix2` | `CandleSource` y `YahooSource` en UTC (nube) | Hora de Nueva York → UTC | leer | LB1 |
+| B-T2 | `QuantAgent-br4h` | `DataProvider` delega en la fuente (nube); depende de B-T1 | Pide solo el hueco | leer | LB1 |
+| B-T9 | `QuantAgent-jpms` | `AlpacaSource` solo datos (nube) | 2 páginas en UTC; solo host de datos | leer | LB1 |
+| B-T8 | `QuantAgent-v38v` | Medición de Alpaca con claves reales (notebook o VM); depende de B-T9 | Cifras o "sin claves" | leer | LB1 |
 
 V08b y V23d se agregaron el 2026-10-12 al revisar V23c (#127): la corrida del agente leyó el tramo de prueba 2019–2022 porque el CLI solo protege la reserva, y con llenado en la apertura siguiente el adaptador cancela órdenes al 100% del capital (21 de 48 celdas). Van antes de V24 para que el markdown salga con la sensibilidad corregida.
 
