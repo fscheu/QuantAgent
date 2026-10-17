@@ -270,4 +270,5 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-17 #241 QuantAgent-d4cq.30 I06 (nube) informe HTML: merge tras 2 cambios (glosario; Sharpe registrado).
 2026-10-17 #248 QuantAgent-d4cq.32 I08 tanda: merge. Tanda real aislada: sma repite y suma 12 intentos → nuevo I08b (d4cq.35) antes de I10.
 2026-10-17 #249 QuantAgent-d4cq.35 I08b tanda saltea veredictos finales: merge. Queda I10 (espera OK de Fede).
+2026-10-17 #250 QuantAgent-d4cq.34 I10 tanda real (corrida por el PM con OK de Fede): merge tras 1 cambio (conteos Sharpe 9 y 7 de 12). Las 2 nuevas cortan en etapa 1 por la regla de 30 trades → decisión de Fede para L12. L11 completo.
 ```
