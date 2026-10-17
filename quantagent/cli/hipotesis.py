@@ -106,7 +106,11 @@ def correr_command(archivo, snapshot_name, carpeta):
         registrar_estado(h.id, etapa, veredicto, motivo)
         click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
         if veredicto == "PASA":
-            veredicto, filas = validar_etapa2(h, snapshot_name, parametros, carpeta)
+            try:
+                veredicto, filas = validar_etapa2(h, snapshot_name, parametros, carpeta)
+            except Exception as exc:
+                registrar_estado(h.id, "2", "ERROR", f"{type(exc).__name__}: {exc}"[:200])
+                raise
             etapa = "2"
             motivos = [m for fila in filas for m in fila["motivos"]]
             motivo = "; ".join(motivos) if motivos else "control coincide y al menos un activo pasa V30"
@@ -126,7 +130,11 @@ def correr_command(archivo, snapshot_name, carpeta):
                 except CandadoError as exc:
                     veredicto, motivo = "CORTA", str(exc)
                 else:
-                    veredicto, filas = validar_etapa3(h, snapshot_name, parametros, Path(carpeta) / "etapa3")
+                    try:
+                        veredicto, filas = validar_etapa3(h, snapshot_name, parametros, Path(carpeta) / "etapa3")
+                    except Exception as exc:
+                        registrar_estado(h.id, "3", "ERROR", f"{type(exc).__name__}: {exc}"[:200])
+                        raise
                     click.echo(tabulate([[f["activo"], f["v30"], f["dsr"]] for f in filas],
                                         headers=["activo", "V30", "DSR"], tablefmt="github"))
                     motivo = "; ".join(m for f in filas for m in f["motivos"])
