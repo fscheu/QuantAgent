@@ -100,7 +100,7 @@ def grilla_vecinos(strategy: str) -> tuple[list[dict[str, Any]], list[str]]:
 
 CAMPOS_INTENTOS = [
     "fecha_utc", "estrategia", "activo", "snapshot", "desde", "hasta", "costos",
-    "tamano", "params", "trades", "pnl", "sharpe", "hipotesis", "etapa",
+    "tamano", "params", "trades", "pnl", "sharpe", "hipotesis", "etapa", "sharpe_base",
 ]
 
 
@@ -125,6 +125,7 @@ def registrar_intento(
     row: dict[str, Any],
     hipotesis: Optional[str] = None,
     etapa: Optional[str] = None,
+    sharpe_base: Optional[str] = "tasa_libre",
 ) -> None:
     """Agrega una corrida al registro, conservando sus valores.
 
@@ -148,6 +149,7 @@ def registrar_intento(
         "sharpe": row["sharpe"],
         "hipotesis": hipotesis or "",
         "etapa": etapa or "",
+        "sharpe_base": sharpe_base or "",
     }
     previas = []
     if intentos_path.exists():
@@ -324,7 +326,7 @@ def sweep_command(
         rows.append(row)
         if vecinos_20:
             row["vecino"] = vecinos[len(rows) - 1]
-        registrar_intento(strategy_name, sym, snapshot_name, costos, tamano_posicion, {**combo, "llenado": llenado}, row)
+        registrar_intento(strategy_name, sym, snapshot_name, costos, tamano_posicion, {**combo, "llenado": llenado}, row, sharpe_base="tasa_libre")
 
     with open(out_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)

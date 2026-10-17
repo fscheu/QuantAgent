@@ -1,6 +1,6 @@
 # Cartera de primas de riesgo: qué se prueba, a qué nivel y con qué datos
 
-Fecha: 2026-10-17. Estado: **propuesta, espera decisión de Fede**. No cambia código.
+Fecha: 2026-10-17. Estado: **decidido por Fede el 2026-10-17** (ver al final). No cambia código.
 Origen: conversación de Fede con el PM (fork de la sesión PM) al cerrar L11 (PR #239).
 Relacionado: [`QuantAgent-ljoj`](../02_planning/QuantAgent-ljoj-PL-regimenes-y-macro.md) (régimen y macro),
 [retrospectiva y "oficina de inversión"](../02_planning/2026-09-16_retrospectiva_autodev_y_plan_oficina_inversion.md)
@@ -115,4 +115,6 @@ FRED/ALFRED y la capa macro quedan para el lote siguiente.
 
 ## Decisiones de Fede
 
-Pendientes.
+2026-10-17: Fede aceptó las recomendaciones del PM en D1 a D6 (opción A donde había opciones) y pidió replanificar L12 con ellas (PR #253).
+
+**D7 (agregada en la revisión del PM, decidida por Fede el 2026-10-17).** Una cartera cuenta en `intentos.csv` como **una fila por cartera y etapa**, con `activo = cartera` y el Sharpe de la cartera a tasa 0. Las celdas por pierna y activo no se registran como intentos, porque no son selecciones aparte. Las filas existentes siguen contando en N.

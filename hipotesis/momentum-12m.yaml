@@ -10,4 +10,5 @@ clase: momentum-12m
 parametros:
   lookback: [189, 252]
 activos: [SPY, IWM, EFA, EEM, TLT, SHY, GLD, DBC, XLK, XLE, XLF, XLU]
+universo: Universo M2 de 12 ETFs liquidos multiactivo para probar momentum absoluto en ETFs.
 timeframe: 1d

@@ -43,6 +43,9 @@ def tanda_command(ctx, carpeta_yaml, snapshot_name, carpeta):
         except Exception:
             (destino / f"{archivo.stem}.log").write_text(traceback.format_exc(), encoding="utf-8")
             continue
+        if len(h.piernas) > 1:
+            click.echo(f"cartera de {len(h.piernas)} piernas: falta C05")
+            raise click.exceptions.Exit(1)
         salida = destino / h.id
         salida.mkdir(parents=True, exist_ok=True)
         with (salida / "corrida.log").open("w", encoding="utf-8") as log:
@@ -99,7 +102,7 @@ def admitir_hipotesis(archivo, snapshot_name, prueba_unica=False):
         registrar_intento(
             h.clase, h.activos[0], snapshot_name, "etf", 1.0, h.parametros,
             {"desde": "2007-01-01", "hasta": "2018-12-31", "trades": 0, "pnl": "", "sharpe": ""},
-            hipotesis=h.id, etapa="0",
+            hipotesis=h.id, etapa="0", sharpe_base="",
         )
     return h, ok, motivos
 
@@ -122,6 +125,7 @@ def filtrar_hipotesis(h, snapshot_name):
             h.clase, activo, snapshot_name, "etf", 1.0, h.parametros,
             {"desde": "2007-01-01", "hasta": "2018-12-31", "trades": r["trades"],
              "pnl": "", "sharpe": r["sharpe_tasa_0"]}, hipotesis=h.id, etapa="1",
+            sharpe_base="tasa_0",
         )
     veredicto, bajos = veredicto_etapa1(resultados)
     return resultados, parametros, veredicto, bajos
@@ -132,6 +136,10 @@ def filtrar_hipotesis(h, snapshot_name):
 @click.option("--snapshot", "snapshot_name", required=True)
 @click.option("--out", type=click.Path(dir_okay=False), help="CSV de resultados y parámetros por activo.")
 def filtrar_command(archivo, snapshot_name, out):
+    h = cargar_hipotesis(archivo)
+    if len(h.piernas) > 1:
+        click.echo(f"cartera de {len(h.piernas)} piernas: falta C05")
+        raise click.exceptions.Exit(1)
     h, ok, motivos = admitir_hipotesis(archivo, snapshot_name)
     if not ok:
         for motivo in motivos:
@@ -154,6 +162,10 @@ def filtrar_command(archivo, snapshot_name, out):
 @click.option("--snapshot", "snapshot_name", required=True)
 @click.option("--carpeta", type=click.Path(file_okay=False), required=True)
 def correr_command(archivo, snapshot_name, carpeta):
+    h = cargar_hipotesis(archivo)
+    if len(h.piernas) > 1:
+        click.echo(f"cartera de {len(h.piernas)} piernas: falta C05")
+        raise click.exceptions.Exit(1)
     h, ok, motivos = admitir_hipotesis(archivo, snapshot_name, True)
     etapa, veredicto = "0", "PASA" if ok else "CORTA"
     motivo = "; ".join(motivos) if motivos else "admisión aceptada"

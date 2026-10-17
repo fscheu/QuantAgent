@@ -11,4 +11,5 @@ parametros:
   rsi_period: [7, 14]
   oversold_threshold: [30.0]
 activos: [SPY, IWM, EFA, EEM, TLT, SHY, GLD, DBC, XLK, XLE, XLF, XLU]
+universo: Universo M2 de 12 ETFs liquidos multiactivo para probar reversion en sobreventa.
 timeframe: 1d

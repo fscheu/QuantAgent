@@ -34,6 +34,7 @@ from quantagent.strategy.registry import STRATEGY_REGISTRY, build_strategy, cli_
 from quantagent.trading.position_sizer import PositionSizer
 
 from . import utils
+from .data import data_group
 from .hipotesis import hipotesis_group
 from .sweep import attempts_command, sweep_command
 from .verdict import verdict_command
@@ -1061,4 +1062,5 @@ backtest_group.add_command(attempts_command, name="attempts")
 backtest_group.add_command(walkforward_command, name="walkforward")
 backtest_group.add_command(verdict_command)
 backtest_group.add_command(hipotesis_group)
+backtest_group.add_command(data_group, name="data")
 
