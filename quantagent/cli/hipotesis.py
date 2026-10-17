@@ -2,6 +2,7 @@
 
 import csv
 import json
+from datetime import timezone
 from pathlib import Path
 
 import click
@@ -10,7 +11,7 @@ from tabulate import tabulate
 from quantagent.data.snapshot import SnapshotError, read_snapshot
 from quantagent.fabrica.admision import admitir
 from quantagent.fabrica.candado import CandadoError, abrir, fecha_apertura
-from quantagent.fabrica.estado import registrar_estado
+from quantagent.fabrica.estado import registrar_estado, resumen_tanda
 from quantagent.fabrica.filtro import filtrar_activo, parametros_elegidos, veredicto_etapa1
 from quantagent.fabrica.hipotesis import cargar_hipotesis
 from quantagent.fabrica.validacion import alarma_filtro_motor, validar_etapa2, validar_etapa3
@@ -22,6 +23,19 @@ from .sweep import registrar_intento
 @click.group("hipotesis", help="Evaluar hipótesis de la fábrica de estrategias.")
 def hipotesis_group():
     pass
+
+
+@hipotesis_group.command("resumen", help="Resumir los últimos estados y los intentos de la tanda.")
+@click.option("--desde", type=click.DateTime(["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S%z"]),
+              help="Inicio UTC inclusivo (fecha o fecha y hora con zona).")
+@click.option("--out", type=click.Path(dir_okay=False))
+def resumen_command(desde, out):
+    if desde is not None:
+        desde = desde.replace(tzinfo=timezone.utc) if desde.tzinfo is None else desde
+    texto = resumen_tanda(desde)
+    if out:
+        Path(out).write_text(texto)
+    click.echo(texto, nl=False)
 
 
 def admitir_hipotesis(archivo, snapshot_name, prueba_unica=False):
