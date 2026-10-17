@@ -1,3 +1,4 @@
+import json
 from dataclasses import replace
 from pathlib import Path
 
@@ -66,3 +67,16 @@ def test_estrategia_que_mira_el_futuro(velas, monkeypatch):
     )
     ok, motivos = admitir(H, velas)
     assert not ok and all("truncamiento" in m for m in motivos)
+
+
+def test_universo_coincide_con_el_manifiesto_amplio():
+    manifiesto = Path(__file__).parent / "fixtures" / "snapshots" / "etf-1d-2026-10-amplio.json"
+    assert admision.UNIVERSO_AMPLIO == frozenset(json.loads(manifiesto.read_text())["symbols"])
+
+
+def test_simbolo_del_universo_ampliado_se_admite_y_uno_ajeno_sigue_rechazado(velas):
+    # XLV está entre los 29 del manifiesto pero no estaba en los 12 de M2; AAPL no está en ninguno.
+    ok, motivos = admitir(replace(H, piernas=(replace(H.piernas[0], activos=("SPY", "XLV")),)), velas)
+    assert (ok, motivos) == (True, [])
+    ok, motivos = admitir(replace(H, piernas=(replace(H.piernas[0], activos=("SPY", "XLV", "AAPL")),)), velas)
+    assert not ok and len(motivos) == 1 and "AAPL" in motivos[0] and "XLV" not in motivos[0]

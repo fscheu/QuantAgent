@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from quantagent.fabrica import admision
 from quantagent.fabrica.admision import _senales, admitir
 from quantagent.fabrica.hipotesis import cargar_hipotesis
 
@@ -40,12 +39,8 @@ def test_estructura_de_la_cartera():
     assert "doi.org" in h.fuente
 
 
-def test_admision_acepta_la_cartera(velas, monkeypatch):
+def test_admision_acepta_la_cartera(velas):
     h = cargar_hipotesis(YAML)
-    # admision.UNIVERSO_M2 sigue siendo el de 12 ETFs y rechaza los otros 17 del snapshot amplio.
-    # Se lo reemplaza por los símbolos del snapshot para validar el resto de las reglas; quitar el
-    # monkeypatch cuando el universo de la admisión se amplíe (fuera del alcance de d4cq.54).
-    monkeypatch.setattr(admision, "UNIVERSO_M2", frozenset(json.loads(SNAPSHOT.read_text())["symbols"]))
     assert admitir(h, velas) == (True, [])
 
 

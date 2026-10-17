@@ -11,7 +11,16 @@ from quantagent.strategy.registry import STRATEGY_REGISTRY, build_strategy
 
 MAX_PARAMETROS_LIBRES = 6  # provisorio, decidido por Fede el 2026-10-15
 MIN_JUSTIFICACION = 40
-UNIVERSO_M2 = frozenset({"SPY", "IWM", "EFA", "EEM", "TLT", "SHY", "GLD", "DBC", "XLE", "XLF", "XLK", "XLU"})
+# Universo amplio de L12 (QuantAgent-d4cq.46/.47): los 29 ETFs del manifiesto
+# tests/fixtures/snapshots/etf-1d-2026-10-amplio.json. Se eligió el manifiesto solo y no su unión con los 12
+# de M2 porque los contiene a todos. Está copiado acá y no leído del archivo porque el manifiesto es un
+# fixture de tests; test_admision.py verifica que no se desincronicen.
+UNIVERSO_AMPLIO = frozenset(
+    {
+        "AGG", "DBC", "EEM", "EFA", "EWJ", "EWZ", "FXE", "FXI", "GLD", "IEF", "IWM", "LQD", "QQQ", "SHY", "SLV",
+        "SPY", "TIP", "TLT", "USO", "VNQ", "XLB", "XLE", "XLF", "XLI", "XLK", "XLP", "XLU", "XLV", "XLY",
+    }
+)
 
 
 def _senales(p: Pierna | Hipotesis, combinacion: dict, velas: pd.DataFrame) -> pd.DataFrame:
@@ -32,9 +41,9 @@ def admitir(h: Hipotesis, velas: pd.DataFrame) -> tuple[bool, list[str]]:
     for p in h.piernas:
         if aliases.get(p.clase, p.clase) not in STRATEGY_REGISTRY:
             motivos.append(f"clase no registrada: {p.clase}")
-    ajenos = sorted({a for p in h.piernas for a in p.activos} - UNIVERSO_M2)
+    ajenos = sorted({a for p in h.piernas for a in p.activos} - UNIVERSO_AMPLIO)
     if ajenos:
-        motivos.append(f"activos fuera del universo M2: {', '.join(ajenos)}")
+        motivos.append(f"activos fuera del universo amplio: {', '.join(ajenos)}")
     if "timestamp" in velas.columns:
         velas = velas.set_index(pd.DatetimeIndex(velas["timestamp"]), drop=False)
     cortes = [velas.index[len(velas) // 2], velas.index[(3 * len(velas)) // 4]]
