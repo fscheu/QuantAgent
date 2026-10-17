@@ -40,6 +40,7 @@ Decision documents should include:
 - [QuantAgent-hx0.7-DC-sharpe-annualization.md](./QuantAgent-hx0.7-DC-sharpe-annualization.md) - Sharpe ratio annualization periods for 24/7 fixtures
 - [QuantAgent-u8lf-DC-diagnostico-rsi-gld-apertura-siguiente.md](./QuantAgent-u8lf-DC-diagnostico-rsi-gld-apertura-siguiente.md) - Diagnóstico: rsi/GLD 243 trades al cierre vs 242 en apertura siguiente (V27c)
 - [QuantAgent-yo4s-DC-umbrales-y-llenado.md](./QuantAgent-yo4s-DC-umbrales-y-llenado.md) - Decisión: umbrales del veredicto, llenado, tamaño mínimo y costo de cortos antes de abrir 2019–2022 (V30)
+- [2026-10-17-DC-cartera-de-primas.md](./2026-10-17-DC-cartera-de-primas.md) - Propuesta: carteras de primas de riesgo con universo por estrategia, veredicto de cartera, capa macro y datos (L12)
 
 
 ## Per-Change Decision Documents
