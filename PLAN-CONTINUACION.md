@@ -606,7 +606,8 @@ Los primeros 5 son los más fáciles de revisar.
 | C03 | `QuantAgent-d4cq.47` | Universo amplio: ETFs con primera vela ≤ 2007-01-03 (VM; el PM baja el snapshot antes) | `snapshot verify` del amplio pasa | leer | L12 |
 | C04 | `QuantAgent-d4cq.48` | Pesos por igual riesgo (1/σ de 60 sesiones, mensual) y retorno de cartera (nube) | 1% y 2% → 2/3 y 1/3; no mira el futuro | leer | L12 |
 | C05a | `QuantAgent-d4cq.49` | `filtrar_activo` devuelve los retornos fuera de muestra (nube) | Sharpe desde la serie = `sharpe_tasa_0` | leer | L12 |
-| C05b | `QuantAgent-d4cq.50` | Etapa 1 con veredicto de cartera; depende de C01, C02, C04, C05a y de D7 | 12 × 5 trades pasa; 24 en total corta | leer | L12 |
+| C05b.1 | `QuantAgent-d4cq.50.1` | Cálculo de etapa 1 para cartera (`evaluar_cartera` y veredicto); depende de C01, C02, C04, C05a | 24 trades corta por trades; Sharpe individual coincide | leer | L12 |
+| C05b.2 | `QuantAgent-d4cq.50.2` | Integración de etapa 1 de cartera en CLI y registro D7; depende de C05b.1 | 12 × 5 trades pasa; 2 piernas × 3 activos agrega 1 fila | leer | L12 |
 | C06 | `QuantAgent-d4cq.51` | Etapa 2: control por celda, V30 y alarma de cartera (VM); depende de C05b | Una celda que no coincide corta | leer | L12 |
 | C07 | `QuantAgent-d4cq.52` | Etapa 3: V30 y DSR de cartera (VM); depende de C06 | DSR 0,96 pasa, 0,94 corta | leer | L12 |
 | C08 | `QuantAgent-d4cq.53` | Informe y resumen de cartera; causas por hipótesis; depende de C07 | Universos y fila de cartera; sin precios | leer | L12 |
