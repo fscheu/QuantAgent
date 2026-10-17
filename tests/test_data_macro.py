@@ -1,5 +1,7 @@
 """`data macro create|verify` (vj37). El cliente FRED se reemplaza por uno falso; sin red ni clave."""
 
+import json
+
 import pandas as pd
 import pytest
 from click.testing import CliRunner
@@ -113,3 +115,19 @@ def test_truncar_versiones_posteriores_a_T_no_cambia_la_serie_hasta_T(tmp_path):
     df[df["realtime_start"] <= T].to_parquet(ruta, index=False)
     truncada = serie_punto_en_el_tiempo("m", "UNRATE", dias, base_dir=tmp_path)
     pd.testing.assert_series_equal(completa, truncada)
+
+
+def test_verify_compara_contra_el_manifiesto_versionado(tmp_path):
+    manifiesto = crear_snapshot_macro("m", ["UNRATE", "CPIAUCSL"], ClienteFalso(), base_dir=tmp_path / "datos")
+    versionado = tmp_path / "versionado"
+    versionado.mkdir()
+    (versionado / "m.json").write_text(json.dumps(manifiesto))
+    assert verificar_snapshot_macro("m", base_dir=tmp_path / "datos", versioned_dir=versionado) == manifiesto
+
+    # un snapshot re-bajado (parquet y manifest.json locales coherentes entre sí) pero distinto del versionado
+    versionado_alterado = json.loads((versionado / "m.json").read_text())
+    versionado_alterado["series"]["UNRATE"]["sha256"] = "0" * 64
+    (versionado / "m.json").write_text(json.dumps(versionado_alterado))
+    with pytest.raises(SnapshotError) as exc:
+        verificar_snapshot_macro("m", base_dir=tmp_path / "datos", versioned_dir=versionado)
+    assert "UNRATE" in str(exc.value) and "versionado" in str(exc.value) and "CPIAUCSL" not in str(exc.value)

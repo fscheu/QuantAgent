@@ -13,7 +13,7 @@ from typing import Iterable, Optional, Tuple
 
 import pandas as pd
 
-from quantagent.data.snapshot import MANIFEST_NAME, SnapshotError, _sha256, load_manifest, snapshot_root
+from quantagent.data.snapshot import MANIFEST_NAME, VERSIONED_DIR, SnapshotError, _sha256, load_manifest, snapshot_root
 
 PRIMERA_FECHA = "1776-07-04"
 ULTIMA_FECHA = "9999-12-31"
@@ -54,8 +54,11 @@ def crear_snapshot_macro(nombre: str, series: Iterable[str], cliente, base_dir: 
     return manifiesto
 
 
-def verificar_snapshot_macro(nombre: str, base_dir: Optional[Path] = None) -> dict:
-    """Recalcula el sha256 de cada serie contra `manifest.json`; si alguna no coincide, `SnapshotError` la nombra."""
+def verificar_snapshot_macro(nombre: str, base_dir: Optional[Path] = None, versioned_dir: Optional[Path] = None) -> dict:
+    """Recalcula el sha256 de cada serie contra `manifest.json` y, si existe, contra el manifiesto versionado.
+
+    Si algo no coincide, `SnapshotError` nombra cada serie.
+    """
     manifiesto = load_manifest(nombre, base_dir)
     carpeta = snapshot_root(base_dir) / nombre
     problemas = []
@@ -65,6 +68,13 @@ def verificar_snapshot_macro(nombre: str, base_dir: Optional[Path] = None) -> di
             problemas.append(f"{serie}: falta el archivo {info['file']}")
         elif _sha256(ruta) != info["sha256"]:
             problemas.append(f"{serie}: sha256 distinto del manifiesto")
+
+    versionado = (VERSIONED_DIR if versioned_dir is None else Path(versioned_dir)) / f"{nombre}.json"
+    if versionado.exists():
+        esperado = json.loads(versionado.read_text())["series"]
+        for serie in sorted(set(esperado) | set(manifiesto["series"])):
+            if esperado.get(serie) != manifiesto["series"].get(serie):
+                problemas.append(f"{serie}: no coincide con el manifiesto versionado {versionado.name}")
     if problemas:
         raise SnapshotError("; ".join(problemas))
     return manifiesto
