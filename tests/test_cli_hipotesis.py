@@ -129,7 +129,8 @@ def test_correr_control_real(tmp_path, monkeypatch, cortar):
     ]
 
 
-def test_correr_prueba_real_y_reapertura(tmp_path, monkeypatch):
+@pytest.mark.parametrize("rechazo", [False, True])
+def test_correr_prueba_real_y_reapertura(tmp_path, monkeypatch, rechazo):
     pytest.importorskip("backtesting")
     import subprocess
 
@@ -189,24 +190,25 @@ def test_correr_prueba_real_y_reapertura(tmp_path, monkeypatch):
                                  ("motor/etapa3", "2019-01-01", "2022-12-31")]:
         curva = pd.read_csv(tmp_path / carpeta / "equity/rsi-SPY.csv")
         assert list(pd.to_datetime(curva["date"])) == list(velas.loc[desde:hasta].index)
+    antes = {p: (tmp_path / p).read_bytes() for p in ("intentos.csv", "hipotesis.csv")}
+
+    def filtro_prohibido(*args):
+        pytest.fail("La reapertura no debe ejecutar el filtro")
+
+    monkeypatch.setattr(hipotesis, "filtrar_hipotesis", filtro_prohibido)
+    if rechazo:
+        data["justificacion"] = "corta"
+        archivo.write_text(yaml.safe_dump(data))
     segunda = runner.invoke(backtest_group, args)
-    assert segunda.exit_code == 1 and "ya se abrió" in segunda.output
-    assert comandos == [("2007-01-01", "2018-12-31"), ("2019-01-01", "2022-12-31"),
-                        ("2007-01-01", "2018-12-31")]
+    fecha = next(csv.reader(candado.splitlines()))[2]
+    assert segunda.exit_code == 1
+    assert segunda.output == f"prueba de {data['id']} ya abierta el {fecha}; no se vuelve a correr\n"
+    assert comandos == [("2007-01-01", "2018-12-31"), ("2019-01-01", "2022-12-31")]
     assert (tmp_path / "hipotesis-candado.csv").read_text() == candado
-    with (tmp_path / "intentos.csv").open() as f:
-        nuevos = list(csv.DictReader(f))
-    assert nuevos[:3] == intentos and [r["etapa"] for r in nuevos[3:]] == ["1", "2"]
-    with (tmp_path / "hipotesis.csv").open() as f:
-        nuevos = list(csv.DictReader(f))
-    assert nuevos[:4] == estados and len(nuevos) == 8
-    assert [(r["etapa"], r["veredicto"]) for r in nuevos[4:]] == [
-        ("0", "PASA"), ("1", "PASA"), ("2", "PASA"), ("3", "CORTA"),
-    ]
-    assert "ya se abrió" in nuevos[-1]["motivo"]
+    assert {p: (tmp_path / p).read_bytes() for p in antes} == antes
 
 
-@pytest.mark.parametrize("final", ["PASA", "CORTA", "candado"])
+@pytest.mark.parametrize("final", ["PASA", "CORTA"])
 def test_correr_etapa3(tmp_path, monkeypatch, final):
     from quantagent.fabrica.candado import abierto
     from quantagent.fabrica.hipotesis import cargar_hipotesis
@@ -223,7 +225,6 @@ def test_correr_etapa3(tmp_path, monkeypatch, final):
     vistos = []
 
     def validar(h_recibida, snapshot, elegidos, carpeta):
-        assert final != "candado", "El candado debe impedir invocar el validador"
         assert abierto(h.id, "prueba")
         assert (h_recibida, snapshot, elegidos, carpeta) == (h, "sintetico", params, tmp_path / "motor/etapa3")
         vistos.append(True)
@@ -231,8 +232,6 @@ def test_correr_etapa3(tmp_path, monkeypatch, final):
                         "motivos": [] if final == "PASA" else ["SPY: DSR < 0.95"]}]
 
     monkeypatch.setattr(hipotesis, "validar_etapa3", validar)
-    if final == "candado":
-        hipotesis.abrir(h.id, "prueba")
     result = CliRunner().invoke(backtest_group, ["hipotesis", "correr", str(archivo),
         "--snapshot", "sintetico", "--carpeta", str(tmp_path / "motor")])
     assert result.exit_code == int(final != "PASA"), result.output
@@ -241,10 +240,9 @@ def test_correr_etapa3(tmp_path, monkeypatch, final):
     assert [f["etapa"] for f in filas] == ["0", "1", "2", "3"]
     assert filas[-1]["veredicto"] == ("PASA" if final == "PASA" else "CORTA")
     assert f"Llegó a la etapa 3: {filas[-1]['veredicto']} ({filas[-1]['motivo']})" in result.output
-    assert vistos == ([] if final == "candado" else [True])
-    assert ("ya se abrió" in result.output) if final == "candado" else (
-        "V30" in result.output and "DSR" in result.output and ("0.95" if final == "PASA" else "0.94") in result.output
-    )
+    assert vistos == [True]
+    assert "V30" in result.output and "DSR" in result.output
+    assert ("0.95" if final == "PASA" else "0.94") in result.output
 
 
 def test_admision_rango_y_registro(tmp_path, monkeypatch):
