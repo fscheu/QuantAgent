@@ -33,6 +33,7 @@ Implementation documents should include:
 
 ## Active Per-Change Implementation
 
+- [QuantAgent-d4cq.31-IM-resumen.md](./QuantAgent-d4cq.31-IM-resumen.md) - Resumen por estado final, causas e intentos del período.
 - [QuantAgent-d4cq.28-IM-reapertura.md](./QuantAgent-d4cq.28-IM-reapertura.md) - Reapertura de prueba: sin filtro, intentos ni estados nuevos.
 - [QuantAgent-d4cq.15-IM-punto-control-l9.md](./QuantAgent-d4cq.15-IM-punto-control-l9.md) - Dos hipótesis YAML: admisión, filtro, veredictos e intentos aislados en 2007–2018.
 - [QuantAgent-d4cq.14.3-IM-filtro-cli.md](./QuantAgent-d4cq.14.3-IM-filtro-cli.md) - RSI en doce ETFs: tabla, veredicto, tiempo e intentos de etapa 1.
