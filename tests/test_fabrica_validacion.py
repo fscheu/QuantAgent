@@ -11,6 +11,33 @@ from quantagent.fabrica import validacion
 from quantagent.fabrica.hipotesis import cargar_hipotesis
 
 
+@pytest.mark.parametrize("cantidad,esperado", [(4, True), (3, False)])
+def test_alarma_mitad_del_filtro(cantidad, esperado):
+    resultados = [(str(i), 0.10, 30) for i in range(8)]
+    filas = [{"activo": str(i), "sharpe_tasa_0": "0" if i < cantidad else "0.01"}
+             for i in reversed(range(8))]
+    assert validacion.alarma_filtro_motor(resultados, filas) == (
+        esperado, [str(i) for i in range(cantidad)])
+
+
+@pytest.mark.parametrize("vacio", ["", None])
+def test_alarma_vacio_y_filtro_bajo(vacio):
+    resultados = [("SPY", 0.10, 30), ("TLT", 0.2, 30), ("GLD", 0.3, 30),
+                  ("QQQ", 0.09, 30)]
+    filas = [{"activo": a, "sharpe_tasa_0": s}
+             for a, s in [("SPY", vacio), ("TLT", "-0.1"), ("GLD", "0.1"), ("QQQ", "-1")]]
+    assert validacion.alarma_filtro_motor(resultados, filas) == (True, ["SPY", "TLT"])
+    filas[1]["sharpe_tasa_0"] = "0.1"
+    assert validacion.alarma_filtro_motor(resultados, filas) == (False, ["SPY"])
+
+
+@pytest.mark.parametrize("sharpes", [[], [0.09, None, float("nan")]])
+def test_alarma_sin_filtro_aprobado(sharpes):
+    resultados = [(str(i), s, 30) for i, s in enumerate(sharpes)]
+    filas = [{"activo": str(i), "sharpe_tasa_0": "-1"} for i in range(len(sharpes))]
+    assert validacion.alarma_filtro_motor(resultados, filas) == (False, [])
+
+
 @pytest.mark.parametrize("abrir_prueba,etapa,desde", [(False, "2", "2007-01-01"), (True, "3", "2019-01-01")])
 def test_motor_dos_activos(tmp_path, monkeypatch, abrir_prueba, etapa, desde):
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))

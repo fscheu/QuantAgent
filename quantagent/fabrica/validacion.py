@@ -11,6 +11,22 @@ from quantagent.cli.sweep import registrar_intento
 from quantagent.data.snapshot import snapshot_root
 
 
+SHARPE_MINIMO_FILTRO = 0.10
+SHARPE_MAXIMO_MOTOR_ALARMA = 0.0
+PROPORCION_MINIMA_ALARMA = 0.5
+
+
+def alarma_filtro_motor(resultados_etapa1, filas_etapa2):
+    """Compara Sharpe por activo; alarma si diverge al menos la mitad del filtro aprobado."""
+    aprobados = [activo for activo, sharpe, _ in resultados_etapa1
+                 if sharpe is not None and sharpe >= SHARPE_MINIMO_FILTRO]
+    motor = {fila["activo"]: fila["sharpe_tasa_0"] for fila in filas_etapa2}
+    activos = [activo for activo in aprobados
+               if motor[activo] in (None, "")
+               or float(motor[activo]) <= SHARPE_MAXIMO_MOTOR_ALARMA]
+    return bool(aprobados) and len(activos) >= PROPORCION_MINIMA_ALARMA * len(aprobados), activos
+
+
 def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, abrir_prueba=False):
     carpeta = Path(carpeta)
     carpeta.mkdir(parents=True, exist_ok=True)
