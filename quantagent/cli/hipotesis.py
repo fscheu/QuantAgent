@@ -99,7 +99,7 @@ def admitir_hipotesis(archivo, snapshot_name, prueba_unica=False):
         registrar_intento(
             h.clase, h.activos[0], snapshot_name, "etf", 1.0, h.parametros,
             {"desde": "2007-01-01", "hasta": "2018-12-31", "trades": 0, "pnl": "", "sharpe": ""},
-            hipotesis=h.id, etapa="0",
+            hipotesis=h.id, etapa="0", sharpe_base="",
         )
     return h, ok, motivos
 
@@ -122,6 +122,7 @@ def filtrar_hipotesis(h, snapshot_name):
             h.clase, activo, snapshot_name, "etf", 1.0, h.parametros,
             {"desde": "2007-01-01", "hasta": "2018-12-31", "trades": r["trades"],
              "pnl": "", "sharpe": r["sharpe_tasa_0"]}, hipotesis=h.id, etapa="1",
+            sharpe_base="tasa_0",
         )
     veredicto, bajos = veredicto_etapa1(resultados)
     return resultados, parametros, veredicto, bajos

@@ -85,15 +85,19 @@ def dsr_contra_intentos(equity, intentos_path) -> float | None:
         return None
     with open(intentos_path, newline="", encoding="utf-8") as f:
         filas = list(csv.DictReader(f))
-    sharpes = []
+    sharpes, sharpes_tasa_0 = [], []
     for fila in filas:
         try:
             valor = float(fila["sharpe"])
         except (KeyError, TypeError, ValueError):
             continue
         if isfinite(valor):
-            sharpes.append(valor / sqrt(252))
-    var_sr = float(np.var(sharpes, ddof=1)) if len(sharpes) >= 2 else 0.0
+            s = valor / sqrt(252)
+            sharpes.append(s)
+            if fila.get("sharpe_base") == "tasa_0":
+                sharpes_tasa_0.append(s)
+    sharpes_var = sharpes_tasa_0 if len(sharpes_tasa_0) >= 2 else sharpes
+    var_sr = float(np.var(sharpes_var, ddof=1)) if len(sharpes_var) >= 2 else 0.0
     sr = float(np.mean(retornos) / np.std(retornos, ddof=1))
     return sharpe_deflactado(
         sr, max(len(filas), 1), var_sr, len(retornos),
