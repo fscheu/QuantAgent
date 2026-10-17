@@ -270,7 +270,7 @@ Dos tickets que no hacen falta para cerrar M3: **investigador-1** (nube) arma el
 
 ## 7. Preguntas para Fede
 
-Fede aprobó el plan y todas las recomendaciones de esta tabla el 2026-10-17. Q1 y Q6 quedan como regla provisoria hasta que P03 las baje a detalle y él las confirme con los números.
+**Decidido por Fede el 2026-10-17:** plan aprobado y las siete recomendaciones de la columna derecha adoptadas como decisiones, incluidas Q1 (pesos) y Q6 (fracción de piernas transversales). P03 las baja a detalle sin reabrirlas.
 
 | # | Pregunta | Recomendación |
 |---|---|---|
@@ -286,7 +286,7 @@ Los números de dinero (capital, tamaño de posición, pesos de cartera) no se f
 
 ## 8. Hallazgos al revisar lo ya mergeado (no se corrigen acá)
 
-1. `hipotesis/cartera-tendencia-momentum.yaml`, campo `fuente`: el DOI `10.3905/jpm.2017.43.4.015` no existe en Crossref. El artículo de Hurst, Ooi y Pedersen es `10.3905/jpm.2017.44.1.015`. El `10.2139/ssrn.962461` (Faber 2007) tampoco resuelve en Crossref ni en DataCite; la versión publicada es `10.3905/jwm.2007.674809`. Es un cambio de texto en un YAML de L12; corresponde a la VM o a un PR chico aparte. El test de P01 ya cubre la forma del DOI, no que resuelva.
+1. `hipotesis/cartera-tendencia-momentum.yaml`, campo `fuente`: el DOI de Hurst, Ooi y Pedersen (`10.3905/jpm.2017.43.4.015`) no existe en Crossref; el correcto es `10.3905/jpm.2017.44.1.015`. **Corregido en #274.** El `10.2139/ssrn.962461` de Faber no figura en Crossref ni en DataCite, pero la VM confirmó que es válido como versión SSRN; se deja. El test de P01 cubre la forma del DOI, no que resuelva.
 2. `backtest hipotesis tanda` todavía corta con "cartera de N piernas: falta C05" si encuentra una cartera. Es de esperar que `.50.2` lo resuelva; si no, P10 y M07 no pueden usar `tanda`.
 3. `QuantAgent-d4cq.54` figura abierto en BEADS pero #267 y #272 ya están mergeados (BEADS atrasa respecto de GitHub, como se esperaba).
 
