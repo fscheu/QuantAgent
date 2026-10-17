@@ -1,6 +1,6 @@
 # QuantAgent-d4cq: propuesta de reescritura de L13 y L14
 
-- **Estado:** propuesta para revisión de Fede (2026-10-17). No abre los lotes ni toca `.beads/issues.jsonl`: la VM aplica los cambios de §6 si Fede aprueba.
+- **Estado:** plan y recomendaciones de §7 aprobados por Fede el 2026-10-17. Falta que la VM aplique §6 y abra los lotes. No abre los lotes ni toca `.beads/issues.jsonl`: la VM aplica los cambios de §6 si Fede aprueba.
 - **Base:** `lote/cartera` en `ec1cf29` (C02, C03 y C09 ya mergeados) y `lote/datos-externos` en `238c82b` (LB1).
 - **Reemplaza:** los tickets `QuantAgent-d4cq.38` a `.44`, escritos antes de [`2026-10-17-DC-cartera-de-primas`](../04_decisions/2026-10-17-DC-cartera-de-primas.md).
 - **No fija dinero:** ningún ticket de este documento define capital, tamaño de posición ni pesos de cartera. Lo que los toca está en §5 como pregunta para Fede.
@@ -269,6 +269,8 @@ Dos tickets que no hacen falta para cerrar M3: **investigador-1** (nube) arma el
 | Nuevos | P03 a P08, P10, M01 (reemplaza `ljoj`), M03 a M07; los ids los asigna la VM |
 
 ## 7. Preguntas para Fede
+
+Fede aprobó el plan y todas las recomendaciones de esta tabla el 2026-10-17. Q1 y Q6 quedan como regla provisoria hasta que P03 las baje a detalle y él las confirme con los números.
 
 | # | Pregunta | Recomendación |
 |---|---|---|
