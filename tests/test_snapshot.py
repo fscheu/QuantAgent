@@ -7,6 +7,7 @@ import pytest
 
 from quantagent.data.snapshot import (
     SnapshotError,
+    VERSIONED_DIR,
     read_snapshot,
     snapshot_root,
     verify_snapshot,
@@ -124,4 +125,18 @@ def test_snapshot_root_sin_env_var_falla_nombrando_local_data(monkeypatch):
     with pytest.raises(SnapshotError) as exc:
         snapshot_root()
     assert "local-data/" in str(exc.value)
+
+
+def test_universo_amplio_cumple_regla_de_inclusion():
+    manifest_amplio = json.loads((VERSIONED_DIR / "etf-1d-2026-10-amplio.json").read_text())
+    manifest_orig = json.loads((VERSIONED_DIR / "etf-1d-2026-10.json").read_text())
+
+    symbols_amplio = manifest_amplio["symbols"]
+    symbols_orig = set(manifest_orig["symbols"])
+
+    assert len(symbols_amplio) == 29
+    assert symbols_orig.issubset(symbols_amplio)
+    for symbol, info in symbols_amplio.items():
+        assert info["start"] <= "2007-01-03", f"{symbol} no cumple la regla de inclusión ({info['start']})"
+
 
