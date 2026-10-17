@@ -18,8 +18,8 @@ La tanda generó `/tmp/qa-tanda/resumen.md` informando 2 hipótesis con CORTA en
 ## Observación sobre el filtro (etapa 1)
 
 `maximo-52-semanas` y `momentum-12m` cortan ambas por la regla de mínimo de 30 trades (E01), a pesar de que la mayoría de los activos presenta Sharpe fuera de muestra ≥ 0,10:
-- En `maximo-52-semanas`, 8 de 12 activos tienen Sharpe ≥ 0,10 (hasta 0,45 en SHY y 0,44 en XLF), pero registran entre 4 y 14 trades en 12 años.
-- En `momentum-12m`, 6 de 12 activos tienen Sharpe ≥ 0,10 (hasta 0,76 en XLK y 0,60 en SPY/XLF), pero registran entre 5 y 10 trades en 12 años.
+- En `maximo-52-semanas`, 9 de 12 activos tienen Sharpe ≥ 0,10 (hasta 0,45 en SHY y 0,44 en XLF), pero registran entre 4 y 14 trades en 12 años.
+- En `momentum-12m`, 7 de 12 activos tienen Sharpe ≥ 0,10 (hasta 0,76 en XLK y 0,60 en SPY/XLF), pero registran entre 5 y 10 trades en 12 años.
 
 Al tener menos de 30 trades por activo fuera de muestra, todos cuentan como bajo 0,10 y resultan en 12 de 12 bajo el umbral (superando el límite de 2/3).
 
@@ -34,5 +34,5 @@ Al tener menos de 30 trades por activo fuera de muestra, todos cuentan como bajo
 ## Verificación en la VM
 
 ```bash
-python3 -c 'import csv, pathlib; p=pathlib.Path("/home/azureuser/repos/projects/QuantAgent/local-data"); i=list(csv.DictReader((p/"intentos.csv").open()))[62:]; h=list(csv.DictReader((p/"hipotesis.csv").open()))[6:]; c=(p/"hipotesis-candado.csv").read_text().splitlines(); assert len(i)==24 and all(x["hasta"]<"2023" for x in i); assert {x["hipotesis"] for x in i}=={"maximo-52-semanas","momentum-12m"}; assert len(h)==4; assert len(c)==1; t=pathlib.Path("/tmp/qa-tanda"); assert (t/"resumen.md").exists(); assert all((t/x/"informe.html").exists() and (t/x/"corrida.log").exists() for x in ["rsi-reversion-corta","sma-tendencia","maximo-52-semanas","momentum-12m"]); print("Tanda OK: 24 intentos, 4 estados, 0 candados nuevos, 4 informes, 1 resumen, fechas < 2023")'
+python3 -c 'import csv, pathlib; from collections import Counter; p=pathlib.Path("/home/azureuser/repos/projects/QuantAgent/local-data"); i=list(csv.DictReader((p/"intentos.csv").open()))[62:]; h=list(csv.DictReader((p/"hipotesis.csv").open()))[6:]; c=(p/"hipotesis-candado.csv").read_text().splitlines(); assert len(i)==24 and all(x["hasta"]<"2023" for x in i); assert {x["hipotesis"] for x in i}=={"maximo-52-semanas","momentum-12m"}; assert Counter(x["hipotesis"] for x in i if float(x["sharpe"])>=0.10)=={"maximo-52-semanas": 9, "momentum-12m": 7}; assert len(h)==4; assert len(c)==1; t=pathlib.Path("/tmp/qa-tanda"); assert (t/"resumen.md").exists(); assert all((t/x/"informe.html").exists() and (t/x/"corrida.log").exists() for x in ["rsi-reversion-corta","sma-tendencia","maximo-52-semanas","momentum-12m"]); print("Tanda OK: 24 intentos, 4 estados, 0 candados nuevos, 4 informes, 1 resumen, fechas < 2023, sharpe>=0.10 ok")'
 ```
