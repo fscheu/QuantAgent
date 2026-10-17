@@ -5,7 +5,12 @@ import pytest
 from click.testing import CliRunner
 
 from quantagent.cli.data import data_group
-from quantagent.data.macro import crear_snapshot_macro, verificar_snapshot_macro
+from quantagent.data.macro import (
+    crear_snapshot_macro,
+    serie_punto_en_el_tiempo,
+    valor_conocido,
+    verificar_snapshot_macro,
+)
 from quantagent.data.snapshot import SnapshotError
 
 
@@ -79,3 +84,31 @@ def test_cli_create_y_verify(tmp_path, monkeypatch):
     assert mal.exit_code == 1 and "UNRATE" in mal.output
     otra_vez = runner.invoke(data_group, ["macro", "create", "--name", "m", "--series", "UNRATE"])
     assert otra_vez.exit_code == 1 and "ya existe" in otra_vez.output
+
+
+def _con_revision(tmp_path):
+    crear_snapshot_macro("m", ["UNRATE"], ClienteFalso(), base_dir=tmp_path)
+
+
+def test_punto_en_el_tiempo_ve_la_version_vigente_en_cada_fecha(tmp_path):
+    _con_revision(tmp_path)
+    mar = pd.Timestamp("2020-03-01")
+    assert valor_conocido("m", "UNRATE", "2020-04-01", base_dir=tmp_path) is None
+    assert valor_conocido("m", "UNRATE", "2020-04-10", base_dir=tmp_path) == (mar, 4.0)
+    assert valor_conocido("m", "UNRATE", "2020-05-03", base_dir=tmp_path) == (mar, 4.2)  # realtime_end es exclusivo
+    assert valor_conocido("m", "UNRATE", "2020-05-10", base_dir=tmp_path) == (mar, 4.2)
+    s = serie_punto_en_el_tiempo("m", "UNRATE", ["2020-04-01", "2020-04-10", "2020-05-10"], base_dir=tmp_path)
+    assert s.isna().tolist() == [True, False, False] and s.dropna().tolist() == [4.0, 4.2]
+
+
+def test_truncar_versiones_posteriores_a_T_no_cambia_la_serie_hasta_T(tmp_path):
+    _con_revision(tmp_path)
+    T = pd.Timestamp("2020-04-20")
+    dias = pd.date_range("2020-04-01", T)
+    completa = serie_punto_en_el_tiempo("m", "UNRATE", dias, base_dir=tmp_path)
+    ruta = tmp_path / "m" / "UNRATE.parquet"
+    df = pd.read_parquet(ruta)
+    assert len(df[df["realtime_start"] > T]) == 1  # la revisión del 3 de mayo sí se quita
+    df[df["realtime_start"] <= T].to_parquet(ruta, index=False)
+    truncada = serie_punto_en_el_tiempo("m", "UNRATE", dias, base_dir=tmp_path)
+    pd.testing.assert_series_equal(completa, truncada)

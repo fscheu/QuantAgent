@@ -9,7 +9,9 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Tuple
+
+import pandas as pd
 
 from quantagent.data.snapshot import MANIFEST_NAME, SnapshotError, _sha256, load_manifest, snapshot_root
 
@@ -66,3 +68,38 @@ def verificar_snapshot_macro(nombre: str, base_dir: Optional[Path] = None) -> di
     if problemas:
         raise SnapshotError("; ".join(problemas))
     return manifiesto
+
+
+def _versiones(nombre: str, serie: str, base_dir: Optional[Path]) -> pd.DataFrame:
+    manifiesto = load_manifest(nombre, base_dir)
+    if serie not in manifiesto["series"]:
+        raise SnapshotError(f"{serie} no está en el snapshot macro '{nombre}'")
+    df = pd.read_parquet(snapshot_root(base_dir) / nombre / manifiesto["series"][serie]["file"])
+    return df.dropna(subset=["valor"]).sort_values("fecha")
+
+
+def _conocido(df: pd.DataFrame, al: pd.Timestamp) -> Optional[Tuple[pd.Timestamp, float]]:
+    vigentes = df[(df["realtime_start"] <= al) & (al < df["realtime_end"])]
+    if vigentes.empty:
+        return None
+    ultima = vigentes.iloc[-1]
+    return ultima["fecha"], float(ultima["valor"])
+
+
+def valor_conocido(nombre: str, serie: str, al, base_dir: Optional[Path] = None) -> Optional[Tuple[pd.Timestamp, float]]:
+    """Observación más reciente cuya versión estaba vigente en `al` (`realtime_start <= al < realtime_end`), o None.
+
+    Una versión `.` (NaN) no cuenta como valor conocido.
+    """
+    return _conocido(_versiones(nombre, serie, base_dir), pd.Timestamp(al))
+
+
+def serie_punto_en_el_tiempo(nombre: str, serie: str, sesiones, base_dir: Optional[Path] = None) -> pd.Series:
+    """Para cada sesión, el último valor conocido ese día; NaN si todavía no se conocía ninguno."""
+    df = _versiones(nombre, serie, base_dir)
+    sesiones = pd.DatetimeIndex(sesiones)
+    valores = []
+    for dia in sesiones:
+        conocido = _conocido(df, dia)
+        valores.append(float("nan") if conocido is None else conocido[1])
+    return pd.Series(valores, index=sesiones, name=serie)
