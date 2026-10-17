@@ -10,6 +10,7 @@ GLOSARIO = (
     ("Sharpe", "retorno sobre volatilidad; en la etapa 1 es del filtro fuera de muestra, en las etapas 2 y 3 es del motor propio."),
     ("V30", "la regla de evaluar: al menos 2 trades, pnl > 0, Sharpe con tasa 0 >= 0,10 y caída máxima <= 35%."),
     ("DSR", "probabilidad de que el Sharpe no sea suerte, dado el total de intentos; pasa con 0,95."),
+    ("Sharpe registrado", "En la tabla, la etapa 1 muestra el Sharpe con tasa 0 del filtro y las etapas 2 y 3 el Sharpe del motor con tasa libre de riesgo; V30 usa el de tasa 0, por eso un activo puede pasar V30 con Sharpe registrado negativo."),
     ("Intentos", "corridas registradas; más intentos, más riesgo de falso hallazgo."),
 )
 
@@ -46,7 +47,7 @@ def render_informe(d, hipotesis=None):
         "<style>body{font:16px sans-serif;max-width:50em;margin:2em auto}td,th{padding:.2em .8em}</style>"
         f"<h1>{escape(d['id'])}</h1>{extra}<h2>Veredicto: {escape(f['veredicto'])} en la etapa {escape(f['etapa'])}</h2>"
         f"<ul>{li}</ul><h2>Activos de la etapa {escape(f['etapa'])}</h2>"
-        f"<table><tr><th>Activo</th><th>Sharpe</th><th>Trades</th></tr>{tr}</table>"
+        f"<table><tr><th>Activo</th><th>Sharpe registrado</th><th>Trades</th></tr>{tr}</table>"
         f"<p>Intentos registrados: {d['intentos']}. Prueba abierta: {'sí' if d['prueba_abierta'] else 'no'}.</p>"
         f"<h2>Glosario</h2><dl>{gl}</dl></html>"
     )

@@ -1,0 +1,16 @@
+id: maximo-52-semanas
+autor: fede
+justificacion: >-
+  Los inversores anclan en el máximo de 52 semanas y reaccionan tarde a la
+  información que acerca el precio a ese nivel. George y Hwang lo documentan
+  en acciones; proponemos probar la ruptura del máximo en ETFs líquidos, sin
+  suponer que la evidencia se traslada.
+fuente: https://doi.org/10.1111/j.1540-6261.2004.00695.x
+clase: fifty-two-week-high
+parametros:
+  lookback_days: [252]
+  proximity_threshold: [0.95, 0.98]
+  trend_ma_period: [50, 100]
+  volume_factor: [1.0, 1.5]
+activos: [SPY, IWM, EFA, EEM, TLT, SHY, GLD, DBC, XLK, XLE, XLF, XLU]
+timeframe: 1d

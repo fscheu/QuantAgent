@@ -17,7 +17,8 @@ def _validar(periodo):
         raise ValueError(f"periodo inválido: {periodo!r}; debe ser uno de {PERIODOS}")
 
 
-def _fecha_apertura(hipotesis_id, periodo):
+def fecha_apertura(hipotesis_id, periodo):
+    _validar(periodo)
     path = snapshot_root() / CANDADO_CSV
     if not path.exists():
         return None
@@ -29,13 +30,11 @@ def _fecha_apertura(hipotesis_id, periodo):
 
 
 def abierto(hipotesis_id, periodo):
-    _validar(periodo)
-    return _fecha_apertura(hipotesis_id, periodo) is not None
+    return fecha_apertura(hipotesis_id, periodo) is not None
 
 
 def abrir(hipotesis_id, periodo):
-    _validar(periodo)
-    previa = _fecha_apertura(hipotesis_id, periodo)
+    previa = fecha_apertura(hipotesis_id, periodo)
     if previa is not None:
         raise CandadoError(
             f"{hipotesis_id}/{periodo} ya se abrió el {previa}; se abre una sola vez"

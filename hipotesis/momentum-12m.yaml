@@ -1,0 +1,13 @@
+id: momentum-12m
+autor: fede
+justificacion: >-
+  La subreacción inicial y la sobrerreacción tardía hacen que el retorno de
+  los últimos doce meses anticipe el del mes siguiente. Moskowitz, Ooi y
+  Pedersen lo muestran en futuros de muchas clases de activos; acá lo probamos
+  como momentum absoluto en ETFs, decidiendo a fin de mes.
+fuente: https://doi.org/10.1016/j.jfineco.2011.11.003
+clase: momentum-12m
+parametros:
+  lookback: [189, 252]
+activos: [SPY, IWM, EFA, EEM, TLT, SHY, GLD, DBC, XLK, XLE, XLF, XLU]
+timeframe: 1d
