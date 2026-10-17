@@ -269,3 +269,24 @@ def test_dsr_contra_intentos_curva_plana_y_filas_vacias(tmp_path):
     args = (r.mean() / r.std(ddof=1), None, var_sr, 6, (z**3).mean(), (z**4).mean())
     assert con_vacia == pytest.approx(sharpe_deflactado(args[0], 3, *args[2:]), abs=1e-9)
     assert con_vacia != pytest.approx(sharpe_deflactado(args[0], 2, *args[2:]), abs=1e-9)
+
+
+def test_dsr_contra_intentos_ignora_tasa_libre_con_suficientes_tasa_0(tmp_path):
+    path = tmp_path / "intentos.csv"
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["estrategia", "sharpe", "sharpe_base"])
+        w.writerows([
+            ["s", 0.5, "tasa_0"],
+            ["s", 1.0, "tasa_0"],
+            ["s", 1.5, "tasa_0"],
+            ["s", 10.0, "tasa_libre"],
+            ["s", -10.0, "tasa_libre"],
+        ])
+    r = np.diff(EQUITY_DSR) / np.array(EQUITY_DSR[:-1])
+    sr = r.mean() / r.std(ddof=1)
+    z = (r - r.mean()) / r.std()
+    var_sr_tasa_0 = np.var([0.5 / sqrt(252), 1.0 / sqrt(252), 1.5 / sqrt(252)], ddof=1)
+    esperado = sharpe_deflactado(sr, 5, var_sr_tasa_0, 6, (z**3).mean(), (z**4).mean())
+    assert dsr_contra_intentos(EQUITY_DSR, path) == pytest.approx(esperado, abs=1e-9)
+

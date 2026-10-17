@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Dict
+from typing import Dict, Optional
 
 import click
 import pandas as pd
@@ -78,11 +78,15 @@ def create_snapshot(name: str, symbols: str, start: str, end: str) -> None:
 
 
 @snapshot_group.command("verify", help="Recalcula los hashes contra el manifiesto.")
-@click.option("--name", required=True)
-def verify_snapshot_cmd(name: str) -> None:
+@click.argument("name_arg", required=False, default=None)
+@click.option("--name", default=None)
+def verify_snapshot_cmd(name_arg: Optional[str], name: Optional[str]) -> None:
+    snapshot_name = name or name_arg
+    if not snapshot_name:
+        raise click.ClickException("Falta el nombre del snapshot (--name o argumento)")
     try:
-        verify_snapshot(name)
-        symbols = load_manifest(name)["symbols"]
+        verify_snapshot(snapshot_name)
+        symbols = load_manifest(snapshot_name)["symbols"]
     except SnapshotError as exc:
         raise click.ClickException(str(exc))
     click.echo(f"OK {len(symbols)} símbolos, {sum(i['rows'] for i in symbols.values())} filas")
