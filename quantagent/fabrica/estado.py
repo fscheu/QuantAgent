@@ -7,7 +7,7 @@ from quantagent.data.snapshot import snapshot_root
 ESTADO_CSV = "hipotesis.csv"
 COLUMNAS = ("fecha_utc", "hipotesis", "etapa", "veredicto", "motivo")
 ETAPAS = ("0", "1", "2", "3")
-VEREDICTOS = ("PASA", "CORTA")
+VEREDICTOS = ("PASA", "CORTA", "ALARMA")
 
 
 def registrar_estado(hipotesis_id, etapa, veredicto, motivo=""):

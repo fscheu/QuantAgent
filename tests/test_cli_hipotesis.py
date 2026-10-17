@@ -218,7 +218,7 @@ def test_correr_etapa3(tmp_path, monkeypatch, final):
     monkeypatch.setattr(hipotesis, "admitir_hipotesis", lambda *a: (h, True, []))
     monkeypatch.setattr(hipotesis, "filtrar_hipotesis", lambda *a: ([["SPY", 1, 30]], params, "PASA", 0))
     monkeypatch.setattr(hipotesis, "validar_etapa2", lambda *a: (
-        "PASA", [{"activo": "SPY", "v30": "PASA", "motivos": []}],
+        "PASA", [{"activo": "SPY", "v30": "PASA", "motivos": [], "sharpe_tasa_0": 1}],
     ))
     vistos = []
 
