@@ -31,6 +31,18 @@ def test_fetch_converts_new_york_to_utc():
     assert list(df.columns) == ["timestamp", "open", "high", "low", "close", "volume"]
 
 
+def test_fetch_daily_midnight_keeps_local_date_at_midnight_utc():
+    idx = pd.DatetimeIndex(["2024-01-02", "2024-07-02"], tz="America/New_York")
+    with patch("quantagent.data.sources.yahoo.yf.Ticker") as ticker:
+        ticker.return_value.history.return_value = _history(idx)
+        df = YahooSource().fetch(
+            "QQQ", "1d", datetime(2024, 1, 1), datetime(2024, 7, 3)
+        )
+
+    assert df["timestamp"].iloc[0] == pd.Timestamp("2024-01-02 00:00", tz="UTC")
+    assert df["timestamp"].iloc[1] == pd.Timestamp("2024-07-02 00:00", tz="UTC")
+
+
 def test_earliest_and_latest():
     now = datetime(2026, 10, 17, 12, 0)
     src = YahooSource()
