@@ -86,3 +86,14 @@ def test_la_prueba_no_usa_velas_de_la_ventana_siguiente(espia):
         recortes = [v for v in espia if v[0] >= desde and v[1] <= hasta and v[0].year == desde.year]
         assert recortes and all(v[0] == v[2] and v[1] == v[3] for v in recortes)  # señales y velas, mismo tramo
         assert all(v[1] <= hasta for v in recortes)  # nada posterior al fin de la prueba
+
+
+def test_retornos_solo_de_pruebas_y_reproducen_el_sharpe(espia):
+    r = filtro.filtrar_activo(_hip(), _velas(), costos=COSTOS, capital=10_000.0, train_years=3, test_years=1)
+    ret = r["retornos"]
+    assert isinstance(ret.index, pd.DatetimeIndex) and ret.index.is_unique
+    pruebas = [(pd.Timestamp(g["prueba_desde"]), pd.Timestamp(g["prueba_hasta"])) for g in r["ganadores"]]
+    assert all(any(d <= f <= h for d, h in pruebas) for f in ret.index)
+    assert ret.index.min() >= pruebas[0][0] and ret.index.max() <= pruebas[-1][1]
+    equity = 10_000.0 * (1 + ret).cumprod()
+    assert filtro.equity_metrics(equity, 0.0)["sharpe"] == pytest.approx(r["sharpe_tasa_0"])
