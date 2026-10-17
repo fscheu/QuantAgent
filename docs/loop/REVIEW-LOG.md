@@ -275,4 +275,6 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-17 #255 QuantAgent-d4cq.48 C04 (nube) pesos por igual riesgo: merge.
 2026-10-17 #254 QuantAgent-d4cq.49 C05a (nube) filtrar_activo devuelve retornos: merge.
 2026-10-17 #260 QuantAgent-qix2 LB1 (nube) CandleSource y YahooSource, ahora en UTC: merge en lote/datos-externos.
+2026-10-17 #259 QuantAgent-pdxx LB1 (nube) cliente FRED/ALFRED: merge en lote/datos-externos.
+2026-10-17 #258 QuantAgent-jpms LB1 (nube) AlpacaSource solo datos: merge en lote/datos-externos.
 ```
