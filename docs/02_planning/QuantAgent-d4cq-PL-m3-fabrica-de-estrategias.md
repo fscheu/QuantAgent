@@ -121,7 +121,7 @@ Fede decidió, a partir de [`2026-10-17-DC-cartera-de-primas.md`](../04_decision
 | 3. Prueba | PASA si la cartera cumple V30 y su DSR es ≥ 0,95 | Candado por id, 2019–2022 una sola vez |
 | 4. Reserva | — | 2023 en adelante, solo finalistas |
 
-**Decisión pendiente D7: cómo cuenta una cartera en `intentos.csv`.** La recomendación del PM es una fila por cartera y etapa (activo `cartera`), con el Sharpe de la cartera a tasa 0. Las celdas por activo no se registran como intentos, porque no son selecciones aparte. Las 86 filas existentes siguen contando en N, que es lo conservador. La alternativa es seguir registrando cada celda: N sube unas 30 veces por cartera y el DSR se vuelve casi inalcanzable, aunque las celdas no sean apuestas independientes. Se decide antes de C05b.
+**D7, decidida por Fede el 2026-10-17 (recomendación del PM): cómo cuenta una cartera en `intentos.csv`.** La recomendación del PM es una fila por cartera y etapa (activo `cartera`), con el Sharpe de la cartera a tasa 0. Las celdas por activo no se registran como intentos, porque no son selecciones aparte. Las 86 filas existentes siguen contando en N, que es lo conservador. La alternativa es seguir registrando cada celda: N sube unas 30 veces por cartera y el DSR se vuelve casi inalcanzable, aunque las celdas no sean apuestas independientes.
 
 **Lotes.**
 
