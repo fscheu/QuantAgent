@@ -364,6 +364,11 @@ Qué NO se hizo: <lista corta>
 **Reporte diario a Fede** (Telegram o la sesión, ≤10 líneas): qué sabe hacer el sistema que ayer no, avance del
 lote (n de m) y de M1, lo encontrado en revisión, y las decisiones pendientes con recomendación.
 
+**Operar el loop.** Para que Codex escriba registros reales en `local-data` por una corrida, creá
+`~/.local/state/quantagent-loop/next-local-data` (vacío alcanza). Tras pasar el gate se consume y Codex recibe
+`--add-dir "$QUANTAGENT_SNAPSHOT_DIR"`, registrado en el log; otros agentes lo consumen con un aviso y lo
+ignoran. No cambia los permisos de los snapshots. Detalles en `docs/loop/SETUP-HERMES.md`.
+
 **Límite conocido.** El PM comenta con la misma cuenta de GitHub que Fede, así que el gate distingue `PM:` de
 `R:` por el prefijo y no por el autor. La barrera real es que una `PM:` no vale en PRs hacia `main` y que el
 PM no mergea a `main`.

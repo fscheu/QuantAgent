@@ -145,6 +145,12 @@ revisor, `workspace-write`, con dos agregados que una entrega necesita y una rev
 tests) y escritura en el `.beads` del checkout principal. Lee todo el disco y escribe solo en el worktree, en
 `.beads` y en `/tmp`.
 
+Para habilitar escritura en `local-data` durante una sola corrida, creá
+`~/.local/state/quantagent-loop/next-local-data` (puede estar vacío). Después de pasar el gate,
+el wrapper lo consume y agrega `--add-dir "$QUANTAGENT_SNAPSHOT_DIR"` a Codex, dejando la ruta en el log.
+Con otro agente lo consume sin habilitar permisos y deja un aviso. Los snapshots conservan sus permisos
+de solo lectura. La siguiente corrida vuelve a los permisos habituales.
+
 Codex no puede escribir en `.git`: su aislamiento lo deja en solo lectura aunque se pase con `--add-dir`
 (primera corrida real, 2026-10-12). Por eso no hace la parte de git. El wrapper le agrega al prompt
 `scripts/loop/codex_addendum.md`, que le pide dejar en el worktree la carpeta `.loop-delivery/` (`ticket`,
