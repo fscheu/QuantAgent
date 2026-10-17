@@ -9,7 +9,7 @@ justificacion: >-
   respaldo de la prima de tendencia en Hurst, Ooi y Pedersen 2017. A diferencia
   de Faber, que decide a fin de mes, aca la regla se evalua a diario. Parametros
   fijos, sin grilla: la cartera tiene 0 parametros libres.
-fuente: https://doi.org/10.1016/j.jfineco.2011.11.003 ; https://doi.org/10.2139/ssrn.962461 ; https://doi.org/10.3905/jpm.2017.44.1.015
+fuente: https://doi.org/10.1016/j.jfineco.2011.11.003 ; https://doi.org/10.3905/jwm.2007.674809 ; https://doi.org/10.3905/jpm.2017.44.1.015
 timeframe: 1d
 piernas:
   - clase: momentum-12m
