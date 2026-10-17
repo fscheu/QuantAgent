@@ -2,6 +2,9 @@
 
 import csv
 import json
+import traceback
+from contextlib import redirect_stderr, redirect_stdout
+from datetime import datetime, timezone
 from pathlib import Path
 
 import click
@@ -9,11 +12,12 @@ from tabulate import tabulate
 
 from quantagent.data.snapshot import SnapshotError, read_snapshot
 from quantagent.fabrica.admision import admitir
-from quantagent.fabrica.candado import CandadoError, abrir
-from quantagent.fabrica.estado import registrar_estado
+from quantagent.fabrica.candado import CandadoError, abrir, fecha_apertura
+from quantagent.fabrica.estado import registrar_estado, resumen_tanda, ultimo_estado
 from quantagent.fabrica.filtro import filtrar_activo, parametros_elegidos, veredicto_etapa1
 from quantagent.fabrica.hipotesis import cargar_hipotesis
-from quantagent.fabrica.validacion import validar_etapa2, validar_etapa3
+from quantagent.fabrica.informe import datos_informe, render_informe
+from quantagent.fabrica.validacion import alarma_filtro_motor, validar_etapa2, validar_etapa3
 from quantagent.settings import COSTOS_PERFILES
 
 from .sweep import registrar_intento
@@ -24,7 +28,58 @@ def hipotesis_group():
     pass
 
 
-def admitir_hipotesis(archivo, snapshot_name):
+@hipotesis_group.command("tanda", help="Procesar los YAML en orden y guardar informes, logs y resumen.")
+@click.argument("carpeta_yaml", type=click.Path(exists=True, file_okay=False))
+@click.option("--snapshot", "snapshot_name", required=True)
+@click.option("--carpeta", type=click.Path(file_okay=False), required=True)
+@click.pass_context
+def tanda_command(ctx, carpeta_yaml, snapshot_name, carpeta):
+    desde = datetime.now(timezone.utc)
+    destino = Path(carpeta)
+    destino.mkdir(parents=True, exist_ok=True)
+    for archivo in sorted(Path(carpeta_yaml).glob("*.yaml")):
+        try:
+            h = cargar_hipotesis(archivo)
+        except Exception:
+            (destino / f"{archivo.stem}.log").write_text(traceback.format_exc(), encoding="utf-8")
+            continue
+        salida = destino / h.id
+        salida.mkdir(parents=True, exist_ok=True)
+        with (salida / "corrida.log").open("w", encoding="utf-8") as log:
+            with redirect_stdout(log), redirect_stderr(log):
+                try:
+                    estado = ultimo_estado(h.id)
+                    if estado and (estado["veredicto"] in ("CORTA", "ALARMA") or
+                                   (estado["veredicto"] == "PASA" and estado["etapa"] == "3")):
+                        click.echo(f"ya evaluada: etapa {estado['etapa']} {estado['veredicto']}; se saltea")
+                    else:
+                        ctx.invoke(correr_command, archivo=str(archivo), snapshot_name=snapshot_name, carpeta=str(salida))
+                except click.exceptions.Exit:
+                    pass
+                except Exception:
+                    traceback.print_exc()
+                try:
+                    ctx.invoke(informe_command, hipotesis_id=h.id, out=str(salida / "informe.html"), archivo=str(archivo))
+                except Exception:
+                    traceback.print_exc()
+    (destino / "resumen.md").write_text(resumen_tanda(desde), encoding="utf-8")
+    click.echo(f"Tanda terminada: {destino / 'resumen.md'}")
+
+
+@hipotesis_group.command("resumen", help="Resumir los últimos estados y los intentos de la tanda.")
+@click.option("--desde", type=click.DateTime(["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S%z"]),
+              help="Inicio UTC inclusivo (fecha o fecha y hora con zona).")
+@click.option("--out", type=click.Path(dir_okay=False))
+def resumen_command(desde, out):
+    if desde is not None:
+        desde = desde.replace(tzinfo=timezone.utc) if desde.tzinfo is None else desde
+    texto = resumen_tanda(desde)
+    if out:
+        Path(out).write_text(texto)
+    click.echo(texto, nl=False)
+
+
+def admitir_hipotesis(archivo, snapshot_name, prueba_unica=False):
     """Admitir y registrar el rechazo, devolviendo hipótesis y motivos."""
     try:
         h = cargar_hipotesis(archivo)
@@ -35,6 +90,11 @@ def admitir_hipotesis(archivo, snapshot_name):
         ok, motivos = admitir(h, velas)
     except (ValueError, SnapshotError) as exc:
         raise click.ClickException(str(exc)) from exc
+    if prueba_unica:
+        fecha = fecha_apertura(h.id, "prueba")
+        if fecha is not None:
+            click.echo(f"prueba de {h.id} ya abierta el {fecha}; no se vuelve a correr")
+            raise click.exceptions.Exit(1)
     if not ok:
         registrar_intento(
             h.clase, h.activos[0], snapshot_name, "etf", 1.0, h.parametros,
@@ -94,7 +154,7 @@ def filtrar_command(archivo, snapshot_name, out):
 @click.option("--snapshot", "snapshot_name", required=True)
 @click.option("--carpeta", type=click.Path(file_okay=False), required=True)
 def correr_command(archivo, snapshot_name, carpeta):
-    h, ok, motivos = admitir_hipotesis(archivo, snapshot_name)
+    h, ok, motivos = admitir_hipotesis(archivo, snapshot_name, True)
     etapa, veredicto = "0", "PASA" if ok else "CORTA"
     motivo = "; ".join(motivos) if motivos else "admisión aceptada"
     registrar_estado(h.id, etapa, veredicto, motivo)
@@ -106,13 +166,21 @@ def correr_command(archivo, snapshot_name, carpeta):
         registrar_estado(h.id, etapa, veredicto, motivo)
         click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
         if veredicto == "PASA":
-            veredicto, filas = validar_etapa2(h, snapshot_name, parametros, carpeta)
+            try:
+                veredicto, filas = validar_etapa2(h, snapshot_name, parametros, carpeta)
+            except Exception as exc:
+                registrar_estado(h.id, "2", "ERROR", f"{type(exc).__name__}: {exc}"[:200])
+                raise
             etapa = "2"
             motivos = [m for fila in filas for m in fila["motivos"]]
             motivo = "; ".join(motivos) if motivos else "control coincide y al menos un activo pasa V30"
             if veredicto == "PASA":
                 activos = ", ".join(f["activo"] for f in filas if f["v30"] == "PASA")
                 motivo = f"pasan V30: {activos}; control coincide en {len(filas)} de {len(filas)}"
+                alarma, activos = alarma_filtro_motor(resultados, filas)
+                if alarma:
+                    veredicto = "ALARMA"
+                    motivo = "filtro optimista en " + ", ".join(activos)
             registrar_estado(h.id, etapa, veredicto, motivo)
             click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
             if veredicto == "PASA":
@@ -122,7 +190,11 @@ def correr_command(archivo, snapshot_name, carpeta):
                 except CandadoError as exc:
                     veredicto, motivo = "CORTA", str(exc)
                 else:
-                    veredicto, filas = validar_etapa3(h, snapshot_name, parametros, Path(carpeta) / "etapa3")
+                    try:
+                        veredicto, filas = validar_etapa3(h, snapshot_name, parametros, Path(carpeta) / "etapa3")
+                    except Exception as exc:
+                        registrar_estado(h.id, "3", "ERROR", f"{type(exc).__name__}: {exc}"[:200])
+                        raise
                     click.echo(tabulate([[f["activo"], f["v30"], f["dsr"]] for f in filas],
                                         headers=["activo", "V30", "DSR"], tablefmt="github"))
                     motivo = "; ".join(m for f in filas for m in f["motivos"])
@@ -131,4 +203,18 @@ def correr_command(archivo, snapshot_name, carpeta):
                 registrar_estado(h.id, etapa, veredicto, motivo)
                 click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
     click.echo(f"Llegó a la etapa {etapa}: {veredicto} ({motivo})")
-    raise click.exceptions.Exit(int(veredicto == "CORTA"))
+    raise click.exceptions.Exit(int(veredicto != "PASA"))
+
+
+@hipotesis_group.command("informe", help="Página HTML con el veredicto y los motivos de una hipótesis.")
+@click.argument("hipotesis_id")
+@click.option("--out", type=click.Path(dir_okay=False), required=True)
+@click.option("--archivo", type=click.Path(exists=True, dir_okay=False), help="YAML de la hipótesis.")
+def informe_command(hipotesis_id, out, archivo):
+    try:
+        h = cargar_hipotesis(archivo) if archivo else None
+        html = render_informe(datos_informe(hipotesis_id), h)
+    except (ValueError, SnapshotError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    Path(out).write_text(html, encoding="utf-8")
+    click.echo(f"Informe en {out}")
