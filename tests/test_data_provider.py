@@ -475,3 +475,51 @@ class TestSourceDelegation:
 
     def test_default_source_is_yahoo(self, db_session):
         assert isinstance(DataProvider(db_session).source, YahooSource)
+
+
+class TestDailyBarConvention:
+    """Las barras diarias se guardan a las 00:00 (convención vieja), las intradía en UTC."""
+
+    class NewYorkDailySource(FakeSource):
+        """Devuelve una barra diaria a las 00:00 de Nueva York, como yfinance."""
+
+        def fetch(self, symbol, timeframe, start, end):
+            self.calls.append((symbol, timeframe, start, end))
+            ts = pd.DatetimeIndex(["2024-01-02 00:00"], tz="America/New_York")
+            return pd.DataFrame(
+                {"timestamp": ts, "open": 9.0, "high": 9.5, "low": 8.5, "close": 9.2, "volume": 99.0}
+            )
+
+    def test_daily_bar_does_not_duplicate_or_shift_a_row_cached_at_midnight(self, db_session):
+        day = datetime(2024, 1, 2, 0, 0)
+        db_session.add(
+            MarketData(
+                symbol="QQQ", timeframe="1d", timestamp=day,
+                open=1.0, high=2.0, low=0.5, close=1.5, volume=10.0,
+            )
+        )
+        db_session.commit()
+        provider = DataProvider(db_session, source=self.NewYorkDailySource())
+
+        result = provider.get_ohlc("QQQ", "1d", datetime(2024, 1, 1), datetime(2024, 1, 4))
+
+        assert provider.source.calls, "el hueco posterior a la última barra debía pedirse"
+        stored = db_session.query(MarketData).filter(MarketData.symbol == "QQQ").all()
+        assert [r.timestamp for r in stored] == [day]
+        # el borde cacheado/hueco puede repetirse en el DataFrame (comportamiento previo); lo que no debe haber es otra hora
+        assert set(result["timestamp"]) == {day}
+
+    def test_intraday_bar_keeps_utc_naive(self, db_session):
+        class NewYorkHourly(FakeSource):
+            def fetch(self, symbol, timeframe, start, end):
+                ts = pd.DatetimeIndex(["2024-01-02 09:30"], tz="America/New_York")
+                return pd.DataFrame(
+                    {"timestamp": ts, "open": 1.0, "high": 2.0, "low": 0.5, "close": 1.5, "volume": 1.0}
+                )
+
+        DataProvider(db_session, source=NewYorkHourly()).get_ohlc(
+            "QQQ", "1h", datetime(2024, 1, 2), datetime(2024, 1, 3)
+        )
+
+        stored = db_session.query(MarketData).one()
+        assert stored.timestamp == datetime(2024, 1, 2, 14, 30)

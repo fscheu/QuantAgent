@@ -8,7 +8,7 @@ import pandas as pd
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
-from quantagent.data.sources.base import CandleSource
+from quantagent.data.sources.base import CandleSource, to_utc
 from quantagent.data.sources.yahoo import YahooSource
 from quantagent.models import MarketData
 
@@ -144,7 +144,7 @@ class DataProvider:
                         # DB stores UTC without tzinfo
                         ts = pd.to_datetime(api_data["timestamp"])
                         if ts.dt.tz is not None:
-                            ts = ts.dt.tz_convert("UTC").dt.tz_localize(None)
+                            ts = to_utc(ts, timeframe).dt.tz_localize(None)
                         api_data["timestamp"] = ts
 
                         # Store in database

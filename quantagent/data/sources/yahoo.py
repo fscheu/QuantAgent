@@ -7,7 +7,7 @@ from typing import Optional
 import pandas as pd
 import yfinance as yf
 
-from quantagent.data.sources.base import CANDLE_COLUMNS
+from quantagent.data.sources.base import CANDLE_COLUMNS, to_utc
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +108,6 @@ class YahooSource:
 
         ts = pd.to_datetime(df["timestamp"])
         # Yahoo devuelve hora local del exchange; sin zona se asume UTC.
-        ts = ts.dt.tz_localize("UTC") if ts.dt.tz is None else ts.dt.tz_convert("UTC")
+        ts = ts.dt.tz_localize("UTC") if ts.dt.tz is None else to_utc(ts, timeframe)
         df["timestamp"] = ts
         return df
