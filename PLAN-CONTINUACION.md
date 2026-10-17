@@ -594,6 +594,7 @@ Los primeros 5 son los más fáciles de revisar.
 | I06 | `QuantAgent-d4cq.30` | Informe HTML por hipótesis | Etapa, motivo y activos; sin precios | leer | L11 |
 | I07 | `QuantAgent-d4cq.31` | Resumen de la tanda | Conteos por etapa y veredicto; causas agrupadas | leer | L11 |
 | I08 | `QuantAgent-d4cq.32` | `backtest hipotesis tanda`; depende de I04, I06, I07 | 3 YAML, uno corta y uno lanza: 3 informes o logs y resumen | leer | L11 |
+| I08b | `QuantAgent-d4cq.35` | `tanda` saltea hipótesis con veredicto final; depende de I08, agregado por el PM el 2026-10-17 al revisar #248 | CORTA/ALARMA/PASA etapa 3 se saltean; ERROR y sin estado corren | leer | L11 |
 | I09 | `QuantAgent-d4cq.33` | Hipótesis máximo de 52 semanas y momentum 12m | La admisión acepta las dos | leer | L11 |
 | I10 | `QuantAgent-d4cq.34` | Punto de control L11: tanda de `hipotesis/` (VM); depende de I01–I09 | Informe por hipótesis; rsi y sma sin intentos nuevos | probar | L11 |
 
