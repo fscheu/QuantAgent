@@ -2,7 +2,9 @@
 
 import csv
 import json
-from datetime import timezone
+import traceback
+from contextlib import redirect_stderr, redirect_stdout
+from datetime import datetime, timezone
 from pathlib import Path
 
 import click
@@ -24,6 +26,39 @@ from .sweep import registrar_intento
 @click.group("hipotesis", help="Evaluar hipótesis de la fábrica de estrategias.")
 def hipotesis_group():
     pass
+
+
+@hipotesis_group.command("tanda", help="Procesar los YAML en orden y guardar informes, logs y resumen.")
+@click.argument("carpeta_yaml", type=click.Path(exists=True, file_okay=False))
+@click.option("--snapshot", "snapshot_name", required=True)
+@click.option("--carpeta", type=click.Path(file_okay=False), required=True)
+@click.pass_context
+def tanda_command(ctx, carpeta_yaml, snapshot_name, carpeta):
+    desde = datetime.now(timezone.utc)
+    destino = Path(carpeta)
+    destino.mkdir(parents=True, exist_ok=True)
+    for archivo in sorted(Path(carpeta_yaml).glob("*.yaml")):
+        try:
+            h = cargar_hipotesis(archivo)
+        except Exception:
+            (destino / f"{archivo.stem}.log").write_text(traceback.format_exc(), encoding="utf-8")
+            continue
+        salida = destino / h.id
+        salida.mkdir(parents=True, exist_ok=True)
+        with (salida / "corrida.log").open("w", encoding="utf-8") as log:
+            with redirect_stdout(log), redirect_stderr(log):
+                try:
+                    ctx.invoke(correr_command, archivo=str(archivo), snapshot_name=snapshot_name, carpeta=str(salida))
+                except click.exceptions.Exit:
+                    pass
+                except Exception:
+                    traceback.print_exc()
+                try:
+                    ctx.invoke(informe_command, hipotesis_id=h.id, out=str(salida / "informe.html"), archivo=str(archivo))
+                except Exception:
+                    traceback.print_exc()
+    (destino / "resumen.md").write_text(resumen_tanda(desde), encoding="utf-8")
+    click.echo(f"Tanda terminada: {destino / 'resumen.md'}")
 
 
 @hipotesis_group.command("resumen", help="Resumir los últimos estados y los intentos de la tanda.")
