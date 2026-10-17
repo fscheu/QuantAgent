@@ -4,7 +4,7 @@ from pathlib import Path
 import click
 import pytest
 
-from quantagent.cli.sweep import MAX_SWEEP_COMBINATIONS, cargar_grilla, validar_grilla
+from quantagent.cli.sweep import CAMPOS_INTENTOS, MAX_SWEEP_COMBINATIONS, cargar_grilla, validar_grilla
 
 
 def test_vecinos_rsi_un_parametro_por_vez():
@@ -286,10 +286,7 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
     assert intentos.read_bytes().startswith(prefijo)
     with intentos.open(newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
-        assert reader.fieldnames == [
-            "fecha_utc", "estrategia", "activo", "snapshot", "desde", "hasta",
-            "costos", "tamano", "params", "trades", "pnl", "sharpe", "hipotesis", "etapa",
-        ]
+        assert reader.fieldnames == CAMPOS_INTENTOS
         intentos_rows = list(reader)
     assert len(intentos_rows) == 8
     antes = intentos.read_bytes()
@@ -431,7 +428,7 @@ def test_registrar_intento_migra_encabezado_viejo_y_cuenta_por_hipotesis(monkeyp
 
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     path = tmp_path / "intentos.csv"
-    viejo = CAMPOS_INTENTOS[:-2]
+    viejo = CAMPOS_INTENTOS[:-3]
     filas = [{c: f"{c}{i}" for c in viejo} for i in range(3)]
     with path.open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=viejo)
@@ -450,6 +447,34 @@ def test_registrar_intento_migra_encabezado_viejo_y_cuenta_por_hipotesis(monkeyp
     assert len(rows) == 5
     for orig, nueva in zip(filas, rows[:3]):
         assert {c: nueva[c] for c in viejo} == orig
-        assert (nueva["hipotesis"], nueva["etapa"]) == ("", "")
+        assert (nueva["hipotesis"], nueva["etapa"], nueva["sharpe_base"]) == ("", "", "")
     assert (rows[3]["hipotesis"], rows[3]["etapa"]) == ("h1", "E1")
     assert contar_intentos() == 5 and contar_intentos("h1") == 1
+
+
+def test_registrar_intento_migra_encabezado_sin_sharpe_base(monkeypatch, tmp_path):
+    import csv
+    from quantagent.cli.sweep import CAMPOS_INTENTOS, registrar_intento
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    path = tmp_path / "intentos.csv"
+    sin_sharpe_base = CAMPOS_INTENTOS[:-1]
+    filas = [{c: f"v_{c}_{i}" for c in sin_sharpe_base} for i in range(2)]
+    with path.open("w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=sin_sharpe_base)
+        w.writeheader()
+        w.writerows(filas)
+
+    row = {"desde": "2010-01-01", "hasta": "2012-01-01", "trades": 4, "pnl": 1.5, "sharpe": 0.3}
+    registrar_intento("rsi", "SPY", "snap", None, 1.0, {"a": 1}, row, hipotesis="h1", etapa="1", sharpe_base="tasa_0")
+
+    with path.open(newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        assert reader.fieldnames == CAMPOS_INTENTOS
+        rows = list(reader)
+    assert len(rows) == 3
+    for orig, guardada in zip(filas, rows[:2]):
+        assert {c: guardada[c] for c in sin_sharpe_base} == orig
+        assert guardada["sharpe_base"] == ""
+    assert rows[2]["sharpe_base"] == "tasa_0"
+    assert rows[2]["hipotesis"] == "h1"
