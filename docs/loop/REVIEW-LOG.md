@@ -271,4 +271,10 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-17 #248 QuantAgent-d4cq.32 I08 tanda: merge. Tanda real aislada: sma repite y suma 12 intentos → nuevo I08b (d4cq.35) antes de I10.
 2026-10-17 #249 QuantAgent-d4cq.35 I08b tanda saltea veredictos finales: merge. Queda I10 (espera OK de Fede).
 2026-10-17 #250 QuantAgent-d4cq.34 I10 tanda real (corrida por el PM con OK de Fede): merge tras 1 cambio (conteos Sharpe 9 y 7 de 12). Las 2 nuevas cortan en etapa 1 por la regla de 30 trades → decisión de Fede para L12. L11 completo.
+2026-10-17 #256 QuantAgent-d4cq.37 C01 sharpe_base y tasa 0 en etapas 2-3: merge.
+2026-10-17 #255 QuantAgent-d4cq.48 C04 (nube) pesos por igual riesgo: merge.
+2026-10-17 #254 QuantAgent-d4cq.49 C05a (nube) filtrar_activo devuelve retornos: merge.
+2026-10-17 #260 QuantAgent-qix2 LB1 (nube) CandleSource y YahooSource, ahora en UTC: merge en lote/datos-externos.
+2026-10-17 #259 QuantAgent-pdxx LB1 (nube) cliente FRED/ALFRED: merge en lote/datos-externos.
+2026-10-17 #258 QuantAgent-jpms LB1 (nube) AlpacaSource solo datos: merge en lote/datos-externos.
 ```

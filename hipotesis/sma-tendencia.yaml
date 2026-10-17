@@ -11,4 +11,5 @@ parametros:
   fast: [20, 50]
   slow: [200]
 activos: [SPY, IWM, EFA, EEM, TLT, SHY, GLD, DBC, XLK, XLE, XLF, XLU]
+universo: Universo M2 de 12 ETFs liquidos multiactivo para probar seguimiento de tendencia.
 timeframe: 1d

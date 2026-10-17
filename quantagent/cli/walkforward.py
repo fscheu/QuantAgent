@@ -83,7 +83,8 @@ def walkforward_command(strategy_name, symbol, snapshot_name, grid_path, out_pat
                     registrar_intento(strategy_name, symbol, snapshot_name, options["costos"],
                                       options["tamano_posicion"], {**combo, "llenado": llenado},
                                       {**r, "pnl": round(r["pnl"], 2), "sharpe": round(r["sharpe"], 2),
-                                       "desde": f"{meta.start_date:%Y-%m-%d}", "hasta": f"{meta.end_date:%Y-%m-%d}"})
+                                       "desde": f"{meta.start_date:%Y-%m-%d}", "hasta": f"{meta.end_date:%Y-%m-%d}"},
+                                      sharpe_base="tasa_libre")
                     resultados.append({**r, "params": combo})
         rows.append(dict(ajuste_desde=f"{a:%Y-%m-%d}", ajuste_hasta=f"{b:%Y-%m-%d}",
                          prueba_desde=f"{c:%Y-%m-%d}", prueba_hasta=f"{d:%Y-%m-%d}",

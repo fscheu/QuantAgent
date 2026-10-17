@@ -50,4 +50,4 @@ def filtrar_activo(h, velas: pd.DataFrame, *, costos: dict, capital: float, trai
         trades += r["trades"]
     ret = pd.concat(retornos)
     equity = capital * (1 + ret).cumprod()
-    return {"sharpe_tasa_0": equity_metrics(equity, 0.0)["sharpe"], "trades": trades, "ganadores": ganadores}
+    return {"sharpe_tasa_0": equity_metrics(equity, 0.0)["sharpe"], "trades": trades, "ganadores": ganadores, "retornos": ret}

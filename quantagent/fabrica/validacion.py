@@ -50,8 +50,9 @@ def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, a
                 raise RuntimeError(resultado.stderr)
             with out.open(newline="") as f:
                 fila = next(csv.DictReader(f))
-            registrar_intento(h.clase, activo, snapshot, "etf", 1.0, params, fila,
-                              hipotesis=h.id, etapa=etapa)
+            fila_intento = {**fila, "sharpe": fila["sharpe_tasa_0"]}
+            registrar_intento(h.clase, activo, snapshot, "etf", 1.0, params, fila_intento,
+                              hipotesis=h.id, etapa=etapa, sharpe_base="tasa_0")
             filas.append(fila)
     return filas
 
