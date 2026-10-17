@@ -50,3 +50,48 @@ def test_tanda_continua_y_escribe_informes_logs_y_resumen(tmp_path, monkeypatch,
     resumen = (tmp_path / "salida" / "resumen.md").read_text()
     assert f"| 1 | CORTA | {3 if todas_cortan else 2} |" in resumen
     assert "fuera de tanda" not in resumen
+
+
+@pytest.mark.parametrize("estados", [
+    [("1", "CORTA"), ("2", "ALARMA"), ("3", "ERROR"), None],
+    [("3", "PASA"), ("1", "PASA"), ("0", "PASA"), ("2", "PASA")],
+    [("0", "CORTA"), ("3", "CORTA"), ("0", "ALARMA"), ("3", "ALARMA")],
+])
+def test_tanda_solo_corre_estados_no_finales(tmp_path, monkeypatch, estados):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path / "datos"))
+    origen = tmp_path / "yaml"
+    origen.mkdir()
+    from quantagent.fabrica.hipotesis import cargar_hipotesis
+    plantilla = Path("hipotesis/rsi-reversion-corta.yaml").read_text()
+    id_original = cargar_hipotesis("hipotesis/rsi-reversion-corta.yaml").id
+    finales = []
+    for i, estado in enumerate(estados):
+        nombre = f"tanda-{i}"
+        (origen / f"{nombre}.yaml").write_text(plantilla.replace(id_original, nombre))
+        if estado:
+            registrar_estado(nombre, "0", "PASA", "estado anterior")
+            registrar_estado(nombre, *estado, "último estado")
+        if estado and (estado[1] in ("CORTA", "ALARMA") or estado == ("3", "PASA")):
+            finales.append(nombre)
+    registros = (tmp_path / "datos" / "hipotesis.csv").read_bytes()
+    llamadas = []
+
+    def correr(archivo, snapshot_name, carpeta):
+        llamadas.append(Path(archivo).stem)
+        click.echo("ejecutada")
+
+    monkeypatch.setattr(correr_command, "callback", correr)
+    resultado = CliRunner().invoke(hipotesis_group, ["tanda", str(origen), "--snapshot", "sin-lectura",
+                                                   "--carpeta", str(tmp_path / "salida")])
+    assert resultado.exit_code == 0, resultado.output
+    assert llamadas == [f"tanda-{i}" for i in range(4) if f"tanda-{i}" not in finales]
+    assert (tmp_path / "datos" / "hipotesis.csv").read_bytes() == registros
+    assert not (tmp_path / "datos" / "intentos.csv").exists()
+    for i, estado in enumerate(estados):
+        salida = tmp_path / "salida" / f"tanda-{i}"
+        log = (salida / "corrida.log").read_text()
+        if f"tanda-{i}" in finales:
+            assert f"ya evaluada: etapa {estado[0]} {estado[1]}; se saltea" in log
+            assert f"Veredicto: {estado[1]}" in (salida / "informe.html").read_text()
+        else:
+            assert "ejecutada" in log

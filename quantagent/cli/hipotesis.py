@@ -13,7 +13,7 @@ from tabulate import tabulate
 from quantagent.data.snapshot import SnapshotError, read_snapshot
 from quantagent.fabrica.admision import admitir
 from quantagent.fabrica.candado import CandadoError, abrir, fecha_apertura
-from quantagent.fabrica.estado import registrar_estado, resumen_tanda
+from quantagent.fabrica.estado import registrar_estado, resumen_tanda, ultimo_estado
 from quantagent.fabrica.filtro import filtrar_activo, parametros_elegidos, veredicto_etapa1
 from quantagent.fabrica.hipotesis import cargar_hipotesis
 from quantagent.fabrica.informe import datos_informe, render_informe
@@ -48,7 +48,12 @@ def tanda_command(ctx, carpeta_yaml, snapshot_name, carpeta):
         with (salida / "corrida.log").open("w", encoding="utf-8") as log:
             with redirect_stdout(log), redirect_stderr(log):
                 try:
-                    ctx.invoke(correr_command, archivo=str(archivo), snapshot_name=snapshot_name, carpeta=str(salida))
+                    estado = ultimo_estado(h.id)
+                    if estado and (estado["veredicto"] in ("CORTA", "ALARMA") or
+                                   (estado["veredicto"] == "PASA" and estado["etapa"] == "3")):
+                        click.echo(f"ya evaluada: etapa {estado['etapa']} {estado['veredicto']}; se saltea")
+                    else:
+                        ctx.invoke(correr_command, archivo=str(archivo), snapshot_name=snapshot_name, carpeta=str(salida))
                 except click.exceptions.Exit:
                     pass
                 except Exception:
