@@ -14,6 +14,7 @@ from quantagent.fabrica.candado import CandadoError, abrir, fecha_apertura
 from quantagent.fabrica.estado import registrar_estado, resumen_tanda
 from quantagent.fabrica.filtro import filtrar_activo, parametros_elegidos, veredicto_etapa1
 from quantagent.fabrica.hipotesis import cargar_hipotesis
+from quantagent.fabrica.informe import datos_informe, render_informe
 from quantagent.fabrica.validacion import alarma_filtro_motor, validar_etapa2, validar_etapa3
 from quantagent.settings import COSTOS_PERFILES
 
@@ -163,3 +164,17 @@ def correr_command(archivo, snapshot_name, carpeta):
                 click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
     click.echo(f"Llegó a la etapa {etapa}: {veredicto} ({motivo})")
     raise click.exceptions.Exit(int(veredicto != "PASA"))
+
+
+@hipotesis_group.command("informe", help="Página HTML con el veredicto y los motivos de una hipótesis.")
+@click.argument("hipotesis_id")
+@click.option("--out", type=click.Path(dir_okay=False), required=True)
+@click.option("--archivo", type=click.Path(exists=True, dir_okay=False), help="YAML de la hipótesis.")
+def informe_command(hipotesis_id, out, archivo):
+    try:
+        h = cargar_hipotesis(archivo) if archivo else None
+        html = render_informe(datos_informe(hipotesis_id), h)
+    except (ValueError, SnapshotError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    Path(out).write_text(html, encoding="utf-8")
+    click.echo(f"Informe en {out}")
