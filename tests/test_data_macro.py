@@ -22,7 +22,7 @@ class ClienteFalso:
     def observaciones(self, serie, desde, hasta, todas_las_versiones=True):
         self.llamadas.append((serie, todas_las_versiones))
         fin = pd.Timestamp("9999-12-31")
-        filas = [("2020-03-01", 4.0, "2020-04-05", "2020-05-03"), ("2020-03-01", 4.2, "2020-05-03", fin)]
+        filas = [("2020-03-01", 4.0, "2020-04-05", "2020-05-02"), ("2020-03-01", 4.2, "2020-05-03", fin)]
         if serie == "CPIAUCSL":
             filas = [("2020-03-01", 258.1, "2020-04-10", fin)]
         return pd.DataFrame(
@@ -95,7 +95,8 @@ def test_punto_en_el_tiempo_ve_la_version_vigente_en_cada_fecha(tmp_path):
     mar = pd.Timestamp("2020-03-01")
     assert valor_conocido("m", "UNRATE", "2020-04-01", base_dir=tmp_path) is None
     assert valor_conocido("m", "UNRATE", "2020-04-10", base_dir=tmp_path) == (mar, 4.0)
-    assert valor_conocido("m", "UNRATE", "2020-05-03", base_dir=tmp_path) == (mar, 4.2)  # realtime_end es exclusivo
+    assert valor_conocido("m", "UNRATE", "2020-05-02", base_dir=tmp_path) == (mar, 4.0)  # último día de la versión: realtime_end es inclusivo
+    assert valor_conocido("m", "UNRATE", "2020-05-03", base_dir=tmp_path) == (mar, 4.2)
     assert valor_conocido("m", "UNRATE", "2020-05-10", base_dir=tmp_path) == (mar, 4.2)
     s = serie_punto_en_el_tiempo("m", "UNRATE", ["2020-04-01", "2020-04-10", "2020-05-10"], base_dir=tmp_path)
     assert s.isna().tolist() == [True, False, False] and s.dropna().tolist() == [4.0, 4.2]
