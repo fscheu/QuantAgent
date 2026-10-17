@@ -9,7 +9,7 @@ from tabulate import tabulate
 
 from quantagent.data.snapshot import SnapshotError, read_snapshot
 from quantagent.fabrica.admision import admitir
-from quantagent.fabrica.candado import CandadoError, abrir
+from quantagent.fabrica.candado import CandadoError, abrir, fecha_apertura
 from quantagent.fabrica.estado import registrar_estado
 from quantagent.fabrica.filtro import filtrar_activo, parametros_elegidos, veredicto_etapa1
 from quantagent.fabrica.hipotesis import cargar_hipotesis
@@ -24,7 +24,7 @@ def hipotesis_group():
     pass
 
 
-def admitir_hipotesis(archivo, snapshot_name):
+def admitir_hipotesis(archivo, snapshot_name, prueba_unica=False):
     """Admitir y registrar el rechazo, devolviendo hipótesis y motivos."""
     try:
         h = cargar_hipotesis(archivo)
@@ -35,6 +35,11 @@ def admitir_hipotesis(archivo, snapshot_name):
         ok, motivos = admitir(h, velas)
     except (ValueError, SnapshotError) as exc:
         raise click.ClickException(str(exc)) from exc
+    if prueba_unica:
+        fecha = fecha_apertura(h.id, "prueba")
+        if fecha is not None:
+            click.echo(f"prueba de {h.id} ya abierta el {fecha}; no se vuelve a correr")
+            raise click.exceptions.Exit(1)
     if not ok:
         registrar_intento(
             h.clase, h.activos[0], snapshot_name, "etf", 1.0, h.parametros,
@@ -94,7 +99,7 @@ def filtrar_command(archivo, snapshot_name, out):
 @click.option("--snapshot", "snapshot_name", required=True)
 @click.option("--carpeta", type=click.Path(file_okay=False), required=True)
 def correr_command(archivo, snapshot_name, carpeta):
-    h, ok, motivos = admitir_hipotesis(archivo, snapshot_name)
+    h, ok, motivos = admitir_hipotesis(archivo, snapshot_name, True)
     etapa, veredicto = "0", "PASA" if ok else "CORTA"
     motivo = "; ".join(motivos) if motivos else "admisión aceptada"
     registrar_estado(h.id, etapa, veredicto, motivo)
