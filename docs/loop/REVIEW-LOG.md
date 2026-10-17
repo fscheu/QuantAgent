@@ -257,4 +257,5 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-16 #235 QuantAgent-d4cq.23.1 E08a: merge tras fijar la variable en el test.
 2026-10-16 #236 QuantAgent-d4cq.23.2 E08b etapa 3 y candado en correr: merge. Mutación sin candado rompe 3 tests.
 2026-10-16 #237 QuantAgent-d4cq.23.3 E08c integración etapa 3 y reapertura: merge. Mutación a 2023 detectada. E08 cerrado. Queda E09 (VM, abre la prueba real): espera OK de Fede.
+2026-10-16 #238 QuantAgent-d4cq.24 E09: bloqueo (sandbox sin escritura en local-data) → Fede eligió opción 1, el PM corrió el comando real; el agente escribió el IM leyendo salidas. rsi CORTA etapa 3 (V30 PASA en SPY/SHY/XLK/XLE, DSR máx 0,007); sma CORTA etapa 1. merge. L10 completo.
 ```
