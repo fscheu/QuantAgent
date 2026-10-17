@@ -85,6 +85,16 @@ source "$REPO/.venv/bin/activate"
 export DATABASE_URL="$LOOP_TEST_DATABASE_URL"
 # Frozen market-data snapshots (M2): read-only data under local-data (ignored by git).
 export QUANTAGENT_SNAPSHOT_DIR="${LOOP_SNAPSHOT_DIR:-/home/azureuser/repos/projects/QuantAgent/local-data}"
+CODEX_DATA_ARGS=()
+if [ -f "$LOOP_LOG_DIR/next-local-data" ]; then
+  rm -f "$LOOP_LOG_DIR/next-local-data"
+  if [ "$AGENT" = "codex" ]; then
+    CODEX_DATA_ARGS=(--add-dir "$QUANTAGENT_SNAPSHOT_DIR")
+    echo "Codex: --add-dir $QUANTAGENT_SNAPSHOT_DIR" >>"$LOG"
+  else
+    echo "Aviso: next-local-data ignorado por $AGENT" >>"$LOG"
+  fi
+fi
 python -m alembic upgrade head >>"$LOG" 2>&1 || { echo "⚠ QuantAgent loop: alembic upgrade falló sobre la base de tests. Log: $LOG"; exit 0; }
 PROMPT="$(cat loop/PROMPT.md)
 
@@ -113,22 +123,22 @@ case "$AGENT" in
       --permission-mode acceptEdits \
       --allowedTools "Bash" "Read" "Edit" "Write" "Glob" "Grep" "Agent" "TodoWrite" \
       --disallowedTools "Bash(git push origin main:*)" "Bash(git push --force:*)" "Bash(git push -f:*)" "Bash(git branch -D:*)" \
-      >"$LOG" 2>&1 ;;
+      >>"$LOG" 2>&1 ;;
   agy)
     # No --dangerously-skip-permissions: what agy may run comes from the allow/deny rules in
     # ~/.gemini/antigravity-cli/settings.json (docs/loop/SETUP-HERMES.md). A command outside them is
     # auto-denied in headless mode and the run ends without a delivery.
     timeout "${LOOP_TIMEOUT_MIN}m" agy -p "$PROMPT" --model "$MODEL" --mode accept-edits \
-      --print-timeout "${LOOP_TIMEOUT_MIN}m" >"$LOG" 2>&1 ;;
+      --print-timeout "${LOOP_TIMEOUT_MIN}m" >>"$LOG" 2>&1 ;;
   codex)
     # Same sandbox as the reviewer (workspace-write), plus network (gh, the test DB) and write access to the
     # shared BEADS database. The sandbox keeps .git read-only even with --add-dir (QuantAgent-dhlu), so
     # Codex leaves .loop-delivery/ and codex_deliver.sh does branch, commit, push and PR under the guard.
     timeout "${LOOP_TIMEOUT_MIN}m" "${LOOP_CODEX_BIN:-codex}" exec -m "$MODEL" -s workspace-write \
       -c sandbox_workspace_write.network_access=true -c shell_environment_policy.inherit=all \
-      --add-dir "$REPO/.beads" - <<<"$PROMPT
+      --add-dir "$REPO/.beads" "${CODEX_DATA_ARGS[@]}" - <<<"$PROMPT
 
-$(cat "$SELF_DIR/codex_addendum.md")" >"$LOG" 2>&1
+$(cat "$SELF_DIR/codex_addendum.md")" >>"$LOG" 2>&1
     LOOP_GITHUB_REPO="$LOOP_GITHUB_REPO" "$SELF_DIR/codex_deliver.sh" "$BASE" "$MODE" >>"$LOG" 2>&1 ;;
 esac
 crc=$?
