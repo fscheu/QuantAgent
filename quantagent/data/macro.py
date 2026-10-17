@@ -1,0 +1,68 @@
+"""Snapshots macro congelados: un Parquet por serie de ALFRED (todas las versiones) y un manifiesto con hashes.
+
+Mismo patrón que `snapshot.py`: `<snapshot_root>/<nombre>/<serie>.parquet` y `manifest.json`.
+Un snapshot macro se congela: no se vuelve a bajar con el mismo nombre (vj37).
+"""
+
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Iterable, Optional
+
+from quantagent.data.snapshot import MANIFEST_NAME, SnapshotError, _sha256, load_manifest, snapshot_root
+
+PRIMERA_FECHA = "1776-07-04"
+ULTIMA_FECHA = "9999-12-31"
+
+
+def crear_snapshot_macro(nombre: str, series: Iterable[str], cliente, base_dir: Optional[Path] = None) -> dict:
+    """Baja todas las versiones de cada serie con `cliente.observaciones` y escribe parquet + manifiesto."""
+    series = sorted(set(series))
+    if not series:
+        raise SnapshotError("no hay series para guardar")
+    carpeta = snapshot_root(base_dir) / nombre
+    if carpeta.exists():
+        raise SnapshotError(f"el snapshot '{nombre}' ya existe: {carpeta}")
+    frames = {s: cliente.observaciones(s, PRIMERA_FECHA, ULTIMA_FECHA, todas_las_versiones=True) for s in series}
+    vacias = [s for s, df in frames.items() if df.empty]
+    if vacias:
+        raise SnapshotError(f"sin filas: {', '.join(vacias)}")
+
+    carpeta.mkdir(parents=True)
+    info = {}
+    for serie, df in frames.items():
+        ruta = carpeta / f"{serie}.parquet"
+        df.to_parquet(ruta, index=False)
+        info[serie] = {
+            "file": ruta.name,
+            "rows": len(df),
+            "start": df["fecha"].min().date().isoformat(),
+            "end": df["fecha"].max().date().isoformat(),
+            "sha256": _sha256(ruta),
+        }
+    manifiesto = {
+        "name": nombre,
+        "source": "alfred",
+        "downloaded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "series": info,
+    }
+    (carpeta / MANIFEST_NAME).write_text(json.dumps(manifiesto, indent=2, sort_keys=True) + "\n")
+    return manifiesto
+
+
+def verificar_snapshot_macro(nombre: str, base_dir: Optional[Path] = None) -> dict:
+    """Recalcula el sha256 de cada serie contra `manifest.json`; si alguna no coincide, `SnapshotError` la nombra."""
+    manifiesto = load_manifest(nombre, base_dir)
+    carpeta = snapshot_root(base_dir) / nombre
+    problemas = []
+    for serie, info in manifiesto["series"].items():
+        ruta = carpeta / info["file"]
+        if not ruta.exists():
+            problemas.append(f"{serie}: falta el archivo {info['file']}")
+        elif _sha256(ruta) != info["sha256"]:
+            problemas.append(f"{serie}: sha256 distinto del manifiesto")
+    if problemas:
+        raise SnapshotError("; ".join(problemas))
+    return manifiesto
