@@ -269,4 +269,5 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-17 #247 QuantAgent-d4cq.31 I07 resumen de la tanda: merge. Real: 2 hipótesis, 48 intentos; causas por activo.
 2026-10-17 #241 QuantAgent-d4cq.30 I06 (nube) informe HTML: merge tras 2 cambios (glosario; Sharpe registrado).
 2026-10-17 #248 QuantAgent-d4cq.32 I08 tanda: merge. Tanda real aislada: sma repite y suma 12 intentos → nuevo I08b (d4cq.35) antes de I10.
+2026-10-17 #249 QuantAgent-d4cq.35 I08b tanda saltea veredictos finales: merge. Queda I10 (espera OK de Fede).
 ```
