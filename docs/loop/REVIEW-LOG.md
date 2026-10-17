@@ -240,4 +240,22 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-16 #220 QuantAgent-d4cq.14.2.2 H06.2b bordes del veredicto: merge. 3 mutaciones detectadas; NaN cuenta como bajo. Escalo a Fede: con 'más de 8' una hipótesis de <=8 activos nunca corta.
 2026-10-16 #221 QuantAgent-d4cq.14.3 H06.3 RSI en 12 ETFs: merge. Reproducido: PASA (4 de 12), 159 s, 12 intentos.
 2026-10-16 #222 QuantAgent-d4cq.15 H07 punto de control L9: merge. SMA reproducido: PASA (5 de 12), 157 s; SMA con 3-10 trades por activo → falta mínimo de trades (L10).
+2026-10-16 #224 QuantAgent-d4cq.16 E01 corte proporcional y mínimo 30 trades: merge. 2 mutaciones detectadas; real: rsi PASA (4 de 12), sma CORTA (12 de 12, 3-10 trades). CI: SIGABRT ajeno en test_recalc_metrics, verde al relanzar.
+2026-10-16 #225 QuantAgent-d4cq.17 E02 parámetros elegidos y filtrar --out: merge. Mutación del empate detectada; real SPY+TLT: CSV con params por activo.
+2026-10-16 #226 QuantAgent-d4cq.18 E03 estado en hipotesis.csv (nube): merge. 5 tests, inválidos no escriben.
+2026-10-16 #227 QuantAgent-d4cq.19 E04 correr_motor: merge. Real rsi/SPY 2007-2018 = golden 181 / -21841.01. Nota: h.clase como alias de compare; intento sin 'llenado'.
+2026-10-16 #229 QuantAgent-d4cq.20 E05 etapa 2: cambio. Ruta relativa a scripts/compare_control.py falla fuera de la raíz del repo.
+2026-10-16 #228 QuantAgent-d4cq.21 E06 dsr_contra_intentos (nube): merge. Mutación sin /√252 detectada.
+2026-10-16 #229 QuantAgent-d4cq.20 E05 etapa 2: cambio (CI sin backtesting.py → importorskip), luego merge. Real SPY+TLT desde /tmp: PASA, controles 181/181 y 198/198. Ojo: en CI test_etapa2 se saltea; solo la VM lo cubre.
+2026-10-16 #230 QuantAgent-d4cq.22 E07 partición en .22.1-.22.3: merge.
+2026-10-16 #231 QuantAgent-d4cq.22.1 E07a extraer admisión y filtro: merge. Salida real de filtrar (sma, 12 ETFs) idéntica por md5.
+2026-10-16 #232 QuantAgent-d4cq.22.2 E07b correr etapas 0-1: merge. Real sma: CORTA en etapa 1 (12 de 12), exit 1, 2 filas de estado.
+2026-10-16 #233 QuantAgent-d4cq.22.3 E07c etapa 2 en correr: cambio. Real rsi: PASA 0-1-2 en 499 s (V30 solo XLE y XLU), pero el motivo de PASA lista las fallas. Hallazgo: etapa 1 da Sharpe fuera de muestra positivo en 8 de 12 y el motor propio 2007-2018 da pnl <= 0 en 10 de 12; falta la alarma filtro vs motor del plan M3.
+2026-10-16 #233 QuantAgent-d4cq.22.3 E07c: merge tras el cambio del motivo de PASA. E07 cerrado.
+2026-10-16 #234 QuantAgent-d4cq.23 E08 partición en .23.1-.23.3: merge.
+2026-10-16 #235 QuantAgent-d4cq.23.1 E08a validar etapa 3: cambio. 2 mutaciones detectadas; CI falla porque test_etapa3_regla no fija QUANTAGENT_SNAPSHOT_DIR.
+2026-10-16 #235 QuantAgent-d4cq.23.1 E08a: merge tras fijar la variable en el test.
+2026-10-16 #236 QuantAgent-d4cq.23.2 E08b etapa 3 y candado en correr: merge. Mutación sin candado rompe 3 tests.
+2026-10-16 #237 QuantAgent-d4cq.23.3 E08c integración etapa 3 y reapertura: merge. Mutación a 2023 detectada. E08 cerrado. Queda E09 (VM, abre la prueba real): espera OK de Fede.
+2026-10-16 #238 QuantAgent-d4cq.24 E09: bloqueo (sandbox sin escritura en local-data) → Fede eligió opción 1, el PM corrió el comando real; el agente escribió el IM leyendo salidas. rsi CORTA etapa 3 (V30 PASA en SPY/SHY/XLK/XLE, DSR máx 0,007); sma CORTA etapa 1. merge. L10 completo.
 ```

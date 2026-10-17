@@ -1,11 +1,28 @@
 """Etapa 1 de la fábrica: walk-forward por activo con el motor del filtro (QuantAgent-d4cq.13)."""
 
+from math import isnan
+
 import pandas as pd
 
 from quantagent.backtesting.signals import bar_signals
 from quantagent.backtesting.vbt_filter import equity_metrics, run_filter
 from quantagent.cli.walkforward import construir_ventanas, seleccionar_ganador
 from quantagent.strategy.registry import build_strategy, cli_aliases
+
+
+def parametros_elegidos(ganadores) -> dict:
+    """Más frecuente; en empate gana la ventana de prueba más reciente."""
+    recientes = sorted(ganadores, key=lambda g: g["prueba_desde"], reverse=True)
+    return max(recientes, key=lambda g: sum(
+        otro["params"] == g["params"] for otro in ganadores
+    ))["params"]
+
+
+def veredicto_etapa1(resultados) -> tuple[str, int]:
+    """Corta si más de dos tercios tienen Sharpe bajo o menos de 30 trades."""
+    bajos = sum(sharpe is None or isnan(sharpe) or sharpe < 0.10 or trades < 30
+                for _, sharpe, trades in resultados)
+    return ("CORTA" if 3 * bajos > 2 * len(resultados) else "PASA"), bajos
 
 
 def filtrar_activo(h, velas: pd.DataFrame, *, costos: dict, capital: float, train_years: int = 4, test_years: int = 2) -> dict:

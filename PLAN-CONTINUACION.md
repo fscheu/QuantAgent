@@ -391,6 +391,8 @@ Lotes (definidos por el PM el 2026-10-06; cada uno se abre cuando Fede mergea el
 | L7 | `lote/fuera-de-muestra` | V27a–V27d, V30–V36, V36a | Hay veredicto PASA / NO PASA por estrategia y activo sobre la prueba 2019–2022, con umbrales fijados antes de abrirla, intentos contados y la reserva cerrada; las 48 celdas de la tabla validan contra `backtesting.py` o tienen causa escrita | V30 (umbrales y supuesto de llenado, antes de abrir la prueba); pivot a LEAN: se decide en M3 (Fede, 2026-10-13, con el resultado del spike `QuantAgent-ryaw`) |
 | L8 | `lote/motor-del-filtro` | F01–F03, F03a, F03a.2a–k, F03b.1–2, F05–F08, F08b, F09 (F04 salió el 2026-10-15) | Plan M3 (`docs/02_planning/QuantAgent-d4cq-PL-m3-fabrica-de-estrategias.md`): `vectorbt` corre las 4 estrategias de M2 sobre los 12 ETFs 2007–2018 con llenado en la apertura siguiente, stops dentro de la vela y prueba de truncamiento; medidos el tiempo de las 48 celdas y el Spearman contra el motor propio | F01 (llenado por defecto: Fede eligió A el 2026-10-14), F03a y F03b (semántica de llenado y números de referencia), F09 (motor del filtro: B o A) |
 | L9 | `lote/hipotesis` | F09.4, F03b.3–5, H01–H07 | Dos hipótesis escritas como archivo YAML corren de punta a punta en la etapa 1 (`backtest hipotesis filtrar`), con admisión, intentos por hipótesis y candado | ninguna prevista: umbrales provisorios decididos por Fede el 2026-10-15 (máx. 6 parámetros libres; corta con Sharpe fuera de muestra < 0,10 en más de 8 de 12 activos) |
+| L10 | `lote/embudo` | E01–E09 | `backtest hipotesis correr` lleva una hipótesis por las etapas 0 a 3 y se detiene en la primera que corta, con estado en `hipotesis.csv`, control contra `backtesting.py` en la etapa 2 y Sharpe deflactado contra el total de intentos en la 3 | umbrales de la etapa 1 decididos por Fede el 2026-10-16 (más de 2/3 de los activos bajo 0,10; menos de 30 trades cuenta como bajo; Sharpe vacío cuenta como bajo); etapa 3 "al menos un activo pasa" y OK para abrir la prueba de las dos hipótesis de L9 (E09) |
+| L11 | `lote/informe-y-tanda` | I01–I10 | `backtest hipotesis tanda hipotesis/` procesa la carpeta entera sobre datos reales y deja un informe HTML por hipótesis y un resumen; la alarma filtro vs motor frena antes de abrir la prueba, un error deja estado y una hipótesis con la prueba ya abierta no suma intentos | decididas por Fede el 2026-10-16: regla de la alarma de I01 (filtro ≥ 0,10 y motor ≤ 0 en al menos la mitad) y punto de control con las 4 hipótesis disponibles en vez de 10 (el catálogo es de L12); falta el OK para abrir la prueba de las que pasen (I10) |
 
 T13 se adelantó dentro de L1: es un documento de decisión que no depende del resto, así la respuesta de Fede
 llega mientras el lote avanza. T20 pasó a L1 porque congela los números que ese lote audita.
@@ -566,6 +568,29 @@ Los primeros 5 son los más fáciles de revisar.
 | H06.2b | `QuantAgent-d4cq.14.2.2` | Bordes del veredicto etapa 1; depende de H06.2a | Nueve de doce bajo 0,10 cortan; ocho pasan; 0,10 no cuenta como bajo | leer | L9 |
 | H06.3 | `QuantAgent-d4cq.14.3` | Evidencia VM del CLI RSI con dos combinaciones; depende de H06.2 | Tabla de doce ETFs, veredicto, tiempo e incremento de doce intentos | probar | L9 |
 | H07 | `QuantAgent-d4cq.15` | Punto de control L9: dos hipótesis de punta a punta (loop, VM); depende de H06 | Doc con veredicto, tiempos y conteo de intentos | leer | L9 |
+| E01 | `QuantAgent-d4cq.16` | Etapa 1: corte si más de 2/3 bajo 0,10; menos de 30 trades cuenta como bajo (nube) | 12 activos: 8 pasa, 9 corta; 6: 4 pasa, 5 corta; 29 trades es bajo | leer | L10 |
+| E02 | `QuantAgent-d4cq.17` | `parametros_elegidos` y `filtrar --out` (nube); depende de E01 | Más elegido gana, empate el más reciente; CSV por activo | leer | L10 |
+| E03 | `QuantAgent-d4cq.18` | Estado por hipótesis en `hipotesis.csv` (nube) | Dos registros, último estado; valores inválidos no escriben | leer | L10 |
+| E04 | `QuantAgent-d4cq.19` | `correr_motor`: compare por activo con sus parámetros e intentos por etapa (nube); depende de E02 | Cada activo con sus parámetros; 2 intentos con hipótesis y etapa | leer | L10 |
+| E05 | `QuantAgent-d4cq.20` | Etapa 2: control contra `backtesting.py` y V30 por activo (nube); depende de E04 | `sin validar` corta; todos NO PASA corta | leer | L10 |
+| E06 | `QuantAgent-d4cq.21` | `dsr_contra_intentos` (nube) | Igual al cálculo a mano; más intentos, menor DSR | leer | L10 |
+| E07a | `QuantAgent-d4cq.22.1` | Extraer resultados reutilizables de admisión y filtro; partición de E07 | `filtrar` conserva salida, intentos y CSV; resultados reutilizables comprobados | leer | L10 |
+| E07b | `QuantAgent-d4cq.22.2` | `correr`, etapas 0 y 1 con estado; depende de E07a | Rechazo deja una fila; corte del filtro deja dos; sin compare | leer | L10 |
+| E07c | `QuantAgent-d4cq.22.3` | Encadenar etapa 2 con parámetros elegidos; depende de E07b | Control real, tres filas de estado y salida según veredicto | leer | L10 |
+| E08a | `QuantAgent-d4cq.23.1` | Validar etapa 3: motor 2019–2022, V30 y DSR por activo; partición de E08, depende de E06, E07 | V30 PASA y DSR ≥ 0,95; basta un activo; intentos etapa 3 | leer | L10 |
+| E08b | `QuantAgent-d4cq.23.2` | Conectar etapa 3 y candado al CLI; depende de E08a | Candado antes de leer prueba; tabla y cuarto estado; corte previo no abre | leer | L10 |
+| E08c | `QuantAgent-d4cq.23.3` | Integración real y segunda apertura; depende de E08b | Cuatro estados y candado; segunda corrida sin compare de prueba; nada desde 2023 | leer | L10 |
+| E09 | `QuantAgent-d4cq.24` | Punto de control L10: las dos hipótesis de L9 por el embudo (VM); depende de E08 | Doc con etapa, motivo, tiempos y conteos | probar | L10 |
+| I01 | `QuantAgent-d4cq.25` | Alarma filtro vs motor: regla pura | 8 con filtro ≥ 0,10: 4 con motor ≤ 0 alarma, 3 no | leer | L11 |
+| I02 | `QuantAgent-d4cq.26` | La alarma frena `correr` antes de la etapa 3; depende de I01 | Etapa 2 ALARMA, candado sin fila | leer | L11 |
+| I03 | `QuantAgent-d4cq.27` | ERROR registrado si falla la etapa 2 o 3 | Fila ERROR; candado usado en etapa 3; la excepción sale | leer | L11 |
+| I04 | `QuantAgent-d4cq.28` | `correr` no repite etapas con la prueba ya abierta | 0 intentos y 0 estados nuevos | leer | L11 |
+| I05 | `QuantAgent-d4cq.29` | `next-local-data`: Codex escribe en `local-data` una corrida (VM) | Con archivo, `--add-dir`; sin él, comando igual | leer | L11 |
+| I06 | `QuantAgent-d4cq.30` | Informe HTML por hipótesis | Etapa, motivo y activos; sin precios | leer | L11 |
+| I07 | `QuantAgent-d4cq.31` | Resumen de la tanda | Conteos por etapa y veredicto; causas agrupadas | leer | L11 |
+| I08 | `QuantAgent-d4cq.32` | `backtest hipotesis tanda`; depende de I04, I06, I07 | 3 YAML, uno corta y uno lanza: 3 informes o logs y resumen | leer | L11 |
+| I09 | `QuantAgent-d4cq.33` | Hipótesis máximo de 52 semanas y momentum 12m | La admisión acepta las dos | leer | L11 |
+| I10 | `QuantAgent-d4cq.34` | Punto de control L11: tanda de `hipotesis/` (VM); depende de I01–I09 | Informe por hipótesis; rsi y sma sin intentos nuevos | probar | L11 |
 
 V08b y V23d se agregaron el 2026-10-12 al revisar V23c (#127): la corrida del agente leyó el tramo de prueba 2019–2022 porque el CLI solo protege la reserva, y con llenado en la apertura siguiente el adaptador cancela órdenes al 100% del capital (21 de 48 celdas). Van antes de V24 para que el markdown salga con la sensibilidad corregida.
 
@@ -671,3 +696,4 @@ revisado
 | Idea | Ticket | Documento | Cuándo |
 |---|---|---|---|
 | Elegir el tipo de estrategia técnica según el régimen de mercado (y más adelante la macro), en lugar de probar todas en todos los activos. Primer paso: medir en 2007–2018 si el resultado de cada estrategia cambia con la volatilidad y la tendencia de SPY | `QuantAgent-ljoj` (decidir) | [`docs/02_planning/QuantAgent-ljoj-PL-regimenes-y-macro.md`](docs/02_planning/QuantAgent-ljoj-PL-regimenes-y-macro.md): análisis, riesgos y referencias comerciales y académicas (JPMaQS, Hedgeye, Fidelity, Two Sigma, meta-labeling, ALFRED) | M3, después de cerrar L7 |
+| Que cada hipótesis defina sobre qué activos trabaja, en lugar de evaluar siempre los 12 ETFs. El corte proporcional de E01 ya lo admite; falta la regla de admisión (cuántos activos como mínimo y con qué justificación) | sin ticket | Fede, 2026-10-16, al mergear L9 | después de L10 |
