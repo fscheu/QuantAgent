@@ -264,4 +264,6 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-17 #243 QuantAgent-d4cq.26 I02 alarma en correr: merge. Mutación rompe el caso con alarma.
 2026-10-17 #244 QuantAgent-d4cq.27 I03 ERROR en etapas 2 y 3: merge. Mutación rompe 2 de 4.
 2026-10-17 #245 QuantAgent-d4cq.28 I04 correr no repite con prueba abierta: merge. rsi real aislado: 29 s, 0 filas nuevas.
+2026-10-17 #246 QuantAgent-d4cq.29 I05 next-local-data: merge. Mutación rompe 1 de 4.
+2026-10-17 #241 QuantAgent-d4cq.30 I06 (nube): segundo cambio, columna Sharpe mezcla tasa 0 y tasa libre de riesgo; conflicto con el lote.
 ```
