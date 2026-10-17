@@ -5,14 +5,17 @@ import json
 import traceback
 from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime, timezone
+from math import isnan
 from pathlib import Path
 
 import click
+import pandas as pd
 from tabulate import tabulate
 
 from quantagent.data.snapshot import SnapshotError, read_snapshot
 from quantagent.fabrica.admision import admitir
 from quantagent.fabrica.candado import CandadoError, abrir, fecha_apertura
+from quantagent.fabrica.cartera import evaluar_cartera
 from quantagent.fabrica.estado import registrar_estado, resumen_tanda, ultimo_estado
 from quantagent.fabrica.filtro import filtrar_activo, parametros_elegidos, veredicto_etapa1
 from quantagent.fabrica.hipotesis import cargar_hipotesis
@@ -43,9 +46,6 @@ def tanda_command(ctx, carpeta_yaml, snapshot_name, carpeta):
         except Exception:
             (destino / f"{archivo.stem}.log").write_text(traceback.format_exc(), encoding="utf-8")
             continue
-        if len(h.piernas) > 1:
-            click.echo(f"cartera de {len(h.piernas)} piernas: falta C05")
-            raise click.exceptions.Exit(1)
         salida = destino / h.id
         salida.mkdir(parents=True, exist_ok=True)
         with (salida / "corrida.log").open("w", encoding="utf-8") as log:
@@ -108,27 +108,42 @@ def admitir_hipotesis(archivo, snapshot_name, prueba_unica=False):
 
 
 def filtrar_hipotesis(h, snapshot_name):
-    """Filtrar y registrar intentos; devolver métricas y parámetros por activo."""
+    """Filtrar y registrar intento de cartera; devolver métricas, parámetros y veredicto."""
     resultados, parametros = [], {}
-    for activo in h.activos:
-        try:
-            velas = read_snapshot(snapshot_name, activo).loc["2007-01-01":"2018-12-31"]
-            if velas.empty:
-                raise ValueError("Sin velas entre 2007 y 2018")
-            velas = velas.rename_axis("timestamp").reset_index()
-            r = filtrar_activo(h, velas, costos=COSTOS_PERFILES["etf"], capital=100_000.0)
-        except (ValueError, SnapshotError) as exc:
-            raise click.ClickException(str(exc)) from exc
-        resultados.append([activo, r["sharpe_tasa_0"], r["trades"]])
-        parametros[activo] = parametros_elegidos(r["ganadores"])
-        registrar_intento(
-            h.clase, activo, snapshot_name, "etf", 1.0, h.parametros,
-            {"desde": "2007-01-01", "hasta": "2018-12-31", "trades": r["trades"],
-             "pnl": "", "sharpe": r["sharpe_tasa_0"]}, hipotesis=h.id, etapa="1",
-            sharpe_base="tasa_0",
-        )
-    veredicto, bajos = veredicto_etapa1(resultados)
-    return resultados, parametros, veredicto, bajos
+    retornos_dict, cierres_dict = {}, {}
+    filas_tabla = []
+    total_trades = 0
+    piernas_map = {}
+    for i, p in enumerate(h.piernas):
+        piernas_map[i] = list(p.activos)
+        for activo in p.activos:
+            try:
+                velas_raw = read_snapshot(snapshot_name, activo).loc["2007-01-01":"2018-12-31"]
+                if velas_raw.empty:
+                    raise ValueError("Sin velas entre 2007 y 2018")
+                cierres_dict[activo] = velas_raw["close"]
+                velas = velas_raw.rename_axis("timestamp").reset_index()
+                r = filtrar_activo(p, velas, costos=COSTOS_PERFILES["etf"], capital=100_000.0)
+            except (ValueError, SnapshotError) as exc:
+                raise click.ClickException(str(exc)) from exc
+            resultados.append([activo, r["sharpe_tasa_0"], r["trades"]])
+            filas_tabla.append([p.clase, activo, r["sharpe_tasa_0"], r["trades"]] if len(h.piernas) > 1 else [activo, r["sharpe_tasa_0"], r["trades"]])
+            retornos_dict[(i, activo)] = r["retornos"]
+            total_trades += r["trades"]
+            parametros[activo] = parametros_elegidos(r["ganadores"])
+    cierres = pd.DataFrame(cierres_dict)
+    sharpe_car = evaluar_cartera(cierres, piernas_map, retornos_dict)
+    veredicto, motivo = veredicto_etapa1(sharpe_car, total_trades)
+    combo = h.parametros if len(h.piernas) == 1 else {p.clase: p.parametros for p in h.piernas}
+    estrategia = h.clase if len(h.piernas) == 1 else "+".join(p.clase for p in h.piernas)
+    sharpe_csv = sharpe_car if (sharpe_car is not None and not (isinstance(sharpe_car, float) and isnan(sharpe_car))) else ""
+    registrar_intento(
+        estrategia, "cartera", snapshot_name, "etf", 1.0, combo,
+        {"desde": "2007-01-01", "hasta": "2018-12-31", "trades": total_trades,
+         "pnl": "", "sharpe": sharpe_csv}, hipotesis=h.id, etapa="1",
+        sharpe_base="tasa_0",
+    )
+    return resultados, parametros, veredicto, motivo, sharpe_car, total_trades, filas_tabla
 
 
 @hipotesis_group.command("filtrar", help="Cargar y admitir una hipótesis sobre 2007–2018.")
@@ -136,17 +151,21 @@ def filtrar_hipotesis(h, snapshot_name):
 @click.option("--snapshot", "snapshot_name", required=True)
 @click.option("--out", type=click.Path(dir_okay=False), help="CSV de resultados y parámetros por activo.")
 def filtrar_command(archivo, snapshot_name, out):
-    h = cargar_hipotesis(archivo)
-    if len(h.piernas) > 1:
-        click.echo(f"cartera de {len(h.piernas)} piernas: falta C05")
-        raise click.exceptions.Exit(1)
     h, ok, motivos = admitir_hipotesis(archivo, snapshot_name)
     if not ok:
         for motivo in motivos:
             click.echo(motivo)
         raise click.exceptions.Exit(1)
-    resultados, parametros, veredicto, bajos = filtrar_hipotesis(h, snapshot_name)
-    click.echo(tabulate(resultados, headers=["activo", "sharpe_fuera_muestra", "trades"], tablefmt="github"))
+    ret = filtrar_hipotesis(h, snapshot_name)
+    resultados, parametros, veredicto, motivo = ret[:4]
+    sharpe_car = ret[4] if len(ret) > 4 else None
+    total_trades = ret[5] if len(ret) > 5 else sum(r[2] for r in resultados)
+    filas_tabla = ret[6] if len(ret) > 6 else (
+        [[p.clase, *r] for p in h.piernas for r in resultados] if len(h.piernas) > 1 else resultados
+    )
+    headers = ["pierna", "activo", "sharpe_fuera_muestra", "trades"] if len(h.piernas) > 1 else ["activo", "sharpe_fuera_muestra", "trades"]
+    fila_cartera = ["cartera", "", sharpe_car, total_trades] if len(h.piernas) > 1 else ["cartera", sharpe_car, total_trades]
+    click.echo(tabulate([*filas_tabla, fila_cartera], headers=headers, tablefmt="github"))
     if out:
         with open(out, "w", newline="") as f:
             writer = csv.writer(f)
@@ -154,7 +173,7 @@ def filtrar_command(archivo, snapshot_name, out):
             writer.writerows(
                 [*fila, json.dumps(parametros[fila[0]], sort_keys=True), veredicto] for fila in resultados
             )
-    click.echo(f"{veredicto} ({bajos} de {len(resultados)} bajo 0,10 o con menos de 30 trades)")
+    click.echo(f"{veredicto} ({motivo})")
 
 
 @hipotesis_group.command("correr", help="Ejecutar las etapas 0 a 3, con corte temprano y estado.")
@@ -162,19 +181,14 @@ def filtrar_command(archivo, snapshot_name, out):
 @click.option("--snapshot", "snapshot_name", required=True)
 @click.option("--carpeta", type=click.Path(file_okay=False), required=True)
 def correr_command(archivo, snapshot_name, carpeta):
-    h = cargar_hipotesis(archivo)
-    if len(h.piernas) > 1:
-        click.echo(f"cartera de {len(h.piernas)} piernas: falta C05")
-        raise click.exceptions.Exit(1)
     h, ok, motivos = admitir_hipotesis(archivo, snapshot_name, True)
     etapa, veredicto = "0", "PASA" if ok else "CORTA"
     motivo = "; ".join(motivos) if motivos else "admisión aceptada"
     registrar_estado(h.id, etapa, veredicto, motivo)
     click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
     if ok:
-        resultados, parametros, veredicto, bajos = filtrar_hipotesis(h, snapshot_name)
+        resultados, parametros, veredicto, motivo = filtrar_hipotesis(h, snapshot_name)[:4]
         etapa = "1"
-        motivo = f"{bajos} de {len(resultados)} bajo 0,10 o con menos de 30 trades"
         registrar_estado(h.id, etapa, veredicto, motivo)
         click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
         if veredicto == "PASA":

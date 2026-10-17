@@ -46,7 +46,7 @@ def test_correr_corte_real_y_estado(tmp_path, monkeypatch, rechazo):
         *[f"Etapa {r['etapa']}: {r['veredicto']} ({r['motivo']})" for r in filas],
         f"Llegó a la etapa {filas[-1]['etapa']}: CORTA ({filas[-1]['motivo']})",
     ]
-    assert ("justificación" if rechazo else "1 de 1 bajo 0,10") in filas[-1]["motivo"]
+    assert ("justificación" if rechazo else "menos de 30 trades en la cartera") in filas[-1]["motivo"]
     with (tmp_path / "intentos.csv").open() as f:
         intentos = list(csv.DictReader(f))
     assert [r["etapa"] for r in intentos] == ["0" if rechazo else "1"]
@@ -109,8 +109,8 @@ def test_correr_control_real(tmp_path, monkeypatch, cortar):
     assert veredicto == ("CORTA" if cortar else "PASA")
     with (tmp_path / "intentos.csv").open() as f:
         intentos = list(csv.DictReader(f))
-    assert [r["etapa"] for r in intentos] == ["1", "1", "2", "2"]
-    assert {r["activo"]: json.loads(r["params"]) for r in intentos[2:]} == params
+    assert [r["etapa"] for r in intentos] == ["1", "2", "2"]
+    assert {r["activo"]: json.loads(r["params"]) for r in intentos[1:]} == params
     assert all((tmp_path / "motor" / f"{a}.csv").exists() for a in params)
     with (tmp_path / "hipotesis.csv").open() as f:
         filas = list(csv.DictReader(f))
@@ -330,21 +330,19 @@ def test_filtro_real_dos_activos(tmp_path, monkeypatch, exportar):
     args = ["--out", str(out)] if exportar else []
     result = CliRunner().invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico", *args])
     assert result.exit_code == 0, result.output
-    assert result.output.rstrip().endswith("CORTA (2 de 2 bajo 0,10 o con menos de 30 trades)")
+    assert "CORTA" in result.output
     with (tmp_path / "intentos.csv").open() as f:
         filas = list(csv.DictReader(f))
-    assert len(filas) == len(resultados) == 2
-    for fila, activo, r in zip(filas, data["activos"], resultados):
-        assert fila["activo"] == activo and fila["hipotesis"] == data["id"] and fila["etapa"] == "1"
-        assert float(fila["sharpe"]) == r["sharpe_tasa_0"]
-        assert int(fila["trades"]) == r["trades"] > 0
+    assert len(filas) == 1 and filas[0]["activo"] == "cartera" and filas[0]["etapa"] == "1"
+    assert int(filas[0]["trades"]) == sum(r["trades"] for r in resultados)
+    for activo, r in zip(data["activos"], resultados):
         celdas = next(line for line in result.output.splitlines() if activo in line).split("|")
         assert float(celdas[2]) == float(format(r["sharpe_tasa_0"], ".6g"))
         assert int(celdas[3]) == r["trades"]
     assert out.exists() == exportar
-    metricas, parametros, veredicto, bajos = filtros[0]
+    metricas, parametros, veredicto, motivo = filtros[0][:4]
     assert metricas == [[a, r["sharpe_tasa_0"], r["trades"]] for a, r in zip(data["activos"], resultados)]
-    assert veredicto == "CORTA" and bajos == 2
+    assert veredicto == "CORTA"
     assert parametros == {a: hipotesis.parametros_elegidos(r["ganadores"]) for a, r in zip(data["activos"], resultados)}
     if exportar:
         with out.open() as f:
@@ -359,40 +357,108 @@ def test_filtro_real_dos_activos(tmp_path, monkeypatch, exportar):
             assert json.loads(fila["params"]) == parametros[activo]
 
 
-@pytest.mark.parametrize("sharpes,final", [
-    ([0.09] * 9 + [0.10] * 3, "CORTA (9 de 12 bajo 0,10)"),
-    ([0.09] * 8 + [0.10] * 4, "PASA (8 de 12 bajo 0,10)"),
-    ([0.09] * 8 + [float("nan")] + [0.10] * 3, "CORTA (9 de 12 bajo 0,10)"),
-    ([0.09] * 8 + [None] + [0.10] * 3, "CORTA (9 de 12 bajo 0,10)"),
-])
-def test_bordes_veredicto_etapa1(tmp_path, monkeypatch, sharpes, final):
+def test_etapa1_cartera_12_activos_5_trades_pasa(tmp_path, monkeypatch):
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     activos = ["SPY", "IWM", "EFA", "EEM", "TLT", "SHY", "GLD", "DBC", "XLE", "XLF", "XLK", "XLU"]
-    fechas = pd.date_range("2007-01-01", periods=40)
-    velas = pd.DataFrame(
-        {c: 100.0 for c in ("open", "high", "low", "close", "adj_close", "volume")}, index=fechas,
-    )
+    fechas = pd.date_range("2007-01-01", periods=100)
+    velas = pd.DataFrame({c: 100.0 for c in ("open", "high", "low", "close", "adj_close", "volume")}, index=fechas)
     write_snapshot("sintetico", dict.fromkeys(activos, velas), base_dir=tmp_path)
     data = yaml.safe_load((Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml").read_text())
     data.update(activos=activos, parametros={"rsi_period": [7], "oversold_threshold": [30.0]})
     archivo = tmp_path / "h.yaml"
     archivo.write_text(yaml.safe_dump(data))
-    resultados = iter({"sharpe_tasa_0": s, "trades": 30, "ganadores": [{"params": {}, "prueba_desde": fechas[0]}]} for s in sharpes)
-    monkeypatch.setattr(hipotesis, "filtrar_activo", lambda *a, **kw: next(resultados))
+    ret_serie = pd.Series(0.001, index=fechas[60:])
+    monkeypatch.setattr(hipotesis, "filtrar_activo", lambda *a, **kw: {
+        "sharpe_tasa_0": 0.5, "trades": 5, "ganadores": [{"params": {}, "prueba_desde": fechas[0]}],
+        "retornos": ret_serie,
+    })
     result = CliRunner().invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico"])
     assert result.exit_code == 0, result.output
-    assert result.output.rstrip().endswith(final.replace(")", " o con menos de 30 trades)"))
+    assert "PASA" in result.output
     with (tmp_path / "intentos.csv").open() as f:
         filas = list(csv.DictReader(f))
-    tabla = [line.split("|") for line in result.output.splitlines()[2:-1]]
-    assert len(filas) == len(tabla) == 12
-    for i, (fila, celdas, activo, sharpe) in enumerate(zip(filas, tabla, activos, sharpes)):
-        assert fila["activo"] == celdas[1].strip() == activo
-        assert fila["etapa"] == "1" and fila["hipotesis"] == data["id"]
-        assert int(fila["trades"]) == int(celdas[3]) == 30
-        if sharpe is None:
-            assert fila["sharpe"] == celdas[2].strip() == ""
-        elif np.isnan(sharpe):
-            assert np.isnan(float(fila["sharpe"])) and np.isnan(float(celdas[2]))
-        else:
-            assert float(fila["sharpe"]) == float(celdas[2]) == sharpe
+    assert len(filas) == 1 and filas[0]["activo"] == "cartera" and int(filas[0]["trades"]) == 60
+
+
+def test_etapa1_cartera_24_trades_corta_motivo_trades(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    activos = ["SPY", "TLT"]
+    fechas = pd.date_range("2007-01-01", periods=100)
+    velas = pd.DataFrame({c: 100.0 for c in ("open", "high", "low", "close", "adj_close", "volume")}, index=fechas)
+    write_snapshot("sintetico", dict.fromkeys(activos, velas), base_dir=tmp_path)
+    data = yaml.safe_load((Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml").read_text())
+    data.update(activos=activos, parametros={"rsi_period": [7], "oversold_threshold": [30.0]})
+    archivo = tmp_path / "h.yaml"
+    archivo.write_text(yaml.safe_dump(data))
+    ret_serie = pd.Series(0.001, index=fechas[60:])
+    monkeypatch.setattr(hipotesis, "filtrar_activo", lambda *a, **kw: {
+        "sharpe_tasa_0": 0.5, "trades": 12, "ganadores": [{"params": {}, "prueba_desde": fechas[0]}],
+        "retornos": ret_serie,
+    })
+    result = CliRunner().invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico"])
+    assert result.exit_code == 0, result.output
+    assert "CORTA (menos de 30 trades en la cartera)" in result.output
+
+
+def test_etapa1_cartera_dos_piernas_tres_activos_un_intento(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    activos = ["SPY", "TLT", "GLD"]
+    fechas = pd.date_range("2007-01-01", periods=100)
+    velas = pd.DataFrame({c: 100.0 for c in ("open", "high", "low", "close", "adj_close", "volume")}, index=fechas)
+    write_snapshot("sintetico", dict.fromkeys(activos, velas), base_dir=tmp_path)
+    data = {
+        "id": "cartera-2x3",
+        "autor": "fede",
+        "justificacion": "Combinar tendencia y momentum diversifica el riesgo en ETFs.",
+        "timeframe": "1d",
+        "piernas": [
+            {"clase": "rsi", "parametros": {"rsi_period": [7], "oversold_threshold": [30.0]}, "activos": ["SPY", "TLT", "GLD"], "universo": "Multi"},
+            {"clase": "sma-cross", "parametros": {"fast": [20], "slow": [200]}, "activos": ["SPY", "TLT", "GLD"], "universo": "Multi"},
+        ],
+    }
+    archivo = tmp_path / "cartera.yaml"
+    archivo.write_text(yaml.safe_dump(data))
+    ret_serie = pd.Series(0.001, index=fechas[60:])
+    monkeypatch.setattr(hipotesis, "filtrar_activo", lambda *a, **kw: {
+        "sharpe_tasa_0": 0.5, "trades": 10, "ganadores": [{"params": {}, "prueba_desde": fechas[0]}],
+        "retornos": ret_serie,
+    })
+    result = CliRunner().invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico"])
+    assert result.exit_code == 0, result.output
+    with (tmp_path / "intentos.csv").open() as f:
+        filas = list(csv.DictReader(f))
+    assert len(filas) == 1 and filas[0]["activo"] == "cartera" and filas[0]["etapa"] == "1"
+    assert int(filas[0]["trades"]) == 60
+
+
+def test_formato_viejo_una_pierna_coincide_con_cartera(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fechas = pd.date_range("2007-01-01", periods=100)
+    velas = pd.DataFrame({c: 100.0 for c in ("open", "high", "low", "close", "adj_close", "volume")}, index=fechas)
+    write_snapshot("sintetico", {"SPY": velas}, base_dir=tmp_path)
+    ret_serie = pd.Series(0.001, index=fechas[60:])
+    monkeypatch.setattr(hipotesis, "filtrar_activo", lambda *a, **kw: {
+        "sharpe_tasa_0": 0.55, "trades": 35, "ganadores": [{"params": {}, "prueba_desde": fechas[0]}],
+        "retornos": ret_serie,
+    })
+    from quantagent.fabrica.hipotesis import cargar_hipotesis
+    data_viejo = {
+        "id": "h-vieja", "autor": "fede", "justificacion": "Hipótesis de formato viejo para verificar.",
+        "timeframe": "1d", "clase": "rsi", "activos": ["SPY"], "universo": "EEUU",
+        "parametros": {"rsi_period": [7], "oversold_threshold": [30.0]},
+    }
+    data_nueva = {
+        "id": "h-nueva", "autor": "fede", "justificacion": "Hipótesis de formato nuevo para verificar.",
+        "timeframe": "1d",
+        "piernas": [{"clase": "rsi", "activos": ["SPY"], "universo": "EEUU", "parametros": {"rsi_period": [7], "oversold_threshold": [30.0]}}],
+    }
+    f_v = tmp_path / "v.yaml"
+    f_v.write_text(yaml.safe_dump(data_viejo))
+    f_n = tmp_path / "n.yaml"
+    f_n.write_text(yaml.safe_dump(data_nueva))
+    r_v = hipotesis.filtrar_hipotesis(cargar_hipotesis(f_v), "sintetico")
+    r_n = hipotesis.filtrar_hipotesis(cargar_hipotesis(f_n), "sintetico")
+    assert r_v[2] == r_n[2] == "PASA"
+    assert r_v[3] == r_n[3]
+    assert r_v[4] == pytest.approx(r_n[4])
+    assert r_v[5] == r_n[5] == 35

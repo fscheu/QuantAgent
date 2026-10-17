@@ -80,9 +80,16 @@ def test_parametro_desconocido_falla_en_validar_grilla(tmp_path):
         cargar_hipotesis(_variante(tmp_path, parametros={"no_existe": [1, 2]}))
 
 
-def test_cli_cartera_dos_piernas_sale_falta_c05(tmp_path):
+def test_cli_cartera_dos_piernas_admite_y_no_frena_falta_c05(tmp_path, monkeypatch):
+    import pandas as pd
     from click.testing import CliRunner
     from quantagent.cli.backtest import backtest_group
+    from quantagent.data.snapshot import write_snapshot
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fechas = pd.date_range("2007-01-01", "2018-12-31", freq="7D")
+    velas = pd.DataFrame({c: 100.0 for c in ("open", "high", "low", "close", "adj_close", "volume")}, index=fechas)
+    write_snapshot("sintetico", {"SPY": velas, "TLT": velas}, base_dir=tmp_path)
 
     data = {
         "id": "dos-piernas",
@@ -97,9 +104,7 @@ def test_cli_cartera_dos_piernas_sale_falta_c05(tmp_path):
     archivo = tmp_path / "h.yaml"
     archivo.write_text(yaml.safe_dump(data))
     runner = CliRunner()
-    for cmd in (["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico"],
-                ["hipotesis", "correr", str(archivo), "--snapshot", "sintetico", "--carpeta", str(tmp_path / "c")],
-                ["hipotesis", "tanda", str(tmp_path), "--snapshot", "sintetico", "--carpeta", str(tmp_path / "t")]):
-        res = runner.invoke(backtest_group, cmd)
-        assert res.exit_code == 1
-        assert "cartera de 2 piernas: falta C05" in res.output
+    res = runner.invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico"])
+    assert "falta C05" not in res.output
+    assert "cartera" in res.output
+

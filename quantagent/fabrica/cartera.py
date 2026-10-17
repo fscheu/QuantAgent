@@ -28,3 +28,17 @@ def pesos(cierres, piernas, ventana=60):
 def combinar(retornos, pesos):
     """Retorno diario de la cartera: Σ peso × retorno de la pierna en cada activo."""
     return (retornos[pesos.columns] * pesos).sum(axis=1)
+
+
+def evaluar_cartera(cierres, piernas, retornos_dict, capital=100_000.0):
+    """Combina retornos fuera de muestra con pesos por igual riesgo y devuelve sharpe a tasa 0."""
+    from quantagent.backtesting.vbt_filter import equity_metrics
+
+    df_ret = pd.DataFrame(retornos_dict).fillna(0.0)
+    if df_ret.empty:
+        return None
+    w = pesos(cierres, piernas).reindex(df_ret.index).ffill().bfill()
+    ret = combinar(df_ret, w)
+    equity = capital * (1 + ret).cumprod()
+    return equity_metrics(equity, 0.0)["sharpe"]
+
