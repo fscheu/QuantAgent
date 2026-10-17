@@ -258,4 +258,7 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-16 #236 QuantAgent-d4cq.23.2 E08b etapa 3 y candado en correr: merge. Mutación sin candado rompe 3 tests.
 2026-10-16 #237 QuantAgent-d4cq.23.3 E08c integración etapa 3 y reapertura: merge. Mutación a 2023 detectada. E08 cerrado. Queda E09 (VM, abre la prueba real): espera OK de Fede.
 2026-10-16 #238 QuantAgent-d4cq.24 E09: bloqueo (sandbox sin escritura en local-data) → Fede eligió opción 1, el PM corrió el comando real; el agente escribió el IM leyendo salidas. rsi CORTA etapa 3 (V30 PASA en SPY/SHY/XLK/XLE, DSR máx 0,007); sma CORTA etapa 1. merge. L10 completo.
+2026-10-17 #242 QuantAgent-d4cq.25 I01 alarma filtro vs motor: merge. Con CSV reales de E09, rsi da alarma en 6 de 8.
+2026-10-17 #240 QuantAgent-d4cq.33 I09 (nube) hipótesis 52 semanas y momentum 12m: merge. DOIs verificados; admisión real en SPY y SHY.
+2026-10-17 #241 QuantAgent-d4cq.30 I06 (nube) informe HTML: cambio, glosario define mal V30 y Sharpe.
 ```
