@@ -10,7 +10,6 @@ from quantagent.backtesting.verdict import dsr_contra_intentos, evaluar
 from quantagent.cli.sweep import registrar_intento
 from quantagent.data.snapshot import snapshot_root
 
-
 SHARPE_MINIMO_FILTRO = 0.10
 SHARPE_MAXIMO_MOTOR_ALARMA = 0.0
 PROPORCION_MINIMA_ALARMA = 0.5
