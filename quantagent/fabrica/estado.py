@@ -54,9 +54,11 @@ def resumen_tanda(desde=None):
         registros[nombre] = filas
     ultimos = {r["hipotesis"]: r for r in registros[ESTADO_CSV]}
     conteos = Counter((r["etapa"], r["veredicto"]) for r in ultimos.values())
-    causas = Counter(re.sub(r"\b[A-Z][A-Z0-9.-]*:\s*", "", causa).strip()
+    causas = Counter(causa
                      for r in ultimos.values() if r["veredicto"] != "PASA"
-                     for causa in r["motivo"].split(";") if causa.strip())
+                     for causa in {re.sub(r"\b[A-Z][A-Z0-9.-]*:\s*", "", c).strip()
+                                   for c in r["motivo"].split(";")
+                                   if re.sub(r"\b[A-Z][A-Z0-9.-]*:\s*", "", c).strip()})
     intentos = sum(r.get("hipotesis") in ultimos for r in registros["intentos.csv"])
     lineas = ["# Resumen de la tanda", "", "| Etapa | Veredicto | Hipótesis |",
               "| --- | --- | ---: |"]

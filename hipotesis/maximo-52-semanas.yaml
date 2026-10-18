@@ -13,4 +13,5 @@ parametros:
   trend_ma_period: [50, 100]
   volume_factor: [1.0, 1.5]
 activos: [SPY, IWM, EFA, EEM, TLT, SHY, GLD, DBC, XLK, XLE, XLF, XLU]
+universo: Universo M2 de 12 ETFs liquidos multiactivo para probar ruptura de maximo en ETFs.
 timeframe: 1d

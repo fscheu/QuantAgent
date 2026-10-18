@@ -1,0 +1,25 @@
+id: cartera-tendencia-momentum
+autor: fede
+justificacion: >-
+  Cartera de dos primas de series de tiempo con literatura larga y en muchos
+  activos. Momentum: el retorno de los ultimos doce meses anticipa el del mes
+  siguiente (Moskowitz, Ooi y Pedersen 2012). Tendencia: el precio por encima
+  de su media de unos 10 meses (210 ruedas) indica tendencia alcista, la regla
+  de Faber 2007, "A Quantitative Approach to Tactical Asset Allocation", con
+  respaldo de la prima de tendencia en Hurst, Ooi y Pedersen 2017. A diferencia
+  de Faber, que decide a fin de mes, aca la regla se evalua a diario. Parametros
+  fijos, sin grilla: la cartera tiene 0 parametros libres.
+fuente: https://doi.org/10.1016/j.jfineco.2011.11.003 ; https://doi.org/10.3905/jwm.2007.674809 ; https://doi.org/10.3905/jpm.2017.44.1.015
+timeframe: 1d
+piernas:
+  - clase: momentum-12m
+    parametros:
+      lookback: [252]
+    activos: [AGG, DBC, EEM, EFA, EWJ, EWZ, FXE, FXI, GLD, IEF, IWM, LQD, QQQ, SHY, SLV, SPY, TIP, TLT, USO, VNQ, XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV, XLY]
+    universo: 29 ETFs liquidos multiactivo del snapshot etf-1d-2026-10-amplio.
+  - clase: sma-cross
+    parametros:
+      fast: [1]
+      slow: [210]
+    activos: [AGG, DBC, EEM, EFA, EWJ, EWZ, FXE, FXI, GLD, IEF, IWM, LQD, QQQ, SHY, SLV, SPY, TIP, TLT, USO, VNQ, XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV, XLY]
+    universo: 29 ETFs liquidos multiactivo del snapshot etf-1d-2026-10-amplio.

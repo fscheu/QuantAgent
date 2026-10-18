@@ -50,6 +50,7 @@ PASO 2 — Elegir el trabajo
 - Modo cambio: ya estás en la rama del PR abierto. Aplicá SOLO lo que pide review.detail. Sin alcance nuevo.
 - Modo nuevo: en §4 de PLAN-CONTINUACION.md, la tabla de lotes dice qué código (L1, L2, …) tiene la rama <base>.
   Mirá SOLO las filas de la cola con ese código en la columna Lote, en orden.
+  Si el prompt trae "Ticket asignado: <ID>", tomá ese ticket siempre que cumpla las mismas condiciones de elegibilidad; si no las cumple, imprimí por qué y terminá sin entrega.
   Tomá la primera cuyo ticket esté open en BEADS (`bd show`), sin blockers abiertos, y sin label
   loop-descartado ni fuera-loop. No tomes filas de otro lote.
   Si ninguna es elegible: no hagas entrega. Imprimí `LOTE SIN FILAS ELEGIBLES: <base>` y, por cada fila

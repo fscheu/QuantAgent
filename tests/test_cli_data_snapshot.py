@@ -45,6 +45,9 @@ def test_crea_y_verify_da_ok(runner):
     verify = runner.invoke(data_group, ["snapshot", "verify", "--name", "t"])
     assert verify.exit_code == 0, verify.output
     assert verify.output.strip() == "OK 2 símbolos, 6 filas"
+    verify_pos = runner.invoke(data_group, ["snapshot", "verify", "t"])
+    assert verify_pos.exit_code == 0, verify_pos.output
+    assert verify_pos.output.strip() == "OK 2 símbolos, 6 filas"
 
 
 def test_segundo_create_con_el_mismo_nombre_sale_con_1_sin_tocar_nada(runner, tmp_path):
