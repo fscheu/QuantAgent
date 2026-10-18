@@ -1,0 +1,81 @@
+# Catálogo de primas aplicables con ETFs (QuantAgent-d4cq, L13/P01). No es una hipótesis: vive fuera de
+# hipotesis/ porque `backtest hipotesis tanda` carga todos los YAML de esa carpeta.
+# Los DOI se verificaron contra api.crossref.org; los que no resuelven no entran.
+_amplio: &amplio [AGG, DBC, EEM, EFA, EWJ, EWZ, FXE, FXI, GLD, IEF, IWM, LQD, QQQ, SHY, SLV, SPY, TIP, TLT, USO, VNQ, XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV, XLY]
+_acciones: &acciones [EEM, EFA, EWJ, EWZ, FXI, IWM, QQQ, SPY, XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV, XLY]
+
+primas:
+  - id: tendencia-series-de-tiempo
+    prima: Tendencia de series de tiempo
+    idea: Un activo por encima de su media de unas 210 sesiones tiende a seguir subiendo.
+    fuente: [10.3905/jwm.2007.674809, 10.3905/jpm.2017.44.1.015]
+    universo: {activos: *amplio, criterio: Los 29 ETFs; la tendencia vale en cualquier activo líquido.}
+    clase: sma-cross
+    datos: precios
+    destino: L12
+  - id: momentum-series-de-tiempo
+    prima: Momentum de series de tiempo
+    idea: El signo del retorno de los últimos 12 meses anticipa el del mes siguiente.
+    fuente: [10.1016/j.jfineco.2011.11.003]
+    universo: {activos: *amplio, criterio: Los 29 ETFs, mismo criterio que la tendencia.}
+    clase: momentum-12m
+    datos: precios
+    destino: L12
+  - id: maximo-52-semanas
+    prima: Cercanía al máximo de 52 semanas
+    idea: Los activos cerca de su máximo anual siguen superando a los alejados.
+    fuente: [10.1111/j.1540-6261.2004.00695.x]
+    universo: {activos: *amplio, criterio: Los 29 ETFs.}
+    clase: fifty-two-week-high
+    datos: precios
+    destino: no-aplica
+    motivo: Variante de momentum que no suma amplitud; ya probada en L11.
+  - id: momentum-transversal
+    prima: Momentum transversal
+    idea: Los ganadores de los últimos meses superan a los perdedores en el mes siguiente.
+    fuente: [10.1111/j.1540-6261.1993.tb04702.x, 10.1111/jofi.12021]
+    universo: {activos: *amplio, criterio: Los 29 ETFs en un único ranking global.}
+    clase: null
+    datos: precios
+    destino: L13
+  - id: baja-volatilidad-transversal
+    prima: Baja volatilidad transversal
+    idea: Los activos de menor volatilidad rinden más de lo que prevé su riesgo.
+    fuente: [10.1111/j.1540-6261.2006.00836.x, 10.1016/j.jfineco.2013.10.005, 10.2469/faj.v67.n1.4]
+    universo: {activos: *acciones, criterio: Solo ETFs de acciones; rankear bonos contra acciones mide otra cosa.}
+    clase: null
+    datos: precios
+    destino: L13
+  - id: estacionalidad-halloween
+    prima: Estacionalidad de Halloween
+    idea: El retorno de noviembre a abril supera al de mayo a octubre; con decaimiento posterior a su publicación.
+    fuente: [10.1257/000282802762024683, 10.1111/jofi.12365]
+    universo: {activos: *acciones, criterio: Solo ETFs de acciones.}
+    clase: null
+    datos: precios
+    destino: L13
+  - id: carry-bonos-pendiente
+    prima: Carry de bonos por pendiente de la curva
+    idea: La pendiente de la curva anticipa el exceso de retorno de los bonos.
+    fuente: [10.1257/0002828053828581, 10.1016/j.jfineco.2017.11.002]
+    universo: {activos: [AGG, IEF, LQD, TIP, TLT], criterio: ETFs de bonos con duración.}
+    clase: null
+    datos: macro
+    destino: L14
+  - id: reversion-con-regimen
+    prima: Reversión con volatilidad alta
+    idea: El retorno esperado de la reversión de corto plazo es mayor cuando la volatilidad es alta.
+    fuente: [10.1093/rfs/hhs066]
+    universo: {activos: *acciones, criterio: Solo ETFs de acciones.}
+    clase: null  # rsi-regimen lo registra M02
+    datos: macro
+    destino: L14
+  - id: value
+    prima: Valor
+    idea: Los activos baratos contra sus fundamentos rinden más que los caros.
+    fuente: [10.1111/jofi.12021]
+    universo: {activos: [], criterio: Sin activos.}
+    clase: null
+    datos: macro
+    destino: no-aplica
+    motivo: No hay una medida de valuación para ETFs en el snapshot (D1, más adelante).
