@@ -14,6 +14,11 @@ from quantagent.fabrica.hipotesis import cargar_hipotesis
 H = cargar_hipotesis(Path(__file__).parent / "fixtures" / "hipotesis" / "rsi-valida.yaml")
 
 
+@pytest.fixture(autouse=True)
+def _aislar_snapshot_dir(monkeypatch):
+    monkeypatch.delenv("QUANTAGENT_SNAPSHOT_DIR", raising=False)
+
+
 @pytest.fixture
 def velas():
     rng = np.random.default_rng(7)

@@ -63,7 +63,7 @@ def admitir(h: Hipotesis, velas: pd.DataFrame, existentes: list[Hipotesis] | Non
         motivos.append(f"{libres} parámetros libres; máximo {MAX_PARAMETROS_LIBRES}")
     aliases = cli_aliases()
     for p in h.piernas:
-        if p.clase == CLASE_INTERNA:
+        if p.clase in (CLASE_INTERNA, "SenalExterna"):
             motivos.append(f"clase interna, no válida en una hipótesis: {p.clase}")
         elif not es_transversal(p.clase) and aliases.get(p.clase, p.clase) not in STRATEGY_REGISTRY:
             motivos.append(f"clase no registrada: {p.clase}")
@@ -84,7 +84,7 @@ def admitir(h: Hipotesis, velas: pd.DataFrame, existentes: list[Hipotesis] | Non
             if difs:
                 motivos.append(f"prueba de truncamiento fallida en {p.clase}: {difs[0]}")
             continue
-        if aliases.get(p.clase, p.clase) not in STRATEGY_REGISTRY:
+        if p.clase in (CLASE_INTERNA, "SenalExterna") or aliases.get(p.clase, p.clase) not in STRATEGY_REGISTRY:
             continue
         for comb in p.combinaciones():
             difs = check_no_lookahead(lambda c, comb=comb, p=p: _senales(p, comb, c), velas, cortes)
