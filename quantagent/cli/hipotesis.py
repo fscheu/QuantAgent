@@ -179,6 +179,13 @@ def filtrar_command(archivo, snapshot_name, out):
     click.echo(f"{veredicto} ({motivo})")
 
 
+def motivo_error(exc):
+    """Motivo de ERROR con la última línea no vacía de la excepción, truncada a 200."""
+    lineas = [linea.strip() for linea in str(exc).splitlines() if linea.strip()]
+    ultima = lineas[-1] if lineas else ""
+    return f"{type(exc).__name__}: {ultima}"[:200]
+
+
 @hipotesis_group.command("correr", help="Ejecutar las etapas 0 a 3, con corte temprano y estado.")
 @click.argument("archivo", type=click.Path(exists=True, dir_okay=False))
 @click.option("--snapshot", "snapshot_name", required=True)
@@ -200,7 +207,7 @@ def correr_command(archivo, snapshot_name, carpeta):
             try:
                 veredicto, filas = validar_etapa2(h, snapshot_name, parametros, carpeta)
             except Exception as exc:
-                registrar_estado(h.id, "2", "ERROR", f"{type(exc).__name__}: {exc}"[:200])
+                registrar_estado(h.id, "2", "ERROR", motivo_error(exc))
                 raise
             etapa = "2"
             motivos = [m for fila in filas for m in fila["motivos"]]
@@ -232,7 +239,7 @@ def correr_command(archivo, snapshot_name, carpeta):
                     try:
                         veredicto, filas = validar_etapa3(h, snapshot_name, parametros, Path(carpeta) / "etapa3")
                     except Exception as exc:
-                        registrar_estado(h.id, "3", "ERROR", f"{type(exc).__name__}: {exc}"[:200])
+                        registrar_estado(h.id, "3", "ERROR", motivo_error(exc))
                         raise
                     headers = ["pierna", "activo", "V30", "DSR"] if len(h.piernas) > 1 else ["activo", "V30", "DSR"]
                     filas_tab = [[f.get("estrategia", ""), f["activo"], f["v30"], f["dsr"]] if len(h.piernas) > 1 else [f["activo"], f["v30"], f["dsr"]] for f in filas]
