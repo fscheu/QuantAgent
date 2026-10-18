@@ -616,7 +616,8 @@ Los primeros 5 son los más fáciles de revisar.
 | C10 | `QuantAgent-d4cq.55` | Punto de control L12 (VM, lo corre el PM; etapa 3 con OK de Fede) | Veredicto e informe de la cartera | probar | L12 |
 | C11.1 | `QuantAgent-d4cq.76.1` | Loop: lote y ticket por variable o argumento (`LOOP_LOTE`, `LOOP_TICKET`) | Dos lotes borrador: con `LOOP_LOTE` toma el indicado; ticket no elegible dice por qué | leer | L12 |
 | C11.2 | `QuantAgent-d4cq.76.2` | Loop: reclamo por ticket con CLAIM y RELEASE; depende de C11.1 | Dos CLAIM del mismo ticket en <6h el segundo no lanza; con RELEASE sí | leer | L12 |
-| M01 | `QuantAgent-d4cq.69` | Régimen del mercado contra la cartera núcleo: tabla de ΔSharpe por régimen sobre 2007–2018, sin elegir parámetros | Tabla con N de intentos; no mira 2019 en adelante | leer | L14 |
+| M01.1 | `QuantAgent-d4cq.69.1` | Módulo puro `fabrica/regimen.py`: `clasificar_regimen`, `sharpe_por_regimen` y `permutar_regimenes_bloques` | Régimen con datos hasta t-1; Sharpe por categoría; permuta bloques de un mes | leer | L14 |
+| M01.2 | `QuantAgent-d4cq.69.2` | Medición de la cartera núcleo por régimen 2007–2018 y contraste contra azar; depende de M01.1 | Tabla de Sharpe diario por régimen 2007–2018; permutación en bloques de un mes; conclusión se sigue o se archiva | decidir | L14 |
 | M07 | `QuantAgent-d4cq.75` | Punto de control de la capa macro (VM, lo corre el PM; `--margen` lo fija Fede antes de correr) | Veredicto de cada capa con ΔDSR contra el margen | probar | L14 |
 | G04a | `QuantAgent-d4cq.39` | Catálogo semilla: 15 de momentum, reversión y tendencia (nube) | Ids únicos, fuente verificable | leer | L13 |
 | G04b | `QuantAgent-d4cq.40` | Catálogo semilla: 15 de estacionalidad, volatilidad y régimen (nube); depende de G04a | Ídem; 30 en total | leer | L13 |
