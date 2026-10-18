@@ -26,7 +26,11 @@ TMP="$(mktemp -d)"
 git -C "$REPO" archive origin/main loop scripts/loop | tar -x -C "$TMP"
 # shellcheck disable=SC1091
 source "$TMP/loop/config.env"
-if [ "${1:-}" != "--run" ] && [ -n "${LOOP_PM_TMUX:-}" ] && tmux has-session -t "$LOOP_PM_TMUX" 2>/dev/null; then
+RUN_NOW=0; ARGS=()
+while [ $# -gt 0 ]; do
+  case "$1" in --run) RUN_NOW=1; shift ;; --lote) export LOOP_LOTE="$2"; ARGS+=(--lote "$2"); shift 2 ;; --ticket) export LOOP_TICKET="$2"; ARGS+=(--ticket "$2"); shift 2 ;; *) shift ;; esac
+done
+if [ "$RUN_NOW" -ne 1 ] && [ -n "${LOOP_PM_TMUX:-}" ] && tmux has-session -t "$LOOP_PM_TMUX" 2>/dev/null; then
   # The text lands in the PM session as if typed, so it says who sent it and that it approves nothing.
   tmux send-keys -t "$LOOP_PM_TMUX" -l "[Aviso automático del cron del loop; no lo escribió Fede y no aprueba nada] Arrancá la tanda del lote: armá el estado real, revisá lo pendiente y lanzá corridas con hermes_launch.sh --run, con los frenos de PLAN-CONTINUACION.md §3.7."
   sleep 1
@@ -35,7 +39,7 @@ if [ "${1:-}" != "--run" ] && [ -n "${LOOP_PM_TMUX:-}" ] && tmux has-session -t 
   rm -rf "$TMP"
   exit 0
 fi
-GATE="$(cd "$TMP" && python3 scripts/loop/gate.py)"
+GATE="$(cd "$TMP" && GIT_DIR="$REPO/.git" python3 scripts/loop/gate.py "${ARGS[@]}")"
 rc=$?
 if [ "$rc" -ne 0 ]; then
   python3 -c 'import json,sys; print(json.loads(sys.argv[1])["message"])' "$GATE" 2>/dev/null || echo "⚠ QuantAgent loop: gate sin salida válida"
@@ -45,7 +49,7 @@ fi
 
 rm -f "$STATE/last-result.txt"
 date -u +%Y-%m-%dT%H:%M:%SZ >"$STATE/last-launch.txt"
-setsid nohup bash -c "bash '$TMP/scripts/loop/run_nightly.sh' >'$STATE/last-result.txt' 2>&1; rm -rf '$TMP' '$STATE/running.pid'" >/dev/null 2>&1 &
+setsid nohup bash -c "bash '$TMP/scripts/loop/run_nightly.sh' ${ARGS[*]} >'$STATE/last-result.txt' 2>&1; rm -rf '$TMP' '$STATE/running.pid'" >/dev/null 2>&1 &
 echo $! >"$STATE/running.pid"
 WHAT="$(python3 -c '
 import json,sys
