@@ -118,7 +118,7 @@ class TestBacktestPositionMonitorIntegration:
 
         DataProvider should use DB cache, but this ensures no API leakage.
         """
-        with patch("quantagent.data.provider.yf.download") as mock_download:
+        with patch("quantagent.data.sources.yahoo.yf.download") as mock_download:
             # Return empty DataFrame to force DB cache usage
             mock_download.return_value = Mock(empty=True)
             yield mock_download

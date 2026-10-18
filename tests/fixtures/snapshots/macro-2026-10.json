@@ -1,0 +1,77 @@
+{
+  "downloaded_at": "2026-10-17T21:10:26+00:00",
+  "name": "macro-2026-10",
+  "series": {
+    "BAA10Y": {
+      "end": "2026-10-15",
+      "file": "BAA10Y.parquet",
+      "rows": 10655,
+      "sha256": "30378a09320e4abafb711e72838101e8f09d4c7a9a5f0865b1d6ef974c53baf8",
+      "start": "1986-01-02"
+    },
+    "CPIAUCSL": {
+      "end": "2026-09-01",
+      "file": "CPIAUCSL.parquet",
+      "rows": 3363,
+      "sha256": "c1ef666c00daa1d4f781b8097cce85adffa7c9d3c6090cf56b9baf8b9945884c",
+      "start": "1947-01-01"
+    },
+    "DGS10": {
+      "end": "2026-10-15",
+      "file": "DGS10.parquet",
+      "rows": 16910,
+      "sha256": "0300b9cc2934165085fcade4f676098d929debe65cdf0519d3c2644943a5b042",
+      "start": "1962-01-02"
+    },
+    "DGS2": {
+      "end": "2026-10-15",
+      "file": "DGS2.parquet",
+      "rows": 13151,
+      "sha256": "a88b543565ad2875652492581455cb0ef7b94c54f87999d692ff23e5fd70f354",
+      "start": "1976-06-01"
+    },
+    "DGS3MO": {
+      "end": "2026-10-15",
+      "file": "DGS3MO.parquet",
+      "rows": 11779,
+      "sha256": "1923902b2fc8bb4f89f554bb6d841bd01357bd12a9132c864bbc5d8f061924e2",
+      "start": "1981-09-01"
+    },
+    "FEDFUNDS": {
+      "end": "2026-09-01",
+      "file": "FEDFUNDS.parquet",
+      "rows": 921,
+      "sha256": "f19306a7672d73ba9baa16cd29741ed4753a4cd54a093ab3359af630007b2dad",
+      "start": "1954-07-01"
+    },
+    "INDPRO": {
+      "end": "2026-09-01",
+      "file": "INDPRO.parquet",
+      "rows": 39368,
+      "sha256": "78cfbfab89ca85a21ca193c1e9d67580b57580b183994b32f34fac9f1e2499b4",
+      "start": "1919-01-01"
+    },
+    "PAYEMS": {
+      "end": "2026-09-01",
+      "file": "PAYEMS.parquet",
+      "rows": 13691,
+      "sha256": "e9253f6b3dbb84258a68536f67f7776f4ef9c69c8280a1978816b4d43d2f1499",
+      "start": "1939-01-01"
+    },
+    "T10Y2Y": {
+      "end": "2026-10-16",
+      "file": "T10Y2Y.parquet",
+      "rows": 13148,
+      "sha256": "068f8f9a64e70679915ef48813690c1117a285818959a8ba253be816f62cd983",
+      "start": "1976-06-01"
+    },
+    "UNRATE": {
+      "end": "2026-09-01",
+      "file": "UNRATE.parquet",
+      "rows": 2199,
+      "sha256": "37aed5eaaf91fa552790242681d501c71bef5f2a3a323110e2d4d828e6c6309b",
+      "start": "1948-01-01"
+    }
+  },
+  "source": "alfred"
+}
