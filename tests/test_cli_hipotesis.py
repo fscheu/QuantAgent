@@ -418,3 +418,51 @@ def test_formato_viejo_una_pierna_coincide_con_cartera(tmp_path, monkeypatch):
     r_v = hipotesis.filtrar_hipotesis(cargar_hipotesis(f_v), "sintetico")
     r_n = hipotesis.filtrar_hipotesis(cargar_hipotesis(f_n), "sintetico")
     assert r_v[2] == r_n[2] == "PASA" and r_v[4] == pytest.approx(r_n[4]) and r_v[5] == r_n[5] == 35
+
+
+def test_correr_y_tanda_cartera_corta_en_etapa1_falta_c06(tmp_path, monkeypatch):
+    from quantagent.fabrica.candado import abierto
+    from quantagent.fabrica.hipotesis import cargar_hipotesis
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    data = {
+        "id": "c-c06", "autor": "fede", "timeframe": "1d",
+        "justificacion": "Combinar tendencia y momentum diversifica el riesgo en ETFs.",
+        "piernas": [
+            {"clase": "rsi", "parametros": {"rsi_period": [7]}, "activos": ["SPY"], "universo": "U"},
+            {"clase": "sma-cross", "parametros": {"fast": [20]}, "activos": ["TLT"], "universo": "U"},
+        ],
+    }
+    archivo = tmp_path / "c.yaml"
+    archivo.write_text(yaml.safe_dump(data))
+    h = cargar_hipotesis(archivo)
+    monkeypatch.setattr(hipotesis, "admitir_hipotesis", lambda *a, **kw: (h, True, []))
+    monkeypatch.setattr(hipotesis, "filtrar_hipotesis", lambda *a, **kw: (
+        [["SPY", 1.0, 30], ["TLT", 1.0, 30]], {"SPY": {}, "TLT": {}}, "PASA", "sharpe 1.0 >= 0.10 y 60 trades >= 30", 1.0, 60, [],
+    ))
+    monkeypatch.setattr(hipotesis, "validar_etapa2", lambda *a, **kw: pytest.fail("etapa 2 no debe llamarse"))
+    monkeypatch.setattr(hipotesis, "validar_etapa3", lambda *a, **kw: pytest.fail("etapa 3 no debe llamarse"))
+    monkeypatch.setattr(hipotesis, "abrir", lambda *a, **kw: pytest.fail("candado no debe abrirse"))
+
+    runner = CliRunner()
+    res_correr = runner.invoke(backtest_group, [
+        "hipotesis", "correr", str(archivo), "--snapshot", "sintetico", "--carpeta", str(tmp_path / "salida_correr"),
+    ])
+    assert res_correr.exit_code == 0, res_correr.output
+    assert "etapa 1 PASA; etapas 2 y 3 de cartera: falta C06" in res_correr.output
+    assert "Llegó a la etapa 1: PASA" in res_correr.output
+    assert not abierto(h.id, "prueba")
+
+    tanda_dir = tmp_path / "yaml_tanda"
+    tanda_dir.mkdir()
+    (tanda_dir / "c.yaml").write_text(yaml.safe_dump(data))
+    res_tanda = runner.invoke(backtest_group, [
+        "hipotesis", "tanda", str(tanda_dir), "--snapshot", "sintetico", "--carpeta", str(tmp_path / "salida_tanda"),
+    ])
+    assert res_tanda.exit_code == 0, res_tanda.output
+    log = (tmp_path / "salida_tanda" / h.id / "corrida.log").read_text()
+    assert "etapa 1 PASA; etapas 2 y 3 de cartera: falta C06" in log
+    assert not abierto(h.id, "prueba")
+    assert (tmp_path / "salida_tanda" / h.id / "informe.html").exists()
+    assert (tmp_path / "salida_tanda" / "resumen.md").exists()
+

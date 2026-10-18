@@ -182,42 +182,45 @@ def correr_command(archivo, snapshot_name, carpeta):
         registrar_estado(h.id, etapa, veredicto, motivo)
         click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
         if veredicto == "PASA":
-            try:
-                veredicto, filas = validar_etapa2(h, snapshot_name, parametros, carpeta)
-            except Exception as exc:
-                registrar_estado(h.id, "2", "ERROR", f"{type(exc).__name__}: {exc}"[:200])
-                raise
-            etapa = "2"
-            motivos = [m for fila in filas for m in fila["motivos"]]
-            motivo = "; ".join(motivos) if motivos else "control coincide y al menos un activo pasa V30"
-            if veredicto == "PASA":
-                activos = ", ".join(f["activo"] for f in filas if f["v30"] == "PASA")
-                motivo = f"pasan V30: {activos}; control coincide en {len(filas)} de {len(filas)}"
-                alarma, activos = alarma_filtro_motor(resultados, filas)
-                if alarma:
-                    veredicto = "ALARMA"
-                    motivo = "filtro optimista en " + ", ".join(activos)
-            registrar_estado(h.id, etapa, veredicto, motivo)
-            click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
-            if veredicto == "PASA":
-                etapa = "3"
+            if len(h.piernas) > 1:
+                click.echo("etapa 1 PASA; etapas 2 y 3 de cartera: falta C06")
+            else:
                 try:
-                    abrir(h.id, "prueba")
-                except CandadoError as exc:
-                    veredicto, motivo = "CORTA", str(exc)
-                else:
-                    try:
-                        veredicto, filas = validar_etapa3(h, snapshot_name, parametros, Path(carpeta) / "etapa3")
-                    except Exception as exc:
-                        registrar_estado(h.id, "3", "ERROR", f"{type(exc).__name__}: {exc}"[:200])
-                        raise
-                    click.echo(tabulate([[f["activo"], f["v30"], f["dsr"]] for f in filas],
-                                        headers=["activo", "V30", "DSR"], tablefmt="github"))
-                    motivo = "; ".join(m for f in filas for m in f["motivos"])
-                    if veredicto == "PASA":
-                        motivo = "pasan V30 y DSR: " + ", ".join(f["activo"] for f in filas if not f["motivos"])
+                    veredicto, filas = validar_etapa2(h, snapshot_name, parametros, carpeta)
+                except Exception as exc:
+                    registrar_estado(h.id, "2", "ERROR", f"{type(exc).__name__}: {exc}"[:200])
+                    raise
+                etapa = "2"
+                motivos = [m for fila in filas for m in fila["motivos"]]
+                motivo = "; ".join(motivos) if motivos else "control coincide y al menos un activo pasa V30"
+                if veredicto == "PASA":
+                    activos = ", ".join(f["activo"] for f in filas if f["v30"] == "PASA")
+                    motivo = f"pasan V30: {activos}; control coincide en {len(filas)} de {len(filas)}"
+                    alarma, activos = alarma_filtro_motor(resultados, filas)
+                    if alarma:
+                        veredicto = "ALARMA"
+                        motivo = "filtro optimista en " + ", ".join(activos)
                 registrar_estado(h.id, etapa, veredicto, motivo)
                 click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
+                if veredicto == "PASA":
+                    etapa = "3"
+                    try:
+                        abrir(h.id, "prueba")
+                    except CandadoError as exc:
+                        veredicto, motivo = "CORTA", str(exc)
+                    else:
+                        try:
+                            veredicto, filas = validar_etapa3(h, snapshot_name, parametros, Path(carpeta) / "etapa3")
+                        except Exception as exc:
+                            registrar_estado(h.id, "3", "ERROR", f"{type(exc).__name__}: {exc}"[:200])
+                            raise
+                        click.echo(tabulate([[f["activo"], f["v30"], f["dsr"]] for f in filas],
+                                            headers=["activo", "V30", "DSR"], tablefmt="github"))
+                        motivo = "; ".join(m for f in filas for m in f["motivos"])
+                        if veredicto == "PASA":
+                            motivo = "pasan V30 y DSR: " + ", ".join(f["activo"] for f in filas if not f["motivos"])
+                    registrar_estado(h.id, etapa, veredicto, motivo)
+                    click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
     click.echo(f"Llegó a la etapa {etapa}: {veredicto} ({motivo})")
     raise click.exceptions.Exit(int(veredicto != "PASA"))
 
