@@ -8,6 +8,7 @@ import pytest
 
 from quantagent.fabrica import admision
 from quantagent.fabrica.admision import admitir
+from quantagent.fabrica.critico import cargar_existentes, criticar
 from quantagent.fabrica.hipotesis import cargar_hipotesis
 
 H = cargar_hipotesis(Path(__file__).parent / "fixtures" / "hipotesis" / "rsi-valida.yaml")
@@ -80,3 +81,42 @@ def test_simbolo_del_universo_ampliado_se_admite_y_uno_ajeno_sigue_rechazado(vel
     assert (ok, motivos) == (True, [])
     ok, motivos = admitir(replace(H, piernas=(replace(H.piernas[0], activos=("SPY", "XLV", "AAPL")),)), velas)
     assert not ok and len(motivos) == 1 and "AAPL" in motivos[0] and "XLV" not in motivos[0]
+
+
+def _pierna(clase, activos, parametros):
+    return replace(H.piernas[0], clase=clase, activos=tuple(activos), parametros=parametros)
+
+
+RSI = {"rsi_period": [14]}
+SMA = {"fast": [10], "slow": [50]}
+
+
+def test_critico_cartera_con_piernas_en_otro_orden_es_duplicada():
+    a, b = _pierna("rsi", ["SPY"], RSI), _pierna("sma-cross", ["QQQ"], SMA)
+    existente = replace(H, id="cartera-a", piernas=(a, b))
+    nueva = replace(H, id="cartera-b", piernas=(b, a))
+    assert criticar(nueva, [existente]) == ("duplicada", "duplicada de cartera-a", "cartera-a")
+
+
+def test_critico_otro_activo_es_variante_con_la_familia_de_la_mas_antigua():
+    vieja = replace(H, id="vieja", piernas=(_pierna("rsi", ["SPY"], RSI),))
+    posterior = replace(H, id="posterior", piernas=(_pierna("rsi", ["SPY", "QQQ"], RSI),))
+    nueva = replace(H, id="nueva", piernas=(_pierna("rsi", ["QQQ"], RSI),))
+    veredicto, _, familia = criticar(nueva, [vieja, posterior])
+    assert (veredicto, familia) == ("variante", "vieja")
+    assert criticar(replace(nueva, piernas=(_pierna("rsi", ["QQQ"], {"rsi_period": [7]}),)), [vieja])[0] == "variante"
+
+
+def test_admitir_rechaza_duplicada_y_acepta_variante(velas):
+    existente = replace(H, id="ya-existe")
+    ok, motivos = admitir(replace(H, id="copia"), velas, [existente])
+    assert not ok and motivos == ["duplicada de ya-existe"]
+    variante = replace(H, id="variante", piernas=(replace(H.piernas[0], activos=("QQQ",)),))
+    assert admitir(variante, velas, [existente]) == (True, [])
+
+
+def test_las_hipotesis_actuales_pasan_la_etapa_0_unas_contra_otras(velas):
+    existentes = cargar_existentes()
+    assert len(existentes) >= 5
+    for h in existentes:
+        assert criticar(h, existentes)[0] != "duplicada", h.id

@@ -6,6 +6,7 @@ import pandas as pd
 
 from quantagent.backtesting.signals import bar_signals, check_no_lookahead
 from quantagent.cli.sweep import cli_aliases
+from quantagent.fabrica.critico import cargar_existentes, criticar
 from quantagent.fabrica.hipotesis import Hipotesis, Pierna
 from quantagent.strategy.registry import STRATEGY_REGISTRY, build_strategy
 
@@ -29,9 +30,15 @@ def _senales(p: Pierna | Hipotesis, combinacion: dict, velas: pd.DataFrame) -> p
     return bar_signals(estrategia, velas, p.activos[0], getattr(p, "timeframe", "1d"))
 
 
-def admitir(h: Hipotesis, velas: pd.DataFrame) -> tuple[bool, list[str]]:
-    """(True, []) si la hipótesis entra al embudo; si no, todos los motivos de rechazo."""
+def admitir(h: Hipotesis, velas: pd.DataFrame, existentes: list[Hipotesis] | None = None) -> tuple[bool, list[str]]:
+    """(True, []) si la hipótesis entra al embudo; si no, todos los motivos de rechazo.
+
+    `existentes` son las hipótesis ya conocidas; por defecto, las de `hipotesis/`.
+    """
     motivos = []
+    veredicto, motivo, _ = criticar(h, cargar_existentes() if existentes is None else existentes)
+    if veredicto == "duplicada":
+        motivos.append(motivo)
     if len(h.justificacion.strip()) < MIN_JUSTIFICACION:
         motivos.append(f"justificación de {len(h.justificacion.strip())} caracteres; mínimo {MIN_JUSTIFICACION}")
     libres = sum(sum(len(v) > 1 for v in p.parametros.values()) for p in h.piernas)
