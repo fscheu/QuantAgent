@@ -227,3 +227,69 @@ def test_etapa2_cartera_snapshot_ilegible_falla(tmp_path):
     assert validacion.evaluar_etapa2_cartera(h, [], tmp_path, snapshot=None) == (False, ["curva de cartera vacía"])
 
 
+@pytest.mark.parametrize("filtro,motor,esperado", [
+    (0.15, -0.05, True),
+    (0.15, 0.0, True),
+    (0.15, 0.01, False),
+    (0.09, -0.05, False),
+    (None, -0.05, False),
+    (float("nan"), -0.05, False),
+    (0.20, None, True),
+    (0.20, "", True),
+])
+def test_alarma_cartera_dispara_y_no_dispara(filtro, motor, esperado):
+    assert validacion.alarma_cartera(filtro, motor) is esperado
+
+
+def test_etapa2_cartera_2_piernas_3_activos_agrega_una_fila_intentos(tmp_path, monkeypatch):
+    from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fechas = pd.date_range("2010-01-01", periods=100)
+    eq_dir = tmp_path / "salida" / "equity"
+    eq_dir.mkdir(parents=True)
+    p1_activos = ("SPY", "TLT", "GLD")
+    p2_activos = ("EEM", "IWM", "DIA")
+    for a in p1_activos:
+        pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(100, 0.001))}).to_csv(eq_dir / f"rsi-{a}.csv", index=False)
+    for a in p2_activos:
+        pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(100, 0.0005))}).to_csv(eq_dir / f"sma-{a}.csv", index=False)
+
+    h = Hipotesis(
+        "h-c2x3", "autor", "just", "1d",
+        piernas=(
+            Pierna("rsi", {"rsi_period": [7]}, p1_activos, "U"),
+            Pierna("sma", {"fast": [20]}, p2_activos, "U"),
+        ),
+    )
+    filas_falsas = [
+        {"activo": a, "estrategia": "rsi", "trades": "5", "pnl": "100", "sharpe_tasa_0": "0.4", "max_drawdown": "0.02"} for a in p1_activos
+    ] + [
+        {"activo": a, "estrategia": "sma", "trades": "5", "pnl": "100", "sharpe_tasa_0": "0.4", "max_drawdown": "0.02"} for a in p2_activos
+    ]
+    monkeypatch.setattr(validacion, "correr_motor", lambda *a, **k: filas_falsas)
+
+    def fake_subp(cmd, **kwargs):
+        if "--tabla" in cmd:
+            t = Path(cmd[cmd.index("--tabla") + 1])
+            t.write_text("activo,control\nX,coinciden 5 de 5\n")
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(validacion.subprocess, "run", fake_subp)
+    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas)}))
+
+    veredicto, filas = validacion.validar_etapa2(h, "sintetico", {a: {} for a in p1_activos + p2_activos}, tmp_path / "salida")
+    assert veredicto == "PASA"
+    assert len(filas) == 6
+    with (tmp_path / "intentos.csv").open() as f:
+        intentos = list(csv.DictReader(f))
+    assert len(intentos) == 1
+    intento = intentos[0]
+    assert intento["activo"] == "cartera"
+    assert intento["etapa"] == "2"
+    assert intento["sharpe_base"] == "tasa_0"
+    assert intento["trades"] == "30"
+    assert intento["estrategia"] == "rsi+sma"
+
+
+

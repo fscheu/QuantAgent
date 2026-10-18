@@ -420,7 +420,7 @@ def test_formato_viejo_una_pierna_coincide_con_cartera(tmp_path, monkeypatch):
     assert r_v[2] == r_n[2] == "PASA" and r_v[4] == pytest.approx(r_n[4]) and r_v[5] == r_n[5] == 35
 
 
-def test_correr_y_tanda_cartera_corta_en_etapa1_falta_c06(tmp_path, monkeypatch):
+def test_correr_y_tanda_cartera_etapa2_pasa_falta_c07(tmp_path, monkeypatch):
     from quantagent.fabrica.candado import abierto
     from quantagent.fabrica.hipotesis import cargar_hipotesis
 
@@ -440,7 +440,10 @@ def test_correr_y_tanda_cartera_corta_en_etapa1_falta_c06(tmp_path, monkeypatch)
     monkeypatch.setattr(hipotesis, "filtrar_hipotesis", lambda *a, **kw: (
         [["SPY", 1.0, 30], ["TLT", 1.0, 30]], {"SPY": {}, "TLT": {}}, "PASA", "sharpe 1.0 >= 0.10 y 60 trades >= 30", 1.0, 60, [],
     ))
-    monkeypatch.setattr(hipotesis, "validar_etapa2", lambda *a, **kw: pytest.fail("etapa 2 no debe llamarse"))
+    monkeypatch.setattr(hipotesis, "validar_etapa2", lambda *a, **kw: ("PASA", [
+        {"activo": "SPY", "v30": "PASA", "motivos": [], "sharpe_cartera": 0.5},
+        {"activo": "TLT", "v30": "PASA", "motivos": [], "sharpe_cartera": 0.5},
+    ]))
     monkeypatch.setattr(hipotesis, "validar_etapa3", lambda *a, **kw: pytest.fail("etapa 3 no debe llamarse"))
     monkeypatch.setattr(hipotesis, "abrir", lambda *a, **kw: pytest.fail("candado no debe abrirse"))
 
@@ -449,8 +452,8 @@ def test_correr_y_tanda_cartera_corta_en_etapa1_falta_c06(tmp_path, monkeypatch)
         "hipotesis", "correr", str(archivo), "--snapshot", "sintetico", "--carpeta", str(tmp_path / "salida_correr"),
     ])
     assert res_correr.exit_code == 0, res_correr.output
-    assert "etapa 1 PASA; etapas 2 y 3 de cartera: falta C06" in res_correr.output
-    assert "Llegó a la etapa 1: PASA" in res_correr.output
+    assert "etapa 2 PASA; etapa 3 de cartera: falta C07" in res_correr.output
+    assert "Llegó a la etapa 2: PASA" in res_correr.output
     assert not abierto(h.id, "prueba")
 
     tanda_dir = tmp_path / "yaml_tanda"
@@ -461,8 +464,48 @@ def test_correr_y_tanda_cartera_corta_en_etapa1_falta_c06(tmp_path, monkeypatch)
     ])
     assert res_tanda.exit_code == 0, res_tanda.output
     log = (tmp_path / "salida_tanda" / h.id / "corrida.log").read_text()
-    assert "etapa 1 PASA; etapas 2 y 3 de cartera: falta C06" in log
+    assert "etapa 2 PASA; etapa 3 de cartera: falta C07" in log
     assert not abierto(h.id, "prueba")
     assert (tmp_path / "salida_tanda" / h.id / "informe.html").exists()
     assert (tmp_path / "salida_tanda" / "resumen.md").exists()
+
+
+def test_correr_cartera_alarma(tmp_path, monkeypatch):
+    from quantagent.fabrica.hipotesis import cargar_hipotesis
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    data = {
+        "id": "c-alarma", "autor": "fede", "timeframe": "1d",
+        "justificacion": "Combinar tendencia y momentum diversifica el riesgo en ETFs.",
+        "piernas": [
+            {"clase": "rsi", "parametros": {"rsi_period": [7]}, "activos": ["SPY"], "universo": "U"},
+            {"clase": "sma-cross", "parametros": {"fast": [20]}, "activos": ["TLT"], "universo": "U"},
+        ],
+    }
+    archivo = tmp_path / "c_al.yaml"
+    archivo.write_text(yaml.safe_dump(data))
+    h = cargar_hipotesis(archivo)
+    monkeypatch.setattr(hipotesis, "admitir_hipotesis", lambda *a, **kw: (h, True, []))
+    monkeypatch.setattr(hipotesis, "filtrar_hipotesis", lambda *a, **kw: (
+        [["SPY", 1.0, 30], ["TLT", 1.0, 30]], {"SPY": {}, "TLT": {}}, "PASA", "sharpe 1.0 >= 0.10 y 60 trades >= 30", 0.5, 60, [],
+    ))
+    monkeypatch.setattr(hipotesis, "validar_etapa2", lambda *a, **kw: ("PASA", [
+        {"activo": "SPY", "v30": "PASA", "motivos": [], "sharpe_cartera": -0.1},
+        {"activo": "TLT", "v30": "PASA", "motivos": [], "sharpe_cartera": -0.1},
+    ]))
+    monkeypatch.setattr(hipotesis, "validar_etapa3", lambda *a, **kw: pytest.fail("etapa 3 no debe llamarse"))
+    monkeypatch.setattr(hipotesis, "abrir", lambda *a, **kw: pytest.fail("candado no debe abrirse"))
+
+    runner = CliRunner()
+    res = runner.invoke(backtest_group, [
+        "hipotesis", "correr", str(archivo), "--snapshot", "sintetico", "--carpeta", str(tmp_path / "salida"),
+    ])
+    assert res.exit_code == 1, res.output
+    assert "Etapa 2: ALARMA (filtro optimista en la cartera)" in res.output
+    assert "Llegó a la etapa 2: ALARMA (filtro optimista en la cartera)" in res.output
+    with (tmp_path / "hipotesis.csv").open() as f:
+        estados = list(csv.DictReader(f))
+    assert estados[-1]["veredicto"] == "ALARMA"
+    assert estados[-1]["motivo"] == "filtro optimista en la cartera"
+
 
