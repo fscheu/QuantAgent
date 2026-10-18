@@ -402,6 +402,7 @@ Lotes (definidos por el PM el 2026-10-06; cada uno se abre cuando Fede mergea el
 | L13 | `lote/catalogo-de-primas` | G04a, G04b, G05, G06a, G06b, G07 (se reescriben) | Catálogo de primas aplicables con ETFs corrido como carteras; el LLM propone primas con cita y universo, el crítico rechaza duplicadas | propuesto; se arma al mergear L12 |
 | L14 | `lote/capa-macro` | G03 y tickets nuevos | FRED/ALFRED punto en el tiempo y régimen de mercado como hipótesis aparte, aceptada solo si mejora el DSR del núcleo | propuesto; puede ir en paralelo con M4 |
 | LB1 | `lote/datos-externos` (carril B, label `carril-b`, PR #257) | B-F1–B-F4, B-T1, B-T2, B-T9, B-T8 | Snapshot macro `macro-2026-10` punto en el tiempo (10 series FRED/ALFRED) y `AlpacaSource` bajando SPY con claves reales | OK de Fede el 2026-10-17 para paralelizar la capa de datos de M4 y L14 (nube y notebook); fuera: broker y ejecución en paper hasta cerrar L12. Necesita `FRED_API_KEY` y claves de Alpaca paper en `~/secrets` (las pone Fede) |
+| L15 | `lote/gate-por-lote` | K01 | El gate del loop con `LOOP_LOTE` evalúa solo la entrega previa del lote activo: un PR loop de una máquina no frena ni activa a la otra | PM, 2026-10-18; sale de origin/main para llegar a main sin esperar a L13 ni L14 |
 
 T13 se adelantó dentro de L1: es un documento de decisión que no depende del resto, así la respuesta de Fede
 llega mientras el lote avanza. T20 pasó a L1 porque congela los números que ese lote audita.
@@ -616,6 +617,7 @@ Los primeros 5 son los más fáciles de revisar.
 | C10 | `QuantAgent-d4cq.55` | Punto de control L12 (VM, lo corre el PM; etapa 3 con OK de Fede) | Veredicto e informe de la cartera | probar | L12 |
 | C11.1 | `QuantAgent-d4cq.76.1` | Loop: lote y ticket por variable o argumento (`LOOP_LOTE`, `LOOP_TICKET`) | Dos lotes borrador: con `LOOP_LOTE` toma el indicado; ticket no elegible dice por qué | leer | L12 |
 | C11.2 | `QuantAgent-d4cq.76.2` | Loop: reclamo por ticket con CLAIM y RELEASE; depende de C11.1 | Dos CLAIM del mismo ticket en <6h el segundo no lanza; con RELEASE sí | leer | L12 |
+| K01 | `QuantAgent-kw84` | Loop: el gate toma la entrega previa solo del lote activo (`LOOP_LOTE`) | Dos PRs loop de lotes distintos: con `LOOP_LOTE=lote/a` evalúa solo el de lote/a; un cambio sobre lote/b no activa modo cambio en lote/a | leer | L15 |
 | G03 | `QuantAgent-d4cq.38` | Hipótesis RSI con régimen de volatilidad (familia ljoj) | Entra solo con volatilidad alta; no mira el futuro | leer | L14 |
 | G04a | `QuantAgent-d4cq.39` | Catálogo semilla: 15 de momentum, reversión y tendencia (nube) | Ids únicos, fuente verificable | leer | L13 |
 | G04b | `QuantAgent-d4cq.40` | Catálogo semilla: 15 de estacionalidad, volatilidad y régimen (nube); depende de G04a | Ídem; 30 en total | leer | L13 |
