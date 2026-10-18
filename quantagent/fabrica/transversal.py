@@ -9,6 +9,22 @@ from quantagent.strategy.momentum_12m_strategy import is_last_session_of_month
 # Lo llenan P06 y P07; las clases transversales no son `TradingStrategy`, por eso no van en `registry.py`.
 METRICAS = {}
 
+VENTANA_VOLATILIDAD = 252  # sesiones; fija, sin grilla (P07)
+
+
+def baja_volatilidad(cierres):
+    """-σ de los retornos diarios de las últimas 252 sesiones (Ang et al. 2006): el más calmo puntúa más alto.
+
+    Pide la ventana completa (NaN si algún retorno falta). Solo tiene sentido dentro de una clase de activo:
+    rankeando bonos y acciones juntos, "baja volatilidad" sería casi siempre "bonos". El universo (ETFs de
+    acciones, `catalogo/primas.yaml`) lo fija el YAML de la cartera, no esta función.
+    """
+    retornos = cierres.pct_change(fill_method=None)
+    return -retornos.rolling(VENTANA_VOLATILIDAD, min_periods=VENTANA_VOLATILIDAD).std()
+
+
+METRICAS["baja-volatilidad"] = baja_volatilidad
+
 
 def señales_transversales(cierres, metrica, fraccion=1 / 3):
     """Panel 0/1 fecha × activo: 1 = el activo está en el tercio superior vigente; se mantiene desde la apertura siguiente.

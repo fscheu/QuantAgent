@@ -1,5 +1,8 @@
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
+import yaml
 
 from quantagent.backtesting.signals import check_no_lookahead
 from quantagent.fabrica.transversal import METRICAS, señales_transversales
@@ -98,5 +101,64 @@ def test_igual_a_una_implementacion_independiente_por_bucle():
     assert esperado.to_numpy().sum() > 0  # el panel sí produce posiciones; no es una comparación de ceros
 
 
-def test_registro_de_metricas_arranca_vacio():
-    assert METRICAS == {}
+def _panel_volatilidades():
+    """8 activos con retornos alternados +a/-a (σ ≈ a): el activo 'Vk' tiene σ creciente con k."""
+    idx = pd.bdate_range("2021-01-01", periods=600)
+    signo = np.where(np.arange(len(idx)) % 2 == 0, 1.0, -1.0)[:, None]
+    amplitudes = np.array([0.002, 0.004, 0.006, 0.008, 0.010, 0.012, 0.014, 0.016])
+    return pd.DataFrame(100 * np.cumprod(1 + signo * amplitudes, axis=0), index=idx, columns=[f"V{k}" for k in range(8)])
+
+
+def test_baja_volatilidad_puntua_menos_sigma_y_exige_ventana_completa():
+    c = _panel_volatilidades()
+    m = METRICAS["baja-volatilidad"](c)
+    # los primeros 252 retornos no alcanzan hasta la sesión 253: antes, NaN
+    assert m.iloc[:252].isna().all().all()
+    ultimo = m.iloc[-1]
+    assert (ultimo < 0).all()
+    assert ultimo.is_monotonic_decreasing  # V0 (más calmo) puntúa más alto
+    # valor conocido contra el desvío calculado a mano sobre la ventana
+    ventana = c["V3"].pct_change().iloc[-252:]
+    assert ultimo["V3"] == -ventana.std()
+
+
+def test_baja_volatilidad_elige_el_tercio_mas_calmo():
+    s = señales_transversales(_panel_volatilidades(), METRICAS["baja-volatilidad"])
+    # 8 activos -> k = 2: V0 y V1; antes de tener 252 retornos no hay pierna
+    assert list(s.columns[s.iloc[-1] == 1]) == ["V0", "V1"]
+    assert s.iloc[:252].sum().sum() == 0
+
+
+def test_baja_volatilidad_no_mira_el_futuro():
+    c = _aleatorio(n=800)
+    cortes = [c.index[i] for i in (420, 520, 620, 700)]
+    assert check_no_lookahead(lambda p: señales_transversales(p, METRICAS["baja-volatilidad"]), c, cortes) == []
+
+
+def test_baja_volatilidad_igual_a_un_bucle_independiente():
+    c = _aleatorio(n=800)
+    esperado = pd.DataFrame(0, index=c.index, columns=c.columns)
+    vigente = {a: 0 for a in c.columns}
+    for i, fecha in enumerate(c.index):
+        if is_last_session_of_month(fecha) and i >= 252:
+            sigma = {}
+            for a in c.columns:
+                r = [c[a].iloc[j] / c[a].iloc[j - 1] - 1 for j in range(i - 251, i + 1)]
+                if not np.isnan(r).any():
+                    sigma[a] = np.std(r, ddof=1)
+            vigente = {a: 0 for a in c.columns}
+            if len(sigma) >= 3:
+                for a in sorted(sigma, key=lambda a: (sigma[a], a))[: max(1, len(sigma) // 3)]:
+                    vigente[a] = 1
+        esperado.loc[fecha] = pd.Series(vigente)
+    pd.testing.assert_frame_equal(señales_transversales(c, METRICAS["baja-volatilidad"]), esperado)
+    assert esperado.to_numpy().sum() > 0
+
+
+def test_universo_de_baja_volatilidad_es_solo_acciones_y_tiene_al_menos_6():
+    """T5: con menos de 6 ETFs el tercio es 1 solo. El catálogo declara 17 ETFs de acciones antes de correr."""
+    ruta = Path(__file__).resolve().parent.parent / "catalogo" / "primas.yaml"
+    entrada = next(e for e in yaml.safe_load(ruta.read_text())["primas"] if e["clase"] == "baja-volatilidad")
+    activos = set(entrada["universo"]["activos"])
+    assert len(activos) >= 6
+    assert activos.isdisjoint({"AGG", "IEF", "LQD", "SHY", "TIP", "TLT", "GLD", "SLV", "DBC", "USO", "FXE", "VNQ"})
