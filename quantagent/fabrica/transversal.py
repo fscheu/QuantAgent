@@ -22,7 +22,11 @@ VENTANA_VOLATILIDAD = 252  # sesiones; constante fija, 0 parámetros libres
 
 
 def baja_volatilidad(cierres):
-    """-σ de los retornos diarios de las últimas 252 sesiones (mayor = más calmo). NaN sin 252 retornos completos."""
+    """-σ de los retornos diarios de las últimas 252 sesiones (Ang et al. 2006): el más calmo puntúa más alto.
+
+    Pide la ventana completa (NaN si falta algún retorno). Solo tiene sentido dentro de una clase de activo:
+    rankeando bonos y acciones juntos, "baja volatilidad" sería casi siempre "bonos"; el universo es `UNIVERSO_ACCIONES`.
+    """
     retornos = cierres.pct_change(fill_method=None)
     return -retornos.rolling(VENTANA_VOLATILIDAD, min_periods=VENTANA_VOLATILIDAD).std()
 

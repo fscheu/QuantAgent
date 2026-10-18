@@ -164,3 +164,23 @@ def test_universo_de_acciones_declarado_por_definicion():
     por_id = {p["id"]: p for p in catalogo}
     assert set(por_id["baja-volatilidad-transversal"]["universo"]["activos"]) == UNIVERSO_ACCIONES
     assert por_id["baja-volatilidad-transversal"]["clase"] == "baja-volatilidad"
+
+
+def test_baja_volatilidad_igual_a_un_bucle_independiente():
+    c = _aleatorio(n=800)
+    esperado = pd.DataFrame(0, index=c.index, columns=c.columns)
+    vigente = {a: 0 for a in c.columns}
+    for i, fecha in enumerate(c.index):
+        if is_last_session_of_month(fecha) and i >= 252:
+            sigma = {}
+            for a in c.columns:
+                r = [c[a].iloc[j] / c[a].iloc[j - 1] - 1 for j in range(i - 251, i + 1)]
+                if not np.isnan(r).any():
+                    sigma[a] = np.std(r, ddof=1)
+            vigente = {a: 0 for a in c.columns}
+            if len(sigma) >= 3:
+                for a in sorted(sigma, key=lambda a: (sigma[a], a))[: max(1, len(sigma) // 3)]:
+                    vigente[a] = 1
+        esperado.loc[fecha] = pd.Series(vigente)
+    pd.testing.assert_frame_equal(señales_transversales(c, METRICAS["baja-volatilidad"]), esperado)
+    assert esperado.to_numpy().sum() > 0
