@@ -5,19 +5,27 @@ import json
 import traceback
 from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime, timezone
+from math import isnan
 from pathlib import Path
 
 import click
+import pandas as pd
 from tabulate import tabulate
 
 from quantagent.data.snapshot import SnapshotError, read_snapshot
 from quantagent.fabrica.admision import admitir
 from quantagent.fabrica.candado import CandadoError, abrir, fecha_apertura
+from quantagent.fabrica.cartera import evaluar_cartera
 from quantagent.fabrica.estado import registrar_estado, resumen_tanda, ultimo_estado
 from quantagent.fabrica.filtro import filtrar_activo, parametros_elegidos, veredicto_etapa1
 from quantagent.fabrica.hipotesis import cargar_hipotesis
 from quantagent.fabrica.informe import datos_informe, render_informe
-from quantagent.fabrica.validacion import alarma_filtro_motor, validar_etapa2, validar_etapa3
+from quantagent.fabrica.validacion import (
+    alarma_cartera,
+    alarma_filtro_motor,
+    validar_etapa2,
+    validar_etapa3,
+)
 from quantagent.settings import COSTOS_PERFILES
 
 from .sweep import registrar_intento
@@ -43,9 +51,6 @@ def tanda_command(ctx, carpeta_yaml, snapshot_name, carpeta):
         except Exception:
             (destino / f"{archivo.stem}.log").write_text(traceback.format_exc(), encoding="utf-8")
             continue
-        if len(h.piernas) > 1:
-            click.echo(f"cartera de {len(h.piernas)} piernas: falta C05")
-            raise click.exceptions.Exit(1)
         salida = destino / h.id
         salida.mkdir(parents=True, exist_ok=True)
         with (salida / "corrida.log").open("w", encoding="utf-8") as log:
@@ -108,27 +113,37 @@ def admitir_hipotesis(archivo, snapshot_name, prueba_unica=False):
 
 
 def filtrar_hipotesis(h, snapshot_name):
-    """Filtrar y registrar intentos; devolver métricas y parámetros por activo."""
-    resultados, parametros = [], {}
-    for activo in h.activos:
-        try:
-            velas = read_snapshot(snapshot_name, activo).loc["2007-01-01":"2018-12-31"]
-            if velas.empty:
-                raise ValueError("Sin velas entre 2007 y 2018")
-            velas = velas.rename_axis("timestamp").reset_index()
-            r = filtrar_activo(h, velas, costos=COSTOS_PERFILES["etf"], capital=100_000.0)
-        except (ValueError, SnapshotError) as exc:
-            raise click.ClickException(str(exc)) from exc
-        resultados.append([activo, r["sharpe_tasa_0"], r["trades"]])
-        parametros[activo] = parametros_elegidos(r["ganadores"])
-        registrar_intento(
-            h.clase, activo, snapshot_name, "etf", 1.0, h.parametros,
-            {"desde": "2007-01-01", "hasta": "2018-12-31", "trades": r["trades"],
-             "pnl": "", "sharpe": r["sharpe_tasa_0"]}, hipotesis=h.id, etapa="1",
-            sharpe_base="tasa_0",
-        )
-    veredicto, bajos = veredicto_etapa1(resultados)
-    return resultados, parametros, veredicto, bajos
+    """Filtrar y registrar intento de cartera; devolver métricas, parámetros y veredicto."""
+    resultados, parametros, retornos_dict, cierres_dict, filas_tabla = [], {}, {}, {}, []
+    total_trades, piernas_map = 0, {}
+    for i, p in enumerate(h.piernas):
+        piernas_map[i] = list(p.activos)
+        for activo in p.activos:
+            try:
+                v = read_snapshot(snapshot_name, activo).loc["2007-01-01":"2018-12-31"]
+                if v.empty:
+                    raise ValueError("Sin velas entre 2007 y 2018")
+                cierres_dict[activo] = v["close"]
+                r = filtrar_activo(p, v.rename_axis("timestamp").reset_index(), costos=COSTOS_PERFILES["etf"], capital=100_000.0)
+            except (ValueError, SnapshotError) as exc:
+                raise click.ClickException(str(exc)) from exc
+            resultados.append([activo, r["sharpe_tasa_0"], r["trades"]])
+            filas_tabla.append([p.clase, activo, r["sharpe_tasa_0"], r["trades"]] if len(h.piernas) > 1 else [activo, r["sharpe_tasa_0"], r["trades"]])
+            retornos_dict[(i, activo)] = r["retornos"]
+            total_trades += r["trades"]
+            clave = (p.clase, activo) if len(h.piernas) > 1 else activo
+            parametros[clave] = parametros_elegidos(r["ganadores"])
+    sharpe_car = evaluar_cartera(pd.DataFrame(cierres_dict), piernas_map, retornos_dict)
+    veredicto, motivo = veredicto_etapa1(sharpe_car, total_trades)
+    combo = h.parametros if len(h.piernas) == 1 else {p.clase: p.parametros for p in h.piernas}
+    estrategia = h.clase if len(h.piernas) == 1 else "+".join(p.clase for p in h.piernas)
+    sharpe_csv = "" if sharpe_car is None or (isinstance(sharpe_car, float) and isnan(sharpe_car)) else sharpe_car
+    registrar_intento(
+        estrategia, "cartera", snapshot_name, "etf", 1.0, combo,
+        {"desde": "2007-01-01", "hasta": "2018-12-31", "trades": total_trades, "pnl": "", "sharpe": sharpe_csv},
+        hipotesis=h.id, etapa="1", sharpe_base="tasa_0",
+    )
+    return resultados, parametros, veredicto, motivo, sharpe_car, total_trades, filas_tabla
 
 
 @hipotesis_group.command("filtrar", help="Cargar y admitir una hipótesis sobre 2007–2018.")
@@ -136,25 +151,32 @@ def filtrar_hipotesis(h, snapshot_name):
 @click.option("--snapshot", "snapshot_name", required=True)
 @click.option("--out", type=click.Path(dir_okay=False), help="CSV de resultados y parámetros por activo.")
 def filtrar_command(archivo, snapshot_name, out):
-    h = cargar_hipotesis(archivo)
-    if len(h.piernas) > 1:
-        click.echo(f"cartera de {len(h.piernas)} piernas: falta C05")
-        raise click.exceptions.Exit(1)
     h, ok, motivos = admitir_hipotesis(archivo, snapshot_name)
     if not ok:
         for motivo in motivos:
             click.echo(motivo)
         raise click.exceptions.Exit(1)
-    resultados, parametros, veredicto, bajos = filtrar_hipotesis(h, snapshot_name)
-    click.echo(tabulate(resultados, headers=["activo", "sharpe_fuera_muestra", "trades"], tablefmt="github"))
+    ret = filtrar_hipotesis(h, snapshot_name)
+    resultados, parametros, veredicto, motivo = ret[:4]
+    sharpe_car, total_trades, filas_tabla = ret[4], ret[5], ret[6]
+    headers = ["pierna", "activo", "sharpe_fuera_muestra", "trades"] if len(h.piernas) > 1 else ["activo", "sharpe_fuera_muestra", "trades"]
+    fila_cartera = ["cartera", "", sharpe_car, total_trades] if len(h.piernas) > 1 else ["cartera", sharpe_car, total_trades]
+    click.echo(tabulate([*filas_tabla, fila_cartera], headers=headers, tablefmt="github"))
     if out:
         with open(out, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["activo", "sharpe_fuera_muestra", "trades", "params", "veredicto"])
-            writer.writerows(
-                [*fila, json.dumps(parametros[fila[0]], sort_keys=True), veredicto] for fila in resultados
-            )
-    click.echo(f"{veredicto} ({bajos} de {len(resultados)} bajo 0,10 o con menos de 30 trades)")
+            if len(h.piernas) > 1:
+                writer.writerow(["pierna", "activo", "sharpe_fuera_muestra", "trades", "params", "veredicto"])
+                writer.writerows(
+                    [*fila, json.dumps(parametros[(fila[0], fila[1])], sort_keys=True), veredicto]
+                    for fila in filas_tabla
+                )
+            else:
+                writer.writerow(["activo", "sharpe_fuera_muestra", "trades", "params", "veredicto"])
+                writer.writerows(
+                    [*fila, json.dumps(parametros[fila[0]], sort_keys=True), veredicto] for fila in resultados
+                )
+    click.echo(f"{veredicto} ({motivo})")
 
 
 @hipotesis_group.command("correr", help="Ejecutar las etapas 0 a 3, con corte temprano y estado.")
@@ -162,19 +184,16 @@ def filtrar_command(archivo, snapshot_name, out):
 @click.option("--snapshot", "snapshot_name", required=True)
 @click.option("--carpeta", type=click.Path(file_okay=False), required=True)
 def correr_command(archivo, snapshot_name, carpeta):
-    h = cargar_hipotesis(archivo)
-    if len(h.piernas) > 1:
-        click.echo(f"cartera de {len(h.piernas)} piernas: falta C05")
-        raise click.exceptions.Exit(1)
     h, ok, motivos = admitir_hipotesis(archivo, snapshot_name, True)
     etapa, veredicto = "0", "PASA" if ok else "CORTA"
     motivo = "; ".join(motivos) if motivos else "admisión aceptada"
     registrar_estado(h.id, etapa, veredicto, motivo)
     click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
     if ok:
-        resultados, parametros, veredicto, bajos = filtrar_hipotesis(h, snapshot_name)
+        ret_filtro = filtrar_hipotesis(h, snapshot_name)
+        resultados, parametros, veredicto, motivo = ret_filtro[:4]
+        sharpe_car = ret_filtro[4] if len(ret_filtro) > 4 else None
         etapa = "1"
-        motivo = f"{bajos} de {len(resultados)} bajo 0,10 o con menos de 30 trades"
         registrar_estado(h.id, etapa, veredicto, motivo)
         click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
         if veredicto == "PASA":
@@ -185,14 +204,22 @@ def correr_command(archivo, snapshot_name, carpeta):
                 raise
             etapa = "2"
             motivos = [m for fila in filas for m in fila["motivos"]]
-            motivo = "; ".join(motivos) if motivos else "control coincide y al menos un activo pasa V30"
-            if veredicto == "PASA":
-                activos = ", ".join(f["activo"] for f in filas if f["v30"] == "PASA")
-                motivo = f"pasan V30: {activos}; control coincide en {len(filas)} de {len(filas)}"
-                alarma, activos = alarma_filtro_motor(resultados, filas)
-                if alarma:
-                    veredicto = "ALARMA"
-                    motivo = "filtro optimista en " + ", ".join(activos)
+            if len(h.piernas) > 1:
+                motivo = "; ".join(dict.fromkeys(motivos)) if motivos else f"cartera pasa V30; control coincide en {len(filas)} de {len(filas)}"
+                if veredicto == "PASA":
+                    sharpe_motor = filas[0].get("sharpe_cartera") if filas else None
+                    if alarma_cartera(sharpe_car, sharpe_motor):
+                        veredicto = "ALARMA"
+                        motivo = "filtro optimista en la cartera"
+            else:
+                motivo = "; ".join(motivos) if motivos else "control coincide y al menos un activo pasa V30"
+                if veredicto == "PASA":
+                    activos = ", ".join(f["activo"] for f in filas if f["v30"] == "PASA")
+                    motivo = f"pasan V30: {activos}; control coincide en {len(filas)} de {len(filas)}"
+                    alarma, activos = alarma_filtro_motor(resultados, filas)
+                    if alarma:
+                        veredicto = "ALARMA"
+                        motivo = "filtro optimista en " + ", ".join(activos)
             registrar_estado(h.id, etapa, veredicto, motivo)
             click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
             if veredicto == "PASA":
@@ -207,11 +234,16 @@ def correr_command(archivo, snapshot_name, carpeta):
                     except Exception as exc:
                         registrar_estado(h.id, "3", "ERROR", f"{type(exc).__name__}: {exc}"[:200])
                         raise
-                    click.echo(tabulate([[f["activo"], f["v30"], f["dsr"]] for f in filas],
-                                        headers=["activo", "V30", "DSR"], tablefmt="github"))
-                    motivo = "; ".join(m for f in filas for m in f["motivos"])
-                    if veredicto == "PASA":
-                        motivo = "pasan V30 y DSR: " + ", ".join(f["activo"] for f in filas if not f["motivos"])
+                    headers = ["pierna", "activo", "V30", "DSR"] if len(h.piernas) > 1 else ["activo", "V30", "DSR"]
+                    filas_tab = [[f.get("estrategia", ""), f["activo"], f["v30"], f["dsr"]] if len(h.piernas) > 1 else [f["activo"], f["v30"], f["dsr"]] for f in filas]
+                    click.echo(tabulate(filas_tab, headers=headers, tablefmt="github"))
+                    motivos = [m for f in filas for m in f["motivos"]]
+                    if len(h.piernas) > 1:
+                        motivo = "; ".join(dict.fromkeys(motivos)) if motivos else "cartera pasa V30 y DSR"
+                    else:
+                        motivo = "; ".join(motivos)
+                        if veredicto == "PASA":
+                            motivo = "pasan V30 y DSR: " + ", ".join(f["activo"] for f in filas if not f["motivos"])
                 registrar_estado(h.id, etapa, veredicto, motivo)
                 click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
     click.echo(f"Llegó a la etapa {etapa}: {veredicto} ({motivo})")

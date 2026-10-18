@@ -54,7 +54,8 @@ def test_los_trades_son_la_suma_de_entradas_de_todos_los_activos_y_cuentan_para_
     panel = transversal.señales_transversales(cierres, transversal.METRICAS[p.clase])
     entradas = ((panel == 1) & (panel.shift(1, fill_value=0) == 0)).loc["2014-01-01":]
     assert r["trades"] > 0 and abs(r["trades"] - int(entradas.sum().sum())) <= len(ACTIVOS) * 2  # bordes de ventana
-    assert veredicto_etapa1([("cartera", r["sharpe_tasa_0"], r["trades"])])[0] == ("PASA" if r["trades"] >= 30 and r["sharpe_tasa_0"] >= 0.10 else "CORTA")
+    corta_por_trades = veredicto_etapa1(r["sharpe_tasa_0"], r["trades"])[1] == "menos de 30 trades en la cartera"
+    assert corta_por_trades == (r["trades"] < 30)  # los trades de la pierna son los que cuenta el veredicto de la cartera
 
 
 def test_el_resultado_no_depende_de_velas_posteriores(resultado):

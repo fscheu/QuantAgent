@@ -25,9 +25,12 @@ def raiz(tmp_path, monkeypatch):
     return tmp_path
 
 
-def informe(raiz, hid):
+def informe(raiz, hid, archivo=None):
     out = raiz / "i.html"
-    return CliRunner().invoke(backtest_group, ["hipotesis", "informe", hid, "--out", str(out)]), out
+    args = ["hipotesis", "informe", hid, "--out", str(out)]
+    if archivo:
+        args.extend(["--archivo", str(archivo)])
+    return CliRunner().invoke(backtest_group, args), out
 
 
 def test_corte_en_etapa_1_nombra_etapa_motivo_y_activos(raiz):
@@ -51,3 +54,35 @@ def test_corte_en_etapa_3_usa_solo_activos_de_esa_etapa(raiz):
 def test_hipotesis_desconocida_falla(raiz):
     r, out = informe(raiz, "nada")
     assert r.exit_code != 0 and "desconocida" in r.output and not out.exists()
+
+
+def test_informe_cartera_dos_piernas_contiene_universos_y_fila_cartera_sin_precios(raiz):
+    import yaml
+    yaml_path = raiz / "cartera.yaml"
+    yaml_path.write_text(yaml.safe_dump({
+        "id": "h-cartera",
+        "autor": "fede",
+        "justificacion": "Cartera de 2 piernas.",
+        "timeframe": "1d",
+        "piernas": [
+            {"clase": "momentum-12m", "parametros": {"lookback": [252]},
+             "activos": ["SPY", "QQQ"], "universo": "Universo 1: 12 ETFs de acciones"},
+            {"clase": "sma-cross", "parametros": {"fast": [1], "slow": [210]},
+             "activos": ["TLT", "IEF"], "universo": "Universo 2: ETFs de bonos"}
+        ]
+    }))
+    registrar_estado("h-cartera", "1", "PASA", "ok")
+    with (raiz / "intentos.csv").open("a", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=CAMPOS_INTENTOS, restval="")
+        w.writerow({"hipotesis": "h-cartera", "etapa": "1", "activo": "cartera", "sharpe": "0.45", "trades": "120", "pnl": "5000.0"})
+        w.writerow({"hipotesis": "h-cartera", "etapa": "1", "activo": "SPY", "sharpe": "0.20", "trades": "60", "pnl": "2500.0"})
+    r, out = informe(raiz, "h-cartera", archivo=yaml_path)
+    assert r.exit_code == 0, r.output
+    html = out.read_text()
+    assert "Universo 1: 12 ETFs de acciones" in html
+    assert "Universo 2: ETFs de bonos" in html
+    assert "<td>cartera</td>" in html
+    assert html.index("<td>cartera</td>") < html.index("<td>SPY</td>")
+    assert "<th>pnl" not in html.lower() and "5000.0" not in html and "2500.0" not in html
+    assert "Cartera" in html and "Pierna" in html and "Igual riesgo" in html
+

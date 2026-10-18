@@ -18,21 +18,16 @@ def test_parametros_elegidos(valores, elegido):
     assert filtro.parametros_elegidos(ganadores[::-1]) == {"fast": elegido, "slow": 20}
 
 
-@pytest.mark.parametrize("total,bajos,esperado", [
-    (12, 8, "PASA"), (12, 9, "CORTA"),
-    (6, 4, "PASA"), (6, 5, "CORTA"),
-    (3, 2, "PASA"), (3, 3, "CORTA"),
+@pytest.mark.parametrize("sharpe,trades,esperado,motivo", [
+    (0.10, 30, "PASA", "Sharpe de cartera 0.10"),
+    (0.50, 60, "PASA", "Sharpe de cartera 0.50"),
+    (0.50, 24, "CORTA", "menos de 30 trades en la cartera"),
+    (0.09, 30, "CORTA", "Sharpe de cartera bajo 0,10"),
+    (float("nan"), 30, "CORTA", "Sharpe de cartera bajo 0,10"),
+    (None, 30, "CORTA", "Sharpe de cartera bajo 0,10"),
 ])
-def test_veredicto_corte_proporcional(total, bajos, esperado):
-    resultados = [(str(i), 0.09 if i < bajos else 0.10, 30) for i in range(total)]
-    assert filtro.veredicto_etapa1(resultados) == (esperado, bajos)
-
-
-@pytest.mark.parametrize("sharpe,trades,bajos", [
-    (0.10, 30, 0), (0.50, 29, 1), (float("nan"), 30, 1), (None, 30, 1),
-])
-def test_veredicto_sharpe_y_minimo_trades(sharpe, trades, bajos):
-    assert filtro.veredicto_etapa1([("SPY", sharpe, trades)]) == ("CORTA" if bajos else "PASA", bajos)
+def test_veredicto_etapa1_cartera(sharpe, trades, esperado, motivo):
+    assert filtro.veredicto_etapa1(sharpe, trades) == (esperado, motivo)
 
 
 def _velas():
@@ -97,3 +92,16 @@ def test_retornos_solo_de_pruebas_y_reproducen_el_sharpe(espia):
     assert ret.index.min() >= pruebas[0][0] and ret.index.max() <= pruebas[-1][1]
     equity = 10_000.0 * (1 + ret).cumprod()
     assert filtro.equity_metrics(equity, 0.0)["sharpe"] == pytest.approx(r["sharpe_tasa_0"])
+
+
+def test_filtrar_activo_soporta_pierna_sin_timeframe(espia):
+    class FakePierna:
+        clase = "sma-cross"
+        activos = ("SPY",)
+        parametros = {"fast": [5], "slow": [20]}
+
+        def combinaciones(self):
+            return [{"fast": 5, "slow": 20}]
+
+    r = filtro.filtrar_activo(FakePierna(), _velas(), costos=COSTOS, capital=10_000.0, train_years=3, test_years=1)
+    assert r["trades"] > 0
