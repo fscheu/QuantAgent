@@ -195,3 +195,30 @@ def test_two_open_lots_wait():
 def test_a_draft_lot_is_the_base_of_the_next_delivery():
     lot, wait = gate.active_lot([{"number": 30, "headRefName": LOT, "isDraft": True}])
     assert wait is None and lot["headRefName"] == LOT
+
+
+def test_active_lot_with_target_lot():
+    prs = [{"number": 30, "headRefName": LOT, "isDraft": True}, {"number": 31, "headRefName": "lote/b", "isDraft": True}]
+    assert gate.active_lot(prs)[0] is None
+    assert gate.active_lot(prs, target_lot="lote/b")[0]["headRefName"] == "lote/b"
+
+
+def test_claim_check():
+    from datetime import datetime, timedelta, timezone
+    t0 = datetime(2026, 10, 18, 10, 0, tzinfo=timezone.utc)
+    c = [{"body": "CLAIM QuantAgent-d4cq.76 host1 2026-10-18T10:00:00Z"}]
+    assert gate.check_claim(c, "QuantAgent-d4cq.76", now=t0 + timedelta(hours=2))[0] is True
+    assert gate.check_claim(c + [{"body": "RELEASE QuantAgent-d4cq.76 host1"}], "QuantAgent-d4cq.76", now=t0 + timedelta(hours=2))[0] is False
+    assert gate.check_claim(c, "QuantAgent-d4cq.76", now=t0 + timedelta(hours=7))[0] is False
+
+
+@pytest.mark.parametrize("bd, ticket, msg", [
+    ({"status": "closed", "labels": [], "dependencies": []}, "QuantAgent-d4cq.76", "no está open"),
+    ({"status": "open", "labels": [], "dependencies": [{"status": "open", "dependency_type": "blocks"}]}, "QuantAgent-d4cq.76", "blockers abiertos"),
+    ({"status": "open", "labels": ["loop-descartado"], "dependencies": []}, "QuantAgent-d4cq.76", "label de exclusión"),
+    ({"status": "open", "labels": [], "dependencies": []}, "QuantAgent-e35", "pertenece al lote L1"),
+])
+def test_ticket_not_eligible(bd, ticket, msg):
+    q = "| L12 | `lote/cartera` | ...\n| L1 | `lote/m` | ...\n| C11 | `QuantAgent-d4cq.76` | o | a | l | L12 |\n| T01 | `QuantAgent-e35` | o | a | l | L1 |\n"
+    assert msg in gate.check_ticket_eligible(ticket, "lote/cartera", q, bd)[1]
+    assert gate.check_ticket_eligible("QuantAgent-d4cq.76", "lote/cartera", q, {"status": "open", "labels": [], "dependencies": []})[0] is True

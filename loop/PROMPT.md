@@ -49,6 +49,7 @@ PASO 1 — Cierre del ticket anterior (solo si el gate trae "review")
 PASO 2 — Elegir el trabajo
 - Modo cambio: ya estás en la rama del PR abierto. Aplicá SOLO lo que pide review.detail. Sin alcance nuevo.
 - Modo nuevo: en §4 de PLAN-CONTINUACION.md, la tabla de lotes dice qué código (L1, L2, …) tiene la rama <base>.
+  Si el prompt trae "Ticket asignado: <ID>": tomá ese en vez de la primera fila si cumple las condiciones (lote, open en BEADS, sin blockers ni labels de exclusión); si no las cumple, imprimí por qué y terminá sin entrega.
   Mirá SOLO las filas de la cola con ese código en la columna Lote, en orden.
   Tomá la primera cuyo ticket esté open en BEADS (`bd show`), sin blockers abiertos, y sin label
   loop-descartado ni fuera-loop. No tomes filas de otro lote.
