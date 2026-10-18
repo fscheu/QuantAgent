@@ -120,3 +120,22 @@ def test_las_hipotesis_actuales_pasan_la_etapa_0_unas_contra_otras(velas):
     assert len(existentes) >= 5
     for h in existentes:
         assert criticar(h, existentes)[0] != "duplicada", h.id
+
+
+def test_universo_se_congela_en_la_primera_admision(velas, tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    assert admitir(H, velas, []) == (True, [])
+    assert (tmp_path / "hipotesis-universos.csv").read_text().count("\n") == 1
+    # misma hipótesis y universo, otra grilla: sigue admitida y no agrega filas
+    h_grilla = replace(H, piernas=(replace(H.piernas[0], parametros={"rsi_period": [7, 14], "oversold_threshold": [30.0]}),))
+    assert admitir(h_grilla, velas, []) == (True, [])
+    assert (tmp_path / "hipotesis-universos.csv").read_text().count("\n") == 1
+    ok, motivos = admitir(replace(H, piernas=(replace(H.piernas[0], activos=("SPY", "QQQ")),)), velas, [])
+    assert not ok and len(motivos) == 1 and motivos[0].startswith("universo distinto del declarado el ")
+    assert motivos[0].endswith(" (D2)")
+
+
+def test_hipotesis_rechazada_no_congela_universo(velas, tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    ok, _ = admitir(replace(H, justificacion="corta"), velas, [])
+    assert not ok and not (tmp_path / "hipotesis-universos.csv").exists()

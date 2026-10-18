@@ -6,7 +6,14 @@ import pandas as pd
 
 from quantagent.backtesting.signals import bar_signals, check_no_lookahead
 from quantagent.cli.sweep import cli_aliases
-from quantagent.fabrica.critico import cargar_existentes, criticar
+from quantagent.data.snapshot import SnapshotError, snapshot_root
+from quantagent.fabrica.critico import (
+    UNIVERSOS_CSV,
+    cargar_existentes,
+    criticar,
+    motivo_universo,
+    registrar_universo,
+)
 from quantagent.fabrica.hipotesis import Hipotesis, Pierna
 from quantagent.strategy.registry import STRATEGY_REGISTRY, build_strategy
 
@@ -39,6 +46,12 @@ def admitir(h: Hipotesis, velas: pd.DataFrame, existentes: list[Hipotesis] | Non
     veredicto, motivo, _ = criticar(h, cargar_existentes() if existentes is None else existentes)
     if veredicto == "duplicada":
         motivos.append(motivo)
+    try:
+        universos = snapshot_root() / UNIVERSOS_CSV
+    except SnapshotError:  # sin carpeta de datos no hay dónde congelar (solo tests sueltos)
+        universos = None
+    if universos and (congelado := motivo_universo(h, universos)):
+        motivos.append(congelado)
     if len(h.justificacion.strip()) < MIN_JUSTIFICACION:
         motivos.append(f"justificación de {len(h.justificacion.strip())} caracteres; mínimo {MIN_JUSTIFICACION}")
     libres = sum(sum(len(v) > 1 for v in p.parametros.values()) for p in h.piernas)
@@ -61,4 +74,6 @@ def admitir(h: Hipotesis, velas: pd.DataFrame, existentes: list[Hipotesis] | Non
             difs = check_no_lookahead(lambda c, comb=comb, p=p: _senales(p, comb, c), velas, cortes)
             if difs:
                 motivos.append(f"prueba de truncamiento fallida con {comb}: {difs[0]}")
+    if not motivos and universos:
+        registrar_universo(h, universos)
     return not motivos, motivos
