@@ -5,7 +5,9 @@ the loop could start work on an unreviewed delivery, or stay blocked after a val
 """
 
 import importlib.util
+import json
 from pathlib import Path
+import subprocess
 
 import pytest
 
@@ -213,3 +215,39 @@ def test_ticket_not_eligible(bd, ticket, msg):
     q = "| L12 | `lote/cartera` | ...\n| L1 | `lote/m` | ...\n| C11 | `QuantAgent-d4cq.76` | o | a | l | L12 |\n| T01 | `QuantAgent-e35` | o | a | l | L1 |\n"
     assert msg in gate.check_ticket_eligible(ticket, "lote/cartera", q, bd)[1]
     assert gate.check_ticket_eligible("QuantAgent-d4cq.76", "lote/cartera", q, {"status": "open", "labels": [], "dependencies": []})[0] is True
+
+
+def test_gate_with_ticket_reads_queue_from_lot_branch(tmp_path, monkeypatch, capsys):
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "T"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "--allow-empty", "--no-verify", "-m", "init"], cwd=tmp_path, check=True)
+    (tmp_path / "PLAN-CONTINUACION.md").write_text("| L12 | `lote/cartera` |\n| C11 | `QuantAgent-d4cq.76` | o | a | l | L12 |\n")
+    subprocess.run(["git", "add", "PLAN-CONTINUACION.md"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "commit", "--no-verify", "-m", "queue in lot"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "update-ref", "refs/remotes/origin/lote/cartera", "HEAD"], cwd=tmp_path, check=True)
+    (tmp_path / "PLAN-CONTINUACION.md").unlink()
+    subprocess.run(["git", "commit", "-a", "--no-verify", "-m", "remove queue from main"], cwd=tmp_path, check=True)
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("GIT_DIR", raising=False)
+    monkeypatch.setattr(gate, "_gh", lambda *a: json.dumps(
+        [{"number": 42, "url": "https://github.com/x/y/pull/42", "headRefName": "lote/cartera", "isDraft": True}] if "--label" in a and a[a.index("--label") + 1] == "lote" else []
+    ))
+    orig_run = gate.subprocess.run
+    monkeypatch.setattr(gate.subprocess, "run", lambda cmd, *a, **kw: subprocess.CompletedProcess(cmd, 0, stdout=json.dumps([{"status": "open", "labels": [], "dependencies": []}])) if cmd[:2] == ["bd", "show"] else orig_run(cmd, *a, **kw))
+    monkeypatch.setattr(gate.sys, "argv", ["gate.py", "--ticket", "QuantAgent-d4cq.76"])
+
+    rc = gate.main()
+    out = json.loads(capsys.readouterr().out)
+    assert rc == gate.EXIT_PASS
+    assert out["result"] == "PASS" and out["ticket_asignado"] == "QuantAgent-d4cq.76"
+
+
+def test_load_lot_queue_failure_raises_clear_error(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("GIT_DIR", raising=False)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    with pytest.raises(RuntimeError, match="no se pudo leer PLAN-CONTINUACION.md de origin/lote/inexistente"):
+        gate.load_lot_queue("lote/inexistente")
+

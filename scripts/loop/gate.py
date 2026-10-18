@@ -107,6 +107,14 @@ def check_ticket_eligible(ticket: str, lot_branch: str, queue_text: str, bd_data
     return True, None
 
 
+def load_lot_queue(lot_branch: str, queue_file: str = "PLAN-CONTINUACION.md") -> str:
+    res = subprocess.run(["git", "show", f"origin/{lot_branch}:{queue_file}"], capture_output=True, text=True)
+    if res.returncode != 0:
+        err = res.stderr.strip() or f"exit code {res.returncode}"
+        raise RuntimeError(f"no se pudo leer {queue_file} de origin/{lot_branch}: {err}")
+    return res.stdout
+
+
 def evaluate(prs: list[dict], reviewer: str, get_detail) -> tuple[int, dict]:
     """Decide PASS/WAIT from the loop PRs. `get_detail(number)` returns commits, comments, reviews, body, diff."""
     if not prs:
@@ -191,7 +199,7 @@ def main() -> int:
         code, result = evaluate(prs, cfg["LOOP_REVIEWER"], get_detail)
         result = {**result, "base": lot["headRefName"], "lot_pr": lot["number"]}
         if target_ticket and result.get("mode") == "nuevo" and code == EXIT_PASS:
-            q = (Path(__file__).resolve().parents[2] / cfg.get("LOOP_QUEUE_FILE", "PLAN-CONTINUACION.md")).read_text()
+            q = load_lot_queue(lot["headRefName"], cfg.get("LOOP_QUEUE_FILE", "PLAN-CONTINUACION.md"))
             ok, reason = check_ticket_eligible(target_ticket, lot["headRefName"], q)
             if not ok:
                 print(json.dumps({**result, "result": "WAIT", "message": f"⏸ ticket no elegible {target_ticket}: {reason}"}, ensure_ascii=False))

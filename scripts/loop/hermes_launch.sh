@@ -39,7 +39,7 @@ if [ "$RUN_NOW" -ne 1 ] && [ -n "${LOOP_PM_TMUX:-}" ] && tmux has-session -t "$L
   rm -rf "$TMP"
   exit 0
 fi
-GATE="$(cd "$TMP" && python3 scripts/loop/gate.py "${ARGS[@]}")"
+GATE="$(cd "$TMP" && GIT_DIR="$REPO/.git" python3 scripts/loop/gate.py "${ARGS[@]}")"
 rc=$?
 if [ "$rc" -ne 0 ]; then
   python3 -c 'import json,sys; print(json.loads(sys.argv[1])["message"])' "$GATE" 2>/dev/null || echo "⚠ QuantAgent loop: gate sin salida válida"
