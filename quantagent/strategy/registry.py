@@ -4,6 +4,7 @@ from typing import Any
 
 from .base import TradingStrategy
 from .fifty_two_week_high_strategy import FiftyTwoWeekHighStrategy
+from .halloween_strategy import HalloweenStrategy
 from .llm_agent_strategy import LLMAgentStrategy
 from .momentum_12m_strategy import Momentum12mStrategy
 from .rsi_strategy import RSIMeanReversionStrategy
@@ -191,6 +192,7 @@ STRATEGY_REGISTRY: dict[str, dict[str, Any]] = {
             },
         },
     },
+    "HalloweenStrategy": {"cls": HalloweenStrategy, "type": "deterministic", "cli_alias": "halloween", "display_name": HalloweenStrategy.describe()["display_name"], "description": HalloweenStrategy.describe()["description"], "min_bars": 1, "params": {}},
     "LLMAgentStrategy": {
         "cls": LLMAgentStrategy,
         "type": "llm",

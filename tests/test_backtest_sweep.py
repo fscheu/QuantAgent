@@ -478,3 +478,9 @@ def test_registrar_intento_migra_encabezado_sin_sharpe_base(monkeypatch, tmp_pat
         assert guardada["sharpe_base"] == ""
     assert rows[2]["sharpe_base"] == "tasa_0"
     assert rows[2]["hipotesis"] == "h1"
+
+
+def test_grilla_vacia_solo_vale_para_estrategias_sin_parametros():
+    assert validar_grilla({}, "halloween") == [{}]
+    with pytest.raises(click.ClickException, match="no vacío"):
+        validar_grilla({}, "rsi")
