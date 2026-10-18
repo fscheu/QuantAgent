@@ -339,4 +339,80 @@ def test_etapa2_cartera_dos_piernas_mismo_activo_parametros_distintos(tmp_path, 
     assert recibidos_control[("sma-cross", "SPY")] == {"sma-cross": {"fast": 50, "slow": 200}}
 
 
+@pytest.mark.parametrize("dsr,esperado,motivo_esperado", [
+    (0.96, "PASA", []),
+    (0.94, "CORTA", ["DSR de cartera < 0.95"]),
+])
+def test_etapa3_cartera_dsr(tmp_path, monkeypatch, dsr, esperado, motivo_esperado):
+    from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fechas = pd.date_range("2019-01-01", "2022-12-31", periods=100)
+    eq_dir = tmp_path / "salida" / "equity"
+    eq_dir.mkdir(parents=True)
+    pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(100, 0.001))}).to_csv(eq_dir / "rsi-SPY.csv", index=False)
+    pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(100, 0.0005))}).to_csv(eq_dir / "sma-TLT.csv", index=False)
+
+    h = Hipotesis("h-c", "autor", "just", "1d", piernas=(Pierna("rsi", {}, ("SPY",), "U"), Pierna("sma", {}, ("TLT",), "U")))
+    monkeypatch.setattr(validacion, "correr_motor", lambda *a, **k: [
+        {"activo": "SPY", "estrategia": "rsi", "trades": "4", "pnl": "1000", "sharpe_tasa_0": "0.5", "max_drawdown": "0.05"},
+        {"activo": "TLT", "estrategia": "sma", "trades": "2", "pnl": "200", "sharpe_tasa_0": "0.2", "max_drawdown": "0.08"},
+    ])
+    monkeypatch.setattr(validacion, "dsr_contra_intentos", lambda *a: dsr)
+    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas)}))
+
+    veredicto, filas = validacion.validar_etapa3(h, "sintetico", {("rsi", "SPY"): {}, ("sma", "TLT"): {}}, tmp_path / "salida")
+    assert veredicto == esperado
+    assert len(filas) == 2
+    assert filas[0]["motivos"] == motivo_esperado
+    assert filas[0]["dsr"] == dsr
+    assert filas[0]["v30"] == "PASA"
+
+
+def test_etapa3_cartera_2_piernas_3_activos_agrega_una_fila_intentos(tmp_path, monkeypatch):
+    from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fechas = pd.date_range("2019-01-01", "2022-12-31", periods=100)
+    eq_dir = tmp_path / "salida" / "equity"
+    eq_dir.mkdir(parents=True)
+    p1_activos = ("SPY", "TLT", "GLD")
+    p2_activos = ("EEM", "IWM", "DIA")
+    for a in p1_activos:
+        pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(100, 0.001))}).to_csv(eq_dir / f"rsi-{a}.csv", index=False)
+    for a in p2_activos:
+        pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(100, 0.0005))}).to_csv(eq_dir / f"sma-{a}.csv", index=False)
+
+    h = Hipotesis(
+        "h-c2x3", "autor", "just", "1d",
+        piernas=(
+            Pierna("rsi", {"rsi_period": [7]}, p1_activos, "U"),
+            Pierna("sma", {"fast": [20]}, p2_activos, "U"),
+        ),
+    )
+    filas_falsas = [
+        {"activo": a, "estrategia": "rsi", "trades": "5", "pnl": "100", "sharpe_tasa_0": "0.4", "max_drawdown": "0.02"} for a in p1_activos
+    ] + [
+        {"activo": a, "estrategia": "sma", "trades": "5", "pnl": "100", "sharpe_tasa_0": "0.4", "max_drawdown": "0.02"} for a in p2_activos
+    ]
+    monkeypatch.setattr(validacion, "correr_motor", lambda *a, **k: filas_falsas)
+    monkeypatch.setattr(validacion, "dsr_contra_intentos", lambda *a: 0.96)
+    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas)}))
+
+    veredicto, filas = validacion.validar_etapa3(h, "sintetico", {(p.clase, a): {} for p in h.piernas for a in p.activos}, tmp_path / "salida")
+    assert veredicto == "PASA"
+    assert len(filas) == 6
+    with (tmp_path / "intentos.csv").open() as f:
+        intentos = list(csv.DictReader(f))
+    assert len(intentos) == 1
+    intento = intentos[0]
+    assert intento["activo"] == "cartera"
+    assert intento["etapa"] == "3"
+    assert intento["sharpe_base"] == "tasa_0"
+    assert intento["trades"] == "30"
+    assert intento["desde"] == "2019-01-01"
+    assert intento["hasta"] == "2022-12-31"
+
+
+
 

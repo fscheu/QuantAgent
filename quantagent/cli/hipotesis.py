@@ -223,27 +223,29 @@ def correr_command(archivo, snapshot_name, carpeta):
             registrar_estado(h.id, etapa, veredicto, motivo)
             click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
             if veredicto == "PASA":
-                if len(h.piernas) > 1:
-                    click.echo("etapa 2 PASA; etapa 3 de cartera: falta C07")
+                etapa = "3"
+                try:
+                    abrir(h.id, "prueba")
+                except CandadoError as exc:
+                    veredicto, motivo = "CORTA", str(exc)
                 else:
-                    etapa = "3"
                     try:
-                        abrir(h.id, "prueba")
-                    except CandadoError as exc:
-                        veredicto, motivo = "CORTA", str(exc)
+                        veredicto, filas = validar_etapa3(h, snapshot_name, parametros, Path(carpeta) / "etapa3")
+                    except Exception as exc:
+                        registrar_estado(h.id, "3", "ERROR", f"{type(exc).__name__}: {exc}"[:200])
+                        raise
+                    headers = ["pierna", "activo", "V30", "DSR"] if len(h.piernas) > 1 else ["activo", "V30", "DSR"]
+                    filas_tab = [[f.get("estrategia", ""), f["activo"], f["v30"], f["dsr"]] if len(h.piernas) > 1 else [f["activo"], f["v30"], f["dsr"]] for f in filas]
+                    click.echo(tabulate(filas_tab, headers=headers, tablefmt="github"))
+                    motivos = [m for f in filas for m in f["motivos"]]
+                    if len(h.piernas) > 1:
+                        motivo = "; ".join(dict.fromkeys(motivos)) if motivos else "cartera pasa V30 y DSR"
                     else:
-                        try:
-                            veredicto, filas = validar_etapa3(h, snapshot_name, parametros, Path(carpeta) / "etapa3")
-                        except Exception as exc:
-                            registrar_estado(h.id, "3", "ERROR", f"{type(exc).__name__}: {exc}"[:200])
-                            raise
-                        click.echo(tabulate([[f["activo"], f["v30"], f["dsr"]] for f in filas],
-                                            headers=["activo", "V30", "DSR"], tablefmt="github"))
-                        motivo = "; ".join(m for f in filas for m in f["motivos"])
+                        motivo = "; ".join(motivos)
                         if veredicto == "PASA":
                             motivo = "pasan V30 y DSR: " + ", ".join(f["activo"] for f in filas if not f["motivos"])
-                    registrar_estado(h.id, etapa, veredicto, motivo)
-                    click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
+                registrar_estado(h.id, etapa, veredicto, motivo)
+                click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
     click.echo(f"Llegó a la etapa {etapa}: {veredicto} ({motivo})")
     raise click.exceptions.Exit(int(veredicto != "PASA"))
 

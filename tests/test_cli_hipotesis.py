@@ -420,13 +420,22 @@ def test_formato_viejo_una_pierna_coincide_con_cartera(tmp_path, monkeypatch):
     assert r_v[2] == r_n[2] == "PASA" and r_v[4] == pytest.approx(r_n[4]) and r_v[5] == r_n[5] == 35
 
 
-def test_correr_y_tanda_cartera_etapa2_pasa_falta_c07(tmp_path, monkeypatch):
+@pytest.mark.parametrize("final,dsr,motivo_3", [
+    ("PASA", 0.96, "cartera pasa V30 y DSR"),
+    ("CORTA", 0.94, "DSR de cartera < 0.95"),
+])
+def test_correr_cartera_etapa3_y_reapertura(tmp_path, monkeypatch, final, dsr, motivo_3):
     from quantagent.fabrica.candado import abierto
     from quantagent.fabrica.hipotesis import cargar_hipotesis
 
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    velas = pd.DataFrame(
+        {"open": [100.0], "high": [101.0], "low": [99.0], "close": [100.0], "adj_close": [100.0], "volume": [1000.0]},
+        index=pd.date_range("2007-01-01", periods=1),
+    )
+    write_snapshot("sintetico", {"SPY": velas, "TLT": velas}, base_dir=tmp_path)
     data = {
-        "id": "c-c06", "autor": "fede", "timeframe": "1d",
+        "id": f"c-c07-{final.lower()}", "autor": "fede", "timeframe": "1d",
         "justificacion": "Combinar tendencia y momentum diversifica el riesgo en ETFs.",
         "piernas": [
             {"clase": "rsi", "parametros": {"rsi_period": [7]}, "activos": ["SPY"], "universo": "U"},
@@ -436,7 +445,6 @@ def test_correr_y_tanda_cartera_etapa2_pasa_falta_c07(tmp_path, monkeypatch):
     archivo = tmp_path / "c.yaml"
     archivo.write_text(yaml.safe_dump(data))
     h = cargar_hipotesis(archivo)
-    monkeypatch.setattr(hipotesis, "admitir_hipotesis", lambda *a, **kw: (h, True, []))
     monkeypatch.setattr(hipotesis, "filtrar_hipotesis", lambda *a, **kw: (
         [["SPY", 1.0, 30], ["TLT", 1.0, 30]], {("rsi", "SPY"): {}, ("sma-cross", "TLT"): {}}, "PASA", "sharpe 1.0 >= 0.10 y 60 trades >= 30", 1.0, 60, [],
     ))
@@ -444,30 +452,35 @@ def test_correr_y_tanda_cartera_etapa2_pasa_falta_c07(tmp_path, monkeypatch):
         {"activo": "SPY", "v30": "PASA", "motivos": [], "sharpe_cartera": 0.5},
         {"activo": "TLT", "v30": "PASA", "motivos": [], "sharpe_cartera": 0.5},
     ]))
-    monkeypatch.setattr(hipotesis, "validar_etapa3", lambda *a, **kw: pytest.fail("etapa 3 no debe llamarse"))
-    monkeypatch.setattr(hipotesis, "abrir", lambda *a, **kw: pytest.fail("candado no debe abrirse"))
+    vistos_etapa3 = []
+
+    def fake_etapa3(h_obj, snap, params, carp):
+        vistos_etapa3.append(carp)
+        motivos = [] if final == "PASA" else ["DSR de cartera < 0.95"]
+        return final, [
+            {"activo": "SPY", "estrategia": "rsi", "v30": "PASA", "dsr": dsr, "motivos": motivos},
+            {"activo": "TLT", "estrategia": "sma-cross", "v30": "PASA", "dsr": dsr, "motivos": motivos},
+        ]
+
+    monkeypatch.setattr(hipotesis, "validar_etapa3", fake_etapa3)
 
     runner = CliRunner()
     res_correr = runner.invoke(backtest_group, [
         "hipotesis", "correr", str(archivo), "--snapshot", "sintetico", "--carpeta", str(tmp_path / "salida_correr"),
     ])
-    assert res_correr.exit_code == 0, res_correr.output
-    assert "etapa 2 PASA; etapa 3 de cartera: falta C07" in res_correr.output
-    assert "Llegó a la etapa 2: PASA" in res_correr.output
-    assert not abierto(h.id, "prueba")
+    assert res_correr.exit_code == int(final != "PASA"), res_correr.output
+    assert f"Etapa 3: {final} ({motivo_3})" in res_correr.output
+    assert f"Llegó a la etapa 3: {final}" in res_correr.output
+    assert abierto(h.id, "prueba")
+    assert len(vistos_etapa3) == 1
 
-    tanda_dir = tmp_path / "yaml_tanda"
-    tanda_dir.mkdir()
-    (tanda_dir / "c.yaml").write_text(yaml.safe_dump(data))
-    res_tanda = runner.invoke(backtest_group, [
-        "hipotesis", "tanda", str(tanda_dir), "--snapshot", "sintetico", "--carpeta", str(tmp_path / "salida_tanda"),
-    ])
-    assert res_tanda.exit_code == 0, res_tanda.output
-    log = (tmp_path / "salida_tanda" / h.id / "corrida.log").read_text()
-    assert "etapa 2 PASA; etapa 3 de cartera: falta C07" in log
-    assert not abierto(h.id, "prueba")
-    assert (tmp_path / "salida_tanda" / h.id / "informe.html").exists()
-    assert (tmp_path / "salida_tanda" / "resumen.md").exists()
+    if final == "PASA":
+        res_segunda = runner.invoke(backtest_group, [
+            "hipotesis", "correr", str(archivo), "--snapshot", "sintetico", "--carpeta", str(tmp_path / "salida_segunda"),
+        ])
+        assert res_segunda.exit_code == 1, res_segunda.output
+        assert f"prueba de {h.id} ya abierta el" in res_segunda.output
+        assert "no se vuelve a correr" in res_segunda.output
 
 
 def test_correr_cartera_alarma(tmp_path, monkeypatch):
