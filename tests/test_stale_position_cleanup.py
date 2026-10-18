@@ -5,7 +5,6 @@ from decimal import Decimal
 from unittest.mock import patch
 
 import pandas as pd
-import pytest
 
 from quantagent.backtesting.backtest import Backtest
 from quantagent.models import (
@@ -21,6 +20,7 @@ from quantagent.models import (
 def _session():
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
+
     from quantagent.models import Base
     engine = create_engine("sqlite:///:memory:")
     TestingSession = sessionmaker(bind=engine)

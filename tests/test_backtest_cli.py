@@ -831,8 +831,8 @@ def test_worst_day_on_a_hand_curve_and_edge_cases():
 
 def test_isolated_sqlite_db_synchronous_off_and_external_default():
     """Dentro de _isolated_sqlite_db() PRAGMA synchronous = 0; fuera, una SQLite común conserva su valor (QuantAgent-06yj)."""
-    from quantagent.cli.backtest import _isolated_sqlite_db
     import quantagent.database as db
+    from quantagent.cli.backtest import _isolated_sqlite_db
 
     with _isolated_sqlite_db():
         with db.engine.connect() as conn:
@@ -846,8 +846,9 @@ def test_isolated_sqlite_db_synchronous_off_and_external_default():
 def test_isolated_sqlite_db_fallback_without_shm(monkeypatch):
     """Con /dev/shm no disponible (simulado), la base se crea igual y la corrida termina (QuantAgent-06yj)."""
     import os
-    from quantagent.cli.backtest import _isolated_sqlite_db
+
     import quantagent.database as db
+    from quantagent.cli.backtest import _isolated_sqlite_db
 
     original_isdir = os.path.isdir
     monkeypatch.setattr(os.path, "isdir", lambda path: False if path == "/dev/shm" else original_isdir(path))
@@ -861,6 +862,7 @@ def test_isolated_sqlite_db_fallback_without_shm(monkeypatch):
 def test_isolated_sqlite_db_no_leftover_files_in_shm():
     """No quedan archivos en /dev/shm al terminar, tampoco si una corrida falla (QuantAgent-06yj)."""
     import os
+
     from quantagent.cli.backtest import _isolated_sqlite_db
 
     if not (os.path.isdir("/dev/shm") and os.access("/dev/shm", os.W_OK)):

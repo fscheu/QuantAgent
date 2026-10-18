@@ -15,18 +15,13 @@ Functions under test:
 
 from __future__ import annotations
 
-from contextlib import contextmanager
 from datetime import datetime, timedelta
-from typing import Any
-from unittest.mock import MagicMock
 
-import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from quantagent.llm_telemetry import get_environment_metrics
 from quantagent.models import Base, Log
-
 
 # ---------------------------------------------------------------------------
 # Helpers

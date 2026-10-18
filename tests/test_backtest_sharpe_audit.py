@@ -1,7 +1,8 @@
 """Tests for Sharpe ratio annualization in the backtest engine (QuantAgent-hx0.4)."""
 
-from datetime import datetime
 import math
+from datetime import datetime
+
 from quantagent.backtesting.backtest import Backtest
 
 

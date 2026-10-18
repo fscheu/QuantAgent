@@ -3,8 +3,6 @@
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-import pytest
-
 from quantagent.backtesting.backtest import Backtest
 from quantagent.models import MarketData, OrderSide
 from quantagent.strategy.rsi_strategy import RSIMeanReversionStrategy

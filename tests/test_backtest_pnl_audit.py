@@ -1,8 +1,9 @@
 from datetime import datetime
 from decimal import Decimal
+
+from quantagent.backtesting.backtest import Backtest
 from quantagent.models import Environment, Order, OrderSide, OrderStatus, OrderType
 from quantagent.portfolio.manager import PortfolioManager
-from quantagent.backtesting.backtest import Backtest
 
 
 def test_hand_calculated_trades_pnl_and_metrics(db_session):

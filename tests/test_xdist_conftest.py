@@ -1,7 +1,9 @@
 """Tests for pytest-xdist worker database configuration in tests/conftest.py."""
 
 import os
+
 import pytest
+
 from tests.conftest import _configure_xdist_worker_database
 
 

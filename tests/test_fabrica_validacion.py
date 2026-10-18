@@ -180,6 +180,7 @@ def test_etapa3_real(tmp_path, monkeypatch):
 def test_etapa2_cartera_compare_falso(tmp_path, monkeypatch):
     from quantagent.fabrica.hipotesis import Hipotesis, Pierna
 
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     fechas = pd.date_range("2010-01-01", periods=100)
     eq_dir = tmp_path / "salida" / "equity"
     eq_dir.mkdir(parents=True)
