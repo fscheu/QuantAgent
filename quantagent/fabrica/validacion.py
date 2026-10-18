@@ -73,15 +73,14 @@ def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, a
     return filas
 
 
-def evaluar_etapa2_cartera(h, filas, carpeta, snapshot=None):
-    """Combina retornos de celdas con pesos de cartera y evalúa V30 sumando trades."""
+def _curva_y_v30_cartera(h, filas, carpeta, snapshot, etapa, desde, hasta):
     from quantagent.backtesting.vbt_filter import equity_metrics
     from quantagent.fabrica.cartera import curva_cartera
 
     cierres = None
     if snapshot is not None:
         from quantagent.data.snapshot import read_snapshot
-        cierres = pd.DataFrame({a: read_snapshot(snapshot, a)["close"].loc["2007-01-01":"2018-12-31"]
+        cierres = pd.DataFrame({a: read_snapshot(snapshot, a)["close"].loc[desde:hasta]
                                 for p in h.piernas for a in p.activos})
 
     piernas_map = {i: list(p.activos) for i, p in enumerate(h.piernas)}
@@ -113,11 +112,17 @@ def evaluar_etapa2_cartera(h, filas, carpeta, snapshot=None):
             pnl_val = round(float(eq_cartera.iloc[-1] - 100_000.0), 2)
             registrar_intento(
                 estrategia, "cartera", snapshot, "etf", 1.0, combo,
-                {"desde": "2007-01-01", "hasta": "2018-12-31", "trades": total_trades, "pnl": pnl_val, "sharpe": sharpe_val},
-                hipotesis=h.id, etapa="2", sharpe_base="tasa_0",
+                {"desde": desde, "hasta": hasta, "trades": total_trades, "pnl": pnl_val, "sharpe": sharpe_val},
+                hipotesis=h.id, etapa=etapa, sharpe_base="tasa_0",
             )
-        return pasa, motivos
-    return False, ["curva de cartera vacía"]
+        return eq_cartera, pasa, motivos
+    return None, False, ["curva de cartera vacía"]
+
+
+def evaluar_etapa2_cartera(h, filas, carpeta, snapshot=None):
+    """Combina retornos de celdas con pesos de cartera y evalúa V30 sumando trades."""
+    _, pasa, motivos = _curva_y_v30_cartera(h, filas, carpeta, snapshot, "2", "2007-01-01", "2018-12-31")
+    return pasa, motivos
 
 
 def validar_etapa2(h, snapshot, params_por_activo, carpeta):
@@ -162,6 +167,20 @@ def validar_etapa3(h, snapshot, params_por_activo, carpeta):
     """Valida la prueba; el llamador debe abrir el candado antes de invocar."""
     filas = correr_motor(h, snapshot, params_por_activo, "2019-01-01", "2022-12-31",
                          carpeta, "3", abrir_prueba=True)
+    if len(h.piernas) > 1:
+        eq_cartera, pasa_v30, motivos = _curva_y_v30_cartera(
+            h, filas, carpeta, snapshot, "3", "2019-01-01", "2022-12-31"
+        )
+        dsr = dsr_contra_intentos(eq_cartera, snapshot_root() / "intentos.csv") if eq_cartera is not None else None
+        pasa_dsr = dsr is not None and dsr >= 0.95
+        if not pasa_dsr:
+            motivos.append("DSR de cartera < 0.95" if dsr is not None else "sin DSR")
+        for fila in filas:
+            fila["v30"] = "PASA" if pasa_v30 else "NO PASA"
+            fila["dsr"] = dsr
+            fila["motivos"] = list(motivos)
+        pasa = pasa_v30 and pasa_dsr
+        return "PASA" if pasa else "CORTA", filas
     for fila in filas:
         activo = fila["activo"]
         with (Path(carpeta) / "equity" / f"{h.clase}-{activo}.csv").open(newline="") as f:
