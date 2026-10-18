@@ -614,7 +614,8 @@ Los primeros 5 son los más fáciles de revisar.
 | C08 | `QuantAgent-d4cq.53` | Informe y resumen de cartera; causas por hipótesis; depende de C07 | Universos y fila de cartera; sin precios | leer | L12 |
 | C09 | `QuantAgent-d4cq.54` | Primera cartera: momentum-12m + tendencia de Faber sobre el universo amplio; depende de C02, C03 | Admisión acepta; 0 parámetros libres | leer | L12 |
 | C10 | `QuantAgent-d4cq.55` | Punto de control L12 (VM, lo corre el PM; etapa 3 con OK de Fede) | Veredicto e informe de la cartera | probar | L12 |
-| C11 | `QuantAgent-d4cq.76` | Loop: lote y ticket por variable o argumento (`LOOP_LOTE`, `LOOP_TICKET`) y reclamo por ticket (CLAIM/RELEASE) | Dos lotes borrador: con `LOOP_LOTE` toma el indicado; dos CLAIM del mismo ticket: el segundo no lanza | leer | L12 |
+| C11.1 | `QuantAgent-d4cq.76.1` | Loop: lote y ticket por variable o argumento (`LOOP_LOTE`, `LOOP_TICKET`) | Dos lotes borrador: con `LOOP_LOTE` toma el indicado; ticket no elegible dice por qué | leer | L12 |
+| C11.2 | `QuantAgent-d4cq.76.2` | Loop: reclamo por ticket con CLAIM y RELEASE; depende de C11.1 | Dos CLAIM del mismo ticket en <6h el segundo no lanza; con RELEASE sí | leer | L12 |
 | G03 | `QuantAgent-d4cq.38` | Hipótesis RSI con régimen de volatilidad (familia ljoj) | Entra solo con volatilidad alta; no mira el futuro | leer | L14 |
 | G04a | `QuantAgent-d4cq.39` | Catálogo semilla: 15 de momentum, reversión y tendencia (nube) | Ids únicos, fuente verificable | leer | L13 |
 | G04b | `QuantAgent-d4cq.40` | Catálogo semilla: 15 de estacionalidad, volatilidad y régimen (nube); depende de G04a | Ídem; 30 en total | leer | L13 |
