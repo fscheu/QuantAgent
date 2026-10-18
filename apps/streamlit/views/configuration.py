@@ -6,10 +6,10 @@ from typing import Dict, List
 import pandas as pd
 import streamlit as st
 
-from quantagent.data.provider import DataProvider
+from quantagent.data.sources.yahoo import YahooSource
 from quantagent.strategy.registry import get_strategy_names
 
-SUPPORTED_UNIVERSE_SYMBOLS: List[str] = list(DataProvider.SYMBOL_MAPPING.keys())
+SUPPORTED_UNIVERSE_SYMBOLS: List[str] = list(YahooSource.SYMBOL_MAPPING.keys())
 
 
 def _collect_profiles_from_db(db, kind: str) -> List[str]:
