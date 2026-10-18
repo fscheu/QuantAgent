@@ -616,7 +616,8 @@ Los primeros 5 son los más fáciles de revisar.
 | C10 | `QuantAgent-d4cq.55` | Punto de control L12 (VM, lo corre el PM; etapa 3 con OK de Fede) | Veredicto e informe de la cartera | probar | L12 |
 | C11.1 | `QuantAgent-d4cq.76.1` | Loop: lote y ticket por variable o argumento (`LOOP_LOTE`, `LOOP_TICKET`) | Dos lotes borrador: con `LOOP_LOTE` toma el indicado; ticket no elegible dice por qué | leer | L12 |
 | C11.2 | `QuantAgent-d4cq.76.2` | Loop: reclamo por ticket con CLAIM y RELEASE; depende de C11.1 | Dos CLAIM del mismo ticket en <6h el segundo no lanza; con RELEASE sí | leer | L12 |
-| G03 | `QuantAgent-d4cq.38` | Hipótesis RSI con régimen de volatilidad (familia ljoj) | Entra solo con volatilidad alta; no mira el futuro | leer | L14 |
+| M01 | `QuantAgent-d4cq.69` | Régimen del mercado contra la cartera núcleo: tabla de ΔSharpe por régimen sobre 2007–2018, sin elegir parámetros | Tabla con N de intentos; no mira 2019 en adelante | leer | L14 |
+| M07 | `QuantAgent-d4cq.75` | Punto de control de la capa macro (VM, lo corre el PM; `--margen` lo fija Fede antes de correr) | Veredicto de cada capa con ΔDSR contra el margen | probar | L14 |
 | G04a | `QuantAgent-d4cq.39` | Catálogo semilla: 15 de momentum, reversión y tendencia (nube) | Ids únicos, fuente verificable | leer | L13 |
 | G04b | `QuantAgent-d4cq.40` | Catálogo semilla: 15 de estacionalidad, volatilidad y régimen (nube); depende de G04a | Ídem; 30 en total | leer | L13 |
 | G05 | `QuantAgent-d4cq.41` | Crítico determinista y familia en `hipotesis.csv`; depende de G03 | Duplicada corta en etapa 0 sin intentos | leer | L13 |
