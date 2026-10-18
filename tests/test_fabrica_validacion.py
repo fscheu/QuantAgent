@@ -296,6 +296,7 @@ def test_etapa2_cartera_2_piernas_3_activos_agrega_una_fila_intentos(tmp_path, m
 def test_etapa2_cartera_dos_piernas_mismo_activo_parametros_distintos(tmp_path, monkeypatch):
     from quantagent.fabrica.hipotesis import Hipotesis, Pierna
 
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     fechas = pd.date_range("2010-01-01", periods=50)
     p1 = Pierna("rsi", {"rsi_period": [7]}, ("SPY",), "U")
     p2 = Pierna("sma-cross", {"fast": [20]}, ("SPY",), "U")
