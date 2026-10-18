@@ -12,6 +12,9 @@ GLOSARIO = (
     ("DSR", "probabilidad de que el Sharpe no sea suerte, dado el total de intentos; pasa con 0,95."),
     ("Sharpe registrado", "En la tabla, la etapa 1 muestra el Sharpe con tasa 0 del filtro y las etapas 2 y 3 el Sharpe del motor con tasa libre de riesgo; V30 usa el de tasa 0, por eso un activo puede pasar V30 con Sharpe registrado negativo."),
     ("Intentos", "corridas registradas; más intentos, más riesgo de falso hallazgo."),
+    ("Cartera", "combinación de piernas ponderadas por igual riesgo y evaluadas en conjunto."),
+    ("Pierna", "estrategia con sus parámetros y universo de activos dentro de una cartera."),
+    ("Igual riesgo", "ponderación inversamente proporcional a la volatilidad pasada, sin optimizar pesos."),
 )
 
 
@@ -38,10 +41,20 @@ def render_informe(d, hipotesis=None):
     f = d["final"]
     li = "".join(f"<li>Etapa {escape(e['etapa'])}: <b>{escape(e['veredicto'])}</b> — {escape(e['motivo'])}</li>"
                  for e in d["etapas"])
+    activos = sorted(d["activos"].items(), key=lambda x: (x[0].lower() != "cartera", x[0]))
     tr = "".join(f"<tr><td>{escape(a)}</td><td>{escape(i['sharpe'])}</td><td>{escape(i['trades'])}</td></tr>"
-                 for a, i in d["activos"].items())
+                 for a, i in activos)
     gl = "".join(f"<dt>{k}</dt><dd>{escape(v)}</dd>" for k, v in GLOSARIO)
-    extra = f"<p>{escape(hipotesis.justificacion)} ({escape(hipotesis.clase)})</p>" if hipotesis else ""
+    if hipotesis:
+        secciones = "".join(
+            f"<section><h3>Pierna: {escape(p.clase)}</h3>"
+            f"<p><b>Universo:</b> {escape(p.universo)}</p>"
+            f"<p><b>Activos:</b> {escape(', '.join(p.activos))}</p></section>"
+            for p in hipotesis.piernas
+        )
+        extra = f"<p>{escape(hipotesis.justificacion)}</p><h2>Piernas</h2>{secciones}"
+    else:
+        extra = ""
     return (
         f"<!doctype html><html lang='es'><meta charset='utf-8'><title>Informe {escape(d['id'])}</title>"
         "<style>body{font:16px sans-serif;max-width:50em;margin:2em auto}td,th{padding:.2em .8em}</style>"
