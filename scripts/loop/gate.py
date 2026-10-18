@@ -9,7 +9,9 @@ Two review lines exist. `R:` is Fede's and is valid on any PR. `PM:` is the pm-r
 valid only on PRs whose base is a lot branch: nothing reaches main on a `PM:` line.
 """
 
+import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -67,8 +69,11 @@ def parse_review(body: str, ticket: str, evidence: str, base: str = "main") -> t
             "line": first}, None
 
 
-def active_lot(lot_prs: list[dict]) -> tuple[dict | None, str | None]:
-    """The lot the loop delivers into: the single open, draft PR with the lot label. Returns (lot, None) or (None, wait)."""
+def active_lot(lot_prs: list[dict], target_lot: str | None = None) -> tuple[dict | None, str | None]:
+    """The lot the loop delivers into: matching target_lot, or the single open draft PR with the lot label."""
+    if target_lot:
+        m = [p for p in lot_prs if p.get("headRefName") == target_lot]
+        return ((m[0], None) if m[0].get("isDraft") else (None, f"⏸ lote {m[0]['headRefName']} entregado, falta que Fede lo mergee: {m[0].get('url', '')}")) if m else (None, f"⏸ sin lote abierto para {target_lot}")
     if not lot_prs:
         return None, "⏸ sin lote abierto: el PM abre el siguiente cuando Fede mergea el anterior"
     if len(lot_prs) > 1:
@@ -77,6 +82,29 @@ def active_lot(lot_prs: list[dict]) -> tuple[dict | None, str | None]:
     if not lot.get("isDraft"):
         return None, f"⏸ lote {lot['headRefName']} entregado, falta que Fede lo mergee: {lot.get('url', '')}"
     return lot, None
+
+
+def check_ticket_eligible(ticket: str, lot_branch: str, queue_text: str, bd_data: dict | None = None) -> tuple[bool, str | None]:
+    """Check if ticket is eligible for lot_branch per PLAN-CONTINUACION.md §4 rules."""
+    bare = _bare_ticket(ticket)
+    ml = re.search(r"\|\s*([A-Za-z0-9]+)\s*\|\s*`?" + re.escape(lot_branch) + r"`?\s*\|", queue_text)
+    found_lot = next((c[5].strip("` ") for l in queue_text.splitlines() if l.startswith("|") for c in [[x.strip() for x in l.split("|")[1:-1]]] if len(c) >= 6 and _bare_ticket(c[1].strip("` ")) == bare), None)
+    if not found_lot:
+        return False, f"ticket {ticket} no está en la cola de PLAN-CONTINUACION.md"
+    if ml and found_lot != ml.group(1):
+        return False, f"ticket {ticket} pertenece al lote {found_lot}, no a {lot_branch} ({ml.group(1)})"
+    if bd_data is None:
+        try:
+            bd_data = (json.loads(subprocess.run(["bd", "show", ticket, "--json"], capture_output=True, text=True, check=True).stdout) or [{}])[0]
+        except Exception as exc:
+            return False, f"no se pudo consultar bd para {ticket}: {exc}"
+    if bd_data.get("status") != "open":
+        return False, f"ticket {ticket} no está open en BEADS (status: {bd_data.get('status')})"
+    if any(lbl in bd_data.get("labels", []) for lbl in ("loop-descartado", "fuera-loop")):
+        return False, f"ticket {ticket} tiene label de exclusión"
+    if any(d.get("dependency_type") != "parent-child" and d.get("status") != "closed" for d in bd_data.get("dependencies", [])):
+        return False, f"ticket {ticket} tiene blockers abiertos"
+    return True, None
 
 
 def evaluate(prs: list[dict], reviewer: str, get_detail) -> tuple[int, dict]:
@@ -138,10 +166,17 @@ def _load_config() -> dict:
 def main() -> int:
     try:
         cfg = _load_config()
+        p = argparse.ArgumentParser(add_help=False)
+        p.add_argument("--lote", default=os.environ.get("LOOP_LOTE") or cfg.get("LOOP_LOTE"))
+        p.add_argument("--ticket", default=os.environ.get("LOOP_TICKET") or cfg.get("LOOP_TICKET"))
+        args, _ = p.parse_known_args()
+        target_lot, target_ticket = (args.lote or "").strip() or None, (args.ticket or "").strip() or None
+
         fields = "number,state,createdAt,headRefName,baseRefName,url,title"
         repo = ("-R", cfg["LOOP_GITHUB_REPO"])  # explicit: the launcher runs the gate outside any git checkout
-        lot, wait = active_lot(json.loads(_gh("pr", "list", *repo, "--label", cfg["LOOP_LOT_LABEL"], "--state", "open",
-                                              "--json", "number,url,headRefName,isDraft")))
+        labels = [cfg["LOOP_LOT_LABEL"], "carril-b"] if target_lot else [cfg["LOOP_LOT_LABEL"]]
+        lot_prs = list({p["number"]: p for lbl in labels for p in json.loads(_gh("pr", "list", *repo, "--label", lbl, "--state", "open", "--json", "number,url,headRefName,isDraft"))}.values())
+        lot, wait = active_lot(lot_prs, target_lot)
         if lot is None:
             print(json.dumps({"result": "WAIT", "message": wait}, ensure_ascii=False))
             return EXIT_WAIT
@@ -155,6 +190,13 @@ def main() -> int:
 
         code, result = evaluate(prs, cfg["LOOP_REVIEWER"], get_detail)
         result = {**result, "base": lot["headRefName"], "lot_pr": lot["number"]}
+        if target_ticket and result.get("mode") == "nuevo" and code == EXIT_PASS:
+            q = (Path(__file__).resolve().parents[2] / cfg.get("LOOP_QUEUE_FILE", "PLAN-CONTINUACION.md")).read_text()
+            ok, reason = check_ticket_eligible(target_ticket, lot["headRefName"], q)
+            if not ok:
+                print(json.dumps({**result, "result": "WAIT", "message": f"⏸ ticket no elegible {target_ticket}: {reason}"}, ensure_ascii=False))
+                return EXIT_WAIT
+            result["ticket_asignado"] = target_ticket
     except Exception as exc:  # noqa: BLE001 - any failure must stop the loop, never let it run
         print(json.dumps({"result": "ERROR", "message": f"⚠ gate error: {exc}"}, ensure_ascii=False))
         return EXIT_ERROR

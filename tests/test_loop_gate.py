@@ -195,3 +195,21 @@ def test_two_open_lots_wait():
 def test_a_draft_lot_is_the_base_of_the_next_delivery():
     lot, wait = gate.active_lot([{"number": 30, "headRefName": LOT, "isDraft": True}])
     assert wait is None and lot["headRefName"] == LOT
+
+
+def test_active_lot_with_target_lot():
+    prs = [{"number": 30, "headRefName": LOT, "isDraft": True}, {"number": 31, "headRefName": "lote/b", "isDraft": True}]
+    assert gate.active_lot(prs)[0] is None
+    assert gate.active_lot(prs, target_lot="lote/b")[0]["headRefName"] == "lote/b"
+
+
+@pytest.mark.parametrize("bd, ticket, msg", [
+    ({"status": "closed", "labels": [], "dependencies": []}, "QuantAgent-d4cq.76", "no está open"),
+    ({"status": "open", "labels": [], "dependencies": [{"status": "open", "dependency_type": "blocks"}]}, "QuantAgent-d4cq.76", "blockers abiertos"),
+    ({"status": "open", "labels": ["loop-descartado"], "dependencies": []}, "QuantAgent-d4cq.76", "label de exclusión"),
+    ({"status": "open", "labels": [], "dependencies": []}, "QuantAgent-e35", "pertenece al lote L1"),
+])
+def test_ticket_not_eligible(bd, ticket, msg):
+    q = "| L12 | `lote/cartera` | ...\n| L1 | `lote/m` | ...\n| C11 | `QuantAgent-d4cq.76` | o | a | l | L12 |\n| T01 | `QuantAgent-e35` | o | a | l | L1 |\n"
+    assert msg in gate.check_ticket_eligible(ticket, "lote/cartera", q, bd)[1]
+    assert gate.check_ticket_eligible("QuantAgent-d4cq.76", "lote/cartera", q, {"status": "open", "labels": [], "dependencies": []})[0] is True
