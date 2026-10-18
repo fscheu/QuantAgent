@@ -20,7 +20,12 @@ from quantagent.fabrica.estado import registrar_estado, resumen_tanda, ultimo_es
 from quantagent.fabrica.filtro import filtrar_activo, parametros_elegidos, veredicto_etapa1
 from quantagent.fabrica.hipotesis import cargar_hipotesis
 from quantagent.fabrica.informe import datos_informe, render_informe
-from quantagent.fabrica.validacion import alarma_filtro_motor, validar_etapa2, validar_etapa3
+from quantagent.fabrica.validacion import (
+    alarma_cartera,
+    alarma_filtro_motor,
+    validar_etapa2,
+    validar_etapa3,
+)
 from quantagent.settings import COSTOS_PERFILES
 
 from .sweep import registrar_intento
@@ -126,7 +131,8 @@ def filtrar_hipotesis(h, snapshot_name):
             filas_tabla.append([p.clase, activo, r["sharpe_tasa_0"], r["trades"]] if len(h.piernas) > 1 else [activo, r["sharpe_tasa_0"], r["trades"]])
             retornos_dict[(i, activo)] = r["retornos"]
             total_trades += r["trades"]
-            parametros[activo] = parametros_elegidos(r["ganadores"])
+            clave = (p.clase, activo) if len(h.piernas) > 1 else activo
+            parametros[clave] = parametros_elegidos(r["ganadores"])
     sharpe_car = evaluar_cartera(pd.DataFrame(cierres_dict), piernas_map, retornos_dict)
     veredicto, motivo = veredicto_etapa1(sharpe_car, total_trades)
     combo = h.parametros if len(h.piernas) == 1 else {p.clase: p.parametros for p in h.piernas}
@@ -159,10 +165,17 @@ def filtrar_command(archivo, snapshot_name, out):
     if out:
         with open(out, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["activo", "sharpe_fuera_muestra", "trades", "params", "veredicto"])
-            writer.writerows(
-                [*fila, json.dumps(parametros[fila[0]], sort_keys=True), veredicto] for fila in resultados
-            )
+            if len(h.piernas) > 1:
+                writer.writerow(["pierna", "activo", "sharpe_fuera_muestra", "trades", "params", "veredicto"])
+                writer.writerows(
+                    [*fila, json.dumps(parametros[(fila[0], fila[1])], sort_keys=True), veredicto]
+                    for fila in filas_tabla
+                )
+            else:
+                writer.writerow(["activo", "sharpe_fuera_muestra", "trades", "params", "veredicto"])
+                writer.writerows(
+                    [*fila, json.dumps(parametros[fila[0]], sort_keys=True), veredicto] for fila in resultados
+                )
     click.echo(f"{veredicto} ({motivo})")
 
 
@@ -177,21 +190,28 @@ def correr_command(archivo, snapshot_name, carpeta):
     registrar_estado(h.id, etapa, veredicto, motivo)
     click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
     if ok:
-        resultados, parametros, veredicto, motivo = filtrar_hipotesis(h, snapshot_name)[:4]
+        ret_filtro = filtrar_hipotesis(h, snapshot_name)
+        resultados, parametros, veredicto, motivo = ret_filtro[:4]
+        sharpe_car = ret_filtro[4] if len(ret_filtro) > 4 else None
         etapa = "1"
         registrar_estado(h.id, etapa, veredicto, motivo)
         click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
         if veredicto == "PASA":
+            try:
+                veredicto, filas = validar_etapa2(h, snapshot_name, parametros, carpeta)
+            except Exception as exc:
+                registrar_estado(h.id, "2", "ERROR", f"{type(exc).__name__}: {exc}"[:200])
+                raise
+            etapa = "2"
+            motivos = [m for fila in filas for m in fila["motivos"]]
             if len(h.piernas) > 1:
-                click.echo("etapa 1 PASA; etapas 2 y 3 de cartera: falta C06")
+                motivo = "; ".join(dict.fromkeys(motivos)) if motivos else f"cartera pasa V30; control coincide en {len(filas)} de {len(filas)}"
+                if veredicto == "PASA":
+                    sharpe_motor = filas[0].get("sharpe_cartera") if filas else None
+                    if alarma_cartera(sharpe_car, sharpe_motor):
+                        veredicto = "ALARMA"
+                        motivo = "filtro optimista en la cartera"
             else:
-                try:
-                    veredicto, filas = validar_etapa2(h, snapshot_name, parametros, carpeta)
-                except Exception as exc:
-                    registrar_estado(h.id, "2", "ERROR", f"{type(exc).__name__}: {exc}"[:200])
-                    raise
-                etapa = "2"
-                motivos = [m for fila in filas for m in fila["motivos"]]
                 motivo = "; ".join(motivos) if motivos else "control coincide y al menos un activo pasa V30"
                 if veredicto == "PASA":
                     activos = ", ".join(f["activo"] for f in filas if f["v30"] == "PASA")
@@ -200,9 +220,12 @@ def correr_command(archivo, snapshot_name, carpeta):
                     if alarma:
                         veredicto = "ALARMA"
                         motivo = "filtro optimista en " + ", ".join(activos)
-                registrar_estado(h.id, etapa, veredicto, motivo)
-                click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
-                if veredicto == "PASA":
+            registrar_estado(h.id, etapa, veredicto, motivo)
+            click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
+            if veredicto == "PASA":
+                if len(h.piernas) > 1:
+                    click.echo("etapa 2 PASA; etapa 3 de cartera: falta C07")
+                else:
                     etapa = "3"
                     try:
                         abrir(h.id, "prueba")
