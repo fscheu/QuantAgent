@@ -15,7 +15,7 @@ HIPOTESIS_DIR = Path(__file__).resolve().parents[2] / "hipotesis"
 
 
 def cargar_existentes(directorio: Path = HIPOTESIS_DIR) -> list[Hipotesis]:
-    """Hipótesis del directorio, ordenadas por id: el orden es el de antigüedad que usa `criticar`."""
+    """Hipótesis del directorio, ordenadas por nombre de archivo: ese orden es el de antigüedad que usa `criticar`."""
     return [cargar_hipotesis(p) for p in sorted(Path(directorio).glob("*.yaml"))]
 
 
