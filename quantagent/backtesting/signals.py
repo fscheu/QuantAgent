@@ -6,6 +6,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
+from ..data.macro import recortar_vintage
 from ..models import ActivePosition, ExitPolicy, OrderSide
 from ..strategy.base import TradingStrategy
 
@@ -71,3 +72,15 @@ def check_no_lookahead(signal_fn: Callable[[pd.DataFrame], pd.DataFrame], candle
             if not same.all():
                 diffs.append(f"{col}: difiere con corte en {cut}, primera fecha {same.index[~same][0]}")
     return diffs
+
+
+def check_no_lookahead_vintage(
+    signal_fn: Callable[[pd.DataFrame, dict[str, pd.DataFrame]], pd.DataFrame], candles: pd.DataFrame, macro: dict[str, pd.DataFrame], cuts
+) -> list[str]:
+    """Prueba de truncamiento de vintage (QuantAgent-d4cq.71): como `check_no_lookahead`, pero además recorta las versiones macro.
+
+    `signal_fn(candles, macro)` recibe las velas y el macro (`versiones_macro`) recortados a la última vela con
+    `recortar_vintage`, o sea lo que existía ese día. `candles` debe tener índice de fechas. Una estrategia que lee la
+    última revisión de una serie, y no lo publicado en la fecha, da otra señal con el corte y aparece en la lista.
+    """
+    return check_no_lookahead(lambda c: signal_fn(c, recortar_vintage(macro, c.index[-1])), candles, cuts)

@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable, Optional, Tuple
+from typing import Dict, Iterable, Optional, Tuple
 
 import pandas as pd
 
@@ -113,3 +113,28 @@ def serie_punto_en_el_tiempo(nombre: str, serie: str, sesiones, base_dir: Option
         conocido = _conocido(df, dia)
         valores.append(float("nan") if conocido is None else conocido[1])
     return pd.Series(valores, index=sesiones, name=serie)
+
+
+def versiones_macro(nombre: str, series: Iterable[str], base_dir: Optional[Path] = None) -> Dict[str, pd.DataFrame]:
+    """Todas las versiones de cada serie del snapshot, para que una estrategia las lea con `valor_conocido_en`."""
+    return {s: _versiones(nombre, s, base_dir) for s in sorted(set(series))}
+
+
+def valor_conocido_en(versiones: pd.DataFrame, al) -> Optional[Tuple[pd.Timestamp, float]]:
+    """Igual que `valor_conocido`, sobre las versiones de una serie ya cargadas (`versiones_macro`)."""
+    return _conocido(versiones, pd.Timestamp(al))
+
+
+def recortar_vintage(macro: Dict[str, pd.DataFrame], hasta) -> Dict[str, pd.DataFrame]:
+    """Lo que el snapshot macro habría contenido en `hasta`: sin versiones con `realtime_start > hasta` y con `realtime_end` acotado a `hasta`.
+
+    Acotar `realtime_end` hace que "la versión vigente hoy" (`realtime_end` = 9999-12-31) deje de existir en la copia
+    recortada, así que una estrategia que toma la última revisión en vez de lo publicado en la fecha da otra señal.
+    """
+    hasta = pd.Timestamp(hasta)
+    recortado = {}
+    for serie, df in macro.items():
+        df = df[df["realtime_start"] <= hasta].copy()
+        df["realtime_end"] = df["realtime_end"].clip(upper=hasta)
+        recortado[serie] = df
+    return recortado

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from quantagent.backtesting.signals import bar_signals, check_no_lookahead
+from quantagent.backtesting.signals import bar_signals, check_no_lookahead, check_no_lookahead_vintage
 from quantagent.cli.sweep import cli_aliases
 from quantagent.fabrica.hipotesis import Hipotesis, Pierna
 from quantagent.strategy.registry import STRATEGY_REGISTRY, build_strategy
@@ -23,14 +23,26 @@ UNIVERSO_AMPLIO = frozenset(
 )
 
 
-def _senales(p: Pierna | Hipotesis, combinacion: dict, velas: pd.DataFrame) -> pd.DataFrame:
+def _requiere_macro(p: Pierna | Hipotesis) -> tuple[str, ...]:
+    """Series que declara la clase con `requiere_macro`; vacío si no lee macro."""
     nombre = cli_aliases().get(p.clase, p.clase)
-    estrategia = build_strategy(nombre, **combinacion)
+    return tuple(getattr(STRATEGY_REGISTRY[nombre]["cls"], "requiere_macro", ()))
+
+
+def _senales(p: Pierna | Hipotesis, combinacion: dict, velas: pd.DataFrame, macro: dict | None = None) -> pd.DataFrame:
+    """Una clase con `requiere_macro` recibe el macro por el argumento `macro` de su constructor."""
+    nombre = cli_aliases().get(p.clase, p.clase)
+    extra = {"macro": macro} if _requiere_macro(p) else {}
+    estrategia = build_strategy(nombre, **combinacion, **extra)
     return bar_signals(estrategia, velas, p.activos[0], getattr(p, "timeframe", "1d"))
 
 
-def admitir(h: Hipotesis, velas: pd.DataFrame) -> tuple[bool, list[str]]:
-    """(True, []) si la hipótesis entra al embudo; si no, todos los motivos de rechazo."""
+def admitir(h: Hipotesis, velas: pd.DataFrame, macro: dict | None = None) -> tuple[bool, list[str]]:
+    """(True, []) si la hipótesis entra al embudo; si no, todos los motivos de rechazo.
+
+    `macro` son las versiones del snapshot (`versiones_macro`); toda clase con `requiere_macro` pasa además la prueba
+    de truncamiento de vintage y, sin `macro`, se rechaza porque no se puede probar.
+    """
     motivos = []
     if len(h.justificacion.strip()) < MIN_JUSTIFICACION:
         motivos.append(f"justificación de {len(h.justificacion.strip())} caracteres; mínimo {MIN_JUSTIFICACION}")
@@ -50,8 +62,19 @@ def admitir(h: Hipotesis, velas: pd.DataFrame) -> tuple[bool, list[str]]:
     for p in h.piernas:
         if aliases.get(p.clase, p.clase) not in STRATEGY_REGISTRY:
             continue
+        series = _requiere_macro(p)
+        if series and macro is None:
+            motivos.append(f"{p.clase} requiere macro ({', '.join(series)}) y no se pasó snapshot macro para la prueba de vintage")
+            continue
+        faltan = sorted(set(series) - set(macro or {}))
+        if faltan:
+            motivos.append(f"{p.clase}: el snapshot macro no tiene {', '.join(faltan)}")
+            continue
         for comb in p.combinaciones():
-            difs = check_no_lookahead(lambda c, comb=comb, p=p: _senales(p, comb, c), velas, cortes)
+            if series:
+                difs = check_no_lookahead_vintage(lambda c, m, comb=comb, p=p: _senales(p, comb, c, m), velas, macro, cortes)
+            else:
+                difs = check_no_lookahead(lambda c, comb=comb, p=p: _senales(p, comb, c), velas, cortes)
             if difs:
                 motivos.append(f"prueba de truncamiento fallida con {comb}: {difs[0]}")
     return not motivos, motivos
