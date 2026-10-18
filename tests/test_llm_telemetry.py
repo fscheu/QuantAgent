@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
@@ -26,6 +26,7 @@ from quantagent.llm_telemetry import (
     get_session_metrics,
     persist_llm_call,
 )
+
 
 # ---------------------------------------------------------------------------
 # Helpers

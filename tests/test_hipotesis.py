@@ -82,7 +82,6 @@ def test_parametro_desconocido_falla_en_validar_grilla(tmp_path):
 
 def test_cli_cartera_dos_piernas_sin_guarda_c05(tmp_path):
     from click.testing import CliRunner
-
     from quantagent.cli.backtest import backtest_group
 
     data = {

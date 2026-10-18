@@ -38,8 +38,8 @@ def _configure_xdist_worker_database() -> None:
     url = os.environ.get("DATABASE_URL", "")
     if not url.startswith("sqlite"):
         raise pytest.UsageError(
-            "pytest-xdist parallel execution is only supported with SQLite (e.g. try.sh). "
-            "Current DATABASE_URL is not SQLite. Run tests sequentially without -n."
+            f"pytest-xdist parallel execution is only supported with SQLite (e.g. try.sh). "
+            f"Current DATABASE_URL is not SQLite. Run tests sequentially without -n."
         )
     if not url.startswith("sqlite:///"):
         return

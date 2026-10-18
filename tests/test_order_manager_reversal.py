@@ -18,10 +18,10 @@ from unittest.mock import Mock
 import pytest
 
 from quantagent.models import Environment, Order, OrderSide
-from quantagent.portfolio.manager import PortfolioManager
 from quantagent.trading.order_manager import OrderManager
 from quantagent.trading.paper_broker import PaperBroker
 from quantagent.trading.position_sizer import PositionSizer
+from quantagent.portfolio.manager import PortfolioManager
 from quantagent.trading.risk_manager import RiskManager
 
 

@@ -1,8 +1,9 @@
 """QuantAgent-d4cq.3: bar_signals convierte una estrategia en columnas de señales sin mirar el futuro."""
 
-import numpy as np
 import pandas as pd
 import pytest
+
+import numpy as np
 
 from quantagent.backtesting.signals import bar_signals, check_no_lookahead
 from quantagent.strategy.fifty_two_week_high_strategy import FiftyTwoWeekHighStrategy

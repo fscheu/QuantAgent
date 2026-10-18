@@ -43,7 +43,7 @@ def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, a
     carpeta = Path(carpeta)
     carpeta.mkdir(parents=True, exist_ok=True)
     filas = []
-    celdas = [(p.clase, a, params_por_activo.get((p.clase, a), params_por_activo.get(a, {})))
+    celdas = [(p.clase, a, params_por_activo.get((p.clase, a), {}))
               for p in h.piernas for a in p.activos] if len(h.piernas) > 1 else [
               (h.clase, a, p) for a, p in params_por_activo.items()]
     with TemporaryDirectory() as temporal:
@@ -128,7 +128,7 @@ def validar_etapa2(h, snapshot, params_por_activo, carpeta):
         for fila in filas:
             activo = fila["activo"]
             strat = fila.get("estrategia", h.clase)
-            params = params_por_activo.get((strat, activo), params_por_activo.get(activo, {}))
+            params = params_por_activo.get((strat, activo), {}) if len(h.piernas) > 1 else params_por_activo.get(activo, {})
             params_path.write_text(json.dumps({strat: params}), encoding="utf-8")
             tabla = Path(carpeta) / (f"{strat}-{activo}.csv" if (Path(carpeta) / f"{strat}-{activo}.csv").exists() else f"{activo}.csv")
             resultado = subprocess.run([

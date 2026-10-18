@@ -22,7 +22,7 @@ def test_vecinos_rsi_un_parametro_por_vez():
 
 
 def test_vecinos_fijos_redondeo_y_tope(monkeypatch):
-    from quantagent.cli.sweep import STRATEGY_REGISTRY, grilla_vecinos
+    from quantagent.cli.sweep import grilla_vecinos, STRATEGY_REGISTRY
     params = {k: {"default": v} for k, v in {"zero": 0, "bool": True, "text": "x", "one": 1}.items()}
     monkeypatch.setitem(STRATEGY_REGISTRY, "Test", {"params": params})
     assert grilla_vecinos("Test") == ([{k: v["default"] for k, v in params.items()}], ["default"])
@@ -33,7 +33,6 @@ def test_vecinos_fijos_redondeo_y_tope(monkeypatch):
 
 def test_cli_vecinos_excluye_grid(tmp_path):
     from click.testing import CliRunner
-
     from quantagent.cli.backtest import backtest_group
     out = tmp_path / "out.csv"
     args = ["sweep", "--strategy", "rsi", "--symbol", "SPY", "--snapshot", "missing", "--out", str(out)]
@@ -104,7 +103,6 @@ def test_grilla_con_valores_repetidos_se_rechaza():
 
 def test_cli_help_expone_sweep_sin_abrir_prueba_ni_reserva():
     from click.testing import CliRunner
-
     from quantagent.cli.backtest import backtest_group
 
     runner = CliRunner()
@@ -121,7 +119,6 @@ def test_cli_help_expone_sweep_sin_abrir_prueba_ni_reserva():
 
 def test_cli_parametro_desconocido_sale_1_sin_csv(tmp_path: Path):
     from click.testing import CliRunner
-
     from quantagent.cli.backtest import backtest_group
 
     grid_file = tmp_path / "grid_bad.json"
@@ -143,7 +140,6 @@ def test_cli_parametro_desconocido_sale_1_sin_csv(tmp_path: Path):
 
 def test_cli_mas_de_50_combinaciones_sale_1_sin_csv(tmp_path: Path):
     from click.testing import CliRunner
-
     from quantagent.cli.backtest import backtest_group
 
     grid_file = tmp_path / "grid_51.json"
@@ -165,7 +161,6 @@ def test_cli_mas_de_50_combinaciones_sale_1_sin_csv(tmp_path: Path):
 
 def test_cli_to_en_tramo_prueba_sale_1_sin_csv(tmp_path: Path):
     from click.testing import CliRunner
-
     from quantagent.cli.backtest import backtest_group
 
     grid_file = tmp_path / "grid.json"
@@ -204,7 +199,6 @@ def test_cli_to_en_tramo_prueba_sale_1_sin_csv(tmp_path: Path):
 
 def test_cli_valores_duplicados_sale_1_sin_csv(tmp_path: Path):
     from click.testing import CliRunner
-
     from quantagent.cli.backtest import backtest_group
 
     grid_file = tmp_path / "grid_dup.json"
@@ -226,10 +220,8 @@ def test_cli_valores_duplicados_sale_1_sin_csv(tmp_path: Path):
 
 def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Path):
     import csv
-
     import pandas as pd
     from click.testing import CliRunner
-
     from quantagent.backtesting.fixtures import FIXTURES_DIR, snapshot_metadata
     from quantagent.cli.backtest import (
         COMPARE_COLUMNS,
@@ -386,9 +378,7 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
 
 def test_attempts_filtra_alias_y_activo_sin_modificar(monkeypatch, tmp_path):
     import csv
-
     from click.testing import CliRunner
-
     from quantagent.cli.backtest import backtest_group
 
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
@@ -417,7 +407,6 @@ def test_attempts_filtra_alias_y_activo_sin_modificar(monkeypatch, tmp_path):
 
 def test_attempts_registro_ausente_o_encabezado_invalido(monkeypatch, tmp_path):
     from click.testing import CliRunner
-
     from quantagent.cli.backtest import backtest_group
 
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
@@ -435,7 +424,6 @@ def test_attempts_registro_ausente_o_encabezado_invalido(monkeypatch, tmp_path):
 
 def test_registrar_intento_migra_encabezado_viejo_y_cuenta_por_hipotesis(monkeypatch, tmp_path):
     import csv
-
     from quantagent.cli.sweep import CAMPOS_INTENTOS, contar_intentos, registrar_intento
 
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
@@ -466,7 +454,6 @@ def test_registrar_intento_migra_encabezado_viejo_y_cuenta_por_hipotesis(monkeyp
 
 def test_registrar_intento_migra_encabezado_sin_sharpe_base(monkeypatch, tmp_path):
     import csv
-
     from quantagent.cli.sweep import CAMPOS_INTENTOS, registrar_intento
 
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))

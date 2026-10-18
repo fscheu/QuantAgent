@@ -8,9 +8,9 @@ import pandas as pd
 import pytest
 
 from quantagent.backtesting.backtest import Backtest, check_intrabar_stops
+from quantagent.strategy.registry import cli_aliases
 from quantagent.models import ActivePosition, Environment, ExitPolicy, MarketData, OrderSide
 from quantagent.strategy import build_strategy
-from quantagent.strategy.registry import cli_aliases
 from quantagent.strategy.sma_cross_strategy import SmaCrossStrategy
 
 _START = datetime(2024, 1, 1)

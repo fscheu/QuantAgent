@@ -2,10 +2,9 @@
 
 from datetime import datetime
 from decimal import Decimal
-
 import pytest
 
-from quantagent.backtesting.backtest import _is_candle_after_entry, check_intrabar_stops
+from quantagent.backtesting.backtest import check_intrabar_stops, _is_candle_after_entry
 from quantagent.models import OrderSide
 
 
@@ -62,7 +61,6 @@ def test_is_candle_after_entry():
 
 def test_backtest_engine_intrabar_stops_defaults():
     from unittest.mock import MagicMock
-
     from quantagent.backtesting.backtest import Backtest
 
     # Default should be True
@@ -100,7 +98,6 @@ def test_backtest_engine_intrabar_stops_defaults():
 
 def test_cli_intrabar_stops_options():
     from click.testing import CliRunner
-
     from quantagent.cli.backtest import backtest_group
 
     runner = CliRunner()

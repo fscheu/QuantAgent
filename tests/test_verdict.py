@@ -8,13 +8,7 @@ import pytest
 from click.testing import CliRunner
 from scipy.stats import t
 
-from quantagent.backtesting.verdict import (
-    dsr_contra_intentos,
-    evaluar,
-    montecarlo_bloques,
-    p_valor_retornos,
-    sharpe_deflactado,
-)
+from quantagent.backtesting.verdict import dsr_contra_intentos, evaluar, montecarlo_bloques, p_valor_retornos, sharpe_deflactado
 from quantagent.cli.backtest import backtest_group
 from quantagent.cli.verdict import COLUMNAS
 

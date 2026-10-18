@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
 from decimal import Decimal
-
-from quantagent.backtesting.backtest import Backtest
+import math
 from quantagent.models import BacktestRun, Environment, OrderSide, Trade
+from quantagent.backtesting.backtest import Backtest
 
 
 def test_hand_calculated_win_rate_profit_factor_and_neutral_trades(db_session):

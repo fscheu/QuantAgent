@@ -131,7 +131,8 @@ def filtrar_hipotesis(h, snapshot_name):
             filas_tabla.append([p.clase, activo, r["sharpe_tasa_0"], r["trades"]] if len(h.piernas) > 1 else [activo, r["sharpe_tasa_0"], r["trades"]])
             retornos_dict[(i, activo)] = r["retornos"]
             total_trades += r["trades"]
-            parametros[activo] = parametros_elegidos(r["ganadores"])
+            clave = (p.clase, activo) if len(h.piernas) > 1 else activo
+            parametros[clave] = parametros_elegidos(r["ganadores"])
     sharpe_car = evaluar_cartera(pd.DataFrame(cierres_dict), piernas_map, retornos_dict)
     veredicto, motivo = veredicto_etapa1(sharpe_car, total_trades)
     combo = h.parametros if len(h.piernas) == 1 else {p.clase: p.parametros for p in h.piernas}
@@ -164,10 +165,17 @@ def filtrar_command(archivo, snapshot_name, out):
     if out:
         with open(out, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["activo", "sharpe_fuera_muestra", "trades", "params", "veredicto"])
-            writer.writerows(
-                [*fila, json.dumps(parametros[fila[0]], sort_keys=True), veredicto] for fila in resultados
-            )
+            if len(h.piernas) > 1:
+                writer.writerow(["pierna", "activo", "sharpe_fuera_muestra", "trades", "params", "veredicto"])
+                writer.writerows(
+                    [*fila, json.dumps(parametros[(fila[0], fila[1])], sort_keys=True), veredicto]
+                    for fila in filas_tabla
+                )
+            else:
+                writer.writerow(["activo", "sharpe_fuera_muestra", "trades", "params", "veredicto"])
+                writer.writerows(
+                    [*fila, json.dumps(parametros[fila[0]], sort_keys=True), veredicto] for fila in resultados
+                )
     click.echo(f"{veredicto} ({motivo})")
 
 
