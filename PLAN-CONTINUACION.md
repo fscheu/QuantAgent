@@ -616,13 +616,8 @@ Los primeros 5 son los más fáciles de revisar.
 | C10 | `QuantAgent-d4cq.55` | Punto de control L12 (VM, lo corre el PM; etapa 3 con OK de Fede) | Veredicto e informe de la cartera | probar | L12 |
 | C11.1 | `QuantAgent-d4cq.76.1` | Loop: lote y ticket por variable o argumento (`LOOP_LOTE`, `LOOP_TICKET`) | Dos lotes borrador: con `LOOP_LOTE` toma el indicado; ticket no elegible dice por qué | leer | L12 |
 | C11.2 | `QuantAgent-d4cq.76.2` | Loop: reclamo por ticket con CLAIM y RELEASE; depende de C11.1 | Dos CLAIM del mismo ticket en <6h el segundo no lanza; con RELEASE sí | leer | L12 |
-| G03 | `QuantAgent-d4cq.38` | Hipótesis RSI con régimen de volatilidad (familia ljoj) | Entra solo con volatilidad alta; no mira el futuro | leer | L14 |
-| G04a | `QuantAgent-d4cq.39` | Catálogo semilla: 15 de momentum, reversión y tendencia (nube) | Ids únicos, fuente verificable | leer | L13 |
-| G04b | `QuantAgent-d4cq.40` | Catálogo semilla: 15 de estacionalidad, volatilidad y régimen (nube); depende de G04a | Ídem; 30 en total | leer | L13 |
-| G05 | `QuantAgent-d4cq.41` | Crítico determinista y familia en `hipotesis.csv`; depende de G03 | Duplicada corta en etapa 0 sin intentos | leer | L13 |
-| G06a | `QuantAgent-d4cq.42` | Generador: pedido y lectura de respuesta, sin LLM | 3 válidos de 5 bloques; no pisa | leer | L13 |
-| G06b | `QuantAgent-d4cq.43` | `backtest hipotesis proponer` vía `QUANTAGENT_LLM_CMD` (VM); depende de G06a | Comando falso: 2 archivos y log | leer | L13 |
-| G07 | `QuantAgent-d4cq.44` | Resumen cuenta causas por hipótesis; ERROR con la última línea | 3 activos de una hipótesis cuentan 1 | leer | L13 |
+| P05.4 | `QuantAgent-d4cq.63` | Etapas 2 y 3 con piernas transversales: `SenalExterna` y celdas transversales en `validar_etapa2`/`validar_etapa3`; depende de P05.3 (hecho) | Una pierna transversal alimenta a los dos motores con la misma serie 0/1; `senal-externa` no es válida en un YAML | leer | L13 |
+| P09 | `QuantAgent-d4cq.67` | Motivo de ERROR con la última línea no vacía de la excepción, `<Tipo>: `, truncada a 200 | ERROR con excepción de 3 líneas muestra la última | leer | L13 |
 | B-F1 | `QuantAgent-pdxx` | Cliente FRED/ALFRED con todas las versiones (nube) | 2 páginas; la clave nunca aparece | leer | LB1 |
 | B-F2 | `QuantAgent-vj37` | Snapshot macro congelado con manifiesto (nube); depende de B-F1 | `verify` detecta un parquet alterado | leer | LB1 |
 | B-F3 | `QuantAgent-okp9` | Lectura punto en el tiempo (nube); depende de B-F2 | Revisión de mayo no se ve en abril | leer | LB1 |
