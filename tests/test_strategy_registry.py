@@ -107,6 +107,7 @@ def test_registry_has_expected_entries():
         "TripleScreenStrategy",
         "SmaCrossStrategy",
         "Momentum12mStrategy",
+        "HalloweenStrategy",
         "LLMAgentStrategy",
     }
     for entry in registry.values():

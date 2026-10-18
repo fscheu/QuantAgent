@@ -1,0 +1,9 @@
+id: halloween-spy
+autor: fede
+justificacion: Retorno de noviembre a abril mayor que el de mayo a octubre en acciones (Bouman y Jacobsen 2002).
+clase: halloween
+parametros: {}
+activos: [SPY]
+universo: SPY como proxy de mercado accionario estadounidense.
+timeframe: 1d
+fuente: sintetica

@@ -20,6 +20,10 @@ MAX_SWEEP_COMBINATIONS = 50
 
 def validar_grilla(data: Any, strategy: str) -> list[dict[str, Any]]:
     """Valida un objeto de grilla y devuelve combinaciones con claves alfabéticas."""
+    aliases = cli_aliases()
+    reg_name = aliases.get(strategy) or (strategy if strategy in STRATEGY_REGISTRY else None)
+    if data == {} and reg_name and not STRATEGY_REGISTRY[reg_name]["params"]:
+        return [{}]  # estrategia sin parámetros: una única combinación vacía
     if not isinstance(data, dict) or not data:
         raise click.ClickException("La grilla debe ser un objeto JSON no vacío (parámetro: lista de valores)")
     for param, values in data.items():
@@ -28,8 +32,6 @@ def validar_grilla(data: Any, strategy: str) -> list[dict[str, Any]]:
         if len(values) != len(set(values)):
             raise click.ClickException(f"El parámetro '{param}' contiene valores duplicados")
 
-    aliases = cli_aliases()
-    reg_name = aliases.get(strategy) or (strategy if strategy in STRATEGY_REGISTRY else None)
     if not reg_name:
         raise click.ClickException(f"Estrategia desconocida '{strategy}'. Opciones: {', '.join(sorted(aliases))}")
 
