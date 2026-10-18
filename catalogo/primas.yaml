@@ -43,7 +43,7 @@ primas:
     idea: Los activos de menor volatilidad rinden más de lo que prevé su riesgo.
     fuente: [10.1111/j.1540-6261.2006.00836.x, 10.1016/j.jfineco.2013.10.005, 10.2469/faj.v67.n1.4]
     universo: {activos: *acciones, criterio: Solo ETFs de acciones; rankear bonos contra acciones mide otra cosa.}
-    clase: null
+    clase: baja-volatilidad
     datos: precios
     destino: L13
   - id: estacionalidad-halloween

@@ -9,6 +9,31 @@ from quantagent.strategy.momentum_12m_strategy import is_last_session_of_month
 # Lo llenan P06 y P07; las clases transversales no son `TradingStrategy`, por eso no van en `registry.py`.
 METRICAS = {}
 
+# Universo de la pierna de baja volatilidad (P07): los ETFs de acciones del universo amplio. Se define por clase
+# de activo, no por resultados: rankear bonos contra acciones mide otra cosa ("baja volatilidad" sería "bonos").
+# Mismo criterio que `*acciones` de catalogo/primas.yaml; el test lo verifica. Excluye bonos, materias primas,
+# divisas y VNQ (inmobiliario).
+UNIVERSO_ACCIONES = frozenset(
+    {"EEM", "EFA", "EWJ", "EWZ", "FXI", "IWM", "QQQ", "SPY", "XLB", "XLE", "XLF", "XLI", "XLK", "XLP", "XLU", "XLV", "XLY"}
+)
+# Con menos de 6 ETFs el tercio es 1 solo y la pierna queda demasiado concentrada (decisión piernas-transversales T5).
+MIN_ACTIVOS_PIERNA = 6
+VENTANA_VOLATILIDAD = 252  # sesiones; constante fija, 0 parámetros libres
+
+
+def baja_volatilidad(cierres):
+    """-σ de los retornos diarios de las últimas 252 sesiones (Ang et al. 2006): el más calmo puntúa más alto.
+
+    Pide la ventana completa (NaN si falta algún retorno). Solo tiene sentido dentro de una clase de activo:
+    rankeando bonos y acciones juntos, "baja volatilidad" sería casi siempre "bonos"; el universo es `UNIVERSO_ACCIONES`.
+    """
+    retornos = cierres.pct_change(fill_method=None)
+    return -retornos.rolling(VENTANA_VOLATILIDAD, min_periods=VENTANA_VOLATILIDAD).std()
+
+
+METRICAS["baja-volatilidad"] = baja_volatilidad
+
+
 SALTO_MOMENTUM = 21  # un mes de sesiones: el "menos uno" de la literatura
 VENTANA_MOMENTUM = 252  # doce meses de sesiones
 
