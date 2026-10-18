@@ -18,12 +18,8 @@ def parametros_elegidos(ganadores) -> dict:
     ))["params"]
 
 
-def veredicto_etapa1(sharpe_cartera, trades_totales=None) -> tuple:
+def veredicto_etapa1(sharpe_cartera, trades_totales) -> tuple:
     """Veredicto a nivel cartera (D3): mínimo 30 trades y Sharpe >= 0,10."""
-    if trades_totales is None and isinstance(sharpe_cartera, (list, tuple)):
-        bajos = sum(sharpe is None or isnan(sharpe) or sharpe < 0.10 or trades < 30
-                    for _, sharpe, trades in sharpe_cartera)
-        return ("CORTA" if 3 * bajos > 2 * len(sharpe_cartera) else "PASA"), bajos
     if trades_totales < 30:
         return "CORTA", "menos de 30 trades en la cartera"
     if sharpe_cartera is None or isnan(sharpe_cartera) or sharpe_cartera < 0.10:
