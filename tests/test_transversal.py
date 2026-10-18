@@ -1,9 +1,21 @@
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
+import yaml
 
 from quantagent.backtesting.signals import check_no_lookahead
-from quantagent.fabrica.transversal import METRICAS, señales_transversales
+from quantagent.fabrica.admision import UNIVERSO_AMPLIO
+from quantagent.fabrica.transversal import (
+    METRICAS,
+    MIN_ACTIVOS_PIERNA,
+    UNIVERSO_ACCIONES,
+    baja_volatilidad,
+    señales_transversales,
+)
 from quantagent.strategy.momentum_12m_strategy import is_last_session_of_month
+
+RAIZ = Path(__file__).parent.parent
 
 
 def _retorno_5(cierres):
@@ -98,5 +110,57 @@ def test_igual_a_una_implementacion_independiente_por_bucle():
     assert esperado.to_numpy().sum() > 0  # el panel sí produce posiciones; no es una comparación de ceros
 
 
-def test_registro_de_metricas_arranca_vacio():
-    assert METRICAS == {}
+def _paneles_volatilidad(n=400):
+    """6 activos con retornos alternados +a/-a de amplitud creciente: A el más calmo, F el más volátil."""
+    idx = pd.bdate_range("2021-01-04", periods=n)
+    amplitudes = np.array([0.002, 0.004, 0.006, 0.008, 0.010, 0.012])
+    signo = np.where(np.arange(n) % 2 == 0, 1.0, -1.0)[:, None]
+    return pd.DataFrame(100 * np.cumprod(1 + signo * amplitudes, axis=0), index=idx, columns=list("ABCDEF"))
+
+
+def test_baja_volatilidad_devuelve_menos_sigma_y_exige_252_retornos():
+    c = _paneles_volatilidad()
+    m = baja_volatilidad(c)
+    # 252 retornos recién completos en la fila 252 (el primer retorno es la fila 1)
+    assert m.iloc[:252].isna().all().all()
+    assert m.iloc[252].notna().all()
+    esperado = -c.pct_change().iloc[1:253].std()
+    pd.testing.assert_series_equal(m.iloc[252], esperado, check_names=False)
+    # mayor es mejor: el más calmo tiene el puntaje más alto
+    assert list(m.iloc[300].sort_values(ascending=False).index) == list("ABCDEF")
+
+
+def test_baja_volatilidad_elige_el_tercio_mas_calmo():
+    s = señales_transversales(_paneles_volatilidad(), METRICAS["baja-volatilidad"])
+    ultima = s.index[-1]
+    # 6 activos -> k = 2: entran A y B (los de menor volatilidad)
+    assert list(s.columns[s.loc[ultima] == 1]) == ["A", "B"]
+    assert s.loc[:"2021-11-30"].sum().sum() == 0  # antes de la fila 252 no hay ranking
+
+
+def test_baja_volatilidad_no_mira_el_futuro():
+    c = _aleatorio()
+    cortes = [c.index[i] for i in (300, 420, 480, 560, 640)]
+    assert check_no_lookahead(lambda p: señales_transversales(p, METRICAS["baja-volatilidad"]), c, cortes) == []
+    assert (señales_transversales(c, baja_volatilidad).to_numpy().sum()) > 0
+
+
+def test_baja_volatilidad_ignora_un_precio_futuro_de_otro_activo():
+    c = _aleatorio()
+    corte = c.index[500]
+    alterado = c.copy()
+    alterado.loc[alterado.index > corte, "A"] *= 50  # el futuro de A no puede cambiar el ranking de antes
+    antes = señales_transversales(c, baja_volatilidad).loc[:corte]
+    pd.testing.assert_frame_equal(señales_transversales(alterado, baja_volatilidad).loc[:corte], antes)
+
+
+def test_universo_de_acciones_declarado_por_definicion():
+    assert len(UNIVERSO_ACCIONES) >= MIN_ACTIVOS_PIERNA  # T5: con menos de 6 el tercio es 1 solo
+    assert UNIVERSO_ACCIONES <= UNIVERSO_AMPLIO
+    # ningún bono, materia prima, divisa ni inmobiliario
+    assert not UNIVERSO_ACCIONES & {"AGG", "IEF", "LQD", "SHY", "TIP", "TLT", "GLD", "SLV", "DBC", "USO", "FXE", "VNQ"}
+    # coincide con la lista `*acciones` del catálogo (P01)
+    catalogo = yaml.safe_load((RAIZ / "catalogo" / "primas.yaml").read_text(encoding="utf-8"))["primas"]
+    por_id = {p["id"]: p for p in catalogo}
+    assert set(por_id["baja-volatilidad-transversal"]["universo"]["activos"]) == UNIVERSO_ACCIONES
+    assert por_id["baja-volatilidad-transversal"]["clase"] == "baja-volatilidad"

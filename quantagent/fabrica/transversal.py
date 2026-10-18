@@ -9,6 +9,26 @@ from quantagent.strategy.momentum_12m_strategy import is_last_session_of_month
 # Lo llenan P06 y P07; las clases transversales no son `TradingStrategy`, por eso no van en `registry.py`.
 METRICAS = {}
 
+# Universo de la pierna de baja volatilidad (P07): los ETFs de acciones del universo amplio. Se define por clase
+# de activo, no por resultados: rankear bonos contra acciones mide otra cosa ("baja volatilidad" sería "bonos").
+# Mismo criterio que `*acciones` de catalogo/primas.yaml; el test lo verifica. Excluye bonos, materias primas,
+# divisas y VNQ (inmobiliario).
+UNIVERSO_ACCIONES = frozenset(
+    {"EEM", "EFA", "EWJ", "EWZ", "FXI", "IWM", "QQQ", "SPY", "XLB", "XLE", "XLF", "XLI", "XLK", "XLP", "XLU", "XLV", "XLY"}
+)
+# Con menos de 6 ETFs el tercio es 1 solo y la pierna queda demasiado concentrada (decisión piernas-transversales T5).
+MIN_ACTIVOS_PIERNA = 6
+VENTANA_VOLATILIDAD = 252  # sesiones; constante fija, 0 parámetros libres
+
+
+def baja_volatilidad(cierres):
+    """-σ de los retornos diarios de las últimas 252 sesiones (mayor = más calmo). NaN sin 252 retornos completos."""
+    retornos = cierres.pct_change(fill_method=None)
+    return -retornos.rolling(VENTANA_VOLATILIDAD, min_periods=VENTANA_VOLATILIDAD).std()
+
+
+METRICAS["baja-volatilidad"] = baja_volatilidad
+
 
 def señales_transversales(cierres, metrica, fraccion=1 / 3):
     """Panel 0/1 fecha × activo: 1 = el activo está en el tercio superior vigente; se mantiene desde la apertura siguiente.
