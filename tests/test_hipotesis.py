@@ -80,7 +80,7 @@ def test_parametro_desconocido_falla_en_validar_grilla(tmp_path):
         cargar_hipotesis(_variante(tmp_path, parametros={"no_existe": [1, 2]}))
 
 
-def test_cli_cartera_dos_piernas_sale_falta_c05(tmp_path):
+def test_cli_cartera_dos_piernas_sin_guarda_c05(tmp_path):
     from click.testing import CliRunner
     from quantagent.cli.backtest import backtest_group
 
@@ -101,5 +101,4 @@ def test_cli_cartera_dos_piernas_sale_falta_c05(tmp_path):
                 ["hipotesis", "correr", str(archivo), "--snapshot", "sintetico", "--carpeta", str(tmp_path / "c")],
                 ["hipotesis", "tanda", str(tmp_path), "--snapshot", "sintetico", "--carpeta", str(tmp_path / "t")]):
         res = runner.invoke(backtest_group, cmd)
-        assert res.exit_code == 1
-        assert "cartera de 2 piernas: falta C05" in res.output
+        assert "falta C05" not in res.output
