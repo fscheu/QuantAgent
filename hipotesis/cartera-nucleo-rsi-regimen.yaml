@@ -1,0 +1,35 @@
+id: cartera-nucleo-rsi-regimen
+autor: fede
+justificacion: >-
+  Cartera nucleo (momentum de 12 meses y tendencia de 210 ruedas, ver
+  cartera-tendencia-momentum) mas una pierna de reversion que se mide como capa
+  candidata contra el nucleo solo. La pierna compra RSI en sobreventa unicamente
+  cuando la volatilidad realizada propia de 20 ruedas supera su mediana de 252
+  ruedas: la prima por proveer liquidez sube cuando la volatilidad es alta
+  (Nagel 2012). Parametros fijos, sin grilla: la cartera tiene 0 parametros
+  libres.
+fuente: https://doi.org/10.1016/j.jfineco.2011.11.003 ; https://doi.org/10.2139/ssrn.962461 ; https://doi.org/10.3905/jpm.2017.44.1.015 ; https://doi.org/10.1093/rfs/hhs066
+timeframe: 1d
+piernas:
+  - clase: momentum-12m
+    parametros:
+      lookback: [252]
+    activos: [AGG, DBC, EEM, EFA, EWJ, EWZ, FXE, FXI, GLD, IEF, IWM, LQD, QQQ, SHY, SLV, SPY, TIP, TLT, USO, VNQ, XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV, XLY]
+    universo: 29 ETFs liquidos multiactivo del snapshot etf-1d-2026-10-amplio.
+  - clase: sma-cross
+    parametros:
+      fast: [1]
+      slow: [210]
+    activos: [AGG, DBC, EEM, EFA, EWJ, EWZ, FXE, FXI, GLD, IEF, IWM, LQD, QQQ, SHY, SLV, SPY, TIP, TLT, USO, VNQ, XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV, XLY]
+    universo: 29 ETFs liquidos multiactivo del snapshot etf-1d-2026-10-amplio.
+  - clase: rsi-regimen
+    parametros:
+      rsi_period: [14]
+      oversold_threshold: [30.0]
+      vol_window: [20]
+    activos: [EEM, EFA, EWJ, EWZ, FXI, IWM, QQQ, SPY, XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV, XLY]
+    universo: >-
+      ETFs de renta variable del snapshot etf-1d-2026-10-amplio: indices amplios (SPY, QQQ, IWM),
+      regiones y paises (EFA, EEM, EWJ, EWZ, FXI) y sectores GICS del S&P 500 (XLB, XLE, XLF, XLI,
+      XLK, XLP, XLU, XLV, XLY). Se excluyen renta fija, materias primas, divisas y VNQ (inmobiliario).
+      Criterio fijado antes de la primera corrida.
