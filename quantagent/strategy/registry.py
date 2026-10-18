@@ -3,6 +3,7 @@
 from typing import Any
 
 from .base import TradingStrategy
+from .curva_pendiente_strategy import CurvaPendienteStrategy
 from .fifty_two_week_high_strategy import FiftyTwoWeekHighStrategy
 from .llm_agent_strategy import LLMAgentStrategy
 from .momentum_12m_strategy import Momentum12mStrategy
@@ -250,3 +251,4 @@ def cli_aliases() -> dict[str, str]:
 
 
 register_strategy(RsiRegimenStrategy, min_bars=272, cli_alias="rsi-regimen", params=RsiRegimenStrategy.PARAMS)
+register_strategy(CurvaPendienteStrategy, min_bars=1, cli_alias="curva-pendiente", params=CurvaPendienteStrategy.PARAMS)
