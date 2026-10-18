@@ -1,5 +1,6 @@
 import csv
 import json
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -174,3 +175,44 @@ def test_etapa3_real(tmp_path, monkeypatch):
         intentos = list(csv.DictReader(f))
     assert [(r["activo"], r["hipotesis"], r["etapa"]) for r in intentos] == [
         (a, h.id, "3") for a in ("SPY", "TLT")]
+
+
+def test_etapa2_cartera_compare_falso(tmp_path, monkeypatch):
+    from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+
+    fechas = pd.date_range("2010-01-01", periods=100)
+    eq_dir = tmp_path / "salida" / "equity"
+    eq_dir.mkdir(parents=True)
+    pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(100, 0.001))}).to_csv(eq_dir / "rsi-SPY.csv", index=False)
+    pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(100, -0.0002))}).to_csv(eq_dir / "sma-TLT.csv", index=False)
+
+    h = Hipotesis("h-c", "autor", "just", "1d", piernas=(Pierna("rsi", {}, ("SPY",), "U"), Pierna("sma", {}, ("TLT",), "U")))
+    monkeypatch.setattr(validacion, "correr_motor", lambda h_obj, *a, **k: [
+        {"activo": "SPY", "estrategia": "rsi", "trades": "4", "pnl": "1000", "sharpe_tasa_0": "0.5", "max_drawdown": "0.05"},
+    ] if len(h_obj.piernas) == 1 else [
+        {"activo": "SPY", "estrategia": "rsi", "trades": "4", "pnl": "1000", "sharpe_tasa_0": "0.5", "max_drawdown": "0.05"},
+        {"activo": "TLT", "estrategia": "sma", "trades": "2", "pnl": "-200", "sharpe_tasa_0": "-0.2", "max_drawdown": "0.08"},
+    ])
+    no_coincide = False
+
+    def fake_subp(cmd, **kwargs):
+        if "--tabla" in cmd:
+            t = Path(cmd[cmd.index("--tabla") + 1])
+            ctrl = "sin validar: dif" if "TLT" in str(t) and no_coincide else "coinciden 5 de 5"
+            t.write_text(f"activo,control\nX,{ctrl}\n")
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(validacion.subprocess, "run", fake_subp)
+
+    veredicto, filas = validacion.validar_etapa2(h, "sintetico", {"SPY": {}, "TLT": {}}, tmp_path / "salida")
+    assert veredicto == "PASA" and filas[1]["v30"] == "NO PASA"
+
+    no_coincide = True
+    veredicto, filas = validacion.validar_etapa2(h, "sintetico", {"SPY": {}, "TLT": {}}, tmp_path / "salida")
+    assert veredicto == "CORTA" and "TLT: sin validar: dif" in filas[1]["motivos"]
+
+    no_coincide = False
+    h1 = Hipotesis("h-1p", "autor", "just", "1d", clase="rsi", parametros={}, activos=("SPY",), universo="U")
+    veredicto1, filas1 = validacion.validar_etapa2(h1, "sintetico", {"SPY": {}}, tmp_path / "salida")
+    assert veredicto1 == "PASA" and filas1[0]["v30"] == "PASA"
+
