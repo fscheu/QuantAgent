@@ -251,3 +251,68 @@ def test_load_lot_queue_failure_raises_clear_error(tmp_path, monkeypatch):
     with pytest.raises(RuntimeError, match="no se pudo leer PLAN-CONTINUACION.md de origin/lote/inexistente"):
         gate.load_lot_queue("lote/inexistente")
 
+
+def test_filter_loop_prs():
+    prs = [_pr(number=1, base="lote/a"), _pr(number=2, base="lote/b")]
+    assert gate.filter_loop_prs(prs, None) == prs
+    assert gate.filter_loop_prs(prs, "") == prs
+    assert [p["number"] for p in gate.filter_loop_prs(prs, "lote/a")] == [1]
+    assert [p["number"] for p in gate.filter_loop_prs(prs, "lote/b")] == [2]
+    assert gate.filter_loop_prs(prs, "lote/c") == []
+
+
+def test_gate_with_loop_lote_evaluates_only_matching_base(monkeypatch, capsys):
+    pr_a = _pr("MERGED", number=10, created="2026-10-01T01:00:00Z", branch="loop/QuantAgent-a", base="lote/a")
+    pr_b = _pr("OPEN", number=11, created="2026-10-01T02:00:00Z", branch="loop/QuantAgent-b", base="lote/b")
+    r_a = _comment("PM: a vi: salida ok 5 lineas decido: merge")
+
+    def fake_gh(*args):
+        if "--label" in args and args[args.index("--label") + 1] in ("lote", "carril-b"):
+            return json.dumps([{"number": 100, "url": "u", "headRefName": "lote/a", "isDraft": True}])
+        if "--label" in args and args[args.index("--label") + 1] == "loop":
+            return json.dumps([pr_a, pr_b])
+        if "view" in args:
+            return json.dumps({"commits": [{"committedDate": "2026-10-01T01:30:00Z"}], "comments": [r_a], "reviews": [], "body": BODY})
+        if "diff" in args:
+            return DIFF
+        return ""
+
+    monkeypatch.setattr(gate, "_gh", fake_gh)
+    monkeypatch.setattr(gate.sys, "argv", ["gate.py"])
+    monkeypatch.setenv("LOOP_LOTE", "lote/a")
+
+    rc = gate.main()
+    out = json.loads(capsys.readouterr().out)
+    assert rc == gate.EXIT_PASS
+    assert out["result"] == "PASS" and out["pr"] == 10 and out["mode"] == "nuevo"
+
+
+def test_gate_with_loop_lote_ignores_cambio_on_other_lot(monkeypatch, capsys):
+    pr_a = _pr("MERGED", number=20, created="2026-10-01T01:00:00Z", branch="loop/QuantAgent-a", base="lote/a")
+    pr_b = _pr("OPEN", number=21, created="2026-10-01T02:00:00Z", branch="loop/QuantAgent-b", base="lote/b")
+    r_a = _comment("PM: a vi: salida ok 5 lineas decido: merge")
+    r_b = _comment("PM: b vi: salida ok 5 lineas decido: cambio ajustar x")
+
+    def fake_gh(*args):
+        if "--label" in args and args[args.index("--label") + 1] in ("lote", "carril-b"):
+            return json.dumps([{"number": 100, "url": "u", "headRefName": "lote/a", "isDraft": True}])
+        if "--label" in args and args[args.index("--label") + 1] == "loop":
+            return json.dumps([pr_a, pr_b])
+        if "view" in args:
+            num = int(args[args.index("view") + 1])
+            comments = [r_a] if num == 20 else [r_b]
+            return json.dumps({"commits": [{"committedDate": "2026-10-01T01:30:00Z"}], "comments": comments, "reviews": [], "body": BODY})
+        if "diff" in args:
+            return DIFF
+        return ""
+
+    monkeypatch.setattr(gate, "_gh", fake_gh)
+    monkeypatch.setattr(gate.sys, "argv", ["gate.py"])
+    monkeypatch.setenv("LOOP_LOTE", "lote/a")
+
+    rc = gate.main()
+    out = json.loads(capsys.readouterr().out)
+    assert rc == gate.EXIT_PASS
+    assert out["result"] == "PASS" and out["pr"] == 20 and out["mode"] == "nuevo"
+
+
