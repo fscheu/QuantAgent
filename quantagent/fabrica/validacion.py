@@ -6,6 +6,8 @@ import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import pandas as pd
+
 from quantagent.backtesting.verdict import dsr_contra_intentos, evaluar
 from quantagent.cli.sweep import registrar_intento
 from quantagent.data.snapshot import snapshot_root
@@ -57,6 +59,40 @@ def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, a
     return filas
 
 
+def evaluar_etapa2_cartera(h, filas, carpeta, snapshot=None):
+    """Combina retornos de celdas con pesos de cartera y evalúa V30 sumando trades."""
+    from quantagent.backtesting.vbt_filter import equity_metrics
+    from quantagent.fabrica.cartera import curva_cartera
+
+    cierres = None
+    if snapshot is not None:
+        from quantagent.data.snapshot import read_snapshot
+        cierres = pd.DataFrame({a: read_snapshot(snapshot, a)["close"].loc["2007-01-01":"2018-12-31"]
+                                for p in h.piernas for a in p.activos})
+
+    piernas_map = {i: list(p.activos) for i, p in enumerate(h.piernas)}
+    retornos_dict = {}
+    for i, p in enumerate(h.piernas):
+        for activo in p.activos:
+            p_eq = Path(carpeta) / "equity" / f"{p.clase}-{activo}.csv"
+            if not p_eq.exists():
+                p_eq = Path(carpeta) / "equity" / f"{activo}.csv"
+            if p_eq.exists():
+                with p_eq.open(newline="") as f:
+                    curva = list(csv.DictReader(f))
+                if len(curva) >= 2:
+                    col = "date" if "date" in curva[0] else "timestamp"
+                    eq = pd.Series([float(r["equity"]) for r in curva], index=pd.to_datetime([r[col] for r in curva]))
+                    retornos_dict[(i, activo)] = eq.pct_change().dropna()
+
+    total_trades = sum(int(f["trades"]) for f in filas if f.get("trades") not in (None, ""))
+    eq_cartera = curva_cartera(cierres, piernas_map, retornos_dict)
+    if eq_cartera is not None and not eq_cartera.empty:
+        m = equity_metrics(eq_cartera, 0.0)
+        return evaluar(total_trades, float(eq_cartera.iloc[-1] - 100_000.0), m["sharpe"], m["max_drawdown"])
+    return False, ["curva de cartera vacía"]
+
+
 def validar_etapa2(h, snapshot, params_por_activo, carpeta):
     """Control independiente y V30; los motivos de corte quedan en las filas por activo."""
     filas = correr_motor(h, snapshot, params_por_activo, "2007-01-01", "2018-12-31", carpeta, "2")
@@ -76,13 +112,20 @@ def validar_etapa2(h, snapshot, params_por_activo, carpeta):
                 raise RuntimeError(resultado.stderr)
             with tabla.open(newline="") as f:
                 fila["control"] = next(csv.DictReader(f))["control"]
-            pasa, motivos = evaluar(*(float(fila[c]) if fila[c] != "" else None
-                                      for c in ("trades", "pnl", "sharpe_tasa_0", "max_drawdown")))
-            fila["v30"] = "PASA" if pasa else "NO PASA"
+            pasa_c, motivos = evaluar(*(float(fila[c]) if fila[c] != "" else None
+                                        for c in ("trades", "pnl", "sharpe_tasa_0", "max_drawdown")))
+            fila["v30"] = "PASA" if pasa_c else "NO PASA"
             if not fila["control"].startswith("coinciden"):
                 motivos.append(fila["control"])
             fila["motivos"] = [f"{activo}: {motivo}" for motivo in motivos]
-    pasa = all(f["control"].startswith("coinciden") for f in filas) and any(f["v30"] == "PASA" for f in filas)
+    if len(h.piernas) > 1:
+        pasa_cartera, motivos_cartera = evaluar_etapa2_cartera(h, filas, carpeta, snapshot)
+        pasa = all(f["control"].startswith("coinciden") for f in filas) and pasa_cartera
+        if not pasa_cartera:
+            for f in filas:
+                f["motivos"].extend([f"cartera: {m}" for m in motivos_cartera if f"cartera: {m}" not in f["motivos"]])
+    else:
+        pasa = all(f["control"].startswith("coinciden") for f in filas) and any(f["v30"] == "PASA" for f in filas)
     return "PASA" if pasa else "CORTA", filas
 
 
