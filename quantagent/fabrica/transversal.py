@@ -9,6 +9,21 @@ from quantagent.strategy.momentum_12m_strategy import is_last_session_of_month
 # Lo llenan P06 y P07; las clases transversales no son `TradingStrategy`, por eso no van en `registry.py`.
 METRICAS = {}
 
+SALTO_MOMENTUM = 21  # un mes de sesiones: el "menos uno" de la literatura
+VENTANA_MOMENTUM = 252  # doce meses de sesiones
+
+
+def momentum_12m_menos_1m(cierres):
+    """Retorno de 12 meses salteando el último mes: cierre[t-21] / cierre[t-252] - 1 (QuantAgent P06).
+
+    Jegadeesh y Titman (1993) y Asness, Moskowitz y Pedersen (2013). Saltear el último mes evita el rebote de
+    corto plazo. Usa solo filas anteriores o iguales a la de cada fecha; NaN si falta alguno de los dos cierres.
+    """
+    return cierres.shift(SALTO_MOMENTUM) / cierres.shift(VENTANA_MOMENTUM) - 1
+
+
+METRICAS["momentum-transversal"] = momentum_12m_menos_1m
+
 
 def señales_transversales(cierres, metrica, fraccion=1 / 3):
     """Panel 0/1 fecha × activo: 1 = el activo está en el tercio superior vigente; se mantiene desde la apertura siguiente.

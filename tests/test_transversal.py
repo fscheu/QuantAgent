@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 from quantagent.backtesting.signals import check_no_lookahead
-from quantagent.fabrica.transversal import METRICAS, señales_transversales
+from quantagent.fabrica.transversal import METRICAS, momentum_12m_menos_1m, señales_transversales
 from quantagent.strategy.momentum_12m_strategy import is_last_session_of_month
 
 
@@ -98,5 +98,35 @@ def test_igual_a_una_implementacion_independiente_por_bucle():
     assert esperado.to_numpy().sum() > 0  # el panel sí produce posiciones; no es una comparación de ceros
 
 
-def test_registro_de_metricas_arranca_vacio():
-    assert METRICAS == {}
+def test_momentum_transversal_esta_registrado():
+    assert METRICAS["momentum-transversal"] is momentum_12m_menos_1m
+
+
+def test_momentum_12m_menos_1m_valores_conocidos():
+    """El valor en t es cierre[t-21] / cierre[t-252] - 1 y no usa el último mes."""
+    c = _aleatorio()
+    m = momentum_12m_menos_1m(c)
+    i = 600
+    for a in ("A", "H"):
+        assert m[a].iloc[i] == c[a].iloc[i - 21] / c[a].iloc[i - 252] - 1
+    # sin 252 sesiones de historia no hay valor; y el último mes no cambia el resultado
+    assert m.iloc[:252].isna().all().all()
+    alterado = c.copy()
+    alterado.iloc[i - 20 : i + 1] *= 7
+    assert momentum_12m_menos_1m(alterado).iloc[i].equals(m.iloc[i])
+
+
+def test_momentum_transversal_elige_los_dos_mejores_de_seis():
+    """6 activos con tasas de crecimiento distintas y constantes: entran los 2 de mayor momentum."""
+    idx = pd.bdate_range("2021-01-04", "2022-06-30")
+    tasas = np.array([0.0005, 0.0030, 0.0010, 0.0045, 0.0020, 0.0001])
+    c = pd.DataFrame(100 * np.cumprod(1 + np.tile(tasas, (len(idx), 1)), axis=0), index=idx, columns=list("ABCDEF"))
+    s = señales_transversales(c, METRICAS["momentum-transversal"])
+    assert list(s.columns[s.loc["2022-05-31"] == 1]) == ["B", "D"]
+    assert s.loc["2021-10-29"].sum() == 0  # todavía sin 252 sesiones de historia
+
+
+def test_momentum_transversal_no_mira_el_futuro():
+    c = _aleatorio()
+    cortes = [c.index[i] for i in (300, 420, 480, 560, 640)]
+    assert check_no_lookahead(lambda p: señales_transversales(p, METRICAS["momentum-transversal"]), c, cortes) == []
