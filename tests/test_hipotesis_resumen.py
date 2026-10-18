@@ -35,3 +35,24 @@ def test_resumen_ultimos_fecha_causas_e_intentos(tmp_path, monkeypatch):
     assert "sin historia" not in filtrado.output
     assert "Intentos: 4" in filtrado.output
     assert out.read_text() == filtrado.output
+
+
+def test_resumen_causa_en_varios_activos_cuenta_una_vez_por_hipotesis(tmp_path, monkeypatch):
+    monkeypatch.setattr("quantagent.fabrica.estado.snapshot_root", lambda: tmp_path)
+    filas = [
+        ("2026-02-01T00:00:00+00:00", "h1", "3", "CORTA", "SPY: DSR < 0.95; XLK: DSR < 0.95; QQQ: DSR < 0.95"),
+        ("2026-02-01T00:00:00+00:00", "h2", "3", "CORTA", "EFA: DSR < 0.95; IWM: DSR < 0.95"),
+    ]
+    with (tmp_path / "hipotesis.csv").open("w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(COLUMNAS)
+        w.writerows(filas)
+    with (tmp_path / "intentos.csv").open("w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(("fecha_utc", "hipotesis"))
+        w.writerows([(r[0], r[1]) for r in filas])
+    runner = CliRunner()
+    completo = runner.invoke(hipotesis_group, ["resumen"])
+    assert completo.exit_code == 0
+    assert "- DSR < 0.95: 2" in completo.output
+

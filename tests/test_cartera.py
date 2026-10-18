@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from quantagent.fabrica.cartera import combinar, pesos
+from quantagent.fabrica.cartera import combinar, evaluar_cartera, pesos
 
 PIERNAS = {"p1": ["A", "B"], "p2": ["C"]}
 
@@ -123,3 +123,14 @@ def test_combinar_a_mano():
     out = combinar(r, w)
     assert out.iloc[0] == pytest.approx(0.2 * 0.01 + 0.3 * -0.02)
     assert out.iloc[1] == pytest.approx(0.3 * 0.01 + 0.5 * 0.04)
+
+
+def test_evaluar_cartera_una_pierna_un_activo_coincide():
+    from quantagent.backtesting.vbt_filter import equity_metrics
+
+    c = _cierres()
+    idx = c.index[60:]
+    ret_a = pd.Series(0.001, index=idx)
+    s = evaluar_cartera(c, {"p1": ["A"]}, {("p1", "A"): ret_a})
+    eq = 100_000.0 * (1 + ret_a).cumprod()
+    assert s == pytest.approx(equity_metrics(eq, 0.0)["sharpe"])
