@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import pandas as pd
 
-from quantagent.backtesting.signals import bar_signals, check_no_lookahead
+from quantagent.backtesting.signals import bar_signals, check_no_lookahead, check_no_lookahead_macro
 from quantagent.cli.sweep import cli_aliases
+from quantagent.data.snapshot import SnapshotError
 from quantagent.fabrica.hipotesis import Hipotesis, Pierna
 from quantagent.strategy.registry import STRATEGY_REGISTRY, build_strategy
 
@@ -50,8 +51,19 @@ def admitir(h: Hipotesis, velas: pd.DataFrame) -> tuple[bool, list[str]]:
     for p in h.piernas:
         if aliases.get(p.clase, p.clase) not in STRATEGY_REGISTRY:
             continue
+        # Una clase con `requiere_macro = True` recibe `snapshot` (y `serie`) como parámetros de valor único.
+        macro = getattr(STRATEGY_REGISTRY[aliases.get(p.clase, p.clase)]["cls"], "requiere_macro", False)
         for comb in p.combinaciones():
-            difs = check_no_lookahead(lambda c, comb=comb, p=p: _senales(p, comb, c), velas, cortes)
+            senales = lambda c, comb=comb, p=p: _senales(p, comb, c)  # noqa: E731
+            try:
+                if not macro:
+                    difs = check_no_lookahead(senales, velas, cortes)
+                elif "snapshot" not in comb:
+                    difs = ["la clase requiere_macro y falta el parámetro snapshot"]
+                else:
+                    difs = check_no_lookahead_macro(senales, velas, cortes, comb["snapshot"])
+            except SnapshotError as e:
+                difs = [str(e)]
             if difs:
                 motivos.append(f"prueba de truncamiento fallida con {comb}: {difs[0]}")
     return not motivos, motivos

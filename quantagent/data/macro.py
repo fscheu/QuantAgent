@@ -32,7 +32,11 @@ def crear_snapshot_macro(nombre: str, series: Iterable[str], cliente, base_dir: 
     if vacias:
         raise SnapshotError(f"sin filas: {', '.join(vacias)}")
 
-    carpeta.mkdir(parents=True)
+    return _escribir(carpeta, nombre, frames)
+
+
+def _escribir(carpeta: Path, nombre: str, frames: dict) -> dict:
+    carpeta.mkdir(parents=True, exist_ok=True)
     info = {}
     for serie, df in frames.items():
         ruta = carpeta / f"{serie}.parquet"
@@ -40,8 +44,8 @@ def crear_snapshot_macro(nombre: str, series: Iterable[str], cliente, base_dir: 
         info[serie] = {
             "file": ruta.name,
             "rows": len(df),
-            "start": df["fecha"].min().date().isoformat(),
-            "end": df["fecha"].max().date().isoformat(),
+            "start": df["fecha"].min().date().isoformat() if len(df) else None,
+            "end": df["fecha"].max().date().isoformat() if len(df) else None,
             "sha256": _sha256(ruta),
         }
     manifiesto = {
@@ -52,6 +56,24 @@ def crear_snapshot_macro(nombre: str, series: Iterable[str], cliente, base_dir: 
     }
     (carpeta / MANIFEST_NAME).write_text(json.dumps(manifiesto, indent=2, sort_keys=True) + "\n")
     return manifiesto
+
+
+def recortar_snapshot_macro(nombre: str, al, destino: Path, base_dir: Optional[Path] = None) -> dict:
+    """Escribe en `destino/nombre` el snapshot como estaba publicado en `al` (QuantAgent-d4cq.71).
+
+    Descarta las versiones con `realtime_start > al` y acota `realtime_end` a `al`: nada posterior a `al`
+    queda visible, ni por `valor_conocido` ni leyendo la última versión a mano.
+    """
+    al = pd.Timestamp(al)
+    manifiesto = load_manifest(nombre, base_dir)
+    carpeta = snapshot_root(base_dir) / nombre
+    frames = {}
+    for serie, info in manifiesto["series"].items():
+        df = pd.read_parquet(carpeta / info["file"])
+        df = df[df["realtime_start"] <= al].copy()
+        df["realtime_end"] = df["realtime_end"].clip(upper=al)
+        frames[serie] = df
+    return _escribir(Path(destino) / nombre, nombre, frames)
 
 
 def verificar_snapshot_macro(nombre: str, base_dir: Optional[Path] = None, versioned_dir: Optional[Path] = None) -> dict:
