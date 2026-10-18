@@ -18,6 +18,10 @@ fi
 
 mkdir -p /tmp/ai-loop
 git -C "$REPO" worktree add -q --detach "$WT" origin/main >/dev/null 2>&1 || { echo "⚠ QuantAgent loop: no pude crear el worktree"; exit 0; }
+ARGS=(); TICKET="${LOOP_TICKET:-}"
+while [ $# -gt 0 ]; do
+  case "$1" in --lote) export LOOP_LOTE="$2"; ARGS+=(--lote "$2"); shift 2 ;; --ticket) TICKET="$2"; export LOOP_TICKET="$2"; ARGS+=(--ticket "$2"); shift 2 ;; *) shift ;; esac
+done
 HOOKS=""
 cleanup() { cd /; git -C "$REPO" worktree remove --force "$WT" >/dev/null 2>&1; [ -n "$HOOKS" ] && rm -rf "$HOOKS"; }
 trap cleanup EXIT
@@ -27,12 +31,14 @@ source loop/config.env
 mkdir -p "$LOOP_LOG_DIR"
 LOG="$LOOP_LOG_DIR/$RUN.log"
 
-GATE="$(python3 scripts/loop/gate.py)"
+GATE="$(python3 scripts/loop/gate.py "${ARGS[@]}")"
 rc=$?
 if [ "$rc" -ne 0 ]; then
   python3 -c 'import json,sys; print(json.loads(sys.argv[1])["message"])' "$GATE" 2>/dev/null || echo "⚠ QuantAgent loop: gate sin salida válida"
   exit 0
 fi
+ASSIGNED_TICKET="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("ticket_asignado",""))' "$GATE" 2>/dev/null || true)"
+[ -n "$ASSIGNED_TICKET" ] && TICKET="$ASSIGNED_TICKET"
 
 # Agent for this run: the one-shot override file wins over LOOP_AGENT and is consumed here, after the
 # gate passed, so a WAIT night does not burn it.
@@ -96,7 +102,11 @@ if [ -f "$LOOP_LOG_DIR/next-local-data" ]; then
   fi
 fi
 python -m alembic upgrade head >>"$LOG" 2>&1 || { echo "⚠ QuantAgent loop: alembic upgrade falló sobre la base de tests. Log: $LOG"; exit 0; }
-PROMPT="$(cat loop/PROMPT.md)
+PROMPT_HEADER=""
+[ -n "${TICKET:-}" ] && PROMPT_HEADER="Ticket asignado: $TICKET
+
+"
+PROMPT="${PROMPT_HEADER}$(cat loop/PROMPT.md)
 
 CONTEXTO DEL GATE (JSON):
 $GATE
