@@ -204,6 +204,7 @@ def test_etapa2_cartera_compare_falso(tmp_path, monkeypatch):
 
     monkeypatch.setattr(validacion.subprocess, "run", fake_subp)
 
+    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas)}))
     veredicto, filas = validacion.validar_etapa2(h, "sintetico", {"SPY": {}, "TLT": {}}, tmp_path / "salida")
     assert veredicto == "PASA" and filas[1]["v30"] == "NO PASA"
 
@@ -215,4 +216,14 @@ def test_etapa2_cartera_compare_falso(tmp_path, monkeypatch):
     h1 = Hipotesis("h-1p", "autor", "just", "1d", clase="rsi", parametros={}, activos=("SPY",), universo="U")
     veredicto1, filas1 = validacion.validar_etapa2(h1, "sintetico", {"SPY": {}}, tmp_path / "salida")
     assert veredicto1 == "PASA" and filas1[0]["v30"] == "PASA"
+
+
+def test_etapa2_cartera_snapshot_ilegible_falla(tmp_path):
+    from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+
+    h = Hipotesis("h-c", "autor", "just", "1d", piernas=(Pierna("rsi", {}, ("SPY",), "U"), Pierna("sma", {}, ("TLT",), "U")))
+    with pytest.raises(Exception):
+        validacion.evaluar_etapa2_cartera(h, [], tmp_path, snapshot="ilegible")
+    assert validacion.evaluar_etapa2_cartera(h, [], tmp_path, snapshot=None) == (False, ["curva de cartera vacía"])
+
 

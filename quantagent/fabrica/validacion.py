@@ -65,13 +65,10 @@ def evaluar_etapa2_cartera(h, filas, carpeta, snapshot=None):
     from quantagent.fabrica.cartera import curva_cartera
 
     cierres = None
-    if snapshot:
-        try:
-            from quantagent.data.snapshot import read_snapshot
-            cierres = pd.DataFrame({a: read_snapshot(snapshot, a)["close"].loc["2007-01-01":"2018-12-31"]
-                                    for p in h.piernas for a in p.activos})
-        except Exception:
-            cierres = None
+    if snapshot is not None:
+        from quantagent.data.snapshot import read_snapshot
+        cierres = pd.DataFrame({a: read_snapshot(snapshot, a)["close"].loc["2007-01-01":"2018-12-31"]
+                                for p in h.piernas for a in p.activos})
 
     piernas_map = {i: list(p.activos) for i, p in enumerate(h.piernas)}
     retornos_dict = {}
