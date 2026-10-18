@@ -17,6 +17,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from quantagent.data.provider import DataProvider
+from quantagent.data.sources.yahoo import YahooSource
 from quantagent.models import BacktestRun, StrategyConfig
 
 # ============================================================================
@@ -64,26 +65,26 @@ class TestSupportedUniverse:
 
     def test_symbol_mapping_exists(self):
         """Verify SYMBOL_MAPPING is defined in DataProvider."""
-        assert hasattr(DataProvider, 'SYMBOL_MAPPING')
-        assert isinstance(DataProvider.SYMBOL_MAPPING, dict)
+        assert hasattr(YahooSource, 'SYMBOL_MAPPING')
+        assert isinstance(YahooSource.SYMBOL_MAPPING, dict)
 
     def test_symbol_mapping_contains_required_symbols(self):
         """Verify all required symbols are in SYMBOL_MAPPING."""
         required_symbols = {"BTC", "SPX", "CL", "DAX", "ES", "NQ", "QQQ", "GC", "VIX", "DXY"}
-        actual_symbols = set(DataProvider.SYMBOL_MAPPING.keys())
+        actual_symbols = set(YahooSource.SYMBOL_MAPPING.keys())
         assert required_symbols.issubset(actual_symbols), \
             f"Missing symbols: {required_symbols - actual_symbols}"
 
     def test_symbol_mapping_values_are_valid_yfinance_symbols(self):
         """Verify all symbol mappings have valid yfinance symbol values."""
-        for symbol, yf_symbol in DataProvider.SYMBOL_MAPPING.items():
+        for symbol, yf_symbol in YahooSource.SYMBOL_MAPPING.items():
             assert isinstance(yf_symbol, str), f"Symbol {symbol} maps to non-string: {yf_symbol}"
             assert len(yf_symbol) > 0, f"Symbol {symbol} maps to empty string"
 
     def test_required_symbols_exact_list(self):
         """Verify required symbols match exactly (at minimum)."""
         required_symbols = {"BTC", "SPX", "CL", "DAX", "ES", "NQ", "QQQ", "GC", "VIX", "DXY"}
-        actual_symbols = set(DataProvider.SYMBOL_MAPPING.keys())
+        actual_symbols = set(YahooSource.SYMBOL_MAPPING.keys())
         # At minimum, we should have all required symbols
         assert required_symbols.issubset(actual_symbols)
 
@@ -119,7 +120,7 @@ class TestProfileUniversePersistence:
 
     def test_create_multiple_universe_symbols(self, test_db):
         """Test creating profile with all 10 supported symbols."""
-        all_symbols = list(DataProvider.SYMBOL_MAPPING.keys())
+        all_symbols = list(YahooSource.SYMBOL_MAPPING.keys())
         profile = StrategyConfig(
             name="test_portfolio_all_symbols",
             kind="portfolio",
@@ -244,7 +245,7 @@ class TestUniverseFiltering:
 
     def test_filter_supported_symbols(self):
         """Test filtering of supported vs unsupported symbols."""
-        supported = set(DataProvider.SYMBOL_MAPPING.keys())
+        supported = set(YahooSource.SYMBOL_MAPPING.keys())
         test_symbols = ["BTC", "SPX", "INVALID", "CL", "UNKNOWN"]
 
         filtered = [s for s in test_symbols if s in supported]
@@ -274,7 +275,7 @@ class TestUniverseFiltering:
 
     def test_supported_symbols_constant_matches_provider(self):
         """Verify that supported symbols list is consistent with DataProvider."""
-        supported_from_provider = list(DataProvider.SYMBOL_MAPPING.keys())
+        supported_from_provider = list(YahooSource.SYMBOL_MAPPING.keys())
 
         # Test configuration file should reference the same symbols
         required_symbols = {"BTC", "SPX", "CL", "DAX", "ES", "NQ", "QQQ", "GC", "VIX", "DXY"}
@@ -465,7 +466,7 @@ class TestUniverseEdgeCases:
 
     def test_unicode_symbols_rejected(self):
         """Test that non-ASCII symbols are rejected."""
-        supported = set(DataProvider.SYMBOL_MAPPING.keys())
+        supported = set(YahooSource.SYMBOL_MAPPING.keys())
         test_symbols = ["BTC", "SPX", "BTC€", "₹SPX"]  # EUR and INR symbols
 
         filtered = [s for s in test_symbols if s in supported]
@@ -474,7 +475,7 @@ class TestUniverseEdgeCases:
 
     def test_whitespace_in_symbols(self):
         """Test that symbols with whitespace are handled."""
-        supported = set(DataProvider.SYMBOL_MAPPING.keys())
+        supported = set(YahooSource.SYMBOL_MAPPING.keys())
         test_symbols = ["BTC", " BTC", "BTC ", "BT C"]
 
         filtered = [s for s in test_symbols if s in supported]
@@ -500,7 +501,7 @@ class TestUniverseEdgeCases:
 
     def test_case_sensitivity_of_symbols(self):
         """Test that symbols are case-sensitive."""
-        supported = set(DataProvider.SYMBOL_MAPPING.keys())
+        supported = set(YahooSource.SYMBOL_MAPPING.keys())
 
         # All supported symbols should be uppercase
         for symbol in supported:

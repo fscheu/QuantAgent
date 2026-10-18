@@ -8,6 +8,7 @@ from typing import Dict, Optional
 import click
 import pandas as pd
 
+from quantagent.data.macro import crear_snapshot_macro, verificar_snapshot_macro
 from quantagent.data.snapshot import (
     SnapshotError,
     check_snapshot,
@@ -109,3 +110,32 @@ def check_snapshot_cmd(name: str) -> None:
                 click.echo(f"  {label}: {', '.join(r[key][:10])}{' ...' if len(r[key]) > 10 else ''}")
     if any(r["faltan"] for r in report.values()):
         raise SystemExit(1)
+
+
+@data_group.group("macro", help="Snapshots macro de ALFRED (todas las versiones) en Parquet.")
+def macro_group() -> None:
+    """Macro snapshot subcommands."""
+
+
+@macro_group.command("create", help="Baja todas las versiones de las series de ALFRED y congela el snapshot (requiere FRED_API_KEY).")
+@click.option("--name", required=True, help="Nombre del snapshot, por ejemplo macro-2026-10.")
+@click.option("--series", required=True, help="Series de FRED separadas por coma, por ejemplo UNRATE,CPIAUCSL.")
+def create_macro(name: str, series: str) -> None:
+    from quantagent.data.sources.fred import FredClient
+
+    try:
+        manifest = crear_snapshot_macro(name, [s.strip().upper() for s in series.split(",") if s.strip()], FredClient())
+    except (SnapshotError, RuntimeError) as exc:
+        raise click.ClickException(str(exc))
+    rows = sum(info["rows"] for info in manifest["series"].values())
+    click.echo(f"Snapshot macro {name} creado: {len(manifest['series'])} series, {rows} filas")
+
+
+@macro_group.command("verify", help="Recalcula los hashes contra el manifiesto.")
+@click.argument("name")
+def verify_macro(name: str) -> None:
+    try:
+        series = verificar_snapshot_macro(name)["series"]
+    except SnapshotError as exc:
+        raise click.ClickException(str(exc))
+    click.echo(f"OK {len(series)} series, {sum(i['rows'] for i in series.values())} filas")

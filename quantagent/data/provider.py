@@ -1,14 +1,15 @@
 """Data provider with caching layer for market data."""
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 import pandas as pd
-import yfinance as yf
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
+from quantagent.data.sources.base import CandleSource, to_utc
+from quantagent.data.sources.yahoo import YahooSource
 from quantagent.models import MarketData
 
 logger = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ class DataProvider:
     Pattern:
     1. Check database for existing data
     2. Identify gaps in cached data
-    3. Fetch missing data from yfinance
+    3. Fetch missing data from the candle source
     4. Store fetched data in database
     5. Return complete dataset
 
@@ -31,33 +32,6 @@ class DataProvider:
     - Reproducible results (same data every run)
     - Offline capability (after first fetch)
     """
-
-    # Symbol mapping for yfinance
-    SYMBOL_MAPPING = {
-        "BTC": "BTC-USD",
-        "SPX": "SPY",  # SPY ETF used as proxy for S&P 500 (^GSPC doesn't support intraday data)
-        "CL": "CL=F",
-        "DAX": "^GDAXI",
-        "ES": "ES=F",
-        "NQ": "NQ=F",
-        "QQQ": "QQQ",
-        "GC": "GC=F",
-        "VIX": "^VIX",
-        "DXY": "DX-Y.NYB",
-    }
-
-    # Timeframe mapping for yfinance
-    TIMEFRAME_MAPPING = {
-        "1m": "1m",
-        "5m": "5m",
-        "15m": "15m",
-        "30m": "30m",
-        "1h": "1h",
-        "4h": "4h",
-        "1d": "1d",
-        "1w": "1wk",
-        "1mo": "1mo",
-    }
 
     # Pandas frequency mapping
     PANDAS_FREQ_MAPPING = {
@@ -72,18 +46,19 @@ class DataProvider:
         "1mo": "1mo",
     }
 
-    # Yahoo rejects intraday requests whose start is older than 730 days
-    # ("The requested range must be within the last 730 days") and returns an
-    # empty frame. One day of margin keeps a clamped start inside the window.
-    INTRADAY_WINDOW_DAYS = {"1h": 729, "4h": 729}
-
-    def __init__(self, db_session: Session, offline: bool = False):
+    def __init__(
+        self,
+        db_session: Session,
+        source: Optional[CandleSource] = None,
+        offline: bool = False,
+    ):
         """
         Initialize DataProvider.
 
         Args:
             db_session: SQLAlchemy database session
-            offline: If True, never call out to yfinance for gaps -- only ever
+            source: CandleSource that serves the gaps (YahooSource if None)
+            offline: If True, never call the source for gaps -- only ever
                 return what's already cached. For deterministic, fixture-based
                 backtests (e.g. the `backtest run` CLI), hitting a live API
                 defeats the point (reproducibility, no network dependency) and,
@@ -91,6 +66,7 @@ class DataProvider:
                 any pre-fixture lookback window on nearly every candle.
         """
         self.db = db_session
+        self.source = source if source is not None else YahooSource()
         self.offline = offline
 
     def get_ohlc(
@@ -145,13 +121,32 @@ class DataProvider:
                 f"Found {len(missing_ranges)} gap(s) in cached data, fetching from API"
             )
 
+            now = datetime.now()
+            earliest_start = self.source.earliest(timeframe, now)
+            latest_end = self.source.latest(now)
+
             for gap_start, gap_end in missing_ranges:
-                try:
-                    api_data = self._fetch_yfinance(
-                        symbol, timeframe, gap_start, gap_end
+                if earliest_start is not None:
+                    gap_start = max(gap_start, earliest_start)
+                gap_end = min(gap_end, latest_end)
+                if gap_start >= gap_end:
+                    logger.warning(
+                        f"{symbol} ({timeframe}): gap outside what "
+                        f"{self.source.name} serves; not calling the source"
                     )
+                    continue
+
+                try:
+                    api_data = self.source.fetch(symbol, timeframe, gap_start, gap_end)
 
                     if not api_data.empty:
+                        api_data = api_data.copy()
+                        # DB stores UTC without tzinfo
+                        ts = pd.to_datetime(api_data["timestamp"])
+                        if ts.dt.tz is not None:
+                            ts = to_utc(ts, timeframe).dt.tz_localize(None)
+                        api_data["timestamp"] = ts
+
                         # Store in database
                         self._store_data(symbol, timeframe, api_data)
 
@@ -185,91 +180,6 @@ class DataProvider:
         logger.info(f"Returning {len(result)} total records")
 
         return result
-
-    def _fetch_yfinance(
-        self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
-    ) -> pd.DataFrame:
-        """
-        Fetch data from yfinance API.
-
-        Args:
-            symbol: Trading symbol
-            timeframe: Timeframe
-            start_date: Start date
-            end_date: End date
-
-        Returns:
-            DataFrame with OHLCV data
-        """
-        yf_symbol = self._to_yfinance_symbol(symbol)
-        yf_interval = self._to_yfinance_interval(timeframe)
-
-        window_days = self.INTRADAY_WINDOW_DAYS.get(timeframe)
-        if window_days is not None:
-            earliest = datetime.now() - timedelta(days=window_days)
-            if end_date <= earliest:
-                logger.warning(
-                    f"{symbol} ({timeframe}): requested range {start_date} to {end_date} "
-                    f"is entirely older than Yahoo's 730-day intraday window "
-                    f"(earliest available: {earliest}); not calling the API"
-                )
-                return pd.DataFrame(
-                    columns=["timestamp", "open", "high", "low", "close", "volume"]
-                )
-            if start_date < earliest:
-                logger.warning(
-                    f"{symbol} ({timeframe}): requested start {start_date} is older than "
-                    f"Yahoo's 730-day intraday window; truncating start to {earliest}"
-                )
-                start_date = earliest
-
-        logger.debug(f"Fetching {yf_symbol} with interval {yf_interval}")
-
-        # Fetch data from yfinance
-        ticker = yf.Ticker(yf_symbol)
-        df = ticker.history(
-            start=start_date,
-            end=end_date,
-            interval=yf_interval,
-            auto_adjust=True,
-            actions=False,
-        )
-
-        if df.empty:
-            return pd.DataFrame(
-                columns=["timestamp", "open", "high", "low", "close", "volume"]
-            )
-
-        # Reset index to get timestamp as column
-        df = df.reset_index()
-
-        # Rename columns to match our schema
-        if "Date" in df.columns:
-            df = df.rename(columns={"Date": "timestamp"})
-        elif "Datetime" in df.columns:
-            df = df.rename(columns={"Datetime": "timestamp"})
-
-        df = df.rename(
-            columns={
-                "Open": "open",
-                "High": "high",
-                "Low": "low",
-                "Close": "close",
-                "Volume": "volume",
-            }
-        )
-
-        # Select only required columns
-        df = df[["timestamp", "open", "high", "low", "close", "volume"]]
-
-        # Ensure timestamp is datetime and timezone-naive
-        df["timestamp"] = pd.to_datetime(df["timestamp"])
-
-        # Remove timezone info if present (ensure consistency with database)
-        if hasattr(df["timestamp"].dtype, "tz") and df["timestamp"].dt.tz is not None:
-            df["timestamp"] = df["timestamp"].dt.tz_localize(None)
-
-        return df
 
     def _store_data(self, symbol: str, timeframe: str, df: pd.DataFrame) -> None:
         """
@@ -401,14 +311,6 @@ class DataProvider:
         ]
 
         return pd.DataFrame(data)
-
-    def _to_yfinance_symbol(self, symbol: str) -> str:
-        """Convert custom symbol to yfinance format."""
-        return self.SYMBOL_MAPPING.get(symbol, symbol)
-
-    def _to_yfinance_interval(self, timeframe: str) -> str:
-        """Convert timeframe to yfinance interval."""
-        return self.TIMEFRAME_MAPPING.get(timeframe, "1h")
 
     def _to_pandas_freq(self, timeframe: str) -> str:
         """Convert timeframe to pandas frequency."""
