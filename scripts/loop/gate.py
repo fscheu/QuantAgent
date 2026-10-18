@@ -84,6 +84,13 @@ def active_lot(lot_prs: list[dict], target_lot: str | None = None) -> tuple[dict
     return lot, None
 
 
+def filter_loop_prs(prs: list[dict], target_lot: str | None = None) -> list[dict]:
+    """Filter loop PRs to those with baseRefName matching target_lot, or return all if None."""
+    if not target_lot:
+        return prs
+    return [p for p in prs if p.get("baseRefName") == target_lot]
+
+
 def check_ticket_eligible(ticket: str, lot_branch: str, queue_text: str, bd_data: dict | None = None) -> tuple[bool, str | None]:
     """Check if ticket is eligible for lot_branch per PLAN-CONTINUACION.md §4 rules."""
     bare = _bare_ticket(ticket)
@@ -190,6 +197,7 @@ def main() -> int:
             return EXIT_WAIT
         prs = json.loads(_gh("pr", "list", *repo, "--label", cfg["LOOP_LABEL"], "--state", "all", "--limit", "30",
                              "--json", fields))
+        prs = filter_loop_prs(prs, target_lot)
 
         def get_detail(number: int) -> dict:
             d = json.loads(_gh("pr", "view", str(number), *repo, "--json", "commits,comments,reviews,body"))
