@@ -21,6 +21,11 @@ MIN_ACTIVOS_PIERNA = 6
 VENTANA_VOLATILIDAD = 252  # sesiones; constante fija, 0 parámetros libres
 
 
+def es_transversal(clase):
+    """True si `clase` es una métrica transversal registrada (no una `TradingStrategy` de `registry.py`)."""
+    return clase in METRICAS
+
+
 def baja_volatilidad(cierres):
     """-σ de los retornos diarios de las últimas 252 sesiones (Ang et al. 2006): el más calmo puntúa más alto.
 
