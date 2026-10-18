@@ -64,3 +64,21 @@ def render_informe(d, hipotesis=None):
         f"<p>Intentos registrados: {d['intentos']}. Prueba abierta: {'sí' if d['prueba_abierta'] else 'no'}.</p>"
         f"<h2>Glosario</h2><dl>{gl}</dl></html>"
     )
+
+
+def render_comparacion(c, id_nucleo, id_capa):
+    """Informe HTML de `hipotesis comparar`: las dos carteras, los deltas y las dos cuentas de N."""
+    def f(v):
+        return "—" if v is None else f"{v:.4f}"
+    return (
+        f"<!doctype html><html lang='es'><meta charset='utf-8'><title>Comparación {escape(id_nucleo)} y {escape(id_capa)}</title>"
+        "<style>body{font:16px sans-serif;max-width:50em;margin:2em auto}td,th{padding:.2em .8em}</style>"
+        f"<h1>{escape(id_nucleo)} contra {escape(id_capa)}</h1>"
+        f"<h2>Veredicto de la capa: {escape(c['veredicto'])}</h2><p>{escape(c['motivo'])}</p>"
+        "<table><tr><th></th><th>Sharpe</th><th>DSR</th></tr>"
+        f"<tr><td>Núcleo</td><td>{f(c['sharpe_nucleo'])}</td><td>{f(c['dsr_nucleo'])}</td></tr>"
+        f"<tr><td>Núcleo + capa</td><td>{f(c['sharpe_capa'])}</td><td>{f(c['dsr_capa'])}</td></tr>"
+        f"<tr><td>Diferencia</td><td>{c['delta_sharpe']:+.4f}</td><td>{f(c['delta_dsr'])}</td></tr></table>"
+        f"<p>N de intentos: {c['n_con_capa']} contando la capa, {c['n_sin_capa']} sin ella. "
+        f"Margen de aceptación: {c['margen']}.</p></html>"
+    )

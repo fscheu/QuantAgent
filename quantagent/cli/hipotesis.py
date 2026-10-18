@@ -12,14 +12,15 @@ import click
 import pandas as pd
 from tabulate import tabulate
 
-from quantagent.data.snapshot import SnapshotError, read_snapshot
+from quantagent.data.snapshot import SnapshotError, read_snapshot, snapshot_root
 from quantagent.fabrica.admision import admitir
 from quantagent.fabrica.candado import CandadoError, abrir, fecha_apertura
 from quantagent.fabrica.cartera import evaluar_cartera
+from quantagent.fabrica.comparar import comparar
 from quantagent.fabrica.estado import registrar_estado, resumen_tanda, ultimo_estado
 from quantagent.fabrica.filtro import filtrar_activo, parametros_elegidos, veredicto_etapa1
 from quantagent.fabrica.hipotesis import cargar_hipotesis
-from quantagent.fabrica.informe import datos_informe, render_informe
+from quantagent.fabrica.informe import datos_informe, render_comparacion, render_informe
 from quantagent.fabrica.validacion import (
     alarma_cartera,
     alarma_filtro_motor,
@@ -262,3 +263,44 @@ def informe_command(hipotesis_id, out, archivo):
         raise click.ClickException(str(exc)) from exc
     Path(out).write_text(html, encoding="utf-8")
     click.echo(f"Informe en {out}")
+
+
+def correr_cartera(archivo, snapshot_name, desde, hasta, carpeta):
+    """Corre una cartera con los parámetros de su YAML y registra una fila en intentos.csv; devuelve su curva."""
+    from quantagent.fabrica.validacion import _curva_y_v30_cartera, correr_motor
+
+    h = cargar_hipotesis(archivo)
+    params = {(p.clase, a): p.parametros for p in h.piernas for a in p.activos}
+    carpeta = Path(carpeta) / h.id
+    filas = correr_motor(h, snapshot_name, params, desde, hasta, carpeta, "comparar")
+    eq, _, motivos = _curva_y_v30_cartera(h, filas, carpeta, snapshot_name, "comparar", desde, hasta)
+    if eq is None:
+        raise ValueError(f"{h.id}: {'; '.join(motivos)}")
+    return h.id, eq
+
+
+@hipotesis_group.command("comparar", help="Comparar una cartera núcleo con la misma más una capa (ΔSharpe, ΔDSR).")
+@click.argument("nucleo", type=click.Path(exists=True, dir_okay=False))
+@click.argument("con_capa", type=click.Path(exists=True, dir_okay=False))
+@click.option("--snapshot", "snapshot_name", required=True)
+@click.option("--carpeta", type=click.Path(file_okay=False), required=True)
+@click.option("--margen", type=float, required=True, help="ΔDSR mínimo para aceptar la capa; lo fija Fede antes de correr.")
+@click.option("--desde", default="2007-01-01", show_default=True)
+@click.option("--hasta", default="2018-12-31", show_default=True)
+@click.option("--out", type=click.Path(dir_okay=False), help="Informe HTML de la comparación.")
+def comparar_command(nucleo, con_capa, snapshot_name, carpeta, margen, desde, hasta, out):
+    if hasta >= "2019-01-01":
+        raise click.ClickException("La comparación no corre sobre la prueba (desde 2019-01-01)")
+    try:
+        id_n, eq_n = correr_cartera(nucleo, snapshot_name, desde, hasta, carpeta)
+        id_c, eq_c = correr_cartera(con_capa, snapshot_name, desde, hasta, carpeta)
+        c = comparar(eq_n, eq_c, snapshot_root() / "intentos.csv", margen)
+    except (ValueError, SnapshotError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(f"{id_n} Sharpe {c['sharpe_nucleo']:.4f} DSR {c['dsr_nucleo']}; "
+               f"{id_c} Sharpe {c['sharpe_capa']:.4f} DSR {c['dsr_capa']}")
+    click.echo(f"ΔSharpe {c['delta_sharpe']:+.4f}; N {c['n_con_capa']} con la capa, {c['n_sin_capa']} sin ella")
+    click.echo(f"Veredicto de la capa: {c['veredicto']} ({c['motivo']})")
+    if out:
+        Path(out).write_text(render_comparacion(c, id_n, id_c), encoding="utf-8")
+    raise click.exceptions.Exit(int(c["veredicto"] != "ACEPTA"))
