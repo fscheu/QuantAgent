@@ -2,7 +2,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from quantagent.fabrica.criterio import anios_positivos, sharpe_por_anio
+from quantagent.fabrica.criterio import (
+    AniosPositivos,
+    RecargoPaper,
+    anios_positivos,
+    recargo_paper,
+    sharpe_por_anio,
+)
 
 
 def _generar_curva(anios_suben=(2019, 2020, 2022), anios_bajan=(2021,), sesiones=250):
@@ -43,3 +49,29 @@ def test_curva_ya_calculada_sin_lectura_datos():
     ap = anios_positivos(vals, fechas=dias)
     assert ap == (1, 1)
     assert ap.positivos == 1 and ap.totales == 1
+
+
+def test_recargo_paper_tramos_y_bordes():
+    # Tramo 1: DSR < 0.50
+    assert recargo_paper(0.0) == (50, 12)
+    assert recargo_paper(0.49) == (50, 12)
+
+    # Borde 0.50 y Tramo 2: 0.50 <= DSR < 0.95
+    assert recargo_paper(0.50) == (75, 6)
+    assert recargo_paper(0.70) == (75, 6)
+    assert recargo_paper(0.949) == (75, 6)
+
+    # Borde 0.95 y Tramo 3: DSR >= 0.95
+    assert recargo_paper(0.95) == (100, 0)
+    assert recargo_paper(1.0) == (100, 0)
+
+    # Atributos NamedTuple y desempaque
+    res = recargo_paper(0.50)
+    assert res.tamano_pct == 75 and res.semanas == 6
+    tamano, semanas = res
+    assert (tamano, semanas) == (75, 6)
+
+
+def test_recargo_paper_none_y_nan():
+    assert recargo_paper(None) == (50, 12)
+    assert recargo_paper(float("nan")) == (50, 12)

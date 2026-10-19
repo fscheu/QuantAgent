@@ -1,4 +1,5 @@
 """Criterio de evaluación de curvas de equity (holdout y sub-períodos)."""
+import math
 import warnings
 from typing import NamedTuple
 
@@ -12,6 +13,20 @@ MIN_SESIONES = 30
 class AniosPositivos(NamedTuple):
     positivos: int
     totales: int
+
+
+class RecargoPaper(NamedTuple):
+    tamano_pct: int
+    semanas: int
+
+
+def recargo_paper(dsr: float | None) -> RecargoPaper:
+    """Devuelve (tamano_pct, semanas) de paper trading según el DSR."""
+    if dsr is None or math.isnan(dsr) or dsr < 0.50:
+        return RecargoPaper(50, 12)
+    if dsr < 0.95:
+        return RecargoPaper(75, 6)
+    return RecargoPaper(100, 0)
 
 
 def sharpe_por_anio(equity, fechas=None, risk_free_rate: float = 0.0) -> dict[int, float]:
