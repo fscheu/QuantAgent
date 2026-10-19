@@ -86,6 +86,10 @@ class Hipotesis:
     def universo(self) -> str:
         return self.piernas[0].universo
 
+    @property
+    def es_cartera(self) -> bool:
+        return len(self.piernas) > 1 or self.id.startswith("cartera-")
+
     def combinaciones(self) -> list[dict[str, Any]]:
         return self.piernas[0].combinaciones()
 

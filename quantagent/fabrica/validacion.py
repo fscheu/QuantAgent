@@ -56,7 +56,7 @@ def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, a
                 pd.DataFrame({"timestamp": cierres.index, "posicion": paneles_trans[p.clase][a].values}).to_csv(
                     carpeta / f"senal-{p.clase}-{a}.csv", index=False)
     celdas = [(p.clase, a, params_por_activo.get((p.clase, a), {}))
-              for p in h.piernas for a in p.activos] if len(h.piernas) > 1 else [
+              for p in h.piernas for a in p.activos] if h.es_cartera else [
               (h.clase, a, p) for a, p in params_por_activo.items()]
     with TemporaryDirectory() as temporal:
         params_path = Path(temporal) / "params.json"
@@ -66,7 +66,7 @@ def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, a
             strat_cli = "senal-externa" if es_trans else strat
             cli_params = {"ruta": str(csv_path)} if es_trans else params
             params_path.write_text(json.dumps({strat_cli: cli_params}), encoding="utf-8")
-            out = carpeta / (f"{strat}-{activo}.csv" if len(h.piernas) > 1 else f"{activo}.csv")
+            out = carpeta / (f"{strat}-{activo}.csv" if h.es_cartera else f"{activo}.csv")
             comando = [
                 sys.executable, "-m", "quantagent.cli", "backtest", "compare",
                 "--strategies", strat_cli, "--symbols", activo, "--snapshot", snapshot,
@@ -88,7 +88,7 @@ def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, a
                         shutil.copy(src, carpeta / sub / f"{strat}-{activo}.csv")
                 fila["pierna_clase"] = strat
                 fila["ruta_senal"] = str(csv_path)
-            if len(h.piernas) <= 1 and not es_trans:
+            if not h.es_cartera and not es_trans:
                 fila_intento = {**fila, "sharpe": fila["sharpe_tasa_0"]}
                 registrar_intento(strat, activo, snapshot, "etf", 1.0, params, fila_intento,
                                   hipotesis=h.id, etapa=etapa, sharpe_base="tasa_0")
@@ -170,7 +170,7 @@ def validar_etapa2(h, snapshot, params_por_activo, carpeta):
                 if src_tr.exists():
                     shutil.copy(src_tr, Path(carpeta) / "trades" / f"senal-externa-{activo}.csv")
             else:
-                params = params_por_activo.get((strat, activo), {}) if len(h.piernas) > 1 else params_por_activo.get(activo, {})
+                params = params_por_activo.get((strat, activo), {}) if h.es_cartera else params_por_activo.get(activo, {})
             params_path.write_text(json.dumps({strat: params}), encoding="utf-8")
             tabla = Path(carpeta) / (f"{clase}-{activo}.csv" if (Path(carpeta) / f"{clase}-{activo}.csv").exists() else f"{activo}.csv")
             resultado = subprocess.run([
@@ -193,7 +193,7 @@ def validar_etapa2(h, snapshot, params_por_activo, carpeta):
                 if not fila["control"].startswith("coinciden"):
                     motivos.append(fila["control"])
                 fila["motivos"] = [f"{activo}: {motivo}" for motivo in motivos]
-    if len(h.piernas) > 1:
+    if h.es_cartera:
         pasa_cartera, motivos_cartera = evaluar_etapa2_cartera(h, filas, carpeta, snapshot)
         pasa = all(f["control"].startswith("coinciden") for f in filas) and pasa_cartera
         if not pasa_cartera:
@@ -208,7 +208,7 @@ def validar_etapa3(h, snapshot, params_por_activo, carpeta):
     """Valida la prueba; el llamador debe abrir el candado antes de invocar."""
     filas = correr_motor(h, snapshot, params_por_activo, "2019-01-01", "2022-12-31",
                          carpeta, "3", abrir_prueba=True)
-    if len(h.piernas) > 1:
+    if h.es_cartera:
         eq_cartera, pasa_v30, motivos = _curva_y_v30_cartera(
             h, filas, carpeta, snapshot, "3", "2019-01-01", "2022-12-31"
         )
