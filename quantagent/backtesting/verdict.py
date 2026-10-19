@@ -77,8 +77,23 @@ def sharpe_deflactado(sr, n_intentos, var_sr_intentos, n_obs, asimetria, curtosi
     return float(norm.cdf((sr - sr0) * sqrt(n_obs - 1) / denominador))
 
 
-def dsr_contra_intentos(equity, intentos_path) -> float | None:
-    """Sharpe deflactado de una curva contra el registro `intentos.csv` (N = filas válidas)."""
+def n_efectivo(filas) -> int:
+    """Cuenta intentos distintos por (estrategia, params, activo, desde, hasta)."""
+    distintos = {
+        (
+            f.get("estrategia"),
+            f.get("params"),
+            f.get("activo"),
+            f.get("desde"),
+            f.get("hasta"),
+        )
+        for f in filas
+    }
+    return len(distintos)
+
+
+def dsr_contra_intentos(equity, intentos_path, n_intentos: int | None = None) -> float | None:
+    """Sharpe deflactado de una curva contra el registro `intentos.csv` (N = filas válidas o n_intentos)."""
     curva = np.asarray(equity, dtype=float)
     retornos = curva[1:] / curva[:-1] - 1
     if len(retornos) < 3 or np.std(retornos, ddof=1) == 0:
@@ -106,7 +121,9 @@ def dsr_contra_intentos(equity, intentos_path) -> float | None:
     sharpes_var = sharpes_tasa_0 if len(sharpes_tasa_0) >= 2 else sharpes
     var_sr = float(np.var(sharpes_var, ddof=1)) if len(sharpes_var) >= 2 else 0.0
     sr = float(np.mean(retornos) / np.std(retornos, ddof=1))
+    n = max(n_intentos if n_intentos is not None else len(filas_validas), 1)
     return sharpe_deflactado(
-        sr, max(len(filas_validas), 1), var_sr, len(retornos),
+        sr, n, var_sr, len(retornos),
         float(skew(retornos)), float(kurtosis(retornos, fisher=False)),
     )
+

@@ -8,7 +8,7 @@ import pytest
 from click.testing import CliRunner
 from scipy.stats import t
 
-from quantagent.backtesting.verdict import dsr_contra_intentos, evaluar, montecarlo_bloques, p_valor_retornos, sharpe_deflactado
+from quantagent.backtesting.verdict import dsr_contra_intentos, evaluar, montecarlo_bloques, n_efectivo, p_valor_retornos, sharpe_deflactado
 from quantagent.cli.backtest import backtest_group
 from quantagent.cli.verdict import COLUMNAS
 
@@ -301,4 +301,42 @@ def test_dsr_contra_intentos_ignora_sharpe_absurdo_inf_y_sintetico(tmp_path):
     dsr = dsr_contra_intentos(EQUITY_DSR, limpio)
     assert dsr is not None
     assert dsr_contra_intentos(EQUITY_DSR, contaminado) == pytest.approx(dsr, abs=1e-12)
+
+
+def test_n_efectivo_cuenta_intentos_distintos():
+    filas = [
+        {"estrategia": "rsi", "params": '{"p": 14}', "activo": "SPY", "desde": "2010-01-01", "hasta": "2015-01-01"},
+        {"estrategia": "rsi", "params": '{"p": 14}', "activo": "SPY", "desde": "2010-01-01", "hasta": "2015-01-01"},
+        {"estrategia": "rsi", "params": '{"p": 20}', "activo": "SPY", "desde": "2010-01-01", "hasta": "2015-01-01"},
+        {"estrategia": "rsi", "params": '{"p": 14}', "activo": "QQQ", "desde": "2010-01-01", "hasta": "2015-01-01"},
+        {"estrategia": "sma", "params": '{"p": 14}', "activo": "SPY", "desde": "2010-01-01", "hasta": "2015-01-01"},
+    ]
+    assert len(filas) == 5
+    assert n_efectivo(filas) == 4
+
+
+def test_n_efectivo_dos_corridas_misma_cartera_tres_etapas_cuentan_como_tres():
+    cartera_etapa1 = {"estrategia": "cartera_primas", "params": '{"v": 1}', "activo": "PORTFOLIO", "desde": "2007-01-01", "hasta": "2014-12-31"}
+    cartera_etapa2 = {"estrategia": "cartera_primas", "params": '{"v": 1}', "activo": "PORTFOLIO", "desde": "2015-01-01", "hasta": "2018-12-31"}
+    cartera_etapa3 = {"estrategia": "cartera_primas", "params": '{"v": 1}', "activo": "PORTFOLIO", "desde": "2019-01-01", "hasta": "2022-12-31"}
+    filas = [
+        cartera_etapa1,
+        cartera_etapa2,
+        cartera_etapa3,
+        cartera_etapa1.copy(),
+        cartera_etapa2.copy(),
+        cartera_etapa3.copy(),
+    ]
+    assert len(filas) == 6
+    assert n_efectivo(filas) == 3
+
+
+def test_dsr_contra_intentos_parametro_n_intentos(tmp_path):
+    path = _intentos(tmp_path / "intentos.csv", [0.5, 1.0, 1.5, 0.8, 1.2])
+    dsr_crudo = dsr_contra_intentos(EQUITY_DSR, path)
+    dsr_k_menor = dsr_contra_intentos(EQUITY_DSR, path, n_intentos=3)
+    assert dsr_crudo is not None and dsr_k_menor is not None
+    assert dsr_k_menor >= dsr_crudo
+    assert dsr_contra_intentos(EQUITY_DSR, path, n_intentos=5) == pytest.approx(dsr_crudo, abs=1e-12)
+
 
