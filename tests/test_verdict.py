@@ -290,3 +290,31 @@ def test_dsr_contra_intentos_ignora_tasa_libre_con_suficientes_tasa_0(tmp_path):
     esperado = sharpe_deflactado(sr, 5, var_sr_tasa_0, 6, (z**3).mean(), (z**4).mean())
     assert dsr_contra_intentos(EQUITY_DSR, path) == pytest.approx(esperado, abs=1e-9)
 
+
+def test_dsr_contra_intentos_ignora_sharpe_absurdo_inf_y_sintetico(tmp_path):
+    limpio = tmp_path / "limpio.csv"
+    with open(limpio, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["estrategia", "snapshot", "sharpe", "sharpe_base"])
+        w.writerows([
+            ["s", "real", 0.5, "tasa_0"],
+            ["s", "real", 1.0, "tasa_0"],
+            ["s", "real", 1.5, "tasa_0"],
+        ])
+    contaminado = tmp_path / "contaminado.csv"
+    with open(contaminado, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["estrategia", "snapshot", "sharpe", "sharpe_base"])
+        w.writerows([
+            ["s", "real", 0.5, "tasa_0"],
+            ["s", "real", 1.0, "tasa_0"],
+            ["s", "real", 1.5, "tasa_0"],
+            ["s", "real", "1e13", "tasa_0"],
+            ["s", "real", "inf", "tasa_0"],
+            ["s", "sintetico", 0.8, "tasa_0"],
+        ])
+    dsr_limpio = dsr_contra_intentos(EQUITY_DSR, limpio)
+    dsr_contaminado = dsr_contra_intentos(EQUITY_DSR, contaminado)
+    assert dsr_limpio is not None
+    assert dsr_contaminado == pytest.approx(dsr_limpio, abs=1e-12)
+

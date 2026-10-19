@@ -405,6 +405,19 @@ def ensure_default_llm_api_keys(monkeypatch):
         monkeypatch.setattr(qa_settings, key, current, raising=False)
 
 
+def isolate_snapshot_dir(tmp_path, monkeypatch, request):
+    """Apunta QUANTAGENT_SNAPSHOT_DIR a tmp_path salvo tests marcados con snapshot."""
+    if request.node.get_closest_marker("snapshot"):
+        return
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+
+
+@pytest.fixture(autouse=True)
+def _isolate_snapshot_dir(tmp_path, monkeypatch, request):
+    """Apunta QUANTAGENT_SNAPSHOT_DIR a tmp_path en toda la suite (salvo tests con snapshot real)."""
+    isolate_snapshot_dir(tmp_path, monkeypatch, request)
+
+
 # ============================================================================
 # LLM Mock Fixtures
 # ============================================================================
