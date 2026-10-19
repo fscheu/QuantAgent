@@ -92,3 +92,37 @@ def test_cli_rechaza_ventana_de_prueba(tmp_path):
         "comparar", str(tmp_path / "a.yaml"), str(tmp_path / "a.yaml"), "--snapshot", "s",
         "--carpeta", str(tmp_path), "--margen", "0", "--hasta", "2022-12-31"])
     assert r.exit_code != 0 and "prueba" in r.output
+
+
+def test_correr_cartera_desempaqueta_parametros_escalares(tmp_path, monkeypatch):
+    """Verifica que correr_cartera extrae parámetros escalares de p.combinaciones() en vez de pasar listas."""
+    yaml_path = tmp_path / "cartera.yaml"
+    yaml_path.write_text("""id: test-cartera
+autor: fede
+justificacion: prueba unitaria
+timeframe: 1d
+piernas:
+  - clase: sma-cross
+    parametros:
+      fast: [1]
+      slow: [210]
+    activos: [SPY]
+    universo: prueba
+""")
+    capturados = {}
+
+    def fake_correr_motor(h, snapshot, params, desde, hasta, carpeta, etapa):
+        capturados.update(params)
+        return [{"activo": "SPY", "trades": "5"}]
+
+    def fake_curva(h, filas, carpeta, snapshot, etapa, desde, hasta):
+        idx = pd.bdate_range("2007-01-01", periods=10)
+        return pd.Series(100_000.0, index=idx), True, []
+
+    monkeypatch.setattr("quantagent.fabrica.validacion.correr_motor", fake_correr_motor)
+    monkeypatch.setattr("quantagent.fabrica.validacion._curva_y_v30_cartera", fake_curva)
+
+    id_, eq = hipotesis.correr_cartera(str(yaml_path), "snap", "2007-01-01", "2018-12-31", str(tmp_path))
+    assert id_ == "test-cartera"
+    assert capturados == {("sma-cross", "SPY"): {"fast": 1, "slow": 210}}
+

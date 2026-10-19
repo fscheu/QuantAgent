@@ -270,8 +270,9 @@ def correr_cartera(archivo, snapshot_name, desde, hasta, carpeta):
     from quantagent.fabrica.validacion import _curva_y_v30_cartera, correr_motor
 
     h = cargar_hipotesis(archivo)
-    params = {(p.clase, a): p.parametros for p in h.piernas for a in p.activos}
+    params = {(p.clase, a): (p.combinaciones()[0] if p.parametros else {}) for p in h.piernas for a in p.activos}
     carpeta = Path(carpeta) / h.id
+
     filas = correr_motor(h, snapshot_name, params, desde, hasta, carpeta, "comparar")
     eq, _, motivos = _curva_y_v30_cartera(h, filas, carpeta, snapshot_name, "comparar", desde, hasta)
     if eq is None:
@@ -293,8 +294,26 @@ def comparar_command(nucleo, con_capa, snapshot_name, carpeta, margen, desde, ha
         raise click.ClickException("La comparación no corre sobre la prueba (desde 2019-01-01)")
     try:
         id_n, eq_n = correr_cartera(nucleo, snapshot_name, desde, hasta, carpeta)
+        try:
+            id_con_capa = cargar_hipotesis(con_capa).id
+        except Exception:
+            id_con_capa = None
+        dir_n = Path(carpeta) / id_n
+        if id_con_capa and dir_n.exists():
+            import shutil
+            dir_c = Path(carpeta) / id_con_capa
+            for sub in ["", "trades", "equity"]:
+                src_sub = dir_n / sub if sub else dir_n
+                dst_sub = dir_c / sub if sub else dir_c
+                dst_sub.mkdir(parents=True, exist_ok=True)
+                for f in src_sub.glob("*.csv"):
+                    dst_file = dst_sub / f.name
+                    if not dst_file.exists():
+                        shutil.copy2(f, dst_file)
         id_c, eq_c = correr_cartera(con_capa, snapshot_name, desde, hasta, carpeta)
+
         c = comparar(eq_n, eq_c, snapshot_root() / "intentos.csv", margen)
+
     except (ValueError, SnapshotError) as exc:
         raise click.ClickException(str(exc)) from exc
     click.echo(f"{id_n} Sharpe {c['sharpe_nucleo']:.4f} DSR {c['dsr_nucleo']}; "

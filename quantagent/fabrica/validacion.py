@@ -51,18 +51,21 @@ def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, a
         for strat, activo, params in celdas:
             params_path.write_text(json.dumps({strat: params}), encoding="utf-8")
             out = carpeta / (f"{strat}-{activo}.csv" if len(h.piernas) > 1 else f"{activo}.csv")
-            comando = [
-                sys.executable, "-m", "quantagent.cli", "backtest", "compare",
-                "--strategies", strat, "--symbols", activo, "--snapshot", snapshot,
-                "--from", str(desde), "--to", str(hasta), "--costos", "etf",
-                "--llenado", "apertura", "--params", str(params_path), "--out", str(out),
-                "--trades-dir", str(carpeta / "trades"), "--equity-dir", str(carpeta / "equity"),
-            ]
-            if abrir_prueba:
-                comando.append("--abrir-prueba")
-            resultado = subprocess.run(comando, capture_output=True, text=True)
-            if resultado.returncode:
-                raise RuntimeError(resultado.stderr)
+            eq_out = carpeta / "equity" / (f"{strat}-{activo}.csv" if len(h.piernas) > 1 else f"{activo}.csv")
+            if not (out.exists() and eq_out.exists()):
+                comando = [
+                    sys.executable, "-m", "quantagent.cli", "backtest", "compare",
+                    "--strategies", strat, "--symbols", activo, "--snapshot", snapshot,
+                    "--from", str(desde), "--to", str(hasta), "--costos", "etf",
+                    "--llenado", "apertura", "--params", str(params_path), "--out", str(out),
+                    "--trades-dir", str(carpeta / "trades"), "--equity-dir", str(carpeta / "equity"),
+                ]
+                if abrir_prueba:
+                    comando.append("--abrir-prueba")
+                resultado = subprocess.run(comando, capture_output=True, text=True)
+                if resultado.returncode:
+                    raise RuntimeError(resultado.stderr)
+
             with out.open(newline="") as f:
                 fila = next(csv.DictReader(f))
             if len(h.piernas) <= 1:

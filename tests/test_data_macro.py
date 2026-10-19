@@ -81,6 +81,11 @@ def test_cli_create_y_verify(tmp_path, monkeypatch):
     assert "2 series, 3 filas" in creado.output
     ok = runner.invoke(data_group, ["macro", "verify", "m"])
     assert ok.exit_code == 0 and ok.output.strip() == "OK 2 series, 3 filas"
+    ok_opt = runner.invoke(data_group, ["macro", "verify", "--name", "m"])
+    assert ok_opt.exit_code == 0 and ok_opt.output.strip() == "OK 2 series, 3 filas"
+    sin_nombre = runner.invoke(data_group, ["macro", "verify"])
+    assert sin_nombre.exit_code == 1 and "Falta el nombre" in sin_nombre.output
+
     (tmp_path / "m" / "UNRATE.parquet").write_bytes(b"roto")
     mal = runner.invoke(data_group, ["macro", "verify", "m"])
     assert mal.exit_code == 1 and "UNRATE" in mal.output

@@ -132,10 +132,15 @@ def create_macro(name: str, series: str) -> None:
 
 
 @macro_group.command("verify", help="Recalcula los hashes contra el manifiesto.")
-@click.argument("name")
-def verify_macro(name: str) -> None:
+@click.argument("name_arg", required=False, default=None)
+@click.option("--name", default=None)
+def verify_macro(name_arg: Optional[str], name: Optional[str]) -> None:
+    snapshot_name = name or name_arg
+    if not snapshot_name:
+        raise click.ClickException("Falta el nombre del snapshot macro (--name o argumento)")
     try:
-        series = verificar_snapshot_macro(name)["series"]
+        series = verificar_snapshot_macro(snapshot_name)["series"]
     except SnapshotError as exc:
         raise click.ClickException(str(exc))
     click.echo(f"OK {len(series)} series, {sum(i['rows'] for i in series.values())} filas")
+
