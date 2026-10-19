@@ -17,9 +17,15 @@ from quantagent.fabrica.admision import admitir
 from quantagent.fabrica.candado import CandadoError, abrir, fecha_apertura
 from quantagent.fabrica.cartera import evaluar_cartera
 from quantagent.fabrica.estado import registrar_estado, resumen_tanda, ultimo_estado
-from quantagent.fabrica.filtro import filtrar_activo, parametros_elegidos, veredicto_etapa1
+from quantagent.fabrica.filtro import (
+    filtrar_activo,
+    filtrar_pierna,
+    parametros_elegidos,
+    veredicto_etapa1,
+)
 from quantagent.fabrica.hipotesis import cargar_hipotesis
 from quantagent.fabrica.informe import datos_informe, render_informe
+from quantagent.fabrica.transversal import es_transversal
 from quantagent.fabrica.validacion import (
     alarma_cartera,
     alarma_filtro_motor,
@@ -95,7 +101,12 @@ def admitir_hipotesis(archivo, snapshot_name, prueba_unica=False):
         if velas.empty:
             raise ValueError("Sin velas entre 2007 y 2018")
         velas = velas.rename_axis("timestamp").reset_index().set_index("timestamp", drop=False)
-        ok, motivos = admitir(h, velas)
+        if any(es_transversal(p.clase) for p in h.piernas):
+            activos = sorted({a for p in h.piernas if es_transversal(p.clase) for a in p.activos})
+            cierres = pd.DataFrame({a: read_snapshot(snapshot_name, a)["close"].loc["2007-01-01":"2018-12-31"] for a in activos})
+            ok, motivos = admitir(h, velas, cierres=cierres)
+        else:
+            ok, motivos = admitir(h, velas)
     except (ValueError, SnapshotError) as exc:
         raise click.ClickException(str(exc)) from exc
     if prueba_unica:
@@ -118,21 +129,41 @@ def filtrar_hipotesis(h, snapshot_name):
     total_trades, piernas_map = 0, {}
     for i, p in enumerate(h.piernas):
         piernas_map[i] = list(p.activos)
-        for activo in p.activos:
-            try:
-                v = read_snapshot(snapshot_name, activo).loc["2007-01-01":"2018-12-31"]
-                if v.empty:
-                    raise ValueError("Sin velas entre 2007 y 2018")
-                cierres_dict[activo] = v["close"]
-                r = filtrar_activo(p, v.rename_axis("timestamp").reset_index(), costos=COSTOS_PERFILES["etf"], capital=100_000.0)
-            except (ValueError, SnapshotError) as exc:
-                raise click.ClickException(str(exc)) from exc
-            resultados.append([activo, r["sharpe_tasa_0"], r["trades"]])
-            filas_tabla.append([p.clase, activo, r["sharpe_tasa_0"], r["trades"]] if len(h.piernas) > 1 else [activo, r["sharpe_tasa_0"], r["trades"]])
-            retornos_dict[(i, activo)] = r["retornos"]
+        if es_transversal(p.clase):
+            paneles = {}
+            for activo in p.activos:
+                try:
+                    v = read_snapshot(snapshot_name, activo).loc["2007-01-01":"2018-12-31"]
+                    if v.empty:
+                        raise ValueError("Sin velas entre 2007 y 2018")
+                    cierres_dict[activo] = v["close"]
+                    paneles[activo] = v.rename_axis("timestamp").reset_index()
+                except (ValueError, SnapshotError) as exc:
+                    raise click.ClickException(str(exc)) from exc
+            r = filtrar_pierna(h, p, paneles, costos=COSTOS_PERFILES["etf"], capital=100_000.0)
             total_trades += r["trades"]
-            clave = (p.clase, activo) if len(h.piernas) > 1 else activo
-            parametros[clave] = parametros_elegidos(r["ganadores"])
+            params = parametros_elegidos(r["ganadores"]) if r["ganadores"] else {}
+            for activo in p.activos:
+                retornos_dict[i, activo] = r["retornos"][(i, activo)]
+                parametros[(p.clase, activo) if h.es_cartera else activo] = params
+                resultados.append([activo, r["sharpe_tasa_0"], r["trades"]])
+                filas_tabla.append([p.clase, activo, r["sharpe_tasa_0"], r["trades"]] if h.es_cartera else [activo, r["sharpe_tasa_0"], r["trades"]])
+        else:
+            for activo in p.activos:
+                try:
+                    v = read_snapshot(snapshot_name, activo).loc["2007-01-01":"2018-12-31"]
+                    if v.empty:
+                        raise ValueError("Sin velas entre 2007 y 2018")
+                    cierres_dict[activo] = v["close"]
+                    r = filtrar_activo(p, v.rename_axis("timestamp").reset_index(), costos=COSTOS_PERFILES["etf"], capital=100_000.0)
+                except (ValueError, SnapshotError) as exc:
+                    raise click.ClickException(str(exc)) from exc
+                resultados.append([activo, r["sharpe_tasa_0"], r["trades"]])
+                filas_tabla.append([p.clase, activo, r["sharpe_tasa_0"], r["trades"]] if h.es_cartera else [activo, r["sharpe_tasa_0"], r["trades"]])
+                retornos_dict[(i, activo)] = r["retornos"]
+                total_trades += r["trades"]
+                clave = (p.clase, activo) if h.es_cartera else activo
+                parametros[clave] = parametros_elegidos(r["ganadores"])
     sharpe_car = evaluar_cartera(pd.DataFrame(cierres_dict), piernas_map, retornos_dict)
     veredicto, motivo = veredicto_etapa1(sharpe_car, total_trades)
     combo = h.parametros if len(h.piernas) == 1 else {p.clase: p.parametros for p in h.piernas}
@@ -179,6 +210,13 @@ def filtrar_command(archivo, snapshot_name, out):
     click.echo(f"{veredicto} ({motivo})")
 
 
+def motivo_error(exc):
+    """Motivo de ERROR con la última línea no vacía de la excepción, truncada a 200."""
+    lineas = [linea.strip() for linea in str(exc).splitlines() if linea.strip()]
+    ultima = lineas[-1] if lineas else ""
+    return f"{type(exc).__name__}: {ultima}"[:200]
+
+
 @hipotesis_group.command("correr", help="Ejecutar las etapas 0 a 3, con corte temprano y estado.")
 @click.argument("archivo", type=click.Path(exists=True, dir_okay=False))
 @click.option("--snapshot", "snapshot_name", required=True)
@@ -200,11 +238,11 @@ def correr_command(archivo, snapshot_name, carpeta):
             try:
                 veredicto, filas = validar_etapa2(h, snapshot_name, parametros, carpeta)
             except Exception as exc:
-                registrar_estado(h.id, "2", "ERROR", f"{type(exc).__name__}: {exc}"[:200])
+                registrar_estado(h.id, "2", "ERROR", motivo_error(exc))
                 raise
             etapa = "2"
             motivos = [m for fila in filas for m in fila["motivos"]]
-            if len(h.piernas) > 1:
+            if h.es_cartera:
                 motivo = "; ".join(dict.fromkeys(motivos)) if motivos else f"cartera pasa V30; control coincide en {len(filas)} de {len(filas)}"
                 if veredicto == "PASA":
                     sharpe_motor = filas[0].get("sharpe_cartera") if filas else None
@@ -232,13 +270,13 @@ def correr_command(archivo, snapshot_name, carpeta):
                     try:
                         veredicto, filas = validar_etapa3(h, snapshot_name, parametros, Path(carpeta) / "etapa3")
                     except Exception as exc:
-                        registrar_estado(h.id, "3", "ERROR", f"{type(exc).__name__}: {exc}"[:200])
+                        registrar_estado(h.id, "3", "ERROR", motivo_error(exc))
                         raise
-                    headers = ["pierna", "activo", "V30", "DSR"] if len(h.piernas) > 1 else ["activo", "V30", "DSR"]
-                    filas_tab = [[f.get("estrategia", ""), f["activo"], f["v30"], f["dsr"]] if len(h.piernas) > 1 else [f["activo"], f["v30"], f["dsr"]] for f in filas]
+                    headers = ["pierna", "activo", "V30", "DSR"] if h.es_cartera else ["activo", "V30", "DSR"]
+                    filas_tab = [[f.get("estrategia", ""), f["activo"], f["v30"], f["dsr"]] if h.es_cartera else [f["activo"], f["v30"], f["dsr"]] for f in filas]
                     click.echo(tabulate(filas_tab, headers=headers, tablefmt="github"))
                     motivos = [m for f in filas for m in f["motivos"]]
-                    if len(h.piernas) > 1:
+                    if h.es_cartera:
                         motivo = "; ".join(dict.fromkeys(motivos)) if motivos else "cartera pasa V30 y DSR"
                     else:
                         motivo = "; ".join(motivos)

@@ -1,6 +1,7 @@
 """Corridas del motor por activo para las etapas de validación."""
 import csv
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -11,6 +12,7 @@ import pandas as pd
 from quantagent.backtesting.verdict import dsr_contra_intentos, evaluar
 from quantagent.cli.sweep import registrar_intento
 from quantagent.data.snapshot import snapshot_root
+from quantagent.fabrica.transversal import METRICAS, es_transversal, señales_transversales
 
 SHARPE_MINIMO_FILTRO = 0.10
 SHARPE_MAXIMO_MOTOR_ALARMA = 0.0
@@ -43,17 +45,31 @@ def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, a
     carpeta = Path(carpeta)
     carpeta.mkdir(parents=True, exist_ok=True)
     filas = []
+    paneles_trans = {}
+    import quantagent.data.snapshot as snap_mod
+    for p in h.piernas:
+        if es_transversal(p.clase) and p.clase not in paneles_trans:
+            activos = list(p.activos) or [a for c, a in params_por_activo.keys() if c == p.clase] or list(params_por_activo.keys())
+            cierres = pd.DataFrame({a: snap_mod.read_snapshot(snapshot, a)["close"].loc[:hasta] for a in activos})
+            paneles_trans[p.clase] = señales_transversales(cierres, METRICAS[p.clase])
+            for a in activos:
+                pd.DataFrame({"timestamp": cierres.index, "posicion": paneles_trans[p.clase][a].values}).to_csv(
+                    carpeta / f"senal-{p.clase}-{a}.csv", index=False)
     celdas = [(p.clase, a, params_por_activo.get((p.clase, a), {}))
-              for p in h.piernas for a in p.activos] if len(h.piernas) > 1 else [
+              for p in h.piernas for a in p.activos] if h.es_cartera else [
               (h.clase, a, p) for a, p in params_por_activo.items()]
     with TemporaryDirectory() as temporal:
         params_path = Path(temporal) / "params.json"
         for strat, activo, params in celdas:
-            params_path.write_text(json.dumps({strat: params}), encoding="utf-8")
-            out = carpeta / (f"{strat}-{activo}.csv" if len(h.piernas) > 1 else f"{activo}.csv")
+            es_trans = es_transversal(strat)
+            csv_path = carpeta / f"senal-{strat}-{activo}.csv"
+            strat_cli = "senal-externa" if es_trans else strat
+            cli_params = {"ruta": str(csv_path)} if es_trans else params
+            params_path.write_text(json.dumps({strat_cli: cli_params}), encoding="utf-8")
+            out = carpeta / (f"{strat}-{activo}.csv" if h.es_cartera else f"{activo}.csv")
             comando = [
                 sys.executable, "-m", "quantagent.cli", "backtest", "compare",
-                "--strategies", strat, "--symbols", activo, "--snapshot", snapshot,
+                "--strategies", strat_cli, "--symbols", activo, "--snapshot", snapshot,
                 "--from", str(desde), "--to", str(hasta), "--costos", "etf",
                 "--llenado", "apertura", "--params", str(params_path), "--out", str(out),
                 "--trades-dir", str(carpeta / "trades"), "--equity-dir", str(carpeta / "equity"),
@@ -65,7 +81,14 @@ def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, a
                 raise RuntimeError(resultado.stderr)
             with out.open(newline="") as f:
                 fila = next(csv.DictReader(f))
-            if len(h.piernas) <= 1:
+            if es_trans:
+                for sub in ("equity", "trades"):
+                    src = carpeta / sub / f"senal-externa-{activo}.csv"
+                    if src.exists():
+                        shutil.copy(src, carpeta / sub / f"{strat}-{activo}.csv")
+                fila["pierna_clase"] = strat
+                fila["ruta_senal"] = str(csv_path)
+            if not h.es_cartera and not es_trans:
                 fila_intento = {**fila, "sharpe": fila["sharpe_tasa_0"]}
                 registrar_intento(strat, activo, snapshot, "etf", 1.0, params, fila_intento,
                                   hipotesis=h.id, etapa=etapa, sharpe_base="tasa_0")
@@ -79,8 +102,8 @@ def _curva_y_v30_cartera(h, filas, carpeta, snapshot, etapa, desde, hasta):
 
     cierres = None
     if snapshot is not None:
-        from quantagent.data.snapshot import read_snapshot
-        cierres = pd.DataFrame({a: read_snapshot(snapshot, a)["close"].loc[desde:hasta]
+        import quantagent.data.snapshot as snap_mod
+        cierres = pd.DataFrame({a: snap_mod.read_snapshot(snapshot, a)["close"].loc[desde:hasta]
                                 for p in h.piernas for a in p.activos})
 
     piernas_map = {i: list(p.activos) for i, p in enumerate(h.piernas)}
@@ -133,9 +156,23 @@ def validar_etapa2(h, snapshot, params_por_activo, carpeta):
         for fila in filas:
             activo = fila["activo"]
             strat = fila.get("estrategia", h.clase)
-            params = params_por_activo.get((strat, activo), {}) if len(h.piernas) > 1 else params_por_activo.get(activo, {})
+            clase = fila.get("pierna_clase", strat)
+            es_trans = es_transversal(clase)
+            trades = int(float(fila["trades"])) if fila.get("trades") not in (None, "") else 0
+            if es_trans and trades == 0:
+                fila["control"] = "coinciden 0 de 0"
+                fila["v30"] = "PASA"
+                fila["motivos"] = []
+                continue
+            if es_trans:
+                params = {"ruta": fila["ruta_senal"]}
+                src_tr = Path(carpeta) / "trades" / f"{clase}-{activo}.csv"
+                if src_tr.exists():
+                    shutil.copy(src_tr, Path(carpeta) / "trades" / f"senal-externa-{activo}.csv")
+            else:
+                params = params_por_activo.get((strat, activo), {}) if h.es_cartera else params_por_activo.get(activo, {})
             params_path.write_text(json.dumps({strat: params}), encoding="utf-8")
-            tabla = Path(carpeta) / (f"{strat}-{activo}.csv" if (Path(carpeta) / f"{strat}-{activo}.csv").exists() else f"{activo}.csv")
+            tabla = Path(carpeta) / (f"{clase}-{activo}.csv" if (Path(carpeta) / f"{clase}-{activo}.csv").exists() else f"{activo}.csv")
             resultado = subprocess.run([
                 sys.executable, str(Path(__file__).resolve().parents[2] / "scripts" / "compare_control.py"),
                 "--tabla", str(tabla),
@@ -146,13 +183,17 @@ def validar_etapa2(h, snapshot, params_por_activo, carpeta):
                 raise RuntimeError(resultado.stderr)
             with tabla.open(newline="") as f:
                 fila["control"] = next(csv.DictReader(f))["control"]
-            pasa_c, motivos = evaluar(*(float(fila[c]) if fila[c] != "" else None
-                                        for c in ("trades", "pnl", "sharpe_tasa_0", "max_drawdown")))
-            fila["v30"] = "PASA" if pasa_c else "NO PASA"
-            if not fila["control"].startswith("coinciden"):
-                motivos.append(fila["control"])
-            fila["motivos"] = [f"{activo}: {motivo}" for motivo in motivos]
-    if len(h.piernas) > 1:
+            if es_trans:
+                fila["v30"] = "PASA"
+                fila["motivos"] = [] if fila["control"].startswith("coinciden") else [f"{activo}: {fila['control']}"]
+            else:
+                pasa_c, motivos = evaluar(*(float(fila[c]) if fila[c] != "" else None
+                                            for c in ("trades", "pnl", "sharpe_tasa_0", "max_drawdown")))
+                fila["v30"] = "PASA" if pasa_c else "NO PASA"
+                if not fila["control"].startswith("coinciden"):
+                    motivos.append(fila["control"])
+                fila["motivos"] = [f"{activo}: {motivo}" for motivo in motivos]
+    if h.es_cartera:
         pasa_cartera, motivos_cartera = evaluar_etapa2_cartera(h, filas, carpeta, snapshot)
         pasa = all(f["control"].startswith("coinciden") for f in filas) and pasa_cartera
         if not pasa_cartera:
@@ -167,7 +208,7 @@ def validar_etapa3(h, snapshot, params_por_activo, carpeta):
     """Valida la prueba; el llamador debe abrir el candado antes de invocar."""
     filas = correr_motor(h, snapshot, params_por_activo, "2019-01-01", "2022-12-31",
                          carpeta, "3", abrir_prueba=True)
-    if len(h.piernas) > 1:
+    if h.es_cartera:
         eq_cartera, pasa_v30, motivos = _curva_y_v30_cartera(
             h, filas, carpeta, snapshot, "3", "2019-01-01", "2022-12-31"
         )

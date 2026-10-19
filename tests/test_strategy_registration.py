@@ -91,6 +91,8 @@ def test_alias_actuales_del_cli():
         "triple-screen": "TripleScreenStrategy",
         "sma-cross": "SmaCrossStrategy",
         "momentum-12m": "Momentum12mStrategy",
+        "halloween": "HalloweenStrategy",
+        "senal-externa": "SenalExterna",
     }
 
 

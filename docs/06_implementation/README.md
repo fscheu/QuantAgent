@@ -33,6 +33,7 @@ Implementation documents should include:
 
 ## Active Per-Change Implementation
 
+- [QuantAgent-d4cq.68-IM-punto-de-control-catalogo-primas.md](./QuantAgent-d4cq.68-IM-punto-de-control-catalogo-primas.md) - Punto de control L13: carteras de primas de riesgo, catálogo, N total y DSR.
 - [QuantAgent-d4cq.47-IM-universo-amplio.md](./QuantAgent-d4cq.47-IM-universo-amplio.md) - Universo amplio de ETFs (2007) para cartera de primas de riesgo (D6).
 - [QuantAgent-d4cq.34-IM-punto-de-control-tanda.md](./QuantAgent-d4cq.34-IM-punto-de-control-tanda.md) - Punto de control L11: tanda de hipotesis/ sobre datos reales.
 - [QuantAgent-d4cq.31-IM-resumen.md](./QuantAgent-d4cq.31-IM-resumen.md) - Resumen por estado final, causas e intentos del período.

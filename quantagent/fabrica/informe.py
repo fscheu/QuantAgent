@@ -32,9 +32,16 @@ def datos_informe(hipotesis_id):
         raise ValueError(f"Hipótesis desconocida: {hipotesis_id}")
     intentos = _filas("intentos.csv", hipotesis_id)
     ultima = max(por_etapa)
+    dsr = None
+    for fila in reversed(list(por_etapa.values())):
+        if "dsr" in fila.get("motivo", "").lower():
+            dsr = fila["motivo"]
+            break
+    from quantagent.cli.sweep import contar_intentos
     return {"id": hipotesis_id, "etapas": [por_etapa[e] for e in sorted(por_etapa)], "final": por_etapa[ultima],
             "activos": {i["activo"]: i for i in intentos if i["etapa"] == ultima},
-            "intentos": len(intentos), "prueba_abierta": abierto(hipotesis_id, "prueba")}
+            "intentos": len(intentos), "n_total": contar_intentos(),
+            "dsr": dsr or "no evaluado", "prueba_abierta": abierto(hipotesis_id, "prueba")}
 
 
 def render_informe(d, hipotesis=None):
@@ -61,6 +68,6 @@ def render_informe(d, hipotesis=None):
         f"<h1>{escape(d['id'])}</h1>{extra}<h2>Veredicto: {escape(f['veredicto'])} en la etapa {escape(f['etapa'])}</h2>"
         f"<ul>{li}</ul><h2>Activos de la etapa {escape(f['etapa'])}</h2>"
         f"<table><tr><th>Activo</th><th>Sharpe registrado</th><th>Trades</th></tr>{tr}</table>"
-        f"<p>Intentos registrados: {d['intentos']}. Prueba abierta: {'sí' if d['prueba_abierta'] else 'no'}.</p>"
+        f"<p>Intentos registrados: {d['intentos']}. Total de intentos (N): {d.get('n_total', d['intentos'])}. DSR: {escape(str(d.get('dsr', 'no evaluado')))}. Prueba abierta: {'sí' if d['prueba_abierta'] else 'no'}.</p>"
         f"<h2>Glosario</h2><dl>{gl}</dl></html>"
     )

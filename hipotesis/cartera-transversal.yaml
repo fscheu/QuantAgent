@@ -1,0 +1,23 @@
+id: cartera-transversal
+autor: fede
+justificacion: >-
+  Cartera de dos primas transversales: se compran los activos que van mejor
+  contra los demas, no los que suben contra si mismos. Momentum relativo: el
+  tercio del universo con mayor retorno de 12 meses salteando el ultimo mes
+  supera al resto (Jegadeesh y Titman 1993; Asness, Moskowitz y Pedersen 2013).
+  Baja volatilidad: dentro de los ETFs de acciones, el tercio de menor
+  volatilidad de 252 sesiones rinde mas de lo que prevé su riesgo (Ang et al.
+  2006; Frazzini y Pedersen 2014; Baker, Bradley y Wurgler 2011). Decision a
+  fin de mes, constantes fijas (21, 252 y un tercio): la cartera tiene 0
+  parametros libres.
+fuente: https://doi.org/10.1111/j.1540-6261.1993.tb04702.x ; https://doi.org/10.1111/jofi.12021 ; https://doi.org/10.1111/j.1540-6261.2006.00836.x ; https://doi.org/10.1016/j.jfineco.2013.10.005 ; https://doi.org/10.2469/faj.v67.n1.4
+timeframe: 1d
+piernas:
+  - clase: momentum-transversal
+    parametros: {}
+    activos: [AGG, DBC, EEM, EFA, EWJ, EWZ, FXE, FXI, GLD, IEF, IWM, LQD, QQQ, SHY, SLV, SPY, TIP, TLT, USO, VNQ, XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV, XLY]
+    universo: Los 29 ETFs del snapshot etf-1d-2026-10-amplio en un unico ranking global; el momentum vale en cualquier clase de activo liquido.
+  - clase: baja-volatilidad
+    parametros: {}
+    activos: [EEM, EFA, EWJ, EWZ, FXI, IWM, QQQ, SPY, XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV, XLY]
+    universo: Solo los 17 ETFs de acciones del snapshot etf-1d-2026-10-amplio; rankear bonos contra acciones mide otra cosa.
