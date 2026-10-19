@@ -101,7 +101,7 @@ def _config():
 
 def test_backtest_end_close_updates_linked_trade_metrics(db_session, monkeypatch):
     monkeypatch.setattr(
-        "quantagent.data.provider.DataProvider._fetch_yfinance",
+        "quantagent.data.sources.yahoo.YahooSource.fetch",
         lambda self, symbol, timeframe, start_date, end_date: pd.DataFrame(
             columns=["timestamp", "open", "high", "low", "close", "volume"]
         ),
@@ -144,7 +144,7 @@ def test_backtest_end_close_updates_linked_trade_metrics(db_session, monkeypatch
 
 def test_sequential_1h_and_4h_backtests_diverge_without_yahoo(db_session, monkeypatch):
     monkeypatch.setattr(
-        "quantagent.data.provider.DataProvider._fetch_yfinance",
+        "quantagent.data.sources.yahoo.YahooSource.fetch",
         lambda self, symbol, timeframe, start_date, end_date: pd.DataFrame(
             columns=["timestamp", "open", "high", "low", "close", "volume"]
         ),

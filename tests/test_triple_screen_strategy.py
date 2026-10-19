@@ -398,7 +398,7 @@ def test_backtest_reference_profile_completes(db_session):
         "market_hours_filter": False,
     }
 
-    with patch("quantagent.data.provider.yf.download") as mock_download:
+    with patch("quantagent.data.sources.yahoo.yf.download") as mock_download:
         mock_download.return_value = Mock(empty=True)
         backtest = Backtest(
             start_date=datetime(2024, 1, 1),

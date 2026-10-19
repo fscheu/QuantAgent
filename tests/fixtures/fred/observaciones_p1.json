@@ -1,0 +1,1 @@
+{"count": 3, "observations": [{"realtime_start": "2020-02-01", "realtime_end": "2020-02-28", "date": "2020-01-01", "value": "100.5"}, {"realtime_start": "2020-02-29", "realtime_end": "9999-12-31", "date": "2020-01-01", "value": "101.0"}]}

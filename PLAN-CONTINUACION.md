@@ -402,6 +402,7 @@ Lotes (definidos por el PM el 2026-10-06; cada uno se abre cuando Fede mergea el
 | L13 | `lote/catalogo-de-primas` | G04a, G04b, G05, G06a, G06b, G07 (se reescriben) | Catálogo de primas aplicables con ETFs corrido como carteras; el LLM propone primas con cita y universo, el crítico rechaza duplicadas | propuesto; se arma al mergear L12 |
 | L14 | `lote/capa-macro` | G03 y tickets nuevos | FRED/ALFRED punto en el tiempo y régimen de mercado como hipótesis aparte, aceptada solo si mejora el DSR del núcleo | propuesto; puede ir en paralelo con M4 |
 | LB1 | `lote/datos-externos` (carril B, label `carril-b`, PR #257) | B-F1–B-F4, B-T1, B-T2, B-T9, B-T8 | Snapshot macro `macro-2026-10` punto en el tiempo (10 series FRED/ALFRED) y `AlpacaSource` bajando SPY con claves reales | OK de Fede el 2026-10-17 para paralelizar la capa de datos de M4 y L14 (nube y notebook); fuera: broker y ejecución en paper hasta cerrar L12. Necesita `FRED_API_KEY` y claves de Alpaca paper en `~/secrets` (las pone Fede) |
+| L15 | `lote/gate-por-lote` | K01 | El gate del loop con `LOOP_LOTE` evalúa solo la entrega previa del lote activo: un PR loop de una máquina no frena ni activa a la otra | PM, 2026-10-18; sale de origin/main para llegar a main sin esperar a L13 ni L14 |
 
 T13 se adelantó dentro de L1: es un documento de decisión que no depende del resto, así la respuesta de Fede
 llega mientras el lote avanza. T20 pasó a L1 porque congela los números que ese lote audita.
@@ -619,6 +620,7 @@ Los primeros 5 son los más fáciles de revisar.
 | P05.4 | `QuantAgent-d4cq.63` | Etapas 2 y 3 con piernas transversales: `SenalExterna` y celdas transversales en `validar_etapa2`/`validar_etapa3`; depende de P05.3 (hecho) | Una pierna transversal alimenta a los dos motores con la misma serie 0/1; `senal-externa` no es válida en un YAML | leer | L13 |
 | P09 | `QuantAgent-d4cq.67` | Motivo de ERROR con la última línea no vacía de la excepción, `<Tipo>: `, truncada a 200 | ERROR con excepción de 3 líneas muestra la última | leer | L13 |
 | P10 | `QuantAgent-d4cq.68` | Punto de control L13 (VM, lo corre el PM sobre el snapshot amplio `etf-1d-2026-10-amplio`; Fede dio OK por cartera el 2026-10-19 para abrir 2019–2022 en las carteras que pasen la etapa 2); depende de P05.4 y P09 | Cada entrada `destino: L13` con veredicto e informe o `motivo`; el informe muestra N de intentos y DSR | probar | L13 |
+| K01 | `QuantAgent-kw84` | Loop: el gate toma la entrega previa solo del lote activo (`LOOP_LOTE`) | Dos PRs loop de lotes distintos: con `LOOP_LOTE=lote/a` evalúa solo el de lote/a; un cambio sobre lote/b no activa modo cambio en lote/a | leer | L15 |
 | B-F1 | `QuantAgent-pdxx` | Cliente FRED/ALFRED con todas las versiones (nube) | 2 páginas; la clave nunca aparece | leer | LB1 |
 | B-F2 | `QuantAgent-vj37` | Snapshot macro congelado con manifiesto (nube); depende de B-F1 | `verify` detecta un parquet alterado | leer | LB1 |
 | B-F3 | `QuantAgent-okp9` | Lectura punto en el tiempo (nube); depende de B-F2 | Revisión de mayo no se ve en abril | leer | LB1 |

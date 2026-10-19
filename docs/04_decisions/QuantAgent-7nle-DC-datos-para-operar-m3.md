@@ -172,3 +172,21 @@ Pendiente de ordenar: V39a está en el lote 5 de M2 y T1 es de M3. Si T9 se hace
 - Para T9 se usa un cliente propio sobre `requests` y no el SDK `alpaca-py`: es un solo endpoint y `requests` ya es dependencia. El SDK se reevalúa en M3, para órdenes y cuenta.
 - El soporte de Alpaca indica que sus datos no se pueden redistribuir: ningún PR ni snapshot versionado lleva velas de Alpaca.
 - Sugerencia del PM incluida en T8: comparar señales de las estrategias diarias con `split` contra `all`, porque el backtest usa precios ajustados por dividendos y esa diferencia no está medida.
+
+### Medición con claves reales (T8, `QuantAgent-v38v`, 2026-10-17)
+
+Corrida de `scripts/medir_alpaca.py` con las claves de paper, SPY desde 2016-01-04, `adjustment=split` salvo donde se indica. No se guardó ninguna vela.
+
+| Pregunta | Resultado |
+|---|---|
+| ¿Paper alcanza SIP? | Sí. `feed=sip` y `feed=iex` responden, ambos con 701 velas diarias desde 2024. |
+| `1Hour` | 42.703 velas, la primera a las 09:00 UTC (04:00 NY): incluye preapertura y postcierre. 217 pedidos, 220 s. |
+| `4Hour` | 11.637 velas, alineadas a UTC y no a la sesión de NY (caen a las 03/04, 07/08, 11/12, 15/16, 19/20 hora NY según DST). 215 pedidos, 150 s. |
+| `1Day` | 2.713 velas, selladas a las 00:00 NY (05:00 UTC en invierno). 1 pedido, 1 s. |
+| Límite de llamadas | Los headers informan `x-ratelimit-limit: 200` (por minuto), lo que confirma la cifra de la página de planes. |
+| `split` vs `all` (1d) | Mismas 2.713 velas. El cierre difiere hasta 17,78% (mediana 7,62%): `all` reescribe diez años de historia por dividendos. |
+| Señales con `split` vs `all` | `sma-cross`: 4 entradas en ambos, 8 velas con señal distinta. `momentum-12m`: 100 entradas con `split`, 103 con `all`, 3 velas con señal distinta. |
+
+Lectura: la diferencia entre ajustes es grande en nivel de precio pero chica en señales (entre 3 y 8 velas de 2.713). No justifica pasar a `all`; la recomendación de `split` de la sección 4 se mantiene. Al implementar el provider hay que recortar `1Hour` a sesión regular si la estrategia no debe ver preapertura, y tener presente que `4Hour` no cierra con la sesión.
+
+Sin explicar: `1Hour` necesitó 217 pedidos para 42.703 velas (unas 200 por página) aun pidiendo `limit=10000`; `4Hour` se comportó igual. No se investigó la causa.
