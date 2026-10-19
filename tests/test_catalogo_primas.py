@@ -65,3 +65,12 @@ def test_hipotesis_citan_solo_doi_bien_formados():
             citados += 1
             assert DOI.match(doi), f"{f.name}: DOI mal formado {doi!r}"
     assert citados, "ninguna hipótesis cita un DOI: el test no está verificando nada"
+
+
+def test_destino_l13_tiene_veredicto_e_informe_o_motivo():
+    l13_primas = [p for p in PRIMAS if p["destino"] == "L13"]
+    assert l13_primas, "no hay primas con destino L13"
+    for p in l13_primas:
+        tiene_veredicto_e_informe = bool(p.get("veredicto")) and bool(p.get("informe"))
+        tiene_motivo = bool(p.get("motivo", "").strip())
+        assert tiene_veredicto_e_informe or tiene_motivo, f"{p['id']}: falta veredicto e informe o motivo"

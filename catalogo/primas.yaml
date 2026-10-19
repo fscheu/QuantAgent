@@ -35,9 +35,11 @@ primas:
     idea: Los ganadores de los últimos meses superan a los perdedores en el mes siguiente.
     fuente: [10.1111/j.1540-6261.1993.tb04702.x, 10.1111/jofi.12021]
     universo: {activos: *amplio, criterio: Los 29 ETFs en un único ranking global.}
-    clase: null
+    clase: momentum-transversal
     datos: precios
     destino: L13
+    veredicto: CORTA
+    informe: docs/06_implementation/QuantAgent-d4cq.68-IM-punto-de-control-catalogo-primas.md
   - id: baja-volatilidad-transversal
     prima: Baja volatilidad transversal
     idea: Los activos de menor volatilidad rinden más de lo que prevé su riesgo.
@@ -46,14 +48,18 @@ primas:
     clase: baja-volatilidad
     datos: precios
     destino: L13
+    veredicto: CORTA
+    informe: docs/06_implementation/QuantAgent-d4cq.68-IM-punto-de-control-catalogo-primas.md
   - id: estacionalidad-halloween
     prima: Estacionalidad de Halloween
     idea: El retorno de noviembre a abril supera al de mayo a octubre; con decaimiento posterior a su publicación.
     fuente: [10.1257/000282802762024683, 10.1111/jofi.12365]
     universo: {activos: *acciones, criterio: Solo ETFs de acciones.}
-    clase: null
+    clase: halloween
     datos: precios
     destino: L13
+    veredicto: CORTA
+    informe: docs/06_implementation/QuantAgent-d4cq.68-IM-punto-de-control-catalogo-primas.md
   - id: carry-bonos-pendiente
     prima: Carry de bonos por pendiente de la curva
     idea: La pendiente de la curva anticipa el exceso de retorno de los bonos.
