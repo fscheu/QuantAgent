@@ -1,6 +1,6 @@
 # QuantAgent-vbnh: plan de L16 (criterio de la etapa 3) y L17 (loop investigador)
 
-- **Estado:** borrador para revisión de Fede (2026-10-19). No abre los lotes ni toca `.beads/issues.jsonl`: la VM crea los tickets y las ramas si Fede aprueba. Los códigos `E01` a `E08` e `I01` a `I08` son del plan; BEADS les asigna su id.
+- **Estado:** plan y recomendaciones de §6 aprobados por Fede el 2026-10-19. No abre los lotes ni toca `.beads/issues.jsonl`: la VM crea los tickets y las ramas si Fede aprueba. Los códigos `E01` a `E08` e `I01` a `I08` son del plan; BEADS les asigna su id.
 - **Origen:** [`2026-10-19-DC-criterio-etapa3-y-loop-de-mejora`](../04_decisions/2026-10-19-DC-criterio-etapa3-y-loop-de-mejora.md), decidido por Fede el 2026-10-19 (mergeado en #322). Bug: `QuantAgent-vbnh`.
 - **Reemplaza:** nada. Reescribe como `I04` e `I05` los tickets `QuantAgent-d4cq.42` y `.43` (LLM investigador, aprobado por Fede el 2026-10-19), según [`QuantAgent-d4cq-PL-l13-l14-reescritura-de-tickets`](./QuantAgent-d4cq-PL-l13-l14-reescritura-de-tickets.md) líneas 186-188.
 - **No fija dinero:** el tamaño de posición y las semanas de paper salen del DC (50 % / 75 % y 12 / 6 semanas); acá solo se calculan e informan, no se aplican.
@@ -164,14 +164,16 @@
 
 L16 son 8 tickets y L17 son 8, dentro del rango de 5 a 10 por lote (PLAN-CONTINUACION §3.7).
 
-## 6. Preguntas para Fede
+## 6. Decisiones de Fede (2026-10-19)
 
-- **Q1 · ¿Qué es el "control" del criterio?** En el repo, "control" es la comparación del motor propio contra la referencia (`compare_control.py`), que no sirve como vara de rendimiento. **Recomendación:** benchmark = misma cartera de activos con pesos iguales, comprada y mantenida con rebalanceo mensual, sin señal. Si preferís otra (por ejemplo SPY solo), lo cambia E04.
-- **Q2 · Regla v1 de N efectivo (E03).** **Recomendación:** quitar solo las repeticiones exactas por `(estrategia, params, activo, desde, hasta)`. Es honesta y chica, pero baja poco el N (de 109 a unos 100). El agrupado por correlación baja más y requiere guardar curvas por intento: sería un ticket aparte.
-- **Q3 · Recalcular las tres carteras (E08).** Ya gastaron su holdout 2019–2022, así que el recálculo no revela nada nuevo, pero un PASA con el criterio nuevo sale de datos ya vistos. **Recomendación:** hacerlo como informativo y que el paper trading sea la vara fresca, como dice el DC. ¿Lo aprobás?
-- **Q4 · Orden.** L16 primero y L17 después de #277, con E02/E03/E05/E06 en paralelo mientras #277 y #278 esperan tu revisión. ¿Te cierra?
-- **Q5 · Capa macro (L14).** M07 acepta o descarta una capa con ΔDSR ≥ 0,05. Con el DSR como indicador, **recomendación:** que lea también ΔSharpe y los años positivos. No se cambia sin tu OK ni dentro de este plan.
-- **Q6 · Hipótesis de una sola pierna.** `validar_etapa3` tiene un camino por activo (sin cartera). **Recomendación:** mantenerlo como está hasta que haya una hipótesis de una sola pierna que lo necesite.
+Fede leyó el plan y aprobó las seis recomendaciones. Quedan como decididas:
+
+- **Q1 · ¿Qué es el "control" del criterio?** En el repo, "control" es la comparación del motor propio contra la referencia (`compare_control.py`), que no sirve como vara de rendimiento. **Decidido:** benchmark = misma cartera de activos con pesos iguales, comprada y mantenida con rebalanceo mensual, sin señal.
+- **Q2 · Regla v1 de N efectivo (E03).** **Decidido:** quitar solo las repeticiones exactas por `(estrategia, params, activo, desde, hasta)`. Baja poco el N (de 109 a unos 100). El agrupado por correlación baja más y requiere guardar curvas por intento: sería un ticket aparte.
+- **Q3 · Recalcular las tres carteras (E08).** Ya gastaron su holdout 2019–2022, así que el recálculo no revela nada nuevo, pero un PASA con el criterio nuevo sale de datos ya vistos. **Decidido:** hacerlo como informativo y que el paper trading sea la vara fresca, como dice el DC.
+- **Q4 · Orden.** L16 primero y L17 después de #277, con E02/E03/E05/E06 en paralelo mientras #277 y #278 esperan tu revisión.
+- **Q5 · Capa macro (L14).** M07 acepta o descarta una capa con ΔDSR ≥ 0,05. Con el DSR como indicador, **Decidido:** la regla de aceptación de la capa debe leer también ΔSharpe y los años positivos. El cambio no está en L16 ni L17: va como ticket aparte en el lote de L14 cuando se retome.
+- **Q6 · Hipótesis de una sola pierna.** `validar_etapa3` tiene un camino por activo (sin cartera). **Decidido:** mantenerlo como está hasta que haya una hipótesis de una sola pierna que lo necesite.
 
 ## 7. Qué queda fuera
 
