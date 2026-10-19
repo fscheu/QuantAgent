@@ -1,6 +1,6 @@
 # Criterio de pase de la etapa 3 y loop de investigación de carteras
 
-Fecha: 2026-10-19. Estado: **propuesta, aprobada en lo conceptual por Fede el 2026-10-19; falta su OK sobre los números**. No cambia código.
+Fecha: 2026-10-19. Estado: **decidido por Fede el 2026-10-19** (criterio y números, ver al final). No cambia código.
 Origen: sesión de discusión de Fede con Claude. Relacionado: [`2026-10-17-DC-cartera-de-primas`](./2026-10-17-DC-cartera-de-primas.md), [`QuantAgent-d4cq-DC-motor-de-la-fabrica`](./QuantAgent-d4cq-DC-motor-de-la-fabrica.md), `QuantAgent-d4cq.42/.43` (LLM investigador).
 
 ## Resumen
@@ -44,9 +44,11 @@ Principio: aprender de los fallos sin que el holdout 2019–2022 influya en lo q
 
 Riesgo residual: aunque el generador no vea el Sharpe, Fede y el crítico sí lo ven y deciden. Eso es aceptable si el pase final depende de paper trading y no de seguir ajustando contra 2019–2022.
 
-## Pendiente de Fede (marcado como abierto)
+## Decisiones de Fede (2026-10-19)
 
-- **Pendiente** · OK para limpiar `intentos.csv` (D bug).
-- **Pendiente** · Números de D1: tamaño reducido y semanas de paper si el DSR es bajo.
-- **Pendiente** · Si D2 se informa solo o también reemplaza al N crudo en el DSR.
-- **Pendiente** · Cuota de variantes por idea (D3.7).
+Fede aprobó el esquema y los valores propuestos por Claude (criterio de juicio, no medidos).
+
+- **D1, números del DSR:** DSR < 0,50: tamaño de posición 50% del de igual riesgo y 12 semanas de paper antes de vivo. DSR entre 0,50 y 0,95: 75% y 6 semanas. DSR ≥ 0,95: sin recargo. Sub-períodos: Sharpe positivo en al menos 3 de los 4 años del holdout.
+- **D2:** el N efectivo se informa junto al N crudo y el DSR del semáforo usa el efectivo. Si resulta fácil de manipular, se vuelve al crudo.
+- **D3.7, cuota de variantes:** máximo 2 variantes derivadas de una misma idea por lote; una tercera cuenta como idea nueva y necesita su propia cita.
+- **Limpieza de `intentos.csv`:** sí, con una copia fechada en `local-data/` antes de borrar. Se ejecuta en `QuantAgent-vbnh`.
