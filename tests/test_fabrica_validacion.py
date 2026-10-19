@@ -339,49 +339,125 @@ def test_etapa2_cartera_dos_piernas_mismo_activo_parametros_distintos(tmp_path, 
     assert recibidos_control[("sma-cross", "SPY")] == {"sma-cross": {"fast": 50, "slow": 200}}
 
 
-@pytest.mark.parametrize("dsr,esperado,motivo_esperado", [
-    (0.96, "PASA", []),
-    (0.94, "CORTA", ["DSR de cartera < 0.95"]),
-])
-def test_etapa3_cartera_dsr(tmp_path, monkeypatch, dsr, esperado, motivo_esperado):
+def test_etapa3_cartera_criterio_pasa_con_dsr_bajo(tmp_path, monkeypatch):
+    """Cartera con DSR bajo pero Sharpe > 0, > benchmark, >=3 años positivos y DD bajo PASA."""
     from quantagent.fabrica.hipotesis import Hipotesis, Pierna
 
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
-    fechas = pd.date_range("2019-01-01", "2022-12-31", periods=100)
+    fechas = pd.bdate_range("2019-01-01", "2022-12-31")
     eq_dir = tmp_path / "salida" / "equity"
     eq_dir.mkdir(parents=True)
-    pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(100, 0.001))}).to_csv(eq_dir / "rsi-SPY.csv", index=False)
-    pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(100, 0.0005))}).to_csv(eq_dir / "sma-TLT.csv", index=False)
+    pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(len(fechas), 0.001))}).to_csv(eq_dir / "rsi-SPY.csv", index=False)
+    pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(len(fechas), 0.0005))}).to_csv(eq_dir / "sma-TLT.csv", index=False)
 
     h = Hipotesis("h-c", "autor", "just", "1d", piernas=(Pierna("rsi", {}, ("SPY",), "U"), Pierna("sma", {}, ("TLT",), "U")))
     monkeypatch.setattr(validacion, "correr_motor", lambda *a, **k: [
         {"activo": "SPY", "estrategia": "rsi", "trades": "4", "pnl": "1000", "sharpe_tasa_0": "0.5", "max_drawdown": "0.05"},
         {"activo": "TLT", "estrategia": "sma", "trades": "2", "pnl": "200", "sharpe_tasa_0": "0.2", "max_drawdown": "0.08"},
     ])
-    monkeypatch.setattr(validacion, "dsr_contra_intentos", lambda *a: dsr)
+    monkeypatch.setattr(validacion, "dsr_contra_intentos", lambda *a, **k: 0.10)
     monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas)}))
 
     veredicto, filas = validacion.validar_etapa3(h, "sintetico", {("rsi", "SPY"): {}, ("sma", "TLT"): {}}, tmp_path / "salida")
-    assert veredicto == esperado
-    assert len(filas) == 2
-    assert filas[0]["motivos"] == motivo_esperado
-    assert filas[0]["dsr"] == dsr
+    assert veredicto == "PASA"
     assert filas[0]["v30"] == "PASA"
+    assert filas[0]["motivos"] == []
+    assert filas[0]["dsr"] == 0.10
+    assert filas[0]["recargo"] == (50, 12)
+
+
+def test_etapa3_cartera_solo_2_anios_positivos_corta(tmp_path, monkeypatch):
+    """La misma cartera con solo 2 de 4 años positivos CORTA con el motivo escrito."""
+    from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fechas = pd.bdate_range("2019-01-01", "2022-12-31")
+    retornos = np.where(fechas.year >= 2021, -0.0005, 0.001)
+    eq_dir = tmp_path / "salida" / "equity"
+    eq_dir.mkdir(parents=True)
+    pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + retornos)}).to_csv(eq_dir / "rsi-SPY.csv", index=False)
+    pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + retornos)}).to_csv(eq_dir / "sma-TLT.csv", index=False)
+
+    h = Hipotesis("h-c", "autor", "just", "1d", piernas=(Pierna("rsi", {}, ("SPY",), "U"), Pierna("sma", {}, ("TLT",), "U")))
+    monkeypatch.setattr(validacion, "correr_motor", lambda *a, **k: [
+        {"activo": "SPY", "estrategia": "rsi", "trades": "4", "pnl": "1000", "sharpe_tasa_0": "0.5", "max_drawdown": "0.05"},
+        {"activo": "TLT", "estrategia": "sma", "trades": "2", "pnl": "200", "sharpe_tasa_0": "0.2", "max_drawdown": "0.08"},
+    ])
+    monkeypatch.setattr(validacion, "dsr_contra_intentos", lambda *a, **k: 0.90)
+    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas)}))
+
+    veredicto, filas = validacion.validar_etapa3(h, "sintetico", {("rsi", "SPY"): {}, ("sma", "TLT"): {}}, tmp_path / "salida")
+    assert veredicto == "CORTA"
+    assert filas[0]["v30"] == "NO PASA"
+    assert any("2 de 4" in m or "(< 3)" in m for m in filas[0]["motivos"])
+
+
+def test_etapa3_cartera_menor_al_benchmark_corta_con_dsr_alto(tmp_path, monkeypatch):
+    """Sharpe de cartera menor al del benchmark corta aunque el DSR sea alto."""
+    from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fechas = pd.bdate_range("2019-01-01", "2022-12-31")
+    eq_dir = tmp_path / "salida" / "equity"
+    eq_dir.mkdir(parents=True)
+    pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(len(fechas), 0.0001))}).to_csv(eq_dir / "rsi-SPY.csv", index=False)
+    pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(len(fechas), 0.0001))}).to_csv(eq_dir / "sma-TLT.csv", index=False)
+
+    h = Hipotesis("h-c", "autor", "just", "1d", piernas=(Pierna("rsi", {}, ("SPY",), "U"), Pierna("sma", {}, ("TLT",), "U")))
+    monkeypatch.setattr(validacion, "correr_motor", lambda *a, **k: [
+        {"activo": "SPY", "estrategia": "rsi", "trades": "4", "pnl": "100", "sharpe_tasa_0": "0.1", "max_drawdown": "0.01"},
+        {"activo": "TLT", "estrategia": "sma", "trades": "2", "pnl": "100", "sharpe_tasa_0": "0.1", "max_drawdown": "0.01"},
+    ])
+    monkeypatch.setattr(validacion, "dsr_contra_intentos", lambda *a, **k: 0.99)
+    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame(
+        {"close": pd.Series(100.0 * np.cumprod(1 + np.full(len(fechas), 0.002)), index=fechas)}
+    ))
+
+    veredicto, filas = validacion.validar_etapa3(h, "sintetico", {("rsi", "SPY"): {}, ("sma", "TLT"): {}}, tmp_path / "salida")
+    assert veredicto == "CORTA"
+    assert filas[0]["v30"] == "NO PASA"
+    assert any("benchmark" in m for m in filas[0]["motivos"])
+
+
+def test_etapa3_cartera_dsr_cero_cumple_lo_demas_pasa(tmp_path, monkeypatch):
+    """Falla si se vuelve a poner el corte por DSR (cartera con DSR 0,00 pasa si cumple lo demás)."""
+    from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fechas = pd.bdate_range("2019-01-01", "2022-12-31")
+    eq_dir = tmp_path / "salida" / "equity"
+    eq_dir.mkdir(parents=True)
+    pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(len(fechas), 0.001))}).to_csv(eq_dir / "rsi-SPY.csv", index=False)
+    pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(len(fechas), 0.001))}).to_csv(eq_dir / "sma-TLT.csv", index=False)
+
+    h = Hipotesis("h-c", "autor", "just", "1d", piernas=(Pierna("rsi", {}, ("SPY",), "U"), Pierna("sma", {}, ("TLT",), "U")))
+    monkeypatch.setattr(validacion, "correr_motor", lambda *a, **k: [
+        {"activo": "SPY", "estrategia": "rsi", "trades": "4", "pnl": "1000", "sharpe_tasa_0": "0.5", "max_drawdown": "0.05"},
+        {"activo": "TLT", "estrategia": "sma", "trades": "2", "pnl": "200", "sharpe_tasa_0": "0.2", "max_drawdown": "0.08"},
+    ])
+    monkeypatch.setattr(validacion, "dsr_contra_intentos", lambda *a, **k: 0.0)
+    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas)}))
+
+    veredicto, filas = validacion.validar_etapa3(h, "sintetico", {("rsi", "SPY"): {}, ("sma", "TLT"): {}}, tmp_path / "salida")
+    assert veredicto == "PASA"
+    assert filas[0]["v30"] == "PASA"
+    assert filas[0]["motivos"] == []
+    assert filas[0]["dsr"] == 0.0
 
 
 def test_etapa3_cartera_2_piernas_3_activos_agrega_una_fila_intentos(tmp_path, monkeypatch):
     from quantagent.fabrica.hipotesis import Hipotesis, Pierna
 
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
-    fechas = pd.date_range("2019-01-01", "2022-12-31", periods=100)
+    fechas = pd.bdate_range("2019-01-01", "2022-12-31")
     eq_dir = tmp_path / "salida" / "equity"
     eq_dir.mkdir(parents=True)
     p1_activos = ("SPY", "TLT", "GLD")
     p2_activos = ("EEM", "IWM", "DIA")
     for a in p1_activos:
-        pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(100, 0.001))}).to_csv(eq_dir / f"rsi-{a}.csv", index=False)
+        pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(len(fechas), 0.001))}).to_csv(eq_dir / f"rsi-{a}.csv", index=False)
     for a in p2_activos:
-        pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(100, 0.0005))}).to_csv(eq_dir / f"sma-{a}.csv", index=False)
+        pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(len(fechas), 0.0005))}).to_csv(eq_dir / f"sma-{a}.csv", index=False)
 
     h = Hipotesis(
         "h-c2x3", "autor", "just", "1d",
