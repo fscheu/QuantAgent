@@ -1,7 +1,9 @@
 """Estrategia interna que replica una serie 0/1 externa (QuantAgent-d4cq.63, P05.4)."""
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+
 import pandas as pd
+
 from ..models import ActivePosition, ExitPolicy
 from .base import TradingSignal, TradingStrategy
 from .sma_cross_strategy import UNREACHABLE_STOP_LOSS, UNREACHABLE_TAKE_PROFIT
