@@ -1,5 +1,7 @@
 import csv
+import hashlib
 import json
+import os
 from pathlib import Path
 
 import numpy as np
@@ -546,5 +548,47 @@ def test_filtrar_hipotesis_cartera_dos_piernas_mismo_activo_parametros_por_clase
         ("rsi", "SPY"): {"rsi_period": 7},
         ("sma-cross", "SPY"): {"fast": 20},
     }
+
+
+def test_hipotesis_correr_sintetico_no_escribe_en_local_data():
+    local_data = Path(__file__).resolve().parents[1] / "local-data"
+    for cand in (Path("/home/azureuser/repos/projects/QuantAgent/local-data"), local_data):
+        if (cand / "intentos.csv").exists():
+            local_data = cand
+            break
+
+    intentos_real = local_data / "intentos.csv"
+    creado = False
+    if not intentos_real.exists():
+        intentos_real.write_text("fecha_utc,estrategia,activo,snapshot,desde,hasta,costos,tamano,params,trades,pnl,sharpe,hipotesis,etapa,sharpe_base\n")
+        creado = True
+    try:
+        h_antes = hashlib.sha256(intentos_real.read_bytes()).hexdigest()
+
+        snapshot_dir = Path(os.environ["QUANTAGENT_SNAPSHOT_DIR"])
+        intentos_aislado = snapshot_dir / "intentos.csv"
+        if not intentos_aislado.exists():
+            intentos_aislado.write_text("fecha_utc,estrategia,activo,snapshot,desde,hasta,costos,tamano,params,trades,pnl,sharpe,hipotesis,etapa,sharpe_base\n")
+
+        fechas = pd.date_range("2007-01-01", "2018-12-31", freq="7D")
+        velas = pd.DataFrame(
+            {c: 100.0 for c in ("open", "high", "low", "close", "adj_close", "volume")}, index=fechas,
+        )
+        write_snapshot("sintetico", {"SPY": velas}, base_dir=snapshot_dir)
+        data = yaml.safe_load((Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml").read_text())
+        data["parametros"] = {"rsi_period": [7], "oversold_threshold": [30.0]}
+        archivo = snapshot_dir / "h.yaml"
+        archivo.write_text(yaml.safe_dump(data))
+
+        CliRunner().invoke(backtest_group, [
+            "hipotesis", "correr", str(archivo), "--snapshot", "sintetico", "--carpeta", str(snapshot_dir / "salida"),
+        ])
+
+        assert (snapshot_dir / "intentos.csv").exists()
+        h_despues = hashlib.sha256(intentos_real.read_bytes()).hexdigest()
+        assert h_despues == h_antes
+    finally:
+        if creado and intentos_real.exists():
+            intentos_real.unlink()
 
 

@@ -290,3 +290,15 @@ def test_dsr_contra_intentos_ignora_tasa_libre_con_suficientes_tasa_0(tmp_path):
     esperado = sharpe_deflactado(sr, 5, var_sr_tasa_0, 6, (z**3).mean(), (z**4).mean())
     assert dsr_contra_intentos(EQUITY_DSR, path) == pytest.approx(esperado, abs=1e-9)
 
+
+def test_dsr_contra_intentos_ignora_sharpe_absurdo_inf_y_sintetico(tmp_path):
+    cab = "estrategia,snapshot,sharpe,sharpe_base\n"
+    base = "s,real,0.5,tasa_0\ns,real,1.0,tasa_0\ns,real,1.5,tasa_0\n"
+    limpio = tmp_path / "limpio.csv"
+    limpio.write_text(cab + base)
+    contaminado = tmp_path / "contaminado.csv"
+    contaminado.write_text(cab + base + "s,real,1e13,tasa_0\ns,real,inf,tasa_0\ns,sintetico,0.8,tasa_0\n")
+    dsr = dsr_contra_intentos(EQUITY_DSR, limpio)
+    assert dsr is not None
+    assert dsr_contra_intentos(EQUITY_DSR, contaminado) == pytest.approx(dsr, abs=1e-12)
+
