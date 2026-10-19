@@ -113,18 +113,18 @@ def test_evaluar_etapa3_cartera_casos():
     assert evaluar_etapa3_cartera(pd.Series(dtype=float), 0.0) == (False, ["curva de cartera vacía"])
 
     # Trades < 2
-    pasa, motivos = evaluar_etapa3_cartera(eq_ok, sharpe_bench3=0.0, trades=1)
+    pasa, motivos = evaluar_etapa3_cartera(eq_ok, sharpe_bench3=0.0, sharpe_cartera_etapa2=1.0, sharpe_bench2=0.5, trades=1)
     assert pasa is False
     assert "trades < 2" in motivos
 
     # Sharpe <= 0
     eq_neg = pd.Series(100_000.0 * np.cumprod(1 + np.full(len(fechas), -0.001)), index=fechas)
-    pasa, motivos = evaluar_etapa3_cartera(eq_neg, sharpe_bench3=-1.0)
+    pasa, motivos = evaluar_etapa3_cartera(eq_neg, sharpe_bench3=-1.0, sharpe_cartera_etapa2=1.0, sharpe_bench2=0.5)
     assert pasa is False
     assert "Sharpe de cartera <= 0" in motivos
 
     # Sharpe cartera etapa 3 <= benchmark
-    pasa, motivos = evaluar_etapa3_cartera(eq_ok, sharpe_bench3=1e20)
+    pasa, motivos = evaluar_etapa3_cartera(eq_ok, sharpe_bench3=1e20, sharpe_cartera_etapa2=1.0, sharpe_bench2=0.5)
     assert pasa is False
     assert any("Sharpe de cartera" in m and "benchmark" in m for m in motivos)
 
@@ -136,7 +136,28 @@ def test_evaluar_etapa3_cartera_casos():
     # Menos de 3 años positivos
     ret_2_anios = np.where(fechas.year >= 2021, -0.001, 0.001)
     eq_2 = pd.Series(100_000.0 * np.cumprod(1 + ret_2_anios), index=fechas)
-    pasa, motivos = evaluar_etapa3_cartera(eq_2, sharpe_bench3=-10.0)
+    pasa, motivos = evaluar_etapa3_cartera(eq_2, sharpe_bench3=-10.0, sharpe_cartera_etapa2=1.0, sharpe_bench2=0.5)
     assert pasa is False
     assert any("2 de 4" in m or "(< 3)" in m for m in motivos)
+
+
+def test_evaluar_etapa3_cartera_sin_etapa2_o_sin_benchmark():
+    fechas = pd.bdate_range("2019-01-01", "2022-12-31")
+    eq_ok = pd.Series(100_000.0 * np.cumprod(1 + np.full(len(fechas), 0.001)), index=fechas)
+
+    # Falta Sharpe de etapa 2
+    pasa, motivos = evaluar_etapa3_cartera(eq_ok, sharpe_bench3=0.0, sharpe_cartera_etapa2=None, sharpe_bench2=0.5, trades=10)
+    assert pasa is False
+    assert "sin Sharpe de etapa 2" in motivos
+
+    # Falta benchmark de etapa 2
+    pasa, motivos = evaluar_etapa3_cartera(eq_ok, sharpe_bench3=0.0, sharpe_cartera_etapa2=1.0, sharpe_bench2=None, trades=10)
+    assert pasa is False
+    assert "sin benchmark de etapa 2" in motivos
+
+    # Faltan ambos
+    pasa, motivos = evaluar_etapa3_cartera(eq_ok, sharpe_bench3=0.0, sharpe_cartera_etapa2=None, sharpe_bench2=None, trades=10)
+    assert pasa is False
+    assert "sin Sharpe de etapa 2" in motivos
+    assert "sin benchmark de etapa 2" in motivos
 

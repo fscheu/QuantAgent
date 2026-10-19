@@ -345,6 +345,8 @@ def test_etapa3_cartera_criterio_pasa_con_dsr_bajo(tmp_path, monkeypatch):
 
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     fechas = pd.bdate_range("2019-01-01", "2022-12-31")
+    fechas_snap = pd.bdate_range("2007-01-01", "2022-12-31")
+    (tmp_path / "intentos.csv").write_text("activo,hipotesis,etapa,sharpe\ncartera,h-c,2,0.5\n")
     eq_dir = tmp_path / "salida" / "equity"
     eq_dir.mkdir(parents=True)
     pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(len(fechas), 0.001))}).to_csv(eq_dir / "rsi-SPY.csv", index=False)
@@ -356,7 +358,7 @@ def test_etapa3_cartera_criterio_pasa_con_dsr_bajo(tmp_path, monkeypatch):
         {"activo": "TLT", "estrategia": "sma", "trades": "2", "pnl": "200", "sharpe_tasa_0": "0.2", "max_drawdown": "0.08"},
     ])
     monkeypatch.setattr(validacion, "dsr_contra_intentos", lambda *a, **k: 0.10)
-    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas)}))
+    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas_snap)}))
 
     veredicto, filas = validacion.validar_etapa3(h, "sintetico", {("rsi", "SPY"): {}, ("sma", "TLT"): {}}, tmp_path / "salida")
     assert veredicto == "PASA"
@@ -372,6 +374,8 @@ def test_etapa3_cartera_solo_2_anios_positivos_corta(tmp_path, monkeypatch):
 
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     fechas = pd.bdate_range("2019-01-01", "2022-12-31")
+    fechas_snap = pd.bdate_range("2007-01-01", "2022-12-31")
+    (tmp_path / "intentos.csv").write_text("activo,hipotesis,etapa,sharpe\ncartera,h-c,2,0.5\n")
     retornos = np.where(fechas.year >= 2021, -0.0005, 0.001)
     eq_dir = tmp_path / "salida" / "equity"
     eq_dir.mkdir(parents=True)
@@ -384,7 +388,7 @@ def test_etapa3_cartera_solo_2_anios_positivos_corta(tmp_path, monkeypatch):
         {"activo": "TLT", "estrategia": "sma", "trades": "2", "pnl": "200", "sharpe_tasa_0": "0.2", "max_drawdown": "0.08"},
     ])
     monkeypatch.setattr(validacion, "dsr_contra_intentos", lambda *a, **k: 0.90)
-    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas)}))
+    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas_snap)}))
 
     veredicto, filas = validacion.validar_etapa3(h, "sintetico", {("rsi", "SPY"): {}, ("sma", "TLT"): {}}, tmp_path / "salida")
     assert veredicto == "CORTA"
@@ -398,6 +402,8 @@ def test_etapa3_cartera_menor_al_benchmark_corta_con_dsr_alto(tmp_path, monkeypa
 
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     fechas = pd.bdate_range("2019-01-01", "2022-12-31")
+    fechas_snap = pd.bdate_range("2007-01-01", "2022-12-31")
+    (tmp_path / "intentos.csv").write_text("activo,hipotesis,etapa,sharpe\ncartera,h-c,2,0.5\n")
     eq_dir = tmp_path / "salida" / "equity"
     eq_dir.mkdir(parents=True)
     pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(len(fechas), 0.0001))}).to_csv(eq_dir / "rsi-SPY.csv", index=False)
@@ -409,8 +415,10 @@ def test_etapa3_cartera_menor_al_benchmark_corta_con_dsr_alto(tmp_path, monkeypa
         {"activo": "TLT", "estrategia": "sma", "trades": "2", "pnl": "100", "sharpe_tasa_0": "0.1", "max_drawdown": "0.01"},
     ])
     monkeypatch.setattr(validacion, "dsr_contra_intentos", lambda *a, **k: 0.99)
+    ret_snap = pd.Series(0.0, index=fechas_snap)
+    ret_snap.loc["2019-01-01":"2022-12-31"] = 0.002
     monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame(
-        {"close": pd.Series(100.0 * np.cumprod(1 + np.full(len(fechas), 0.002)), index=fechas)}
+        {"close": pd.Series(100.0 * np.cumprod(1 + ret_snap.values), index=fechas_snap)}
     ))
 
     veredicto, filas = validacion.validar_etapa3(h, "sintetico", {("rsi", "SPY"): {}, ("sma", "TLT"): {}}, tmp_path / "salida")
@@ -425,6 +433,8 @@ def test_etapa3_cartera_dsr_cero_cumple_lo_demas_pasa(tmp_path, monkeypatch):
 
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     fechas = pd.bdate_range("2019-01-01", "2022-12-31")
+    fechas_snap = pd.bdate_range("2007-01-01", "2022-12-31")
+    (tmp_path / "intentos.csv").write_text("activo,hipotesis,etapa,sharpe\ncartera,h-c,2,0.5\n")
     eq_dir = tmp_path / "salida" / "equity"
     eq_dir.mkdir(parents=True)
     pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(len(fechas), 0.001))}).to_csv(eq_dir / "rsi-SPY.csv", index=False)
@@ -436,7 +446,7 @@ def test_etapa3_cartera_dsr_cero_cumple_lo_demas_pasa(tmp_path, monkeypatch):
         {"activo": "TLT", "estrategia": "sma", "trades": "2", "pnl": "200", "sharpe_tasa_0": "0.2", "max_drawdown": "0.08"},
     ])
     monkeypatch.setattr(validacion, "dsr_contra_intentos", lambda *a, **k: 0.0)
-    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas)}))
+    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas_snap)}))
 
     veredicto, filas = validacion.validar_etapa3(h, "sintetico", {("rsi", "SPY"): {}, ("sma", "TLT"): {}}, tmp_path / "salida")
     assert veredicto == "PASA"
@@ -450,6 +460,8 @@ def test_etapa3_cartera_2_piernas_3_activos_agrega_una_fila_intentos(tmp_path, m
 
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     fechas = pd.bdate_range("2019-01-01", "2022-12-31")
+    fechas_snap = pd.bdate_range("2007-01-01", "2022-12-31")
+    (tmp_path / "intentos.csv").write_text("activo,hipotesis,etapa,sharpe\ncartera,h-c2x3,2,0.5\n")
     eq_dir = tmp_path / "salida" / "equity"
     eq_dir.mkdir(parents=True)
     p1_activos = ("SPY", "TLT", "GLD")
@@ -473,21 +485,65 @@ def test_etapa3_cartera_2_piernas_3_activos_agrega_una_fila_intentos(tmp_path, m
     ]
     monkeypatch.setattr(validacion, "correr_motor", lambda *a, **k: filas_falsas)
     monkeypatch.setattr(validacion, "dsr_contra_intentos", lambda *a: 0.96)
-    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas)}))
+    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas_snap)}))
 
     veredicto, filas = validacion.validar_etapa3(h, "sintetico", {(p.clase, a): {} for p in h.piernas for a in p.activos}, tmp_path / "salida")
     assert veredicto == "PASA"
     assert len(filas) == 6
     with (tmp_path / "intentos.csv").open() as f:
         intentos = list(csv.DictReader(f))
-    assert len(intentos) == 1
-    intento = intentos[0]
+    assert len(intentos) == 2
+    intento = intentos[1]
     assert intento["activo"] == "cartera"
     assert intento["etapa"] == "3"
     assert intento["sharpe_base"] == "tasa_0"
     assert intento["trades"] == "30"
     assert intento["desde"] == "2019-01-01"
     assert intento["hasta"] == "2022-12-31"
+
+
+def test_etapa3_cartera_sin_etapa2_o_benchmark_corta(tmp_path, monkeypatch):
+    """Falla si se saltea el chequeo de etapa 2 (falta intento en intentos.csv o falta benchmark etapa 2)."""
+    from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fechas = pd.bdate_range("2019-01-01", "2022-12-31")
+    eq_dir = tmp_path / "salida" / "equity"
+    eq_dir.mkdir(parents=True)
+    pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(len(fechas), 0.001))}).to_csv(eq_dir / "rsi-SPY.csv", index=False)
+    pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(len(fechas), 0.0005))}).to_csv(eq_dir / "sma-TLT.csv", index=False)
+
+    h = Hipotesis("h-c", "autor", "just", "1d", piernas=(Pierna("rsi", {}, ("SPY",), "U"), Pierna("sma", {}, ("TLT",), "U")))
+    monkeypatch.setattr(validacion, "correr_motor", lambda *a, **k: [
+        {"activo": "SPY", "estrategia": "rsi", "trades": "4", "pnl": "1000", "sharpe_tasa_0": "0.5", "max_drawdown": "0.05"},
+        {"activo": "TLT", "estrategia": "sma", "trades": "2", "pnl": "200", "sharpe_tasa_0": "0.2", "max_drawdown": "0.08"},
+    ])
+    monkeypatch.setattr(validacion, "dsr_contra_intentos", lambda *a, **k: 0.90)
+
+    # Caso 1: snapshot sin 2007-2018 (sb2 is None) y sin intentos.csv (s2 is None)
+    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas)}))
+    veredicto, filas = validacion.validar_etapa3(h, "sintetico", {("rsi", "SPY"): {}, ("sma", "TLT"): {}}, tmp_path / "salida")
+    assert veredicto == "CORTA"
+    assert filas[0]["v30"] == "NO PASA"
+    assert "sin Sharpe de etapa 2" in filas[0]["motivos"]
+    assert "sin benchmark de etapa 2" in filas[0]["motivos"]
+
+    # Caso 2: con benchmark pero sin fila de etapa 2 en intentos.csv
+    fechas_snap = pd.bdate_range("2007-01-01", "2022-12-31")
+    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas_snap)}))
+    veredicto, filas = validacion.validar_etapa3(h, "sintetico", {("rsi", "SPY"): {}, ("sma", "TLT"): {}}, tmp_path / "salida")
+    assert veredicto == "CORTA"
+    assert "sin Sharpe de etapa 2" in filas[0]["motivos"]
+    assert "sin benchmark de etapa 2" not in filas[0]["motivos"]
+
+    # Caso 3: con fila de etapa 2 pero sin benchmark
+    (tmp_path / "intentos.csv").write_text("activo,hipotesis,etapa,sharpe\ncartera,h-c,2,0.5\n")
+    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas)}))
+    veredicto, filas = validacion.validar_etapa3(h, "sintetico", {("rsi", "SPY"): {}, ("sma", "TLT"): {}}, tmp_path / "salida")
+    assert veredicto == "CORTA"
+    assert "sin Sharpe de etapa 2" not in filas[0]["motivos"]
+    assert "sin benchmark de etapa 2" in filas[0]["motivos"]
+
 
 
 

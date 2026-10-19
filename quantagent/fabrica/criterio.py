@@ -6,6 +6,7 @@ from typing import NamedTuple
 import pandas as pd
 
 from quantagent.backtesting.vbt_filter import equity_metrics
+from quantagent.backtesting.verdict import MAX_DRAWDOWN, MIN_TRADES
 
 MIN_SESIONES = 30
 
@@ -92,7 +93,7 @@ def evaluar_etapa3_cartera(
     sharpe_bench3: float,
     sharpe_cartera_etapa2: float | None = None,
     sharpe_bench2: float | None = None,
-    max_dd_limite: float = 0.35,
+    max_dd_limite: float = MAX_DRAWDOWN,
     trades: int | None = None,
 ) -> tuple[bool, list[str]]:
     """Criterio de pase de la etapa 3 para carteras (DC 2026-10-19)."""
@@ -102,12 +103,16 @@ def evaluar_etapa3_cartera(
     sharpe = float(m["sharpe"])
     dd = float(m["max_drawdown"])
     motivos = []
-    if trades is not None and trades < 2:
-        motivos.append("trades < 2")
+    if trades is not None and trades < MIN_TRADES:
+        motivos.append(f"trades < {MIN_TRADES}")
     if sharpe <= 0:
         motivos.append("Sharpe de cartera <= 0")
     if sharpe <= sharpe_bench3:
         motivos.append(f"Sharpe de cartera ({sharpe:.2f}) <= benchmark ({sharpe_bench3:.2f})")
+    if sharpe_cartera_etapa2 is None:
+        motivos.append("sin Sharpe de etapa 2")
+    if sharpe_bench2 is None:
+        motivos.append("sin benchmark de etapa 2")
     if sharpe_cartera_etapa2 is not None and sharpe_bench2 is not None and sharpe_cartera_etapa2 <= sharpe_bench2:
         motivos.append(f"Sharpe etapa 2 ({sharpe_cartera_etapa2:.2f}) <= benchmark ({sharpe_bench2:.2f})")
     ap = anios_positivos(eq_cartera)
