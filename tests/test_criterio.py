@@ -20,7 +20,7 @@ def _generar_curva(anios_suben=(2019, 2020, 2022), anios_bajan=(2021,), sesiones
 def test_anios_positivos_3_de_4():
     eq = _generar_curva()
     ap = anios_positivos(eq)
-    assert ap == "3 de 4" and ap == (3, 4) and ap >= 3
+    assert ap == (3, 4)
     assert ap.positivos == 3 and ap.totales == 4
     pos, tot = ap
     assert (pos, tot) == (3, 4)
@@ -32,10 +32,14 @@ def test_anio_menos_30_sesiones_se_descarta_e_informa():
     with pytest.warns(UserWarning, match="Año 2018 descartado.*15 sesiones"):
         sharpes = sharpe_por_anio(eq_corto)
     assert 2018 not in sharpes and len(sharpes) == 4
-    assert anios_positivos(sharpes) == "3 de 4"
+    ap = anios_positivos(sharpes)
+    assert ap == (3, 4)
+    assert ap.positivos == 3 and ap.totales == 4
 
 
 def test_curva_ya_calculada_sin_lectura_datos():
     dias = pd.bdate_range("2019-01-02", periods=40)
     vals = [100.0 + i * 0.1 for i in range(40)]
-    assert anios_positivos(vals, fechas=dias) == "1 de 1"
+    ap = anios_positivos(vals, fechas=dias)
+    assert ap == (1, 1)
+    assert ap.positivos == 1 and ap.totales == 1

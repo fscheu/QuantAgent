@@ -1,29 +1,17 @@
 """Criterio de evaluación de curvas de equity (holdout y sub-períodos)."""
-import logging
 import warnings
+from typing import NamedTuple
 
 import pandas as pd
 
 from quantagent.backtesting.vbt_filter import equity_metrics
 
-logger = logging.getLogger(__name__)
 MIN_SESIONES = 30
 
 
-class AniosPositivos(tuple):
-    positivos = property(lambda self: self[0])
-    totales = property(lambda self: self[1])
-
-    def __str__(self) -> str:
-        return f"{self[0]} de {self[1]}"
-
-    __repr__ = __str__
-
-    def __eq__(self, other) -> bool:
-        return str(self) == other if isinstance(other, str) else super().__eq__(other)
-
-    def __ge__(self, other) -> bool:
-        return self[0] >= other if isinstance(other, (int, float)) else super().__ge__(other)
+class AniosPositivos(NamedTuple):
+    positivos: int
+    totales: int
 
 
 def sharpe_por_anio(equity, fechas=None, risk_free_rate: float = 0.0) -> dict[int, float]:
@@ -39,9 +27,7 @@ def sharpe_por_anio(equity, fechas=None, risk_free_rate: float = 0.0) -> dict[in
     res = {}
     for anio, sub in s.sort_index().groupby(s.index.year):
         if len(sub) < MIN_SESIONES:
-            msg = f"Año {anio} descartado: {len(sub)} sesiones (< {MIN_SESIONES})"
-            logger.warning(msg)
-            warnings.warn(msg, UserWarning, stacklevel=2)
+            warnings.warn(f"Año {anio} descartado: {len(sub)} sesiones (< {MIN_SESIONES})", UserWarning, stacklevel=2)
             continue
         ret = sub.pct_change().dropna()
         if len(ret) >= 2 and ret.std() == 0:
@@ -52,7 +38,7 @@ def sharpe_por_anio(equity, fechas=None, risk_free_rate: float = 0.0) -> dict[in
 
 
 def anios_positivos(equity_o_sharpes, fechas=None, risk_free_rate: float = 0.0) -> AniosPositivos:
-    """Devuelve cuántos años del tramo tienen Sharpe > 0 (formato 'X de Y')."""
+    """Devuelve cuántos años del tramo tienen Sharpe > 0."""
     sharpes = equity_o_sharpes if isinstance(equity_o_sharpes, dict) else sharpe_por_anio(equity_o_sharpes, fechas, risk_free_rate)
     positivos = sum(1 for s in sharpes.values() if s > 0)
-    return AniosPositivos((positivos, len(sharpes)))
+    return AniosPositivos(positivos, len(sharpes))
