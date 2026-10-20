@@ -311,7 +311,7 @@ def informe_command(hipotesis_id, out, archivo):
     click.echo(f"Informe en {out}")
 
 
-def correr_cartera(archivo, snapshot_name, desde, hasta, carpeta):
+def correr_cartera(archivo, snapshot_name, desde, hasta, carpeta, abrir_prueba=False):
     """Corre una cartera con los parámetros de su YAML y registra una fila en intentos.csv; devuelve su curva."""
     from quantagent.fabrica.validacion import _curva_y_v30_cartera, correr_motor
 
@@ -319,7 +319,8 @@ def correr_cartera(archivo, snapshot_name, desde, hasta, carpeta):
     params = {(p.clase, a): (p.combinaciones()[0] if p.parametros else {}) for p in h.piernas for a in p.activos}
     carpeta = Path(carpeta) / h.id
 
-    filas = correr_motor(h, snapshot_name, params, desde, hasta, carpeta, "comparar")
+    extra = {"abrir_prueba": True} if abrir_prueba else {}
+    filas = correr_motor(h, snapshot_name, params, desde, hasta, carpeta, "comparar", **extra)
     eq, _, motivos = _curva_y_v30_cartera(h, filas, carpeta, snapshot_name, "comparar", desde, hasta)
     if eq is None:
         raise ValueError(f"{h.id}: {'; '.join(motivos)}")
@@ -335,11 +336,17 @@ def correr_cartera(archivo, snapshot_name, desde, hasta, carpeta):
 @click.option("--desde", default="2007-01-01", show_default=True)
 @click.option("--hasta", default="2018-12-31", show_default=True)
 @click.option("--out", type=click.Path(dir_okay=False), help="Informe HTML de la comparación.")
-def comparar_command(nucleo, con_capa, snapshot_name, carpeta, margen, desde, hasta, out):
-    if hasta >= "2019-01-01":
-        raise click.ClickException("La comparación no corre sobre la prueba (desde 2019-01-01)")
+@click.option("--abrir-prueba", is_flag=True, help="Corre sobre la prueba (desde 2019-01-01) y abre su candado para la cartera con capa; se abre una sola vez.")
+def comparar_command(nucleo, con_capa, snapshot_name, carpeta, margen, desde, hasta, out, abrir_prueba):
+    if hasta >= "2019-01-01" and not abrir_prueba:
+        raise click.ClickException("La comparación no corre sobre la prueba (desde 2019-01-01) sin --abrir-prueba")
+    if abrir_prueba:
+        try:
+            abrir(cargar_hipotesis(con_capa).id, "prueba")
+        except (CandadoError, ValueError) as exc:
+            raise click.ClickException(str(exc)) from exc
     try:
-        id_n, eq_n = correr_cartera(nucleo, snapshot_name, desde, hasta, carpeta)
+        id_n, eq_n = correr_cartera(nucleo, snapshot_name, desde, hasta, carpeta, abrir_prueba)
         try:
             id_con_capa = cargar_hipotesis(con_capa).id
         except Exception:
@@ -356,7 +363,7 @@ def comparar_command(nucleo, con_capa, snapshot_name, carpeta, margen, desde, ha
                     dst_file = dst_sub / f.name
                     if not dst_file.exists():
                         shutil.copy2(f, dst_file)
-        id_c, eq_c = correr_cartera(con_capa, snapshot_name, desde, hasta, carpeta)
+        id_c, eq_c = correr_cartera(con_capa, snapshot_name, desde, hasta, carpeta, abrir_prueba)
 
         c = comparar(eq_n, eq_c, snapshot_root() / "intentos.csv", margen)
 
@@ -364,6 +371,8 @@ def comparar_command(nucleo, con_capa, snapshot_name, carpeta, margen, desde, ha
         raise click.ClickException(str(exc)) from exc
     click.echo(f"{id_n} Sharpe {c['sharpe_nucleo']:.4f} DSR {c['dsr_nucleo']}; "
                f"{id_c} Sharpe {c['sharpe_capa']:.4f} DSR {c['dsr_capa']}")
+    click.echo(f"Años con Sharpe positivo: núcleo {c['anios_positivos_nucleo'].positivos} de {c['anios_positivos_nucleo'].totales}, "
+               f"con capa {c['anios_positivos_capa'].positivos} de {c['anios_positivos_capa'].totales}")
     click.echo(f"ΔSharpe {c['delta_sharpe']:+.4f}; N {c['n_con_capa']} con la capa, {c['n_sin_capa']} sin ella")
     click.echo(f"Veredicto de la capa: {c['veredicto']} ({c['motivo']})")
     if out:
