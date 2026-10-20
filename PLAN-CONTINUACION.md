@@ -302,7 +302,7 @@ termina cuando cierra su punto de control.
 1. El PM crea la rama `lote/<nombre>` desde `origin/main` y abre un PR **borrador** hacia `main` con label `lote`.
 2. El loop toma solo filas de ese lote, parte de esa rama y abre cada PR `loop` contra ella.
 3. El PM revisa cada entrega (protocolo abajo), comenta la línea `PM:` y, si decide merge, mergea el PR en la
-   rama del lote. Después lanza la siguiente corrida. Tope: 10 entregas por día. La tanda la arranca el aviso del
+   rama del lote. La Action `lote-automerge` puede hacer ese merge cuando la línea `PM:` dice `decido: merge`, el CI está verde y la base es `lote/*`; el pase lote → main sigue manual con la `R:` de Fede. Después lanza la siguiente corrida. Tope: 10 entregas por día. La tanda la arranca el aviso del
    cron (§3.5) o un pedido de Fede; el PM frena si la cuota del agente baja del 20% de la ventana de 5 horas.
 4. Cuando no quedan filas elegibles, el PM corre el punto de control sobre la rama del lote, completa el cuerpo
    del PR del lote y lo marca listo para revisión. Desde ahí el gate espera.
