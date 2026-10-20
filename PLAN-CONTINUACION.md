@@ -302,7 +302,7 @@ termina cuando cierra su punto de control.
 1. El PM crea la rama `lote/<nombre>` desde `origin/main` y abre un PR **borrador** hacia `main` con label `lote`.
 2. El loop toma solo filas de ese lote, parte de esa rama y abre cada PR `loop` contra ella.
 3. El PM revisa cada entrega (protocolo abajo), comenta la línea `PM:` y, si decide merge, mergea el PR en la
-   rama del lote. Después lanza la siguiente corrida. Tope: 10 entregas por día. La tanda la arranca el aviso del
+   rama del lote. La Action `lote-automerge` puede hacer ese merge cuando la línea `PM:` dice `decido: merge`, el CI está verde y la base es `lote/*`; el pase lote → main sigue manual con la `R:` de Fede. Después lanza la siguiente corrida. Tope: 10 entregas por día. La tanda la arranca el aviso del
    cron (§3.5) o un pedido de Fede; el PM frena si la cuota del agente baja del 20% de la ventana de 5 horas.
 4. Cuando no quedan filas elegibles, el PM corre el punto de control sobre la rama del lote, completa el cuerpo
    del PR del lote y lo marca listo para revisión. Desde ahí el gate espera.
@@ -402,6 +402,8 @@ Lotes (definidos por el PM el 2026-10-06; cada uno se abre cuando Fede mergea el
 | L13 | `lote/catalogo-de-primas` | G04a, G04b, G05, G06a, G06b, G07 (se reescriben) | Catálogo de primas aplicables con ETFs corrido como carteras; el LLM propone primas con cita y universo, el crítico rechaza duplicadas | propuesto; se arma al mergear L12 |
 | L14 | `lote/capa-macro` | G03 y tickets nuevos | FRED/ALFRED punto en el tiempo y régimen de mercado como hipótesis aparte, aceptada solo si mejora el DSR del núcleo | propuesto; puede ir en paralelo con M4 |
 | LB1 | `lote/datos-externos` (carril B, label `carril-b`, PR #257) | B-F1–B-F4, B-T1, B-T2, B-T9, B-T8 | Snapshot macro `macro-2026-10` punto en el tiempo (10 series FRED/ALFRED) y `AlpacaSource` bajando SPY con claves reales | OK de Fede el 2026-10-17 para paralelizar la capa de datos de M4 y L14 (nube y notebook); fuera: broker y ejecución en paper hasta cerrar L12. Necesita `FRED_API_KEY` y claves de Alpaca paper en `~/secrets` (las pone Fede) |
+| L15 | `lote/gate-por-lote` | K01 | El gate del loop con `LOOP_LOTE` evalúa solo la entrega previa del lote activo: un PR loop de una máquina no frena ni activa a la otra | PM, 2026-10-18; sale de origin/main para llegar a main sin esperar a L13 ni L14 |
+| L16 | `lote/criterio-etapa3` | E01–E08 | `quantagent backtest hipotesis informe <id>` de una cartera validada muestra DSR con N crudo y N efectivo, Sharpe por año del holdout, recargo de paper y veredicto con el criterio del DC; recalculado sobre las tres carteras que cortaron | decidido por Fede el 2026-10-19 (DC #322, plan #323); sale de origin/main; todo corre en la VM |
 
 T13 se adelantó dentro de L1: es un documento de decisión que no depende del resto, así la respuesta de Fede
 llega mientras el lote avanza. T20 pasó a L1 porque congela los números que ese lote audita.
@@ -625,6 +627,18 @@ Los primeros 5 son los más fáciles de revisar.
 | G06a | `QuantAgent-d4cq.42` | Generador: pedido y lectura de respuesta, sin LLM | 3 válidos de 5 bloques; no pisa | leer | L13 |
 | G06b | `QuantAgent-d4cq.43` | `backtest hipotesis proponer` vía `QUANTAGENT_LLM_CMD` (VM); depende de G06a | Comando falso: 2 archivos y log | leer | L13 |
 | G07 | `QuantAgent-d4cq.44` | Resumen cuenta causas por hipótesis; ERROR con la última línea | 3 activos de una hipótesis cuentan 1 | leer | L13 |
+| P05.4 | `QuantAgent-d4cq.63` | Etapas 2 y 3 con piernas transversales: `SenalExterna` y celdas transversales en `validar_etapa2`/`validar_etapa3`; depende de P05.3 (hecho) | Una pierna transversal alimenta a los dos motores con la misma serie 0/1; `senal-externa` no es válida en un YAML | leer | L13 |
+| P09 | `QuantAgent-d4cq.67` | Motivo de ERROR con la última línea no vacía de la excepción, `<Tipo>: `, truncada a 200 | ERROR con excepción de 3 líneas muestra la última | leer | L13 |
+| P10 | `QuantAgent-d4cq.68` | Punto de control L13 (VM, lo corre el PM sobre el snapshot amplio `etf-1d-2026-10-amplio`; Fede dio OK por cartera el 2026-10-19 para abrir 2019–2022 en las carteras que pasen la etapa 2); depende de P05.4 y P09 | Cada entrada `destino: L13` con veredicto e informe o `motivo`; el informe muestra N de intentos y DSR | probar | L13 |
+| K01 | `QuantAgent-kw84` | Loop: el gate toma la entrega previa solo del lote activo (`LOOP_LOTE`) | Dos PRs loop de lotes distintos: con `LOOP_LOTE=lote/a` evalúa solo el de lote/a; un cambio sobre lote/b no activa modo cambio en lote/a | leer | L15 |
+| E01 | `QuantAgent-w12l` | Limpiar `intentos.csv`: copia fechada y retiro de las 10 filas `sintetico`; IM con hashes (corrida con `next-local-data`) | `grep -c sintetico local-data/intentos.csv` da 0; copia fechada con el sha256 original; el resto de las filas igual; DSR de la etapa 2 de `cartera-transversal` ya no da 0,00 por el SR0 | leer | L16 |
+| E02 | `QuantAgent-hzkq` | Las pruebas sintéticas no escriben en el registro real y `dsr_contra_intentos` ignora Sharpe no finitos o `sintetico` | `hipotesis correr --snapshot sintetico` deja `intentos.csv` con el mismo hash; fila con Sharpe 1e13 e `inf` no cambia el DSR | leer | L16 |
+| E03 | `QuantAgent-gziw` | N efectivo: `n_efectivo(filas)` por `(estrategia, params, activo, desde, hasta)` y `n_intentos` en `dsr_contra_intentos` | 5 filas con 2 idénticas dan `n_efectivo = 4`; DSR con N menor es mayor o igual que con N crudo | leer | L16 |
+| E05 | `QuantAgent-txun` | `sharpe_por_anio` y `anios_positivos` sobre una curva ya calculada | Curva de 4 años con 3 positivos da `3 de 4`; un año con <30 sesiones se descarta e informa | leer | L16 |
+| E06 | `QuantAgent-344q` | `recargo_paper(dsr)`: (50 %, 12 sem) bajo 0,50; (75 %, 6) hasta 0,95; (100 %, 0) desde 0,95 | Test de los tres tramos y de los bordes; `None` da (50, 12) | leer | L16 |
+| E04 | `QuantAgent-cjh3` | Criterio de pase de la etapa 3: Sharpe > 0, mayor al benchmark equiponderado en etapas 2 y 3, ≥ 3 de 4 años positivos y drawdown V30; el DSR se informa y no corta | Cartera con DSR 0,00 que cumple lo demás pasa; con 2 de 4 años positivos corta con motivo; menor al benchmark corta aunque el DSR sea alto | decidir | L16 |
+| E07 | `QuantAgent-haua` | Informe con N crudo y efectivo, DSR con ambos, años positivos, benchmark y recargo; glosario sin 'pasa con 0,95' | El HTML de una fila de etapa 3 muestra las cuatro cifras y el recargo | probar | L16 |
+| E08 | `QuantAgent-n96l` | Punto de control L16: recalcular las tres carteras que cortaron con el criterio nuevo (curvas guardadas, sin abrir 2019–2022); IM | El IM dice cuáles pasan y por qué; ninguna corrida nueva sobre 2019–2022; `pytest -m oraculo` verde | decidir | L16 |
 | B-F1 | `QuantAgent-pdxx` | Cliente FRED/ALFRED con todas las versiones (nube) | 2 páginas; la clave nunca aparece | leer | LB1 |
 | B-F2 | `QuantAgent-vj37` | Snapshot macro congelado con manifiesto (nube); depende de B-F1 | `verify` detecta un parquet alterado | leer | LB1 |
 | B-F3 | `QuantAgent-okp9` | Lectura punto en el tiempo (nube); depende de B-F2 | Revisión de mayo no se ve en abril | leer | LB1 |

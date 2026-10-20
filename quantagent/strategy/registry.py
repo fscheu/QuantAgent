@@ -5,10 +5,12 @@ from typing import Any
 from .base import TradingStrategy
 from .curva_pendiente_strategy import CurvaPendienteStrategy
 from .fifty_two_week_high_strategy import FiftyTwoWeekHighStrategy
+from .halloween_strategy import HalloweenStrategy
 from .llm_agent_strategy import LLMAgentStrategy
 from .momentum_12m_strategy import Momentum12mStrategy
 from .rsi_regimen_strategy import RsiRegimenStrategy
 from .rsi_strategy import RSIMeanReversionStrategy
+from .senal_externa_strategy import SenalExterna
 from .sma_cross_strategy import SmaCrossStrategy
 from .triple_screen_strategy import TripleScreenStrategy
 
@@ -193,6 +195,8 @@ STRATEGY_REGISTRY: dict[str, dict[str, Any]] = {
             },
         },
     },
+    "HalloweenStrategy": {"cls": HalloweenStrategy, "type": "deterministic", "cli_alias": "halloween", "display_name": HalloweenStrategy.describe()["display_name"], "description": HalloweenStrategy.describe()["description"], "min_bars": 1, "params": {}},
+    "SenalExterna": {"cls": SenalExterna, "type": "deterministic", "cli_alias": "senal-externa", "display_name": SenalExterna.describe()["display_name"], "description": SenalExterna.describe()["description"], "min_bars": 1, "params": {"ruta": {"type": str, "default": "", "description": "Ruta al CSV con timestamp, posicion."}}},
     "LLMAgentStrategy": {
         "cls": LLMAgentStrategy,
         "type": "llm",

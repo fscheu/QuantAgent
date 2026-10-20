@@ -6,10 +6,19 @@ import pandas as pd
 
 from quantagent.backtesting.signals import bar_signals, check_no_lookahead, check_no_lookahead_macro
 from quantagent.cli.sweep import cli_aliases
-from quantagent.data.snapshot import SnapshotError
+from quantagent.data.snapshot import SnapshotError, snapshot_root
+from quantagent.fabrica.critico import (
+    UNIVERSOS_CSV,
+    cargar_existentes,
+    criticar,
+    motivo_universo,
+    registrar_universo,
+)
 from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+from quantagent.fabrica.transversal import METRICAS, es_transversal, señales_transversales
 from quantagent.strategy.registry import STRATEGY_REGISTRY, build_strategy
 
+CLASE_INTERNA = "senal-externa"  # P05.4 (SenalExterna) lee una ruta arbitraria: solo la usa el motor
 MAX_PARAMETROS_LIBRES = 6  # provisorio, decidido por Fede el 2026-10-15
 MIN_JUSTIFICACION = 40
 # Universo amplio de L12 (QuantAgent-d4cq.46/.47): los 29 ETFs del manifiesto
@@ -30,9 +39,23 @@ def _senales(p: Pierna | Hipotesis, combinacion: dict, velas: pd.DataFrame) -> p
     return bar_signals(estrategia, velas, p.activos[0], getattr(p, "timeframe", "1d"))
 
 
-def admitir(h: Hipotesis, velas: pd.DataFrame) -> tuple[bool, list[str]]:
-    """(True, []) si la hipótesis entra al embudo; si no, todos los motivos de rechazo."""
+def admitir(h: Hipotesis, velas: pd.DataFrame, existentes: list[Hipotesis] | None = None,
+            cierres: pd.DataFrame | None = None) -> tuple[bool, list[str]]:
+    """(True, []) si la hipótesis entra al embudo; si no, todos los motivos de rechazo.
+
+    `existentes` son las hipótesis ya conocidas; por defecto, las de `hipotesis/`.
+    `cierres`: panel fecha × activo del universo, para la prueba de truncamiento de las piernas transversales.
+    """
     motivos = []
+    veredicto, motivo, _ = criticar(h, cargar_existentes() if existentes is None else existentes)
+    if veredicto == "duplicada":
+        motivos.append(motivo)
+    try:
+        universos = snapshot_root() / UNIVERSOS_CSV
+    except SnapshotError:  # sin carpeta de datos no hay dónde congelar (solo tests sueltos)
+        universos = None
+    if universos and (congelado := motivo_universo(h, universos)):
+        motivos.append(congelado)
     if len(h.justificacion.strip()) < MIN_JUSTIFICACION:
         motivos.append(f"justificación de {len(h.justificacion.strip())} caracteres; mínimo {MIN_JUSTIFICACION}")
     libres = sum(sum(len(v) > 1 for v in p.parametros.values()) for p in h.piernas)
@@ -40,7 +63,9 @@ def admitir(h: Hipotesis, velas: pd.DataFrame) -> tuple[bool, list[str]]:
         motivos.append(f"{libres} parámetros libres; máximo {MAX_PARAMETROS_LIBRES}")
     aliases = cli_aliases()
     for p in h.piernas:
-        if aliases.get(p.clase, p.clase) not in STRATEGY_REGISTRY:
+        if p.clase in (CLASE_INTERNA, "SenalExterna"):
+            motivos.append(f"clase interna, no válida en una hipótesis: {p.clase}")
+        elif not es_transversal(p.clase) and aliases.get(p.clase, p.clase) not in STRATEGY_REGISTRY:
             motivos.append(f"clase no registrada: {p.clase}")
     ajenos = sorted({a for p in h.piernas for a in p.activos} - UNIVERSO_AMPLIO)
     if ajenos:
@@ -49,7 +74,17 @@ def admitir(h: Hipotesis, velas: pd.DataFrame) -> tuple[bool, list[str]]:
         velas = velas.set_index(pd.DatetimeIndex(velas["timestamp"]), drop=False)
     cortes = [velas.index[len(velas) // 2], velas.index[(3 * len(velas)) // 4]]
     for p in h.piernas:
-        if aliases.get(p.clase, p.clase) not in STRATEGY_REGISTRY:
+        if es_transversal(p.clase):
+            if cierres is None:
+                motivos.append(f"falta el panel de cierres para la prueba de truncamiento de {p.clase}")
+                continue
+            idx = cierres.index
+            difs = check_no_lookahead(lambda c, p=p: señales_transversales(c, METRICAS[p.clase]), cierres,
+                                      [idx[len(idx) // 2], idx[(3 * len(idx)) // 4]])
+            if difs:
+                motivos.append(f"prueba de truncamiento fallida en {p.clase}: {difs[0]}")
+            continue
+        if p.clase in (CLASE_INTERNA, "SenalExterna") or aliases.get(p.clase, p.clase) not in STRATEGY_REGISTRY:
             continue
         # Una clase con `requiere_macro = True` recibe `snapshot` (y `serie`) como parámetros de valor único.
         macro = getattr(STRATEGY_REGISTRY[aliases.get(p.clase, p.clase)]["cls"], "requiere_macro", False)
@@ -66,4 +101,6 @@ def admitir(h: Hipotesis, velas: pd.DataFrame) -> tuple[bool, list[str]]:
                 difs = [str(e)]
             if difs:
                 motivos.append(f"prueba de truncamiento fallida con {comb}: {difs[0]}")
+    if not motivos and universos:
+        registrar_universo(h, universos)
     return not motivos, motivos

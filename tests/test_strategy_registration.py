@@ -93,6 +93,8 @@ def test_alias_actuales_del_cli():
         "momentum-12m": "Momentum12mStrategy",
         "rsi-regimen": "RsiRegimenStrategy",
         "curva-pendiente": "CurvaPendienteStrategy",
+        "halloween": "HalloweenStrategy",
+        "senal-externa": "SenalExterna",
     }
 
 

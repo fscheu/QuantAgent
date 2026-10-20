@@ -1,0 +1,16 @@
+id: cartera-estacionalidad
+autor: fede
+justificacion: >-
+  Estacionalidad de Halloween: el retorno de noviembre a abril supera al de
+  mayo a octubre en acciones (Bouman y Jacobsen 2002), con decaimiento
+  posterior a su publicacion (McLean y Pontiff 2016). La regla es larga desde
+  la ultima sesion de octubre hasta la ultima de abril y fuera el resto del
+  año. Las fechas son las de la literatura, sin parametros: la cartera tiene 0
+  parametros libres.
+fuente: https://doi.org/10.1257/000282802762024683 ; https://doi.org/10.1111/jofi.12365
+timeframe: 1d
+piernas:
+  - clase: halloween
+    parametros: {}
+    activos: [EEM, EFA, EWJ, EWZ, FXI, IWM, QQQ, SPY, XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV, XLY]
+    universo: Solo los 17 ETFs de acciones del snapshot etf-1d-2026-10-amplio; la estacionalidad se midio en acciones.

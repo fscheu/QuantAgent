@@ -22,6 +22,10 @@ class Pierna:
     universo: str
 
     def combinaciones(self) -> list[dict[str, Any]]:
+        from quantagent.fabrica.transversal import es_transversal
+
+        if not self.parametros and es_transversal(self.clase):
+            return [{}]  # métrica transversal: sin parámetros, una única combinación vacía
         return validar_grilla(self.parametros, self.clase)
 
 
@@ -81,6 +85,10 @@ class Hipotesis:
     @property
     def universo(self) -> str:
         return self.piernas[0].universo
+
+    @property
+    def es_cartera(self) -> bool:
+        return len(self.piernas) > 1 or self.id.startswith("cartera-")
 
     def combinaciones(self) -> list[dict[str, Any]]:
         return self.piernas[0].combinaciones()
