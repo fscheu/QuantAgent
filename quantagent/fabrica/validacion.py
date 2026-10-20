@@ -9,9 +9,10 @@ from tempfile import TemporaryDirectory
 
 import pandas as pd
 
-from quantagent.backtesting.verdict import dsr_contra_intentos, evaluar
+from quantagent.backtesting.verdict import dsr_contra_intentos, evaluar, n_efectivo
 from quantagent.cli.sweep import registrar_intento
 from quantagent.data.snapshot import snapshot_root
+from quantagent.fabrica.criterio import evaluar_etapa3_cartera, recargo_paper, sharpe_benchmark
 from quantagent.fabrica.transversal import METRICAS, es_transversal, señales_transversales
 
 SHARPE_MINIMO_FILTRO = 0.10
@@ -209,18 +210,45 @@ def validar_etapa3(h, snapshot, params_por_activo, carpeta):
     filas = correr_motor(h, snapshot, params_por_activo, "2019-01-01", "2022-12-31",
                          carpeta, "3", abrir_prueba=True)
     if h.es_cartera:
-        eq_cartera, pasa_v30, motivos = _curva_y_v30_cartera(
+        eq_cartera, _, _ = _curva_y_v30_cartera(
             h, filas, carpeta, snapshot, "3", "2019-01-01", "2022-12-31"
         )
-        dsr = dsr_contra_intentos(eq_cartera, snapshot_root() / "intentos.csv") if eq_cartera is not None else None
-        pasa_dsr = dsr is not None and dsr >= 0.95
-        if not pasa_dsr:
-            motivos.append("DSR de cartera < 0.95" if dsr is not None else "sin DSR")
+        import quantagent.data.snapshot as snap_mod
+        activos = list(dict.fromkeys(a for p in h.piernas for a in p.activos))
+        c3 = pd.DataFrame({a: snap_mod.read_snapshot(snapshot, a)["close"].loc["2019-01-01":"2022-12-31"] for a in activos}) if snapshot else None
+        c2 = pd.DataFrame({a: snap_mod.read_snapshot(snapshot, a)["close"].loc["2007-01-01":"2018-12-31"] for a in activos}) if snapshot else None
+        sb3 = sharpe_benchmark(c3) if c3 is not None and not c3.empty else 0.0
+        sb2 = sharpe_benchmark(c2) if c2 is not None and not c2.empty else None
+
+        intentos_csv = snapshot_root() / "intentos.csv"
+        todas_filas, s2 = [], None
+        if intentos_csv.exists():
+            with open(intentos_csv, newline="", encoding="utf-8") as f:
+                todas_filas = list(csv.DictReader(f))
+            for r in todas_filas:
+                if r.get("hipotesis") == h.id and r.get("etapa") == "2" and r.get("activo") == "cartera":
+                    try:
+                        s2 = float(r["sharpe"])
+                    except (ValueError, TypeError):
+                        pass
+
+        tot_trades = sum(int(f["trades"]) for f in filas if f.get("trades") not in (None, ""))
+        pasa, motivos = evaluar_etapa3_cartera(eq_cartera, sb3, s2, sb2, trades=tot_trades)
+
+        neff = n_efectivo(todas_filas) if todas_filas else None
+        try:
+            dsr_eff = dsr_contra_intentos(eq_cartera, intentos_csv, neff) if eq_cartera is not None else None
+            dsr_crudo = dsr_contra_intentos(eq_cartera, intentos_csv) if eq_cartera is not None else None
+        except FileNotFoundError:
+            dsr_eff, dsr_crudo = None, None
+
+        recargo = recargo_paper(dsr_eff)
         for fila in filas:
-            fila["v30"] = "PASA" if pasa_v30 else "NO PASA"
-            fila["dsr"] = dsr
+            fila["v30"] = "PASA" if pasa else "NO PASA"
+            fila["dsr"] = dsr_eff
+            fila["dsr_crudo"] = dsr_crudo
+            fila["recargo"] = recargo
             fila["motivos"] = list(motivos)
-        pasa = pasa_v30 and pasa_dsr
         return "PASA" if pasa else "CORTA", filas
     for fila in filas:
         activo = fila["activo"]
