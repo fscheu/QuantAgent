@@ -67,3 +67,36 @@ def test_proponer_cli_comando_falla_no_escribe_nada(tmp_path, monkeypatch, cmd, 
     monkeypatch.setenv("QUANTAGENT_LLM_CMD", cmd)
     res = CliRunner().invoke(backtest_group, ["hipotesis", "proponer", "--carpeta", str(tmp_path / "propuestas")])
     assert res.exit_code != 0 and esperado in res.output and not list(tmp_path.rglob("*.yaml"))
+
+
+def test_propuestas_aprobar_rechazar_y_tanda_ignora_no_aprobadas(tmp_path, monkeypatch):
+    import csv
+    from datetime import datetime
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path / "datos"))
+    prop_dir, hip_dir, runner = tmp_path / "catalogo/propuestas", tmp_path / "hipotesis", CliRunner()
+    escribir_propuestas(yaml.safe_dump({"propuestas": [
+        {"id": f"prop-{s}", "idea": f"idea-{s}", "clase": "momentum-12m", "ventana": {"lookback": [63 + i]}, "hipotesis_economica": "Carry corto en bonos.",
+         "fuente": ["10.1016/j.jfineco.2011.11.003"], "universo": {"activos": ["IEF", "TLT"], "criterio": "Bonos"}, "parametros_libres": 0}
+        for i, s in enumerate(("ok", "no", "pendiente"))
+    ]}), prop_dir)
+    r_ok = runner.invoke(backtest_group, ["hipotesis", "propuestas", "aprobar", "prop-ok", "--quien", "fede", "--propuestas-dir", str(prop_dir), "--hipotesis-dir", str(hip_dir)])
+    assert r_ok.exit_code == 0 and "APROBADA prop-ok" in r_ok.output and not (prop_dir / "prop-ok.yaml").exists()
+    assert (hip_dir / "prop-ok.yaml").exists() and not (hip_dir / "prop-pendiente.yaml").exists()
+    r_no = runner.invoke(backtest_group, ["hipotesis", "propuestas", "rechazar", "prop-no", "--motivo", "universo redundante", "--propuestas-dir", str(prop_dir)])
+    assert r_no.exit_code == 0 and not (prop_dir / "prop-no.yaml").exists() and not (hip_dir / "prop-no.yaml").exists()
+    assert yaml.safe_load((prop_dir / "rechazadas/prop-no.yaml").read_text(encoding="utf-8"))["motivo_rechazo"] == "universo redundante"
+    filas = list(csv.DictReader((prop_dir / "registro.csv").read_text(encoding="utf-8").splitlines()))
+    assert [(f["id"], f["decision"], f["quien"], f["motivo"]) for f in filas] == [("prop-ok", "APROBADA", "fede", ""), ("prop-no", "RECHAZADA", "fede", "universo redundante")]
+    assert all(datetime.fromisoformat(f["fecha_utc"]) for f in filas)
+    corridas = []
+    monkeypatch.setattr(hipotesis.correr_command, "callback", lambda archivo, snapshot_name, carpeta: corridas.append(cargar_hipotesis(archivo).id))
+    r_tanda = runner.invoke(backtest_group, ["hipotesis", "tanda", str(hip_dir), "--snapshot", "snap", "--carpeta", str(tmp_path / "salida")])
+    assert r_tanda.exit_code == 0 and corridas == ["prop-ok"]
+
+
+@pytest.mark.parametrize("args", [["rechazar", "prop-1"], ["rechazar", "prop-1", "--motivo", "   "], ["rechazar", "no-existe", "--motivo", "x"], ["aprobar", "no-existe"]])
+def test_propuestas_rechazar_sin_motivo_o_inexistente_falla(tmp_path, args):
+    (prop_dir := tmp_path / "propuestas").mkdir()
+    (prop_dir / "prop-1.yaml").write_text("id: prop-1\n", encoding="utf-8")
+    res = CliRunner().invoke(backtest_group, ["hipotesis", "propuestas", *args, "--propuestas-dir", str(prop_dir)])
+    assert res.exit_code != 0 and (prop_dir / "prop-1.yaml").exists() and not (prop_dir / "registro.csv").exists()
