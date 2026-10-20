@@ -119,6 +119,8 @@ def test_etapa2(tmp_path, monkeypatch, caso):
     assert veredicto == ("PASA" if caso in ("pasa", "otro directorio") else "CORTA")
     assert [f["activo"] for f in filas] == ["SPY", "TLT"]
     assert filas[0]["control"].startswith("coinciden")
+    with (tmp_path / "salida" / "celdas.csv").open() as f:
+        assert [(c["pierna_clase"], c["activo"]) for c in csv.DictReader(f)] == [("rsi", "SPY"), ("rsi", "TLT")]
     if caso == "ninguno pasa":
         assert all(f["v30"] == "NO PASA" and f["motivos"] for f in filas)
     else:
@@ -291,6 +293,40 @@ def test_etapa2_cartera_2_piernas_3_activos_agrega_una_fila_intentos(tmp_path, m
     assert intento["sharpe_base"] == "tasa_0"
     assert intento["trades"] == "30"
     assert intento["estrategia"] == "rsi+sma"
+
+
+def test_etapa2_cartera_escribe_celdas_por_pierna_y_activo(tmp_path, monkeypatch):
+    from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fechas = pd.date_range("2010-01-01", periods=100)
+    eq_dir = tmp_path / "salida" / "equity"
+    eq_dir.mkdir(parents=True)
+    h = Hipotesis("h-celdas", "autor", "just", "1d", piernas=(
+        Pierna("rsi", {"rsi_period": [7]}, ("SPY", "TLT"), "U"), Pierna("sma", {"fast": [20]}, ("SPY", "TLT"), "U")))
+    filas_falsas = [{"activo": a, "estrategia": p.clase, "trades": str(n), "pnl": "100", "sharpe_tasa_0": "0.4",
+                     "max_drawdown": "0.02", "dsr": "0.9"} for n, p in enumerate(h.piernas, 5) for a in p.activos]
+    for f in filas_falsas:
+        pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(100, 0.001))}).to_csv(
+            eq_dir / f"{f['estrategia']}-{f['activo']}.csv", index=False)
+    monkeypatch.setattr(validacion, "correr_motor", lambda *a, **k: filas_falsas)
+
+    def fake_subp(cmd, **kwargs):
+        Path(cmd[cmd.index("--tabla") + 1]).write_text("activo,control\nX,coinciden 5 de 5\n")
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(validacion.subprocess, "run", fake_subp)
+    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas)}))
+    validacion.validar_etapa2(h, "sintetico", {(p.clase, a): {} for p in h.piernas for a in p.activos}, tmp_path / "salida")
+    with (tmp_path / "salida" / "celdas.csv").open() as f:
+        lector = csv.DictReader(f)
+        celdas = list(lector)
+    assert lector.fieldnames == validacion.COLUMNAS_CELDAS
+    assert [(c["pierna_clase"], c["activo"], c["trades"]) for c in celdas] == [
+        ("rsi", "SPY", "5"), ("rsi", "TLT", "5"), ("sma", "SPY", "6"), ("sma", "TLT", "6")]
+    assert {(c["hipotesis"], c["desde"], c["hasta"], c["pnl"], c["max_drawdown"]) for c in celdas} == {
+        ("h-celdas", "2007-01-01", "2018-12-31", "100", "0.02")}
+    assert len({c["max_drawdown_cartera"] for c in celdas}) == 1 and celdas[0]["max_drawdown_cartera"] != ""
 
 
 def test_etapa2_cartera_dos_piernas_mismo_activo_parametros_distintos(tmp_path, monkeypatch):

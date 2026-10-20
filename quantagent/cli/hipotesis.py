@@ -10,6 +10,7 @@ from pathlib import Path
 
 import click
 import pandas as pd
+import yaml
 from tabulate import tabulate
 
 from quantagent.data.snapshot import SnapshotError, read_snapshot, snapshot_root
@@ -26,6 +27,7 @@ from quantagent.fabrica.filtro import (
 )
 from quantagent.fabrica.hipotesis import cargar_hipotesis
 from quantagent.fabrica.informe import datos_informe, render_comparacion, render_informe
+from quantagent.fabrica.investigador import HIPOTESIS_DIR, PROPUESTAS_DIR, proponer_con_llm
 from quantagent.fabrica.transversal import es_transversal
 from quantagent.fabrica.validacion import (
     alarma_cartera,
@@ -34,6 +36,7 @@ from quantagent.fabrica.validacion import (
     validar_etapa3,
 )
 from quantagent.settings import COSTOS_PERFILES
+from quantagent.strategy.registry import STRATEGY_REGISTRY, cli_aliases
 
 from .sweep import registrar_intento
 
@@ -309,6 +312,82 @@ def informe_command(hipotesis_id, out, archivo):
         raise click.ClickException(str(exc)) from exc
     Path(out).write_text(html, encoding="utf-8")
     click.echo(f"Informe en {out}")
+
+
+@hipotesis_group.command("proponer", help="Pedir propuestas al LLM vía QUANTAGENT_LLM_CMD y validarlas.")
+@click.option("--carpeta", type=click.Path(file_okay=False), help="Carpeta donde guardar las propuestas aceptadas.")
+def proponer_command(carpeta):
+    try:
+        rutas, rechazadas = proponer_con_llm(carpeta=carpeta)
+    except (RuntimeError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    for ruta in rutas:
+        click.echo(f"ACEPTADA {ruta.stem}: {ruta}")
+    for rechazo in rechazadas:
+        click.echo(f"RECHAZADA {rechazo}")
+
+
+def _registrar_propuesta(carpeta, prop_id, decision, quien, motivo=""):
+    path, fecha = Path(carpeta) / "registro.csv", datetime.now(timezone.utc).isoformat()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    nuevo = not path.exists()
+    with path.open("a", newline="", encoding="utf-8") as f:
+        if nuevo:
+            csv.writer(f).writerow(["fecha_utc", "id", "decision", "quien", "motivo"])
+        csv.writer(f).writerow([fecha, prop_id, decision, quien, motivo])
+    return fecha
+
+
+@hipotesis_group.group("propuestas", help="Revisar propuestas del catálogo (aprobar o rechazar).")
+def propuestas_group():
+    pass
+
+
+@propuestas_group.command("aprobar", help="Mover una propuesta de catalogo/propuestas/ a hipotesis/ y registrar el OK.")
+@click.argument("propuesta_id")
+@click.option("--quien", "--autor", "quien", required=True)
+@click.option("--propuestas-dir", type=click.Path(file_okay=False), default=None)
+@click.option("--hipotesis-dir", type=click.Path(file_okay=False), default=None)
+def aprobar_command(propuesta_id, quien, propuestas_dir, hipotesis_dir):
+    pid, quien = Path(propuesta_id).stem, (quien or "").strip()
+    p_dir, h_dir = Path(propuestas_dir or PROPUESTAS_DIR), Path(hipotesis_dir or HIPOTESIS_DIR)
+    origen, destino = p_dir / f"{pid}.yaml", h_dir / f"{pid}.yaml"
+    if not quien or not origen.exists() or destino.exists():
+        raise click.ClickException(f"No se puede aprobar {pid}: --quien obligatorio y propuesta existente en {p_dir}")
+    h_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        cargar_hipotesis(origen)
+        origen.replace(destino)
+    except Exception:
+        d = yaml.safe_load(origen.read_text(encoding="utf-8"))
+        u = d.get("universo") if isinstance(d, dict) and isinstance(d.get("universo"), dict) else {}
+        reg = cli_aliases().get(d.get("clase")) if isinstance(d, dict) else None
+        d.update(autor=d.get("autor") or quien, timeframe=d.get("timeframe") or "1d",
+                 justificacion=d.get("justificacion") or d.get("hipotesis_economica") or "",
+                 fuente=" ; ".join(map(str, d["fuente"])) if isinstance(d.get("fuente"), list) else d.get("fuente", ""),
+                 activos=d.get("activos") or u.get("activos") or [], universo=u.get("criterio") or "" if u else d.get("universo", ""),
+                 parametros=d.get("parametros") or d.get("ventana") or ({k: [v["default"]] for k, v in STRATEGY_REGISTRY[reg]["params"].items()} if reg else {}))
+        destino.write_text(yaml.safe_dump(d, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        origen.unlink()
+    click.echo(f"APROBADA {pid}: {destino} (OK de {quien} el {_registrar_propuesta(p_dir, pid, 'APROBADA', quien)})")
+
+
+@propuestas_group.command("rechazar", help="Archivar una propuesta con su motivo.")
+@click.argument("propuesta_id")
+@click.option("--motivo", required=True)
+@click.option("--quien", "--autor", "quien", required=True)
+@click.option("--propuestas-dir", type=click.Path(file_okay=False), default=None)
+def rechazar_command(propuesta_id, motivo, quien, propuestas_dir):
+    pid, motivo, quien, p_dir = Path(propuesta_id).stem, (motivo or "").strip(), (quien or "").strip(), Path(propuestas_dir or PROPUESTAS_DIR)
+    origen, destino = p_dir / f"{pid}.yaml", p_dir / "rechazadas" / f"{pid}.yaml"
+    if not motivo or not quien or not origen.exists():
+        raise click.ClickException(f"No se puede rechazar {pid}: --motivo y --quien obligatorios y propuesta existente en {p_dir}")
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    fecha, d = _registrar_propuesta(p_dir, pid, "RECHAZADA", quien, motivo), yaml.safe_load(origen.read_text(encoding="utf-8"))
+    d.update(estado="rechazada", motivo_rechazo=motivo, fecha_utc=fecha, quien=quien)
+    destino.write_text(yaml.safe_dump(d, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    origen.unlink()
+    click.echo(f"RECHAZADA {pid}: {destino} ({motivo})")
 
 
 def correr_cartera(archivo, snapshot_name, desde, hasta, carpeta, abrir_prueba=False):
