@@ -40,12 +40,13 @@ def ficha_postmortem(h, filas, carpeta=CARPETA):
         pnl_pierna[pierna] = pnl_pierna.get(pierna, 0.0) + float(f["pnl"])
     bruto = sum(pnl_pierna.values()) + costo
     absolutos = [abs(v) for v in pnl_pierna.values()]
+    dd_cartera = filas[0].get("max_drawdown_cartera")
     causas = {
         "pocos_trades": trades < MIN_TRADES,
         "costos_comen_ganancia": bruto > 0 and costo >= COSTO_MAX * bruto,
         "rotacion_alta": trades / len(filas) / anios > ROTACION_MAX,
         "una_pierna_domina": len(absolutos) > 1 and max(absolutos) > DOMINIO_MAX * sum(absolutos),
-        "drawdown": any(float(f["max_drawdown"] or 0) > MAX_DRAWDOWN for f in filas),
+        "drawdown": float(dd_cartera) > MAX_DRAWDOWN if dd_cartera else any(float(f["max_drawdown"] or 0) > MAX_DRAWDOWN for f in filas),
     }
     ficha = {"id": h.id, "causas": [c for c, activa in causas.items() if activa]}
     Path(carpeta).mkdir(parents=True, exist_ok=True)

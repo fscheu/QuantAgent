@@ -326,6 +326,7 @@ def test_etapa2_cartera_escribe_celdas_por_pierna_y_activo(tmp_path, monkeypatch
         ("rsi", "SPY", "5"), ("rsi", "TLT", "5"), ("sma", "SPY", "6"), ("sma", "TLT", "6")]
     assert {(c["hipotesis"], c["desde"], c["hasta"], c["pnl"], c["max_drawdown"]) for c in celdas} == {
         ("h-celdas", "2007-01-01", "2018-12-31", "100", "0.02")}
+    assert len({c["max_drawdown_cartera"] for c in celdas}) == 1 and celdas[0]["max_drawdown_cartera"] != ""
 
 
 def test_etapa2_cartera_dos_piernas_mismo_activo_parametros_distintos(tmp_path, monkeypatch):
