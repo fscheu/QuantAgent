@@ -1,0 +1,39 @@
+# Propuesta sin aprobar (familia F1 de docs/02_planning/2026-10-20_investigacion_edge_y_generacion.md).
+# Datos: los del snapshot etf-1d-2026-10-amplio (SPY, IEF), sin costo. La clase de señal no existe:
+# hace falta una clase nueva y que la cartera acepte pesos objetivo por fecha (tickets R09 y R10).
+# Intentos: 1 cartera, 1 fila de intentos.csv por etapa corrida (hasta 3).
+# Muestra del paper: 1997-09 a 2023-03, que cubre las etapas 2 y 3; la prueba informativa es la reserva
+# (2023 en adelante) y paper. Antes de aprobar, verificar en el texto del paper la definición exacta de
+# la "cuarta semana" (acá: últimos 5 días hábiles del mes).
+id: rebalanceo-fin-de-mes
+idea: Los fondos que rebalancean hacia pesos fijos de acciones y bonos venden a fin de
+  mes el activo que más subió en el mes, y esa venta predecible baja su retorno en
+  los últimos días hábiles.
+clase: rebalanceo-fin-de-mes
+ventana:
+  peso_acciones_referencia: [0.6]
+  dias_habiles_antes_de_fin_de_mes: [5]
+  peso_base: [0.5]
+hipotesis_economica: Pensiones, fondos con fecha objetivo y otros fondos balanceados
+  (unos 20 billones de dólares según los autores) vuelven a pesos fijos de acciones
+  y bonos en fechas conocidas. Si en el mes las acciones le ganaron a los bonos, tienen
+  que vender acciones y comprar bonos cerca del cierre de mes, y al revés si perdieron.
+  Esa presión baja el retorno del ganador del mes al día siguiente y se disuelve en
+  unas dos semanas; quien toma el otro lado le cobra la liquidez. La señal sale solo
+  de los retornos del mes, la contraparte tiene mandatos que le impiden dejar de hacerlo,
+  y el benchmark (50 % SPY y 50 % IEF comprados) no tiene esta fuente de retorno. La
+  regla es la del paper sin ajustes, con una cartera 60/40 que deriva desde el último
+  cierre de mes; si su peso de acciones supera el 60 %, los últimos 5 días hábiles
+  del mes se está 100 % en IEF; si queda por debajo, 100 % en SPY; el resto del mes,
+  50/50 como el benchmark, para que la diferencia mida solo la señal.
+fuente:
+- 10.3386/w33554
+- 10.1093/rfs/hhz054
+universo:
+  activos:
+  - SPY
+  - IEF
+  criterio: Los equivalentes en ETF de los dos activos sobre los que Harvey, Mazzoleni
+    y Melone miden la presión, el futuro del S&P 500 y el futuro del bono del Tesoro
+    a 10 años. Fijado antes de correr; no se agregan otros ETFs de acciones o bonos.
+parametros_libres: 0

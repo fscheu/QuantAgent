@@ -1,0 +1,53 @@
+# Propuesta sin aprobar (familia F3 de docs/02_planning/2026-10-20_investigacion_edge_y_generacion.md).
+# Fase 2: necesita datos que no están en el snapshot (contratos individuales de futuros de CME Group con
+# al menos dos vencimientos por fecha: Norgate Futures o Databento) y un broker con futuros (IBKR; Alpaca
+# no ofrece futuros). No correr hasta que Fede decida datos y broker (ticket R14).
+# Intentos: 1 cartera, 1 fila de intentos.csv por etapa corrida (hasta 3).
+# Riesgo conocido: las curvas de granos tienen estacionalidad que entra en la pendiente 1.º-2.º vencimiento.
+id: carry-futuros
+idea: El carry de un futuro, lo que rinde si los precios no cambian, anticipa su retorno
+  en exceso; comprar carry alto y vender carry bajo dentro de cada clase de activo
+  cobra una prima.
+clase: carry-futuros
+ventana:
+  medida: [carry-koijen-2018]
+  rebalanceo: [mensual]
+hipotesis_economica: En materias primas el carry es la pendiente de la curva de futuros,
+  que refleja el costo de almacenar, el rendimiento por tenencia y lo que pagan los
+  coberturistas por transferir riesgo de precio; en monedas es la diferencia de tasas.
+  Comprar carry alto y vender carry bajo cobra una prima por cargar riesgo de crisis
+  y de liquidez, documentada en todas las clases de activos (Koijen, Moskowitz, Pedersen
+  y Vrugt 2018), en monedas (Lustig, Roussanov y Verdelhan 2011) y en materias primas
+  (Szymanowska et al. 2014). Es una prima por riesgo, no una anomalía que el arbitraje
+  borre al publicarse. La cartera es neutral en dólares dentro de cada clase y no tiene
+  beta de acciones, así que no está en un benchmark comprado. Regla de la cita sin
+  ajustes - carry de materias primas como la pendiente anualizada entre el primer y el
+  segundo vencimiento; de monedas, como la prima del futuro sobre el contado; pesos
+  por ranking dentro de cada clase (rango menos rango medio) e igual riesgo por clase.
+fuente:
+- 10.1016/j.jfineco.2017.11.002
+- 10.1093/rfs/hhr068
+- 10.1111/jofi.12096
+universo:
+  activos:
+  - CL
+  - GC
+  - SI
+  - HG
+  - ZC
+  - ZS
+  - ZW
+  - 6E
+  - 6J
+  - 6B
+  - 6A
+  - 6C
+  - 6S
+  criterio: Futuros de materias primas y de monedas de CME Group con historia diaria
+    desde antes de 2007 y al menos dos vencimientos negociados, que es donde Koijen et
+    al. y Szymanowska et al. miden el carry con la propia curva, sin datos externos de
+    rendimientos. Se excluyen ganado, gas y combustibles refinados, cuyas curvas tienen
+    la estacionalidad más marcada (la de los granos queda como riesgo declarado), y bonos
+    e índices de acciones, porque su carry necesita curvas de tasas o dividendos de otros
+    países. Fijado antes de correr.
+parametros_libres: 0
