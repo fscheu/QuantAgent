@@ -2,7 +2,7 @@
 
 Fecha: 2026-10-20. Estado: **propuesta, sin decidir**. No cambia código.
 
-Alcance: no se corrió ningún backtest ni el embudo, no se leyó ni escribió `local-data/`, no se tocó `intentos.csv` ni el candado. Las cifras de carteras salen de los IM ya publicados. La única cuenta nueva es una simulación con retornos sintéticos que mide cuánto discrimina el criterio (apéndice A). Las tres propuestas nuevas están en `catalogo/propuestas/`, sin aprobar, y pasan el chequeo de forma y de originalidad de `fabrica/propuestas.py`.
+Alcance: no se corrió ningún backtest ni el embudo, no se leyó ni escribió `local-data/`, no se tocó `intentos.csv` ni el candado. Las cifras de carteras salen de los IM ya publicados. La única cuenta nueva es una simulación con retornos sintéticos que mide cuánto discrimina el criterio (apéndice A). El relevamiento de datos (§2.5) y de incubación (§3.6) lo hizo un workflow de agentes con fuentes públicas. Las tres propuestas nuevas están en `catalogo/propuestas/`, sin aprobar, y pasan el chequeo de forma y de originalidad de `fabrica/propuestas.py`.
 
 Beads: este trabajo no tiene issue; la pregunta 13 de §7 propone crear uno padre para el lote.
 
@@ -19,7 +19,7 @@ Más volumen del mismo tipo de idea sube N sin subir la chance de encontrar algo
 3. **Generador**: que el LLM conozca qué corta y contra qué, el inventario de datos y clases, y los efectos que ya decayeron, y que justifique por qué su idea le gana a 1/N de los mismos activos.
 4. **Criterio**: mantener el actual con la medición corregida para carteras que pretenden reemplazar al benchmark, y abrir una vía de "diversificador" declarada antes de correr. Paper pasa a ser incubación con reglas de corte, porque 12 semanas de paper tienen un error estándar de Sharpe de 2.
 
-Las decisiones de Fede están en §7.
+Las decisiones de Fede están en §7. Las respuestas a sus preguntas de seguimiento están en §2.5 (qué datos sumar), §3.3 (cómo leer la vía diversificador), §3.6 (cómo sería la incubación) y §5.7 (modelo y esfuerzo del generador).
 
 ## 1. Diagnóstico
 
@@ -174,6 +174,39 @@ Conclusión práctica: la ventaja de un operador chico está en flujos y liquide
 4. Hay evidencia de que siguió después de publicada, o una razón concreta para que no decaiga.
 5. La implementación es fiel a la cita: si la cita es largo-corto, se prueba largo-corto.
 
+### 2.5 Qué datos conviene sumar
+
+Más datos mejoran la capacidad de producir estrategias solo si traen algo que 1/N de los 29 ETFs no tiene: otras clases de activo (monedas, crédito, países, materias primas), lado corto, carry, prima de volatilidad, un flujo forzado con fecha conocida o más apuestas independientes. Sumar señales de timing sobre los mismos activos (VIX, NFCI, flujos de fondos, FOMC) vuelve a dar el overlay solo largo que ya cortó. Ningún dato arregla la poca potencia de una prueba de 4 años.
+
+La investigación se hizo el 2026-10-20 con un workflow de 8 agentes: cuatro relevaron fuentes por clase de dato, uno armó el ranking y dos intentaron refutarlo, uno contra los precios de las páginas oficiales y otro contra la lógica del orden. La tabla de abajo ya tiene las correcciones de los verificadores.
+
+Dos advertencias:
+- **Contaminación.** Para ordenar familias, uno de los agentes calculó con series de AQR cómo rindieron la tendencia y el carry en 2019–2022, que es la ventana de la etapa 3. Esas cifras no se usan acá para decidir nada, pero ya se conocen: F2 y F3 tampoco tienen prueba ciega en 2019–2022 (§4, "Contaminación de estas propuestas"). Cualquier uso de AQR o French para decidir corta en 2018-12.
+- **Retención sobre fondos con K-1 (PTP).** Según el soporte de Alpaca, cuando una cuenta extranjera vende un PTP se retiene el 10 % del monto bruto de la venta. Son PTP DBC y USO, que ya están en el universo, y candidatos como DBA, DBB, DBE, DBP, DBO, GSG, UNG, UUP y UDN. En una cartera que rota cada mes, eso destruye el resultado. Invesco y USCF publican avisos de excepción (Qualified Notices), pero no hay constancia de que Alpaca los aplique. Ticket R15.
+
+Ranking de mayor provecho y menor costo:
+
+| # | Dato | Fuente y costo | Provecho | Condición o prerrequisito |
+|---|---|---|---|---|
+| 1 | Factores largo-corto: momentum de series de tiempo por clase, BAB, QMJ, carry; FF5, momentum e industrias | AQR Data Sets y Kenneth French Data Library; gratis | Medio. No son operables, pero permiten decidir qué familia vale la pena construir y atribuir cada candidata a factores conocidos | Cortar en 2018-12. AQR tiene términos propietarios: uso interno, no versionar en el repo |
+| 2 | Más ETFs vivos, con una regla de elegibilidad fechada en 2007: monedas (FXA, FXB, FXC, FXF, FXY), crédito (HYG, JNK, EMB), bonos internacionales (BWX), países e inversos 1x (SH, PSQ, RWM) | Yahoo, gratis (uso personal, endpoint no documentado) | Alto para F2: suma clases que 1/N casi no tiene y lado corto. Son unas 15–25 apuestas efectivas, no 80–100 (estimación; medir con componentes principales en 2007–2018) | Muchos arrancan en 2007: para cubrir 2008 hay que empalmar con proxies (tipos de cambio y tasas de FRED, Treasuries sintéticos con DGS*, fondos mutuos de historia larga). Sin PTP hasta resolver R15. Los inversos 1x cuentan como pata corta de acciones, no como amplitud |
+| 3 | Futuros con precio, carry y forward por fecha, en decenas de mercados | CSV de pysystemtrade (Carver); gratis | Alto para investigar F2 y F3 en futuros y como proxy de empalme; nada operable con Alpaca | Las series terminan en 2024-03; validarlas contra los ETFs en el tramo común |
+| 4 | Calendario y resultados de las subastas del Tesoro (anuncio, subasta, plazo, monto) | Fiscal Data API del Tesoro, gratis y sin clave; calendario desde 1979, bid-to-cover desde 1994 | Medio: flujo forzado (los dealers absorben la oferta; Lou, Yan y Zhang 2013) con muchos eventos por año, lo que sube la potencia de una prueba de 4 años. Se opera con IEF y TLT | Llenado al cierre en el motor, que también necesita F1. Efecto de pocos pb contra 5 pb por lado; sin evidencia posterior a la publicación |
+| 5 | Carry de monedas G10: tipos de cambio DEX*, tasas IR3TIB01* y DTB3 | FRED, gratis | Medio-bajo: carry con lado corto, pero pocas apuestas; la comisión de 0,40 % de los CurrencyShares y las tasas de depósito negativas de 2015–2021 se comen buena parte del diferencial | Investigarlo antes con AQR hasta 2018; los cortos piden cuenta margin |
+| 6 | Curva de futuros VIX por contrato, VIX3M y VIX6M | CFE y Cboe, gratis; VXVCLS de FRED desde 2007-12, VIX3M de Cboe desde 2009-09 | Medio-bajo: prima de seguro, pero con correlación ~0,7 con el S&P 500 y colas como la de febrero de 2018 | Reconstruir a −0,5x, que es lo que SVXY es desde 2018-02-27 (existe desde 2011-10) |
+| 7 | ETFs dados de baja: 692 en dólares con fin entre 2007 y 2018 | Tiingo: Starter gratis (500 símbolos por mes) o Power, USD 30 por mes | Bajo-medio: corrige el sesgo de supervivencia, que en tendencia por serie de tiempo con universo por regla pesa menos que en un ranking transversal | Solo los que cumplan la regla de 2007, escrita antes de mirar la lista. Verificar que el plan devuelva sus precios |
+| 8 | Futuros de CME por vencimiento, 2010–2026 | Databento: crédito inicial de USD 125, vence a los 6 meses; plan Standard USD 199 por mes | Bajo por sí solo: empieza en 2010-06 y pierde 2008. Sirve para validar la fila 3 y cubrir 2024–2026 | Calcular el costo antes de bajar |
+| 9 | Base de futuros auditada con todos los contratos | Norgate Futures, USD 270 por año (USD 148,50 por 6 meses, prueba de 3 semanas), o Pinnacle Deep History, USD 149 único más USD 18–20 por mes | Medio y condicional: no agrega ninguna fuente de retorno sobre la fila 3 | Solo si una familia de futuros pasa la etapa 2 con la fila 3, con IBKR y unos USD 100–250 mil de capital (estimación) |
+| 10 | Acciones de EE.UU. sin sesgo de supervivencia, con fundamentales fechados | Sharadar Core US Equities Bundle con historia completa, USD 499 por año o USD 69 por mes | Bajo para este operador: sin capital para la pata corta (estimado en unos USD 100 mil), vuelve a ser un overlay solo largo | Que JKP u Open Source Asset Pricing muestren una prima que sobreviva a su publicación |
+| 11 | Intradía de 1 minuto de ETFs desde antes de 2007 | FirstRate Data ETF Complete, USD 399,95 único | Bajo-medio: solo si F1 necesita una señal tomada a las 15:45 | Probar antes F1 con barras diarias y llenado al cierre |
+| 12 | Cadenas de opciones | Cboe DataShop (SPX 2007–2018, USD 396) u ORATS (desde 2007, USD 599 único más USD 99 por mes) | Bajo: la prima empaquetada del S&P 500 correlaciona ~0,9 con el índice y perdió contra él en 2019–2022 | Un contrato equivale a USD 65–77 mil de nominal; Alpaca no permite venta descubierta |
+
+Del puesto 8 para abajo no se compra nada hasta que una familia pase la etapa 2 con datos gratis y estén confirmados el broker y el capital.
+
+Descartados: series continuas de Nasdaq (CHRIS, discontinuadas), Stooq (solo el primer vencimiento, inútil para carry), Investing.com (prohíbe guardar los datos), IQFeed y CSI Data (más caros que Norgate o Pinnacle para lo mismo), opciones sin historia en 2007–2012 (ThetaData, Databento OPRA y Alpaca, que empieza en 2024-02), OptionMetrics y CRSP/Compustat (piden afiliación académica vía WRDS), cripto (no existe 2007–2018), short interest de FINRA (historia corta y, en ETFs, dominado por los market makers), NFCI (sin versiones antes de 2011) y cualquier otra señal de timing sobre los 29 ETFs.
+
+Sin verificar en la fuente oficial: el precio de CSI Data, que el plan gratis de Tiingo devuelva precios de ETFs dados de baja y que el histórico gratis de Alpaca sea SIP (la documentación solo garantiza IEX sin suscripción). Licencias: Yahoo, Tiingo y Norgate son de uso personal o interno; JKP es CC BY-NC; Public Plans Data es de uso no comercial con atribución; Cboe pide licencia para usar su contenido aunque la descarga sea libre.
+
 ## 3. Revisión del criterio de paper
 
 ### 3.1 Lo que se mantiene
@@ -199,6 +232,8 @@ Pre-registro, cero parámetros libres, todo intento cuenta, una sola apertura po
 
 Cifras de C0, C1 y C2: simulación del apéndice A.
 
+Cómo leer C1. C0 pregunta si la cartera, sola, le gana a comprar y mantener. C1 pregunta si mezclarla con lo comprado da más Sharpe que lo comprado solo. La mezcla mejora si el Sharpe de la cartera supera ρ × el Sharpe del benchmark. Ejemplo con benchmark 0,5 y cartera 0,4: con ρ = 0,2, la mezcla 50/50 en riesgo da 0,58 y pasa C1 aunque la cartera sola pierda; con ρ = 0,9, la mezcla da 0,46 y no pasa por ninguna vía. Lo que se incuba en C1 es la mezcla, así que el operador tiene que tener de verdad la base comprada. Bailey, López de Prado y del Pozo (2013) formalizan la misma decisión para plataformas con varias estrategias: una estrategia se aprueba por su efecto sobre el Sharpe de la cartera, no por su Sharpe sola.
+
 ### 3.4 Recomendación
 
 C0 con M1–M3 para las carteras que pretenden reemplazar al benchmark, y C1 como vía separada para las que declaran `rol: diversificador` en el YAML antes de correr. C1 no relaja en tasa de error: los falsos positivos son los mismos que en C0. Cambia lo que se busca. Si el operador de todos modos tiene una base comprada, una cartera con alfa contra esa base mejora su resultado total aunque sola no le gane al índice. Cederburg et al. (2020) muestran exactamente ese caso con la volatilidad gestionada: no le gana a la estrategia original, pero suma alfa a una cartera que la contiene.
@@ -213,10 +248,30 @@ C2 lo descarto por ahora. Desplaza todo el filtro a paper, y paper hoy no tiene 
 
 ### 3.6 Paper: incubación, no confirmación
 
-Error estándar del Sharpe anual estimado según la duración: 6 semanas, 2,9; 12 semanas, 2,1; 26 semanas, 1,4; 52 semanas, 1,0; 104 semanas, 0,7. Doce semanas de paper no confirman ni descartan una ventaja de 0,3. Lo que paper sí puede verificar en semanas es la implementación. Propuesta, con los números a fijar por Fede:
-- **Éxito de paper = seguimiento:** correlación diaria entre los retornos de paper y los de la simulación sobre los mismos días de al menos 0,9; costo real por operación de no más del doble del supuesto; ninguna orden fuera de regla.
-- **Corte escrito antes, en paper y en vivo:** la curva acumulada cae bajo el percentil 5 de la distribución simulada de la cartera para ese horizonte, o el drawdown supera el límite.
-- **Vivo con tamaño reducido** (el recargo vigente) después del seguimiento mínimo; tamaño completo solo después de 12–24 meses sin activar el corte.
+Incubar es correr la estrategia hacia adelante, con código y parámetros congelados, sobre datos que nunca vio, con reglas escritas de antemano sobre qué la hace avanzar, qué la corta y cómo crece el capital. No sirve para probar que hay edge:
+- Error estándar del Sharpe anual estimado según la duración: 6 semanas, 2,9; 12 semanas, 2,1; 26 semanas, 1,4; 52 semanas, 1,0; 104 semanas, 0,7.
+- Minimum Track Record Length (Bailey y López de Prado 2012), con 95 % de confianza y retornos normales: un Sharpe de 1,5 necesita 1,2 años; uno de 1,0, 2,7 años; uno de 0,5, 10,8 años. Contra 1/N cuenta el ratio de información del retorno activo, y uno de 0,3 necesita 30 años. Subir la frecuencia de los datos casi no ayuda: mandan los años de calendario.
+- Lo que pasa en la práctica: en 215 estrategias de 15 bancos, el Sharpe mediano bajó de 1,20 en el backtest a 0,31 en vivo (Suhonen, Lennkh y Perez 2017); en 888 algoritmos de Quantopian, el Sharpe del backtest casi no predijo el fuera de muestra (Wiecki et al. 2016).
+
+Lo que sí converge en meses es la implementación: pesos, órdenes, costos, volatilidad y correlación con 1/N. Proceso propuesto; los números marcados como heurísticos no tienen fuente publicada y los fija Fede:
+
+| Etapa | Duración | Avanza si | Qué no mide |
+|---|---|---|---|
+| 0. Congelar | Un día | Hash del código y del YAML; un backtest "sombra" que corre cada día sobre los datos nuevos con el mismo código | — |
+| 1. Paper | 1–3 meses o 3 rebalanceos | Pesos de paper iguales a los de la sombra, salvo redondeo; ninguna orden rechazada sin explicar; dividendos bien tratados (Alpaca paper no los simula, así que la sombra corre con precios sin ajustar y dividendos explícitos) | Slippage ni alfa: paper no simula impacto, latencia ni posición en la cola |
+| 2. Dinero real mínimo | 3–6 meses, hasta juntar unas 64 órdenes (n = (z·s/δ)², con desvío de 20 pb por orden y precisión de 5 pb) | Costo real medio ≤ 5 pb (prueba t o SPRT de Wald); tracking error contra la sombra < 1–2 % anual (heurístico); volatilidad realizada y correlación con 1/N dentro de ±2 errores estándar (±13 % para la volatilidad con 126 días) | Alfa |
+| 3. 50 % del tamaño objetivo | 12 meses | Ningún corte activado | — |
+| 4. 100 % | Continua | Volatilidad objetivo = c × Sharpe con haircut, con c entre 0,25 y 0,5 (fracción de Kelly), más el recargo por DSR vigente | — |
+
+Las promociones dependen de criterios operativos y de no haber activado cortes, nunca del retorno realizado: promover a la que tuvo suerte es el sesgo de incubación que Evans (2010) documenta en fondos mutuos.
+
+Cortes, escritos antes de empezar:
+- **Drawdown:** a la mitad si supera el percentil 95 del drawdown máximo simulado para el tiempo transcurrido (bootstrap por bloques del backtest, o normal con el Sharpe con haircut); cierre si supera el percentil 99. Con Sharpe 0,5 y volatilidad del 10 %: a 6 meses, 13 % y 17 %; a 1 año, 18 % y 23 %; a 3 años, 28 % y 37 %.
+- **Decaimiento:** CUSUM de Page sobre el retorno activo contra 1/N (Philips, Yashchin y Stein 2003), con ratio de información bueno de 0,5, malo de 0 y umbral h ≈ 6,4–6,8, que da una falsa alarma cada 84 meses en promedio. Tarda unos 41 meses en promedio en detectar una caída de 0,5 a 0: detecta roturas, no decaimientos suaves.
+- **Operación:** si los pesos no coinciden con la sombra, o el costo supera el supuesto con t > 2, se frena y se investiga.
+- **Relanzar después de un corte** cuenta como un intento nuevo en N.
+
+Detalles de Alpaca. Las órdenes en la subasta de apertura (`time_in_force=opg`) y de cierre (`cls`) existen solo para acciones enteras, y la documentación las marca con "contactar a ventas"; las `cls` enviadas después de las 15:50 ET se rechazan. Con 29 ETFs, el redondeo a acciones enteras exige unos USD 58 mil para que el error de peso de cada activo quede debajo del 25 % de su peso; con menos capital, ese error se acepta y se modela en la sombra.
 
 ### 3.7 La reserva 2023+
 
@@ -262,7 +317,7 @@ Lo que exige: contratos individuales de futuros (no series continuas), un motor 
 
 ### Contaminación de estas propuestas
 
-Elegí F1 y F2 sabiendo, a grandes rasgos, cómo les fue a esas familias en 2019–2022: que el front-running del rebalanceo tuvo un salto grande en 2020 y que la tendencia con cortos ganó en 2022. F3 está menos contaminada porque no conozco el resultado del carry en esos años con precisión. Por eso propongo que, para F1 y F2, la etapa 3 se lea como réplica y que la decisión de paper dependa de la reserva con M1 aplicado.
+Elegí F1 y F2 sabiendo, a grandes rasgos, cómo les fue a esas familias en 2019–2022: que el front-running del rebalanceo tuvo un salto grande en 2020 y que la tendencia con cortos ganó en 2022. F3 quedó contaminada después: en la investigación de datos de §2.5, un agente calculó con series de AQR el resultado del carry de materias primas y monedas en 2019–2022. Por eso propongo que, para F1, F2 y F3, la etapa 3 se lea como réplica y que la decisión de paper dependa de la reserva con M1 aplicado.
 
 ## 5. Cambios al generador
 
@@ -355,6 +410,17 @@ Con estas tres, las cuatro carteras que cortaron habrían llegado con advertenci
 3. Chequeos automáticos de §5.3, con Crossref.
 4. Fede aprueba o rechaza con `hipotesis propuestas aprobar|rechazar`, como hoy.
 
+### 5.7 Modelo y esfuerzo
+
+El generador corre una vez por lote, así que el costo no es la restricción. A precios de la API de Anthropic de octubre de 2026, una corrida con unos 10 mil tokens de entrada y 50 mil de salida, pensamiento incluido, cuesta unos USD 2,6 con Claude Fable 5.1 (USD 10 y 50 por millón) y unos USD 1 con Claude Opus 5.5 (USD 4 y 20). Con las suscripciones por cupo (`agy`, `codex`) pesa mucho menos que un ticket de implementación.
+
+- **Generador:** el modelo más capaz disponible, con esfuerzo alto. Claude Fable 5.1 con esfuerzo `xhigh`; si no está disponible, Claude Opus 5.5 con `xhigh` o `max`. L17 corrió `claude-opus-5-5-medium`: `medium` es el esfuerzo por defecto de Opus 5.5 y queda corto para razonar sobre literatura, decaimiento y mecanismo. Los sufijos de esfuerzo disponibles se ven con `agy models`.
+- **Refutador (paso 2 de §5.6):** un modelo de otra familia, como `gpt-6-astra` vía `codex` o Gemini 4 Argon vía `agy`, con esfuerzo alto. Un crítico del mismo modelo comparte sus puntos ciegos.
+- **Herramientas:** búsqueda y lectura web (Crossref, SSRN, NBER) para que verifique DOIs y evidencia posterior en lugar de recordarlos. Pesa más que el modelo: la cita equivocada de `deriva-pre-fomc` salió de recordar sin verificar.
+- **Muestreo:** 2 o 3 corridas independientes, o con modelos distintos, juntando las ideas antes del refutador. Generar no suma a N; correr en el embudo sí.
+
+Ningún modelo arregla la contaminación: cualquier modelo de 2025–2026 conoce los resultados de 2019–2025 de las estrategias conocidas. Eso lo resuelve el protocolo (reserva y paper, §3.6 y §3.7), no la elección del modelo.
+
 ## 6. Plan del lote siguiente
 
 Lote de búsqueda; el número lo asigna el PM después de L18. Filas con prefijo R para no chocar con las existentes. Tipo como en `PLAN-CONTINUACION.md` §4: leer, probar o decidir.
@@ -375,8 +441,9 @@ Lote de búsqueda; el número lo asigna el PM después de L18. Filas con prefijo
 | R12 | F2 por las etapas 0 a 2 | IM con veredicto y correlación con 1/N; ninguna entrada nueva en el candado | decidir | VM | R02, R11 |
 | R13 | Protocolo de la reserva (lista corta, criterio, una apertura) y de incubación en paper (seguimiento, cortes, duración) | Documento con los números de Fede antes de abrir nada | decidir | doc | R04 |
 | R14 | Opcional: datos y broker de futuros para F3 | Comparación de costo y cobertura (Norgate, Databento; IBKR) y capital mínimo por granularidad | decidir | doc | R13 |
+| R15 | Confirmar con Alpaca la retención del 10 % sobre las ventas de PTP en una cuenta de no residente (DBC y USO, que ya están en el universo; DBA, DBB, UUP, UNG y otros candidatos) y si aplica las Qualified Notices de Invesco y USCF | Respuesta escrita de Alpaca; si retiene, la lista de ETFs que salen de lo operable y su reemplazo sin K-1, aclarando qué historia pierde la etapa 2 | decidir | doc | — |
 
-Orden: R01; después R02, R03 y R05 en paralelo; R04, R06, R07 y R08; R09 a R12 según lo que se apruebe; R13 antes de abrir la reserva. Ningún ticket de nube toca `local-data`. Solo R04, R10 y R12 corren en la VM.
+Orden: R01; después R02, R03 y R05 en paralelo; R04, R06, R07 y R08; R09 a R12 según lo que se apruebe; R13 antes de abrir la reserva. R15 no depende de nada y conviene cerrarlo antes de M4, porque DBC y USO están en las carteras actuales. Ningún ticket de nube toca `local-data`. Solo R04, R10 y R12 corren en la VM.
 
 Recomiendo que `cambio-de-mes` (L18, Q04) no abra su etapa 3 hasta que estén R01 a R03: la apertura es única y conviene que use la medición corregida.
 
@@ -385,7 +452,7 @@ Recomiendo que `cambio-de-mes` (L18, Q04) no abra su etapa 3 hasta que estén R0
 1. **Criterio de la etapa 3.** ¿C0 con M1–M3 (actual corregido), C0 más la vía C1 para carteras que declaran `rol: diversificador` antes de correr, o C2? Recomiendo C0 más C1.
 2. **Sharpe en exceso de la tasa corta (M1).** ¿Se adopta en el informe antes de abrir cualquier ventana nueva, con el registro de intentos a tasa 0? Recomiendo sí.
 3. **Benchmark de mismos pesos (M2).** ¿Se agrega como diagnóstico y 1/N sigue siendo el corte? Recomiendo sí.
-4. **Rol de paper.** ¿Paper pasa a ser incubación con éxito por seguimiento y reglas de corte escritas antes? Si es sí, hacen falta tres números: correlación mínima de seguimiento (propongo 0,9), costo máximo contra el supuesto (propongo el doble) y percentil de corte (propongo 5).
+4. **Rol de paper.** ¿Paper pasa a ser incubación con el proceso de §3.6 (etapas, cortes y escalado)? Si es sí, hacen falta los números heurísticos: tracking error máximo contra la sombra (propongo 1–2 % anual), percentiles de corte por drawdown (propongo 95 para reducir a la mitad y 99 para cerrar) y meses mínimos por etapa (propongo los de la tabla).
 5. **Reserva 2023+.** ¿Se abre una sola vez para una lista corta escrita antes? ¿Cuáles y con qué criterio? Propongo `cartera-transversal`, más F1 y `cambio-de-mes` si pasan la etapa 2, con el criterio de la pregunta 1 y M1.
 6. **`cambio-de-mes` (L18, Q04).** ¿Su etapa 3 espera a R01–R03? Recomiendo que espere.
 7. **F1 `rebalanceo-fin-de-mes`.** ¿Se aprueba, con la etapa 2 leída como réplica y la decisión en la reserva? Recomiendo sí, después de verificar en el texto del paper la definición de la cuarta semana.
@@ -394,7 +461,9 @@ Recomiendo que `cambio-de-mes` (L18, Q04) no abra su etapa 3 hasta que estén R0
 10. **`volatilidad-gestionada` (pendiente desde L17).** ¿Se rechaza, o se deja solo como diversificador con la constante de escala calculada con datos hasta cada fecha? Recomiendo dejarla como diversificador y no correrla antes que F1 y F2.
 11. **Lección escrita para el generador.** ¿Entra al catálogo una regla escrita por personas, sin cifras de la prueba, del tipo "overlays solo largos sobre los activos del benchmark no superaron a 1/N"? Filtra un bit de la prueba; recomiendo sí, porque el pedido nuevo ya dice lo mismo desde el criterio.
 12. **Generador.** ¿Se adoptan el pedido, los campos y los chequeos de §5 antes del próximo `hipotesis proponer`? Recomiendo sí, y no correr `proponer` hasta tenerlos.
-13. **Beads.** ¿Qué ID lleva este trabajo? Propongo crear un issue padre para el lote con R01–R14 como hijos.
+13. **Beads.** ¿Qué ID lleva este trabajo? Propongo crear un issue padre para el lote con R01–R15 como hijos.
+14. **Datos.** ¿Se suman ahora las filas 1 a 4 de §2.5, que son gratis (factores de AQR y French cortados en 2018-12, ETFs ampliados con regla de 2007, CSV de pysystemtrade y subastas del Tesoro)? Recomiendo sí, con un ticket por fila que agrega el PM, y nada pago hasta que una familia pase la etapa 2 con datos gratis.
+15. **Modelo del generador.** ¿Se usa el más capaz disponible con esfuerzo alto, un refutador de otra familia y búsqueda web (§5.7)? Recomiendo sí.
 
 ## Apéndice A. Simulación del criterio
 
@@ -475,6 +544,7 @@ Calendario y flujos
 - Kurov, A., Wolfe, M. y Gilbert, T. (2021). The Disappearing Pre-FOMC Announcement Drift. FRL. [10.1016/j.frl.2020.101781](https://doi.org/10.1016/j.frl.2020.101781)
 - Lakonishok, J. y Smidt, S. (1988). Are Seasonal Anomalies Real? RFS. [10.1093/rfs/1.4.403](https://doi.org/10.1093/rfs/1.4.403)
 - Lucca, D. y Moench, E. (2015). The Pre-FOMC Announcement Drift. JF. [10.1111/jofi.12196](https://doi.org/10.1111/jofi.12196)
+- Lou, D., Yan, H. y Zhang, J. (2013). Anticipated and Repeated Shocks in Liquid Markets. RFS. [10.1093/rfs/hht034](https://doi.org/10.1093/rfs/hht034)
 - McConnell, J. y Xu, W. (2008). Equity Returns at the Turn of the Month. FAJ. [10.2469/faj.v64.n2.11](https://doi.org/10.2469/faj.v64.n2.11)
 
 Intradía y nocturno
@@ -511,7 +581,33 @@ Acciones, factores, cripto y datos alternativos
 - Rapach, D., Ringgenberg, M. y Zhou, G. (2016). Short Interest and Aggregate Stock Returns. JFE. [10.1016/j.jfineco.2016.03.004](https://doi.org/10.1016/j.jfineco.2016.03.004)
 - Schmeling, M., Schrimpf, A. y Todorov, K. (2023, revisado 2025). Crypto Carry. BIS Working Paper 1087. [bis.org/publ/work1087.htm](https://www.bis.org/publ/work1087.htm); decaimiento en 2025: [arXiv:2510.14435](https://arxiv.org/abs/2510.14435)
 
+Incubación y seguimiento (§3.6)
+- Bailey, D. y López de Prado, M. (2012). The Sharpe Ratio Efficient Frontier. Journal of Risk. [10.21314/JOR.2012.255](https://doi.org/10.21314/JOR.2012.255)
+- Bailey, D. y López de Prado, M. (2015). Stop-Outs under Serial Correlation and the Triple Penance Rule. Journal of Risk. [10.21314/JOR.2015.317](https://doi.org/10.21314/JOR.2015.317)
+- Bailey, D., López de Prado, M. y del Pozo, E. (2013). The Strategy Approval Decision: A Sharpe Ratio Indifference Curve Approach. Algorithmic Finance. [10.3233/AF-13018](https://doi.org/10.3233/AF-13018)
+- Evans, R. (2010). Mutual Fund Incubation. JF. [10.1111/j.1540-6261.2010.01579.x](https://doi.org/10.1111/j.1540-6261.2010.01579.x)
+- Frazzini, A., Israel, R. y Moskowitz, T. (2018). Trading Costs. SSRN. [10.2139/ssrn.3229719](https://doi.org/10.2139/ssrn.3229719)
+- Kaminski, K. y Lo, A. (2014). When Do Stop-Loss Rules Stop Losses? JFM. [10.1016/j.finmar.2013.07.001](https://doi.org/10.1016/j.finmar.2013.07.001)
+- Magdon-Ismail, M., Atiya, A., Pratap, A. y Abu-Mostafa, Y. (2004). On the Maximum Drawdown of a Brownian Motion. J. of Applied Probability. [10.1239/jap/1077134674](https://doi.org/10.1239/jap/1077134674)
+- Page, E. (1954). Continuous Inspection Schemes. Biometrika. [10.1093/biomet/41.1-2.100](https://doi.org/10.1093/biomet/41.1-2.100)
+- Perold, A. (1988). The Implementation Shortfall: Paper versus Reality. JPM. [10.3905/jpm.1988.409150](https://doi.org/10.3905/jpm.1988.409150)
+- Philips, T., Yashchin, E. y Stein, D. (2003). Using Statistical Process Control to Monitor Active Managers. JPM. [10.3905/jpm.2003.319922](https://doi.org/10.3905/jpm.2003.319922)
+- Suhonen, A., Lennkh, M. y Perez, F. (2017). Quantifying Backtest Overfitting in Alternative Beta Strategies. JPM. [10.3905/jpm.2017.43.2.090](https://doi.org/10.3905/jpm.2017.43.2.090)
+- Wiecki, T., Campbell, A., Lent, J. y Stauth, J. (2016). All That Glitters Is Not Gold: Comparing Backtest and Out-of-Sample Performance on a Large Cohort of Trading Algorithms. Journal of Investing. [10.3905/joi.2016.25.3.069](https://doi.org/10.3905/joi.2016.25.3.069)
+
+Datos (§2.5)
+- Factores: [AQR Data Sets](https://www.aqr.com/Insights/Datasets) y sus [términos de uso](https://www.aqr.com/Terms-of-Use); [Kenneth French Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html); [JKP Global Factor Data](https://jkpfactors.com/); [Open Source Asset Pricing](https://www.openassetpricing.com/data/)
+- Futuros gratis: [pysystemtrade, data/futures](https://github.com/robcarver17/pysystemtrade/tree/master/data/futures); [CFTC Commitments of Traders](https://www.cftc.gov/MarketReports/CommitmentsofTraders/HistoricalCompressed/index.htm)
+- Subastas del Tesoro: [Fiscal Data, Treasury Securities Auctions](https://fiscaldata.treasury.gov/datasets/treasury-securities-auctions-data/)
+- Volatilidad: [futuros VIX de CFE](https://www.cboe.com/us/futures/market_statistics/historical_data/), [VIX3M de Cboe](https://cdn.cboe.com/api/global/us_indices/daily_prices/VIX3M_History.csv), [VXVCLS en FRED](https://fred.stlouisfed.org/series/VXVCLS), [uso del contenido de Cboe](https://www.cboe.com/use-of-content)
+- Monedas en FRED: [DEXJPUS](https://fred.stlouisfed.org/series/DEXJPUS), [IR3TIB01JPM156N](https://fred.stlouisfed.org/series/IR3TIB01JPM156N), [DTB3](https://fred.stlouisfed.org/series/DTB3)
+- ETFs: [términos de Yahoo](https://legal.yahoo.com/us/en/yahoo/terms/otos/index.html); [precios de Tiingo](https://www.tiingo.com/about/pricing) y su [lista de tickers](https://apimedia.tiingo.com/docs/tiingo/daily/supported_tickers.zip)
+- Pagos: [Norgate Futures](https://norgatedata.com/futurespackage.php), [Pinnacle](https://pinnacledata2.com/extended-clc.html), [Databento GLBX.MDP3](https://databento.com/datasets/GLBX.MDP3), [Sharadar](https://sharadar.com/subscribe), [FirstRate Data ETF](https://firstratedata.com/b/17/etf-complete-historical-intraday), [Cboe DataShop](https://datashop.cboe.com/end-of-day-options-summary), [ORATS](https://orats.com/near-eod-data)
+- Pensiones: [Public Plans Data](https://publicplansdata.org/public-plans-database/) y sus [términos](https://publicplansdata.org/terms-of-use)
+
 Datos y operación
-- Alpaca: [margin y venta corta](https://docs.alpaca.markets/docs/margin-and-short-selling), [sin costo de préstamo en ETB](https://alpaca.markets/blog/zero-borrow-fees-on-short-selling-etb-stock-shares-alpaca-trading-api/), [opciones](https://docs.alpaca.markets/docs/options-trading-overview), [planes de datos](https://docs.alpaca.markets/docs/about-market-data-api), [productos y hoja de ruta](https://docs.alpaca.markets/docs/about-alpaca)
+- Alpaca: [margin y venta corta](https://docs.alpaca.markets/docs/margin-and-short-selling), [sin costo de préstamo en ETB](https://alpaca.markets/blog/zero-borrow-fees-on-short-selling-etb-stock-shares-alpaca-trading-api/), [opciones](https://docs.alpaca.markets/docs/options-trading-overview), [planes de datos](https://docs.alpaca.markets/docs/about-market-data-api), [productos y hoja de ruta](https://docs.alpaca.markets/docs/about-alpaca), [órdenes y time in force](https://docs.alpaca.markets/docs/orders-at-alpaca), [paper trading](https://docs.alpaca.markets/docs/paper-trading), [retención sobre PTP en cuentas extranjeras](https://alpaca.markets/support/what-is-an-example-of-treaty-withholding-withholding-exemption-and-the-1042-s)
+- Qualified Notice de Invesco para los fondos DB: [diciembre de 2025](https://www.invesco.com/content/dam/invesco/us/en/documents/tax-centre/Distribution-Qualified-Notices-25.12.09.pdf)
 - Databento: [precios](https://databento.com/pricing), [créditos y cobro por uso](https://databento.com/docs/knowledge-base/new-users/usage-based-pricing-and-data-credits)
 - Norgate Data: [paquetes de acciones](https://norgatedata.com/stockmarketpackages.php), [suscripción y futuros](https://norgatedata.com/subscribe)
+- Precios de modelos (§5.7): [Anthropic, pricing](https://platform.claude.com/docs/en/about-claude/pricing)

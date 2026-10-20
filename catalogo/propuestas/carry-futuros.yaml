@@ -4,6 +4,8 @@
 # no ofrece futuros). No correr hasta que Fede decida datos y broker (ticket R14).
 # Intentos: 1 cartera, 1 fila de intentos.csv por etapa corrida (hasta 3).
 # Riesgo conocido: las curvas de granos tienen estacionalidad que entra en la pendiente 1.º-2.º vencimiento.
+# Contaminación: la investigación de datos del documento (§2.5) calculó con series de AQR el carry de materias
+# primas y monedas en 2019-2022; para esta propuesta 2019-2022 no es una prueba ciega.
 id: carry-futuros
 idea: El carry de un futuro, lo que rinde si los precios no cambian, anticipa su retorno
   en exceso; comprar carry alto y vender carry bajo dentro de cada clase de activo
