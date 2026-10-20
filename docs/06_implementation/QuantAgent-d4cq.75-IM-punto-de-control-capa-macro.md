@@ -44,3 +44,17 @@ Sensibilidad de la capa curva: la CLI mide ΔDSR contra el registro tal como est
 Los DSR pasaron de 0,0000 (medición del 2026-10-19, registro con filas sintéticas) a cerca de 0,8: esa limpieza, no la capa, es lo que movió el nivel.
 
 El ticket `QuantAgent-m9cx` (regla de aceptación con ΔSharpe y años positivos) sigue abierto y espera los umbrales de Fede.
+
+## Regla de aceptación (QuantAgent-m9cx) y apertura de 2019–2022 (2026-10-20)
+
+Fede fijó la regla antes de mirar la prueba: la capa se acepta solo si ΔDSR > 0,05, ΔSharpe > 0 y no pierde años con Sharpe positivo respecto del núcleo. `hipotesis comparar` la aplica y `--abrir-prueba` permite correr sobre 2019–2022 abriendo el candado de la cartera con capa (una sola vez).
+
+Corrida única de `cartera-nucleo-curva` contra `cartera-tendencia-momentum`, snapshot `etf-1d-2026-10-amplio`, 2019-01-01 a 2022-12-31, margen 0,05:
+
+| | Sharpe | DSR | Años con Sharpe positivo |
+|---|---:|---:|---:|
+| Núcleo | 0,2482 | 0,2807 | 3 de 4 |
+| Núcleo + curva | 0,3756 | 0,3721 | 3 de 4 |
+| Diferencia | +0,1274 | +0,0914 | igual |
+
+Veredicto de la CLI: ACEPTA (N 105 con la capa). Candado de `cartera-nucleo-curva` abierto el 2026-10-20; no se vuelve a abrir. La capa `cartera-nucleo-rsi-regimen` quedó descartada en 2007–2018 y no se midió en la prueba.
