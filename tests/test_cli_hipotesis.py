@@ -593,3 +593,56 @@ def test_hipotesis_correr_sintetico_no_escribe_en_local_data():
             intentos_real.unlink()
 
 
+@pytest.mark.parametrize("hasta_etapa", [0, 1, 2, 3, None])
+def test_correr_hasta_etapa(tmp_path, monkeypatch, hasta_etapa):
+    from quantagent.fabrica.candado import abierto
+    from quantagent.fabrica.hipotesis import cargar_hipotesis
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    archivo = Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml"
+    h = cargar_hipotesis(archivo)
+    params = {"SPY": {"rsi_period": 7}}
+    llamadas = []
+    real_abrir = hipotesis.abrir
+    monkeypatch.setattr(hipotesis, "admitir_hipotesis", lambda *a: (h, True, []))
+    monkeypatch.setattr(hipotesis, "filtrar_hipotesis", lambda *a: (
+        llamadas.append("1") or [["SPY", 1.0, 30]], params, "PASA", "sharpe >= 0.10", 1.0, 30, [],
+    ))
+    monkeypatch.setattr(hipotesis, "validar_etapa2", lambda *a: (
+        llamadas.append("2") or "PASA", [{"activo": "SPY", "v30": "PASA", "motivos": [], "sharpe_tasa_0": 1.0}],
+    ))
+    monkeypatch.setattr(hipotesis, "abrir", lambda *a: llamadas.append(("abrir", a)) or real_abrir(*a))
+    monkeypatch.setattr(hipotesis, "validar_etapa3", lambda *a: (
+        llamadas.append("3") or "PASA", [{"activo": "SPY", "v30": "PASA", "dsr": 0.95, "motivos": []}],
+    ))
+    tope = 3 if hasta_etapa is None else hasta_etapa
+    extra = [] if hasta_etapa is None else ["--hasta-etapa", str(hasta_etapa)]
+    res = CliRunner().invoke(backtest_group, [
+        "hipotesis", "correr", str(archivo), "--snapshot", "sintetico", "--carpeta", str(tmp_path / "motor"), *extra,
+    ])
+    assert res.exit_code == 0, res.output
+    with (tmp_path / "hipotesis.csv").open() as f:
+        filas = list(csv.DictReader(f))
+    assert [f["etapa"] for f in filas] == [str(i) for i in range(tope + 1)]
+    assert res.output.splitlines()[-1] == f"Llegó a la etapa {tope}: PASA ({filas[-1]['motivo']})"
+    assert abierto(h.id, "prueba") == (tope == 3)
+    assert (tmp_path / "hipotesis-candado.csv").exists() == (tope == 3)
+    assert ("abrir", (h.id, "prueba")) in llamadas if tope == 3 else ("abrir", (h.id, "prueba")) not in llamadas
+    assert [x for x in llamadas if isinstance(x, str)] == [str(i) for i in range(1, tope + 1)]
+
+
+@pytest.mark.parametrize("valor", ["-1", "4"])
+def test_correr_hasta_etapa_fuera_de_rango(tmp_path, monkeypatch, valor):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    archivo = Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml"
+    res = CliRunner().invoke(backtest_group, [
+        "hipotesis", "correr", str(archivo), "--snapshot", "sintetico",
+        "--carpeta", str(tmp_path / "motor"), "--hasta-etapa", valor,
+    ])
+    assert res.exit_code != 0
+    assert "--hasta-etapa" in res.output and "0<=x<=3" in res.output
+    assert not (tmp_path / "hipotesis.csv").exists()
+    assert not (tmp_path / "hipotesis-candado.csv").exists()
+
+
+
