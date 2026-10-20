@@ -96,7 +96,8 @@ def main():
         while True:
             checks = [c for page in _api(f"repos/{repo}/commits/{sha}/check-runs?per_page=100", paginate=True)
                       for c in page["check_runs"]]
-            if not any(c.get("status") != "completed" for c in checks) or time.monotonic() >= deadline:
+            ci_seen = any(c["name"] == "CI (Lint + Tests)" for c in checks)
+            if (ci_seen and not any(c.get("status") != "completed" for c in checks)) or time.monotonic() >= deadline:
                 break
             time.sleep(min(20, max(0, deadline - time.monotonic())))
         # Refresh mutable PR state and comments after polling; never authorize a different head.
