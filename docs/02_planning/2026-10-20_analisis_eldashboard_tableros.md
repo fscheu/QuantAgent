@@ -2,6 +2,7 @@
 
 - **Estado:** borrador para que Fede decida (2026-10-20). Investigación; no hay tickets en BEADS ni código.
 - **Pedido de Fede:** analizar los tableros gratis y la lista de funciones pagas de https://eldashboard.com.ar/, compararlos con nuestros datos y proponer qué sumar, cómo construirlo y de dónde sacar los datos, para ir aprendiendo y tener visualizaciones de ese estilo.
+- **Actualización (2026-10-20, pedido de Fede):** el interés está en la visualización y el análisis de **bonos**, extrapolables a EEUU; el mercado argentino importa poco. La sección 13 reordena la propuesta con ese foco y reemplaza la prioridad de las secciones 7 a 10.
 - **Cómo se leyó el sitio:** se bajaron la portada y las seis páginas públicas (soberanos, tasa fija, A3, renta variable, FX MEP, calendario). Las tablas y los textos se leyeron como texto. **No se vieron los gráficos** (se cargan con JavaScript), así que lo que dice este documento sobre gráficos sale de los títulos, los controles y la lista de funciones, no de haberlos mirado. Los precios de Pro y Mesa no están publicados.
 
 ## 1. Qué es el sitio
@@ -178,3 +179,69 @@ Hacer **A, B y C** primero. Son baratas, usan datos que ya tenemos, y enseñan l
 - Los precios de Pro y Mesa (no están publicados).
 - Las condiciones y los endpoints de ArgentinaDatos, data912 y las APIs del BCRA (versión vigente).
 - Cualquier término de licencia de los datos de BYMA/A3.
+
+## 13. Foco en bonos: lo que se puede copiar del sitio, versión EEUU
+
+**Idea central.** Casi todo lo que hace el sitio con bonos argentinos es matemática de bonos, no de Argentina: flujos de fondos, rendimiento (TIR), duration, convexidad, curva, forwards, ajuste de curva. Si construimos esa matemática una vez como biblioteca, la curva de EEUU entra hoy y la de Argentina (o cualquier otro país) entra después cambiando solo la fuente de datos y los flujos.
+
+### 13.1 Equivalencias, tablero por tablero
+
+| Sitio (Argentina) | Versión EEUU |
+|---|---|
+| Tabla de Bonares/Globales con TIR, duration, convexidad | Tabla de la curva del Tesoro por plazo (1M a 30A): rendimiento, duration y convexidad de un bono "a la par" de ese plazo, más los ETF de bonos (SHY, IEF, TLT, AGG, LQD, TIP) como referencia con precio real |
+| Superficie 3D de tasas desde 2020 | Plazo por fecha por rendimiento, desde 1962 en los plazos largos. Más historia que el sitio |
+| Histórico y percentiles | Percentil del rendimiento de cada plazo contra su propia historia |
+| Ratios entre bonos | Pendientes y "mariposas": 2A-10A, 5A-30A, 2A-5A-10A. Diferencial de crédito (Baa menos Tesoro 10A) |
+| Forwards implícitos | Tasas forward de la curva (1A dentro de 1A, 2A dentro de 3A, etc.), calculadas de la curva |
+| Breakeven de inflación (CER contra tasa fija) | Inflación breakeven (TIPS contra nominal) y rendimiento real |
+| Ajuste Nelson-Siegel/Diebold-Li | Lo mismo sobre la curva del Tesoro; los tres parámetros (nivel, pendiente, curvatura) son una serie de tiempo que se grafica |
+| Calculadora de VAN y sensibilidades | Calculadora de bono: precio, TIR, DV01 y escenarios de +-50/100 puntos básicos |
+| Calendario de licitaciones | Calendario de licitaciones del Tesoro y publicaciones macro |
+| Ranking de pares por cointegración | Reversión de pendientes y mariposas (por ejemplo, si 2A-10A está estirada contra su historia) |
+
+Glosario nuevo: **DV01** es cuánto pierde el bono en dólares si la tasa sube un punto básico (0,01%). **Mariposa** compara el plazo medio contra el promedio de los extremos: dice si la curva está más "panzona" o más plana de lo normal. **Rendimiento real** es el que queda descontando inflación; en EEUU lo dan los TIPS. **Punto básico** es 0,01%.
+
+### 13.2 Datos de EEUU (todo gratis)
+
+Ya tenemos en `macro-2026-10`: DGS3MO, DGS2, DGS10, T10Y2Y, BAA10Y, FEDFUNDS y CPI. Faltan, de la misma fuente FRED y con el mismo cliente (`fred.py`):
+
+- Plazos intermedios del Tesoro: DGS1MO, DGS6MO, DGS1, DGS3, DGS5, DGS7, DGS20, DGS30.
+- TIPS y breakeven: DFII5, DFII10 (rendimiento real) y T5YIE, T10YIE (inflación breakeven).
+- Crédito: BAMLC0A0CM y BAMLH0A0HYM2 (grado de inversión y alto rendimiento).
+
+Los nombres de las series salen de mi conocimiento de FRED, no los verifiqué en esta sesión; hay que confirmarlos al armar el ticket. Alternativa oficial: la curva diaria de rendimientos que publica el Tesoro de EEUU (home.treasury.gov), sin clave. El cliente de FRED ya baja las versiones revisadas (ALFRED), que es una ventaja sobre el sitio.
+
+**Un límite importante:** FRED da **rendimientos por plazo**, no el precio de cada bono. El sitio calcula todo desde el precio de cada bono. Con FRED, duration y convexidad se calculan para un bono teórico a la par de cada plazo, que es suficiente para aprender y comparar. Para precios de bonos reales, hay tres caminos: los ETF de bonos (ya los tenemos), los resultados de licitaciones del Tesoro (API de TreasuryDirect / Fiscal Data, no verificado) o Alpaca más adelante (no sé si cubre bonos individuales; no lo verifiqué).
+
+### 13.3 Cómo se construye
+
+1. **`quantagent/bonos/`**, con funciones puras y tests contra números calculados a mano:
+   - `flujos` y `precio_tir`: cronograma de cupones, precio a partir de la TIR y TIR a partir del precio.
+   - `riesgo`: duration modificada, convexidad y DV01.
+   - `curva`: interpolación, tasas forward y ajuste Nelson-Siegel (necesita `scipy`; verificar si ya está).
+   - `analisis`: percentiles, pendientes, mariposas y spreads contra su historia.
+2. **`apps/streamlit/views/bonos.py`**, con pestañas: Curva, Histórico y percentiles, Superficie, Pendientes y mariposas, Forwards y breakeven, Calculadora.
+3. **Fuente separada de la matemática.** La biblioteca no sabe de Argentina ni de EEUU: recibe flujos y precios. Argentina, si Fede la quiere, es un adaptador nuevo (bonos con cupones y calendario propios) y el riesgo país sale gratis de restar la curva del Tesoro.
+4. **Todo desde snapshots congelados**, como el resto del sistema.
+
+### 13.4 Orden propuesto
+
+1. Biblioteca de bonos (`flujos`, `precio_tir`, `riesgo`) con tests contra ejemplos de libro. Es la base de todo y la parte que más enseña.
+2. Snapshot FRED ampliado (plazos, TIPS, crédito).
+3. Vista de curva con tabla de TIR, duration y convexidad, y curva de hoy contra hace 1 mes y 1 año.
+4. Histórico, percentiles y superficie 3D.
+5. Pendientes, mariposas y forwards.
+6. Breakeven y rendimiento real (TIPS).
+7. Ajuste Nelson-Siegel y serie de nivel, pendiente y curvatura.
+8. Calculadora de bono con DV01 y escenarios.
+
+Conexión con la fábrica: el carry de bonos por la pendiente de la curva ya está en el catálogo de primas (L14). Las vistas 3 a 5 son la herramienta para entender esa hipótesis antes de testearla; si de ahí sale una regla de trading, entra por el embudo y cuenta como intento.
+
+### 13.5 Lo que cambia respecto de las secciones 7 a 11
+
+Las vistas de ETFs, correlaciones y pares (secciones 7.C, 7.D y 7.E) pasan a segundo plano. Argentina (7, Nivel 3) queda como extensión opcional del paso 3 de 13.3. La recomendación pasa a ser: empezar por el paso 1 de 13.4. Las decisiones abiertas son ahora:
+
+1. ¿Biblioteca de bonos propia o apoyarse en una existente (por ejemplo `QuantLib` o `scipy`)? Recomendado: propia y chica para duration, convexidad y precio, porque es lo que se quiere aprender, y `scipy` para el ajuste de curva.
+2. ¿Ampliamos el snapshot de FRED con los plazos, TIPS y crédito de 13.2?
+3. ¿Aprobás sumar `plotly` (y `scipy`, si no está) como dependencias?
+4. ¿Argentina queda afuera por ahora?
