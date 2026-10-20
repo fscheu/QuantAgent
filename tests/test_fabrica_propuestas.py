@@ -21,6 +21,7 @@ def test_propuesta_completa_pasa():
     ({"fuente": ["Jegadeesh y Titman 1993"]}, "DOI"),
     ({"hipotesis_economica": "  "}, "hipotesis_economica"),
     ({"idea": ""}, "idea"),
+    ({"id": ""}, "id"),
     ({"universo": {"activos": ["SPY"]}}, "criterio"),
     ({"parametros_libres": 2}, "parametros_libres"),
 ])
@@ -35,4 +36,5 @@ def test_tercera_variante_de_la_misma_idea_se_rechaza():
         assert validar_propuesta(p, lote) is None
         lote.append(p)
     assert "tercera variante" in validar_propuesta(_propuesta(id="v3"), lote)
+    assert "tercera variante" in validar_propuesta(_propuesta(id="v4", idea=" Momentum "), lote)
     assert validar_propuesta(_propuesta(id="otra", idea="carry"), lote) is None
