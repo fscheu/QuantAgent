@@ -19,7 +19,7 @@ SHARPE_MINIMO_FILTRO = 0.10
 SHARPE_MAXIMO_MOTOR_ALARMA = 0.0
 PROPORCION_MINIMA_ALARMA = 0.5
 COLUMNAS_CELDAS = ["hipotesis", "pierna_clase", "estrategia", "activo", "desde", "hasta",
-                   "trades", "pnl", "max_drawdown"]
+                   "trades", "pnl", "max_drawdown", "max_drawdown_cartera"]
 
 
 def alarma_filtro_motor(resultados_etapa1, filas_etapa2):
@@ -132,6 +132,7 @@ def _curva_y_v30_cartera(h, filas, carpeta, snapshot, etapa, desde, hasta):
         sharpe_val = round(m["sharpe"], 2) if m.get("sharpe") is not None else ""
         for f in filas:
             f["sharpe_cartera"] = sharpe_val
+            f["max_drawdown_cartera"] = m["max_drawdown"]
         if snapshot is not None:
             estrategia = "+".join(p.clase for p in h.piernas)
             combo = {p.clase: p.parametros for p in h.piernas}
@@ -154,14 +155,6 @@ def evaluar_etapa2_cartera(h, filas, carpeta, snapshot=None):
 def validar_etapa2(h, snapshot, params_por_activo, carpeta):
     """Control independiente y V30; los motivos de corte quedan en las filas por activo."""
     filas = correr_motor(h, snapshot, params_por_activo, "2007-01-01", "2018-12-31", carpeta, "2")
-    with (Path(carpeta) / "celdas.csv").open("w", newline="") as f:
-        escritor = csv.DictWriter(f, COLUMNAS_CELDAS, extrasaction="ignore")
-        escritor.writeheader()
-        for fila in filas:
-            estrategia = fila.get("estrategia", h.clase)
-            escritor.writerow({**fila, "hipotesis": h.id, "estrategia": estrategia,
-                               "pierna_clase": fila.get("pierna_clase", estrategia),
-                               "desde": "2007-01-01", "hasta": "2018-12-31"})
     with TemporaryDirectory() as temporal:
         params_path = Path(temporal) / "params.json"
         for fila in filas:
@@ -212,6 +205,14 @@ def validar_etapa2(h, snapshot, params_por_activo, carpeta):
                 f["motivos"].extend([f"cartera: {m}" for m in motivos_cartera if f"cartera: {m}" not in f["motivos"]])
     else:
         pasa = all(f["control"].startswith("coinciden") for f in filas) and any(f["v30"] == "PASA" for f in filas)
+    with (Path(carpeta) / "celdas.csv").open("w", newline="") as f:
+        escritor = csv.DictWriter(f, COLUMNAS_CELDAS, extrasaction="ignore")
+        escritor.writeheader()
+        for fila in filas:
+            estrategia = fila.get("estrategia", h.clase)
+            escritor.writerow({**fila, "hipotesis": h.id, "estrategia": estrategia,
+                               "pierna_clase": fila.get("pierna_clase", estrategia),
+                               "desde": "2007-01-01", "hasta": "2018-12-31"})
     return "PASA" if pasa else "CORTA", filas
 
 

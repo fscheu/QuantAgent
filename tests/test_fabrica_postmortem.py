@@ -9,9 +9,9 @@ from quantagent.fabrica.postmortem import ficha_postmortem, filas_postmortem
 H = Hipotesis(id="cartera-x", autor="t", justificacion="t", piernas=())
 
 
-def _fila(pierna="a", trades=20, pnl=1000.0, dd=0.1):
+def _fila(pierna="a", trades=20, pnl=1000.0, dd=0.1, **extra):
     return {"estrategia": pierna, "desde": "2007-01-01", "hasta": "2018-12-31",
-            "trades": trades, "pnl": pnl, "max_drawdown": dd}
+            "trades": trades, "pnl": pnl, "max_drawdown": dd, **extra}
 
 
 @pytest.mark.parametrize("filas,causas", [
@@ -21,6 +21,9 @@ def _fila(pierna="a", trades=20, pnl=1000.0, dd=0.1):
     ([_fila("a", pnl=9000.0), _fila("b", pnl=-500.0)], ["una_pierna_domina"]),
     ([_fila("a", pnl=9000.0), _fila("b", pnl=8000.0, dd=0.5)], ["drawdown"]),
     ([_fila("a", pnl=9000.0), _fila("b", pnl=8000.0)], []),
+    ([_fila(pnl=9000.0, dd=0.5, max_drawdown_cartera=0.2)] * 3, []),
+    ([_fila(pnl=9000.0, dd=0.5, max_drawdown_cartera=0.4)] * 3, ["drawdown"]),
+    ([_fila(pnl=9000.0, dd=0.5, max_drawdown_cartera="")] * 3, ["drawdown"]),
 ])
 def test_causas(tmp_path, filas, causas):
     assert ficha_postmortem(H, filas, tmp_path)["causas"] == causas
