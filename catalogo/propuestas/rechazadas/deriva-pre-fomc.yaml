@@ -18,3 +18,8 @@ universo:
   criterio: El índice amplio de acciones de EE.UU. (S&P 500), que es el activo sobre
     el que Lucca y Moench miden la deriva.
 parametros_libres: 0
+estado: rechazada
+motivo_rechazo: Una de las dos citas (10.1017/S0022109013000410) es de otro articulo
+  y falta el calendario de la FOMC en el snapshot; decision de Fede 2026-10-20
+fecha_utc: '2026-10-20T18:47:46.180053+00:00'
+quien: fede
