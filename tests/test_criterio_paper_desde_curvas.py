@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 from quantagent.data.snapshot import write_snapshot
 from quantagent.fabrica.candado import abierto
-from scripts.criterio_paper_desde_curvas import calcular_criterio_paper
+from scripts.criterio_paper_desde_curvas import calcular_criterio_paper, main
 
 
 def _velas(fechas, ret):
@@ -11,9 +11,7 @@ def _velas(fechas, ret):
     return pd.DataFrame({"open": c, "high": c + 1, "low": c - 1, "close": c, "adj_close": c, "volume": 1000.0}, index=fechas)
 
 
-def test_criterio_paper_desde_curvas_pasa_corta_y_sin_escrituras(tmp_path, monkeypatch):
-    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
-    monkeypatch.chdir(tmp_path)
+def _preparar_fixtures(tmp_path):
     f2, f3 = pd.bdate_range("2017-01-02", "2018-12-31"), pd.bdate_range("2019-01-02", "2022-12-30")
     fechas, osc2, osc3 = f2.append(f3), 1e-4 * np.sin(np.arange(len(f2))), 1e-4 * np.sin(np.arange(len(f3)))
     ret_car3 = np.where(f3.year == 2021, -0.0003, 0.0015) + osc3
@@ -29,6 +27,13 @@ def test_criterio_paper_desde_curvas_pasa_corta_y_sin_escrituras(tmp_path, monke
     for nombre in ("rsi-SPY.csv", "sma-cross-TLT.csv"):
         pd.DataFrame({"date": f2, "equity": 100_000 * np.cumprod(1 + 0.001 + osc2)}).to_csv(e2 / nombre, index=False)
         pd.DataFrame({"date": f3, "equity": 100_000 * np.cumprod(1 + ret_car3)}).to_csv(e3 / nombre, index=False)
+    return yaml_path, e2, e3
+
+
+def test_criterio_paper_desde_curvas_pasa_corta_y_sin_escrituras(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    yaml_path, _, e3 = _preparar_fixtures(tmp_path)
     registros = [tmp_path / n for n in ("intentos.csv", "hipotesis.csv", "hipotesis-candado.csv")]
     res = calcular_criterio_paper(yaml_path, tmp_path / "etapa2", tmp_path / "etapa3", "snap_bajo")
     assert res["veredicto"] == "PASA" and res["pasa"] is True and res["motivos"] == []
@@ -43,3 +48,25 @@ def test_criterio_paper_desde_curvas_pasa_corta_y_sin_escrituras(tmp_path, monke
     (e3 / "sma-cross-TLT.csv").unlink()
     with pytest.raises(FileNotFoundError, match="sma-cross-TLT"):
         calcular_criterio_paper(yaml_path, tmp_path / "etapa2", tmp_path / "etapa3", "snap_bajo")
+
+
+def test_criterio_paper_cli(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    yaml_path, _, e3 = _preparar_fixtures(tmp_path)
+    int_csv = tmp_path / "intentos.csv"
+    int_csv.write_text("hipotesis,etapa,estrategia,params,activo,desde,hasta,sharpe,sharpe_base\nh1,2,rsi,{},SPY,2007-01-01,2018-12-31,0.8,tasa_0\nh1,2,sma,{},TLT,2007-01-01,2018-12-31,0.5,tasa_0\n", encoding="utf-8")
+    txt_int = int_csv.read_text(encoding="utf-8")
+    assert main([str(yaml_path), str(tmp_path / "etapa2"), str(tmp_path / "etapa3"), "snap_bajo"]) == 0
+    out, _ = capsys.readouterr()
+    for esperada in ("cartera-sint", "Sharpe etapa 3", "Benchmark etapa 3", "3 de 4", "DSR con N efectivo (2)", "DSR con N crudo (2)", "Recargo de paper", "Veredicto: PASA"):
+        assert esperada in out
+    assert int_csv.read_text(encoding="utf-8") == txt_int and not (tmp_path / "hipotesis.csv").exists() and not abierto("cartera-sint", "prueba")
+    assert main([str(yaml_path), str(tmp_path / "etapa2"), str(tmp_path / "etapa3"), "snap_alto"]) == 0
+    out_corta, _ = capsys.readouterr()
+    assert "Veredicto: CORTA" in out_corta and "Motivos:" in out_corta and "<= benchmark" in out_corta
+    (e3 / "sma-cross-TLT.csv").unlink()
+    assert main([str(yaml_path), str(tmp_path / "etapa2"), str(tmp_path / "etapa3"), "snap_bajo"]) == 1
+    _, err = capsys.readouterr()
+    assert "Curva faltante: sma-cross-TLT" in err
+    assert int_csv.read_text(encoding="utf-8") == txt_int and not (tmp_path / "hipotesis.csv").exists()
