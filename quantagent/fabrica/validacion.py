@@ -12,7 +12,7 @@ import pandas as pd
 from quantagent.backtesting.verdict import dsr_contra_intentos, evaluar, n_efectivo
 from quantagent.cli.sweep import registrar_intento
 from quantagent.data.snapshot import snapshot_root
-from quantagent.fabrica.criterio import evaluar_etapa3_cartera, recargo_paper, sharpe_benchmark
+from quantagent.fabrica.criterio import anios_positivos, evaluar_etapa3_cartera, recargo_paper, sharpe_benchmark
 from quantagent.fabrica.transversal import METRICAS, es_transversal, señales_transversales
 
 SHARPE_MINIMO_FILTRO = 0.10
@@ -242,13 +242,12 @@ def validar_etapa3(h, snapshot, params_por_activo, carpeta):
         except FileNotFoundError:
             dsr_eff, dsr_crudo = None, None
 
+        ap = anios_positivos(eq_cartera) if eq_cartera is not None and not eq_cartera.empty else None
         recargo = recargo_paper(dsr_eff)
         for fila in filas:
-            fila["v30"] = "PASA" if pasa else "NO PASA"
-            fila["dsr"] = dsr_eff
-            fila["dsr_crudo"] = dsr_crudo
-            fila["recargo"] = recargo
-            fila["motivos"] = list(motivos)
+            fila.update(v30="PASA" if pasa else "NO PASA", dsr=dsr_eff, dsr_crudo=dsr_crudo, recargo=recargo,
+                        anios_positivos=f"{ap.positivos} de {ap.totales}" if ap else None,
+                        benchmark=sb3, n_efectivo=neff, motivos=list(motivos))
         return "PASA" if pasa else "CORTA", filas
     for fila in filas:
         activo = fila["activo"]
