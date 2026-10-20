@@ -26,7 +26,7 @@ Datos de Alpaca (documento `QuantAgent-7nle-DC-datos-para-operar-m3.md` §6): T1
 
 Diagnósticos de paper `say` (Q10), `oc0h` (Q11) y `beo` (Q12). Los tres son de primera entrega sin tocar `quantagent/` y terminan en una decisión de Fede; el lote sigue con las filas independientes mientras esperan.
 
-Los claves de Alpaca paper y de FRED ya están en `~/secrets` (`alpaca.env`, `fred.env`).
+Las claves de Alpaca paper y de FRED ya están en `~/secrets` (`alpaca.env`, `fred.env`).
 
 ## Qué queda afuera y por qué
 
