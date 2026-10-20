@@ -1,0 +1,37 @@
+id: cartera-nucleo-curva
+autor: fede
+justificacion: >-
+  Cartera nucleo (momentum de 12 meses y tendencia de 210 ruedas, ver
+  cartera-tendencia-momentum) mas una pierna de bonos que se mide como capa
+  candidata contra el nucleo solo. La pierna esta larga en ETFs de bonos de
+  duracion media y larga mientras la pendiente de la curva (T10Y2Y), conocida
+  en la fecha, es positiva, y fuera si no lo es: la pendiente anticipa los
+  retornos en exceso de los bonos (Cochrane y Piazzesi 2005; Koijen, Moskowitz,
+  Pedersen y Vrugt 2018). El umbral 0 es el signo, no un ajuste. Entre 2007 y
+  2018 la pendiente fue positiva casi todo el tiempo, asi que la pierna casi no
+  cambia de estado. Parametros fijos, sin grilla: la cartera tiene 0 parametros
+  libres.
+fuente: https://doi.org/10.1016/j.jfineco.2011.11.003 ; https://doi.org/10.2139/ssrn.962461 ; https://doi.org/10.3905/jpm.2017.44.1.015 ; https://doi.org/10.1257/0002828053828581 ; https://doi.org/10.1016/j.jfineco.2017.11.002
+timeframe: 1d
+piernas:
+  - clase: momentum-12m
+    parametros:
+      lookback: [252]
+    activos: [AGG, DBC, EEM, EFA, EWJ, EWZ, FXE, FXI, GLD, IEF, IWM, LQD, QQQ, SHY, SLV, SPY, TIP, TLT, USO, VNQ, XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV, XLY]
+    universo: 29 ETFs liquidos multiactivo del snapshot etf-1d-2026-10-amplio.
+  - clase: sma-cross
+    parametros:
+      fast: [1]
+      slow: [210]
+    activos: [AGG, DBC, EEM, EFA, EWJ, EWZ, FXE, FXI, GLD, IEF, IWM, LQD, QQQ, SHY, SLV, SPY, TIP, TLT, USO, VNQ, XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV, XLY]
+    universo: 29 ETFs liquidos multiactivo del snapshot etf-1d-2026-10-amplio.
+  - clase: curva-pendiente
+    parametros:
+      snapshot: [macro-2026-10]
+      serie: [T10Y2Y]
+    activos: [AGG, IEF, LQD, TIP, TLT]
+    universo: >-
+      ETFs de bonos del snapshot etf-1d-2026-10-amplio con duracion media o larga: AGG (agregado),
+      IEF (Tesoro 7-10 anios), LQD (corporativos grado de inversion), TIP (Tesoro indexado a la
+      inflacion) y TLT (Tesoro 20+ anios). SHY queda afuera por duracion corta. Criterio fijado
+      antes de la primera corrida.

@@ -3,10 +3,12 @@
 from typing import Any
 
 from .base import TradingStrategy
+from .curva_pendiente_strategy import CurvaPendienteStrategy
 from .fifty_two_week_high_strategy import FiftyTwoWeekHighStrategy
 from .halloween_strategy import HalloweenStrategy
 from .llm_agent_strategy import LLMAgentStrategy
 from .momentum_12m_strategy import Momentum12mStrategy
+from .rsi_regimen_strategy import RsiRegimenStrategy
 from .rsi_strategy import RSIMeanReversionStrategy
 from .senal_externa_strategy import SenalExterna
 from .sma_cross_strategy import SmaCrossStrategy
@@ -250,3 +252,7 @@ def register_strategy(
 def cli_aliases() -> dict[str, str]:
     """Return {CLI short name: registry name} for every strategy with a `cli_alias`."""
     return {e["cli_alias"]: name for name, e in STRATEGY_REGISTRY.items() if "cli_alias" in e}
+
+
+register_strategy(RsiRegimenStrategy, min_bars=272, cli_alias="rsi-regimen", params=RsiRegimenStrategy.PARAMS)
+register_strategy(CurvaPendienteStrategy, min_bars=1, cli_alias="curva-pendiente", params=CurvaPendienteStrategy.PARAMS)
