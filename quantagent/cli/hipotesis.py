@@ -25,6 +25,7 @@ from quantagent.fabrica.filtro import (
 )
 from quantagent.fabrica.hipotesis import cargar_hipotesis
 from quantagent.fabrica.informe import datos_informe, render_informe
+from quantagent.fabrica.investigador import proponer_con_llm
 from quantagent.fabrica.transversal import es_transversal
 from quantagent.fabrica.validacion import (
     alarma_cartera,
@@ -308,3 +309,16 @@ def informe_command(hipotesis_id, out, archivo):
         raise click.ClickException(str(exc)) from exc
     Path(out).write_text(html, encoding="utf-8")
     click.echo(f"Informe en {out}")
+
+
+@hipotesis_group.command("proponer", help="Pedir propuestas al LLM vía QUANTAGENT_LLM_CMD y validarlas.")
+@click.option("--carpeta", type=click.Path(file_okay=False), help="Carpeta donde guardar las propuestas aceptadas.")
+def proponer_command(carpeta):
+    try:
+        rutas, rechazadas = proponer_con_llm(carpeta=carpeta)
+    except (RuntimeError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    for ruta in rutas:
+        click.echo(f"ACEPTADA {ruta.stem}: {ruta}")
+    for rechazo in rechazadas:
+        click.echo(f"RECHAZADA {rechazo}")
