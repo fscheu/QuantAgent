@@ -13,10 +13,10 @@ from quantagent.backtesting.verdict import MAX_DRAWDOWN
 from quantagent.settings import COSTOS_PERFILES
 
 # Umbrales fijos; no se ajustan por resultados.
-MIN_TRADES = 30        # mismo mínimo de trades de cartera que la etapa 1 (D3)
+MIN_TRADES = 30        # mismo mínimo de trades de cartera que `filtro.veredicto_etapa1` (DC cartera de primas, D3)
 ROTACION_MAX = 12      # trades por activo y año: más de uno por mes ya no es una prima de señal lenta
 COSTO_MAX = 0.5        # los costos son la mitad o más de la ganancia bruta
-DOMINIO_MAX = 0.7      # una pierna aporta el 70% o más del |pnl| de las piernas
+DOMINIO_MAX = 0.7      # una pierna aporta más del 70% del |pnl| de las piernas
 CAPITAL = 100_000.0    # capital por celda del motor
 CARPETA = Path("catalogo/postmortem")
 
@@ -37,7 +37,7 @@ def ficha_postmortem(h, filas, carpeta=CARPETA):
         "pocos_trades": trades < MIN_TRADES,
         "costos_comen_ganancia": bruto > 0 and costo >= COSTO_MAX * bruto,
         "rotacion_alta": trades / len(filas) / anios > ROTACION_MAX,
-        "una_pierna_domina": len(absolutos) > 1 and max(absolutos) >= DOMINIO_MAX * sum(absolutos),
+        "una_pierna_domina": len(absolutos) > 1 and max(absolutos) > DOMINIO_MAX * sum(absolutos),
         "drawdown": any(float(f["max_drawdown"] or 0) > MAX_DRAWDOWN for f in filas),
     }
     ficha = {"id": h.id, "causas": [c for c, activa in causas.items() if activa]}
