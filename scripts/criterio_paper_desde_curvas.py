@@ -4,7 +4,6 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 import pandas as pd
-
 import quantagent.data.snapshot as snap_mod
 from quantagent.backtesting.vbt_filter import equity_metrics
 from quantagent.fabrica.cartera import curva_cartera

@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import pytest
-
 from quantagent.data.snapshot import write_snapshot
 from quantagent.fabrica.candado import abierto
 from scripts.criterio_paper_desde_curvas import calcular_criterio_paper
