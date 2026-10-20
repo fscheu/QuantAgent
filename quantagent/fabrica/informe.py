@@ -1,15 +1,17 @@
 """Informe HTML por hipótesis (plan M3): veredicto, motivos por etapa y tabla por activo."""
 import csv
+import re
 from html import escape
 
 from quantagent.data.snapshot import snapshot_root
 from quantagent.fabrica.candado import abierto
+from quantagent.fabrica.criterio import recargo_paper
 from quantagent.fabrica.estado import ESTADO_CSV
 
 GLOSARIO = (
     ("Sharpe", "retorno sobre volatilidad; en la etapa 1 es del filtro fuera de muestra, en las etapas 2 y 3 es del motor propio."),
     ("V30", "la regla de evaluar: al menos 2 trades, pnl > 0, Sharpe con tasa 0 >= 0,10 y caída máxima <= 35%."),
-    ("DSR", "probabilidad de que el Sharpe no sea suerte, dado el total de intentos; pasa con 0,95."),
+    ("DSR", "probabilidad de que el Sharpe no sea suerte, dado el total de intentos; no corta el pase pero fija el recargo de paper trading (tamaño y semanas)."),
     ("Sharpe registrado", "En la tabla, la etapa 1 muestra el Sharpe con tasa 0 del filtro y las etapas 2 y 3 el Sharpe del motor con tasa libre de riesgo; V30 usa el de tasa 0, por eso un activo puede pasar V30 con Sharpe registrado negativo."),
     ("Intentos", "corridas registradas; más intentos, más riesgo de falso hallazgo."),
     ("Cartera", "combinación de piernas ponderadas por igual riesgo y evaluadas en conjunto."),
@@ -32,16 +34,46 @@ def datos_informe(hipotesis_id):
         raise ValueError(f"Hipótesis desconocida: {hipotesis_id}")
     intentos = _filas("intentos.csv", hipotesis_id)
     ultima = max(por_etapa)
+
+    path_int = snapshot_root() / "intentos.csv"
+    todas = list(csv.DictReader(path_int.open(newline="", encoding="utf-8"))) if path_int.exists() else []
+    from quantagent.backtesting.verdict import n_efectivo
+    n_crudo, n_eff = len(todas), n_efectivo(todas) if todas else 0
+
+    fila3 = por_etapa.get("3")
+    dsr_eff, dsr_crudo, anios_pos, bench, recargo = None, None, None, None, None
+    if fila3:
+        m = fila3.get("motivo", "")
+
+        def _get(pat):
+            res = re.search(pat, m, re.I)
+            return res.group(1) if res else None
+
+        de = _get(r"dsr[_\s]*(?:eff|efectivo)?[:\s=]+([0-9.]+)") or _get(r"\bdsr[:\s=]+([0-9.]+)")
+        dc = _get(r"dsr[_\s]*crudo[:\s=]+([0-9.]+)")
+        dsr_eff = float(de) if de else None
+        dsr_crudo = float(dc) if dc else None
+        anios_pos = _get(r"(\d+\s+de\s+\d+)")
+        bm = _get(r"bench(?:mark)?[:\s=\(]+([0-9.-]+)")
+        bench = float(bm) if bm else None
+        rec = _get(r"recargo[:\s=]+([^;,]+)")
+        rec_p = recargo_paper(dsr_eff)
+        recargo = rec.strip() if rec else f"{rec_p.tamano_pct}% ({rec_p.semanas} sem)"
+
     dsr = None
     for fila in reversed(list(por_etapa.values())):
         if "dsr" in fila.get("motivo", "").lower():
             dsr = fila["motivo"]
             break
-    from quantagent.cli.sweep import contar_intentos
-    return {"id": hipotesis_id, "etapas": [por_etapa[e] for e in sorted(por_etapa)], "final": por_etapa[ultima],
-            "activos": {i["activo"]: i for i in intentos if i["etapa"] == ultima},
-            "intentos": len(intentos), "n_total": contar_intentos(),
-            "dsr": dsr or "no evaluado", "prueba_abierta": abierto(hipotesis_id, "prueba")}
+
+    return {
+        "id": hipotesis_id, "etapas": [por_etapa[e] for e in sorted(por_etapa)], "final": por_etapa[ultima],
+        "activos": {i["activo"]: i for i in intentos if i["etapa"] == ultima},
+        "intentos": len(intentos), "n_total": n_crudo, "n_crudo": n_crudo, "n_efectivo": n_eff,
+        "dsr": dsr_eff if dsr_eff is not None else (dsr or "no evaluado"),
+        "dsr_efectivo": dsr_eff, "dsr_crudo": dsr_crudo, "anios_positivos": anios_pos,
+        "benchmark": bench, "recargo": recargo, "prueba_abierta": abierto(hipotesis_id, "prueba"),
+    }
 
 
 def render_informe(d, hipotesis=None):
@@ -62,12 +94,30 @@ def render_informe(d, hipotesis=None):
         extra = f"<p>{escape(hipotesis.justificacion)}</p><h2>Piernas</h2>{secciones}"
     else:
         extra = ""
+
+    tabla_e3 = ""
+    if any(e.get("etapa") == "3" for e in d["etapas"]):
+        def _fmt(v):
+            if hasattr(v, "tamano_pct"):
+                return f"{v.tamano_pct}% ({v.semanas} sem)"
+            if isinstance(v, float):
+                return f"{v:.2f}"
+            return str(v) if v not in (None, "") else "-"
+
+        nc = d.get("n_crudo", d.get("n_total", d["intentos"]))
+        vals = [str(nc), str(d.get("n_efectivo", nc)), _fmt(d.get("dsr_efectivo", d.get("dsr"))),
+                _fmt(d.get("dsr_crudo")), _fmt(d.get("anios_positivos")), _fmt(d.get("benchmark")), _fmt(d.get("recargo", "50% (12 sem)"))]
+        th = "".join(f"<th>{h}</th>" for h in ("N crudo", "N efectivo", "DSR efectivo", "DSR crudo", "Años positivos", "Benchmark", "Recargo paper"))
+        td = "".join(f"<td>{escape(v)}</td>" for v in vals)
+        tabla_e3 = f"<h2>Criterio de etapa 3</h2><table><tr>{th}</tr><tr>{td}</tr></table>"
+
     return (
         f"<!doctype html><html lang='es'><meta charset='utf-8'><title>Informe {escape(d['id'])}</title>"
         "<style>body{font:16px sans-serif;max-width:50em;margin:2em auto}td,th{padding:.2em .8em}</style>"
         f"<h1>{escape(d['id'])}</h1>{extra}<h2>Veredicto: {escape(f['veredicto'])} en la etapa {escape(f['etapa'])}</h2>"
         f"<ul>{li}</ul><h2>Activos de la etapa {escape(f['etapa'])}</h2>"
         f"<table><tr><th>Activo</th><th>Sharpe registrado</th><th>Trades</th></tr>{tr}</table>"
+        f"{tabla_e3}"
         f"<p>Intentos registrados: {d['intentos']}. Total de intentos (N): {d.get('n_total', d['intentos'])}. DSR: {escape(str(d.get('dsr', 'no evaluado')))}. Prueba abierta: {'sí' if d['prueba_abierta'] else 'no'}.</p>"
         f"<h2>Glosario</h2><dl>{gl}</dl></html>"
     )

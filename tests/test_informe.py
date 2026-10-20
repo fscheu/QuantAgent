@@ -86,3 +86,29 @@ def test_informe_cartera_dos_piernas_contiene_universos_y_fila_cartera_sin_preci
     assert "<th>pnl" not in html.lower() and "5000.0" not in html and "2500.0" not in html
     assert "Cartera" in html and "Pierna" in html and "Igual riesgo" in html
 
+
+def test_informe_etapa3_muestra_cuatro_cifras_recargo_y_glosario_nuevo(raiz):
+    registrar_estado("h-etapa3-completa", "1", "PASA", "ok")
+    registrar_estado("h-etapa3-completa", "2", "PASA", "ok")
+    registrar_estado(
+        "h-etapa3-completa", "3", "PASA",
+        "cartera pasa V30; DSR eff: 0.80, DSR crudo: 0.55, 3 de 4 años, benchmark: 0.12"
+    )
+    with (raiz / "intentos.csv").open("a", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=CAMPOS_INTENTOS, restval="")
+        w.writerow({"hipotesis": "h-etapa3-completa", "etapa": "3", "activo": "cartera", "sharpe": "0.45", "trades": "100"})
+    r, out = informe(raiz, "h-etapa3-completa")
+    assert r.exit_code == 0, r.output
+    html = out.read_text()
+    assert "<h2>Criterio de etapa 3</h2>" in html
+    assert "<th>N crudo</th>" in html and "<td>6</td>" in html
+    assert "<th>N efectivo</th>" in html and "<td>5</td>" in html
+    assert "<th>DSR efectivo</th>" in html and "<td>0.80</td>" in html
+    assert "<th>DSR crudo</th>" in html and "<td>0.55</td>" in html
+    assert "<th>Recargo paper</th>" in html and "<td>75% (6 sem)</td>" in html
+    assert "<th>Años positivos</th>" in html and "<td>3 de 4</td>" in html
+    assert "<th>Benchmark</th>" in html and "<td>0.12</td>" in html
+    assert "pasa con 0,95" not in html
+    assert "fija el recargo de paper trading" in html
+
+
