@@ -67,19 +67,22 @@ def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, a
             strat_cli = "senal-externa" if es_trans else strat
             cli_params = {"ruta": str(csv_path)} if es_trans else params
             params_path.write_text(json.dumps({strat_cli: cli_params}), encoding="utf-8")
-            out = carpeta / (f"{strat}-{activo}.csv" if h.es_cartera else f"{activo}.csv")
-            comando = [
-                sys.executable, "-m", "quantagent.cli", "backtest", "compare",
-                "--strategies", strat_cli, "--symbols", activo, "--snapshot", snapshot,
-                "--from", str(desde), "--to", str(hasta), "--costos", "etf",
-                "--llenado", "apertura", "--params", str(params_path), "--out", str(out),
-                "--trades-dir", str(carpeta / "trades"), "--equity-dir", str(carpeta / "equity"),
-            ]
-            if abrir_prueba:
-                comando.append("--abrir-prueba")
-            resultado = subprocess.run(comando, capture_output=True, text=True)
-            if resultado.returncode:
-                raise RuntimeError(resultado.stderr)
+            nombre = f"{strat}-{activo}.csv" if h.es_cartera else f"{activo}.csv"
+            out = carpeta / nombre
+            eq_out = carpeta / "equity" / nombre
+            if not (out.exists() and eq_out.exists()):
+                comando = [
+                    sys.executable, "-m", "quantagent.cli", "backtest", "compare",
+                    "--strategies", strat_cli, "--symbols", activo, "--snapshot", snapshot,
+                    "--from", str(desde), "--to", str(hasta), "--costos", "etf",
+                    "--llenado", "apertura", "--params", str(params_path), "--out", str(out),
+                    "--trades-dir", str(carpeta / "trades"), "--equity-dir", str(carpeta / "equity"),
+                ]
+                if abrir_prueba:
+                    comando.append("--abrir-prueba")
+                resultado = subprocess.run(comando, capture_output=True, text=True)
+                if resultado.returncode:
+                    raise RuntimeError(resultado.stderr)
             with out.open(newline="") as f:
                 fila = next(csv.DictReader(f))
             if es_trans:

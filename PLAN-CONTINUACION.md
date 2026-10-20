@@ -618,6 +618,15 @@ Los primeros 5 son los más fáciles de revisar.
 | C10 | `QuantAgent-d4cq.55` | Punto de control L12 (VM, lo corre el PM; etapa 3 con OK de Fede) | Veredicto e informe de la cartera | probar | L12 |
 | C11.1 | `QuantAgent-d4cq.76.1` | Loop: lote y ticket por variable o argumento (`LOOP_LOTE`, `LOOP_TICKET`) | Dos lotes borrador: con `LOOP_LOTE` toma el indicado; ticket no elegible dice por qué | leer | L12 |
 | C11.2 | `QuantAgent-d4cq.76.2` | Loop: reclamo por ticket con CLAIM y RELEASE; depende de C11.1 | Dos CLAIM del mismo ticket en <6h el segundo no lanza; con RELEASE sí | leer | L12 |
+| M01.1 | `QuantAgent-d4cq.69.1` | Módulo puro `fabrica/regimen.py`: `clasificar_regimen`, `sharpe_por_regimen` y `permutar_regimenes_bloques` | Régimen con datos hasta t-1; Sharpe por categoría; permuta bloques de un mes | leer | L14 |
+| M01.2 | `QuantAgent-d4cq.69.2` | Medición de la cartera núcleo por régimen 2007–2018 y contraste contra azar; depende de M01.1 | Tabla de Sharpe diario por régimen 2007–2018; permutación en bloques de un mes; conclusión se sigue o se archiva | decidir | L14 |
+| M07 | `QuantAgent-d4cq.75` | Punto de control de la capa macro (VM, lo corre el PM; `--margen` lo fija Fede antes de correr) | Veredicto de cada capa con ΔDSR contra el margen | probar | L14 |
+| G04a | `QuantAgent-d4cq.39` | Catálogo semilla: 15 de momentum, reversión y tendencia (nube) | Ids únicos, fuente verificable | leer | L13 |
+| G04b | `QuantAgent-d4cq.40` | Catálogo semilla: 15 de estacionalidad, volatilidad y régimen (nube); depende de G04a | Ídem; 30 en total | leer | L13 |
+| G05 | `QuantAgent-d4cq.41` | Crítico determinista y familia en `hipotesis.csv`; depende de G03 | Duplicada corta en etapa 0 sin intentos | leer | L13 |
+| G06a | `QuantAgent-d4cq.42` | Generador: pedido y lectura de respuesta, sin LLM | 3 válidos de 5 bloques; no pisa | leer | L13 |
+| G06b | `QuantAgent-d4cq.43` | `backtest hipotesis proponer` vía `QUANTAGENT_LLM_CMD` (VM); depende de G06a | Comando falso: 2 archivos y log | leer | L13 |
+| G07 | `QuantAgent-d4cq.44` | Resumen cuenta causas por hipótesis; ERROR con la última línea | 3 activos de una hipótesis cuentan 1 | leer | L13 |
 | P05.4 | `QuantAgent-d4cq.63` | Etapas 2 y 3 con piernas transversales: `SenalExterna` y celdas transversales en `validar_etapa2`/`validar_etapa3`; depende de P05.3 (hecho) | Una pierna transversal alimenta a los dos motores con la misma serie 0/1; `senal-externa` no es válida en un YAML | leer | L13 |
 | P09 | `QuantAgent-d4cq.67` | Motivo de ERROR con la última línea no vacía de la excepción, `<Tipo>: `, truncada a 200 | ERROR con excepción de 3 líneas muestra la última | leer | L13 |
 | P10 | `QuantAgent-d4cq.68` | Punto de control L13 (VM, lo corre el PM sobre el snapshot amplio `etf-1d-2026-10-amplio`; Fede dio OK por cartera el 2026-10-19 para abrir 2019–2022 en las carteras que pasen la etapa 2); depende de P05.4 y P09 | Cada entrada `destino: L13` con veredicto e informe o `motivo`; el informe muestra N de intentos y DSR | probar | L13 |

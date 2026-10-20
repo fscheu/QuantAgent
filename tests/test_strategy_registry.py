@@ -109,6 +109,8 @@ def test_registry_has_expected_entries():
         "Momentum12mStrategy",
         "HalloweenStrategy",
         "LLMAgentStrategy",
+        "RsiRegimenStrategy",
+        "CurvaPendienteStrategy",
         "SenalExterna",
     }
     for entry in registry.values():
