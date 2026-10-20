@@ -94,6 +94,7 @@ def test_alias_actuales_del_cli():
         "rsi-regimen": "RsiRegimenStrategy",
         "curva-pendiente": "CurvaPendienteStrategy",
         "halloween": "HalloweenStrategy",
+        "turn-of-the-month": "TurnOfTheMonthStrategy",
         "senal-externa": "SenalExterna",
     }
 
