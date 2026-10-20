@@ -1,6 +1,5 @@
 """Informe HTML por hipótesis (plan M3): veredicto, motivos por etapa y tabla por activo."""
 import csv
-import re
 from html import escape
 
 from quantagent.data.snapshot import snapshot_root
@@ -41,24 +40,18 @@ def datos_informe(hipotesis_id):
     n_crudo, n_eff = len(todas), n_efectivo(todas) if todas else 0
 
     fila3 = por_etapa.get("3")
-    dsr_eff, dsr_crudo, anios_pos, bench, recargo = None, None, None, None, None
+    dsr_eff, dsr_crudo, anios_pos, bench, n_eff_criterio, recargo, pares = None, None, None, None, None, None, {}
     if fila3:
-        m = fila3.get("motivo", "")
-
-        def _get(pat):
-            res = re.search(pat, m, re.I)
-            return res.group(1) if res else None
-
-        de = _get(r"dsr[_\s]*(?:eff|efectivo)?[:\s=]+([0-9.]+)") or _get(r"\bdsr[:\s=]+([0-9.]+)")
-        dc = _get(r"dsr[_\s]*crudo[:\s=]+([0-9.]+)")
-        dsr_eff = float(de) if de else None
-        dsr_crudo = float(dc) if dc else None
-        anios_pos = _get(r"(\d+\s+de\s+\d+)")
-        bm = _get(r"bench(?:mark)?[:\s=\(]+([0-9.-]+)")
-        bench = float(bm) if bm else None
-        rec = _get(r"recargo[:\s=]+([^;,]+)")
-        rec_p = recargo_paper(dsr_eff)
-        recargo = rec.strip() if rec else f"{rec_p.tamano_pct}% ({rec_p.semanas} sem)"
+        pares = {k.strip(): v.strip() for p in fila3.get("motivo", "").split(";") if "=" in p for k, _, v in [p.partition("=")]}
+        def _num(k, t):
+            try:
+                return t(pares[k]) if pares.get(k) not in (None, "", "-") else None
+            except (ValueError, KeyError):
+                return None
+        dsr_eff, dsr_crudo, bench, n_eff_criterio = _num("dsr_efectivo", float), _num("dsr_crudo", float), _num("benchmark", float), _num("n_efectivo", int)
+        anios_pos = pares.get("anios_positivos") if pares.get("anios_positivos") not in (None, "", "-") else None
+        rec_p = recargo_paper(dsr_eff) if dsr_eff is not None else None
+        recargo = f"{rec_p.tamano_pct}% ({rec_p.semanas} sem)" if rec_p else None
 
     dsr = None
     for fila in reversed(list(por_etapa.values())):
@@ -69,7 +62,9 @@ def datos_informe(hipotesis_id):
     return {
         "id": hipotesis_id, "etapas": [por_etapa[e] for e in sorted(por_etapa)], "final": por_etapa[ultima],
         "activos": {i["activo"]: i for i in intentos if i["etapa"] == ultima},
-        "intentos": len(intentos), "n_total": n_crudo, "n_crudo": n_crudo, "n_efectivo": n_eff,
+        "intentos": len(intentos), "n_total": n_crudo,
+        "n_crudo": n_crudo if fila3 and pares else None,
+        "n_efectivo": n_eff_criterio if n_eff_criterio is not None else (n_eff if fila3 and pares else None),
         "dsr": dsr_eff if dsr_eff is not None else (dsr or "no evaluado"),
         "dsr_efectivo": dsr_eff, "dsr_crudo": dsr_crudo, "anios_positivos": anios_pos,
         "benchmark": bench, "recargo": recargo, "prueba_abierta": abierto(hipotesis_id, "prueba"),
@@ -98,15 +93,8 @@ def render_informe(d, hipotesis=None):
     tabla_e3 = ""
     if any(e.get("etapa") == "3" for e in d["etapas"]):
         def _fmt(v):
-            if hasattr(v, "tamano_pct"):
-                return f"{v.tamano_pct}% ({v.semanas} sem)"
-            if isinstance(v, float):
-                return f"{v:.2f}"
-            return str(v) if v not in (None, "") else "-"
-
-        nc = d.get("n_crudo", d.get("n_total", d["intentos"]))
-        vals = [str(nc), str(d.get("n_efectivo", nc)), _fmt(d.get("dsr_efectivo", d.get("dsr"))),
-                _fmt(d.get("dsr_crudo")), _fmt(d.get("anios_positivos")), _fmt(d.get("benchmark")), _fmt(d.get("recargo", "50% (12 sem)"))]
+            return f"{v.tamano_pct}% ({v.semanas} sem)" if hasattr(v, "tamano_pct") else (f"{v:.2f}" if isinstance(v, float) else (str(v) if v not in (None, "") else "-"))
+        vals = [_fmt(d.get(k)) for k in ("n_crudo", "n_efectivo", "dsr_efectivo", "dsr_crudo", "anios_positivos", "benchmark", "recargo")]
         th = "".join(f"<th>{h}</th>" for h in ("N crudo", "N efectivo", "DSR efectivo", "DSR crudo", "Años positivos", "Benchmark", "Recargo paper"))
         td = "".join(f"<td>{escape(v)}</td>" for v in vals)
         tabla_e3 = f"<h2>Criterio de etapa 3</h2><table><tr>{th}</tr><tr>{td}</tr></table>"

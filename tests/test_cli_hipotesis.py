@@ -471,7 +471,8 @@ def test_correr_cartera_etapa3_y_reapertura(tmp_path, monkeypatch, final, dsr, m
         "hipotesis", "correr", str(archivo), "--snapshot", "sintetico", "--carpeta", str(tmp_path / "salida_correr"),
     ])
     assert res_correr.exit_code == int(final != "PASA"), res_correr.output
-    assert f"Etapa 3: {final} ({motivo_3})" in res_correr.output
+    assert f"Etapa 3: {final} ({motivo_3}" in res_correr.output
+    assert f"dsr_efectivo={dsr:.2f}" in res_correr.output
     assert f"Llegó a la etapa 3: {final}" in res_correr.output
     assert abierto(h.id, "prueba")
     assert len(vistos_etapa3) == 1

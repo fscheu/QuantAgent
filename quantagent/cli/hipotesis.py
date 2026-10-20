@@ -217,6 +217,13 @@ def motivo_error(exc):
     return f"{type(exc).__name__}: {ultima}"[:200]
 
 
+def motivo_etapa3_cartera(base, fila):
+    def _v(x):
+        return f"{x:.2f}" if isinstance(x, float) else (str(x) if x not in (None, "") else "-")
+    sufijo = f"dsr_efectivo={_v(fila.get('dsr'))}; dsr_crudo={_v(fila.get('dsr_crudo'))}; anios_positivos={fila.get('anios_positivos') or '-'}; benchmark={_v(fila.get('benchmark'))}; n_efectivo={fila.get('n_efectivo') if fila.get('n_efectivo') is not None else '-'}"
+    return f"{base}; {sufijo}" if base else sufijo
+
+
 @hipotesis_group.command("correr", help="Ejecutar las etapas 0 a 3, con corte temprano y estado.")
 @click.argument("archivo", type=click.Path(exists=True, dir_okay=False))
 @click.option("--snapshot", "snapshot_name", required=True)
@@ -277,7 +284,8 @@ def correr_command(archivo, snapshot_name, carpeta):
                     click.echo(tabulate(filas_tab, headers=headers, tablefmt="github"))
                     motivos = [m for f in filas for m in f["motivos"]]
                     if h.es_cartera:
-                        motivo = "; ".join(dict.fromkeys(motivos)) if motivos else "cartera pasa V30 y DSR"
+                        base = "; ".join(dict.fromkeys(motivos)) if motivos else "cartera pasa V30 y DSR"
+                        motivo = motivo_etapa3_cartera(base, filas[0] if filas else {})
                     else:
                         motivo = "; ".join(motivos)
                         if veredicto == "PASA":
