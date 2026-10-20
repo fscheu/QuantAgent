@@ -29,3 +29,18 @@ Resultado: `OK 10 series, 125185 filas`. Pasa antes de comenzar las comparacione
 ```bash
 python3 -c 'import csv, pathlib; p=pathlib.Path("/home/azureuser/repos/projects/QuantAgent/local-data"); i=list(csv.DictReader((p/"intentos.csv").open()))[105:]; c=(p/"hipotesis-candado.csv").read_text().splitlines(); assert len(i)==4 and all(x["etapa"]=="comparar" and x["hasta"]=="2018-12-31" for x in i); assert [x["hipotesis"] for x in i]==["cartera-tendencia-momentum","cartera-nucleo-curva","cartera-tendencia-momentum","cartera-nucleo-rsi-regimen"]; assert len(c)==4; print("Punto de control L14 OK: 2 capas descartadas (ΔDSR <= 0.05), N=109, prueba intacta")'
 ```
+
+## Segunda medición (2026-10-20, registro limpio por E01 de L16)
+
+Se repitió la comparación con L16 ya en main: `intentos.csv` sin las filas sintéticas retiradas por `QuantAgent-w12l` (99 filas, 95 distintas antes de esta corrida), mismo snapshot `etf-1d-2026-10-amplio`, mismo margen 0,05, solo 2007–2018. Prueba 2019–2022 sin abrir.
+
+| Capa | ΔSharpe | DSR núcleo → con capa | ΔDSR | N crudo | Veredicto de la CLI |
+|---|---:|---|---:|---:|---|
+| `cartera-nucleo-curva` | +0,0543 | 0,7827 → 0,8330 | +0,0503 | 101 | ACEPTA (por 0,0003) |
+| `cartera-nucleo-rsi-regimen` | -0,0638 | 0,8005 → 0,7341 | -0,0664 | 103 | DESCARTA |
+
+Sensibilidad de la capa curva: la CLI mide ΔDSR contra el registro tal como está al correr, y la varianza de los Sharpe del registro cambia con cada intento nuevo. Recalculado sobre las mismas curvas con el registro final de la sesión (103 filas, 95 distintas): ΔDSR +0,0463 con N=101 y +0,0457 con N efectivo=95; ambos están por debajo del margen. El veredicto depende de qué filas hay en el registro, no de la capa.
+
+Los DSR pasaron de 0,0000 (medición del 2026-10-19, registro con filas sintéticas) a cerca de 0,8: esa limpieza, no la capa, es lo que movió el nivel.
+
+El ticket `QuantAgent-m9cx` (regla de aceptación con ΔSharpe y años positivos) sigue abierto y espera los umbrales de Fede.
