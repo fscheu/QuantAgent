@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 
 from quantagent.data.snapshot import write_snapshot
+from quantagent.fabrica.candado import abierto
 from scripts.criterio_paper_desde_curvas import calcular_criterio_paper
 
 
@@ -13,6 +14,7 @@ def _velas(fechas, ret):
 
 def test_criterio_paper_desde_curvas_pasa_corta_y_sin_escrituras(tmp_path, monkeypatch):
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
     f2, f3 = pd.bdate_range("2017-01-02", "2018-12-31"), pd.bdate_range("2019-01-02", "2022-12-30")
     fechas, osc2, osc3 = f2.append(f3), 1e-4 * np.sin(np.arange(len(f2))), 1e-4 * np.sin(np.arange(len(f3)))
     ret_car3 = np.where(f3.year == 2021, -0.0003, 0.0015) + osc3
@@ -33,12 +35,12 @@ def test_criterio_paper_desde_curvas_pasa_corta_y_sin_escrituras(tmp_path, monke
     assert res["veredicto"] == "PASA" and res["pasa"] is True and res["motivos"] == []
     assert res["anios_positivos"] == (3, 4) and 0 < res["max_drawdown"] <= 0.35
     assert res["sharpe_etapa2"] > res["benchmark_etapa2"] and res["sharpe_etapa3"] > res["benchmark_etapa3"]
-    assert all(not r.exists() for r in registros)
+    assert not abierto("cartera-sint", "prueba") and all(not r.exists() for r in registros)
     for r in registros:
         r.write_text("intacto\n", encoding="utf-8")
     res_corta = calcular_criterio_paper(yaml_path, tmp_path / "etapa2", tmp_path / "etapa3", "snap_alto")
     assert res_corta["veredicto"] == "CORTA" and any("Sharpe de cartera" in m and "<= benchmark" in m for m in res_corta["motivos"])
-    assert all(r.read_text(encoding="utf-8") == "intacto\n" for r in registros)
+    assert not abierto("cartera-sint", "prueba") and all(r.read_text(encoding="utf-8") == "intacto\n" for r in registros)
     (e3 / "sma-cross-TLT.csv").unlink()
     with pytest.raises(FileNotFoundError, match="sma-cross-TLT"):
         calcular_criterio_paper(yaml_path, tmp_path / "etapa2", tmp_path / "etapa3", "snap_bajo")
