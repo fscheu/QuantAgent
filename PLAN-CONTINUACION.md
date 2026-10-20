@@ -659,7 +659,9 @@ Los primeros 5 son los más fáciles de revisar.
 | B-T2 | `QuantAgent-br4h` | `DataProvider` delega en la fuente (nube); depende de B-T1 | Pide solo el hueco | leer | LB1 |
 | B-T9 | `QuantAgent-jpms` | `AlpacaSource` solo datos (nube) | 2 páginas en UTC; solo host de datos | leer | LB1 |
 | B-T8 | `QuantAgent-v38v` | Medición de Alpaca con claves reales (notebook o VM); depende de B-T9 | Cifras o "sin claves" | leer | LB1 |
-| Q01 | `QuantAgent-ro3w` | Veredicto de paper de la cartera núcleo + curva: script que recalcula el criterio desde curvas guardadas (VM, `local-data`; Codex) | Sintéticas: pasa si supera al benchmark en las dos etapas; corta con motivo si no; no escribe candado ni registro; IM con la tabla de la cartera | decidir | L18 |
+| Q01a | `QuantAgent-ro3w.1` | Cálculo de criterio paper desde curvas guardadas y tests sin escrituras; padre ro3w | Sintéticas PASA/CORTA con motivo; sin aperturas de candado ni escrituras de registros | leer | L18 |
+| Q01b | `QuantAgent-ro3w.2` | CLI con tabla y DSR crudo/efectivo; depende de Q01a | CLI sintética muestra métricas, recargo y motivos; curva faltante se informa | probar | L18 |
+| Q01c | `QuantAgent-ro3w.3` | Corrida autorizada núcleo + curva e IM; depende de Q01b (VM, Codex) | Tabla y veredicto reales o curvas faltantes; registros intactos; oráculos verdes | decidir | L18 |
 | Q02 | `QuantAgent-rpna` | Señal `turn-of-the-month` registrada como `halloween` (nube) | Abre el último día hábil, cierra el 3.º del mes siguiente, feriados sin corrimiento; no mira el futuro | leer | L18 |
 | Q03 | `QuantAgent-rdcf` | `cambio-de-mes.yaml` con ventana en listas, de vuelta en `hipotesis/` (nube); depende de Q02 | Carga y la admisión la acepta con 0 parámetros libres; `proponer` y `tanda` cargan la carpeta | leer | L18 |
 | Q04 | `QuantAgent-dtbv` | `cambio-de-mes` por las etapas 0 a 2, 2007–2018, intentos contados (VM); depende de Q03 | IM con veredicto; ninguna entrada nueva en el candado; pide a Fede el OK de la etapa 3 si pasa | decidir | L18 |
