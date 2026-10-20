@@ -86,3 +86,29 @@ def test_informe_cartera_dos_piernas_contiene_universos_y_fila_cartera_sin_preci
     assert "<th>pnl" not in html.lower() and "5000.0" not in html and "2500.0" not in html
     assert "Cartera" in html and "Pierna" in html and "Igual riesgo" in html
 
+
+def test_informe_etapa3_muestra_cuatro_cifras_recargo_y_glosario_nuevo(raiz):
+    from quantagent.cli.hipotesis import motivo_etapa3_cartera
+
+    for e in ("1", "2"):
+        registrar_estado("h-etapa3-completa", e, "PASA", "ok")
+    fila_e3 = {"dsr": 0.80, "dsr_crudo": 0.55, "anios_positivos": "3 de 4", "benchmark": 0.12, "n_efectivo": 5}
+    registrar_estado("h-etapa3-completa", "3", "PASA", motivo_etapa3_cartera("cartera pasa V30 y DSR", fila_e3))
+    with (raiz / "intentos.csv").open("a", newline="") as f:
+        csv.DictWriter(f, fieldnames=CAMPOS_INTENTOS, restval="").writerow({"hipotesis": "h-etapa3-completa", "etapa": "3", "activo": "cartera", "sharpe": "0.45", "trades": "100"})
+    r, out = informe(raiz, "h-etapa3-completa")
+    assert r.exit_code == 0, r.output
+    html = out.read_text()
+    for h, v in (("N crudo", "6"), ("N efectivo", "5"), ("DSR efectivo", "0.80"), ("DSR crudo", "0.55"),
+                 ("Recargo paper", "75% (6 sem)"), ("Años positivos", "3 de 4"), ("Benchmark", "0.12")):
+        assert f"<th>{h}</th>" in html and f"<td>{v}</td>" in html
+    assert "pasa con 0,95" not in html and "fija el recargo de paper trading" in html
+
+
+def test_informe_etapa3_motivo_sin_claves_muestra_guiones(raiz):
+    for e, v, m in (("1", "PASA", "ok"), ("2", "PASA", "ok"), ("3", "CORTA", "DSR bajo en QQQ")):
+        registrar_estado("h-sin-claves", e, v, m)
+    r, out = informe(raiz, "h-sin-claves")
+    assert r.exit_code == 0 and "<h2>Criterio de etapa 3</h2>" in out.read_text() and out.read_text().count("<td>-</td>") >= 7
+
+
