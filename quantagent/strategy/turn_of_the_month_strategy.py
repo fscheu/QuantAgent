@@ -1,6 +1,8 @@
 """Efecto de cambio de mes (McConnell y Xu 2008, Lakonishok y Smidt 1988)."""
 
+import datetime as dt
 from typing import Dict, List, Optional, Tuple
+import dateutil.easter
 import pandas as pd
 from ..models import ActivePosition, ExitPolicy
 from .base import TradingSignal, TradingStrategy
@@ -21,7 +23,10 @@ class TurnOfTheMonthStrategy(TradingStrategy):
     @staticmethod
     def _is_entry_day(day: pd.Timestamp) -> bool:
         day = pd.Timestamp(day).tz_localize(None).normalize()
-        return day.weekday() < 5 and (day.day == day.days_in_month or (day.weekday() == 4 and day.days_in_month - day.day <= 2))
+        gf = dateutil.easter.easter(day.year) - dt.timedelta(days=2)
+        if day.weekday() >= 5 or day.date() == gf:
+            return False
+        return not any((day + dt.timedelta(days=d)).weekday() < 5 and (day + dt.timedelta(days=d)).date() != gf for d in range(1, day.days_in_month - day.day + 1))
 
     @staticmethod
     def _is_exit_day(ohlc_data: pd.DataFrame) -> bool:
@@ -37,12 +42,7 @@ class TurnOfTheMonthStrategy(TradingStrategy):
     def generate_signal(self, kline_data: List[Dict], symbol: str, timeframe: str, current_price: float) -> Optional[TradingSignal]:
         if not kline_data or not self._is_entry_day(kline_data[-1]["timestamp"]):
             return None
-        return TradingSignal(
-            decision="LONG", confidence=1.0, entry_price=current_price,
-            stop_loss=UNREACHABLE_STOP_LOSS, take_profit=UNREACHABLE_TAKE_PROFIT,
-            reasoning="Último día hábil del mes: entra turn-of-the-month",
-            exit_policy=ExitPolicy.SL_TP_ONLY,
-        )
+        return TradingSignal(decision="LONG", confidence=1.0, entry_price=current_price, stop_loss=UNREACHABLE_STOP_LOSS, take_profit=UNREACHABLE_TAKE_PROFIT, reasoning="Último día hábil del mes: entra turn-of-the-month", exit_policy=ExitPolicy.SL_TP_ONLY)
 
     def should_exit(self, position: ActivePosition, current_price: float, ohlc_data: pd.DataFrame) -> Tuple[bool, Optional[str]]:
         return (True, "TURN_OF_THE_MONTH_EXIT") if self._is_exit_day(ohlc_data) else (False, None)

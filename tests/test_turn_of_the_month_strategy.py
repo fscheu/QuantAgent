@@ -9,8 +9,7 @@ from quantagent.strategy.turn_of_the_month_strategy import TurnOfTheMonthStrateg
 
 def _velas(fechas: list[str]) -> pd.DataFrame:
     idx = pd.to_datetime(fechas)
-    c = pd.Series(range(100, 100 + len(idx)), index=idx, dtype=float)
-    return pd.DataFrame({"timestamp": idx, "open": c, "high": c + 1, "low": c - 1, "close": c, "volume": 1000.0}, index=idx)
+    return pd.DataFrame({"timestamp": idx, "open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0, "volume": 1000.0}, index=idx)
 
 
 def test_fechas_sinteticas_con_feriados_abre_y_cierra_en_dias_habiles_exactos():
@@ -33,3 +32,11 @@ def test_registrada_con_alias_y_cero_parametros():
     assert cli_aliases()["turn-of-the-month"] == "TurnOfTheMonthStrategy"
     assert STRATEGY_REGISTRY["TurnOfTheMonthStrategy"]["params"] == {}
     assert isinstance(build_strategy("TurnOfTheMonthStrategy"), TurnOfTheMonthStrategy)
+
+
+def test_viernes_santo_en_fin_de_mes_abre_jueves_y_no_abre_viernes_santo():
+    fechas = ["2018-03-28", "2018-03-29", "2018-03-30", "2018-04-02", "2018-04-03", "2018-04-04", "2018-04-05", "2024-03-27", "2024-03-28", "2024-03-29", "2024-04-01", "2024-04-02", "2024-04-03", "2024-04-04"]
+    sig = bar_signals(TurnOfTheMonthStrategy(), _velas(fechas), "SPY", "1d")
+    assert [d.strftime("%Y-%m-%d") for d in sig.index[sig["entry"] == 1]] == ["2018-03-29", "2024-03-28"]
+    assert "2018-03-30" not in sig.index[sig["entry"] == 1] and "2024-03-29" not in sig.index[sig["entry"] == 1]
+    assert [d.strftime("%Y-%m-%d") for d in sig.index[sig["exit"]]] == ["2018-04-04", "2024-04-03"]
