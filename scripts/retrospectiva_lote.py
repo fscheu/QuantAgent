@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """Arma la retrospectiva por lote (QuantAgent-qr1n) sin cifras de rendimiento."""
-import argparse, csv, yaml
+import argparse
+import csv
 from collections import Counter
 from pathlib import Path
 
+import yaml
+
 
 def buscar_intentos_csv(ruta=None):
-    for cand in [Path(ruta) if ruta else None, Path("local-data/intentos.csv"), Path("intentos.csv")]:
-        if cand and cand.exists():
-            return cand
-    return None
+    candidatos = [Path(ruta)] if ruta else [Path("local-data/intentos.csv"), Path("intentos.csv")]
+    return next((c for c in candidatos if c.exists()), None)
 
 
 def armar_retrospectiva(lote, postmortem_dir=None, intentos_path=None, intentos_n=None, out=None):
@@ -43,7 +44,7 @@ def armar_retrospectiva(lote, postmortem_dir=None, intentos_path=None, intentos_
         f"# Retrospectiva {lote}", "",
         "## Causas de corte", "", "| Causa | Conteo | Carteras |", "| --- | ---: | --- |", *filas_causas, "",
         "## Detalle por cartera", "", "| Cartera | Causas de corte |", "| --- | --- |", *filas_carteras, "",
-        "## Registro", "", f"- Intentos sumados por el lote: {n_intentos}", "",
+        "## Registro", "", f"- Intentos registrados de las carteras con ficha: {n_intentos}", "",
     ]
     dest = Path(out or f"docs/06_implementation/retrospectiva-{lote}.md")
     dest.parent.mkdir(parents=True, exist_ok=True)

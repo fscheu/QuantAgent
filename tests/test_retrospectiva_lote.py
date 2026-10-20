@@ -1,6 +1,6 @@
 """QuantAgent-qr1n: retrospectiva por lote sin cifras de rendimiento."""
-import csv
 import yaml
+
 from scripts.retrospectiva_lote import armar_retrospectiva, main
 
 
@@ -12,15 +12,13 @@ def test_retrospectiva_cuenta_causas_con_fichas_sinteticas(tmp_path):
               {"id": "c3", "causas": ["costos_comen_ganancia"]}):
         (p_dir / f"{f['id']}.yaml").write_text(yaml.safe_dump(f), encoding="utf-8")
     int_csv = tmp_path / "intentos.csv"
-    with open(int_csv, "w", newline="", encoding="utf-8") as fp:
-        w = csv.writer(fp)
-        w.writerow(["hipotesis", "activo", "sharpe", "dsr"])
-        w.writerows([["c1", "S", "0.5", "0.9"], ["c2", "T", "0.2", "0.4"], ["otra", "S", "0.8", "0.99"]])
+    int_csv.write_text("hipotesis,activo,sharpe,dsr\nc1,S,0.5,0.9\nc2,T,0.2,0.4\nsin_ficha,S,0.8,0.99\n", encoding="utf-8")
     out_file = tmp_path / "retro.md"
     texto, dest = armar_retrospectiva("L16", postmortem_dir=p_dir, intentos_path=int_csv, out=out_file)
     assert dest == out_file
     assert "| pocos_trades | 2 | c1, c2 |" in texto and "| rotacion_alta | 1 | c1 |" in texto
-    assert "| costos_comen_ganancia | 1 | c3 |" in texto and "- Intentos sumados por el lote: 2" in texto
+    assert "| costos_comen_ganancia | 1 | c3 |" in texto and "- Intentos registrados de las carteras con ficha: 2" in texto
+    assert "sin_ficha" not in texto  # cartera sin ficha no cuenta
 
 
 def test_retrospectiva_sin_cifras_de_rendimiento(tmp_path):
