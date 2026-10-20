@@ -1,0 +1,19 @@
+id: volatilidad-gestionada
+idea: Escalar la exposición al mercado por la inversa de la varianza realizada del
+  mes anterior mejora el Sharpe.
+clase: vol-managed
+ventana:
+  estimacion: varianza realizada con retornos diarios del mes calendario anterior
+  rebalanceo: mensual
+hipotesis_economica: La volatilidad sube mucho más que el retorno esperado, así que
+  el ratio riesgo-retorno empeora cuando la volatilidad es alta. Reducir exposición
+  en esos meses y aumentarla en los calmos cobra la prima de mercado con menos riesgo.
+  La constante de escala solo normaliza la volatilidad total, así que no se optimiza.
+fuente:
+- 10.1111/jofi.12513
+universo:
+  activos:
+  - SPY
+  criterio: El factor de mercado de EE.UU., que es la cartera sobre la que Moreira
+    y Muir definen el resultado principal.
+parametros_libres: 0
