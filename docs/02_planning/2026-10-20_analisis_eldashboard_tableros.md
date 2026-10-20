@@ -3,6 +3,7 @@
 - **Estado:** borrador para que Fede decida (2026-10-20). Investigación; no hay tickets en BEADS ni código.
 - **Pedido de Fede:** analizar los tableros gratis y la lista de funciones pagas de https://eldashboard.com.ar/, compararlos con nuestros datos y proponer qué sumar, cómo construirlo y de dónde sacar los datos, para ir aprendiendo y tener visualizaciones de ese estilo.
 - **Actualización (2026-10-20, pedido de Fede):** el interés está en la visualización y el análisis de **bonos**, extrapolables a EEUU; el mercado argentino importa poco. La sección 13 reordena la propuesta con ese foco y reemplaza la prioridad de las secciones 7 a 10.
+- **Decisiones de Fede (2026-10-20):** biblioteca de bonos propia y chica; ampliar el snapshot de FRED; sumar `plotly`; Argentina afuera por ahora. **No entra en la cola actual**: queda para después de lo ya planificado, sin tickets en BEADS. Detalle en 13.6.
 - **Cómo se leyó el sitio:** se bajaron la portada y las seis páginas públicas (soberanos, tasa fija, A3, renta variable, FX MEP, calendario). Las tablas y los textos se leyeron como texto. **No se vieron los gráficos** (se cargan con JavaScript), así que lo que dice este documento sobre gráficos sale de los títulos, los controles y la lista de funciones, no de haberlos mirado. Los precios de Pro y Mesa no están publicados.
 
 ## 1. Qué es el sitio
@@ -245,3 +246,12 @@ Las vistas de ETFs, correlaciones y pares (secciones 7.C, 7.D y 7.E) pasan a seg
 2. ¿Ampliamos el snapshot de FRED con los plazos, TIPS y crédito de 13.2?
 3. ¿Aprobás sumar `plotly` como dependencia (`scipy` ya está)?
 4. ¿Argentina queda afuera por ahora?
+
+### 13.6 Decisiones registradas (2026-10-20)
+
+1. **Biblioteca de bonos:** propia y chica (precio, TIR, duration, convexidad, DV01). `scipy` para el ajuste de curva.
+2. **Snapshot de FRED:** se amplía con plazos intermedios, TIPS y crédito (13.2).
+3. **Dependencias:** se suma `plotly`. `scipy` ya está.
+4. **Argentina:** afuera por ahora.
+
+**Sin fecha ni cola.** Esto se retoma después de lo que está planificado hoy. No se crean tickets hasta entonces. Al retomar, el punto de partida es el paso 1 de 13.4.
