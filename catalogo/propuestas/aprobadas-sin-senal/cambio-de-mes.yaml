@@ -3,9 +3,8 @@ idea: El retorno de las acciones se concentra entre el último día hábil del m
   los tres primeros del mes siguiente.
 clase: turn-of-the-month
 ventana: &id001
-  dia_inicio: -1
-  dia_fin: 3
-  rebalanceo: mensual
+  dia_inicio: [-1]
+  dia_fin: [3]
 hipotesis_economica: Los flujos de caja que llegan a fin de mes (sueldos, aportes
   a fondos de pensión, dividendos) generan demanda concentrada de acciones. Ese pico
   de liquidez le paga una prima a quien tiene el riesgo en esos días. La ventana [-1,
