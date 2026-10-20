@@ -4,6 +4,7 @@ La ficha lee las filas por celda de la corrida del motor, pero escribe únicamen
 las causas: sin Sharpe, DSR, pnl ni conteos, para que el generador de ideas no pueda ajustar contra ellos.
 """
 
+import csv
 from pathlib import Path
 
 import pandas as pd
@@ -19,6 +20,12 @@ COSTO_MAX = 0.5        # los costos son la mitad o más de la ganancia bruta
 DOMINIO_MAX = 0.7      # una pierna aporta más del 70% del |pnl| de las piernas
 CAPITAL = 100_000.0    # capital por celda del motor
 CARPETA = Path("catalogo/postmortem")
+
+
+def filas_postmortem(carpeta):
+    """Filas por celda (pierna y activo) que `validar_etapa2` dejó en `celdas.csv`."""
+    with (Path(carpeta) / "celdas.csv").open(newline="", encoding="utf-8") as f:
+        return list(csv.DictReader(f))
 
 
 def ficha_postmortem(h, filas, carpeta=CARPETA):
