@@ -18,7 +18,7 @@ Si pasa, es la cartera de entrada a M4 con su recargo de paper (50 % del tamaño
 
 ## Frente 2: `QuantAgent-puv2`, turn-of-the-month (Q02–Q04)
 
-Partido en tres entregas de 100 líneas o menos: la señal (Q02), el YAML que carga y vuelve a `hipotesis/` (Q03) y la corrida hasta la etapa 2 sobre 2007–2018 (Q04, en la VM). La etapa 3 sólo con el OK escrito de Fede por esta hipótesis. Al cerrar Q04 se cierra `QuantAgent-puv2`.
+Partido en entregas de 100 líneas o menos: la señal (Q02), el YAML que carga y vuelve a `hipotesis/` (Q03), la opción `--hasta-etapa` de `correr` (Q03b, agregada el 2026-10-20 porque `correr` abre solo la prueba 2019–2022 al pasar la etapa 2) y la corrida hasta la etapa 2 sobre 2007–2018 (Q04, en la VM). La etapa 3 sólo con el OK escrito de Fede por esta hipótesis. Al cerrar Q04 se cierra `QuantAgent-puv2`.
 
 ## Frente 3: preparación de M4 que no depende de una cartera (Q05–Q12)
 
