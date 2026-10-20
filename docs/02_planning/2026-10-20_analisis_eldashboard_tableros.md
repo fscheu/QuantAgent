@@ -218,7 +218,7 @@ Los nombres de las series salen de mi conocimiento de FRED, no los verifiqué en
 1. **`quantagent/bonos/`**, con funciones puras y tests contra números calculados a mano:
    - `flujos` y `precio_tir`: cronograma de cupones, precio a partir de la TIR y TIR a partir del precio.
    - `riesgo`: duration modificada, convexidad y DV01.
-   - `curva`: interpolación, tasas forward y ajuste Nelson-Siegel (necesita `scipy`; verificar si ya está).
+   - `curva`: interpolación, tasas forward y ajuste Nelson-Siegel (con `scipy`, que ya es dependencia).
    - `analisis`: percentiles, pendientes, mariposas y spreads contra su historia.
 2. **`apps/streamlit/views/bonos.py`**, con pestañas: Curva, Histórico y percentiles, Superficie, Pendientes y mariposas, Forwards y breakeven, Calculadora.
 3. **Fuente separada de la matemática.** La biblioteca no sabe de Argentina ni de EEUU: recibe flujos y precios. Argentina, si Fede la quiere, es un adaptador nuevo (bonos con cupones y calendario propios) y el riesgo país sale gratis de restar la curva del Tesoro.
@@ -243,5 +243,5 @@ Las vistas de ETFs, correlaciones y pares (secciones 7.C, 7.D y 7.E) pasan a seg
 
 1. ¿Biblioteca de bonos propia o apoyarse en una existente (por ejemplo `QuantLib` o `scipy`)? Recomendado: propia y chica para duration, convexidad y precio, porque es lo que se quiere aprender, y `scipy` para el ajuste de curva.
 2. ¿Ampliamos el snapshot de FRED con los plazos, TIPS y crédito de 13.2?
-3. ¿Aprobás sumar `plotly` (y `scipy`, si no está) como dependencias?
+3. ¿Aprobás sumar `plotly` como dependencia (`scipy` ya está)?
 4. ¿Argentina queda afuera por ahora?
