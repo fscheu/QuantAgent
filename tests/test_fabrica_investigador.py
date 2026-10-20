@@ -80,9 +80,8 @@ def test_propuestas_aprobar_rechazar_y_tanda_ignora_no_aprobadas(tmp_path, monke
         for i, s in enumerate(("ok", "no", "pendiente"))
     ]}), prop_dir)
     r_ok = runner.invoke(backtest_group, ["hipotesis", "propuestas", "aprobar", "prop-ok", "--quien", "fede", "--propuestas-dir", str(prop_dir), "--hipotesis-dir", str(hip_dir)])
-    assert r_ok.exit_code == 0 and "APROBADA prop-ok" in r_ok.output and not (prop_dir / "prop-ok.yaml").exists()
-    assert (hip_dir / "prop-ok.yaml").exists() and not (hip_dir / "prop-pendiente.yaml").exists()
-    r_no = runner.invoke(backtest_group, ["hipotesis", "propuestas", "rechazar", "prop-no", "--motivo", "universo redundante", "--propuestas-dir", str(prop_dir)])
+    assert r_ok.exit_code == 0 and "APROBADA prop-ok" in r_ok.output and not (prop_dir / "prop-ok.yaml").exists() and (hip_dir / "prop-ok.yaml").exists() and not (hip_dir / "prop-pendiente.yaml").exists()
+    r_no = runner.invoke(backtest_group, ["hipotesis", "propuestas", "rechazar", "prop-no", "--quien", "fede", "--motivo", "universo redundante", "--propuestas-dir", str(prop_dir)])
     assert r_no.exit_code == 0 and not (prop_dir / "prop-no.yaml").exists() and not (hip_dir / "prop-no.yaml").exists()
     assert yaml.safe_load((prop_dir / "rechazadas/prop-no.yaml").read_text(encoding="utf-8"))["motivo_rechazo"] == "universo redundante"
     filas = list(csv.DictReader((prop_dir / "registro.csv").read_text(encoding="utf-8").splitlines()))
@@ -94,9 +93,10 @@ def test_propuestas_aprobar_rechazar_y_tanda_ignora_no_aprobadas(tmp_path, monke
     assert r_tanda.exit_code == 0 and corridas == ["prop-ok"]
 
 
-@pytest.mark.parametrize("args", [["rechazar", "prop-1"], ["rechazar", "prop-1", "--motivo", "   "], ["rechazar", "no-existe", "--motivo", "x"], ["aprobar", "no-existe"]])
-def test_propuestas_rechazar_sin_motivo_o_inexistente_falla(tmp_path, args):
+@pytest.mark.parametrize("args,err", [(["rechazar", "prop-1", "--quien", "fede"], "--motivo"), (["rechazar", "prop-1", "--quien", "fede", "--motivo", "   "], "--motivo"), (["rechazar", "prop-1", "--motivo", "x"], "--quien"), (["rechazar", "no-existe", "--quien", "fede", "--motivo", "x"], "no-existe"), (["aprobar", "prop-1"], "--quien"), (["aprobar", "prop-1", "--quien", "   "], "--quien"), (["aprobar", "no-existe", "--quien", "fede"], "no-existe")])
+def test_propuestas_rechazar_sin_motivo_o_inexistente_falla(tmp_path, monkeypatch, args, err):
+    monkeypatch.setattr(hipotesis, "HIPOTESIS_DIR", tmp_path / "hipotesis")
     (prop_dir := tmp_path / "propuestas").mkdir()
     (prop_dir / "prop-1.yaml").write_text("id: prop-1\n", encoding="utf-8")
     res = CliRunner().invoke(backtest_group, ["hipotesis", "propuestas", *args, "--propuestas-dir", str(prop_dir)])
-    assert res.exit_code != 0 and (prop_dir / "prop-1.yaml").exists() and not (prop_dir / "registro.csv").exists()
+    assert res.exit_code != 0 and err in res.output and (prop_dir / "prop-1.yaml").exists() and not (tmp_path / "hipotesis").exists() and not (prop_dir / "registro.csv").exists()

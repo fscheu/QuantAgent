@@ -344,7 +344,7 @@ def propuestas_group():
 
 @propuestas_group.command("aprobar", help="Mover una propuesta de catalogo/propuestas/ a hipotesis/ y registrar el OK.")
 @click.argument("propuesta_id")
-@click.option("--quien", "--autor", "quien", default="fede", show_default=True)
+@click.option("--quien", "--autor", "quien", required=True)
 @click.option("--propuestas-dir", type=click.Path(file_okay=False), default=None)
 @click.option("--hipotesis-dir", type=click.Path(file_okay=False), default=None)
 def aprobar_command(propuesta_id, quien, propuestas_dir, hipotesis_dir):
@@ -352,7 +352,7 @@ def aprobar_command(propuesta_id, quien, propuestas_dir, hipotesis_dir):
     p_dir, h_dir = Path(propuestas_dir or PROPUESTAS_DIR), Path(hipotesis_dir or HIPOTESIS_DIR)
     origen, destino = p_dir / f"{pid}.yaml", h_dir / f"{pid}.yaml"
     if not quien or not origen.exists() or destino.exists():
-        raise click.ClickException(f"No se puede aprobar {pid} desde {p_dir}")
+        raise click.ClickException(f"No se puede aprobar {pid}: --quien obligatorio y propuesta existente en {p_dir}")
     h_dir.mkdir(parents=True, exist_ok=True)
     try:
         cargar_hipotesis(origen)
@@ -374,13 +374,13 @@ def aprobar_command(propuesta_id, quien, propuestas_dir, hipotesis_dir):
 @propuestas_group.command("rechazar", help="Archivar una propuesta con su motivo.")
 @click.argument("propuesta_id")
 @click.option("--motivo", required=True)
-@click.option("--quien", "--autor", "quien", default="fede", show_default=True)
+@click.option("--quien", "--autor", "quien", required=True)
 @click.option("--propuestas-dir", type=click.Path(file_okay=False), default=None)
 def rechazar_command(propuesta_id, motivo, quien, propuestas_dir):
     pid, motivo, quien, p_dir = Path(propuesta_id).stem, (motivo or "").strip(), (quien or "").strip(), Path(propuestas_dir or PROPUESTAS_DIR)
     origen, destino = p_dir / f"{pid}.yaml", p_dir / "rechazadas" / f"{pid}.yaml"
     if not motivo or not quien or not origen.exists():
-        raise click.ClickException(f"No se puede rechazar {pid}: motivo obligatorio y propuesta existente en {p_dir}")
+        raise click.ClickException(f"No se puede rechazar {pid}: --motivo y --quien obligatorios y propuesta existente en {p_dir}")
     destino.parent.mkdir(parents=True, exist_ok=True)
     fecha, d = _registrar_propuesta(p_dir, pid, "RECHAZADA", quien, motivo), yaml.safe_load(origen.read_text(encoding="utf-8"))
     d.update(estado="rechazada", motivo_rechazo=motivo, fecha_utc=fecha, quien=quien)
