@@ -641,6 +641,7 @@ def test_backtest_run_aborts_without_deleting_foreign_market_data(cli_runner):
             MarketData(
                 symbol=meta.symbol,
                 timeframe=meta.timeframe,
+                source="fixture",
                 timestamp=meta.start_date + timedelta(hours=i),
                 open=1,
                 high=1,
