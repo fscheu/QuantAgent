@@ -23,6 +23,7 @@ if env_local_path.exists():
 
 # Database Configuration
 DATABASE_URL: str = os.getenv("DATABASE_URL", "")
+QUANTAGENT_DATA_SOURCE: str = os.getenv("QUANTAGENT_DATA_SOURCE", "yahoo")
 
 # LLM API Keys
 OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
