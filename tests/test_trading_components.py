@@ -404,6 +404,19 @@ class TestOrderManager:
 
         assert result is None
 
+    def test_close_symbol_closes_full_position_and_registers_order(self):
+        trade = Mock()
+        trade.pnl = Decimal("0")
+        self.portfolio.positions = {"BTC": {"qty": 0.25}}
+        self.portfolio.execute_trade.return_value = trade
+
+        order = self.order_manager.close_symbol("BTC", 100.0)
+
+        assert order.side == OrderSide.SELL
+        assert order.quantity == pytest.approx(0.25)
+        assert self.db.add.call_count == 2
+        self.db.commit.assert_called_once()
+
     def test_execute_decision_long_valid(self):
         """Test LONG decision executes successfully."""
         # Mock portfolio.execute_trade to return a trade
