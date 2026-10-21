@@ -1244,6 +1244,38 @@ class TestEntryCappedToCash:
         order = om.execute_decision("SPY", "LONG", 1.0, self.PRICE)
         assert float(order.filled_quantity) == pytest.approx(100000.0 * 0.05 / self.PRICE, rel=1e-12)
 
+    @pytest.mark.parametrize("initial_side", ["LONG", "SHORT"])
+    @pytest.mark.parametrize("target_pct", [1.0, 0.9985, 0.05])
+    def test_reversal_cash_never_negative(self, db_session, initial_side, target_pct):
+        om, portfolio = self._build(db_session, 0.05)
+        om.execute_decision("SPY", initial_side, 1.0, self.PRICE)
+        om.position_sizer.base_position_pct = target_pct
+        requested_qty = portfolio.get_total_value() * target_pct / self.PRICE
+        close_qty = abs(portfolio.positions["SPY"]["qty"])
+        cash_after_close = portfolio.cash
+        if initial_side == "SHORT":
+            cash_after_close -= close_qty * self.PRICE * (1 + self.SLIP) * (1 + self.COM)
+        else:
+            cash_after_close += close_qty * self.PRICE * (1 - self.SLIP) * (1 - self.COM)
+        expected_qty = requested_qty
+        if initial_side == "SHORT":
+            expected_qty = min(
+                requested_qty,
+                cash_after_close / (self.PRICE * (1 + self.SLIP) * (1 + self.COM)),
+            )
+
+        reversal = om.execute_decision(
+            "SPY", "SHORT" if initial_side == "LONG" else "LONG", 1.0, self.PRICE
+        )
+
+        assert portfolio.cash >= -1e-6
+        if target_pct == 1.0:
+            assert reversal is None
+            assert portfolio.positions["SPY"]["qty"] == 0
+        else:
+            assert reversal is not None
+            assert float(reversal.filled_quantity) == pytest.approx(expected_qty, rel=1e-9)
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
