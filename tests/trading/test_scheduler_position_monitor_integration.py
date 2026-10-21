@@ -50,6 +50,7 @@ def _make_scheduler(
         }
     )
     strategy = Mock()
+    strategy.should_exit.return_value = (False, None)
     strategy.generate_signal.return_value = StrategyTradingSignal(
         decision=decision,
         confidence=0.9,
@@ -187,6 +188,25 @@ def test_scheduler_stop_loss_exit_skips_llm_and_persists_trade_exit_reason():
         scheduler.strategy.generate_signal.assert_not_called()
         scheduler.order_manager.close_trade.assert_called_once_with(
             trade.id, 97.0, environment=scheduler.environment
+        )
+
+
+def test_scheduler_intrabar_stop_matches_backtest_stop_price():
+    SessionLocal = _make_session()
+    with SessionLocal() as session:
+        trade = _create_trade(session)
+        position = _create_active_position(session, trade_id=trade.id, stop_loss=90.0)
+        scheduler = _make_scheduler(session, closes=[100.0, 95.0], decision="LONG")
+        scheduler.data_provider.get_ohlc.return_value.loc[1, "low"] = 89.0
+
+        scheduler.run_once()
+
+        session.refresh(position)
+        session.refresh(trade)
+        assert position.is_active is False
+        assert trade.exit_signal == "STOP_LOSS"
+        scheduler.order_manager.close_trade.assert_called_once_with(
+            trade.id, 90.0, environment=scheduler.environment
         )
 
 

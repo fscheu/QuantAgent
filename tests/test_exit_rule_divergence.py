@@ -25,38 +25,44 @@ def _backtest_rule(position: ActivePosition, price: float):
     return RSIMeanReversionStrategy().should_exit(position, price, None)
 
 
-def _paper_rule(position: ActivePosition, price: float):
-    return RSIMeanReversionStrategy().should_exit(position, price, None)
+def _paper_rule(position: ActivePosition, candle: dict):
+    intrabar_exit = check_intrabar_stops(position, candle)
+    if intrabar_exit:
+        return intrabar_exit
+    should_exit, reason = RSIMeanReversionStrategy().should_exit(
+        position, candle["close"], None
+    )
+    return (reason, candle["close"]) if should_exit else None
 
 
-def test_trailing_stop_sale_en_backtest_y_no_en_paper():
+def test_trailing_stop_sale_en_backtest_y_paper():
     """Valida: máximo visto 120, trailing 5% => piso 114; con precio 113 el
     backtest y paper cierran por TRAILING_STOP."""
     price = 113.0
 
     backtest = _backtest_rule(_long_position(highest_price_seen=120.0), price)
-    paper = _paper_rule(_long_position(highest_price_seen=120.0), price)
+    paper = _paper_rule(
+        _long_position(highest_price_seen=120.0),
+        {"open": price, "high": price, "low": price, "close": price},
+    )
 
     assert backtest == (True, "TRAILING_STOP")
-    assert paper == backtest
+    assert paper == ("TRAILING_STOP", price)
 
 
-def test_stop_tocado_dentro_de_la_vela_sale_en_backtest_y_no_en_paper():
-    """Valida: vela con mínimo 89 (toca el stop de 90) y cierre 95. El backtest
-    cierra a 90 por el camino intravela; paper solo mira el cierre y no sale."""
+def test_stop_tocado_dentro_de_la_vela_cierra_a_nivel_de_stop():
+    """Una vela con mínimo 89 y cierre 95 ejecuta el stop de 90."""
     candle = {"open": 100.0, "high": 101.0, "low": 89.0, "close": 95.0}
     position = _long_position(exit_policy=ExitPolicy.SL_TP_ONLY, trailing_stop_pct=None)
 
     backtest = check_intrabar_stops(position, candle)
-    paper = _paper_rule(position, candle["close"])
-
-    # QuantAgent-beo: comportamiento actual, defecto conocido.
+    paper = _paper_rule(position, candle)
     assert backtest == ("STOP_LOSS", 90.0)
-    assert paper == (False, None)
+    assert paper == backtest
 
 
-def test_max_hold_sale_en_paper_y_no_en_backtest():
-    """Valida que con SL_TP_ONLY, backtest y paper mantienen la posición."""
+def test_max_hold_sin_salida_en_ambos():
+    """Con SL_TP_ONLY, backtest y paper mantienen la posición."""
     kwargs = dict(
         exit_policy=ExitPolicy.SL_TP_ONLY,
         trailing_stop_pct=None,
@@ -66,20 +72,25 @@ def test_max_hold_sale_en_paper_y_no_en_backtest():
     price = 105.0
 
     backtest = _backtest_rule(_long_position(**kwargs), price)
-    paper = _paper_rule(_long_position(**kwargs), price)
+    paper = _paper_rule(
+        _long_position(**kwargs),
+        {"open": price, "high": price, "low": price, "close": price},
+    )
 
     assert backtest == (False, None)
-    assert paper == backtest
+    assert paper is None
 
 
 def test_misma_salida_por_stop_con_igual_texto_de_razon():
-    """Valida: cuando las dos reglas coinciden en salir (precio 89 <= stop 90),
-    la razón que se guarda en close_reason / exit_signal no es el mismo texto."""
+    """Cuando ambos caminos salen por el stop, conservan la misma razón."""
     price = 89.0
 
     backtest = _backtest_rule(_long_position(), price)
-    paper = _paper_rule(_long_position(), price)
+    paper = _paper_rule(
+        _long_position(),
+        {"open": price, "high": price, "low": price, "close": price},
+    )
 
     # QuantAgent-beo U1: ambos caminos comparten la razón.
     assert backtest == (True, "STOP_LOSS")
-    assert paper == backtest
+    assert paper == ("STOP_LOSS", price)
