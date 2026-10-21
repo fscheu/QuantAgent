@@ -1,11 +1,57 @@
 """Informe HTML por hipótesis (plan M3): veredicto, motivos por etapa y tabla por activo."""
 import csv
 from html import escape
+from pathlib import Path
+
+import pandas as pd
 
 from quantagent.data.snapshot import snapshot_root
 from quantagent.fabrica.candado import abierto
 from quantagent.fabrica.criterio import recargo_paper
 from quantagent.fabrica.estado import ESTADO_CSV
+
+
+def diagnostico_exceso(hipotesis, carpeta_equity, snapshot, base_dir=None):
+    """Calcula Sharpes con tasa libre de riesgo desde curvas guardadas, sin registrar intentos."""
+    from quantagent.data import snapshot as snap_mod
+    from quantagent.fabrica.cartera import curva_cartera, pesos as pesos_cartera
+    from quantagent.fabrica.criterio import curva_benchmark, sharpes_en_exceso
+
+    retornos = {}
+    fechas = None
+    for i, pierna in enumerate(hipotesis.piernas):
+        for activo in pierna.activos:
+            path = Path(carpeta_equity) / f"{pierna.clase}-{activo}.csv"
+            if not path.exists():
+                path = Path(carpeta_equity) / f"{activo}.csv"
+            if not path.exists():
+                return {"disponible": False, "motivo": f"curva faltante: {activo}"}
+            with path.open(newline="", encoding="utf-8") as f:
+                rows = list(csv.DictReader(f))
+            if not rows:
+                return {"disponible": False, "motivo": f"curva vacía: {activo}"}
+            fecha_col = "date" if "date" in rows[0] else "timestamp"
+            equity = pd.Series([float(r["equity"]) for r in rows],
+                               index=pd.to_datetime([r[fecha_col] for r in rows]))
+            fechas = equity.index if fechas is None else fechas.intersection(equity.index)
+            retornos[(i, activo)] = equity
+    if fechas is None or len(fechas) < 3:
+        return {"disponible": False, "motivo": "curvas sin fechas comunes suficientes"}
+    retornos = {k: v.reindex(fechas).pct_change().dropna() for k, v in retornos.items()}
+    cierres = pd.DataFrame({a: snap_mod.read_snapshot(snapshot, a, base_dir)["close"].reindex(fechas)
+                            for p in hipotesis.piernas for a in p.activos}, index=fechas)
+    mapa = {i: list(p.activos) for i, p in enumerate(hipotesis.piernas)}
+    cartera = curva_cartera(cierres, mapa, retornos)
+    if cartera is None or len(cartera) < 3:
+        return {"disponible": False, "motivo": "curvas sin puntos suficientes"}
+    w = pesos_cartera(cierres, mapa).T.groupby(level=1).sum().T
+    benchmark = curva_benchmark(cierres, pesos=w).reindex(cartera.index)
+    try:
+        sharpe_cartera, sharpe_benchmark = sharpes_en_exceso(cartera, benchmark, base_dir=base_dir)
+    except ValueError as exc:
+        return {"disponible": False, "motivo": str(exc)}
+    return {"disponible": True, "sharpe_cartera": sharpe_cartera,
+            "sharpe_benchmark": sharpe_benchmark}
 
 GLOSARIO = (
     ("Sharpe", "retorno sobre volatilidad; en la etapa 1 es del filtro fuera de muestra, en las etapas 2 y 3 es del motor propio."),
