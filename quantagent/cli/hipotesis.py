@@ -77,7 +77,8 @@ def tanda_command(ctx, carpeta_yaml, snapshot_name, carpeta):
                 except Exception:
                     traceback.print_exc()
                 try:
-                    ctx.invoke(informe_command, hipotesis_id=h.id, out=str(salida / "informe.html"), archivo=str(archivo))
+                        ctx.invoke(informe_command, hipotesis_id=h.id, out=str(salida / "informe.html"), archivo=str(archivo),
+                                   carpeta_equity=str(salida / "equity"), snapshot_name=snapshot_name)
                 except Exception:
                     traceback.print_exc()
     (destino / "resumen.md").write_text(resumen_tanda(desde), encoding="utf-8")
@@ -307,10 +308,20 @@ def correr_command(archivo, snapshot_name, carpeta, hasta_etapa=None):
 @click.argument("hipotesis_id")
 @click.option("--out", type=click.Path(dir_okay=False), required=True)
 @click.option("--archivo", type=click.Path(exists=True, dir_okay=False), help="YAML de la hipótesis.")
-def informe_command(hipotesis_id, out, archivo):
+@click.option("--carpeta-equity", type=click.Path(file_okay=False), help="Carpeta con curvas equity guardadas.")
+@click.option("--snapshot", "snapshot_name", help="Snapshot usado para reconstruir el benchmark.")
+def informe_command(hipotesis_id, out, archivo, carpeta_equity, snapshot_name):
     try:
         h = cargar_hipotesis(archivo) if archivo else None
-        html = render_informe(datos_informe(hipotesis_id), h)
+        diagnostico = None
+        if carpeta_equity and snapshot_name and h:
+            from quantagent.fabrica.informe import diagnostico_exceso
+            diagnostico = diagnostico_exceso(h, carpeta_equity, snapshot_name)
+        elif carpeta_equity or snapshot_name:
+            diagnostico = {"disponible": False, "motivo": "requiere --carpeta-equity, --snapshot y --archivo"}
+        else:
+            diagnostico = {"disponible": False, "motivo": "diagnóstico no solicitado"}
+        html = render_informe(datos_informe(hipotesis_id), h, diagnostico)
     except (ValueError, SnapshotError) as exc:
         raise click.ClickException(str(exc)) from exc
     Path(out).write_text(html, encoding="utf-8")
