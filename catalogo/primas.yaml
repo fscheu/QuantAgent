@@ -13,6 +13,11 @@ primas:
     clase: sma-cross
     datos: precios
     destino: L12
+    tema: tendencia
+    muestra: 1985-2009
+    publicacion: 2012
+    fidelidad: señal larga por activo; la cita estudia largo-corto
+    decaimiento: null
   - id: momentum-series-de-tiempo
     prima: Momentum de series de tiempo
     idea: El signo del retorno de los últimos 12 meses anticipa el del mes siguiente.
@@ -21,6 +26,11 @@ primas:
     clase: momentum-12m
     datos: precios
     destino: L12
+    tema: tendencia
+    muestra: 1985-2009
+    publicacion: 2012
+    fidelidad: "desvío: la cita es largo-corto; acá solo largo"
+    decaimiento: null
   - id: maximo-52-semanas
     prima: Cercanía al máximo de 52 semanas
     idea: Los activos cerca de su máximo anual siguen superando a los alejados.
@@ -30,6 +40,11 @@ primas:
     datos: precios
     destino: no-aplica
     motivo: Variante de momentum que no suma amplitud; ya probada en L11.
+    tema: momentum transversal
+    muestra: 1963-2001
+    publicacion: 2004
+    fidelidad: variante de momentum transversal, solo largo
+    decaimiento: null
   - id: momentum-transversal
     prima: Momentum transversal
     idea: Los ganadores de los últimos meses superan a los perdedores en el mes siguiente.
@@ -40,6 +55,11 @@ primas:
     destino: L13
     veredicto: CORTA
     informe: docs/06_implementation/QuantAgent-d4cq.68-IM-punto-de-control-catalogo-primas.md
+    tema: momentum transversal
+    muestra: 1965-1989
+    publicacion: 1993
+    fidelidad: largo-corto por ranking; aquí ranking global de ETFs
+    decaimiento: null
   - id: baja-volatilidad-transversal
     prima: Baja volatilidad transversal
     idea: Los activos de menor volatilidad rinden más de lo que prevé su riesgo.
@@ -50,6 +70,11 @@ primas:
     destino: L13
     veredicto: CORTA
     informe: docs/06_implementation/QuantAgent-d4cq.68-IM-punto-de-control-catalogo-primas.md
+    tema: baja volatilidad
+    muestra: 1968-2005
+    publicacion: 2006
+    fidelidad: largo-corto en acciones; aquí ETFs solo largos
+    decaimiento: null
   - id: estacionalidad-halloween
     prima: Estacionalidad de Halloween
     idea: El retorno de noviembre a abril supera al de mayo a octubre; con decaimiento posterior a su publicación.
@@ -60,6 +85,11 @@ primas:
     destino: L13
     veredicto: CORTA
     informe: docs/06_implementation/QuantAgent-d4cq.68-IM-punto-de-control-catalogo-primas.md
+    tema: calendario
+    muestra: 1970-1998
+    publicacion: 2002; réplica 2015
+    fidelidad: meses largos y cortos; aquí solo largo
+    decaimiento: evidencia débil tras corrección por búsqueda
   - id: carry-bonos-pendiente
     prima: Carry de bonos por pendiente de la curva
     idea: La pendiente de la curva anticipa el exceso de retorno de los bonos.
@@ -68,6 +98,11 @@ primas:
     clase: null
     datos: macro
     destino: L14
+    tema: carry
+    muestra: 1961-2005
+    publicacion: 2005; 2018
+    fidelidad: prima de pendiente en bonos
+    decaimiento: null
   - id: reversion-con-regimen
     prima: Reversión con volatilidad alta
     idea: El retorno esperado de la reversión de corto plazo es mayor cuando la volatilidad es alta.
@@ -76,6 +111,11 @@ primas:
     clase: null  # rsi-regimen lo registra M02
     datos: macro
     destino: L14
+    tema: reversión y liquidez
+    muestra: 1980-2008
+    publicacion: 2012
+    fidelidad: reversión condicionada por volatilidad
+    decaimiento: null
   - id: value
     prima: Valor
     idea: Los activos baratos contra sus fundamentos rinden más que los caros.
@@ -85,3 +125,14 @@ primas:
     datos: macro
     destino: no-aplica
     motivo: No hay una medida de valuación para ETFs en el snapshot (D1, más adelante).
+    tema: valor
+    muestra: sin definir
+    publicacion: sin definir
+    fidelidad: sin implementación
+    decaimiento: null
+
+descartadas_por_decaimiento:
+  - {id: deriva-pre-fomc, tema: calendario, cita: Kurov, Wolfe y Gilbert (2021), doi: 10.1016/j.frl.2020.101781, decaimiento: desaparece después de 2015}
+  - {id: deriva-nocturna-sp500, tema: tendencia, cita: Boyarchenko, Larsen y Whelan (2026), doi: 10.59576/lse.20260701, decaimiento: retorno promedio cercano a cero desde 2021}
+  - {id: pead-acciones-grandes, tema: momentum transversal, cita: Martineau (2022), doi: 10.1561/104.00000122, decaimiento: ausente en acciones grandes desde 2006}
+  - {id: carry-cripto, tema: carry, cita: Schmeling, Schrimpf y Todorov (2023), doi: 10.2139/ssrn.4268371, decaimiento: revisión 2025 reporta Sharpe negativo en 2025; ver arXiv:2510.14435}
