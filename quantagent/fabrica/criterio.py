@@ -89,8 +89,8 @@ def anios_positivos(equity_o_sharpes, fechas=None, risk_free_rate: float = 0.0) 
     return AniosPositivos(positivos, len(sharpes))
 
 
-def curva_benchmark(cierres, capital: float = 100_000.0) -> pd.Series:
-    """Calcula la curva de equity con pesos iguales y rebalanceo mensual."""
+def curva_benchmark(cierres, capital: float = 100_000.0, pesos: pd.DataFrame | None = None) -> pd.Series:
+    """Calcula la curva de equity con rebalanceo mensual, igual o con pesos dados."""
     if cierres is None or (isinstance(cierres, (pd.DataFrame, pd.Series)) and cierres.empty):
         return pd.Series(dtype=float)
     df = (cierres.to_frame() if isinstance(cierres, pd.Series) else cierres.loc[:, ~cierres.columns.duplicated()]).sort_index()
@@ -104,16 +104,21 @@ def curva_benchmark(cierres, capital: float = 100_000.0) -> pd.Series:
         loc = df.index.get_loc(sub.index[0])
         loc = loc.start if isinstance(loc, slice) else loc
         base = df.iloc[loc - 1] if loc > 0 else sub.iloc[0]
-        rel = (sub / base).mean(axis=1)
+        if pesos is None:
+            rel = (sub / base).mean(axis=1)
+        else:
+            w = pesos.loc[sub.index[0], df.columns]
+            w = w / w.sum()
+            rel = ((sub / base) * w).sum(axis=1)
         sub_eq = eq_actual * rel
         equity.loc[sub.index] = sub_eq
         eq_actual = float(sub_eq.iloc[-1])
     return equity
 
 
-def sharpe_benchmark(cierres, risk_free_rate: float = 0.0) -> float:
-    """Sharpe a tasa 0 de la cartera de activos con pesos iguales y rebalanceo mensual."""
-    eq = curva_benchmark(cierres)
+def sharpe_benchmark(cierres, risk_free_rate: float = 0.0, pesos: pd.DataFrame | None = None) -> float:
+    """Sharpe del benchmark mensual 1/N o con pesos suministrados."""
+    eq = curva_benchmark(cierres, pesos=pesos)
     return float(equity_metrics(eq, risk_free_rate)["sharpe"]) if not eq.empty else 0.0
 
 

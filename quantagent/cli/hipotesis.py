@@ -224,7 +224,7 @@ def motivo_error(exc):
 def motivo_etapa3_cartera(base, fila):
     def _v(x):
         return f"{x:.2f}" if isinstance(x, float) else (str(x) if x not in (None, "") else "-")
-    sufijo = f"dsr_efectivo={_v(fila.get('dsr'))}; dsr_crudo={_v(fila.get('dsr_crudo'))}; anios_positivos={fila.get('anios_positivos') or '-'}; benchmark={_v(fila.get('benchmark'))}; n_efectivo={fila.get('n_efectivo') if fila.get('n_efectivo') is not None else '-'}"
+    sufijo = f"dsr_efectivo={_v(fila.get('dsr'))}; dsr_crudo={_v(fila.get('dsr_crudo'))}; anios_positivos={fila.get('anios_positivos') or '-'}; benchmark={_v(fila.get('benchmark'))}; benchmark_mismo_peso={_v(fila.get('benchmark_mismo_peso'))}; n_efectivo={fila.get('n_efectivo') if fila.get('n_efectivo') is not None else '-'}"
     return f"{base}; {sufijo}" if base else sufijo
 
 
