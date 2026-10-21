@@ -135,6 +135,23 @@ def test_curva_y_sharpe_benchmark():
     assert sharpe_benchmark(None) == 0.0
 
 
+def test_curva_benchmark_pesos_cartera_separa_peso_de_senal():
+    fechas = pd.to_datetime(["2020-01-02", "2020-01-03", "2020-01-06"])
+    cierres = pd.DataFrame({"A": [100, 110, 121], "B": [100, 100, 100]}, index=fechas)
+    pesos = pd.DataFrame({"A": [0.9, 0.9, 0.9], "B": [0.1, 0.1, 0.1]}, index=fechas)
+
+    igual = curva_benchmark(cierres)
+    mismo_peso = curva_benchmark(cierres, pesos=pesos)
+
+    assert igual.iloc[-1] == pytest.approx(100_000 * 1.105)
+    assert mismo_peso.iloc[-1] == pytest.approx(100_000 * 1.189)
+    pasa, motivos = evaluar_etapa3_cartera(
+        mismo_peso, sharpe_bench3=1e6,
+        sharpe_cartera_etapa2=1.0, sharpe_bench2=0.5,
+    )
+    assert not pasa and any("benchmark" in motivo for motivo in motivos)
+
+
 def test_evaluar_etapa3_cartera_casos():
     fechas = pd.bdate_range("2019-01-01", "2022-12-31")
     eq_ok = pd.Series(100_000.0 * np.cumprod(1 + np.full(len(fechas), 0.001)), index=fechas)

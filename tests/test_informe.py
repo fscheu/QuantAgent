@@ -92,7 +92,8 @@ def test_informe_etapa3_muestra_cuatro_cifras_recargo_y_glosario_nuevo(raiz):
 
     for e in ("1", "2"):
         registrar_estado("h-etapa3-completa", e, "PASA", "ok")
-    fila_e3 = {"dsr": 0.80, "dsr_crudo": 0.55, "anios_positivos": "3 de 4", "benchmark": 0.12, "n_efectivo": 5}
+    fila_e3 = {"dsr": 0.80, "dsr_crudo": 0.55, "anios_positivos": "3 de 4", "benchmark": 0.12,
+               "benchmark_mismo_peso": 0.34, "n_efectivo": 5}
     registrar_estado("h-etapa3-completa", "3", "PASA", motivo_etapa3_cartera("cartera pasa V30 y DSR", fila_e3))
     with (raiz / "intentos.csv").open("a", newline="") as f:
         csv.DictWriter(f, fieldnames=CAMPOS_INTENTOS, restval="").writerow({"hipotesis": "h-etapa3-completa", "etapa": "3", "activo": "cartera", "sharpe": "0.45", "trades": "100"})
@@ -100,7 +101,9 @@ def test_informe_etapa3_muestra_cuatro_cifras_recargo_y_glosario_nuevo(raiz):
     assert r.exit_code == 0, r.output
     html = out.read_text()
     for h, v in (("N crudo", "6"), ("N efectivo", "5"), ("DSR efectivo", "0.80"), ("DSR crudo", "0.55"),
-                 ("Recargo paper", "75% (6 sem)"), ("Años positivos", "3 de 4"), ("Benchmark", "0.12")):
+                 ("Recargo paper", "75% (6 sem)"), ("Años positivos", "3 de 4"),
+                 ("Benchmark 1/N (corte)", "0.12"),
+                 ("Benchmark con pesos de cartera (diagnóstico)", "0.34")):
         assert f"<th>{h}</th>" in html and f"<td>{v}</td>" in html
     assert "pasa con 0,95" not in html and "fija el recargo de paper trading" in html
 
