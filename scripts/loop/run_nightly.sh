@@ -154,7 +154,8 @@ esac
 crc=$?
 unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0
 
-PR_JSON="$(gh pr list -R "$LOOP_GITHUB_REPO" --label "$LOOP_LABEL" --state all --limit 1 --json number,url,body,createdAt,updatedAt,headRefName 2>/dev/null)"
+PR_JSON="$(gh pr list -R "$LOOP_GITHUB_REPO" --label "$LOOP_LABEL" --state all --limit 20 --json number,url,body,createdAt,updatedAt,headRefName,baseRefName 2>/dev/null)"
+PR_JSON="$(python3 "$SELF_DIR/pr_por_base.py" "$BASE" <<<"${PR_JSON:-[]}" 2>/dev/null || echo "[]")"
 NEW="$(python3 -c '
 import json,sys
 prs=json.loads(sys.argv[1] or "[]"); started=sys.argv[2]
