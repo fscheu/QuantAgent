@@ -22,7 +22,7 @@ Partido en entregas de 100 líneas o menos: la señal (Q02), el YAML que carga y
 
 ## Frente 3: preparación de M4 que no depende de una cartera (Q05–Q12)
 
-Datos de Alpaca (documento `QuantAgent-7nle-DC-datos-para-operar-m3.md` §6): T1, T2, T8 y T9 ya están cerrados. Quedan T3 (Q05), T6 (Q06), T7 (Q07), T4 (Q08) y T5 (Q09). T5 toca las dos consultas del backtest y es "decidir": cualquier cambio en una referencia de M1 se escala.
+Datos de Alpaca (documento `QuantAgent-7nle-DC-datos-para-operar-m3.md` §6): T1, T2, T8 y T9 ya están cerrados. Quedan T3 (Q05), T6 (Q06), T4 (Q07), T5 (Q08) y T7 (Q09; va al final porque borra por fuente y necesita la columna de T4 y el aislamiento de T5). T5 toca las dos consultas del backtest y es "decidir": cualquier cambio en una referencia de M1 se escala.
 
 Diagnósticos de paper `say` (Q10), `oc0h` (Q11) y `beo` (Q12). Los tres son de primera entrega sin tocar `quantagent/` y terminan en una decisión de Fede; el lote sigue con las filas independientes mientras esperan.
 
