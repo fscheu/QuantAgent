@@ -7,6 +7,7 @@ import pandas as pd
 from pydantic import BaseModel, Field
 
 from ..models import ActivePosition, ExitPolicy, OrderSide
+from .exit_reasons import STOP_LOSS, TAKE_PROFIT, TIME_EXPIRED, TRAILING_STOP
 
 
 class TradingSignal(BaseModel):
@@ -103,23 +104,23 @@ class TradingStrategy(ABC):
         # Check stop loss
         if position.side == OrderSide.BUY:
             if current_price <= float(position.stop_loss):
-                return (True, "STOP_LOSS")
+                return (True, STOP_LOSS)
         else:  # SHORT
             if current_price >= float(position.stop_loss):
-                return (True, "STOP_LOSS")
+                return (True, STOP_LOSS)
 
         # Check take profit
         if position.side == OrderSide.BUY:
             if current_price >= float(position.take_profit):
-                return (True, "TAKE_PROFIT")
+                return (True, TAKE_PROFIT)
         else:  # SHORT
             if current_price <= float(position.take_profit):
-                return (True, "TAKE_PROFIT")
+                return (True, TAKE_PROFIT)
 
         # Check trailing stop
         if position.exit_policy == ExitPolicy.TRAILING_STOP:
             if self._check_trailing_stop(position, current_price):
-                return (True, "TRAILING_STOP")
+                return (True, TRAILING_STOP)
 
         # Check time-based exit
         if (
@@ -127,7 +128,7 @@ class TradingStrategy(ABC):
             and position.candles_since_entry >= position.max_hold_candles
         ):
             if position.exit_policy == ExitPolicy.TIME_BASED:
-                return (True, "TIME_EXPIRED")
+                return (True, TIME_EXPIRED)
 
         return (False, None)
 

@@ -72,7 +72,7 @@ def test_check_exit_conditions_stop_loss_long(mock_scheduler):
     should_exit, reason = mock_scheduler._check_exit_conditions(position, 97.0)
 
     assert should_exit is True
-    assert reason == "stop_loss"
+    assert reason == "STOP_LOSS"
 
 
 def test_check_exit_conditions_stop_loss_short(mock_scheduler):
@@ -84,7 +84,7 @@ def test_check_exit_conditions_stop_loss_short(mock_scheduler):
     should_exit, reason = mock_scheduler._check_exit_conditions(position, 103.0)
 
     assert should_exit is True
-    assert reason == "stop_loss"
+    assert reason == "STOP_LOSS"
 
 
 def test_check_exit_conditions_take_profit_long(mock_scheduler):
@@ -96,7 +96,7 @@ def test_check_exit_conditions_take_profit_long(mock_scheduler):
     should_exit, reason = mock_scheduler._check_exit_conditions(position, 106.0)
 
     assert should_exit is True
-    assert reason == "take_profit"
+    assert reason == "TAKE_PROFIT"
 
 
 def test_check_exit_conditions_take_profit_short(mock_scheduler):
@@ -108,7 +108,7 @@ def test_check_exit_conditions_take_profit_short(mock_scheduler):
     should_exit, reason = mock_scheduler._check_exit_conditions(position, 94.0)
 
     assert should_exit is True
-    assert reason == "take_profit"
+    assert reason == "TAKE_PROFIT"
 
 
 def test_check_exit_conditions_max_hold(mock_scheduler):
@@ -125,7 +125,7 @@ def test_check_exit_conditions_max_hold(mock_scheduler):
     should_exit, reason = mock_scheduler._check_exit_conditions(position, 101.0)
 
     assert should_exit is True
-    assert reason == "max_hold"
+    assert reason == "TIME_EXPIRED"
 
 
 def test_check_exit_conditions_max_hold_at_limit(mock_scheduler):
@@ -142,7 +142,7 @@ def test_check_exit_conditions_max_hold_at_limit(mock_scheduler):
     should_exit, reason = mock_scheduler._check_exit_conditions(position, 101.0)
 
     assert should_exit is True
-    assert reason == "max_hold"
+    assert reason == "TIME_EXPIRED"
 
 
 def test_check_exit_conditions_no_exit(mock_scheduler):
@@ -183,7 +183,7 @@ def test_check_exit_conditions_stop_loss_exact_price_long(mock_scheduler):
     should_exit, reason = mock_scheduler._check_exit_conditions(position, 98.0)
 
     assert should_exit is True
-    assert reason == "stop_loss"
+    assert reason == "STOP_LOSS"
 
 
 def test_check_exit_conditions_take_profit_exact_price_long(mock_scheduler):
@@ -195,7 +195,7 @@ def test_check_exit_conditions_take_profit_exact_price_long(mock_scheduler):
     should_exit, reason = mock_scheduler._check_exit_conditions(position, 105.0)
 
     assert should_exit is True
-    assert reason == "take_profit"
+    assert reason == "TAKE_PROFIT"
 
 
 # ============================================================================

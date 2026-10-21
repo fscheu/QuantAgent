@@ -18,6 +18,7 @@ from quantagent.models import Environment, SchedulerHeartbeat, Signal, Trade, Tr
 from quantagent.static_util import format_ohlcv_for_agents
 from quantagent.strategy.base import TradingSignal as StrategyTradingSignal
 from quantagent.strategy.base import TradingStrategy
+from quantagent.strategy.exit_reasons import STOP_LOSS, TAKE_PROFIT, TIME_EXPIRED
 from quantagent.strategy.llm_agent_strategy import LLMAgentStrategy
 from quantagent.trading.order_manager import OrderManager
 from quantagent.trading.position_monitor import PositionMonitor
@@ -598,23 +599,23 @@ class TradingScheduler:
         # Stop loss check
         if position.side == OrderSide.BUY:  # LONG position
             if current_price <= float(position.stop_loss):
-                return (True, "stop_loss")
+                return (True, STOP_LOSS)
         else:  # SHORT position
             if current_price >= float(position.stop_loss):
-                return (True, "stop_loss")
+                return (True, STOP_LOSS)
 
         # Take profit check
         if position.side == OrderSide.BUY:
             if current_price >= float(position.take_profit):
-                return (True, "take_profit")
+                return (True, TAKE_PROFIT)
         else:
             if current_price <= float(position.take_profit):
-                return (True, "take_profit")
+                return (True, TAKE_PROFIT)
 
         # Max hold check
         if position.max_hold_candles:
             if position.candles_since_entry >= position.max_hold_candles:
-                return (True, "max_hold")
+                return (True, TIME_EXPIRED)
 
         return (False, None)
 
