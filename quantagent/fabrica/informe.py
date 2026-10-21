@@ -181,7 +181,7 @@ def render_comparacion(c, id_nucleo, id_capa):
         "<table><tr><th></th><th>Sharpe</th><th>DSR</th></tr>"
         f"<tr><td>Núcleo</td><td>{f(c['sharpe_nucleo'])}</td><td>{f(c['dsr_nucleo'])}</td></tr>"
         f"<tr><td>Núcleo + capa</td><td>{f(c['sharpe_capa'])}</td><td>{f(c['dsr_capa'])}</td></tr>"
-        f"<tr><td>Diferencia</td><td>{c['delta_sharpe']:+.4f}</td><td>{f(c['delta_dsr'])}</td></tr></table>"
+        f"<tr><td>Diferencia</td><td>{c['delta_sharpe']:+.4f} ± {c['error_estandar_delta_sharpe']:.4f}</td><td>{f(c['delta_dsr'])}</td></tr></table>"
         f"<p>Años con Sharpe positivo: núcleo {c['anios_positivos_nucleo'].positivos} de {c['anios_positivos_nucleo'].totales}, "
         f"con capa {c['anios_positivos_capa'].positivos} de {c['anios_positivos_capa'].totales}.</p>"
         f"<p>N de intentos: {c['n_con_capa']} contando la capa, {c['n_sin_capa']} sin ella. "

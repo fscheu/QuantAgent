@@ -3,6 +3,7 @@ import math
 import warnings
 from typing import NamedTuple
 
+import numpy as np
 import pandas as pd
 
 from quantagent.backtesting.vbt_filter import equity_metrics
@@ -10,6 +11,7 @@ from quantagent.backtesting.verdict import MAX_DRAWDOWN, MIN_TRADES
 from quantagent.data.macro import serie_punto_en_el_tiempo
 
 MIN_SESIONES = 30
+LARGO_BLOQUE_DSHARPE = 10  # Bloques cortos preservan dependencia diaria sin elegirlos mirando las curvas.
 
 
 class AniosPositivos(NamedTuple):
@@ -20,6 +22,24 @@ class AniosPositivos(NamedTuple):
 class RecargoPaper(NamedTuple):
     tamano_pct: int
     semanas: int
+
+
+def error_estandar_delta_sharpe(cartera, benchmark) -> float:
+    """Error estándar bootstrap circular del ΔSharpe anualizado con retornos pareados."""
+    if not cartera.index.equals(benchmark.index) or len(cartera) < LARGO_BLOQUE_DSHARPE + 2:
+        raise ValueError("Se requieren curvas con las mismas fechas y al menos 12 puntos")
+    retornos = pd.DataFrame({"cartera": cartera.pct_change(), "benchmark": benchmark.pct_change()}).dropna().to_numpy()
+    n = len(retornos)
+    ppy = (len(cartera) - 1) * 365.25 / (cartera.index[-1] - cartera.index[0]).total_seconds() * 86400
+    rng = np.random.default_rng(20261021)
+    deltas = []
+    for _ in range(1000):
+        starts = rng.integers(n, size=math.ceil(n / LARGO_BLOQUE_DSHARPE))
+        indices = ((starts[:, None] + np.arange(LARGO_BLOQUE_DSHARPE)) % n).ravel()[:n]
+        muestra = retornos[indices]
+        medias, desvios = muestra.mean(axis=0), muestra.std(axis=0, ddof=1)
+        deltas.append((medias[0] / desvios[0] - medias[1] / desvios[1]) * math.sqrt(ppy))
+    return float(pd.Series(deltas).std(ddof=1))
 
 
 def sharpes_en_exceso(cartera, benchmark, *, base_dir=None) -> tuple[float, float]:
