@@ -1,3 +1,4 @@
+from datetime import datetime
 from unittest.mock import MagicMock, Mock
 
 import pandas as pd
@@ -241,6 +242,7 @@ def test_trading_scheduler_long_signal_executes_order():
 
     session = DummySession()
     data_provider = MagicMock()
+    data_provider.now.return_value = datetime(2024, 1, 2, 15)
     data_provider.get_ohlc.return_value = _sample_df()
 
     order_manager = MagicMock()
@@ -270,6 +272,8 @@ def test_trading_scheduler_long_signal_executes_order():
 
     assert stats["processed"] == 1
     assert stats["errors"] == 0
+    assert data_provider.get_ohlc.call_args.kwargs["end_date"] == datetime(2024, 1, 2, 15)
+    assert data_provider.get_ohlc.call_args.kwargs["start_date"] == datetime(2024, 1, 2, 3)
     order_manager.execute_decision.assert_called_once()
     kwargs = order_manager.execute_decision.call_args.kwargs
     assert kwargs["environment"] == Environment.PAPER
