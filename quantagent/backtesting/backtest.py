@@ -30,6 +30,7 @@ from quantagent.models import (
 from quantagent.static_util import format_ohlcv_for_agents
 from quantagent.strategy.assembler import StrategyAssembler
 from quantagent.strategy.base import TradingStrategy
+from quantagent.strategy.exit_reasons import STOP_LOSS, TAKE_PROFIT
 from quantagent.strategy.llm_agent_strategy import LLMAgentStrategy
 from quantagent.trading.position_monitor import PositionMonitor
 
@@ -137,36 +138,36 @@ def check_intrabar_stops(
     if is_long:
         # 1. Opening gap
         if sl is not None and open_price <= sl:
-            return ("STOP_LOSS", open_price)
+            return (STOP_LOSS, open_price)
         if tp is not None and open_price >= tp:
-            return ("TAKE_PROFIT", open_price)
+            return (TAKE_PROFIT, open_price)
 
         # 2 & 3. Intrabar hit (if both, STOP_LOSS wins)
         hit_sl = sl is not None and low_price <= sl
         hit_tp = tp is not None and high_price >= tp
 
         if hit_sl:
-            return ("STOP_LOSS", sl)
+            return (STOP_LOSS, sl)
         if hit_tp:
-            return ("TAKE_PROFIT", tp)
+            return (TAKE_PROFIT, tp)
 
         return None
 
     else:  # is_short
         # 1. Opening gap
         if sl is not None and open_price >= sl:
-            return ("STOP_LOSS", open_price)
+            return (STOP_LOSS, open_price)
         if tp is not None and open_price <= tp:
-            return ("TAKE_PROFIT", open_price)
+            return (TAKE_PROFIT, open_price)
 
         # 2 & 3. Intrabar hit (if both, STOP_LOSS wins)
         hit_sl = sl is not None and high_price >= sl
         hit_tp = tp is not None and low_price <= tp
 
         if hit_sl:
-            return ("STOP_LOSS", sl)
+            return (STOP_LOSS, sl)
         if hit_tp:
-            return ("TAKE_PROFIT", tp)
+            return (TAKE_PROFIT, tp)
 
         return None
 

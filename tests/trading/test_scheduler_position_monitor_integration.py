@@ -149,8 +149,8 @@ def test_scheduler_stop_loss_exit_skips_llm_and_persists_trade_exit_reason():
         assert stats["processed"] == 1
         assert stats["errors"] == 0
         assert position.is_active is False
-        assert position.close_reason == "stop_loss"
-        assert trade.exit_signal == "stop_loss"
+        assert position.close_reason == "STOP_LOSS"
+        assert trade.exit_signal == "STOP_LOSS"
         assert trade.closed_at is not None
         scheduler.strategy.generate_signal.assert_not_called()
         scheduler.order_manager.close_trade.assert_called_once_with(
@@ -180,8 +180,8 @@ def test_scheduler_take_profit_exit_skips_llm_and_persists_trade_exit_reason():
         assert stats["errors"] == 0
         assert heartbeat.status == "completed"
         assert position.is_active is False
-        assert position.close_reason == "take_profit"
-        assert trade.exit_signal == "take_profit"
+        assert position.close_reason == "TAKE_PROFIT"
+        assert trade.exit_signal == "TAKE_PROFIT"
         assert trade.closed_at is not None
         scheduler.strategy.generate_signal.assert_not_called()
         scheduler.order_manager.close_trade.assert_called_once_with(

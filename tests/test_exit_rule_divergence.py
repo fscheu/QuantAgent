@@ -88,10 +88,10 @@ def test_max_hold_sale_en_paper_y_no_en_backtest():
 
     # QuantAgent-beo: comportamiento actual, defecto conocido.
     assert backtest == (False, None)
-    assert paper == (True, "max_hold")
+    assert paper == (True, "TIME_EXPIRED")
 
 
-def test_misma_salida_por_stop_con_distinto_texto_de_razon():
+def test_misma_salida_por_stop_con_igual_texto_de_razon():
     """Valida: cuando las dos reglas coinciden en salir (precio 89 <= stop 90),
     la razón que se guarda en close_reason / exit_signal no es el mismo texto."""
     price = 89.0
@@ -99,7 +99,6 @@ def test_misma_salida_por_stop_con_distinto_texto_de_razon():
     backtest = _backtest_rule(_long_position(), price)
     paper = _paper_rule(_long_position(), price)
 
-    # QuantAgent-beo: comportamiento actual, defecto conocido.
+    # QuantAgent-beo U1: ambos caminos comparten la razón.
     assert backtest == (True, "STOP_LOSS")
-    assert paper == (True, "stop_loss")
-    assert backtest[1] != paper[1]
+    assert paper == backtest
