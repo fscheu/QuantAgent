@@ -18,7 +18,6 @@ from quantagent.models import Environment, SchedulerHeartbeat, Signal, Trade, Tr
 from quantagent.static_util import format_ohlcv_for_agents
 from quantagent.strategy.base import TradingSignal as StrategyTradingSignal
 from quantagent.strategy.base import TradingStrategy
-from quantagent.strategy.exit_reasons import STOP_LOSS, TAKE_PROFIT, TIME_EXPIRED
 from quantagent.strategy.llm_agent_strategy import LLMAgentStrategy
 from quantagent.trading.order_manager import OrderManager
 from quantagent.trading.position_monitor import PositionMonitor
@@ -267,8 +266,8 @@ class TradingScheduler:
             )
 
             # Check exit conditions
-            should_exit, exit_reason = self._check_exit_conditions(
-                position, current_price
+            should_exit, exit_reason = self.strategy.should_exit(
+                position, current_price, df
             )
 
             if should_exit:
@@ -582,44 +581,6 @@ class TradingScheduler:
             return None
         trade = self.db.query(Trade).filter(Trade.order_id == order_id).first()
         return trade.id if trade is not None else None
-
-    def _check_exit_conditions(
-        self, position, current_price: float
-    ) -> tuple[bool, Optional[str]]:
-        """
-        Check if position should exit based on stop loss, take profit, or max hold.
-
-        Args:
-            position: ActivePosition instance
-            current_price: Current market price
-
-        Returns:
-            Tuple of (should_exit, exit_reason)
-        """
-        from quantagent.models import OrderSide
-
-        # Stop loss check
-        if position.side == OrderSide.BUY:  # LONG position
-            if current_price <= float(position.stop_loss):
-                return (True, STOP_LOSS)
-        else:  # SHORT position
-            if current_price >= float(position.stop_loss):
-                return (True, STOP_LOSS)
-
-        # Take profit check
-        if position.side == OrderSide.BUY:
-            if current_price >= float(position.take_profit):
-                return (True, TAKE_PROFIT)
-        else:
-            if current_price <= float(position.take_profit):
-                return (True, TAKE_PROFIT)
-
-        # Max hold check
-        if position.max_hold_candles:
-            if position.candles_since_entry >= position.max_hold_candles:
-                return (True, TIME_EXPIRED)
-
-        return (False, None)
 
     def _execute_position_exit(
         self,
