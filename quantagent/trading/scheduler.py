@@ -415,7 +415,7 @@ class TradingScheduler:
             )
 
     def _fetch_market_data(self, symbol: str) -> pd.DataFrame:
-        end_date = datetime.utcnow()
+        end_date = self.data_provider.now()
         start_date = end_date - timedelta(hours=self.config.lookback_hours)
         try:
             df = self.data_provider.get_ohlc(

@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import Callable, Optional
 
 import pandas as pd
 from sqlalchemy import and_
@@ -51,6 +51,7 @@ class DataProvider:
         db_session: Session,
         source: Optional[CandleSource] = None,
         offline: bool = False,
+        now: Callable[[], datetime] = datetime.utcnow,
     ):
         """
         Initialize DataProvider.
@@ -58,6 +59,7 @@ class DataProvider:
         Args:
             db_session: SQLAlchemy database session
             source: CandleSource that serves the gaps (YahooSource if None)
+            now: Clock returning UTC without tzinfo, also used by the scheduler.
             offline: If True, never call the source for gaps -- only ever
                 return what's already cached. For deterministic, fixture-based
                 backtests (e.g. the `backtest run` CLI), hitting a live API
@@ -68,6 +70,7 @@ class DataProvider:
         self.db = db_session
         self.source = source if source is not None else YahooSource()
         self.offline = offline
+        self.now = now
 
     def get_ohlc(
         self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
@@ -121,7 +124,7 @@ class DataProvider:
                 f"Found {len(missing_ranges)} gap(s) in cached data, fetching from API"
             )
 
-            now = datetime.now()
+            now = self.now()
             earliest_start = self.source.earliest(timeframe, now)
             latest_end = self.source.latest(now)
 
@@ -146,6 +149,12 @@ class DataProvider:
                         if ts.dt.tz is not None:
                             ts = to_utc(ts, timeframe).dt.tz_localize(None)
                         api_data["timestamp"] = ts
+                        duration = (
+                            pd.DateOffset(months=1) if timeframe == "1mo"
+                            else pd.Timedelta(weeks=1) if timeframe == "1w"
+                            else pd.Timedelta(self._to_pandas_freq(timeframe))
+                        )
+                        api_data = api_data[ts + duration <= latest_end]
 
                         # Store in database
                         self._store_data(symbol, timeframe, api_data)
