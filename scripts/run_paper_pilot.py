@@ -111,6 +111,9 @@ class DeterministicPilotStrategy:
     def should_reevaluate(self, position, current_price: float) -> bool:
         return False
 
+    def should_exit(self, position, current_price: float, ohlc_data):
+        return self.rsi.should_exit(position, current_price, ohlc_data)
+
 
 # ---------------------------------------------------------------------------
 # Precondition checks
