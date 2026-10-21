@@ -1,21 +1,6 @@
-"""Divergencia entre las dos reglas de salida (QuantAgent-beo).
-
-Estos tests NO son la especificación deseada: fijan el comportamiento ACTUAL de
-un defecto conocido. La regla de salida está escrita dos veces:
-
-- backtest: ``TradingStrategy.should_exit`` + ``check_intrabar_stops``
-- paper/live: ``TradingScheduler._check_exit_conditions``
-
-Cada test llama a las funciones reales (sin mocks) con la misma posición y el
-mismo precio, y muestra que responden distinto. Cuando se unifique la regla
-(ver docs/03_design/QuantAgent-beo-DS-regla-de-salida-duplicada.md) estos
-asserts van a fallar: ahí hay que reescribirlos como asserts de igualdad.
-"""
-
 from quantagent.backtesting.backtest import check_intrabar_stops
 from quantagent.models import ActivePosition, ExitPolicy, OrderSide
 from quantagent.strategy.rsi_strategy import RSIMeanReversionStrategy
-from quantagent.trading.scheduler import TradingScheduler
 
 
 def _long_position(**overrides) -> ActivePosition:
@@ -41,21 +26,19 @@ def _backtest_rule(position: ActivePosition, price: float):
 
 
 def _paper_rule(position: ActivePosition, price: float):
-    # _check_exit_conditions no usa self: se llama sin armar el scheduler.
-    return TradingScheduler._check_exit_conditions(None, position, price)
+    return RSIMeanReversionStrategy().should_exit(position, price, None)
 
 
 def test_trailing_stop_sale_en_backtest_y_no_en_paper():
     """Valida: máximo visto 120, trailing 5% => piso 114; con precio 113 el
-    backtest cierra por TRAILING_STOP y paper mantiene la posición."""
+    backtest y paper cierran por TRAILING_STOP."""
     price = 113.0
 
     backtest = _backtest_rule(_long_position(highest_price_seen=120.0), price)
     paper = _paper_rule(_long_position(highest_price_seen=120.0), price)
 
-    # QuantAgent-beo: comportamiento actual, defecto conocido.
     assert backtest == (True, "TRAILING_STOP")
-    assert paper == (False, None)
+    assert paper == backtest
 
 
 def test_stop_tocado_dentro_de_la_vela_sale_en_backtest_y_no_en_paper():
@@ -73,8 +56,7 @@ def test_stop_tocado_dentro_de_la_vela_sale_en_backtest_y_no_en_paper():
 
 
 def test_max_hold_sale_en_paper_y_no_en_backtest():
-    """Valida: 5 velas de 5 permitidas, política distinta de TIME_BASED. Paper
-    cierra por max_hold; el backtest solo lo hace si la política es TIME_BASED."""
+    """Valida que con SL_TP_ONLY, backtest y paper mantienen la posición."""
     kwargs = dict(
         exit_policy=ExitPolicy.SL_TP_ONLY,
         trailing_stop_pct=None,
@@ -86,9 +68,8 @@ def test_max_hold_sale_en_paper_y_no_en_backtest():
     backtest = _backtest_rule(_long_position(**kwargs), price)
     paper = _paper_rule(_long_position(**kwargs), price)
 
-    # QuantAgent-beo: comportamiento actual, defecto conocido.
     assert backtest == (False, None)
-    assert paper == (True, "TIME_EXPIRED")
+    assert paper == backtest
 
 
 def test_misma_salida_por_stop_con_igual_texto_de_razon():
