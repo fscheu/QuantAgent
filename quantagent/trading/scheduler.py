@@ -637,14 +637,7 @@ class TradingScheduler:
         Raises:
             ExecutionError: If exit order fails
         """
-        from quantagent.models import OrderSide, Trade
-
-        # Determine exit signal (opposite of position)
-        exit_signal = (
-            TradeSignal.SHORT
-            if position.side == OrderSide.BUY
-            else TradeSignal.LONG
-        )
+        from quantagent.models import Trade
 
         # Close position in tracking system
         self.position_monitor.close_position(
@@ -653,16 +646,17 @@ class TradingScheduler:
 
         # Execute exit order
         try:
-            _order = self.order_manager.execute_decision(
-                symbol=symbol,
-                decision=exit_signal,
-                confidence=1.0,  # Exit is mandatory, not confidence-based
-                current_price=exit_price,
-                environment=self.environment,
-                trigger_signal_id=position.signal_id,
-            )
-            # Note: Exit order execution is fire-and-forget in current architecture
-            # OrderManager logs the result internally
+            if position.trade_id:
+                order = self.order_manager.close_trade(
+                    position.trade_id, exit_price, environment=self.environment
+                )
+            else:
+                order = self.order_manager.close_symbol(
+                    symbol, exit_price, environment=self.environment
+                )
+            if order and position.signal_id:
+                order.trigger_signal_id = position.signal_id
+                self.db.commit()
         except Exception as exc:
             self.db.rollback()
             logger.error(
