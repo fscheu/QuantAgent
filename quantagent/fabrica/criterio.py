@@ -7,6 +7,7 @@ import pandas as pd
 
 from quantagent.backtesting.vbt_filter import equity_metrics
 from quantagent.backtesting.verdict import MAX_DRAWDOWN, MIN_TRADES
+from quantagent.data.macro import serie_punto_en_el_tiempo
 
 MIN_SESIONES = 30
 
@@ -19,6 +20,34 @@ class AniosPositivos(NamedTuple):
 class RecargoPaper(NamedTuple):
     tamano_pct: int
     semanas: int
+
+
+def sharpes_en_exceso(cartera, benchmark, *, base_dir=None) -> tuple[float, float]:
+    """Diagnóstico con DGS3MO de macro-2026-10, sin cambiar el corte ni el DSR.
+
+    Ambas curvas deben tener las mismas fechas. Se resta la tasa conocida al
+    inicio de cada intervalo: porcentaje anual / 100 × días reales / 365.25
+    (interés simple, incluidos fines de semana). Se anualiza como equity_metrics.
+    """
+    if not cartera.index.equals(benchmark.index) or len(cartera) < 3:
+        raise ValueError("Se requieren dos curvas con las mismas fechas y al menos tres puntos")
+    fechas = cartera.index
+    if not fechas.is_monotonic_increasing or not fechas.is_unique:
+        raise ValueError("Las fechas deben ser crecientes y únicas")
+    tasa = serie_punto_en_el_tiempo("macro-2026-10", "DGS3MO", fechas[:-1], base_dir)
+    if tasa.isna().any():
+        raise ValueError("DGS3MO sin cobertura al inicio de uno o más intervalos")
+    dias = (fechas[1:] - fechas[:-1]).total_seconds().to_numpy() / 86400
+    libre = tasa.to_numpy() / 100 * dias / 365.25
+    ppy = (len(fechas) - 1) * 365.25 / dias.sum()
+    resultado = []
+    for curva in (cartera, benchmark):
+        if curva.isna().any():
+            raise ValueError("Curva sin cobertura en una o más fechas")
+        exceso = pd.Series(curva.to_numpy()[1:] / curva.to_numpy()[:-1] - 1 - libre)
+        resultado.append(0.0 if exceso.abs().max() < 1e-12 or exceso.std() == 0
+                         else float(exceso.mean() / exceso.std() * math.sqrt(ppy)))
+    return tuple(resultado)
 
 
 def recargo_paper(dsr: float | None) -> RecargoPaper:

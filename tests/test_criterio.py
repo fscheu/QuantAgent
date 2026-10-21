@@ -11,7 +11,43 @@ from quantagent.fabrica.criterio import (
     recargo_paper,
     sharpe_benchmark,
     sharpe_por_anio,
+    sharpes_en_exceso,
 )
+
+
+@pytest.fixture
+def tasa_macro(tmp_path):
+    from quantagent.data.macro import _escribir
+
+    datos = pd.DataFrame({
+        "fecha": pd.to_datetime(["2020-01-02", "2020-01-06", "2020-01-06"]),
+        "realtime_start": pd.to_datetime(["2020-01-02", "2020-01-07", "2020-01-09"]),
+        "realtime_end": pd.to_datetime(["2099-01-01", "2020-01-08", "2099-01-01"]),
+        "valor": [3.0, 6.0, 12.0],
+    })
+    _escribir(tmp_path / "macro-2026-10", "macro-2026-10", {"DGS3MO": datos})
+    return tmp_path
+
+
+def test_sharpes_exceso_tasa_compartida_sin_anticipacion(tasa_macro):
+    fechas = pd.to_datetime(["2020-01-03", "2020-01-06", "2020-01-07", "2020-01-08", "2020-01-09", "2020-01-10"])
+    # El lunes aún se conoce 3%; el martes 6%; la revisión a 12% recién el jueves.
+    libre = np.array([.03 * 3, .03, .06, .06, .12]) / 365.25
+    curva = pd.Series(100 * np.r_[1, np.cumprod(1 + libre)], index=fechas)
+    assert sharpes_en_exceso(curva, curva * 2, base_dir=tasa_macro) == pytest.approx((0, 0), abs=1e-10)
+    excesos = np.array([.001, -.002, .003, -.001, .002])
+    cartera = pd.Series(100 * np.r_[1, np.cumprod(1 + libre + excesos)], index=fechas)
+    benchmark = pd.Series(100 * np.r_[1, np.cumprod(1 + libre - excesos)], index=fechas)
+    esperado = excesos.mean() / excesos.std(ddof=1) * np.sqrt(5 * 365.25 / 7)
+    assert sharpes_en_exceso(cartera, benchmark, base_dir=tasa_macro) == pytest.approx((esperado, -esperado))
+
+
+def test_sharpes_exceso_falta_cobertura_explicita(tasa_macro):
+    curva = pd.Series([100., 101., 99.], index=pd.date_range("2020-01-01", periods=3))
+    with pytest.raises(ValueError, match="DGS3MO sin cobertura"):
+        sharpes_en_exceso(curva, curva, base_dir=tasa_macro)
+    with pytest.raises(ValueError, match="mismas fechas"):
+        sharpes_en_exceso(curva, curva.shift(1, freq="D"), base_dir=tasa_macro)
 
 
 def _generar_curva(anios_suben=(2019, 2020, 2022), anios_bajan=(2021,), sesiones=250):
