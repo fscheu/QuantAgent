@@ -115,3 +115,57 @@ def test_informe_etapa3_motivo_sin_claves_muestra_guiones(raiz):
     assert r.exit_code == 0 and "<h2>Criterio de etapa 3</h2>" in out.read_text() and out.read_text().count("<td>-</td>") >= 7
 
 
+def test_diagnostico_exceso_solo_lee_curvas_y_fechas_guardadas(raiz, monkeypatch):
+    import pandas as pd
+    from quantagent.fabrica import informe as modulo
+    from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+
+    fechas = pd.date_range("2020-01-01", periods=4)
+    carpeta = raiz / "equity"
+    carpeta.mkdir()
+    with (carpeta / "sma-SPY.csv").open("w") as f:
+        f.write("date,equity\n" + "".join(f"{d.date()},{100+i*2}\n" for i, d in enumerate(fechas)))
+    h = Hipotesis("h", "f", "j", piernas=(Pierna("sma", {}, ("SPY",), "u"),))
+    frame = pd.DataFrame({"close": [100, 101, 102, 103], "SPY": [100, 101, 102, 103]}, index=fechas)
+    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda *a, **k: frame)
+    def forbidden(*a, **k):
+        raise AssertionError("motor llamado")
+    monkeypatch.setattr("quantagent.cli.backtest.run_backtest", forbidden)
+    monkeypatch.setattr("quantagent.fabrica.validacion._curva_y_v30_cartera", forbidden)
+    monkeypatch.setattr("quantagent.fabrica.validacion.registrar_intento", forbidden)
+    monkeypatch.setattr("quantagent.cli.sweep.registrar_intento", forbidden)
+    original = __import__("quantagent.fabrica.criterio", fromlist=["curva_benchmark"]).curva_benchmark
+    fechas_benchmark = []
+    def benchmark(cierres, *a, **k):
+        fechas_benchmark.extend(cierres.index)
+        return original(cierres, *a, **k)
+    monkeypatch.setattr("quantagent.fabrica.criterio.curva_benchmark", benchmark)
+    from quantagent.data.macro import _escribir
+    from quantagent.fabrica.cartera import curva_cartera, pesos
+    from quantagent.fabrica.criterio import curva_benchmark, sharpes_en_exceso
+    macro = pd.DataFrame({"fecha": [fechas[0]], "realtime_start": [fechas[0]],
+                          "realtime_end": [pd.Timestamp("2099-01-01")], "valor": [3.0]})
+    _escribir(raiz / "macro-2026-10", "macro-2026-10", {"DGS3MO": macro})
+    (raiz / "hipotesis-candado.csv").write_text("h,prueba,2020-01-01\n")
+    entradas = ["intentos.csv", "hipotesis.csv", "hipotesis-candado.csv"]
+    antes = {n: (raiz / n).read_bytes() for n in entradas}
+    dsr_antes = modulo.datos_informe("h-corta3")["dsr"]
+    eq = pd.Series([100, 102, 104, 106], index=fechas)
+    precios = frame[["SPY"]]
+    curva = curva_cartera(precios, {0: ["SPY"]}, {(0, "SPY"): eq.pct_change().dropna()})
+    ponderaciones = pesos(precios, {0: ["SPY"]}).T.groupby(level=1).sum().T
+    bench = curva_benchmark(precios, pesos=ponderaciones).reindex(curva.index)
+    esperado = sharpes_en_exceso(curva, bench, base_dir=raiz)
+    fechas_benchmark.clear()
+    resultado = modulo.diagnostico_exceso(h, carpeta, "snapshot", raiz)
+    assert (resultado["sharpe_cartera"], resultado["sharpe_benchmark"]) == pytest.approx(esperado)
+    assert fechas_benchmark == list(fechas)
+    assert {n: (raiz / n).read_bytes() for n in antes} == antes
+    assert modulo.datos_informe("h-corta3")["dsr"] == dsr_antes
+    assert "curva faltante: SPY" in modulo.diagnostico_exceso(h, carpeta / "nada", "snapshot", raiz)["motivo"]
+    monkeypatch.setattr("quantagent.fabrica.criterio.serie_punto_en_el_tiempo",
+                        lambda *a, **k: pd.Series(float("nan"), index=a[2]))
+    sin_tasa = modulo.diagnostico_exceso(h, carpeta, "snapshot", raiz)
+    assert sin_tasa["disponible"] is False and "DGS3MO sin cobertura" in sin_tasa["motivo"]
+
+
