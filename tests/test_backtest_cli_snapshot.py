@@ -202,6 +202,47 @@ def test_verify_snapshot_imprime_ok_reproducible(snap_env):
     assert result.stdout.strip() == "OK reproducible"
 
 
+@pytest.mark.parametrize("command", ["run", "verify"])
+def test_snapshot_cli_coexiste_con_alpaca(snap_env, monkeypatch, command):
+    from quantagent.backtesting import fixtures
+    from quantagent.backtesting.backtest import Backtest
+
+    runner, _ = snap_env
+    write_snapshot("t", {"SPY": _daily_frame()})
+    real_load, real_run = fixtures.load_snapshot, Backtest.run
+    labels, metrics_seen = [], []
+
+    def seed_foreign(session, name, symbol, start, end):
+        session.add(MarketData(symbol="SPY", timeframe="1d", source="alpaca",
+                               timestamp=_daily_frame().index[0].to_pydatetime(),
+                               open=1, high=1, low=1,
+                               close=1, volume=1))
+        session.commit()
+        assert session.query(MarketData).filter_by(source="alpaca").count() == 1
+        return real_load(session, name, symbol, start, end)
+
+    def capture(self, *args, **kwargs):
+        labels.append({row.source for row in self.db.query(MarketData).all()})
+        metrics = real_run(self, *args, **kwargs)
+        metrics_seen.append((metrics.total_trades, metrics.total_pnl))
+        return metrics
+
+    monkeypatch.setattr("quantagent.cli.backtest.load_snapshot", seed_foreign)
+    monkeypatch.setattr(Backtest, "run", capture)
+    args = [command, "--strategy", "fifty-two-week-high", "--snapshot", "t", "--symbol", "SPY"]
+    if command == "run":
+        args += ["--llenado", "cierre"]
+    result = runner.invoke(backtest_group, args)
+    assert result.exit_code == 0, result.output
+    assert labels == ([{"alpaca", "snapshot:t"}] if command == "run" else
+                      [{"alpaca", "snapshot:t"}, {"alpaca", "snapshot:t"}])
+    if command == "run":
+        assert metrics_seen[0][0] == 6 and round(metrics_seen[0][1], 2) == -249.35
+    else:
+        assert len(metrics_seen) == 2 and all(trades == 6 and round(pnl, 2) == -249.35
+                                              for trades, pnl in metrics_seen)
+
+
 def test_verify_snapshot_respeta_reserva_y_registra_apertura(snap_env, monkeypatch, tmp_path):
     runner, _, log = _con_reserva(snap_env, monkeypatch, tmp_path)
     blocked = _verify(runner, "--snapshot", "t", "--symbol", "SPY", "--to", "2024-09-30")
