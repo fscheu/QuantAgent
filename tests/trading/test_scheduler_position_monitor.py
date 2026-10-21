@@ -57,7 +57,7 @@ def mock_scheduler():
     return scheduler
 
 
-def test_check_exit_conditions_stop_loss_long(mock_scheduler):
+def test_should_exit_stop_loss_long(mock_scheduler):
     """AC-1: Stop loss triggered for LONG position."""
     position = DummyActivePosition(
         side=OrderSide.BUY, entry_price=100.0, stop_loss=98.0, take_profit=105.0
@@ -69,7 +69,7 @@ def test_check_exit_conditions_stop_loss_long(mock_scheduler):
     assert reason == "STOP_LOSS"
 
 
-def test_check_exit_conditions_stop_loss_short(mock_scheduler):
+def test_should_exit_stop_loss_short(mock_scheduler):
     """AC-1: Stop loss triggered for SHORT position."""
     position = DummyActivePosition(
         side=OrderSide.SELL, entry_price=100.0, stop_loss=102.0, take_profit=95.0
@@ -81,7 +81,7 @@ def test_check_exit_conditions_stop_loss_short(mock_scheduler):
     assert reason == "STOP_LOSS"
 
 
-def test_check_exit_conditions_take_profit_long(mock_scheduler):
+def test_should_exit_take_profit_long(mock_scheduler):
     """AC-2: Take profit triggered for LONG position."""
     position = DummyActivePosition(
         side=OrderSide.BUY, entry_price=100.0, stop_loss=98.0, take_profit=105.0
@@ -93,7 +93,7 @@ def test_check_exit_conditions_take_profit_long(mock_scheduler):
     assert reason == "TAKE_PROFIT"
 
 
-def test_check_exit_conditions_take_profit_short(mock_scheduler):
+def test_should_exit_take_profit_short(mock_scheduler):
     """AC-2: Take profit triggered for SHORT position."""
     position = DummyActivePosition(
         side=OrderSide.SELL, entry_price=100.0, stop_loss=102.0, take_profit=95.0
@@ -105,7 +105,7 @@ def test_check_exit_conditions_take_profit_short(mock_scheduler):
     assert reason == "TAKE_PROFIT"
 
 
-def test_check_exit_conditions_max_hold(mock_scheduler):
+def test_should_exit_max_hold(mock_scheduler):
     """AC-3: Max hold candles exceeded."""
     position = DummyActivePosition(
         side=OrderSide.BUY,
@@ -122,7 +122,7 @@ def test_check_exit_conditions_max_hold(mock_scheduler):
     assert reason == "TIME_EXPIRED"
 
 
-def test_check_exit_conditions_max_hold_at_limit(mock_scheduler):
+def test_should_exit_max_hold_at_limit(mock_scheduler):
     """AC-3: Max hold candles at exact limit triggers exit."""
     position = DummyActivePosition(
         side=OrderSide.BUY,
@@ -139,7 +139,7 @@ def test_check_exit_conditions_max_hold_at_limit(mock_scheduler):
     assert reason == "TIME_EXPIRED"
 
 
-def test_check_exit_conditions_no_exit(mock_scheduler):
+def test_should_exit_no_exit(mock_scheduler):
     """AC-4: No exit conditions met."""
     position = DummyActivePosition(
         side=OrderSide.BUY, entry_price=100.0, stop_loss=98.0, take_profit=105.0
@@ -151,7 +151,7 @@ def test_check_exit_conditions_no_exit(mock_scheduler):
     assert reason is None
 
 
-def test_check_exit_conditions_no_max_hold_set(mock_scheduler):
+def test_should_exit_no_max_hold_set(mock_scheduler):
     """AC-5: No exit when max_hold_candles is None."""
     position = DummyActivePosition(
         side=OrderSide.BUY,
@@ -168,7 +168,7 @@ def test_check_exit_conditions_no_max_hold_set(mock_scheduler):
     assert reason is None
 
 
-def test_check_exit_conditions_stop_loss_exact_price_long(mock_scheduler):
+def test_should_exit_stop_loss_exact_price_long(mock_scheduler):
     """AC-6: Stop loss at exact price (boundary condition, LONG)."""
     position = DummyActivePosition(
         side=OrderSide.BUY, entry_price=100.0, stop_loss=98.0, take_profit=105.0
@@ -180,7 +180,7 @@ def test_check_exit_conditions_stop_loss_exact_price_long(mock_scheduler):
     assert reason == "STOP_LOSS"
 
 
-def test_check_exit_conditions_take_profit_exact_price_long(mock_scheduler):
+def test_should_exit_take_profit_exact_price_long(mock_scheduler):
     """AC-6: Take profit at exact price (boundary condition, LONG)."""
     position = DummyActivePosition(
         side=OrderSide.BUY, entry_price=100.0, stop_loss=98.0, take_profit=105.0
