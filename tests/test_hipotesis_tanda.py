@@ -22,6 +22,10 @@ def test_tanda_continua_y_escribe_informes_logs_y_resumen(tmp_path, monkeypatch,
     (origen / "0-invalido.yaml").write_text("id: [")
     registrar_estado("anterior", "0", "CORTA", "fuera de tanda")
     llamadas = []
+    diagnosticos = []
+    from quantagent.fabrica import informe as modulo_informe
+    monkeypatch.setattr(modulo_informe, "diagnostico_exceso", lambda h, carpeta, snapshot: (
+        diagnosticos.append((carpeta, snapshot)) or {"disponible": False, "motivo": "sin curva"}))
 
     def correr(archivo, snapshot_name, carpeta):
         nombre = Path(archivo).stem
@@ -39,6 +43,8 @@ def test_tanda_continua_y_escribe_informes_logs_y_resumen(tmp_path, monkeypatch,
                                                    "--carpeta", str(tmp_path / "salida")])
     assert resultado.exit_code == 0, resultado.output
     assert llamadas == ["a", "b", "c"]
+    assert diagnosticos == [(str(tmp_path / "salida" / f"tanda-{n}" / "equity"), "snapshot-test")
+                            for n in llamadas]
     assert "ParserError" in (tmp_path / "salida" / "0-invalido.log").read_text()
     for nombre in llamadas:
         salida = tmp_path / "salida" / f"tanda-{nombre}"

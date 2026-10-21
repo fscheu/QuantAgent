@@ -118,7 +118,7 @@ def datos_informe(hipotesis_id):
     }
 
 
-def render_informe(d, hipotesis=None):
+def render_informe(d, hipotesis=None, diagnostico=None):
     f = d["final"]
     li = "".join(f"<li>Etapa {escape(e['etapa'])}: <b>{escape(e['veredicto'])}</b> — {escape(e['motivo'])}</li>"
                  for e in d["etapas"])
@@ -146,6 +146,16 @@ def render_informe(d, hipotesis=None):
         td = "".join(f"<td>{escape(v)}</td>" for v in vals)
         tabla_e3 = f"<h2>Criterio de etapa 3</h2><table><tr>{th}</tr><tr>{td}</tr></table>"
 
+    exceso = ""
+    if diagnostico is not None:
+        if diagnostico.get("disponible"):
+            valores = (f'{diagnostico["sharpe_cartera"]:.2f}', f'{diagnostico["sharpe_benchmark"]:.2f}')
+        else:
+            valores = ("no disponible", "no disponible")
+        exceso = ("<h2>Sharpe en exceso de DGS3MO</h2><table><tr><th></th>"
+                  "<th>Cartera</th><th>Benchmark 1/N</th></tr>"
+                  f"<tr><td>Sharpe en exceso</td><td>{valores[0]}</td><td>{valores[1]}</td></tr></table>")
+
     return (
         f"<!doctype html><html lang='es'><meta charset='utf-8'><title>Informe {escape(d['id'])}</title>"
         "<style>body{font:16px sans-serif;max-width:50em;margin:2em auto}td,th{padding:.2em .8em}</style>"
@@ -153,6 +163,7 @@ def render_informe(d, hipotesis=None):
         f"<ul>{li}</ul><h2>Activos de la etapa {escape(f['etapa'])}</h2>"
         f"<table><tr><th>Activo</th><th>Sharpe registrado</th><th>Trades</th></tr>{tr}</table>"
         f"{tabla_e3}"
+        f"{exceso}"
         f"<p>Intentos registrados: {d['intentos']}. Total de intentos (N): {d.get('n_total', d['intentos'])}. DSR: {escape(str(d.get('dsr', 'no evaluado')))}. Prueba abierta: {'sí' if d['prueba_abierta'] else 'no'}.</p>"
         f"<h2>Glosario</h2><dl>{gl}</dl></html>"
     )

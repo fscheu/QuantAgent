@@ -115,6 +115,29 @@ def test_informe_etapa3_motivo_sin_claves_muestra_guiones(raiz):
     assert r.exit_code == 0 and "<h2>Criterio de etapa 3</h2>" in out.read_text() and out.read_text().count("<td>-</td>") >= 7
 
 
+def test_informe_cli_muestra_sharpes_en_exceso_y_sin_datos_indica_ausencia(raiz, monkeypatch):
+    from quantagent.fabrica import informe as modulo
+
+    registrar_estado("h-exceso", "1", "PASA", "ok")
+    yaml_path = raiz / "h.yaml"
+    yaml_path.write_text("id: h-exceso\nautor: f\njustificacion: j\ntimeframe: 1d\nclase: rsi\nparametros: {rsi_period: [7], oversold_threshold: [30]}\nactivos: [SPY]\nuniverso: prueba\n")
+    calls = []
+
+    def diagnosticar(h, carpeta, snapshot):
+        calls.append((carpeta, snapshot))
+        return {"disponible": True, "sharpe_cartera": 0.31, "sharpe_benchmark": 0.12}
+
+    monkeypatch.setattr(modulo, "diagnostico_exceso", diagnosticar, raising=False)
+    r, out = informe(raiz, "h-exceso", yaml_path)
+    assert r.exit_code == 0, r.output
+    assert "no disponible" in out.read_text() and calls == []
+    r = CliRunner().invoke(backtest_group, ["hipotesis", "informe", "h-exceso", "--out", str(out),
+                                             "--archivo", str(yaml_path), "--carpeta-equity", str(raiz),
+                                             "--snapshot", "snap"])
+    assert r.exit_code == 0, r.output
+    assert calls == [(str(raiz), "snap")] and "<td>0.31</td><td>0.12</td>" in out.read_text()
+
+
 def test_diagnostico_exceso_solo_lee_curvas_y_fechas_guardadas(raiz, monkeypatch):
     import pandas as pd
     from quantagent.fabrica import informe as modulo
@@ -167,5 +190,15 @@ def test_diagnostico_exceso_solo_lee_curvas_y_fechas_guardadas(raiz, monkeypatch
                         lambda *a, **k: pd.Series(float("nan"), index=a[2]))
     sin_tasa = modulo.diagnostico_exceso(h, carpeta, "snapshot", raiz)
     assert sin_tasa["disponible"] is False and "DGS3MO sin cobertura" in sin_tasa["motivo"]
+    yaml_path = raiz / "h-corta3.yaml"
+    yaml_path.write_text("id: h-corta3\nautor: f\njustificacion: j\ntimeframe: 1d\nclase: sma-cross\nparametros: {fast: [2], slow: [10]}\nactivos: [SPY]\nuniverso: prueba\n")
+    out = raiz / "informe.html"
+    cli = CliRunner().invoke(backtest_group, ["hipotesis", "informe", "h-corta3", "--out", str(out),
+                                               "--archivo", str(yaml_path), "--carpeta-equity", str(carpeta),
+                                               "--snapshot", "snapshot"])
+    assert cli.exit_code == 0, cli.output
+    assert "Sharpe en exceso de DGS3MO" in out.read_text()
+    assert {n: (raiz / n).read_bytes() for n in antes} == antes
+    assert modulo.datos_informe("h-corta3")["dsr"] == dsr_antes
 
 
