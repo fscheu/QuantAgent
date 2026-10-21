@@ -8,11 +8,24 @@ from quantagent.fabrica.criterio import (
     anios_positivos,
     curva_benchmark,
     evaluar_etapa3_cartera,
+    error_estandar_delta_sharpe,
     recargo_paper,
     sharpe_benchmark,
     sharpe_por_anio,
     sharpes_en_exceso,
 )
+
+
+def test_error_estandar_delta_sharpe_iid_concuerda_con_formula():
+    rng = np.random.default_rng(41)
+    x = rng.normal(0, 0.01, 5000)
+    y = 0.4 * x + rng.normal(0, 0.01 * np.sqrt(1 - 0.4**2), len(x))
+    fechas = pd.bdate_range("2000-01-03", periods=len(x) + 1)
+    eq_x = pd.Series(100 * np.r_[1, np.cumprod(1 + x)], index=fechas)
+    eq_y = pd.Series(100 * np.r_[1, np.cumprod(1 + y)], index=fechas)
+    estimado = error_estandar_delta_sharpe(eq_x, eq_y)
+    teorico = np.sqrt((2 - 2 * 0.4) / len(x) * 252)
+    assert estimado == pytest.approx(teorico, rel=0.20)
 
 
 @pytest.fixture
