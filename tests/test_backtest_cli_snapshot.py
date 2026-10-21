@@ -85,6 +85,7 @@ def test_carga_velas_ajustadas_y_solo_las_del_rango(snap_env):
 
     with Session(engine) as session:
         rows = session.query(MarketData).order_by(MarketData.timestamp).all()
+    assert {row.source for row in rows} == {"snapshot:t"}
     expected = _daily_frame(factor).loc["2024-03-01":"2024-09-30"]
     assert len(rows) == len(expected)
     assert rows[0].timestamp == datetime(2024, 3, 1) and rows[-1].timestamp == datetime(2024, 9, 30)
@@ -118,7 +119,7 @@ def test_base_con_otros_datos_en_el_rango_aborta_como_con_fixtures(snap_env):
     runner, engine = snap_env
     write_snapshot("t", {"SPY": _daily_frame()})
     with Session(engine) as session:
-        session.add(MarketData(symbol="SPY", timeframe="1d", timestamp=datetime(2024, 6, 3), open=1, high=1, low=1, close=1, volume=1))
+        session.add(MarketData(symbol="SPY", timeframe="1d", timestamp=datetime(2024, 6, 3), source="snapshot:t", open=1, high=1, low=1, close=1, volume=1))
         session.commit()
     result = _run(runner, "--snapshot", "t", "--symbol", "SPY")
     assert result.exit_code == 1

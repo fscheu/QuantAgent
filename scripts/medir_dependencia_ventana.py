@@ -40,8 +40,9 @@ LARGOS = {"actual": lambda n: n, "+1": lambda n: n + 1, "+5": lambda n: n + 5, "
 def cargar_historia(session):
     """Todas las velas de la base con el formato del motor: una sola llamada a `_get_history_df`."""
     ultima = session.query(MarketData).order_by(MarketData.timestamp.desc()).first()
-    motor = SimpleNamespace(config={"offline_data": True}, db=session, timeframe=ultima.timeframe,
-                            symbol=ultima.symbol, data_provider=DataProvider(session, offline=True))
+    fuente = ultima.source
+    motor = SimpleNamespace(config={"offline_data": True, "source_name": fuente}, db=session, timeframe=ultima.timeframe,
+                            symbol=ultima.symbol, data_provider=DataProvider(session, offline=True, source_name=fuente))
     return motor, Backtest._get_history_df(motor, ultima.symbol, ultima.timestamp, session.query(MarketData).count())
 
 

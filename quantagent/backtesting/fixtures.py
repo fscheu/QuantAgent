@@ -67,6 +67,7 @@ def load_fixture(session: Session, name: str) -> int:
                 MarketData(
                     symbol=row["symbol"],
                     timeframe=row["timeframe"],
+                    source="fixture",
                     timestamp=datetime.fromisoformat(row["timestamp"]),
                     open=Decimal(row["open"]),
                     high=Decimal(row["high"]),
@@ -113,6 +114,7 @@ def load_snapshot(session: Session, name: str, symbol: str, start: Optional[date
         MarketData(
             symbol=symbol,
             timeframe=timeframe,
+            source=f"snapshot:{name}",
             timestamp=ts.to_pydatetime(),
             open=Decimal(f"{r.open:.8f}"),
             high=Decimal(f"{r.high:.8f}"),
