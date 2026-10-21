@@ -263,6 +263,8 @@ class MarketData(Base):
 
     __tablename__ = "market_data"
 
+    source = Column(String(100), nullable=False, default="legacy", server_default="legacy")
+
     id = Column(Integer, primary_key=True, index=True)
     symbol = Column(String(20), nullable=False, index=True)
     timeframe = Column(String(10), nullable=False)  # 1m, 5m, 15m, 1h, 4h, 1d, etc.
@@ -278,6 +280,7 @@ class MarketData(Base):
 
     __table_args__ = (
         Index("idx_symbol_timeframe_timestamp", "symbol", "timeframe", "timestamp"),
+        Index("uq_market_data_source", "symbol", "timeframe", "timestamp", "source", unique=True),
         Index("idx_timestamp", "timestamp"),
     )
 
