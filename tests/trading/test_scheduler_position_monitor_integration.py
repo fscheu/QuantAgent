@@ -7,7 +7,7 @@ import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from quantagent.models import ActivePosition, Environment, OrderSide, SchedulerHeartbeat, Trade, TradeSignal
+from quantagent.models import ActivePosition, Environment, OrderSide, SchedulerHeartbeat, Signal, Trade, TradeSignal
 from quantagent.settings import SchedulerSettings
 from quantagent.strategy.base import TradingSignal as StrategyTradingSignal
 from quantagent.trading.position_monitor import PositionMonitor
@@ -20,12 +20,16 @@ def _make_session():
         Trade.__table__,
         ActivePosition.__table__,
         SchedulerHeartbeat.__table__,
+        Signal.__table__,
     ):
         table.create(bind=engine)
     return sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
-def _make_scheduler(session, *, closes: list[float], decision: str = "HOLD") -> TradingScheduler:
+def _make_scheduler(
+    session, *, closes: list[float], decision: str = "HOLD", take_profit: float | None = 110.0,
+    trailing_stop_pct: float | None = None,
+) -> TradingScheduler:
     config = SchedulerSettings(
         enabled=True,
         interval_hours=1.0,
@@ -51,8 +55,9 @@ def _make_scheduler(session, *, closes: list[float], decision: str = "HOLD") -> 
         confidence=0.9,
         entry_price=closes[-1],
         stop_loss=97.5,
-        take_profit=110.0,
+        take_profit=take_profit,
         reasoning="test signal",
+        trailing_stop_pct=trailing_stop_pct,
     )
     order_manager = MagicMock()
     order_manager.execute_decision.return_value = Mock(
@@ -127,6 +132,33 @@ def test_scheduler_hold_path_updates_tracking_and_continues_analysis():
         assert position.candles_direction == ["up"]
         scheduler.strategy.generate_signal.assert_called_once()
         scheduler.order_manager.execute_decision.assert_not_called()
+
+
+def test_scheduler_opens_position_with_signal_exit_policy_and_trailing_stop():
+    SessionLocal = _make_session()
+    with SessionLocal() as session:
+        scheduler = _make_scheduler(
+            session, closes=[100.0, 101.0], decision="LONG", trailing_stop_pct=0.05,
+        )
+
+        scheduler.run_once()
+
+        position = session.query(ActivePosition).one()
+        assert position.trailing_stop_pct == 0.05
+        assert position.exit_policy.value == "trailing_stop"
+
+
+def test_scheduler_uses_three_percent_take_profit_default():
+    SessionLocal = _make_session()
+    with SessionLocal() as session:
+        scheduler = _make_scheduler(
+            session, closes=[100.0, 101.0], decision="LONG", take_profit=None,
+        )
+
+        scheduler.run_once()
+
+        position = session.query(ActivePosition).one()
+        assert position.take_profit == Decimal("104.03000000")
 
 
 def test_scheduler_stop_loss_exit_skips_llm_and_persists_trade_exit_reason():

@@ -364,8 +364,8 @@ class TradingScheduler:
                 else current_price * 1.02
             )
             take_profit = getattr(signal, "take_profit", None) or (
-                current_price * 1.04 if trade_signal == TradeSignal.LONG
-                else current_price * 0.96
+                current_price * 1.03 if trade_signal == TradeSignal.LONG
+                else current_price * 0.97
             )
 
             self.position_monitor.open_position(
@@ -375,9 +375,11 @@ class TradingScheduler:
                 stop_loss=stop_loss,
                 take_profit=take_profit,
                 quantity=order.quantity,
-                exit_policy="sl_tp_only",
+                exit_policy=signal.exit_policy.value,
                 trade_id=trade_id,
                 signal_id=db_signal.id if db_signal else None,
+                trailing_stop_pct=signal.trailing_stop_pct,
+                max_hold_candles=signal.max_hold_candles,
                 backtest_run_id=None,
                 environment=self.environment,
             )
