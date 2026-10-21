@@ -116,6 +116,9 @@ class DataProvider:
 
         # 3. Identify gaps in cached data
         missing_ranges = self._find_gaps(cached_df, start_date, end_date, timeframe)
+        if cached and not missing_ranges:
+            last_cached = max(row.timestamp for row in cached)
+            missing_ranges = [(last_cached, end_date)]
 
         # 4. Fetch missing data from API
         if missing_ranges and self.offline:
@@ -152,6 +155,25 @@ class DataProvider:
                         if ts.dt.tz is not None:
                             ts = to_utc(ts, timeframe).dt.tz_localize(None)
                         api_data["timestamp"] = ts
+                        overlap = cached_df.merge(
+                            api_data[["timestamp", "close"]], on="timestamp", suffixes=("_cached", "_new")
+                        )
+                        if not overlap.empty and (
+                            (overlap["close_cached"] - overlap["close_new"]).abs()
+                            / overlap["close_cached"].abs().clip(lower=1e-12)
+                        ).max() > 1e-4:
+                            self.db.query(MarketData).filter(
+                                MarketData.symbol == symbol,
+                                MarketData.timeframe == timeframe,
+                                MarketData.source == self.source_name,
+                            ).delete(synchronize_session=False)
+                            self.db.commit()
+                            api_data = self.source.fetch(symbol, timeframe, start_date, end_date).copy()
+                            ts = pd.to_datetime(api_data["timestamp"])
+                            if ts.dt.tz is not None:
+                                ts = to_utc(ts, timeframe).dt.tz_localize(None)
+                            api_data["timestamp"] = ts
+                            cached_df = pd.DataFrame(columns=cached_df.columns)
                         duration = (
                             pd.DateOffset(months=1) if timeframe == "1mo"
                             else pd.Timedelta(weeks=1) if timeframe == "1w"
