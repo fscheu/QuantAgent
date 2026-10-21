@@ -246,7 +246,9 @@ class Backtest:
         # because the naive gap-detection otherwise re-fetches the pre-fixture lookback
         # window on nearly every candle.
         self.data_provider = DataProvider(
-            self.db, offline=self.config.get("offline_data", False)
+            self.db,
+            offline=self.config.get("offline_data", False),
+            source_name=self.config.get("source_name"),
         )
 
         # Resolve config via StrategyAssembler and build components (unify DB session)
@@ -795,6 +797,7 @@ class Backtest:
                 .filter(
                     MarketData.symbol == asset,
                     MarketData.timeframe == self.timeframe,
+                    MarketData.source == self.data_provider.source_name,
                     MarketData.timestamp >= self.start_date,
                     MarketData.timestamp <= self.end_date,
                 )
@@ -1034,6 +1037,7 @@ class Backtest:
                 .filter(
                     MarketData.symbol == asset,
                     MarketData.timeframe == self.timeframe,
+                    MarketData.source == self.data_provider.source_name,
                     MarketData.timestamp <= current_date,
                 )
                 .order_by(MarketData.timestamp.desc())

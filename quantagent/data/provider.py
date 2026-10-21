@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import Callable, Optional
 
 import pandas as pd
 from sqlalchemy import and_
@@ -51,6 +51,8 @@ class DataProvider:
         db_session: Session,
         source: Optional[CandleSource] = None,
         offline: bool = False,
+        now: Callable[[], datetime] = datetime.utcnow,
+        source_name: Optional[str] = None,
     ):
         """
         Initialize DataProvider.
@@ -58,6 +60,7 @@ class DataProvider:
         Args:
             db_session: SQLAlchemy database session
             source: CandleSource that serves the gaps (YahooSource if None)
+            now: Clock returning UTC without tzinfo, also used by the scheduler.
             offline: If True, never call the source for gaps -- only ever
                 return what's already cached. For deterministic, fixture-based
                 backtests (e.g. the `backtest run` CLI), hitting a live API
@@ -66,8 +69,10 @@ class DataProvider:
                 any pre-fixture lookback window on nearly every candle.
         """
         self.db = db_session
+        self.source_name = source.name if source is not None else (source_name or "legacy")
         self.source = source if source is not None else YahooSource()
         self.offline = offline
+        self.now = now
 
     def get_ohlc(
         self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
@@ -95,6 +100,7 @@ class DataProvider:
                 and_(
                     MarketData.symbol == symbol,
                     MarketData.timeframe == timeframe,
+                    MarketData.source == self.source_name,
                     MarketData.timestamp >= start_date,
                     MarketData.timestamp <= end_date,
                 )
@@ -110,6 +116,9 @@ class DataProvider:
 
         # 3. Identify gaps in cached data
         missing_ranges = self._find_gaps(cached_df, start_date, end_date, timeframe)
+        if cached and not missing_ranges:
+            last_cached = max(row.timestamp for row in cached)
+            missing_ranges = [(last_cached, end_date)]
 
         # 4. Fetch missing data from API
         if missing_ranges and self.offline:
@@ -121,7 +130,7 @@ class DataProvider:
                 f"Found {len(missing_ranges)} gap(s) in cached data, fetching from API"
             )
 
-            now = datetime.now()
+            now = self.now()
             earliest_start = self.source.earliest(timeframe, now)
             latest_end = self.source.latest(now)
 
@@ -146,6 +155,31 @@ class DataProvider:
                         if ts.dt.tz is not None:
                             ts = to_utc(ts, timeframe).dt.tz_localize(None)
                         api_data["timestamp"] = ts
+                        overlap = cached_df.merge(
+                            api_data[["timestamp", "close"]], on="timestamp", suffixes=("_cached", "_new")
+                        )
+                        if not overlap.empty and (
+                            (overlap["close_cached"] - overlap["close_new"]).abs()
+                            / overlap["close_cached"].abs().clip(lower=1e-12)
+                        ).max() > 1e-4:
+                            self.db.query(MarketData).filter(
+                                MarketData.symbol == symbol,
+                                MarketData.timeframe == timeframe,
+                                MarketData.source == self.source_name,
+                            ).delete(synchronize_session=False)
+                            self.db.commit()
+                            api_data = self.source.fetch(symbol, timeframe, start_date, end_date).copy()
+                            ts = pd.to_datetime(api_data["timestamp"])
+                            if ts.dt.tz is not None:
+                                ts = to_utc(ts, timeframe).dt.tz_localize(None)
+                            api_data["timestamp"] = ts
+                            cached_df = pd.DataFrame(columns=cached_df.columns)
+                        duration = (
+                            pd.DateOffset(months=1) if timeframe == "1mo"
+                            else pd.Timedelta(weeks=1) if timeframe == "1w"
+                            else pd.Timedelta(self._to_pandas_freq(timeframe))
+                        )
+                        api_data = api_data[ts + duration <= latest_end]
 
                         # Store in database
                         self._store_data(symbol, timeframe, api_data)
@@ -201,6 +235,7 @@ class DataProvider:
                         MarketData.symbol == symbol,
                         MarketData.timeframe == timeframe,
                         MarketData.timestamp == row["timestamp"],
+                        MarketData.source == self.source_name,
                     )
                 )
                 .first()
@@ -212,6 +247,7 @@ class DataProvider:
             record = MarketData(
                 symbol=symbol,
                 timeframe=timeframe,
+                source=self.source_name,
                 timestamp=row["timestamp"],
                 open=float(row["open"]),
                 high=float(row["high"]),

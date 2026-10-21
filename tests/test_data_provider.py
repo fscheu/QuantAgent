@@ -113,6 +113,7 @@ class TestDataProvider:
         cached_data = MarketData(
             symbol="BTC",
             timeframe="1h",
+            source="fake",
             timestamp=start,
             open=100.0,
             high=105.0,
@@ -180,6 +181,49 @@ class TestDataProvider:
 
             assert stored is not None
             assert float(stored.close) == 102.0
+            assert stored.source == provider.source.name
+
+    def test_split_reloads_source_history_when_overlap_changes(self, db_session, sample_dates):
+        start, end = sample_dates
+        source = FakeSource()
+        provider = DataProvider(db_session, source=source)
+        db_session.add_all([
+            MarketData(symbol="BTC", timeframe="1h", source="fake", timestamp=start + timedelta(hours=i),
+                       open=100, high=110, low=90, close=100 - i, volume=1)
+            for i in range(3)
+        ])
+        db_session.commit()
+
+        def adjusted(symbol, timeframe, fetch_start, fetch_end):
+            dates = pd.date_range(start, start + timedelta(hours=2), freq="1h", tz="UTC")
+            return pd.DataFrame({"timestamp": dates, "open": 50, "high": 55, "low": 45,
+                                 "close": [50, 49.5, 49], "volume": 1})
+
+        source.fetch = adjusted
+        result = provider.get_ohlc("BTC", "1h", start, end)
+
+        rows = db_session.query(MarketData).filter_by(symbol="BTC", source="fake").all()
+        assert [row.close for row in rows] == [50, 49.5, 49]
+        assert result.iloc[-1]["close"] == 49
+
+    def test_unchanged_overlap_keeps_cached_history(self, db_session, sample_dates):
+        start, end = sample_dates
+        source = FakeSource()
+        provider = DataProvider(db_session, source=source)
+        db_session.add_all([
+            MarketData(symbol="BTC", timeframe="1h", source="fake", timestamp=start + timedelta(hours=i),
+                       open=100, high=110, low=90, close=100 - i, volume=1)
+            for i in range(3)
+        ])
+        db_session.commit()
+        source.fetch = lambda *args: pd.DataFrame({
+            "timestamp": pd.date_range(start + timedelta(hours=2), periods=1, freq="1h", tz="UTC"),
+            "open": [100], "high": [110], "low": [90], "close": [98], "volume": [1],
+        })
+
+        provider.get_ohlc("BTC", "1h", start, end)
+
+        assert db_session.query(MarketData).filter_by(symbol="BTC", source="fake").count() == 3
 
     # Conversion & Transformation Tests
 
@@ -426,7 +470,7 @@ class TestSourceDelegation:
         for h in range(0, 5):  # cacheado 00:00..04:00
             db_session.add(
                 MarketData(
-                    symbol="BTC", timeframe="1h", timestamp=self.START + timedelta(hours=h),
+                    symbol="BTC", timeframe="1h", source="fake", timestamp=self.START + timedelta(hours=h),
                     open=1.0, high=2.0, low=0.5, close=1.5, volume=10.0,
                 )
             )
@@ -477,6 +521,48 @@ class TestSourceDelegation:
         assert isinstance(DataProvider(db_session).source, YahooSource)
 
 
+@pytest.mark.parametrize("timeframe,start,closed", [
+    ("1h", datetime(2024, 1, 2, 14), datetime(2024, 1, 2, 15)),
+    ("4h", datetime(2024, 1, 2, 14), datetime(2024, 1, 2, 18)),
+    ("1d", datetime(2024, 1, 2), datetime(2024, 1, 3)),
+    ("1w", datetime(2024, 1, 2), datetime(2024, 1, 9)),
+    ("1mo", datetime(2024, 2, 1), datetime(2024, 3, 1)),
+])
+def test_only_closed_candles_are_cached(db_session, timeframe, start, closed):
+    class Source(FakeSource):
+        def latest(self, now):
+            return now - timedelta(minutes=15)
+
+        def fetch(self, symbol, timeframe, start_date, end_date):
+            return pd.DataFrame([[start, 1, 2, 0.5, self.close, 10]], columns=COLUMNS)
+
+    source = Source()
+    source.close = 1.1
+    clock = [closed + timedelta(minutes=14)]
+    provider = DataProvider(db_session, source=source, now=lambda: clock[0])
+    assert provider.get_ohlc("SPY", timeframe, start, clock[0]).empty
+    assert db_session.query(MarketData).count() == 0
+    clock[0] += timedelta(minutes=1)
+    source.close = 1.5
+    result = provider.get_ohlc("SPY", timeframe, start, clock[0])
+    stored = db_session.query(MarketData).one()
+    assert stored.timestamp == start
+    assert float(stored.close) == result.iloc[0]["close"] == 1.5
+
+
+@pytest.mark.parametrize("strategy,fixture,trades,pnl", [
+    ("rsi", "spy-90d", 340, 4571.27),
+    ("fifty-two-week-high", "spy-2y-1d", 6, -249.35),
+    ("triple-screen", "spy-1y-4h", 6, 174.34),
+])
+def test_m1_references_unchanged(strategy, fixture, trades, pnl):
+    from quantagent.cli.backtest import _run_verify_pass
+
+    metrics, _, _ = _run_verify_pass(strategy, fixture)
+    assert metrics.total_trades == trades
+    assert round(metrics.total_pnl, 2) == pnl
+
+
 class TestDailyBarConvention:
     """Las barras diarias se guardan a las 00:00 (convención vieja), las intradía en UTC."""
 
@@ -494,7 +580,7 @@ class TestDailyBarConvention:
         day = datetime(2024, 1, 2, 0, 0)
         db_session.add(
             MarketData(
-                symbol="QQQ", timeframe="1d", timestamp=day,
+                symbol="QQQ", timeframe="1d", source="fake", timestamp=day,
                 open=1.0, high=2.0, low=0.5, close=1.5, volume=10.0,
             )
         )
@@ -523,3 +609,32 @@ class TestDailyBarConvention:
 
         stored = db_session.query(MarketData).one()
         assert stored.timestamp == datetime(2024, 1, 2, 14, 30)
+
+
+def test_sources_keep_same_candle_key_isolated(db_session):
+    stamp = datetime(2024, 1, 1)
+    for source_name, close in (("snapshot:x", 10.0), ("alpaca", 20.0)):
+        candle = pd.DataFrame({
+            "timestamp": [stamp], "open": [close], "high": [close], "low": [close],
+            "close": [close], "volume": [1],
+        })
+        DataProvider(db_session, source_name=source_name)._store_data("SPY", "1h", candle)
+
+    for source_name, expected in (("snapshot:x", 10.0), ("alpaca", 20.0)):
+        result = DataProvider(db_session, source_name=source_name, offline=True).get_ohlc(
+            "SPY", "1h", stamp, stamp
+        )
+        assert result["close"].tolist() == [expected]
+
+
+def test_offline_without_source_name_reads_legacy(db_session):
+    stamp = datetime(2024, 1, 1)
+    db_session.add(MarketData(
+        symbol="SPY", timeframe="1h", timestamp=stamp, source="legacy",
+        open=10, high=10, low=10, close=10, volume=1,
+    ))
+    db_session.commit()
+
+    result = DataProvider(db_session, offline=True).get_ohlc("SPY", "1h", stamp, stamp)
+
+    assert result["close"].tolist() == [10.0]

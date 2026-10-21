@@ -300,6 +300,7 @@ def correr_par(
                 MarketData.timeframe == meta.timeframe,
                 MarketData.timestamp >= meta.start_date,
                 MarketData.timestamp <= meta.end_date,
+                MarketData.source == (f"snapshot:{snapshot_name}" if snapshot_name else "fixture"),
             )
             .count()
         )
@@ -325,7 +326,8 @@ def correr_par(
             # offline_data avoids live yfinance calls for the lookback window before the
             # fixture's first row -- the whole point of a fixture-based run is to be
             # deterministic and network-free.
-            config={**config, "strategy_params": effective_params(reg_name, params)},
+            config={**config, "source_name": f"snapshot:{snapshot_name}" if snapshot_name else "fixture",
+                    "strategy_params": effective_params(reg_name, params)},
             db_session=session,
             strategy=build_strategy(reg_name, **(params or {})),
             intrabar_stops=intrabar_stops,
@@ -636,7 +638,8 @@ def _run_verify_pass(
             end_date=meta.end_date,
             assets=[meta.symbol],
             timeframe=meta.timeframe,
-            config=config or _engine_config(commission_pct, costos),
+            config={**(config or _engine_config(commission_pct, costos)),
+                    "source_name": f"snapshot:{snapshot_name}" if snapshot_name else "fixture"},
             db_session=session,
             strategy=build_strategy(cli_aliases()[strategy_name]),
         )

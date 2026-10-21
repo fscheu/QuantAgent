@@ -244,6 +244,39 @@ def test_backtest_run_exits_zero_and_prints_metrics(cli_runner):
     assert lines[13] == "Peor día: 0.00%"
 
 
+@pytest.mark.parametrize("command", ["run", "verify"])
+def test_fixture_cli_coexiste_con_alpaca(cli_runner, monkeypatch, command):
+    from quantagent.backtesting import fixtures
+    from quantagent.backtesting.backtest import Backtest
+
+    real_load, real_run = fixtures.load_fixture, Backtest.run
+    labels, metrics_seen = [], []
+
+    def seed_foreign(session, name):
+        session.add(MarketData(symbol="SPY", timeframe="1h", source="alpaca",
+                               timestamp=datetime(2026, 6, 1), open=1, high=1, low=1,
+                               close=1, volume=1))
+        session.commit()
+        assert session.query(MarketData).filter_by(source="alpaca").count() == 1
+        return real_load(session, name)
+
+    def capture(self, *args, **kwargs):
+        labels.append({row.source for row in self.db.query(MarketData).all()})
+        metrics = real_run(self, *args, **kwargs)
+        metrics_seen.append((metrics.total_trades, metrics.total_pnl))
+        return metrics
+
+    monkeypatch.setattr("quantagent.cli.backtest.load_fixture", seed_foreign)
+    monkeypatch.setattr(Backtest, "run", capture)
+    result = cli_runner.invoke(backtest_group, [command, "--strategy", "rsi", "--fixture", "spy-smoke"])
+    assert result.exit_code == 0, result.output
+    passes = 1 if command == "run" else 2
+    expected_pnl = 561.18 if command == "run" else 542.36
+    assert labels == [{"alpaca", "fixture"}] * passes
+    assert len(metrics_seen) == passes and all(trades == 9 and pnl == pytest.approx(expected_pnl, abs=0.01)
+                                               for trades, pnl in metrics_seen)
+
+
 def test_backtest_run_commission_pct_charges_every_fill_and_lowers_pnl(cli_runner):
     """--commission-pct llega al broker con modelo pct: la entrada queda registrada como qty * precio * pct
     en el trade y la salida baja el Total PnL, sin cambiar los trades (QuantAgent-de5)."""
@@ -641,6 +674,7 @@ def test_backtest_run_aborts_without_deleting_foreign_market_data(cli_runner):
             MarketData(
                 symbol=meta.symbol,
                 timeframe=meta.timeframe,
+                source="fixture",
                 timestamp=meta.start_date + timedelta(hours=i),
                 open=1,
                 high=1,

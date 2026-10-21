@@ -277,4 +277,21 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-17 #260 QuantAgent-qix2 LB1 (nube) CandleSource y YahooSource, ahora en UTC: merge en lote/datos-externos.
 2026-10-17 #259 QuantAgent-pdxx LB1 (nube) cliente FRED/ALFRED: merge en lote/datos-externos.
 2026-10-17 #258 QuantAgent-jpms LB1 (nube) AlpacaSource solo datos: merge en lote/datos-externos.
+2026-10-20 #348 QuantAgent-ro3w Q01 partición del criterio de paper de la curva: merge. El agente detectó que _curva_y_v30_cartera registra intentos si recibe snapshot.
+2026-10-20 #349 QuantAgent-ro3w.1 Q01a cálculo del criterio desde curvas: merge. Reproduce exacto el IM de n96l (tendencia-momentum 0,76/0,25, benchmark 0,41/0,61).
+2026-10-20 #350 QuantAgent-ro3w.2 Q01b CLI y tablas: merge. Mismas cifras con curvas reales; md5 de registros sin cambio.
+2026-10-20 #351 QuantAgent-rpna Q02 señal turn-of-the-month: merge tras 1 cambio (Viernes Santo no hábil, el mes no abría). Oráculo propio 2007-2024: 0 discrepancias.
+2026-10-20 #353 QuantAgent-rdcf Q03 cambio-de-mes.yaml de vuelta en hipotesis/: merge.
+2026-10-20 #354 QuantAgent-lgg6 Q03b correr --hasta-etapa: merge. Hallazgo del PM: correr abría solo el candado 2019-2022 al pasar la etapa 2.
+2026-10-20 #355 QuantAgent-dtbv Q04 cambio-de-mes corre hasta la etapa 1: merge (docs, sin CI, Fede dijo mergealo vos). Corta con Sharpe -0,46; sin costos 0,03; no es error de señal.
+2026-10-21 #356 QuantAgent-vr3z Q05 fuente de velas por configuración: merge.
+2026-10-21 #357 QuantAgent-gjmf Q06 velas cerradas y UTC: merge.
+2026-10-21 #363 QuantAgent-1y0i Q07 columna source y migración: merge. Probada en Postgres real; borra duplicados, el downgrade no los recupera.
+2026-10-21 #358 QuantAgent-01kb T7 bloqueado: descarto. El error fue del PM al ordenar la cola: T7 necesita la columna source (T4) y el aislamiento (T5).
+2026-10-21 #365 QuantAgent-lrf8 T5 bloqueo por NUMBA_DISABLE_JIT=1: descarto (artefacto de entorno, cambia rsi a 339). Reintentos con diseño decidido por el PM; después se partió en tres.
+2026-10-21 #367 QuantAgent-say Q10 diagnóstico de la salida de paper: merge tras escalar. Bug confirmado (posición contraria suelta tras un stop); Fede pidió arreglarlo.
+2026-10-21 #370 #374 #378 #379 #380 QuantAgent-lrf8.* T5 en cinco entregas: merge. #380 reproducida por el PM: rsi/SPY 187 trades, -9141,21.
+2026-10-21 #375 #376 #377 QuantAgent-ev7d Q13 fix de la salida de paper: merge. #377: los 4 casos con componentes reales quedan planos.
+2026-10-21 #381 QuantAgent-01kb T7 ajuste retroactivo de precios: merge.
+2026-10-21 #369 QuantAgent-oc0h Q11 reversión al 100 %: escalo (queda abierta). Al 100 % la reversión deja la cartera plana; recomendado dejarlo así.
 ```

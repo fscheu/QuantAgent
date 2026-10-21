@@ -215,20 +215,18 @@ def test_execute_position_exit_closes_position(mock_scheduler):
     )
 
 
-def test_execute_position_exit_creates_exit_order(mock_scheduler):
-    """AC-8: _execute_position_exit creates exit order with opposite signal."""
-    position = DummyActivePosition(side=OrderSide.BUY, entry_price=100.0, signal_id=123)
+def test_execute_position_exit_closes_trade(mock_scheduler):
+    """An exit closes the tracked trade rather than sending a reversal signal."""
+    position = DummyActivePosition(
+        side=OrderSide.BUY, entry_price=100.0, signal_id=123, trade_id=456
+    )
 
     mock_scheduler._execute_position_exit(position, "stop_loss", 97.0, "BTC-USD")
 
-    # Verify exit order was placed (opposite signal)
-    mock_scheduler.order_manager.execute_decision.assert_called_once()
-    call_kwargs = mock_scheduler.order_manager.execute_decision.call_args.kwargs
-    assert call_kwargs["symbol"] == "BTC-USD"
-    assert call_kwargs["decision"] == TradeSignal.SHORT  # Opposite of BUY
-    assert call_kwargs["confidence"] == 1.0
-    assert call_kwargs["current_price"] == 97.0
-    assert call_kwargs["trigger_signal_id"] == 123
+    mock_scheduler.order_manager.close_trade.assert_called_once_with(
+        456, 97.0, environment=mock_scheduler.environment
+    )
+    assert mock_scheduler.order_manager.close_trade.return_value.trigger_signal_id == 123
 
 
 def test_execute_position_exit_updates_trade_record(mock_scheduler):
@@ -259,29 +257,31 @@ def test_execute_position_exit_short_position(mock_scheduler):
 
     mock_scheduler._execute_position_exit(position, "stop_loss", 103.0, "ETH-USD")
 
-    # Verify exit order uses LONG (opposite of SELL)
-    call_kwargs = mock_scheduler.order_manager.execute_decision.call_args.kwargs
-    assert call_kwargs["decision"] == TradeSignal.LONG
-    assert call_kwargs["current_price"] == 103.0
+    mock_scheduler.order_manager.close_symbol.assert_called_once_with(
+        "ETH-USD", 103.0, environment=mock_scheduler.environment
+    )
 
 
 def test_execute_position_exit_no_trade_id(mock_scheduler):
     """AC-11: _execute_position_exit handles missing trade_id gracefully."""
-    position = DummyActivePosition(side=OrderSide.BUY, entry_price=100.0, trade_id=None)
+    position = DummyActivePosition(signal_id=321)
 
     # Should not raise, just skip Trade update
     mock_scheduler._execute_position_exit(position, "stop_loss", 97.0, "BTC-USD")
 
-    # Position closed and order executed, but no Trade query
+    # Position closed through the portfolio-aware symbol close path.
     mock_scheduler.position_monitor.close_position.assert_called_once()
-    mock_scheduler.order_manager.execute_decision.assert_called_once()
+    mock_scheduler.order_manager.close_symbol.assert_called_once_with(
+        "BTC-USD", 97.0, environment=mock_scheduler.environment
+    )
+    assert mock_scheduler.order_manager.close_symbol.return_value.trigger_signal_id == 321
     mock_scheduler.db.query.assert_not_called()
 
 
 def test_execute_position_exit_order_failure_rolls_back(mock_scheduler):
     """AC-12: _execute_position_exit rolls back on order failure."""
     position = DummyActivePosition(side=OrderSide.BUY, entry_price=100.0)
-    mock_scheduler.order_manager.execute_decision.side_effect = Exception(
+    mock_scheduler.order_manager.close_symbol.side_effect = Exception(
         "Broker error"
     )
 

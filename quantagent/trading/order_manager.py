@@ -552,16 +552,43 @@ class OrderManager:
             return None
 
         qty = min(float(trade.quantity), current_qty)
+        close_side = OrderSide.SELL if trade.side == OrderSide.BUY else OrderSide.BUY
+        return self._close_position(trade.symbol, qty, current_price, close_side, environment, timestamp)
 
+    def close_symbol(
+        self,
+        symbol: str,
+        current_price: float,
+        environment=None,
+        timestamp: Optional[datetime] = None,
+    ) -> Optional[Order]:
+        """Close the complete portfolio position for a symbol."""
+        current_position = self.portfolio.positions.get(symbol, {})
+        qty = abs(float(current_position.get("qty", 0.0)))
+        if qty <= 0:
+            logger.warning(f"{symbol}: close_symbol skipped - no portfolio position to close")
+            return None
+        close_side = OrderSide.SELL if float(current_position.get("qty", 0.0)) > 0 else OrderSide.BUY
+        return self._close_position(symbol, qty, current_price, close_side, environment, timestamp)
+
+    def _close_position(
+        self,
+        symbol: str,
+        qty: float,
+        current_price: float,
+        close_side: OrderSide,
+        environment=None,
+        timestamp: Optional[datetime] = None,
+    ) -> Optional[Order]:
         is_valid, reason = self.risk_manager.validate_trade(
-            trade.symbol, close_side, qty, current_price
+            symbol, close_side, qty, current_price
         )
         if not is_valid:
-            logger.warning(f"{trade.symbol}: close_trade rejected - {reason}")
+            logger.warning(f"{symbol}: close rejected - {reason}")
             return None
 
         order = Order(
-            symbol=trade.symbol,
+            symbol=symbol,
             side=close_side,
             quantity=qty,
             price=current_price,
@@ -573,14 +600,14 @@ class OrderManager:
             self.db.add(order)
             self.db.flush()
         except Exception as e:
-            logger.error(f"{trade.symbol}: close_trade failed to persist order - {e}")
+            logger.error(f"{symbol}: close failed to persist order - {e}")
             self.db.rollback()
             return None
 
         try:
             filled_order = self.broker.place_order(order)
         except Exception as e:
-            logger.error(f"{trade.symbol}: close_trade broker execution failed - {e}")
+            logger.error(f"{symbol}: close broker execution failed - {e}")
             return None
 
         try:
@@ -588,7 +615,7 @@ class OrderManager:
                 filled_order, filled_order.average_fill_price, timestamp=timestamp
             )
         except Exception as e:
-            logger.error(f"{trade.symbol}: close_trade portfolio update failed - {e}")
+            logger.error(f"{symbol}: close portfolio update failed - {e}")
             return None
 
         self.risk_manager.on_trade_executed(close_trade_record)
@@ -597,7 +624,7 @@ class OrderManager:
             self.db.add(close_trade_record)
             self.db.commit()
         except Exception as e:
-            logger.error(f"{trade.symbol}: close_trade database commit failed - {e}")
+            logger.error(f"{symbol}: close database commit failed - {e}")
             self.db.rollback()
             return None
 

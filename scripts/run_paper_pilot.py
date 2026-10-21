@@ -44,6 +44,7 @@ for _candidate in [
 # ---------------------------------------------------------------------------
 from quantagent import settings  # noqa: E402
 from quantagent.data.provider import DataProvider  # noqa: E402
+from quantagent.data.sources import build_source  # noqa: E402
 from quantagent.database import SessionLocal  # noqa: E402
 from quantagent.models import (  # noqa: E402
     ActivePosition,
@@ -424,7 +425,7 @@ def _build_components(tickers: List[str], session):
         portfolio_manager=pm,
         db=session,
     )
-    dp = DataProvider(session)
+    dp = DataProvider(session, source=build_source())
     pm_monitor = PositionMonitor(
         db_session=session,
         backtest_run_id=None,

@@ -108,6 +108,7 @@ def test_registry_has_expected_entries():
         "SmaCrossStrategy",
         "Momentum12mStrategy",
         "HalloweenStrategy",
+        "TurnOfTheMonthStrategy",
         "LLMAgentStrategy",
         "RsiRegimenStrategy",
         "CurvaPendienteStrategy",

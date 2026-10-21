@@ -26,6 +26,7 @@ def test_parallel_execution(db_session):
     row_count = load_fixture(db_session, "spy-smoke")
     candles = db_session.query(MarketData).order_by(MarketData.timestamp).all()
     assert len(candles) == row_count
+    assert {c.source for c in candles} == {"fixture"}
 
     df = pd.DataFrame(
         {
