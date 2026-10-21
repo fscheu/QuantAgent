@@ -1,6 +1,7 @@
 # Propuesta sin aprobar (familia F1 de docs/02_planning/2026-10-20_investigacion_edge_y_generacion.md).
 # Datos: los del snapshot etf-1d-2026-10-amplio (SPY, IEF), sin costo. La clase de señal no existe:
-# hace falta una clase nueva y que la cartera acepte pesos objetivo por fecha (tickets R09 y R10).
+# hace falta una clase nueva, que la cartera acepte pesos objetivo por fecha y llenado al cierre (ticket R09;
+# la corrida es R10).
 # Intentos: 1 cartera, 1 fila de intentos.csv por etapa corrida (hasta 3).
 # Muestra del paper: 1997-09 a 2023-03, que cubre las etapas 2 y 3; la prueba informativa es la reserva
 # (2023 en adelante) y paper. Antes de aprobar, verificar en el texto del paper la definición exacta de

@@ -7,6 +7,8 @@
 # Contaminación: se propone sabiendo que en 2022 la tendencia con cortos ganó, y la investigación de datos del
 # documento (§2.5) calculó con series de AQR la tendencia por clase de activo en 2019-2022; 2019-2022 no es una
 # prueba ciega para esta propuesta. Rol sugerido: diversificador.
+# El universo incluye DBC y USO, que son PTP: con rotación mensual, no pasa a dinero real hasta cerrar R15
+# (retención del 10 % sobre ventas de PTP en cuentas extranjeras).
 id: tendencia-larga-corta
 idea: El signo del retorno de 12 meses en exceso de la tasa corta anticipa el del mes
   siguiente, en las subas y en las bajas.

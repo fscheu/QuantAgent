@@ -1,7 +1,8 @@
 # Propuesta sin aprobar (familia F3 de docs/02_planning/2026-10-20_investigacion_edge_y_generacion.md).
-# Fase 2: necesita datos que no están en el snapshot (contratos individuales de futuros de CME Group con
-# al menos dos vencimientos por fecha: Norgate Futures o Databento) y un broker con futuros (IBKR; Alpaca
-# no ofrece futuros). No correr hasta que Fede decida datos y broker (ticket R14).
+# Fase 2: la etapa 2 se puede investigar con el CSV gratis de pysystemtrade (fila 3 de §2.5, hasta 2024-03).
+# Para operar hacen falta contratos individuales de futuros de CME Group con al menos dos vencimientos por
+# fecha (Norgate Futures o Databento) y un broker con futuros (IBKR; Alpaca no ofrece futuros). No operar
+# hasta que Fede decida datos y broker (ticket R14).
 # Intentos: 1 cartera, 1 fila de intentos.csv por etapa corrida (hasta 3).
 # Riesgo conocido: las curvas de granos tienen estacionalidad que entra en la pendiente 1.º-2.º vencimiento.
 # Contaminación: la investigación de datos del documento (§2.5) calculó con series de AQR el carry de materias
@@ -23,9 +24,9 @@ hipotesis_economica: En materias primas el carry es la pendiente de la curva de 
   (Szymanowska et al. 2014). Es una prima por riesgo, no una anomalía que el arbitraje
   borre al publicarse. La cartera es neutral en dólares dentro de cada clase y no tiene
   beta de acciones, así que no está en un benchmark comprado. Regla de la cita sin
-  ajustes - carry de materias primas como la pendiente anualizada entre el primer y el
-  segundo vencimiento; de monedas, como la prima del futuro sobre el contado; pesos
-  por ranking dentro de cada clase (rango menos rango medio) e igual riesgo por clase.
+  ajustes. El carry de materias primas es la pendiente anualizada entre el primer y el
+  segundo vencimiento; el de monedas, la prima del futuro sobre el contado; los pesos
+  van por ranking dentro de cada clase (rango menos rango medio), con igual riesgo por clase.
 fuente:
 - 10.1016/j.jfineco.2017.11.002
 - 10.1093/rfs/hhr068
