@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from quantagent import settings
 from quantagent.data.provider import DataProvider
+from quantagent.data.sources import build_source
 from quantagent.database import SessionLocal
 from quantagent.logging_config import setup_logging
 from quantagent.models import Environment
@@ -43,7 +44,7 @@ def _build_scheduler(
             environment=Environment(config.environment),
         )
         components = StrategyAssembler.build_components(resolved, db_session=session)
-        data_provider = DataProvider(session)
+        data_provider = DataProvider(session, source=build_source())
         scheduler = TradingScheduler(
             trading_graph=components.graph,
             order_manager=components.order_manager,

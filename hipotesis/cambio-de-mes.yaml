@@ -2,7 +2,7 @@ id: cambio-de-mes
 idea: El retorno de las acciones se concentra entre el último día hábil del mes y
   los tres primeros del mes siguiente.
 clase: turn-of-the-month
-ventana: &id001
+ventana:
   dia_inicio: [-1]
   dia_fin: [3]
 hipotesis_economica: Los flujos de caja que llegan a fin de mes (sueldos, aportes
@@ -29,4 +29,4 @@ activos:
 - IWM
 - QQQ
 - SPY
-parametros: *id001
+parametros: {}

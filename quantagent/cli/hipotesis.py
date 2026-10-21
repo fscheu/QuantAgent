@@ -232,20 +232,23 @@ def motivo_etapa3_cartera(base, fila):
 @click.argument("archivo", type=click.Path(exists=True, dir_okay=False))
 @click.option("--snapshot", "snapshot_name", required=True)
 @click.option("--carpeta", type=click.Path(file_okay=False), required=True)
-def correr_command(archivo, snapshot_name, carpeta):
+@click.option("--hasta-etapa", type=click.IntRange(0, 3), default=3, show_default=True, expose_value=False,
+              callback=lambda ctx, _p, v: setattr(ctx, "hasta_etapa", v))
+def correr_command(archivo, snapshot_name, carpeta, hasta_etapa=None):
+    hasta_etapa = getattr(click.get_current_context(silent=True), "hasta_etapa", 3) if hasta_etapa is None else hasta_etapa
     h, ok, motivos = admitir_hipotesis(archivo, snapshot_name, True)
     etapa, veredicto = "0", "PASA" if ok else "CORTA"
     motivo = "; ".join(motivos) if motivos else "admisión aceptada"
     registrar_estado(h.id, etapa, veredicto, motivo)
     click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
-    if ok:
+    if ok and hasta_etapa >= 1:
         ret_filtro = filtrar_hipotesis(h, snapshot_name)
         resultados, parametros, veredicto, motivo = ret_filtro[:4]
         sharpe_car = ret_filtro[4] if len(ret_filtro) > 4 else None
         etapa = "1"
         registrar_estado(h.id, etapa, veredicto, motivo)
         click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
-        if veredicto == "PASA":
+        if veredicto == "PASA" and hasta_etapa >= 2:
             try:
                 veredicto, filas = validar_etapa2(h, snapshot_name, parametros, carpeta)
             except Exception as exc:
@@ -271,7 +274,7 @@ def correr_command(archivo, snapshot_name, carpeta):
                         motivo = "filtro optimista en " + ", ".join(activos)
             registrar_estado(h.id, etapa, veredicto, motivo)
             click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
-            if veredicto == "PASA":
+            if veredicto == "PASA" and hasta_etapa >= 3:
                 etapa = "3"
                 try:
                     abrir(h.id, "prueba")

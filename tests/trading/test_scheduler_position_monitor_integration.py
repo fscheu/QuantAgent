@@ -153,10 +153,9 @@ def test_scheduler_stop_loss_exit_skips_llm_and_persists_trade_exit_reason():
         assert trade.exit_signal == "stop_loss"
         assert trade.closed_at is not None
         scheduler.strategy.generate_signal.assert_not_called()
-        scheduler.order_manager.execute_decision.assert_called_once()
-        kwargs = scheduler.order_manager.execute_decision.call_args.kwargs
-        assert kwargs["decision"] == TradeSignal.SHORT
-        assert kwargs["current_price"] == 97.0
+        scheduler.order_manager.close_trade.assert_called_once_with(
+            trade.id, 97.0, environment=scheduler.environment
+        )
 
 
 def test_scheduler_take_profit_exit_skips_llm_and_persists_trade_exit_reason():
@@ -185,7 +184,6 @@ def test_scheduler_take_profit_exit_skips_llm_and_persists_trade_exit_reason():
         assert trade.exit_signal == "take_profit"
         assert trade.closed_at is not None
         scheduler.strategy.generate_signal.assert_not_called()
-        scheduler.order_manager.execute_decision.assert_called_once()
-        kwargs = scheduler.order_manager.execute_decision.call_args.kwargs
-        assert kwargs["decision"] == TradeSignal.SHORT
-        assert kwargs["current_price"] == 106.0
+        scheduler.order_manager.close_trade.assert_called_once_with(
+            trade.id, 106.0, environment=scheduler.environment
+        )
