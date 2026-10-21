@@ -673,7 +673,7 @@ Los primeros 5 son los más fáciles de revisar.
 | Q09 | `QuantAgent-01kb` | T7: detectar ajuste retroactivo de precios y renovar la ventana (nube); depende de Q07 y Q08 porque borra por `(symbol, timeframe, source)` | Split 2:1 simulado deja la historia ajustada; sin diferencia no borra nada | leer | L18 |
 | Q10 | `QuantAgent-say` | Diagnóstico: la salida en paper manda la señal contraria; test sobre el camino real, sin tocar `quantagent/` | El test responde si queda cartera plana o posición opuesta, con evidencia | decidir | L18 |
 | Q11 | `QuantAgent-oc0h` | Tests de reversión al 100 %, 99,85 % y 5 % con slippage y comisión; sin corregir | Efectivo nunca menor a -1e-6; el PR responde si al 100 % queda plana | decidir | L18 |
-| Q12 | `QuantAgent-beo` | Doc con la tabla de diferencias de la regla de salida backtest vs paper y propuesta de unificación en entregas | Cada fila con archivo y línea; ninguna línea de código tocada | decidir | L18 |
+| Q12 | `QuantAgent-beo` | Sale de la cola el 2026-10-21: su entrega (tabla de diferencias y propuesta de unificación) ya está en main desde #83 (`docs/03_design/QuantAgent-beo-DS-regla-de-salida-duplicada.md`); queda solo la decisión de Fede | — | decidir | L18 |
 
 V08b y V23d se agregaron el 2026-10-12 al revisar V23c (#127): la corrida del agente leyó el tramo de prueba 2019–2022 porque el CLI solo protege la reserva, y con llenado en la apertura siguiente el adaptador cancela órdenes al 100% del capital (21 de 48 celdas). Van antes de V24 para que el markdown salga con la sensibilidad corregida.
 
