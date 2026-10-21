@@ -19,6 +19,7 @@ from quantagent.static_util import format_ohlcv_for_agents
 from quantagent.strategy.base import TradingSignal as StrategyTradingSignal
 from quantagent.strategy.base import TradingStrategy
 from quantagent.strategy.llm_agent_strategy import LLMAgentStrategy
+from quantagent.backtesting.intrabar_stops import check_intrabar_stops
 from quantagent.trading.order_manager import OrderManager
 from quantagent.trading.position_monitor import PositionMonitor
 from quantagent.trading_graph import TradingGraph
@@ -254,6 +255,12 @@ class TradingScheduler:
             self.position_monitor.update_candle_tracking(
                 position, current_price, prev_close
             )
+
+            intrabar_exit = check_intrabar_stops(position, df.iloc[-1])
+            if intrabar_exit:
+                exit_reason, exit_price = intrabar_exit
+                self._execute_position_exit(position, exit_reason, exit_price, symbol)
+                return
 
             logger.debug(
                 "Position tracked: %s (candles=%d)",
