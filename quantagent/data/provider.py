@@ -52,6 +52,7 @@ class DataProvider:
         source: Optional[CandleSource] = None,
         offline: bool = False,
         now: Callable[[], datetime] = datetime.utcnow,
+        source_name: Optional[str] = None,
     ):
         """
         Initialize DataProvider.
@@ -68,6 +69,7 @@ class DataProvider:
                 any pre-fixture lookback window on nearly every candle.
         """
         self.db = db_session
+        self.source_name = source.name if source is not None else (source_name or "legacy")
         self.source = source if source is not None else YahooSource()
         self.offline = offline
         self.now = now
@@ -98,6 +100,7 @@ class DataProvider:
                 and_(
                     MarketData.symbol == symbol,
                     MarketData.timeframe == timeframe,
+                    MarketData.source == self.source_name,
                     MarketData.timestamp >= start_date,
                     MarketData.timestamp <= end_date,
                 )
@@ -210,6 +213,7 @@ class DataProvider:
                         MarketData.symbol == symbol,
                         MarketData.timeframe == timeframe,
                         MarketData.timestamp == row["timestamp"],
+                        MarketData.source == self.source_name,
                     )
                 )
                 .first()
@@ -221,6 +225,7 @@ class DataProvider:
             record = MarketData(
                 symbol=symbol,
                 timeframe=timeframe,
+                source=self.source_name,
                 timestamp=row["timestamp"],
                 open=float(row["open"]),
                 high=float(row["high"]),

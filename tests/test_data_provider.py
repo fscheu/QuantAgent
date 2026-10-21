@@ -113,6 +113,7 @@ class TestDataProvider:
         cached_data = MarketData(
             symbol="BTC",
             timeframe="1h",
+            source="fake",
             timestamp=start,
             open=100.0,
             high=105.0,
@@ -180,6 +181,7 @@ class TestDataProvider:
 
             assert stored is not None
             assert float(stored.close) == 102.0
+            assert stored.source == provider.source.name
 
     # Conversion & Transformation Tests
 
@@ -426,7 +428,7 @@ class TestSourceDelegation:
         for h in range(0, 5):  # cacheado 00:00..04:00
             db_session.add(
                 MarketData(
-                    symbol="BTC", timeframe="1h", timestamp=self.START + timedelta(hours=h),
+                    symbol="BTC", timeframe="1h", source="fake", timestamp=self.START + timedelta(hours=h),
                     open=1.0, high=2.0, low=0.5, close=1.5, volume=10.0,
                 )
             )
@@ -536,7 +538,7 @@ class TestDailyBarConvention:
         day = datetime(2024, 1, 2, 0, 0)
         db_session.add(
             MarketData(
-                symbol="QQQ", timeframe="1d", timestamp=day,
+                symbol="QQQ", timeframe="1d", source="fake", timestamp=day,
                 open=1.0, high=2.0, low=0.5, close=1.5, volume=10.0,
             )
         )
@@ -565,3 +567,32 @@ class TestDailyBarConvention:
 
         stored = db_session.query(MarketData).one()
         assert stored.timestamp == datetime(2024, 1, 2, 14, 30)
+
+
+def test_sources_keep_same_candle_key_isolated(db_session):
+    stamp = datetime(2024, 1, 1)
+    for source_name, close in (("snapshot:x", 10.0), ("alpaca", 20.0)):
+        candle = pd.DataFrame({
+            "timestamp": [stamp], "open": [close], "high": [close], "low": [close],
+            "close": [close], "volume": [1],
+        })
+        DataProvider(db_session, source_name=source_name)._store_data("SPY", "1h", candle)
+
+    for source_name, expected in (("snapshot:x", 10.0), ("alpaca", 20.0)):
+        result = DataProvider(db_session, source_name=source_name, offline=True).get_ohlc(
+            "SPY", "1h", stamp, stamp
+        )
+        assert result["close"].tolist() == [expected]
+
+
+def test_offline_without_source_name_reads_legacy(db_session):
+    stamp = datetime(2024, 1, 1)
+    db_session.add(MarketData(
+        symbol="SPY", timeframe="1h", timestamp=stamp, source="legacy",
+        open=10, high=10, low=10, close=10, volume=1,
+    ))
+    db_session.commit()
+
+    result = DataProvider(db_session, offline=True).get_ohlc("SPY", "1h", stamp, stamp)
+
+    assert result["close"].tolist() == [10.0]
