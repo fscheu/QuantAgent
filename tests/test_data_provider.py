@@ -183,6 +183,48 @@ class TestDataProvider:
             assert float(stored.close) == 102.0
             assert stored.source == provider.source.name
 
+    def test_split_reloads_source_history_when_overlap_changes(self, db_session, sample_dates):
+        start, end = sample_dates
+        source = FakeSource()
+        provider = DataProvider(db_session, source=source)
+        db_session.add_all([
+            MarketData(symbol="BTC", timeframe="1h", source="fake", timestamp=start + timedelta(hours=i),
+                       open=100, high=110, low=90, close=100 - i, volume=1)
+            for i in range(3)
+        ])
+        db_session.commit()
+
+        def adjusted(symbol, timeframe, fetch_start, fetch_end):
+            dates = pd.date_range(start, start + timedelta(hours=2), freq="1h", tz="UTC")
+            return pd.DataFrame({"timestamp": dates, "open": 50, "high": 55, "low": 45,
+                                 "close": [50, 49.5, 49], "volume": 1})
+
+        source.fetch = adjusted
+        result = provider.get_ohlc("BTC", "1h", start, end)
+
+        rows = db_session.query(MarketData).filter_by(symbol="BTC", source="fake").all()
+        assert [row.close for row in rows] == [50, 49.5, 49]
+        assert result.iloc[-1]["close"] == 49
+
+    def test_unchanged_overlap_keeps_cached_history(self, db_session, sample_dates):
+        start, end = sample_dates
+        source = FakeSource()
+        provider = DataProvider(db_session, source=source)
+        db_session.add_all([
+            MarketData(symbol="BTC", timeframe="1h", source="fake", timestamp=start + timedelta(hours=i),
+                       open=100, high=110, low=90, close=100 - i, volume=1)
+            for i in range(3)
+        ])
+        db_session.commit()
+        source.fetch = lambda *args: pd.DataFrame({
+            "timestamp": pd.date_range(start + timedelta(hours=2), periods=1, freq="1h", tz="UTC"),
+            "open": [100], "high": [110], "low": [90], "close": [98], "volume": [1],
+        })
+
+        provider.get_ohlc("BTC", "1h", start, end)
+
+        assert db_session.query(MarketData).filter_by(symbol="BTC", source="fake").count() == 3
+
     # Conversion & Transformation Tests
 
     def test_rows_to_df_conversion(self, provider):
