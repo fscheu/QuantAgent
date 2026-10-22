@@ -1,7 +1,9 @@
 """Tests for PositionMonitor."""
 
+import logging
 from datetime import datetime
 from decimal import Decimal
+from types import SimpleNamespace
 
 import pytest
 
@@ -107,6 +109,40 @@ def test_open_position_uses_monitor_environment(db_session):
     )
 
     assert position.environment == Environment.PAPER
+
+
+@pytest.mark.parametrize(
+    "local_qty,remote_positions,expected",
+    [
+        (Decimal("2"), {"BTC": SimpleNamespace(qty="2", side="long")}, []),
+        (Decimal("2"), {"BTC": SimpleNamespace(qty="1", side="long")}, ["BTC"]),
+        (Decimal("2"), {}, ["BTC"]),
+        (None, {"BTC": SimpleNamespace(qty="2", side="long")}, ["BTC"]),
+    ],
+)
+def test_reconcile_alpaca_positions_reports_only_divergences(
+    db_session, caplog, local_qty, remote_positions, expected
+):
+    monitor = PositionMonitor(db_session, environment=Environment.PAPER)
+    if local_qty is not None:
+        monitor.open_position(
+            symbol="BTC", side=OrderSide.BUY, entry_price=100, stop_loss=90,
+            take_profit=110, quantity=local_qty, exit_policy=ExitPolicy.SL_TP_ONLY,
+        )
+    before = db_session.query(ActivePosition).count()
+
+    with caplog.at_level(logging.WARNING):
+        differences = monitor.reconcile_alpaca_positions(
+            SimpleNamespace(get_positions=lambda: remote_positions)
+        )
+
+    assert [item.split(":", 1)[0] for item in differences] == expected
+    assert len([record for record in caplog.records if record.levelno == logging.WARNING]) == len(expected)
+    assert all(record.event_type == "position_reconciliation" for record in caplog.records)
+    assert db_session.query(ActivePosition).count() == before
+    if local_qty is not None:
+        position = db_session.query(ActivePosition).one()
+        assert position.is_active and position.quantity == local_qty
 
 
 def test_update_candle_tracking_up(position_monitor):
