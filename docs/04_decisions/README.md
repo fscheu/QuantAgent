@@ -41,6 +41,7 @@ Decision documents should include:
 - [QuantAgent-u8lf-DC-diagnostico-rsi-gld-apertura-siguiente.md](./QuantAgent-u8lf-DC-diagnostico-rsi-gld-apertura-siguiente.md) - Diagnóstico: rsi/GLD 243 trades al cierre vs 242 en apertura siguiente (V27c)
 - [QuantAgent-yo4s-DC-umbrales-y-llenado.md](./QuantAgent-yo4s-DC-umbrales-y-llenado.md) - Decisión: umbrales del veredicto, llenado, tamaño mínimo y costo de cortos antes de abrir 2019–2022 (V30)
 - [2026-10-17-DC-cartera-de-primas.md](./2026-10-17-DC-cartera-de-primas.md) - Propuesta: carteras de primas de riesgo con universo por estrategia, veredicto de cartera, capa macro y datos (L12)
+- [QuantAgent-R01-DC-decisiones-investigacion-edge.md](./QuantAgent-R01-DC-decisiones-investigacion-edge.md) - Decisiones de investigación de edge, generador, sizing por riesgo y DBC/USO (Fede, 2026-10-22)
 
 
 ## Per-Change Decision Documents

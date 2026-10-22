@@ -2,7 +2,7 @@
 
 **Estado:** Aceptado (decidido por Fede el 2026-10-21/22, en conversación; este documento solo las registra).
 **Origen:** `docs/02_planning/2026-10-20_investigacion_edge_y_generacion.md` §7 (PR #352), `QuantAgent-0gh7` (sizing por riesgo) y la consulta sobre retención fiscal de DBC/USO.
-**Ticket:** R01 (ID de Beads del lote: pendiente, el PM lo completa).
+**Ticket:** R01 = `QuantAgent-e4jc` (padre del lote L20; hijos en `PLAN-CONTINUACION.md`, filas X01–X20).
 
 ## Marco que Fede dejó explícito
 
