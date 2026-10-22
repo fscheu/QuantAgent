@@ -10,12 +10,17 @@ from quantagent.fabrica.propuestas import entradas_de_hipotesis, validar_propues
 def _propuesta(**cambios):
     p = {"id": "p1", "idea": "momentum", "clase": "momentum-12m", "hipotesis_economica": "Subreacción a la información pública.",
          "fuente": ["10.1016/j.jfineco.2011.11.003"],
-         "universo": {"activos": ["SPY", "TLT"], "criterio": "ETFs líquidos de la clase"}, "parametros_libres": 0}
+         "universo": {"activos": ["SPY", "TLT"], "criterio": "ETFs líquidos de la clase"}, "parametros_libres": 0,
+         "tema": "tendencia", "fuente_de_retorno": "prima-de-riesgo"}
     return {**p, **cambios}
 
 
 def test_propuesta_completa_pasa():
     assert validar_propuesta(_propuesta()) is None
+
+
+def test_tema_flujos_institucionales_con_slug_pasa():
+    assert validar_propuesta(_propuesta(tema="flujos-institucionales")) is None
 
 
 @pytest.mark.parametrize("cambios,motivo", [
@@ -27,9 +32,18 @@ def test_propuesta_completa_pasa():
     ({"clase": ""}, "clase"),
     ({"universo": {"activos": ["SPY"]}}, "criterio"),
     ({"parametros_libres": 2}, "parametros_libres"),
+    ({"tema": "tema-inventado"}, "tema"),
+    ({"fuente_de_retorno": "otra"}, "fuente_de_retorno"),
 ])
 def test_rechazos_con_motivo(cambios, motivo):
     assert motivo in validar_propuesta(_propuesta(**cambios))
+
+
+@pytest.mark.parametrize("campo", ["tema", "fuente_de_retorno"])
+def test_rechaza_campos_nuevos_ausentes(campo):
+    propuesta = _propuesta()
+    del propuesta[campo]
+    assert campo in validar_propuesta(propuesta)
 
 
 def test_tercera_variante_de_la_misma_idea_se_rechaza():
