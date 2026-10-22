@@ -13,9 +13,9 @@ from quantagent.fabrica.propuestas import validar_propuesta
 
 def test_escribir_propuestas_desde_respuesta_simulada(tmp_path):
     respuesta = yaml.safe_dump({"propuestas": [
-        {"id": "prop-a", "idea": "momentum", "clase": "momentum-12m", "ventana": {"lookback": [252]}, "hipotesis_economica": "Continuación a 12m.",
+        {"id": "prop-a", "idea": "momentum", "clase": "momentum-12m", "ventana": {"lookback": [252]}, "tema": "tendencia", "fuente_de_retorno": "prima-de-riesgo", "hipotesis_economica": "Continuación a 12m.",
          "fuente": ["10.1016/j.jfineco.2011.11.003"], "universo": {"activos": ["SPY", "QQQ"], "criterio": "ETFs de acciones"}, "parametros_libres": 0},
-        {"id": "prop-b", "idea": "tendencia", "clase": "sma-cross", "hipotesis_economica": "Tendencia secular.",
+        {"id": "prop-b", "idea": "tendencia", "clase": "sma-cross", "tema": "tendencia", "fuente_de_retorno": "prima-de-riesgo", "hipotesis_economica": "Tendencia secular.",
          "fuente": ["10.3905/jwm.2007.674809"], "universo": {"activos": ["SPY", "TLT"], "criterio": "Multiactivo líquido"}, "parametros_libres": 0},
     ]})
     rutas, motivo = escribir_propuestas(respuesta, tmp_path / "propuestas")
@@ -48,10 +48,10 @@ def test_proponer_cli_lista_aceptadas_y_rechazadas_sin_correr_hipotesis(tmp_path
     h_ex = cargar_hipotesis("hipotesis/momentum-12m.yaml")
     resp_file, stdin_file, prop_dir = tmp_path / "resp.yaml", tmp_path / "stdin.txt", tmp_path / "propuestas"
     resp_file.write_text(yaml.safe_dump({"propuestas": [
-        {"id": "prop-ok", "idea": "carry-divisas", "clase": "momentum-12m", "ventana": {"lookback": [63]}, "hipotesis_economica": "Carry corto en bonos.",
+        {"id": "prop-ok", "idea": "carry-divisas", "clase": "momentum-12m", "ventana": {"lookback": [63]}, "tema": "tendencia", "fuente_de_retorno": "prima-de-riesgo", "hipotesis_economica": "Carry corto en bonos.",
          "fuente": ["10.1016/j.jfineco.2011.11.003"], "universo": {"activos": ["IEF", "TLT"], "criterio": "Bonos del Tesoro"}, "parametros_libres": 0},
-        {"id": "prop-sin-doi", "idea": "otra", "clase": "rsi", "hipotesis_economica": "Reversión.", "fuente": ["sin-doi"], "universo": {"activos": ["SPY"], "criterio": "Acciones"}, "parametros_libres": 0},
-        {"id": "prop-dup", "idea": "mom-dup", "clase": "momentum-12m", "ventana": h_ex.parametros, "hipotesis_economica": "Igual.", "fuente": ["10.1016/j.jfineco.2011.11.003"], "universo": {"activos": list(h_ex.activos), "criterio": "12 ETFs"}, "parametros_libres": 0},
+        {"id": "prop-sin-doi", "idea": "otra", "clase": "rsi", "tema": "tendencia", "fuente_de_retorno": "prima-de-riesgo", "hipotesis_economica": "Reversión.", "fuente": ["sin-doi"], "universo": {"activos": ["SPY"], "criterio": "Acciones"}, "parametros_libres": 0},
+        {"id": "prop-dup", "idea": "mom-dup", "clase": "momentum-12m", "ventana": h_ex.parametros, "tema": "tendencia", "fuente_de_retorno": "prima-de-riesgo", "hipotesis_economica": "Igual.", "fuente": ["10.1016/j.jfineco.2011.11.003"], "universo": {"activos": list(h_ex.activos), "criterio": "12 ETFs"}, "parametros_libres": 0},
     ]}), encoding="utf-8")
     (script := tmp_path / "fake_llm.py").write_text(f"import sys, pathlib; pathlib.Path({str(stdin_file)!r}).write_text(sys.stdin.read()); print(pathlib.Path({str(resp_file)!r}).read_text())\n", encoding="utf-8")
     monkeypatch.setenv("QUANTAGENT_LLM_CMD", f"{sys.executable} {script}")
@@ -75,7 +75,7 @@ def test_propuestas_aprobar_rechazar_y_tanda_ignora_no_aprobadas(tmp_path, monke
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path / "datos"))
     prop_dir, hip_dir, runner = tmp_path / "catalogo/propuestas", tmp_path / "hipotesis", CliRunner()
     escribir_propuestas(yaml.safe_dump({"propuestas": [
-        {"id": f"prop-{s}", "idea": f"idea-{s}", "clase": "momentum-12m", "ventana": {"lookback": [63 + i]}, "hipotesis_economica": "Carry corto en bonos.",
+        {"id": f"prop-{s}", "idea": f"idea-{s}", "clase": "momentum-12m", "ventana": {"lookback": [63 + i]}, "tema": "tendencia", "fuente_de_retorno": "prima-de-riesgo", "hipotesis_economica": "Carry corto en bonos.",
          "fuente": ["10.1016/j.jfineco.2011.11.003"], "universo": {"activos": ["IEF", "TLT"], "criterio": "Bonos"}, "parametros_libres": 0}
         for i, s in enumerate(("ok", "no", "pendiente"))
     ]}), prop_dir)
