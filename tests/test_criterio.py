@@ -8,10 +8,59 @@ from quantagent.fabrica.criterio import (
     anios_positivos,
     curva_benchmark,
     evaluar_etapa3_cartera,
+    error_estandar_delta_sharpe,
     recargo_paper,
     sharpe_benchmark,
     sharpe_por_anio,
+    sharpes_en_exceso,
 )
+
+
+def test_error_estandar_delta_sharpe_iid_concuerda_con_formula():
+    rng = np.random.default_rng(41)
+    x = rng.normal(0, 0.01, 5000)
+    y = 0.4 * x + rng.normal(0, 0.01 * np.sqrt(1 - 0.4**2), len(x))
+    fechas = pd.bdate_range("2000-01-03", periods=len(x) + 1)
+    eq_x = pd.Series(100 * np.r_[1, np.cumprod(1 + x)], index=fechas)
+    eq_y = pd.Series(100 * np.r_[1, np.cumprod(1 + y)], index=fechas)
+    estimado = error_estandar_delta_sharpe(eq_x, eq_y)
+    teorico = np.sqrt((2 - 2 * 0.4) / len(x) * 252)
+    assert estimado == pytest.approx(teorico, rel=0.20)
+
+
+@pytest.fixture
+def tasa_macro(tmp_path):
+    from quantagent.data.macro import _escribir
+
+    datos = pd.DataFrame({
+        "fecha": pd.to_datetime(["2020-01-02", "2020-01-06", "2020-01-06"]),
+        "realtime_start": pd.to_datetime(["2020-01-02", "2020-01-07", "2020-01-09"]),
+        "realtime_end": pd.to_datetime(["2099-01-01", "2020-01-08", "2099-01-01"]),
+        "valor": [3.0, 6.0, 12.0],
+    })
+    _escribir(tmp_path / "macro-2026-10", "macro-2026-10", {"DGS3MO": datos})
+    return tmp_path
+
+
+def test_sharpes_exceso_tasa_compartida_sin_anticipacion(tasa_macro):
+    fechas = pd.to_datetime(["2020-01-03", "2020-01-06", "2020-01-07", "2020-01-08", "2020-01-09", "2020-01-10"])
+    # El lunes aún se conoce 3%; el martes 6%; la revisión a 12% recién el jueves.
+    libre = np.array([.03 * 3, .03, .06, .06, .12]) / 365.25
+    curva = pd.Series(100 * np.r_[1, np.cumprod(1 + libre)], index=fechas)
+    assert sharpes_en_exceso(curva, curva * 2, base_dir=tasa_macro) == pytest.approx((0, 0), abs=1e-10)
+    excesos = np.array([.001, -.002, .003, -.001, .002])
+    cartera = pd.Series(100 * np.r_[1, np.cumprod(1 + libre + excesos)], index=fechas)
+    benchmark = pd.Series(100 * np.r_[1, np.cumprod(1 + libre - excesos)], index=fechas)
+    esperado = excesos.mean() / excesos.std(ddof=1) * np.sqrt(5 * 365.25 / 7)
+    assert sharpes_en_exceso(cartera, benchmark, base_dir=tasa_macro) == pytest.approx((esperado, -esperado))
+
+
+def test_sharpes_exceso_falta_cobertura_explicita(tasa_macro):
+    curva = pd.Series([100., 101., 99.], index=pd.date_range("2020-01-01", periods=3))
+    with pytest.raises(ValueError, match="DGS3MO sin cobertura"):
+        sharpes_en_exceso(curva, curva, base_dir=tasa_macro)
+    with pytest.raises(ValueError, match="mismas fechas"):
+        sharpes_en_exceso(curva, curva.shift(1, freq="D"), base_dir=tasa_macro)
 
 
 def _generar_curva(anios_suben=(2019, 2020, 2022), anios_bajan=(2021,), sesiones=250):
@@ -97,6 +146,23 @@ def test_curva_y_sharpe_benchmark():
     assert curva_benchmark(None).empty
     assert curva_benchmark(pd.DataFrame()).empty
     assert sharpe_benchmark(None) == 0.0
+
+
+def test_curva_benchmark_pesos_cartera_separa_peso_de_senal():
+    fechas = pd.to_datetime(["2020-01-02", "2020-01-03", "2020-01-06"])
+    cierres = pd.DataFrame({"A": [100, 110, 121], "B": [100, 100, 100]}, index=fechas)
+    pesos = pd.DataFrame({"A": [0.9, 0.9, 0.9], "B": [0.1, 0.1, 0.1]}, index=fechas)
+
+    igual = curva_benchmark(cierres)
+    mismo_peso = curva_benchmark(cierres, pesos=pesos)
+
+    assert igual.iloc[-1] == pytest.approx(100_000 * 1.105)
+    assert mismo_peso.iloc[-1] == pytest.approx(100_000 * 1.189)
+    pasa, motivos = evaluar_etapa3_cartera(
+        mismo_peso, sharpe_bench3=1e6,
+        sharpe_cartera_etapa2=1.0, sharpe_bench2=0.5,
+    )
+    assert not pasa and any("benchmark" in motivo for motivo in motivos)
 
 
 def test_evaluar_etapa3_cartera_casos():

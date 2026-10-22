@@ -5,7 +5,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from quantagent.models import OrderSide, TradeSignal
+from quantagent.models import ExitPolicy, OrderSide, TradeSignal
+from quantagent.strategy.rsi_strategy import RSIMeanReversionStrategy
 from quantagent.trading.scheduler import TradingScheduler
 
 
@@ -29,6 +30,7 @@ class DummyActivePosition:
         self.entry_price = Decimal(str(entry_price))
         self.stop_loss = Decimal(str(stop_loss))
         self.take_profit = Decimal(str(take_profit))
+        self.exit_policy = ExitPolicy.TIME_BASED
         self.candles_since_entry = candles_since_entry
         self.max_hold_candles = max_hold_candles
         self.signal_id = signal_id
@@ -47,10 +49,7 @@ def mock_scheduler():
     scheduler.order_manager = Mock()
     scheduler.environment = Mock(value="paper")
 
-    # Bind real methods to the mock
-    scheduler._check_exit_conditions = TradingScheduler._check_exit_conditions.__get__(
-        scheduler, TradingScheduler
-    )
+    scheduler.strategy = RSIMeanReversionStrategy()
     scheduler._execute_position_exit = TradingScheduler._execute_position_exit.__get__(
         scheduler, TradingScheduler
     )
@@ -58,60 +57,55 @@ def mock_scheduler():
     return scheduler
 
 
-# ============================================================================
-# Unit Tests: _check_exit_conditions
-# ============================================================================
-
-
-def test_check_exit_conditions_stop_loss_long(mock_scheduler):
+def test_should_exit_stop_loss_long(mock_scheduler):
     """AC-1: Stop loss triggered for LONG position."""
     position = DummyActivePosition(
         side=OrderSide.BUY, entry_price=100.0, stop_loss=98.0, take_profit=105.0
     )
 
-    should_exit, reason = mock_scheduler._check_exit_conditions(position, 97.0)
+    should_exit, reason = mock_scheduler.strategy.should_exit(position, 97.0, None)
 
     assert should_exit is True
-    assert reason == "stop_loss"
+    assert reason == "STOP_LOSS"
 
 
-def test_check_exit_conditions_stop_loss_short(mock_scheduler):
+def test_should_exit_stop_loss_short(mock_scheduler):
     """AC-1: Stop loss triggered for SHORT position."""
     position = DummyActivePosition(
         side=OrderSide.SELL, entry_price=100.0, stop_loss=102.0, take_profit=95.0
     )
 
-    should_exit, reason = mock_scheduler._check_exit_conditions(position, 103.0)
+    should_exit, reason = mock_scheduler.strategy.should_exit(position, 103.0, None)
 
     assert should_exit is True
-    assert reason == "stop_loss"
+    assert reason == "STOP_LOSS"
 
 
-def test_check_exit_conditions_take_profit_long(mock_scheduler):
+def test_should_exit_take_profit_long(mock_scheduler):
     """AC-2: Take profit triggered for LONG position."""
     position = DummyActivePosition(
         side=OrderSide.BUY, entry_price=100.0, stop_loss=98.0, take_profit=105.0
     )
 
-    should_exit, reason = mock_scheduler._check_exit_conditions(position, 106.0)
+    should_exit, reason = mock_scheduler.strategy.should_exit(position, 106.0, None)
 
     assert should_exit is True
-    assert reason == "take_profit"
+    assert reason == "TAKE_PROFIT"
 
 
-def test_check_exit_conditions_take_profit_short(mock_scheduler):
+def test_should_exit_take_profit_short(mock_scheduler):
     """AC-2: Take profit triggered for SHORT position."""
     position = DummyActivePosition(
         side=OrderSide.SELL, entry_price=100.0, stop_loss=102.0, take_profit=95.0
     )
 
-    should_exit, reason = mock_scheduler._check_exit_conditions(position, 94.0)
+    should_exit, reason = mock_scheduler.strategy.should_exit(position, 94.0, None)
 
     assert should_exit is True
-    assert reason == "take_profit"
+    assert reason == "TAKE_PROFIT"
 
 
-def test_check_exit_conditions_max_hold(mock_scheduler):
+def test_should_exit_max_hold(mock_scheduler):
     """AC-3: Max hold candles exceeded."""
     position = DummyActivePosition(
         side=OrderSide.BUY,
@@ -122,13 +116,13 @@ def test_check_exit_conditions_max_hold(mock_scheduler):
         max_hold_candles=20,
     )
 
-    should_exit, reason = mock_scheduler._check_exit_conditions(position, 101.0)
+    should_exit, reason = mock_scheduler.strategy.should_exit(position, 101.0, None)
 
     assert should_exit is True
-    assert reason == "max_hold"
+    assert reason == "TIME_EXPIRED"
 
 
-def test_check_exit_conditions_max_hold_at_limit(mock_scheduler):
+def test_should_exit_max_hold_at_limit(mock_scheduler):
     """AC-3: Max hold candles at exact limit triggers exit."""
     position = DummyActivePosition(
         side=OrderSide.BUY,
@@ -139,25 +133,25 @@ def test_check_exit_conditions_max_hold_at_limit(mock_scheduler):
         max_hold_candles=20,
     )
 
-    should_exit, reason = mock_scheduler._check_exit_conditions(position, 101.0)
+    should_exit, reason = mock_scheduler.strategy.should_exit(position, 101.0, None)
 
     assert should_exit is True
-    assert reason == "max_hold"
+    assert reason == "TIME_EXPIRED"
 
 
-def test_check_exit_conditions_no_exit(mock_scheduler):
+def test_should_exit_no_exit(mock_scheduler):
     """AC-4: No exit conditions met."""
     position = DummyActivePosition(
         side=OrderSide.BUY, entry_price=100.0, stop_loss=98.0, take_profit=105.0
     )
 
-    should_exit, reason = mock_scheduler._check_exit_conditions(position, 101.0)
+    should_exit, reason = mock_scheduler.strategy.should_exit(position, 101.0, None)
 
     assert should_exit is False
     assert reason is None
 
 
-def test_check_exit_conditions_no_max_hold_set(mock_scheduler):
+def test_should_exit_no_max_hold_set(mock_scheduler):
     """AC-5: No exit when max_hold_candles is None."""
     position = DummyActivePosition(
         side=OrderSide.BUY,
@@ -168,34 +162,34 @@ def test_check_exit_conditions_no_max_hold_set(mock_scheduler):
         max_hold_candles=None,
     )
 
-    should_exit, reason = mock_scheduler._check_exit_conditions(position, 101.0)
+    should_exit, reason = mock_scheduler.strategy.should_exit(position, 101.0, None)
 
     assert should_exit is False
     assert reason is None
 
 
-def test_check_exit_conditions_stop_loss_exact_price_long(mock_scheduler):
+def test_should_exit_stop_loss_exact_price_long(mock_scheduler):
     """AC-6: Stop loss at exact price (boundary condition, LONG)."""
     position = DummyActivePosition(
         side=OrderSide.BUY, entry_price=100.0, stop_loss=98.0, take_profit=105.0
     )
 
-    should_exit, reason = mock_scheduler._check_exit_conditions(position, 98.0)
+    should_exit, reason = mock_scheduler.strategy.should_exit(position, 98.0, None)
 
     assert should_exit is True
-    assert reason == "stop_loss"
+    assert reason == "STOP_LOSS"
 
 
-def test_check_exit_conditions_take_profit_exact_price_long(mock_scheduler):
+def test_should_exit_take_profit_exact_price_long(mock_scheduler):
     """AC-6: Take profit at exact price (boundary condition, LONG)."""
     position = DummyActivePosition(
         side=OrderSide.BUY, entry_price=100.0, stop_loss=98.0, take_profit=105.0
     )
 
-    should_exit, reason = mock_scheduler._check_exit_conditions(position, 105.0)
+    should_exit, reason = mock_scheduler.strategy.should_exit(position, 105.0, None)
 
     assert should_exit is True
-    assert reason == "take_profit"
+    assert reason == "TAKE_PROFIT"
 
 
 # ============================================================================

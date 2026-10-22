@@ -28,6 +28,7 @@ from quantagent.fabrica.filtro import (
 from quantagent.fabrica.hipotesis import cargar_hipotesis
 from quantagent.fabrica.informe import datos_informe, render_comparacion, render_informe
 from quantagent.fabrica.investigador import HIPOTESIS_DIR, PROPUESTAS_DIR, proponer_con_llm
+from quantagent.fabrica.propuestas import advertencias_estructurales
 from quantagent.fabrica.transversal import es_transversal
 from quantagent.fabrica.validacion import (
     alarma_cartera,
@@ -77,7 +78,8 @@ def tanda_command(ctx, carpeta_yaml, snapshot_name, carpeta):
                 except Exception:
                     traceback.print_exc()
                 try:
-                    ctx.invoke(informe_command, hipotesis_id=h.id, out=str(salida / "informe.html"), archivo=str(archivo))
+                        ctx.invoke(informe_command, hipotesis_id=h.id, out=str(salida / "informe.html"), archivo=str(archivo),
+                                   carpeta_equity=str(salida / "equity"), snapshot_name=snapshot_name)
                 except Exception:
                     traceback.print_exc()
     (destino / "resumen.md").write_text(resumen_tanda(desde), encoding="utf-8")
@@ -118,6 +120,8 @@ def admitir_hipotesis(archivo, snapshot_name, prueba_unica=False):
         if fecha is not None:
             click.echo(f"prueba de {h.id} ya abierta el {fecha}; no se vuelve a correr")
             raise click.exceptions.Exit(1)
+    for advertencia in advertencias_estructurales(yaml.safe_load(Path(archivo).read_text(encoding="utf-8"))):
+        click.echo(f"Advertencia etapa 0 (no bloquea): {advertencia}")
     if not ok:
         registrar_intento(
             h.clase, h.activos[0], snapshot_name, "etf", 1.0, h.parametros,
@@ -224,7 +228,7 @@ def motivo_error(exc):
 def motivo_etapa3_cartera(base, fila):
     def _v(x):
         return f"{x:.2f}" if isinstance(x, float) else (str(x) if x not in (None, "") else "-")
-    sufijo = f"dsr_efectivo={_v(fila.get('dsr'))}; dsr_crudo={_v(fila.get('dsr_crudo'))}; anios_positivos={fila.get('anios_positivos') or '-'}; benchmark={_v(fila.get('benchmark'))}; n_efectivo={fila.get('n_efectivo') if fila.get('n_efectivo') is not None else '-'}"
+    sufijo = f"dsr_efectivo={_v(fila.get('dsr'))}; dsr_crudo={_v(fila.get('dsr_crudo'))}; anios_positivos={fila.get('anios_positivos') or '-'}; benchmark={_v(fila.get('benchmark'))}; benchmark_mismo_peso={_v(fila.get('benchmark_mismo_peso'))}; n_efectivo={fila.get('n_efectivo') if fila.get('n_efectivo') is not None else '-'}"
     return f"{base}; {sufijo}" if base else sufijo
 
 
@@ -307,10 +311,22 @@ def correr_command(archivo, snapshot_name, carpeta, hasta_etapa=None):
 @click.argument("hipotesis_id")
 @click.option("--out", type=click.Path(dir_okay=False), required=True)
 @click.option("--archivo", type=click.Path(exists=True, dir_okay=False), help="YAML de la hipótesis.")
-def informe_command(hipotesis_id, out, archivo):
+@click.option("--carpeta-equity", type=click.Path(file_okay=False), help="Carpeta con curvas equity guardadas.")
+@click.option("--snapshot", "snapshot_name", help="Snapshot usado para reconstruir el benchmark.")
+def informe_command(hipotesis_id, out, archivo, carpeta_equity, snapshot_name):
     try:
         h = cargar_hipotesis(archivo) if archivo else None
-        html = render_informe(datos_informe(hipotesis_id), h)
+        diagnostico = None
+        if carpeta_equity and snapshot_name and h:
+            from quantagent.fabrica.informe import diagnostico_exceso
+            diagnostico = diagnostico_exceso(h, carpeta_equity, snapshot_name)
+        elif carpeta_equity or snapshot_name:
+            diagnostico = {"disponible": False, "motivo": "requiere --carpeta-equity, --snapshot y --archivo"}
+        else:
+            diagnostico = {"disponible": False, "motivo": "diagnóstico no solicitado"}
+        advertencias = advertencias_estructurales(
+            yaml.safe_load(Path(archivo).read_text(encoding="utf-8"))) if archivo else ()
+        html = render_informe(datos_informe(hipotesis_id), h, diagnostico, advertencias)
     except (ValueError, SnapshotError) as exc:
         raise click.ClickException(str(exc)) from exc
     Path(out).write_text(html, encoding="utf-8")

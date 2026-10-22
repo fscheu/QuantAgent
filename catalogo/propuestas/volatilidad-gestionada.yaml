@@ -17,3 +17,14 @@ universo:
   criterio: El factor de mercado de EE.UU., que es la cartera sobre la que Moreira
     y Muir definen el resultado principal.
 parametros_libres: 0
+clase_nueva: false
+tema: baja-volatilidad
+fuente_de_retorno: prima-de-riesgo
+por_que_no_esta_en_el_benchmark: La exposición se reduce en meses de alta varianza en vez de mantener el benchmark totalmente invertido.
+cita_texto:
+- Moreira y Muir (2017). Volatility-Managed Portfolios
+muestra_de_la_cita: 1926-2015
+evidencia_posterior: []
+fidelidad: igual a la cita; se usa SPY como proxy del mercado de EE.UU.
+datos_nuevos: []
+efecto_esperado: ΔSharpe positivo por gestionar la exposición según varianza; mitad del efecto publicado descontada.

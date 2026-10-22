@@ -33,6 +33,7 @@ Implementation documents should include:
 
 ## Active Per-Change Implementation
 
+- [QuantAgent-v2ll-IM-atribucion.md](./QuantAgent-v2ll-IM-atribucion.md) - Atribución reproducible en pesos, señal y tasa de cuatro carteras (etapa 2 guardada).
 - [QuantAgent-lrf8.3.2-IM-convivencia-fuentes.md](./QuantAgent-lrf8.3.2-IM-convivencia-fuentes.md) - Convivencia de filas `alpaca` con fixture y snapshot en CLI run y verify.
 - [QuantAgent-d4cq.75-IM-punto-de-control-capa-macro.md](./QuantAgent-d4cq.75-IM-punto-de-control-capa-macro.md) - Punto de control L14: comparador sobre datos reales y veredicto por capa.
 - [QuantAgent-d4cq.68-IM-punto-de-control-catalogo-primas.md](./QuantAgent-d4cq.68-IM-punto-de-control-catalogo-primas.md) - Punto de control L13: carteras de primas de riesgo, catálogo, N total y DSR.

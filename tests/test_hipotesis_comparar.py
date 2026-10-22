@@ -85,6 +85,7 @@ def test_cli_registra_una_fila_por_cartera_y_muestra_las_dos_cuentas_de_n(tmp_pa
     assert [x["hipotesis"] for x in filas] == ["n", "c"]
     assert "N 6 con la capa, 5 sin ella" in r.output
     assert "6 contando la capa, 5 sin ella" in out.read_text()
+    assert "±" in out.read_text()
 
 
 def test_cli_rechaza_ventana_de_prueba(tmp_path):

@@ -11,8 +11,10 @@ DOI = re.compile(r"^10\.\d{4,9}/\S+$")
 DOI_EN_TEXTO = re.compile(r"doi\.org/(\S+?)(?=[\s;,]|$)")
 CLAVES = {"id", "prima", "idea", "fuente", "universo", "clase", "datos", "destino"}
 DESTINOS = {"L12", "L13", "L14", "no-aplica"}
+TEMAS = {"tendencia", "momentum transversal", "baja volatilidad", "valor", "carry", "calendario", "flujos institucionales", "prima de volatilidad", "reversión y liquidez", "macro"}
 
-PRIMAS = yaml.safe_load((RAIZ / "catalogo" / "primas.yaml").read_text(encoding="utf-8"))["primas"]
+CATALOGO = yaml.safe_load((RAIZ / "catalogo" / "primas.yaml").read_text(encoding="utf-8"))
+PRIMAS = CATALOGO["primas"]
 
 
 def test_ids_unicos_y_claves_presentes():
@@ -24,6 +26,20 @@ def test_ids_unicos_y_claves_presentes():
         assert p["datos"] in {"precios", "macro"}, p["id"]
         assert p["destino"] in DESTINOS, p["id"]
         assert p["fuente"], f"{p['id']}: sin fuente"
+
+
+def test_campos_de_clasificacion_y_efectos_decaidos():
+    campos = {"tema", "muestra", "publicacion", "fidelidad", "decaimiento"}
+    for p in PRIMAS:
+        assert campos <= p.keys(), p["id"]
+        assert p["tema"] in TEMAS, p["id"]
+        assert all(p[campo] for campo in ("muestra", "publicacion", "fidelidad")), p["id"]
+    descartadas = CATALOGO["descartadas_por_decaimiento"]
+    assert len(descartadas) == 4
+    for efecto in descartadas:
+        assert efecto["tema"] in TEMAS
+        assert DOI.match(efecto["doi"])
+        assert efecto["cita"] and efecto["decaimiento"]
 
 
 def test_no_aplica_exige_motivo():
