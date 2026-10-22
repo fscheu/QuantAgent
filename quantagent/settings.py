@@ -24,6 +24,8 @@ if env_local_path.exists():
 # Database Configuration
 DATABASE_URL: str = os.getenv("DATABASE_URL", "")
 QUANTAGENT_DATA_SOURCE: str = os.getenv("QUANTAGENT_DATA_SOURCE", "yahoo")
+TRADING_BROKER: str = os.getenv("TRADING_BROKER", "paper_local")
+ALPACA_BASE_URL: str = os.getenv("ALPACA_BASE_URL", "https://paper-api.alpaca.markets")
 
 # LLM API Keys
 OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
