@@ -18,6 +18,34 @@ def make_session():
     return Session()
 
 
+def test_broker_selector_uses_registered_constructor():
+    db = make_session()
+    marker = object()
+    StrategyAssembler.register_broker("alpaca_paper", lambda config: marker)
+    try:
+        resolved = StrategyAssembler.from_profiles(
+            portfolio_profile={"broker_type": "alpaca_paper"}
+        )
+        components = StrategyAssembler.build_components(
+            resolved, db_session=db, build_graph=False
+        )
+        assert components.broker is marker
+    finally:
+        StrategyAssembler.BROKER_CONSTRUCTORS.pop("alpaca_paper", None)
+
+
+def test_alpaca_live_url_is_blocked_and_missing_adapter_is_clear():
+    db = make_session()
+    resolved = StrategyAssembler.from_profiles(
+        overrides={"broker_type": "alpaca_paper", "alpaca_base_url": "https://api.alpaca.markets"}
+    )
+    with pytest.raises(ValueError, match="live trading is not supported"):
+        StrategyAssembler.build_components(resolved, db_session=db, build_graph=False)
+    paper = StrategyAssembler.from_profiles(overrides={"broker_type": "alpaca_paper"})
+    with pytest.raises(ValueError, match=r"AlpacaBroker no implementado \(QuantAgent-yme\)"):
+        StrategyAssembler.build_components(paper, db_session=db, build_graph=False)
+
+
 @pytest.mark.api
 def test_build_components_from_snapshot():
     db = make_session()

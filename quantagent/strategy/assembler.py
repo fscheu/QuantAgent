@@ -9,17 +9,29 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
 from quantagent.models import Environment
 from quantagent.portfolio.manager import PortfolioManager
-from quantagent.trading.order_manager import OrderManager
-from quantagent.trading.paper_broker import PaperBroker
-from quantagent.trading.position_sizer import PositionSizer
-from quantagent.trading.risk_manager import RiskManager
 from quantagent.trading_graph import TradingGraph
+
+if TYPE_CHECKING:
+    from quantagent.trading.order_manager import OrderManager
+    from quantagent.trading.paper_broker import PaperBroker
+    from quantagent.trading.position_sizer import PositionSizer
+    from quantagent.trading.risk_manager import RiskManager
+
+
+def _build_paper_local(config):
+    from quantagent.trading.paper_broker import PaperBroker
+
+    return PaperBroker(
+        slippage_pct=config.slippage_pct,
+        commission_model="pct" if config.commission_pct > 0 else "none",
+        commission_pct=config.commission_pct,
+    )
 
 
 @dataclass(frozen=True)
@@ -39,6 +51,8 @@ class ResolvedConfig:
     commission_pct: float = 0.0
     regla_tamano: str = "confianza"
     orden_minima: Optional[float] = None
+    broker_type: str = "paper_local"
+    alpaca_base_url: str = "https://paper-api.alpaca.markets"
 
 
 @dataclass
@@ -53,6 +67,14 @@ class TradingComponents:
 
 class StrategyAssembler:
     """Factory to resolve strategy config and assemble trading components."""
+
+    BROKER_CONSTRUCTORS: Dict[str, Callable[[ResolvedConfig], object]] = {
+        "paper_local": _build_paper_local
+    }
+
+    @staticmethod
+    def register_broker(name: str, constructor: Callable[[ResolvedConfig], object]) -> None:
+        StrategyAssembler.BROKER_CONSTRUCTORS[name] = constructor
 
     @staticmethod
     def DEFAULTS() -> dict:
@@ -71,6 +93,8 @@ class StrategyAssembler:
             "use_checkpointing": settings.TRADING_USE_CHECKPOINTING,
             "universe": settings.get_trading_universe(),
             "orden_minima": None,
+            "broker_type": settings.TRADING_BROKER,
+            "alpaca_base_url": settings.ALPACA_BASE_URL,
         }
 
     @staticmethod
@@ -99,7 +123,7 @@ class StrategyAssembler:
                 k: v
                 for k, v in portfolio_profile.items()
                 if k
-                in {"universe", "base_position_pct", "slippage_pct", "initial_cash"}
+                in {"universe", "base_position_pct", "slippage_pct", "initial_cash", "broker_type", "alpaca_base_url"}
             }
         )
 
@@ -161,6 +185,10 @@ class StrategyAssembler:
         db_session: Session,
         build_graph: bool = True,
     ) -> TradingComponents:
+        from quantagent.trading.order_manager import OrderManager
+        from quantagent.trading.position_sizer import PositionSizer
+        from quantagent.trading.risk_manager import RiskManager
+
         """Construct trading components wired with the resolved config.
 
         build_graph=False skips TradingGraph (and its LLM clients, which need an API key);
@@ -182,11 +210,14 @@ class StrategyAssembler:
             max_position_pct=resolved.max_position_pct,
             db=db_session,
         )
-        broker = PaperBroker(
-            slippage_pct=resolved.slippage_pct,
-            commission_model="pct" if resolved.commission_pct > 0 else "none",
-            commission_pct=resolved.commission_pct,
-        )
+        if resolved.broker_type == "alpaca_paper" and resolved.alpaca_base_url != "https://paper-api.alpaca.markets":
+            raise ValueError("alpaca_paper requires https://paper-api.alpaca.markets; live trading is not supported")
+        constructor = StrategyAssembler.BROKER_CONSTRUCTORS.get(resolved.broker_type)
+        if constructor is None:
+            if resolved.broker_type == "alpaca_paper":
+                raise ValueError("AlpacaBroker no implementado (QuantAgent-yme)")
+            raise ValueError(f"Broker constructor not registered: {resolved.broker_type}")
+        broker = constructor(resolved)
         om = OrderManager(
             position_sizer=ps,
             risk_manager=rm,
@@ -224,6 +255,8 @@ class StrategyAssembler:
             "max_position_pct": resolved.max_position_pct,
             "slippage_pct": resolved.slippage_pct,
             "commission_pct": resolved.commission_pct,
+            "broker_type": resolved.broker_type,
+            "alpaca_base_url": resolved.alpaca_base_url,
             # Align with TradingGraph expected keys (agent_llm_*)
             "agent_llm_provider": resolved.model_provider,
             "agent_llm_model": resolved.model_name,
@@ -326,4 +359,6 @@ class StrategyAssembler:
                 if merged.get("orden_minima") is not None
                 else None
             ),
+            broker_type=str(merged.get("broker_type", "paper_local")),
+            alpaca_base_url=str(merged.get("alpaca_base_url", "https://paper-api.alpaca.markets")),
         )
