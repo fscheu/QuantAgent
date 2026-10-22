@@ -85,6 +85,62 @@ no se lo borra del universo ni se presenta el subconjunto disponible como libre
 de sesgo de supervivencia. Ningún fondo aporta velas operables previas a su primera
 sesión; cualquier proxy requiere el documento separado D-2b, sin retornos futuros.
 
+## Empalme de proxies de investigación (QuantAgent-e4jc.8.2)
+
+Parte de la regla D-2a integrada en el [commit 0c7a0330](https://github.com/fscheu/QuantAgent/commit/0c7a0330dc4244191cbffe01822280c44e4d2028).
+Convención fijada antes de seleccionar candidatos: corte **2007-12-31** y comienzo
+del tramo de investigación **2007-01-03**. No crea series ni velas operables anteriores
+al lanzamiento; un proxy se identifica por separado del ETF y de su retorno total.
+
+| Clase elegible | Fuente gratuita y transformación fijada | Límites / decisión de empalme |
+| --- | --- | --- |
+| Moneda extranjera frente al USD | FX diario FRED, fuente Fed H.10: DEXUSAL (AUD), DEXUSUK (GBP) en USD/moneda; DEXCAUS (CAD), DEXSZUS (CHF), DEXJPUS (JPY) en moneda/USD. Para otras monedas se exige la misma evidencia de orientación. | Solo proxy spot de la misma moneda y exposición larga 1x; no reproduce intereses del depósito, carry, comisiones ni distribuciones del fondo. |
+| Crédito corporativo o soberano emergente | Tasas FRED H.15 y DGS* solo como referencias de tasas estadounidenses, sin enlace al ETF. | Sin proxy defendible con estas fuentes: faltan spreads, impagos, recuperos, cupones y duración de la cartera. Conservar faltantes. |
+| Bonos soberanos internacionales | FX H.10 y Treasury sintético DGS* como referencias separadas, sin combinarlos para enlazar el ETF. | No reconstruyen curvas locales, pesos por país, duración ni cobertura cambiaria del mandato histórico. Conservar faltantes. |
+| Renta variable de un país | Ningún proxy admitido a partir de FX o tasas. | Faltan índice histórico, dividendos, composición y tratamiento fiscal; conservar faltantes. |
+| Inverso diario -1x de renta variable | Ningún proxy admitido a partir de FX o tasas. | Negar el retorno acumulado de un índice no reproduce el rebalanceo diario, financiación ni gastos; conservar faltantes. |
+
+Fuentes y unidades consultadas el 2026-10-22: [H.10](https://www.federalreserve.gov/releases/h10/current/)
+(cotizaciones de mediodía de Nueva York), [DEXUSUK](https://fred.stlouisfed.org/series/DEXUSUK),
+[DEXJPUS](https://fred.stlouisfed.org/series/DEXJPUS), [H.15](https://www.federalreserve.gov/releases/h15/)
+y [DGS10](https://fred.stlouisfed.org/series/DGS10) (rendimiento anual en porcentaje,
+vencimiento constante; no precio ni retorno). Los códigos FX son series de monedas,
+no una selección de ETFs. La elección depende del mandato al corte, nunca del ajuste posterior.
+
+Para FX, normalizar a `S_t` en USD por unidad extranjera: usar la cotización directa
+o su recíproca según la tabla; `r_proxy,t = S_t / S_{t-1} - 1`, decimal, sin sumar carry.
+Para tasas, `y_t = DGS10_t / 100`; ni `y_t` ni su variación son retornos de un bono.
+Como referencia sintética separada, fijar un Treasury par de 10 años que se renueva
+cada día observado, nominal 1, cupón semestral `c/2`, con `c = y_{t-1}`.
+Su precio aproximado con curva plana es
+`B(y,h;c) = sum(k=1..20, (c/2 + 1[k=20]) / (1+y/2)^(k-2h))`;
+`r_sint,t = B(y_t,dt;c) / B(y_{t-1},0;c) - 1`, con `dt` días calendario/365.
+Incluye devengo y repricing aproximados para intervalos menores a medio año;
+no es un índice Treasury real: ignora curva completa, costos y cambios de composición.
+No se elige otro plazo DGS* por correlación futura ni se traslada esta duración a crédito
+o bonos internacionales. Este sintético no habilita empalmes de esas clases.
+
+Fecha del enlace FX `L`: primera sesión desde `max(lanzamiento, 2007-01-03)` con precio
+ajustado del ETF `A_L` y spot disponibles, no posterior al corte; sin ella no hay enlace.
+`A` es el cierre ajustado por splits y dividendos de Yahoo del snapshot D-2c, en USD.
+En cada segmento continuo, `P_t = product(u=t0+1..t, 1+r_proxy,u)` con `P_t0=1`.
+Serie de investigación: `I_t=P_t/P_L` para `t<L`; `I_L=1`; `I_t=A_t/A_L` para `t>L`.
+El primer retorno del ETF es `A_{L+1}/A_L-1`: no se calcula un salto entre niveles
+de distintas unidades. Registrar `L` y ambos niveles originales, sin ajustar por regresión.
+La normalización en L cambia la escala, no usa retornos posteriores para elegir el proxy.
+
+Validación descriptiva: pares diarios comunes desde `L` hasta **2007-12-31**,
+sin extender a 2008 para completar muestra. Informar fechas, cantidad de pares,
+correlación y media/desvío de `r_ETF-r_proxy`; con menos de 60 pares, declarar muestra
+insuficiente. No calibrar pesos, carry o fecha del enlace ni seleccionar candidatos
+con esas métricas; no certifican equivalencia de retorno total. El horario spot difiere
+del cierre del ETF. No descargar ni evaluar 2019–2022 ni la reserva 2023+ para validar.
+Conservar ausencias como NA, sin interpolar, rellenar ni saltar una sesión faltante
+para fabricar un retorno diario; un hueco interrumpe el segmento acumulado y el enlace
+solo cubre el segmento que contiene L. Registrar fuente, fecha de descarga, versión/hash,
+calendario y ajustes del ETF: una descarga actual puede revisar la historia y no prueba
+disponibilidad en tiempo real en 2007; para señales se necesita fecha de publicación/vintage.
+
 ## Factores mensuales hasta 2018-12 (QuantAgent-e4jc.7)
 
 Receta de investigación interna: BAB de [AQR](https://www.aqr.com/Insights/Datasets/Betting-Against-Beta-Equity-Factors-Monthly),
