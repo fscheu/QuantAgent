@@ -109,6 +109,34 @@ def test_scheduler_settings_validation_empty_assets():
         SchedulerSettings(assets=[])
 
 
+def test_intrabar_stop_ignored_on_entry_candle():
+    config = SchedulerSettings(enabled=True, assets=["BTC"], environment="paper")
+    strategy = Mock()
+    strategy.should_exit.return_value = (False, None)
+    strategy.generate_signal.return_value = None
+    scheduler = TradingScheduler(
+        trading_graph=Mock(), order_manager=Mock(), data_provider=Mock(),
+        db_session=DummySession(), scheduler_settings=config,
+        scheduler_factory=DummyScheduler, strategy=strategy,
+    )
+    position = Mock(
+        decision_timestamp=datetime(2024, 1, 1, 2), side=OrderSide.BUY,
+        stop_loss=90, take_profit=130,
+    )
+    scheduler.position_monitor.get_active_position = Mock(return_value=position)
+    scheduler.position_monitor.update_candle_tracking = Mock()
+    scheduler._fetch_market_data = Mock(return_value=pd.DataFrame({
+        "timestamp": pd.date_range("2024-01-01", periods=3, freq="h"),
+        "open": [100, 100, 100], "high": [101, 101, 101],
+        "low": [99, 99, 89], "close": [100, 100, 95], "volume": [1, 1, 1],
+    }))
+    scheduler._execute_position_exit = Mock()
+
+    scheduler._process_asset("BTC")
+
+    scheduler._execute_position_exit.assert_not_called()
+
+
 # ============================================================================
 # AC-1: Scheduler Start (Happy Path)
 # ============================================================================
