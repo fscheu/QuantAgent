@@ -239,6 +239,7 @@ class StrategyAssembler:
             broker=broker,
             portfolio_manager=pm,
             db=db_session,
+            cash_reserve_pct=0.05 if resolved.environment != Environment.BACKTEST else 0.0,
         )
 
         # TradingGraph configuration mapping

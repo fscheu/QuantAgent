@@ -405,6 +405,7 @@ class TestOrderManager:
         assert result is None
 
     def test_gap_next_open_excede_efectivo_despues_del_limite_al_cierre(self):
+        self.order_manager.cash_reserve_pct = 0.05
         qty = self.order_manager._cap_entry_qty(OrderSide.BUY, 1000.0, 100.0)
 
         assert qty == pytest.approx(95000 / (100 * 1.01))
@@ -1234,7 +1235,8 @@ class TestEntryCappedToCash:
         portfolio = PortfolioManager(initial_cash=100000.0, environment=Environment.BACKTEST, db=db_session)
         risk = RiskManager(portfolio, max_position_pct=1.0, db=db_session)
         broker = PaperBroker(slippage_pct=self.SLIP, commission_model="pct", commission_pct=self.COM)
-        om = OrderManager(PositionSizer(base_position_pct=base_pct), risk, broker, portfolio, db_session)
+        om = OrderManager(PositionSizer(base_position_pct=base_pct), risk, broker, portfolio, db_session,
+                          cash_reserve_pct=0.05)
         return om, portfolio
 
     def test_long_entry_at_100pct_is_capped_not_rejected(self, db_session):
