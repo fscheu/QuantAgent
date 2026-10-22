@@ -130,3 +130,78 @@ for name, entry in json.loads((out / "manifest.json").read_text()).items():
 
 French conserva sus unidades porcentuales y sus sentinelas de faltantes (-99.99/-999);
 AQR conserva decimales y celdas vacías. No convertir faltantes en retornos al atribuir.
+
+## Futuros de pysystemtrade hasta 2024-03 (QuantAgent-e4jc.9)
+
+Inventario para investigación de tendencia y carry, sin conexión al motor ni a Alpaca.
+Fuente: [pysystemtrade de Robert Carver](https://github.com/robcarver17/pysystemtrade/tree/007feb5da6cde5b812cdbc1463e73d016393bc63/data/futures),
+revisión fija del 25/03/2024. Se conservan los CSV originales de `adjusted_prices_csv`
+(precio continuo ajustado) y `multiple_prices_csv` (precio, carry, forward y contratos).
+`CARRY` es el precio de otro contrato, no un retorno ni una señal de carry calculada.
+Los faltantes quedan vacíos; no se rellenan. La frecuencia puede ser intradiaria.
+
+El [README de origen](https://github.com/robcarver17/pysystemtrade/blob/007feb5da6cde5b812cdbc1463e73d016393bc63/README.md#licensing-and-legal-stuff)
+declara GNU GPL v3 y ausencia de garantía. La receta guarda su `LICENSE` y `README.md`
+sin modificar junto a los datos; no redistribuye CSV ni incorpora código de pysystemtrade.
+Todo queda ignorado en `local-data/pysystemtrade-2024-03/` (aproximadamente 700 MB).
+El manifiesto identifica URL, revisión, fecha de descarga, hashes, columnas, filas y extremos.
+Esto incorpora datos hasta marzo de 2024, pero no autoriza evaluar estrategias en
+2019–2022 ni abrir la reserva 2023+: solo se comprueba carga y metadatos, sin resultados.
+
+Desde la raíz, descargá y verificá el inventario con este comando (requiere red):
+
+```bash
+python -c 'from pathlib import Path; exec(Path("local-data/README.md").read_text().split("```python\n")[2].split("```")[0])'
+```
+
+```python
+import hashlib
+import io
+import json
+import subprocess
+from datetime import datetime, timezone
+from pathlib import Path
+from urllib.request import urlopen
+
+import pandas as pd
+
+ref = "007feb5da6cde5b812cdbc1463e73d016393bc63"
+repo = "https://api.github.com/repos/robcarver17/pysystemtrade"
+base = f"https://raw.githubusercontent.com/robcarver17/pysystemtrade/{ref}/"
+out = Path("local-data/pysystemtrade-2024-03")
+with urlopen(f"{repo}/git/trees/{ref}?recursive=1", timeout=60) as response:
+    tree = json.load(response)
+assert not tree["truncated"]
+folders = ("data/futures/adjusted_prices_csv/", "data/futures/multiple_prices_csv/")
+paths = sorted(item["path"] for item in tree["tree"]
+               if item["path"].startswith(folders) and item["path"].endswith(".csv"))
+assert paths
+manifest = dict(revision=ref, downloaded_at=datetime.now(timezone.utc).isoformat(),
+                license="GPL-3.0", files={})
+for source in ["LICENSE", "README.md", *paths]:
+    with urlopen(base + source, timeout=60) as response:
+        raw = response.read()
+    relative = source.removeprefix("data/futures/")
+    path = out / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(raw)
+    entry = dict(url=base + source, sha256=hashlib.sha256(raw).hexdigest())
+    if source.endswith(".csv"):
+        frame = pd.read_csv(io.BytesIO(raw), index_col="DATETIME", parse_dates=True)
+        assert not frame.empty and frame.index.notna().all()
+        assert frame.index.max() < pd.Timestamp("2024-04-01")
+        entry.update(rows=len(frame), first=str(frame.index.min()),
+                     last=str(frame.index.max()), columns=list(frame.columns))
+    manifest["files"][relative] = entry
+(out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+for relative, entry in json.loads((out / "manifest.json").read_text())["files"].items():
+    path = out / relative
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == entry["sha256"]
+    subprocess.run(["git", "check-ignore", "-q", str(path)], check=True)
+subprocess.run(["git", "check-ignore", "-q", str(out / "manifest.json")], check=True)
+sample = pd.read_csv(out / "multiple_prices_csv/SP500.csv", index_col="DATETIME", parse_dates=True)
+assert {"PRICE", "CARRY", "FORWARD", "PRICE_CONTRACT", "CARRY_CONTRACT", "FORWARD_CONTRACT"} == set(sample.columns)
+assert sample[["PRICE", "CARRY", "FORWARD"]].notna().all(axis=1).any()
+print(f"{len(paths)} CSV: fuente, fechas, hashes e ignore OK")
+print(f"SP500 cargado: {len(sample)} filas; {sample.index.min()} a {sample.index.max()}")
+```
