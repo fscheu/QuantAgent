@@ -63,15 +63,11 @@ class OrderManager:
         self.entradas_descartadas_orden_minima = 0
 
     def _cap_entry_qty(self, side: OrderSide, qty: float, price: float) -> float:
-        """Recorta una entrada que compra a lo que el efectivo alcanza a pagar con slippage y comisión (sin apalancar).
-
-        Una entrada en corto conserva su cantidad: la venta suma efectivo, no hay faltante que cubrir.
-        Solo cubre el faltante de costos: si el nocional ya excede el efectivo, no toca la cantidad y
-        RiskManager (check 1) la rechaza como antes. El 1e-9 absorbe el redondeo de flotantes al 100%.
-        """
+        """Limita compras al 95% del efectivo, incluidos los costos del broker."""
         cash = self.portfolio.cash
         if side != OrderSide.BUY or qty * price > cash * (1 + 1e-9):
             return qty
+        cash *= 0.95
         unit_cost = price * (1 + self.broker.slippage_pct)
         if self.broker.commission_model == "pct":
             unit_cost *= 1 + self.broker.commission_pct

@@ -407,8 +407,9 @@ class TestOrderManager:
     def test_gap_next_open_excede_efectivo_despues_del_limite_al_cierre(self):
         qty = self.order_manager._cap_entry_qty(OrderSide.BUY, 1000.0, 100.0)
 
-        assert qty == pytest.approx(100000 / (100 * 1.01))
-        assert qty * 105.0 * (1 + self.broker.slippage_pct) > self.portfolio.cash
+        assert qty == pytest.approx(95000 / (100 * 1.01))
+        assert qty * 105.0 * (1 + self.broker.slippage_pct) <= self.portfolio.cash
+        assert self.order_manager._cap_entry_qty(OrderSide.SELL, 1000.0, 100.0) == 1000.0
 
     def test_close_symbol_closes_full_position_and_registers_order(self):
         trade = Mock()
@@ -1241,11 +1242,11 @@ class TestEntryCappedToCash:
         order = om.execute_decision("SPY", "LONG", 1.0, self.PRICE)
         assert order is not None, "la entrada al 100% con costos no debe rechazarse"
         # cantidad esperada: el efectivo dividido el costo por unidad (slippage de compra + comisión sobre el precio con slippage)
-        expected = 100000.0 / (self.PRICE * (1 + self.SLIP) * (1 + self.COM))
+        expected = 95000.0 / (self.PRICE * (1 + self.SLIP) * (1 + self.COM))
         qty = float(order.filled_quantity)
         assert qty == pytest.approx(expected, rel=1e-9)
         assert qty < 100000.0 / self.PRICE
-        assert 0 <= portfolio.cash < 1e-6
+        assert portfolio.cash == pytest.approx(5000.0, abs=1e-6)
 
     def test_short_entry_at_100pct_keeps_its_quantity(self, db_session):
         """Un corto no paga su nocional en efectivo (la venta suma): no hay faltante que recortar."""
@@ -1280,7 +1281,7 @@ class TestEntryCappedToCash:
         if initial_side == "SHORT":
             expected_qty = min(
                 requested_qty,
-                cash_after_close / (self.PRICE * (1 + self.SLIP) * (1 + self.COM)),
+                cash_after_close * 0.95 / (self.PRICE * (1 + self.SLIP) * (1 + self.COM)),
             )
 
         reversal = om.execute_decision(
