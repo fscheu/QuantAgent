@@ -10,7 +10,12 @@ depends_on = None
 
 def upgrade():
     if op.get_bind().dialect.name == "postgresql":
-        op.execute("ALTER TYPE orderstatus ADD VALUE IF NOT EXISTS 'EXPIRED'")
+        op.execute(
+            "DO $$ BEGIN "
+            "IF to_regtype('orderstatus') IS NOT NULL THEN "
+            "ALTER TYPE orderstatus ADD VALUE IF NOT EXISTS 'EXPIRED'; "
+            "END IF; END $$"
+        )
 
 
 def downgrade():
