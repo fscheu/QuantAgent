@@ -256,7 +256,16 @@ class TradingScheduler:
                 position, current_price, prev_close
             )
 
-            intrabar_exit = check_intrabar_stops(position, df.iloc[-1])
+            candle = df.iloc[-1]
+            candle_time = pd.Timestamp(candle["timestamp"])
+            entry_time = pd.Timestamp(position.decision_timestamp)
+            if candle_time.tzinfo != entry_time.tzinfo:
+                candle_time = candle_time.tz_localize(None)
+                entry_time = entry_time.tz_localize(None)
+            intrabar_exit = (
+                check_intrabar_stops(position, candle)
+                if candle_time > entry_time else None
+            )
             if intrabar_exit:
                 exit_reason, exit_price = intrabar_exit
                 self._execute_position_exit(position, exit_reason, exit_price, symbol)
