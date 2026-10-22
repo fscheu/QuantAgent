@@ -43,3 +43,90 @@ Esta carpeta contiene archivos y datos locales necesarios para el desarrollo, ba
 ## Configuración de entorno
 
 La variable de entorno `QUANTAGENT_SNAPSHOT_DIR` apunta a esta carpeta. `loop/config.env` (`LOOP_SNAPSHOT_DIR`), el valor por defecto de `scripts/loop/run_nightly.sh` y `scripts/loop/try.sh` apuntan a la ruta absoluta de `local-data/` del checkout principal, para que el loop y los worktrees puedan acceder a estos datos sin duplicar archivos.
+
+## Factores mensuales hasta 2018-12 (QuantAgent-e4jc.7)
+
+Receta de investigación interna: BAB de [AQR](https://www.aqr.com/Insights/Datasets/Betting-Against-Beta-Equity-Factors-Monthly),
+FF5, momentum y 49 industrias de [Kenneth French](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html).
+Sirven para elegir familias y atribuir retornos; no son precios operables ni se conectan a estrategias.
+Este primer inventario no incluye QMJ, carry ni momentum de series de tiempo.
+Respeta la decisión 14 del [DC R01](../docs/04_decisions/QuantAgent-R01-DC-decisiones-investigacion-edge.md).
+
+Instalá la dependencia de esta receta con `python -m pip install openpyxl==3.1.5`.
+Desde la raíz, ejecutá el bloque con este comando (sin copiar el código a otro archivo):
+
+```bash
+python -c 'from pathlib import Path; exec(Path("local-data/README.md").read_text().split("```python\n")[1].split("```")[0])'
+```
+
+Los originales se descargan en memoria y no se guardan. Solo se escriben CSV cortados
+en `local-data/factores-2018/`, junto con `manifest.json` (URL, hash del original y del CSV,
+unidad, filas y extremos). Todo queda ignorado por git, incluidos los derivados AQR.
+Las descargas actuales pueden revisar historia anterior: los hashes identifican esa versión,
+no un snapshot conocido en 2018. No se muestran retornos de 2019–2022 ni de la reserva.
+La receta verifica el corte, los hashes de cada CSV y la exclusión de git antes de terminar.
+
+```python
+import csv
+import hashlib
+import io
+import json
+import re
+import subprocess
+import zipfile
+from datetime import datetime
+from pathlib import Path
+from urllib.request import urlopen
+
+import openpyxl
+
+out = Path("local-data/factores-2018")
+out.mkdir(parents=True, exist_ok=True)
+manifest = {}
+aqr = "https://www.aqr.com/-/media/AQR/Documents/Insights/Data-Sets/"
+french = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/"
+sources = {"aqr-bab": aqr + "Betting-Against-Beta-Equity-Factors-Monthly.xlsx"}
+for name in ("F-F_Research_Data_5_Factors_2x3", "F-F_Momentum_Factor", "49_Industry_Portfolios"):
+    sources[name] = french + name + "_CSV.zip"
+for name, url in sources.items():
+    with urlopen(url, timeout=60) as response:
+        raw = response.read()
+    if name == "aqr-bab":
+        sheet = openpyxl.load_workbook(io.BytesIO(raw), read_only=True, data_only=True)["BAB Factors"]
+        rows = iter(sheet.values)
+        header = next(row for row in rows if row[0] == "DATE")
+        dated = [(datetime.strptime(row[0], "%m/%d/%Y").strftime("%Y%m"), row[1:30])
+                 for row in rows if isinstance(row[0], str) and re.fullmatch(r"\d{2}/\d{2}/\d{4}", row[0])]
+        columns, unit = list(header[1:30]), "decimal"
+    else:
+        archive = zipfile.ZipFile(io.BytesIO(raw))
+        lines = archive.read(archive.namelist()[0]).decode("utf-8-sig").splitlines()
+        start = next(i for i, line in enumerate(lines) if re.match(r"^\s*\d{6},", line))
+        columns, unit = next(csv.reader([lines[start - 1]]))[1:], "percent"
+        dated = []
+        for row in csv.reader(lines[start:]):
+            if not row or not re.fullmatch(r"\d{6}", row[0].strip()):
+                break  # Solo el primer bloque mensual; no anual ni ponderación alternativa.
+            dated.append((row[0].strip(), row[1:]))
+    kept = [(date, values) for date, values in dated if date <= "201812"]
+    assert kept and max(date for date, _ in kept) <= "201812"
+    path = out / (name + ".csv")
+    with path.open("w", newline="") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(["month", *columns])
+        writer.writerows((date, *values) for date, values in kept)
+    manifest[name] = dict(url=url, source_sha256=hashlib.sha256(raw).hexdigest(),
+                          csv_sha256=hashlib.sha256(path.read_bytes()).hexdigest(), unit=unit,
+                          rows=len(kept), first=kept[0][0], last=kept[-1][0])
+(out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+for name, entry in json.loads((out / "manifest.json").read_text()).items():
+    path = out / (name + ".csv")
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == entry["csv_sha256"]
+    with path.open() as stream:
+        assert all(row["month"] <= "201812" for row in csv.DictReader(stream))
+    subprocess.run(["git", "check-ignore", "-q", str(path)], check=True)
+    print(f"{name}: {entry['rows']} filas, {entry['first']}–{entry['last']}; hash e ignore OK")
+```
+
+French conserva sus unidades porcentuales y sus sentinelas de faltantes (-99.99/-999);
+AQR conserva decimales y celdas vacías. No convertir faltantes en retornos al atribuir.
