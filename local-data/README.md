@@ -44,6 +44,47 @@ Esta carpeta contiene archivos y datos locales necesarios para el desarrollo, ba
 
 La variable de entorno `QUANTAGENT_SNAPSHOT_DIR` apunta a esta carpeta. `loop/config.env` (`LOOP_SNAPSHOT_DIR`), el valor por defecto de `scripts/loop/run_nightly.sh` y `scripts/loop/try.sh` apuntan a la ruta absoluta de `local-data/` del checkout principal, para que el loop y los worktrees puedan acceder a estos datos sin duplicar archivos.
 
+## Regla de admisión de ETFs ampliados (QuantAgent-e4jc.8.1)
+
+Corte histórico: **2007-12-31, cierre de mercado**. Esta regla se escribe ahora;
+no se afirma que existiera en 2007. Se integra en un commit propio; después D-2b
+documenta los empalmes enlazando ese commit y recién D-2c investiga candidatos.
+No contiene símbolos ni autoriza descargas, empalmes o backtests.
+
+Un instrumento se admite si cumple **todas** estas condiciones, según documentos
+del emisor o registros de bolsa/regulador referidos a su situación al corte:
+
+1. Cotizaba en una bolsa estadounidense, en USD, con lanzamiento y primera
+   sesión negociable no posteriores al corte; seguía activo en esa fecha.
+   Fecha de creación del índice o historia simulada no cuentan como lanzamiento.
+2. Era un fondo cotizado o trust cotizado con exposición a una de estas clases:
+   moneda extranjera frente al USD; crédito corporativo o soberano emergente;
+   bonos soberanos internacionales; renta variable de un país; o renta variable
+   mediante un inverso diario 1x. La clase surge del mandato vigente al corte.
+3. Su exposición objetivo era larga sin apalancamiento (1x), salvo los inversos
+   de renta variable con objetivo diario -1x, admitidos explícitamente.
+   Se excluyen múltiplos distintos de +1x/-1x y los ETN (deuda del emisor).
+4. No tenía clasificación fiscal de publicly traded partnership (PTP).
+   El uso de derivados por sí solo no determina esa clasificación; se requiere
+   evidencia de la estructura fiscal vigente al corte.
+
+La evaluación posterior registrará por instrumento clase, estructura, objetivo,
+fechas de lanzamiento/primera sesión y baja si existe, fuente (URL y fecha del
+documento), decisión sí/no por condición y motivo. Un dato sin evidencia queda
+como no verificable y no se admite; no se presume que cumple. Una fuente publicada
+después puede acreditar hechos históricos, pero no justificar con información
+posterior una condición que no se cumplía al corte.
+
+No se filtra por rentabilidad, Sharpe, volatilidad, correlación, volumen o AUM
+posteriores, ni por seguir disponible hoy. Se buscarán también fondos liquidados,
+fusionados o retirados después del corte en registros históricos, conservando su
+elegibilidad y documentando la baja; no se reemplazan por ganadores supervivientes.
+Los cerrados antes del corte y los lanzados después quedan excluidos.
+Si faltan precios de un desaparecido elegible, se registra como dato pendiente:
+no se lo borra del universo ni se presenta el subconjunto disponible como libre
+de sesgo de supervivencia. Ningún fondo aporta velas operables previas a su primera
+sesión; cualquier proxy requiere el documento separado D-2b, sin retornos futuros.
+
 ## Factores mensuales hasta 2018-12 (QuantAgent-e4jc.7)
 
 Receta de investigación interna: BAB de [AQR](https://www.aqr.com/Insights/Datasets/Betting-Against-Beta-Equity-Factors-Monthly),
