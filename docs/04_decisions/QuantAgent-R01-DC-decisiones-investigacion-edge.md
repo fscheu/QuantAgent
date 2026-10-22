@@ -28,6 +28,8 @@ Avanzar ahora tiene como fin tener estrategias para probar paper trading. Paper 
 | 14 | Datos gratis (Q14) | **Filas 1, 2 y 3 de §2.5**: factores AQR/French (cortados en 2018-12, AQR no se versiona en el repo), ETFs ampliados con regla fechada en 2007, CSV de pysystemtrade. **Subastas del Tesoro (fila 4) rechazadas.** Un ticket por fuente, armado por el PM. Nada pago hasta que una familia pase la etapa 2 con datos gratis. |
 | 15 | Modelo del generador (Q15) | **Sí**: modelo más capaz disponible con esfuerzo alto, refutador de otra familia, búsqueda web para verificar citas; el refutador corre en Codex por cuota. |
 
+- Orden de ejecución de F1, F2 y la reserva: indistinto (Fede, 2026-10-22). Fede no tiene una base de ETFs comprados aparte, lo que confirma dejar C1 afuera.
+
 ## Sizing por riesgo (`QuantAgent-0gh7`)
 
 - Fórmula: `cantidad (acciones) = (capital × riesgo_por_trade_pct) / |precio_entrada − precio_stop|`. El numerador está en USD y el divisor en USD por acción.
