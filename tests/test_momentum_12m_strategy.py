@@ -7,14 +7,15 @@ from typing import Dict, List
 import pandas as pd
 import pytest
 
-from quantagent.backtesting.backtest import Backtest, check_intrabar_stops
-from quantagent.strategy.registry import cli_aliases
+from quantagent.backtesting.backtest import Backtest
+from quantagent.backtesting.intrabar_stops import check_intrabar_stops
 from quantagent.models import ActivePosition, Environment, ExitPolicy, MarketData, OrderSide
 from quantagent.strategy import build_strategy
 from quantagent.strategy.momentum_12m_strategy import (
     Momentum12mStrategy,
     is_last_session_of_month,
 )
+from quantagent.strategy.registry import cli_aliases
 
 # Sesiones reales de NYSE del 2023-09-05 al 2023-11-17 (lunes a viernes; en ese tramo
 # no hay feriados). Últimas sesiones de mes: viernes 2023-09-29 y martes 2023-10-31.

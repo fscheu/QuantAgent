@@ -5,7 +5,7 @@ import math
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from quantagent.agent_models import TradingDecision
+from quantagent.backtesting.intrabar_stops import evaluate_position_exit
 from quantagent.data.asset_types import AssetType, get_asset_type
 from quantagent.data.market_calendar import get_market_calendar
 from quantagent.data.provider import DataProvider
@@ -30,7 +31,6 @@ from quantagent.models import (
 from quantagent.static_util import format_ohlcv_for_agents
 from quantagent.strategy.assembler import StrategyAssembler
 from quantagent.strategy.base import TradingStrategy
-from quantagent.backtesting.intrabar_stops import check_intrabar_stops, evaluate_position_exit
 from quantagent.strategy.llm_agent_strategy import LLMAgentStrategy
 from quantagent.trading.position_monitor import PositionMonitor
 
