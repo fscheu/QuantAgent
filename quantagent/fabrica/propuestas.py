@@ -13,7 +13,7 @@ import re
 
 DOI = re.compile(r"^10\.\d{4,9}/\S+$")
 MAX_VARIANTES = 2  # por idea y por lote (DC 2026-10-19, D3.7); la tercera se rechaza: es otra idea y va con su propia cita
-TEMAS = {"tendencia", "momentum transversal", "baja volatilidad", "valor", "carry", "calendario", "flujos institucionales", "prima de volatilidad", "reversión y liquidez", "macro"}
+TEMAS = {"tendencia", "momentum-transversal", "baja-volatilidad", "valor", "carry", "calendario", "flujos-institucionales", "prima-de-volatilidad", "reversion-y-liquidez", "macro"}
 FUENTES_DE_RETORNO = {"prima-de-riesgo", "provision-de-liquidez", "sesgo-de-comportamiento", "friccion"}
 
 

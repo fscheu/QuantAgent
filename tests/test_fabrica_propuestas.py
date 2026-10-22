@@ -19,6 +19,10 @@ def test_propuesta_completa_pasa():
     assert validar_propuesta(_propuesta()) is None
 
 
+def test_tema_flujos_institucionales_con_slug_pasa():
+    assert validar_propuesta(_propuesta(tema="flujos-institucionales")) is None
+
+
 @pytest.mark.parametrize("cambios,motivo", [
     ({"fuente": []}, "DOI"),
     ({"fuente": ["Jegadeesh y Titman 1993"]}, "DOI"),
