@@ -1,4 +1,7 @@
-from quantagent.backtesting.backtest import check_intrabar_stops
+from quantagent.backtesting.intrabar_stops import (
+    check_intrabar_stops,
+    evaluate_position_exit,
+)
 from quantagent.models import ActivePosition, ExitPolicy, OrderSide
 from quantagent.strategy.rsi_strategy import RSIMeanReversionStrategy
 
@@ -35,6 +38,13 @@ def _paper_rule(position: ActivePosition, candle: dict):
     return (reason, candle["close"]) if should_exit else None
 
 
+def _unified_rule(position: ActivePosition, candle: dict):
+    return evaluate_position_exit(
+        position, candle,
+        lambda pos, close, _ohlc: RSIMeanReversionStrategy().should_exit(pos, close, None),
+    )
+
+
 def test_trailing_stop_sale_en_backtest_y_paper():
     """Valida: máximo visto 120, trailing 5% => piso 114; con precio 113 el
     backtest y paper cierran por TRAILING_STOP."""
@@ -48,6 +58,8 @@ def test_trailing_stop_sale_en_backtest_y_paper():
 
     assert backtest == (True, "TRAILING_STOP")
     assert paper == ("TRAILING_STOP", price)
+    candle = {"open": price, "high": price, "low": price, "close": price}
+    assert _unified_rule(_long_position(highest_price_seen=120.0), candle) == paper
 
 
 def test_stop_tocado_dentro_de_la_vela_cierra_a_nivel_de_stop():
@@ -59,6 +71,7 @@ def test_stop_tocado_dentro_de_la_vela_cierra_a_nivel_de_stop():
     paper = _paper_rule(position, candle)
     assert backtest == ("STOP_LOSS", 90.0)
     assert paper == backtest
+    assert _unified_rule(position, candle) == paper
 
 
 def test_max_hold_sin_salida_en_ambos():
@@ -79,6 +92,8 @@ def test_max_hold_sin_salida_en_ambos():
 
     assert backtest == (False, None)
     assert paper is None
+    candle = {"open": price, "high": price, "low": price, "close": price}
+    assert _unified_rule(_long_position(**kwargs), candle) == paper
 
 
 def test_misma_salida_por_stop_con_igual_texto_de_razon():
@@ -94,3 +109,5 @@ def test_misma_salida_por_stop_con_igual_texto_de_razon():
     # QuantAgent-beo U1: ambos caminos comparten la razón.
     assert backtest == (True, "STOP_LOSS")
     assert paper == ("STOP_LOSS", price)
+    candle = {"open": price, "high": price, "low": price, "close": price}
+    assert _unified_rule(_long_position(), candle) == paper
