@@ -38,6 +38,7 @@ class OrderManager:
         portfolio_manager,  # PortfolioManager instance
         db: Session,
         orden_minima: Optional[float] = None,
+        cash_reserve_pct: float = 0.0,
     ):
         """
         Initialize Order Manager.
@@ -61,17 +62,14 @@ class OrderManager:
             else getattr(position_sizer, "orden_minima", None)
         )
         self.entradas_descartadas_orden_minima = 0
+        self.cash_reserve_pct = cash_reserve_pct
 
     def _cap_entry_qty(self, side: OrderSide, qty: float, price: float) -> float:
-        """Recorta una entrada que compra a lo que el efectivo alcanza a pagar con slippage y comisión (sin apalancar).
-
-        Una entrada en corto conserva su cantidad: la venta suma efectivo, no hay faltante que cubrir.
-        Solo cubre el faltante de costos: si el nocional ya excede el efectivo, no toca la cantidad y
-        RiskManager (check 1) la rechaza como antes. El 1e-9 absorbe el redondeo de flotantes al 100%.
-        """
+        """Limita compras al efectivo disponible después de la reserva y los costos."""
         cash = self.portfolio.cash
         if side != OrderSide.BUY or qty * price > cash * (1 + 1e-9):
             return qty
+        cash *= 1 - self.cash_reserve_pct
         unit_cost = price * (1 + self.broker.slippage_pct)
         if self.broker.commission_model == "pct":
             unit_cost *= 1 + self.broker.commission_pct

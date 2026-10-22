@@ -60,8 +60,11 @@ def test_alpaca_paper_builds_configured_broker_and_blocks_live(monkeypatch):
     )
     with pytest.raises(ValueError, match="live trading is not supported"):
         StrategyAssembler.build_components(resolved, db_session=db, build_graph=False)
-    paper = StrategyAssembler.from_profiles(overrides={"broker_type": "alpaca_paper"})
+    paper = StrategyAssembler.from_profiles(
+        overrides={"broker_type": "alpaca_paper"}, environment=Environment.PAPER
+    )
     components = StrategyAssembler.build_components(paper, db_session=db, build_graph=False)
+    assert components.order_manager.cash_reserve_pct == 0.05
     from quantagent.trading.alpaca_broker import AlpacaBroker
     assert isinstance(components.broker, AlpacaBroker)
     assert calls == {"key": "paper-key", "secret": "paper-secret", "paper": True}
@@ -95,6 +98,7 @@ def test_build_components_from_snapshot():
     assert components.risk_manager is not None
     assert components.broker is not None
     assert components.order_manager is not None
+    assert components.order_manager.cash_reserve_pct == 0.0
     assert components.graph is not None
 
 
