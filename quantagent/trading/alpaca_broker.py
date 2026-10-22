@@ -18,9 +18,15 @@ class AlpacaBroker(Broker):
             raise ValueError(f"Unsupported Alpaca order type: {order.order_type}")
         if order.order_type == OrderType.LIMIT and order.price is None:
             raise ValueError("Limit order requires price")
-        request = SimpleNamespace(symbol=order.symbol, qty=str(order.quantity),
-                                  side=order.side.value, type=types[order.order_type],
-                                  time_in_force="day", limit_price=str(order.price) if order.price is not None else None)
+        fields = dict(symbol=order.symbol, qty=str(order.quantity), side=order.side.value,
+                      time_in_force="day")
+        if order.order_type == OrderType.LIMIT:
+            fields["limit_price"] = str(order.price)
+        try:
+            from alpaca.trading.requests import LimitOrderRequest, MarketOrderRequest
+            request = (LimitOrderRequest if order.order_type == OrderType.LIMIT else MarketOrderRequest)(**fields)
+        except ImportError:
+            request = SimpleNamespace(**fields, type=types[order.order_type])
         try:
             result = self.client.submit_order(order_data=request)
         except Exception as exc:
@@ -28,6 +34,7 @@ class AlpacaBroker(Broker):
                 order.status, order.comment = OrderStatus.REJECTED, str(exc)
                 return order
             raise
+        order.alpaca_order_id = str(result.id) if getattr(result, "id", None) else None
         status = str(getattr(result.status, "value", result.status)).lower()
         if status == "rejected":
             order.status = OrderStatus.REJECTED
