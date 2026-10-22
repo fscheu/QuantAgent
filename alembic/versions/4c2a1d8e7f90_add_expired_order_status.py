@@ -12,7 +12,7 @@ def upgrade():
     if op.get_bind().dialect.name == "postgresql":
         op.execute(
             "DO $$ BEGIN "
-            "IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'orderstatus') THEN "
+            "IF to_regtype('orderstatus') IS NOT NULL THEN "
             "ALTER TYPE orderstatus ADD VALUE IF NOT EXISTS 'EXPIRED'; "
             "END IF; END $$"
         )
