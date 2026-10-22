@@ -1,11 +1,20 @@
-# Propuesta sin aprobar (familia F1 de docs/02_planning/2026-10-20_investigacion_edge_y_generacion.md).
+# F1 aprobada: decisión 7 de docs/04_decisions/QuantAgent-R01-DC-decisiones-investigacion-edge.md.
 # Datos: los del snapshot etf-1d-2026-10-amplio (SPY, IEF), sin costo. La clase de señal no existe:
 # hace falta una clase nueva, que la cartera acepte pesos objetivo por fecha y llenado al cierre (ticket R09;
 # la corrida es R10).
 # Intentos: 1 cartera, 1 fila de intentos.csv por etapa corrida (hasta 3).
-# Muestra del paper: 1997-09 a 2023-03, que cubre las etapas 2 y 3; la prueba informativa es la reserva
-# (2023 en adelante) y paper. Antes de aprobar, verificar en el texto del paper la definición exacta de
-# la "cuarta semana" (acá: últimos 5 días hábiles del mes).
+# QuantAgent-e4jc.1: verificado en la versión NBER de marzo de 2025 (no la revisión de 2026).
+# PDF: https://d1e00ek4ebabms.cloudfront.net/production/uploaded-files/w33554-c27954c3-8c17-44f5-a26f-1800436b6ebf.pdf
+# §2.2, pp. 10–11 (PDF 12–13): week4 = Dummy5 Days, últimos cinco días de negociación,
+# no cuarta semana del calendario. §3.1, p. 13 (PDF 15), usa week4_t para predecir Ret_{t+1}.
+# §5, p. 32 (PDF 34), expresa la cartera como R_t, con señal conocida desde t-1 (§2.2, p. 8).
+# Convención de F1 para esos cinco retornos diarios: entrar al cierre de la sesión anterior
+# a la quinta sesión contando desde fin de mes; salir al cierre de la última. Recalcular cada día
+# con el cierre previo; no fijar la dirección toda la semana ni usar el cierre futuro de entrada.
+# Ejemplo F1: octubre de 2024, entrada 24/10, retornos 25, 28, 29, 30 y 31/10, salida 31/10.
+# Activos del paper: futuros E-mini S&P 500 y Treasury note a 10 años (apéndice A, p. 44 / PDF 46).
+# Muestra: 1997-09-10 a 2023-03-17 (tabla 7, p. 33 / PDF 35); etapas 2 y 3 son réplica.
+# La reserva 2023+ se solapa hasta 2023-03-17; ese tramo tampoco es evidencia fuera de muestra.
 id: rebalanceo-fin-de-mes
 idea: Los fondos que rebalancean hacia pesos fijos de acciones y bonos venden a fin de
   mes el activo que más subió en el mes, y esa venta predecible baja su retorno en
@@ -23,10 +32,14 @@ hipotesis_economica: Pensiones, fondos con fecha objetivo y otros fondos balance
   unas dos semanas; quien toma el otro lado le cobra la liquidez. La señal sale solo
   de los retornos del mes, la contraparte tiene mandatos que le impiden dejar de hacerlo,
   y el benchmark (50 % SPY y 50 % IEF comprados) no tiene esta fuente de retorno. La
-  regla es la del paper sin ajustes, con una cartera 60/40 que deriva desde el último
-  cierre de mes; si su peso de acciones supera el 60 %, los últimos 5 días hábiles
-  del mes se está 100 % en IEF; si queda por debajo, 100 % en SPY; el resto del mes,
-  50/50 como el benchmark, para que la diferencia mida solo la señal.
+  regla de F1 usa una cartera de referencia 60/40 que deriva desde el último cierre
+  de mes. Para cada uno de los últimos 5 retornos diarios del mes, si el peso de acciones
+  al cierre previo supera el 60 %, se está 100 % en IEF; si es menor, 100 % en SPY;
+  si es igual, 50/50. El resto del mes, 50/50 como el benchmark.
+fidelidad: 'desvío: SPY/IEF sustituyen futuros; F1 usa solo Calendar y posiciones largas
+  100/0 o 50/50, con la convención de cierres indicada arriba. La estrategia del paper
+  (§5, p. 32) combina Threshold y Calendar, toma futuros largos y cortos y agrega
+  una señal de reversión el primer día hábil del mes; F1 omite esa reversión.'
 fuente:
 - 10.3386/w33554
 - 10.1093/rfs/hhz054
