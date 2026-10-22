@@ -324,7 +324,9 @@ def informe_command(hipotesis_id, out, archivo, carpeta_equity, snapshot_name):
             diagnostico = {"disponible": False, "motivo": "requiere --carpeta-equity, --snapshot y --archivo"}
         else:
             diagnostico = {"disponible": False, "motivo": "diagnóstico no solicitado"}
-        html = render_informe(datos_informe(hipotesis_id), h, diagnostico)
+        advertencias = advertencias_estructurales(
+            yaml.safe_load(Path(archivo).read_text(encoding="utf-8"))) if archivo else ()
+        html = render_informe(datos_informe(hipotesis_id), h, diagnostico, advertencias)
     except (ValueError, SnapshotError) as exc:
         raise click.ClickException(str(exc)) from exc
     Path(out).write_text(html, encoding="utf-8")
