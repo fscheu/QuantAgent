@@ -29,9 +29,11 @@ def _titulo_crossref(doi):
 
 
 def _coincide_titulo(titulo, cita):
-    palabras = lambda s: set(re.findall(r"[a-z0-9]+", s.lower()))
-    palabras_titulo = palabras(titulo)
-    return bool(palabras_titulo) and len(palabras_titulo & palabras(cita)) / len(palabras_titulo) >= 0.6
+    def _palabras(s):
+        return set(re.findall(r"[a-z0-9]+", s.lower()))
+
+    palabras_titulo = _palabras(titulo)
+    return bool(palabras_titulo) and len(palabras_titulo & _palabras(cita)) / len(palabras_titulo) >= 0.6
 
 
 def _idea(p):
