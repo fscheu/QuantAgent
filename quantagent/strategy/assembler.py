@@ -34,6 +34,22 @@ def _build_paper_local(config):
     )
 
 
+def _build_alpaca_paper(config):
+    import os
+
+    try:
+        from alpaca.trading.client import TradingClient
+    except ImportError as exc:
+        raise ImportError("alpaca-py is required for broker_type='alpaca_paper'") from exc
+
+    client = TradingClient(
+        os.getenv("ALPACA_API_KEY"), os.getenv("ALPACA_SECRET_KEY"), paper=True
+    )
+    from quantagent.trading.alpaca_broker import AlpacaBroker
+
+    return AlpacaBroker(client)
+
+
 @dataclass(frozen=True)
 class ResolvedConfig:
     environment: Environment
@@ -69,7 +85,8 @@ class StrategyAssembler:
     """Factory to resolve strategy config and assemble trading components."""
 
     BROKER_CONSTRUCTORS: Dict[str, Callable[[ResolvedConfig], object]] = {
-        "paper_local": _build_paper_local
+        "paper_local": _build_paper_local,
+        "alpaca_paper": _build_alpaca_paper,
     }
 
     @staticmethod
@@ -214,8 +231,6 @@ class StrategyAssembler:
             raise ValueError("alpaca_paper requires https://paper-api.alpaca.markets; live trading is not supported")
         constructor = StrategyAssembler.BROKER_CONSTRUCTORS.get(resolved.broker_type)
         if constructor is None:
-            if resolved.broker_type == "alpaca_paper":
-                raise ValueError("AlpacaBroker no implementado (QuantAgent-yme)")
             raise ValueError(f"Broker constructor not registered: {resolved.broker_type}")
         broker = constructor(resolved)
         om = OrderManager(
