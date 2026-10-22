@@ -1,4 +1,5 @@
 import csv
+from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
@@ -54,6 +55,42 @@ def test_corte_en_etapa_3_usa_solo_activos_de_esa_etapa(raiz):
 def test_hipotesis_desconocida_falla(raiz):
     r, out = informe(raiz, "nada")
     assert r.exit_code != 0 and "desconocida" in r.output and not out.exists()
+
+
+@pytest.mark.parametrize("hid", ["cartera-tendencia-momentum", "cartera-transversal",
+                                 "cartera-estacionalidad", "cartera-nucleo-curva"])
+def test_informe_advierte_overlay_en_cuatro_carteras_conocidas(raiz, hid):
+    registrar_estado(hid, "3", "CORTA", "no supera al benchmark")
+    archivo = Path(__file__).resolve().parents[1] / "hipotesis" / f"{hid}.yaml"
+    r, out = informe(raiz, hid, archivo)
+    assert r.exit_code == 0, r.output
+    html = out.read_text()
+    assert "Advertencias etapa 0 (no bloquean)" in html
+    assert "<li>overlay_solo_largo</li>" in html
+    assert "desvio_de_la_cita" not in html and "muestra_solapada" not in html
+    assert "Veredicto: CORTA en la etapa 3" in html
+
+
+@pytest.mark.parametrize("fiel", [False, True])
+def test_informe_deriva_advertencias_del_yaml_sin_cambiar_veredicto(raiz, fiel):
+    import yaml
+
+    propuesta = {"id": "h-avisos", "autor": "fede", "justificacion": "prueba",
+                 "timeframe": "1d", "clase": "momentum-12m", "parametros": {"lookback": [252]},
+                 "universo": "ETFs líquidos", "activos": ["SPY"],
+                 "fidelidad": "desvío: cita largo-corto", "muestra_de_la_cita": "1985-2009"}
+    if fiel:
+        propuesta.update(fidelidad="igual a la cita", muestra_de_la_cita="1985-2006", activos=["CL"])
+    archivo = raiz / "avisos.yaml"
+    archivo.write_text(yaml.safe_dump(propuesta))
+    registrar_estado("h-avisos", "0", "PASA", "admitida")
+    r, out = informe(raiz, "h-avisos", archivo)
+    assert r.exit_code == 0, r.output
+    html = out.read_text()
+    for codigo in ("desvio_de_la_cita", "muestra_solapada", "overlay_solo_largo"):
+        assert (f"<li>{codigo}</li>" in html) == (not fiel)
+    assert ("Advertencias etapa 0" in html) == (not fiel)
+    assert "Veredicto: PASA en la etapa 0" in html
 
 
 def test_informe_cartera_dos_piernas_contiene_universos_y_fila_cartera_sin_precios(raiz):

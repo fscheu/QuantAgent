@@ -118,7 +118,7 @@ def datos_informe(hipotesis_id):
     }
 
 
-def render_informe(d, hipotesis=None, diagnostico=None):
+def render_informe(d, hipotesis=None, diagnostico=None, advertencias=()):
     f = d["final"]
     li = "".join(f"<li>Etapa {escape(e['etapa'])}: <b>{escape(e['veredicto'])}</b> — {escape(e['motivo'])}</li>"
                  for e in d["etapas"])
@@ -136,6 +136,11 @@ def render_informe(d, hipotesis=None, diagnostico=None):
         extra = f"<p>{escape(hipotesis.justificacion)}</p><h2>Piernas</h2>{secciones}"
     else:
         extra = ""
+
+    avisos = ""
+    if advertencias:
+        items = "".join(f"<li>{escape(codigo)}</li>" for codigo in advertencias)
+        avisos = f"<h2>Advertencias etapa 0 (no bloquean)</h2><ul>{items}</ul>"
 
     tabla_e3 = ""
     if any(e.get("etapa") == "3" for e in d["etapas"]):
@@ -160,7 +165,7 @@ def render_informe(d, hipotesis=None, diagnostico=None):
         f"<!doctype html><html lang='es'><meta charset='utf-8'><title>Informe {escape(d['id'])}</title>"
         "<style>body{font:16px sans-serif;max-width:50em;margin:2em auto}td,th{padding:.2em .8em}</style>"
         f"<h1>{escape(d['id'])}</h1>{extra}<h2>Veredicto: {escape(f['veredicto'])} en la etapa {escape(f['etapa'])}</h2>"
-        f"<ul>{li}</ul><h2>Activos de la etapa {escape(f['etapa'])}</h2>"
+        f"<ul>{li}</ul>{avisos}<h2>Activos de la etapa {escape(f['etapa'])}</h2>"
         f"<table><tr><th>Activo</th><th>Sharpe registrado</th><th>Trades</th></tr>{tr}</table>"
         f"{tabla_e3}"
         f"{exceso}"
