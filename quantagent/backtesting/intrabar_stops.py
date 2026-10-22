@@ -1,8 +1,9 @@
 """Pure intrabar stop evaluation shared by backtest and paper trading."""
 
-from typing import Any, Callable, Optional, Tuple
+from typing import Any, Optional, Tuple
 
 from quantagent.strategy.exit_reasons import STOP_LOSS, TAKE_PROFIT
+from quantagent.strategy.close_exit import should_exit_at_close
 
 
 def _get_field(obj: Any, key: str, default: Any = None) -> Any:
@@ -94,7 +95,6 @@ def check_intrabar_stops(
 def evaluate_position_exit(
     position: Any,
     candle: Any,
-    should_exit_at_close: Callable[[Any, float, Any], Tuple[bool, Optional[str]]],
 ) -> Optional[Tuple[str, float]]:
     """Return the first intrabar or close exit as (reason, execution price)."""
     intrabar_exit = check_intrabar_stops(position, candle)
@@ -103,5 +103,19 @@ def evaluate_position_exit(
     close = _get_field(candle, "close")
     if close is None:
         return None
-    should_exit, reason = should_exit_at_close(position, float(close), None)
+    def trailing_stop(pos: Any, price: float) -> bool:
+        trailing_pct = _get_field(pos, "trailing_stop_pct")
+        if not trailing_pct:
+            return False
+        raw_side = _get_field(pos, "side")
+        side = str(getattr(raw_side, "value", raw_side)).lower()
+        if side in ("buy", "long"):
+            high = _get_field(pos, "highest_price_seen")
+            high = max(float(high), price) if high is not None else price
+            return price < high * (1 - float(trailing_pct))
+        low = _get_field(pos, "lowest_price_seen")
+        low = min(float(low), price) if low is not None else price
+        return price > low * (1 + float(trailing_pct))
+
+    should_exit, reason = should_exit_at_close(position, float(close), trailing_stop)
     return (reason, float(close)) if should_exit else None
