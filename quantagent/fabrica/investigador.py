@@ -38,12 +38,12 @@ def armar_pedido(catalogo=CATALOGO, postmortem=POSTMORTEM_DIR, n_intentos=None):
         "Proponé hasta 3 entradas nuevas para el catálogo en YAML bajo la clave `propuestas:`.\n"
         "- D1: solo primas de riesgo con literatura y cita con DOI (10.xxxx/...), `hipotesis_economica` y `parametros_libres: 0` (máx. 2 variantes por `idea`).\n"
         "- D2: el `universo` (`activos` y `criterio`) se fija antes de correr según dónde está definida la prima, nunca por resultados.\n"
-        "- Campos por propuesta: `id`, `idea`, `clase` (clase de señal), `ventana` (opcional, parámetros de la señal), `hipotesis_economica`, `fuente` (lista de DOI), `universo: {activos: [...], criterio: ...}`, `parametros_libres: 0`.\n\n"
+        "- Campos por propuesta: `id`, `idea`, `clase` (clase de señal), `ventana` (opcional, parámetros de la señal), `hipotesis_economica`, `fuente` (lista de DOI), `cita_texto` (lista con una cita por DOI), `universo: {activos: [...], criterio: ...}`, `parametros_libres: 0`.\n\n"
         f"{ctx}"
     )
 
 
-def escribir_propuestas(respuesta, carpeta=PROPUESTAS_DIR, catalogo=CATALOGO, hipotesis_dir=HIPOTESIS_DIR):
+def escribir_propuestas(respuesta, carpeta=PROPUESTAS_DIR, catalogo=CATALOGO, hipotesis_dir=HIPOTESIS_DIR, crossref=None):
     """Valida el YAML devuelto por el LLM y escribe cada propuesta en `<carpeta>/<id>.yaml`."""
     destino = Path(carpeta)
     if destino.name == "hipotesis":
@@ -64,7 +64,10 @@ def escribir_propuestas(respuesta, carpeta=PROPUESTAS_DIR, catalogo=CATALOGO, hi
     previas = [d for f in sorted(destino.glob("*.y*ml")) if isinstance(d := yaml.safe_load(f.read_text(encoding="utf-8")), dict)] if destino.exists() else []
     rutas, rechazadas = [], []
     for p in lista:
-        if m := validar_propuesta(p, previas=previas, existentes=[*existentes, *(q for q in previas if q.get("id") != p["id"])]):
+        opciones = {"previas": previas, "existentes": [*existentes, *(q for q in previas if q.get("id") != p["id"])]}
+        if crossref is not None:
+            opciones["crossref"] = crossref
+        if m := validar_propuesta(p, **opciones):
             rechazadas.append(f"{p['id']}: {m}")
         else:
             destino.mkdir(parents=True, exist_ok=True)

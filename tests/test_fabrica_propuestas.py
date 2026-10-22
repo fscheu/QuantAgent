@@ -4,19 +4,32 @@ import pytest
 import yaml
 
 from quantagent.fabrica.hipotesis import cargar_hipotesis
+from quantagent.fabrica import propuestas
 from quantagent.fabrica.propuestas import entradas_de_hipotesis, validar_propuesta
+
+
+@pytest.fixture(autouse=True)
+def crossref_simulado(monkeypatch):
+    titulos = {"10.1016/j.jfineco.2011.11.003": "Time Series Momentum", "10.3905/jwm.2007.674809": "A Century of Evidence on Trend Following Investing", "10.3905/jpm.2017.44.1.015": "A Century of Evidence on Trend Following Investing", "10.1111/jofi.12513": "Volatility Managed Portfolios", "10.1016/j.jfineco.2017.11.002": "Carry", "10.1093/rfs/hhr068": "Common Risk Factors in Currency Markets", "10.1111/jofi.12096": "An Anatomy of Commodity Futures Risk Premia"}
+    monkeypatch.setattr(propuestas, "_titulo_crossref", lambda doi: titulos[doi])
 
 
 def _propuesta(**cambios):
     p = {"id": "p1", "idea": "momentum", "clase": "momentum-12m", "hipotesis_economica": "Subreacción a la información pública.",
          "fuente": ["10.1016/j.jfineco.2011.11.003"],
          "universo": {"activos": ["SPY", "TLT"], "criterio": "ETFs líquidos de la clase"}, "parametros_libres": 0,
-         "tema": "tendencia", "fuente_de_retorno": "prima-de-riesgo"}
+         "tema": "tendencia", "fuente_de_retorno": "prima-de-riesgo", "cita_texto": ["Time Series Momentum"]}
     return {**p, **cambios}
 
 
 def test_propuesta_completa_pasa():
     assert validar_propuesta(_propuesta()) is None
+
+
+def test_doi_rechaza_cita_ajena_y_deja_error_de_red_sin_verificar():
+    propuesta = _propuesta()
+    assert "no coincide" in validar_propuesta(propuesta, crossref=lambda _: "Unrelated Economics Paper")
+    assert "sin verificar" in validar_propuesta(propuesta, crossref=lambda _: (_ for _ in ()).throw(OSError("offline")))
 
 
 def test_propuestas_existentes_completas_pasan():
