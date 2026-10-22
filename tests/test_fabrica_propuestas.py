@@ -5,7 +5,7 @@ import yaml
 
 from quantagent.fabrica.hipotesis import cargar_hipotesis
 from quantagent.fabrica import propuestas
-from quantagent.fabrica.propuestas import entradas_de_hipotesis, validar_propuesta
+from quantagent.fabrica.propuestas import advertencias_estructurales, entradas_de_hipotesis, validar_propuesta
 
 
 @pytest.fixture(autouse=True)
@@ -24,6 +24,27 @@ def _propuesta(**cambios):
 
 def test_propuesta_completa_pasa():
     assert validar_propuesta(_propuesta()) is None
+
+
+def test_advertencias_estructurales_se_derivan_sin_bloquear():
+    propuesta = _propuesta(fidelidad="desvío: la cita es largo-corto; acá solo largo",
+                           muestra_de_la_cita="1985-2012")
+    assert advertencias_estructurales(propuesta) == [
+        "desvio_de_la_cita", "muestra_solapada", "overlay_solo_largo"
+    ]
+    assert validar_propuesta(propuesta) is None
+
+
+def test_propuesta_fiel_sin_solapamiento_ni_overlay_no_advierte():
+    propuesta = _propuesta(fidelidad="igual a la cita", muestra_de_la_cita="1985-2006",
+                           universo={"activos": ["SPY", "IEF", "CL"], "criterio": "diversificado"})
+    assert advertencias_estructurales(propuesta) == []
+
+
+def test_overlay_se_emite_solo_si_todas_las_piernas_son_largas_y_del_benchmark():
+    propuesta = {"piernas": [{"lado": "largo", "activos": ["SPY"]},
+                              {"lado": "corto", "activos": ["IEF"]}]}
+    assert "overlay_solo_largo" not in advertencias_estructurales(propuesta)
 
 
 def test_doi_rechaza_cita_ajena_y_deja_error_de_red_sin_verificar():
