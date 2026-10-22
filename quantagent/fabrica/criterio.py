@@ -3,12 +3,15 @@ import math
 import warnings
 from typing import NamedTuple
 
+import numpy as np
 import pandas as pd
 
 from quantagent.backtesting.vbt_filter import equity_metrics
 from quantagent.backtesting.verdict import MAX_DRAWDOWN, MIN_TRADES
+from quantagent.data.macro import serie_punto_en_el_tiempo
 
 MIN_SESIONES = 30
+LARGO_BLOQUE_DSHARPE = 10  # Bloques cortos preservan dependencia diaria sin elegirlos mirando las curvas.
 
 
 class AniosPositivos(NamedTuple):
@@ -19,6 +22,52 @@ class AniosPositivos(NamedTuple):
 class RecargoPaper(NamedTuple):
     tamano_pct: int
     semanas: int
+
+
+def error_estandar_delta_sharpe(cartera, benchmark) -> float:
+    """Error estándar bootstrap circular del ΔSharpe anualizado con retornos pareados."""
+    if not cartera.index.equals(benchmark.index) or len(cartera) < LARGO_BLOQUE_DSHARPE + 2:
+        raise ValueError("Se requieren curvas con las mismas fechas y al menos 12 puntos")
+    retornos = pd.DataFrame({"cartera": cartera.pct_change(), "benchmark": benchmark.pct_change()}).dropna().to_numpy()
+    n = len(retornos)
+    ppy = (len(cartera) - 1) * 365.25 / (cartera.index[-1] - cartera.index[0]).total_seconds() * 86400
+    rng = np.random.default_rng(20261021)
+    deltas = []
+    for _ in range(1000):
+        starts = rng.integers(n, size=math.ceil(n / LARGO_BLOQUE_DSHARPE))
+        indices = ((starts[:, None] + np.arange(LARGO_BLOQUE_DSHARPE)) % n).ravel()[:n]
+        muestra = retornos[indices]
+        medias, desvios = muestra.mean(axis=0), muestra.std(axis=0, ddof=1)
+        deltas.append((medias[0] / desvios[0] - medias[1] / desvios[1]) * math.sqrt(ppy))
+    return float(pd.Series(deltas).std(ddof=1))
+
+
+def sharpes_en_exceso(cartera, benchmark, *, base_dir=None) -> tuple[float, float]:
+    """Diagnóstico con DGS3MO de macro-2026-10, sin cambiar el corte ni el DSR.
+
+    Ambas curvas deben tener las mismas fechas. Se resta la tasa conocida al
+    inicio de cada intervalo: porcentaje anual / 100 × días reales / 365.25
+    (interés simple, incluidos fines de semana). Se anualiza como equity_metrics.
+    """
+    if not cartera.index.equals(benchmark.index) or len(cartera) < 3:
+        raise ValueError("Se requieren dos curvas con las mismas fechas y al menos tres puntos")
+    fechas = cartera.index
+    if not fechas.is_monotonic_increasing or not fechas.is_unique:
+        raise ValueError("Las fechas deben ser crecientes y únicas")
+    tasa = serie_punto_en_el_tiempo("macro-2026-10", "DGS3MO", fechas[:-1], base_dir)
+    if tasa.isna().any():
+        raise ValueError("DGS3MO sin cobertura al inicio de uno o más intervalos")
+    dias = (fechas[1:] - fechas[:-1]).total_seconds().to_numpy() / 86400
+    libre = tasa.to_numpy() / 100 * dias / 365.25
+    ppy = (len(fechas) - 1) * 365.25 / dias.sum()
+    resultado = []
+    for curva in (cartera, benchmark):
+        if curva.isna().any():
+            raise ValueError("Curva sin cobertura en una o más fechas")
+        exceso = pd.Series(curva.to_numpy()[1:] / curva.to_numpy()[:-1] - 1 - libre)
+        resultado.append(0.0 if exceso.abs().max() < 1e-12 or exceso.std() == 0
+                         else float(exceso.mean() / exceso.std() * math.sqrt(ppy)))
+    return tuple(resultado)
 
 
 def recargo_paper(dsr: float | None) -> RecargoPaper:
@@ -60,8 +109,8 @@ def anios_positivos(equity_o_sharpes, fechas=None, risk_free_rate: float = 0.0) 
     return AniosPositivos(positivos, len(sharpes))
 
 
-def curva_benchmark(cierres, capital: float = 100_000.0) -> pd.Series:
-    """Calcula la curva de equity con pesos iguales y rebalanceo mensual."""
+def curva_benchmark(cierres, capital: float = 100_000.0, pesos: pd.DataFrame | None = None) -> pd.Series:
+    """Calcula la curva de equity con rebalanceo mensual, igual o con pesos dados."""
     if cierres is None or (isinstance(cierres, (pd.DataFrame, pd.Series)) and cierres.empty):
         return pd.Series(dtype=float)
     df = (cierres.to_frame() if isinstance(cierres, pd.Series) else cierres.loc[:, ~cierres.columns.duplicated()]).sort_index()
@@ -75,16 +124,21 @@ def curva_benchmark(cierres, capital: float = 100_000.0) -> pd.Series:
         loc = df.index.get_loc(sub.index[0])
         loc = loc.start if isinstance(loc, slice) else loc
         base = df.iloc[loc - 1] if loc > 0 else sub.iloc[0]
-        rel = (sub / base).mean(axis=1)
+        if pesos is None:
+            rel = (sub / base).mean(axis=1)
+        else:
+            w = pesos.loc[sub.index[0], df.columns]
+            w = w / w.sum()
+            rel = ((sub / base) * w).sum(axis=1)
         sub_eq = eq_actual * rel
         equity.loc[sub.index] = sub_eq
         eq_actual = float(sub_eq.iloc[-1])
     return equity
 
 
-def sharpe_benchmark(cierres, risk_free_rate: float = 0.0) -> float:
-    """Sharpe a tasa 0 de la cartera de activos con pesos iguales y rebalanceo mensual."""
-    eq = curva_benchmark(cierres)
+def sharpe_benchmark(cierres, risk_free_rate: float = 0.0, pesos: pd.DataFrame | None = None) -> float:
+    """Sharpe del benchmark mensual 1/N o con pesos suministrados."""
+    eq = curva_benchmark(cierres, pesos=pesos)
     return float(equity_metrics(eq, risk_free_rate)["sharpe"]) if not eq.empty else 0.0
 
 

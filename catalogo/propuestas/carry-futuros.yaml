@@ -54,3 +54,17 @@ universo:
     e índices de acciones, porque su carry necesita curvas de tasas o dividendos de otros
     países. Fijado antes de correr.
 parametros_libres: 0
+clase_nueva: false
+tema: carry
+fuente_de_retorno: prima-de-riesgo
+por_que_no_esta_en_el_benchmark: El benchmark de ETFs no contiene futuros ni compara carry dentro de cada clase.
+cita_texto:
+- Koijen, Moskowitz, Pedersen y Vrugt (2018). Carry
+- Lustig, Roussanov y Verdelhan (2011). Common Risk Factors in Currency Markets
+- Szymanowska et al. (2014). An Anatomy of Commodity Futures Risk Premia
+muestra_de_la_cita: 1985-2012
+evidencia_posterior: []
+fidelidad: igual a la cita
+datos_nuevos:
+- {fuente: Futuros individuales de CME, costo: Norgate Futures o Databento y broker IBKR}
+efecto_esperado: Prima positiva por ranking de carry dentro de clase, con la mitad del efecto publicado descontada.

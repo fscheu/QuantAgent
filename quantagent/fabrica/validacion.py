@@ -19,7 +19,7 @@ SHARPE_MINIMO_FILTRO = 0.10
 SHARPE_MAXIMO_MOTOR_ALARMA = 0.0
 PROPORCION_MINIMA_ALARMA = 0.5
 COLUMNAS_CELDAS = ["hipotesis", "pierna_clase", "estrategia", "activo", "desde", "hasta",
-                   "trades", "pnl", "max_drawdown", "max_drawdown_cartera"]
+                   "trades", "pnl", "max_drawdown", "max_drawdown_cartera", "benchmark_mismo_peso"]
 
 
 def alarma_filtro_motor(resultados_etapa1, filas_etapa2):
@@ -233,6 +233,10 @@ def validar_etapa3(h, snapshot, params_por_activo, carpeta):
         c2 = pd.DataFrame({a: snap_mod.read_snapshot(snapshot, a)["close"].loc["2007-01-01":"2018-12-31"] for a in activos}) if snapshot else None
         sb3 = sharpe_benchmark(c3) if c3 is not None and not c3.empty else 0.0
         sb2 = sharpe_benchmark(c2) if c2 is not None and not c2.empty else None
+        from quantagent.fabrica.cartera import pesos as pesos_cartera
+        piernas = {f"{i}:{p.clase}": p.activos for i, p in enumerate(h.piernas)}
+        w = pesos_cartera(c3, piernas).T.groupby(level=1).sum().T if c3 is not None and not c3.empty else None
+        sb3_mismo_peso = sharpe_benchmark(c3, pesos=w) if w is not None else None
 
         intentos_csv = snapshot_root() / "intentos.csv"
         todas_filas, s2 = [], None
@@ -261,7 +265,8 @@ def validar_etapa3(h, snapshot, params_por_activo, carpeta):
         for fila in filas:
             fila.update(v30="PASA" if pasa else "NO PASA", dsr=dsr_eff, dsr_crudo=dsr_crudo, recargo=recargo,
                         anios_positivos=f"{ap.positivos} de {ap.totales}" if ap else None,
-                        benchmark=sb3, n_efectivo=neff, motivos=list(motivos))
+                        benchmark=sb3, benchmark_mismo_peso=sb3_mismo_peso,
+                        n_efectivo=neff, motivos=list(motivos))
         return "PASA" if pasa else "CORTA", filas
     for fila in filas:
         activo = fila["activo"]

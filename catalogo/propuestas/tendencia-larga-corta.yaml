@@ -64,3 +64,15 @@ universo:
     activo líquido y la única diferencia con lo ya probado es el lado corto, que la cita
     incluye. Fijado antes de correr.
 parametros_libres: 0
+clase_nueva: false
+tema: tendencia
+fuente_de_retorno: prima-de-riesgo
+por_que_no_esta_en_el_benchmark: El benchmark permanece comprado; esta cartera mantiene posiciones cortas cuando la tendencia es negativa.
+cita_texto:
+- Moskowitz, Ooi y Pedersen (2012). Time Series Momentum
+- Hurst, Ooi y Pedersen (2017). A Century of Evidence on Trend-Following Investing
+muestra_de_la_cita: 1985-2015
+evidencia_posterior: []
+fidelidad: igual a la cita en la dirección larga-corta; ETFs y ponderación inversa a volatilidad son adaptación declarada.
+datos_nuevos: []
+efecto_esperado: ΔSharpe positivo contra el benchmark por la pata corta; mitad del efecto publicado descontada.

@@ -5,7 +5,7 @@ import math
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from quantagent.agent_models import TradingDecision
+from quantagent.backtesting.intrabar_stops import evaluate_position_exit
 from quantagent.data.asset_types import AssetType, get_asset_type
 from quantagent.data.market_calendar import get_market_calendar
 from quantagent.data.provider import DataProvider
@@ -69,21 +70,6 @@ class BacktestMetrics:
             self.close_reasons = {}
 
 
-def _get_field(obj: Any, key: str, default: Any = None) -> Any:
-    """Extract a named field from a dict, pandas Series, or object."""
-    for candidate in (key, key.capitalize(), key.upper(), key.lower()):
-        if isinstance(obj, dict) and candidate in obj:
-            return obj[candidate]
-        if hasattr(obj, candidate):
-            return getattr(obj, candidate)
-        try:
-            if candidate in obj:
-                return obj[candidate]
-        except (KeyError, TypeError, IndexError):
-            pass
-    return default
-
-
 def _is_candle_after_entry(
     current_date: Optional[datetime],
     decision_timestamp: Optional[datetime],
@@ -97,78 +83,6 @@ def _is_candle_after_entry(
     elif c_date.tzinfo is None and d_date.tzinfo is not None:
         d_date = d_date.replace(tzinfo=None)
     return c_date > d_date
-
-
-def check_intrabar_stops(
-    position: Any,
-    candle: Any,
-) -> Optional[Tuple[str, float]]:
-    """Evaluate whether an active position hits stop loss or take profit intrabar.
-
-    Pure function: (position, candle) -> (reason, exit_price) or None.
-    """
-    raw_side = _get_field(position, "side")
-    if raw_side is None:
-        return None
-    if hasattr(raw_side, "value"):
-        raw_side = raw_side.value
-    side_str = str(raw_side).lower()
-
-    is_long = side_str in ("buy", "long")
-    is_short = side_str in ("sell", "short")
-    if not (is_long or is_short):
-        return None
-
-    raw_sl = _get_field(position, "stop_loss")
-    raw_tp = _get_field(position, "take_profit")
-    sl = float(raw_sl) if raw_sl is not None and float(raw_sl) > 0 else None
-    tp = float(raw_tp) if raw_tp is not None and float(raw_tp) > 0 else None
-
-    open_val = _get_field(candle, "open")
-    high_val = _get_field(candle, "high")
-    low_val = _get_field(candle, "low")
-    if open_val is None or high_val is None or low_val is None:
-        return None
-
-    open_price = float(open_val)
-    high_price = float(high_val)
-    low_price = float(low_val)
-
-    if is_long:
-        # 1. Opening gap
-        if sl is not None and open_price <= sl:
-            return ("STOP_LOSS", open_price)
-        if tp is not None and open_price >= tp:
-            return ("TAKE_PROFIT", open_price)
-
-        # 2 & 3. Intrabar hit (if both, STOP_LOSS wins)
-        hit_sl = sl is not None and low_price <= sl
-        hit_tp = tp is not None and high_price >= tp
-
-        if hit_sl:
-            return ("STOP_LOSS", sl)
-        if hit_tp:
-            return ("TAKE_PROFIT", tp)
-
-        return None
-
-    else:  # is_short
-        # 1. Opening gap
-        if sl is not None and open_price >= sl:
-            return ("STOP_LOSS", open_price)
-        if tp is not None and open_price <= tp:
-            return ("TAKE_PROFIT", open_price)
-
-        # 2 & 3. Intrabar hit (if both, STOP_LOSS wins)
-        hit_sl = sl is not None and high_price >= sl
-        hit_tp = tp is not None and low_price <= tp
-
-        if hit_sl:
-            return ("STOP_LOSS", sl)
-        if hit_tp:
-            return ("TAKE_PROFIT", tp)
-
-        return None
 
 
 class CloseRejectedError(RuntimeError):
@@ -590,14 +504,14 @@ class Backtest:
         self.total_candles_processed += 1
 
         if active_pos:
-            intrabar_exit = (
-                check_intrabar_stops(active_pos, df.iloc[-1])
+            exit_result = (
+                evaluate_position_exit(active_pos, df.iloc[-1])
                 if self.intrabar_stops
                 and _is_candle_after_entry(current_date, active_pos.decision_timestamp)
                 else None
             )
-            if intrabar_exit is not None:
-                reason, exit_price = intrabar_exit
+            if exit_result is not None:
+                reason, exit_price = exit_result
                 self._close_position_with_trade_sync(
                     active_pos, reason, exit_price, timestamp=current_date
                 )
@@ -857,14 +771,14 @@ class Backtest:
         self.total_candles_processed += 1
 
         if active_pos:
-            intrabar_exit = (
-                check_intrabar_stops(active_pos, df.iloc[-1])
+            exit_result = (
+                evaluate_position_exit(active_pos, df.iloc[-1])
                 if self.intrabar_stops
                 and (self.fill == "apertura" or _is_candle_after_entry(current_date, active_pos.decision_timestamp))
                 else None
             )
-            if intrabar_exit is not None:
-                reason, exit_price = intrabar_exit
+            if exit_result is not None:
+                reason, exit_price = exit_result
                 self._close_position_with_trade_sync(
                     active_pos, reason, exit_price, timestamp=current_date
                 )

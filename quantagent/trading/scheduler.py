@@ -19,6 +19,7 @@ from quantagent.static_util import format_ohlcv_for_agents
 from quantagent.strategy.base import TradingSignal as StrategyTradingSignal
 from quantagent.strategy.base import TradingStrategy
 from quantagent.strategy.llm_agent_strategy import LLMAgentStrategy
+from quantagent.backtesting.intrabar_stops import check_intrabar_stops
 from quantagent.trading.order_manager import OrderManager
 from quantagent.trading.position_monitor import PositionMonitor
 from quantagent.trading_graph import TradingGraph
@@ -255,6 +256,12 @@ class TradingScheduler:
                 position, current_price, prev_close
             )
 
+            intrabar_exit = check_intrabar_stops(position, df.iloc[-1])
+            if intrabar_exit:
+                exit_reason, exit_price = intrabar_exit
+                self._execute_position_exit(position, exit_reason, exit_price, symbol)
+                return
+
             logger.debug(
                 "Position tracked: %s (candles=%d)",
                 symbol, position.candles_since_entry,
@@ -266,8 +273,8 @@ class TradingScheduler:
             )
 
             # Check exit conditions
-            should_exit, exit_reason = self._check_exit_conditions(
-                position, current_price
+            should_exit, exit_reason = self.strategy.should_exit(
+                position, current_price, df
             )
 
             if should_exit:
@@ -363,8 +370,8 @@ class TradingScheduler:
                 else current_price * 1.02
             )
             take_profit = getattr(signal, "take_profit", None) or (
-                current_price * 1.04 if trade_signal == TradeSignal.LONG
-                else current_price * 0.96
+                current_price * 1.03 if trade_signal == TradeSignal.LONG
+                else current_price * 0.97
             )
 
             self.position_monitor.open_position(
@@ -374,9 +381,11 @@ class TradingScheduler:
                 stop_loss=stop_loss,
                 take_profit=take_profit,
                 quantity=order.quantity,
-                exit_policy="sl_tp_only",
+                exit_policy=signal.exit_policy.value,
                 trade_id=trade_id,
                 signal_id=db_signal.id if db_signal else None,
+                trailing_stop_pct=signal.trailing_stop_pct,
+                max_hold_candles=signal.max_hold_candles,
                 backtest_run_id=None,
                 environment=self.environment,
             )
@@ -579,44 +588,6 @@ class TradingScheduler:
             return None
         trade = self.db.query(Trade).filter(Trade.order_id == order_id).first()
         return trade.id if trade is not None else None
-
-    def _check_exit_conditions(
-        self, position, current_price: float
-    ) -> tuple[bool, Optional[str]]:
-        """
-        Check if position should exit based on stop loss, take profit, or max hold.
-
-        Args:
-            position: ActivePosition instance
-            current_price: Current market price
-
-        Returns:
-            Tuple of (should_exit, exit_reason)
-        """
-        from quantagent.models import OrderSide
-
-        # Stop loss check
-        if position.side == OrderSide.BUY:  # LONG position
-            if current_price <= float(position.stop_loss):
-                return (True, "stop_loss")
-        else:  # SHORT position
-            if current_price >= float(position.stop_loss):
-                return (True, "stop_loss")
-
-        # Take profit check
-        if position.side == OrderSide.BUY:
-            if current_price >= float(position.take_profit):
-                return (True, "take_profit")
-        else:
-            if current_price <= float(position.take_profit):
-                return (True, "take_profit")
-
-        # Max hold check
-        if position.max_hold_candles:
-            if position.candles_since_entry >= position.max_hold_candles:
-                return (True, "max_hold")
-
-        return (False, None)
 
     def _execute_position_exit(
         self,
