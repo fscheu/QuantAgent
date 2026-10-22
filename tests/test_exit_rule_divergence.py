@@ -39,10 +39,7 @@ def _paper_rule(position: ActivePosition, candle: dict):
 
 
 def _unified_rule(position: ActivePosition, candle: dict):
-    return evaluate_position_exit(
-        position, candle,
-        lambda pos, close, _ohlc: RSIMeanReversionStrategy().should_exit(pos, close, None),
-    )
+    return evaluate_position_exit(position, candle)
 
 
 def test_trailing_stop_sale_en_backtest_y_paper():

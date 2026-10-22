@@ -30,7 +30,7 @@ from quantagent.models import (
 from quantagent.static_util import format_ohlcv_for_agents
 from quantagent.strategy.assembler import StrategyAssembler
 from quantagent.strategy.base import TradingStrategy
-from quantagent.backtesting.intrabar_stops import check_intrabar_stops
+from quantagent.backtesting.intrabar_stops import check_intrabar_stops, evaluate_position_exit
 from quantagent.strategy.llm_agent_strategy import LLMAgentStrategy
 from quantagent.trading.position_monitor import PositionMonitor
 
@@ -504,14 +504,14 @@ class Backtest:
         self.total_candles_processed += 1
 
         if active_pos:
-            intrabar_exit = (
-                check_intrabar_stops(active_pos, df.iloc[-1])
+            exit_result = (
+                evaluate_position_exit(active_pos, df.iloc[-1])
                 if self.intrabar_stops
                 and _is_candle_after_entry(current_date, active_pos.decision_timestamp)
                 else None
             )
-            if intrabar_exit is not None:
-                reason, exit_price = intrabar_exit
+            if exit_result is not None:
+                reason, exit_price = exit_result
                 self._close_position_with_trade_sync(
                     active_pos, reason, exit_price, timestamp=current_date
                 )
@@ -771,14 +771,14 @@ class Backtest:
         self.total_candles_processed += 1
 
         if active_pos:
-            intrabar_exit = (
-                check_intrabar_stops(active_pos, df.iloc[-1])
+            exit_result = (
+                evaluate_position_exit(active_pos, df.iloc[-1])
                 if self.intrabar_stops
                 and (self.fill == "apertura" or _is_candle_after_entry(current_date, active_pos.decision_timestamp))
                 else None
             )
-            if intrabar_exit is not None:
-                reason, exit_price = intrabar_exit
+            if exit_result is not None:
+                reason, exit_price = exit_result
                 self._close_position_with_trade_sync(
                     active_pos, reason, exit_price, timestamp=current_date
                 )

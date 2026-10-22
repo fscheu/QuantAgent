@@ -86,6 +86,7 @@ def t(self, trade):
     st["breaker_active"] += bool(self.circuit_breaker_triggered)
 R.validate_trade, R.get_daily_pnl, R.on_trade_executed = v, d, t
 from quantagent.backtesting import backtest as _B
+from quantagent.backtesting import intrabar_stops as _S
 _cis = _B.check_intrabar_stops
 def _wcis(pos, candle):
     raw_sl, raw_tp = getattr(pos, "stop_loss", None), getattr(pos, "take_profit", None)
@@ -100,6 +101,7 @@ def _wcis(pos, candle):
         st["double_touches"] += 1
     return _cis(pos, candle)
 _B.check_intrabar_stops = _wcis
+_S.check_intrabar_stops = _wcis
 from quantagent.cli.__main__ import cli
 try:
     cli(sys.argv[1:], standalone_mode=False)
