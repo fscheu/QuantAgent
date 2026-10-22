@@ -19,6 +19,30 @@ DOI = re.compile(r"^10\.\d{4,9}/\S+$")
 MAX_VARIANTES = 2  # por idea y por lote (DC 2026-10-19, D3.7); la tercera se rechaza: es otra idea y va con su propia cita
 TEMAS = {"tendencia", "momentum-transversal", "baja-volatilidad", "valor", "carry", "calendario", "flujos-institucionales", "prima-de-volatilidad", "reversion-y-liquidez", "macro"}
 FUENTES_DE_RETORNO = {"prima-de-riesgo", "provision-de-liquidez", "sesgo-de-comportamiento", "friccion"}
+BENCHMARK = frozenset({"AGG", "DBC", "EEM", "EFA", "EWJ", "EWZ", "FXE", "FXI", "GLD", "IEF", "IWM", "LQD", "QQQ", "SHY", "SLV", "SPY", "TIP", "TLT", "USO", "VNQ", "XLB", "XLE", "XLF", "XLI", "XLK", "XLP", "XLU", "XLV", "XLY"})
+
+
+def advertencias_estructurales(p):
+    """Devuelve códigos de advertencia de la propuesta, sin afectar su admisión."""
+    advertencias = []
+    fidelidad = str(p.get("fidelidad") or "").strip().lower()
+    if fidelidad.startswith(("desvío:", "desvio:")):
+        advertencias.append("desvio_de_la_cita")
+
+    muestra = str(p.get("muestra_de_la_cita") or "")
+    anios = re.findall(r"(?:19|20)\d{2}", muestra)
+    if anios and 2007 <= int(anios[-1]) <= 2018:
+        advertencias.append("muestra_solapada")
+
+    piernas = p.get("piernas") or [p]
+    if piernas and all(
+        str(pierna.get("lado", "largo")).lower() == "largo"
+        and (activos := (pierna.get("universo") or {}).get("activos") or pierna.get("activos"))
+        and set(activos) <= BENCHMARK
+        for pierna in piernas
+    ):
+        advertencias.append("overlay_solo_largo")
+    return advertencias
 
 
 def _titulo_crossref(doi):
