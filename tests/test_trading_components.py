@@ -404,6 +404,12 @@ class TestOrderManager:
 
         assert result is None
 
+    def test_gap_next_open_excede_efectivo_despues_del_limite_al_cierre(self):
+        qty = self.order_manager._cap_entry_qty(OrderSide.BUY, 1000.0, 100.0)
+
+        assert qty == pytest.approx(100000 / (100 * 1.01))
+        assert qty * 105.0 * (1 + self.broker.slippage_pct) > self.portfolio.cash
+
     def test_close_symbol_closes_full_position_and_registers_order(self):
         trade = Mock()
         trade.pnl = Decimal("0")
