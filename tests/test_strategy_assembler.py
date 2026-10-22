@@ -21,6 +21,7 @@ def make_session():
 def test_broker_selector_uses_registered_constructor():
     db = make_session()
     marker = object()
+    original = StrategyAssembler.BROKER_CONSTRUCTORS.get("alpaca_paper")
     StrategyAssembler.register_broker("alpaca_paper", lambda config: marker)
     try:
         resolved = StrategyAssembler.from_profiles(
@@ -31,19 +32,39 @@ def test_broker_selector_uses_registered_constructor():
         )
         assert components.broker is marker
     finally:
-        StrategyAssembler.BROKER_CONSTRUCTORS.pop("alpaca_paper", None)
+        StrategyAssembler.BROKER_CONSTRUCTORS["alpaca_paper"] = original
 
 
-def test_alpaca_live_url_is_blocked_and_missing_adapter_is_clear():
+def test_alpaca_paper_builds_configured_broker_and_blocks_live(monkeypatch):
+    import sys
+    from types import ModuleType
+
     db = make_session()
+    calls = {}
+
+    class TradingClient:
+        def __init__(self, key, secret, paper):
+            calls.update(key=key, secret=secret, paper=paper)
+
+    alpaca = ModuleType("alpaca")
+    trading = ModuleType("alpaca.trading")
+    client_module = ModuleType("alpaca.trading.client")
+    client_module.TradingClient = TradingClient
+    monkeypatch.setitem(sys.modules, "alpaca", alpaca)
+    monkeypatch.setitem(sys.modules, "alpaca.trading", trading)
+    monkeypatch.setitem(sys.modules, "alpaca.trading.client", client_module)
+    monkeypatch.setenv("ALPACA_API_KEY", "paper-key")
+    monkeypatch.setenv("ALPACA_SECRET_KEY", "paper-secret")
     resolved = StrategyAssembler.from_profiles(
         overrides={"broker_type": "alpaca_paper", "alpaca_base_url": "https://api.alpaca.markets"}
     )
     with pytest.raises(ValueError, match="live trading is not supported"):
         StrategyAssembler.build_components(resolved, db_session=db, build_graph=False)
     paper = StrategyAssembler.from_profiles(overrides={"broker_type": "alpaca_paper"})
-    with pytest.raises(ValueError, match=r"AlpacaBroker no implementado \(QuantAgent-yme\)"):
-        StrategyAssembler.build_components(paper, db_session=db, build_graph=False)
+    components = StrategyAssembler.build_components(paper, db_session=db, build_graph=False)
+    from quantagent.trading.alpaca_broker import AlpacaBroker
+    assert isinstance(components.broker, AlpacaBroker)
+    assert calls == {"key": "paper-key", "secret": "paper-secret", "paper": True}
 
 
 @pytest.mark.api
