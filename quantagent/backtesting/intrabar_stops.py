@@ -1,6 +1,6 @@
 """Pure intrabar stop evaluation shared by backtest and paper trading."""
 
-from typing import Any, Optional, Tuple
+from typing import Any, Callable, Optional, Tuple
 
 from quantagent.strategy.exit_reasons import STOP_LOSS, TAKE_PROFIT
 
@@ -72,7 +72,6 @@ def check_intrabar_stops(
             return (TAKE_PROFIT, tp)
 
         return None
-
     else:  # is_short
         # 1. Opening gap
         if sl is not None and open_price >= sl:
@@ -90,3 +89,19 @@ def check_intrabar_stops(
             return (TAKE_PROFIT, tp)
 
         return None
+
+
+def evaluate_position_exit(
+    position: Any,
+    candle: Any,
+    should_exit_at_close: Callable[[Any, float, Any], Tuple[bool, Optional[str]]],
+) -> Optional[Tuple[str, float]]:
+    """Return the first intrabar or close exit as (reason, execution price)."""
+    intrabar_exit = check_intrabar_stops(position, candle)
+    if intrabar_exit is not None:
+        return intrabar_exit
+    close = _get_field(candle, "close")
+    if close is None:
+        return None
+    should_exit, reason = should_exit_at_close(position, float(close), None)
+    return (reason, float(close)) if should_exit else None
