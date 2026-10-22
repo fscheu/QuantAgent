@@ -25,6 +25,16 @@ def test_escribir_propuestas_desde_respuesta_simulada(tmp_path):
         escribir_propuestas(respuesta, tmp_path / "hipotesis")
 
 
+def test_escribir_propuestas_rechaza_propuesta_incompleta(tmp_path):
+    propuesta = {"id": "prop-incompleta", "idea": "momentum", "clase": "momentum-12m",
+                 "tema": "tendencia", "hipotesis_economica": "Continuación a 12m.",
+                 "fuente": ["10.1016/j.jfineco.2011.11.003"],
+                 "universo": {"activos": ["SPY"], "criterio": "ETFs líquidos"}, "parametros_libres": 0}
+    rutas, motivo = escribir_propuestas(yaml.safe_dump({"propuestas": [propuesta]}), tmp_path / "propuestas")
+    assert rutas == [] and "fuente_de_retorno" in motivo
+    assert not list((tmp_path / "propuestas").glob("*.yaml"))
+
+
 def test_pedido_sin_cifras_de_sharpe_dsr_ni_pnl(tmp_path):
     pm, intentos = tmp_path / "postmortem", tmp_path / "intentos.csv"
     pm.mkdir()
