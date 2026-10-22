@@ -19,6 +19,12 @@ def test_propuesta_completa_pasa():
     assert validar_propuesta(_propuesta()) is None
 
 
+def test_propuestas_existentes_completas_pasan():
+    for nombre in ("carry-futuros", "tendencia-larga-corta", "volatilidad-gestionada"):
+        propuesta = yaml.safe_load(open(f"catalogo/propuestas/{nombre}.yaml", encoding="utf-8"))
+        assert validar_propuesta(propuesta) is None
+
+
 def test_tema_flujos_institucionales_con_slug_pasa():
     assert validar_propuesta(_propuesta(tema="flujos-institucionales")) is None
 
