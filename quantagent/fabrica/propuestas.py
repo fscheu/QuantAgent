@@ -37,7 +37,8 @@ def advertencias_estructurales(p):
     piernas = p.get("piernas") or [p]
     if piernas and all(
         str(pierna.get("lado", "largo")).lower() == "largo"
-        and (activos := (pierna.get("universo") or {}).get("activos") or pierna.get("activos"))
+        and (activos := (pierna["universo"].get("activos") if isinstance(pierna.get("universo"), dict)
+                        else None) or pierna.get("activos"))
         and set(activos) <= BENCHMARK
         for pierna in piernas
     ):

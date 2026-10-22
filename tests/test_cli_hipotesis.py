@@ -25,6 +25,7 @@ def test_correr_corte_real_y_estado(tmp_path, monkeypatch, rechazo):
     write_snapshot("sintetico", {"SPY": velas}, base_dir=tmp_path)
     data = yaml.safe_load((Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml").read_text())
     data["parametros"] = {"rsi_period": [7], "oversold_threshold": [30.0]}
+    data.update(fidelidad="desvío: solo largo", muestra_de_la_cita="1985-2012")
     if rechazo:
         data["justificacion"] = "corta"
     archivo = tmp_path / "h.yaml"
@@ -45,6 +46,9 @@ def test_correr_corte_real_y_estado(tmp_path, monkeypatch, rechazo):
     )
     assert all(r["hipotesis"] == data["id"] for r in filas)
     assert result.output.splitlines() == [
+        "Advertencia etapa 0 (no bloquea): desvio_de_la_cita",
+        "Advertencia etapa 0 (no bloquea): muestra_solapada",
+        "Advertencia etapa 0 (no bloquea): overlay_solo_largo",
         *[f"Etapa {r['etapa']}: {r['veredicto']} ({r['motivo']})" for r in filas],
         f"Llegó a la etapa {filas[-1]['etapa']}: CORTA ({filas[-1]['motivo']})",
     ]
@@ -126,6 +130,7 @@ def test_correr_control_real(tmp_path, monkeypatch, cortar):
         activos = ", ".join(r["activo"] for r in resultados if r["v30"] == "PASA")
         assert filas[2]["motivo"] == f"pasan V30: {activos}; control coincide en 2 de 2"
     assert [line for line in result.output.splitlines() if not line.startswith("|")] == [
+        "Advertencia etapa 0 (no bloquea): overlay_solo_largo",
         *[f"Etapa {r['etapa']}: {r['veredicto']} ({r['motivo']})" for r in filas],
         f"Llegó a la etapa {filas[-1]['etapa']}: {veredicto} ({filas[-1]['motivo']})",
     ]

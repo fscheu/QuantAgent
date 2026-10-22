@@ -10,7 +10,7 @@ import yaml
 
 from quantagent.data.snapshot import VERSIONED_DIR
 from quantagent.fabrica.hipotesis import cargar_hipotesis
-from quantagent.fabrica.propuestas import entradas_de_hipotesis, validar_propuesta
+from quantagent.fabrica.propuestas import advertencias_estructurales, entradas_de_hipotesis, validar_propuesta
 from quantagent.fabrica.transversal import METRICAS
 from quantagent.strategy.registry import get_strategy_names
 
@@ -42,7 +42,9 @@ def armar_pedido(catalogo=CATALOGO, postmortem=POSTMORTEM_DIR, n_intentos=None):
     """Arma el pedido para el LLM con el catálogo, reglas D1 y D2, N de intentos y fichas de I01."""
     datos = yaml.safe_load(Path(catalogo).read_text(encoding="utf-8")) if isinstance(catalogo, (str, Path)) and Path(catalogo).exists() else catalogo
     primas = (datos.get("primas", []) if isinstance(datos, dict) else datos) or []
-    cat = [{k: e[k] for k in CLAVES_CAT if k in e} for e in primas if isinstance(e, dict)]
+    cat = [{**{k: e[k] for k in CLAVES_CAT if k in e},
+            "advertencias": advertencias_estructurales({**e, "muestra_de_la_cita": e.get("muestra_de_la_cita", e.get("muestra"))})}
+           for e in primas if isinstance(e, dict)]
     p_dir = Path(postmortem) if isinstance(postmortem, (str, Path)) else None
     raw = ([yaml.safe_load(p.read_text(encoding="utf-8")) for p in sorted(p_dir.glob("*.y*ml"))] if p_dir.exists() else []) if p_dir else list(postmortem)
     fichas = [{"id": f["id"], "causas": list(f.get("causas") or [])} for f in raw if isinstance(f, dict) and "id" in f]
@@ -59,6 +61,7 @@ def armar_pedido(catalogo=CATALOGO, postmortem=POSTMORTEM_DIR, n_intentos=None):
         "Sos investigador de una cartera de trading. Proponé entre 0 y 3 entradas nuevas para el catálogo bajo `propuestas:`. Si ninguna cumple todo, devolvé `propuestas: []`; cada propuesta suma un intento.\n"
         "Cómo se evalúa: cada cartera se compara con comprar y mantener los mismos activos con pesos iguales y rebalanceo mensual, por resultado ajustado al riesgo en exceso de la tasa corta, en 2007-2018 y en una prueba única posterior, y después en paper. Una estrategia que solo decide cuándo estar comprada casi nunca supera esa vara: explicá su fuente de retorno adicional.\n"
         "Qué hay:\n"
+        "Las advertencias del catálogo son informativas y no bloquean la admisión.\n"
         f"- Activos y fecha de inicio: {yaml.safe_dump({s: info['start'] for s, info in activos.items()}, allow_unicode=True, sort_keys=True).strip()}\n"
         f"- Series macro: {', '.join(sorted(macro))}. Velas diarias con apertura y cierre; no hay intradía, opciones ni futuros.\n"
         f"- Clases de señal existentes (registry.py y METRICAS): {', '.join(clases)}. Una clase nueva cuesta un ticket; marcala `clase_nueva: true`.\n"

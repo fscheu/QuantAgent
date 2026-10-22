@@ -28,6 +28,7 @@ from quantagent.fabrica.filtro import (
 from quantagent.fabrica.hipotesis import cargar_hipotesis
 from quantagent.fabrica.informe import datos_informe, render_comparacion, render_informe
 from quantagent.fabrica.investigador import HIPOTESIS_DIR, PROPUESTAS_DIR, proponer_con_llm
+from quantagent.fabrica.propuestas import advertencias_estructurales
 from quantagent.fabrica.transversal import es_transversal
 from quantagent.fabrica.validacion import (
     alarma_cartera,
@@ -119,6 +120,8 @@ def admitir_hipotesis(archivo, snapshot_name, prueba_unica=False):
         if fecha is not None:
             click.echo(f"prueba de {h.id} ya abierta el {fecha}; no se vuelve a correr")
             raise click.exceptions.Exit(1)
+    for advertencia in advertencias_estructurales(yaml.safe_load(Path(archivo).read_text(encoding="utf-8"))):
+        click.echo(f"Advertencia etapa 0 (no bloquea): {advertencia}")
     if not ok:
         registrar_intento(
             h.clase, h.activos[0], snapshot_name, "etf", 1.0, h.parametros,
