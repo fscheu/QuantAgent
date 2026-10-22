@@ -44,20 +44,28 @@ class AlpacaBroker(Broker):
             order.average_fill_price = float(price)
         order.status = {"new": OrderStatus.PENDING, "accepted": OrderStatus.PENDING,
                         "partially_filled": OrderStatus.PARTIALLY_FILLED,
-                        "filled": OrderStatus.FILLED}.get(status, OrderStatus.PENDING)
+                        "filled": OrderStatus.FILLED, "canceled": OrderStatus.CANCELLED,
+                        "rejected": OrderStatus.REJECTED, "expired": OrderStatus.EXPIRED}.get(
+                            status, OrderStatus.PENDING)
         if order.status == OrderStatus.FILLED:
             order.filled_at = datetime.utcnow()
         return order
 
     def cancel_order(self, order_id: str) -> bool:
-        self.client.cancel_order_by_id(order_id)
+        try:
+            self.client.cancel_order_by_id(order_id)
+        except Exception as exc:
+            if getattr(exc, "code", None) == 42210000:
+                return False
+            raise
         return True
 
     def get_balance(self):
-        raise NotImplementedError
+        return float(self.get_account()["cash"])
 
     def get_account(self):
-        raise NotImplementedError
+        account = self.client.get_account()
+        return vars(account)
 
     def get_positions(self):
-        raise NotImplementedError
+        return {position.symbol: position for position in self.client.get_all_positions()}
