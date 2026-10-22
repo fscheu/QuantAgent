@@ -62,6 +62,21 @@ def test_pedido_sin_cifras_de_sharpe_dsr_ni_pnl(tmp_path):
     assert all(p not in pedido.lower() for p in ("sharpe", "dsr", "pnl", "trades:", "0.4321", "0.9876", "1234.56", "0.5555", "0.8888", "999.0", "789", "654"))
 
 
+def test_pedido_incluye_advertencias_por_entrada_sin_bloquear():
+    catalogo = [{"id": "advertida", "fidelidad": "desvío: solo largo", "muestra": "1985-2012",
+                 "universo": {"activos": ["SPY"]}},
+                {"id": "fiel", "fidelidad": "igual a la cita", "muestra_de_la_cita": "1985-2006",
+                 "piernas": [{"lado": "corto", "activos": ["SPY"]}]}]
+    pedido = armar_pedido(catalogo, [], 0)
+    contexto = yaml.safe_load(pedido[pedido.index("intentos_registrados:"):])
+    assert contexto["catalogo"] == [
+        {"id": "advertida", "universo": {"activos": ["SPY"]},
+         "advertencias": ["desvio_de_la_cita", "muestra_solapada", "overlay_solo_largo"]},
+        {"id": "fiel", "advertencias": []},
+    ]
+    assert "informativas y no bloquean" in pedido
+
+
 @pytest.mark.parametrize("invalida", [":::no_yaml: [", "texto suelto", "", "propuestas: [{idea: x}]", "propuestas: [{id: p1}, {id: p1}]", "propuestas: [{id: p1, idea: x}]"])
 def test_respuesta_yaml_invalido_no_escribe_nada(tmp_path, invalida):
     rutas, motivo = escribir_propuestas(invalida, tmp_path / "propuestas")
