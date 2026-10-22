@@ -365,7 +365,6 @@ Además de los actuales (`id`, `idea`, `clase`, `ventana`, `hipotesis_economica`
 
 ```yaml
 clase_nueva: true                 # la clase no existe en registry.py ni en transversal.METRICAS
-rol: diversificador               # independiente | diversificador; no cambia después
 tema: flujos-institucionales      # de una lista cerrada (ver §5.4)
 fuente_de_retorno: provision-de-liquidez  # prima-de-riesgo | provision-de-liquidez | sesgo-de-comportamiento | friccion
 por_que_no_esta_en_el_benchmark: >-

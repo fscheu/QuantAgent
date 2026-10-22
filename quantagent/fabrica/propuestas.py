@@ -13,6 +13,8 @@ import re
 
 DOI = re.compile(r"^10\.\d{4,9}/\S+$")
 MAX_VARIANTES = 2  # por idea y por lote (DC 2026-10-19, D3.7); la tercera se rechaza: es otra idea y va con su propia cita
+TEMAS = {"tendencia", "momentum transversal", "baja volatilidad", "valor", "carry", "calendario", "flujos institucionales", "prima de volatilidad", "reversión y liquidez", "macro"}
+FUENTES_DE_RETORNO = {"prima-de-riesgo", "provision-de-liquidez", "sesgo-de-comportamiento", "friccion"}
 
 
 def _idea(p):
@@ -49,6 +51,10 @@ def validar_propuesta(p, previas=(), existentes=()):
         return "universo sin activos o sin criterio de definición"
     if p.get("parametros_libres") != 0:
         return "debe declarar parametros_libres: 0"
+    if p.get("tema") not in TEMAS:
+        return "tema ausente o fuera de lista"
+    if p.get("fuente_de_retorno") not in FUENTES_DE_RETORNO:
+        return "fuente_de_retorno ausente o fuera de lista"
     if sum(_idea(q) == _idea(p) and q.get("id") != p["id"] for q in previas) >= MAX_VARIANTES:
         return f"tercera variante de la idea {p['idea']} en el lote (máximo {MAX_VARIANTES})"
     parecida = next((e["id"] for e in existentes if _estructura(e) == _estructura(p)), None)
