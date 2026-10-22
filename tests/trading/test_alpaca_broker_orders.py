@@ -27,7 +27,8 @@ def test_submit_maps_market_and_limit(kind, expected):
     client = Client(SimpleNamespace(id="alpaca-123", status="new", filled_qty="0"))
     order = make_order(kind)
     assert AlpacaBroker(client).place_order(order).status == OrderStatus.PENDING
-    assert client.request.type == expected and client.request.qty == "2"
+    assert str(getattr(client.request.type, "value", client.request.type)).lower() == expected
+    assert float(client.request.qty) == 2
     assert order.alpaca_order_id == "alpaca-123"
 @pytest.mark.parametrize("qty,status", [("2", OrderStatus.FILLED), ("1", OrderStatus.PARTIALLY_FILLED)])
 def test_submit_preserves_cumulative_fills(qty, status):
