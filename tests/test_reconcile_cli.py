@@ -1,14 +1,50 @@
+import json
 from contextlib import contextmanager
 from datetime import datetime
 from types import SimpleNamespace
 
-from click.testing import CliRunner
 import pytest
+from click.testing import CliRunner
 
 from quantagent.cli.__main__ import cli
 from quantagent.models import ActivePosition, Environment, ExitPolicy, OrderSide
 from quantagent.strategy.assembler import StrategyAssembler
 from quantagent.trading.alpaca_broker import AlpacaBroker
+
+
+@pytest.mark.parametrize(
+    "weight, status, comment, treatment, expected_exit, expected_text",
+    [
+        (
+            0.50001, "rejected", "Saldo insuficiente; sin explicación adicional del broker",
+            "acreditado", 0, "sin explicación adicional del broker",
+        ),
+        (0.6, "rejected", "motivo", "acreditado", 1, "SPY: peso paper 0.6 difiere"),
+        (0.5, "rejected", None, "acreditado", 1, "QQQ: rechazo sin explicación"),
+        (0.5, "REJECTED", "", "acreditado", 1, "QQQ: rechazo sin explicación"),
+        (0.5, "rejected", "motivo", None, 1, "IWM: dividendo 0.5 USD, falta tratamiento"),
+        (0.50001, "accepted", None, "acreditado", 0, "Sin observaciones"),
+        (
+            0.50001, "accepted", None,
+            "acreditado; se corrigió la falta tratamiento reportada",
+            0, "se corrigió la falta tratamiento reportada",
+        ),
+    ],
+)
+def test_paper_digest_falla_solo_por_incumplimientos_estructurados(
+    tmp_path, weight, status, comment, treatment, expected_exit, expected_text
+):
+    entrada = tmp_path / "digest.json"
+    entrada.write_text(json.dumps({
+        "paper_weights": {"SPY": weight}, "shadow_weights": {"SPY": 0.5},
+        "orders": [{"status": status, "symbol": "QQQ", "comment": comment}],
+        "dividends": [["IWM", 0.5, "USD", treatment]],
+    }))
+    result = CliRunner().invoke(cli, ["trading", "digest", str(entrada)])
+
+    assert result.exit_code == expected_exit
+    assert all(section in result.output for section in ("Pesos:", "Rechazos:", "Dividendos:"))
+    assert expected_text in result.output
 
 
 @pytest.mark.parametrize(

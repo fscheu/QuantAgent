@@ -1,7 +1,11 @@
 """Paper trading reconciliation commands."""
 
+import json
+from types import SimpleNamespace
+
 import click
 
+from quantagent.fabrica.chequeos_paper import comparar_pesos, reportar_dividendos, reportar_rechazos
 from quantagent.models import Environment
 from quantagent.strategy.assembler import StrategyAssembler
 from quantagent.trading.position_monitor import PositionMonitor
@@ -30,3 +34,28 @@ def reconcile_positions() -> None:
             click.echo(difference)
     else:
         click.echo("Sin divergencias: posiciones locales y Alpaca coinciden.")
+
+
+@trading_group.command("digest", help="Evaluar pesos, rechazos y dividendos desde un JSON.")
+@click.argument("archivo", type=click.File("r", encoding="utf-8"))
+def paper_digest(archivo) -> None:
+    """El JSON contiene paper_weights, shadow_weights, orders y dividends."""
+    data = json.load(archivo)
+    diferencias_pesos = comparar_pesos(data["paper_weights"], data["shadow_weights"])
+    secciones = (
+        ("Pesos", diferencias_pesos),
+        ("Rechazos", reportar_rechazos([SimpleNamespace(**order) for order in data["orders"]])),
+        ("Dividendos", reportar_dividendos(data["dividends"])),
+    )
+    fallo = bool(diferencias_pesos) or any(
+        str(orden.get("status")).lower() == "rejected" and not orden.get("comment")
+        for orden in data["orders"]
+    ) or any(not dividendo[3] for dividendo in data["dividends"])
+    for titulo, reportes in secciones:
+        click.echo(f"{titulo}:")
+        for reporte in reportes:
+            click.echo(f"- {reporte}")
+        if not reportes:
+            click.echo("- Sin observaciones")
+    if fallo:
+        raise click.exceptions.Exit(1)
