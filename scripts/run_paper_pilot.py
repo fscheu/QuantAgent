@@ -57,6 +57,7 @@ from quantagent.models import (  # noqa: E402
 )
 from quantagent.portfolio.manager import PortfolioManager  # noqa: E402
 from quantagent.static_util import format_ohlcv_for_agents  # noqa: E402
+from quantagent.stop_loss import resolve_stop_loss  # noqa: E402
 from quantagent.strategy.base import TradingSignal as StrategySignal  # noqa: E402
 from quantagent.strategy.fifty_two_week_high_strategy import FiftyTwoWeekHighStrategy  # noqa: E402
 from quantagent.strategy.rsi_strategy import RSIMeanReversionStrategy  # noqa: E402
@@ -303,6 +304,13 @@ def _run_one_cycle(
                 TradeSignal.LONG if sig.decision.upper() == "LONG" else TradeSignal.SHORT
             )
 
+            stop_loss, default_stop = resolve_stop_loss(
+                sig.stop_loss, trade_signal.value, current_price
+            )
+            sig.stop_loss = stop_loss
+            if default_stop:
+                sig.reasoning = f"{sig.reasoning} (stop por defecto)".strip()
+
             # Persist signal record
             db_sig = Signal(
                 symbol=symbol,
@@ -319,6 +327,7 @@ def _run_one_cycle(
                 state_snapshot={
                     "entry_price": sig.entry_price,
                     "stop_loss": sig.stop_loss,
+                    "stop_loss_source": "stop por defecto" if default_stop else "estrategia",
                     "take_profit": sig.take_profit,
                 },
             )
@@ -337,9 +346,6 @@ def _run_one_cycle(
             )
 
             if order:
-                stop_loss = sig.stop_loss or (
-                    current_price * 0.98 if trade_signal == TradeSignal.LONG else current_price * 1.02
-                )
                 take_profit = sig.take_profit or (
                     current_price * 1.04 if trade_signal == TradeSignal.LONG else current_price * 0.96
                 )
