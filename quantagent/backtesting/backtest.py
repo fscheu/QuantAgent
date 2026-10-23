@@ -545,6 +545,14 @@ class Backtest:
         )
 
         trading_signal = stored_signal.signal
+        snapshot = stored_signal.state_snapshot or {}
+        replay_stop = snapshot.get("stop_loss")
+        if replay_stop is None:
+            logger.info(
+                "[REPLAY] %s signal %s has no stop_loss; using 2%% default for sizing",
+                asset,
+                stored_signal.id,
+            )
         order = self.order_manager.execute_decision(
             symbol=asset,
             decision=trading_signal,
@@ -553,6 +561,7 @@ class Backtest:
             environment=Environment.BACKTEST,
             trigger_signal_id=stored_signal.id,
             timestamp=current_date,
+            stop_price=replay_stop,
         )
 
         if order and order.filled_quantity and order.filled_quantity > 0:
@@ -574,9 +583,13 @@ class Backtest:
                 side=side,
                 entry_price=current_price,
                 stop_loss=(
-                    current_price * 0.98
-                    if side == OrderSide.BUY
-                    else current_price * 1.02
+                    replay_stop
+                    if replay_stop is not None
+                    else (
+                        current_price * 0.98
+                        if side == OrderSide.BUY
+                        else current_price * 1.02
+                    )
                 ),
                 take_profit=(
                     current_price * 1.03
@@ -873,6 +886,9 @@ class Backtest:
         self, asset, current_date, current_price, signal, trading_signal, db_signal, reference_price=None
     ):
         # Shared execution for immediate close fills and pending open fills.
+        stop_price = signal.stop_loss
+        if self.fill == "apertura" and reference_price and stop_price:
+            stop_price = current_price * stop_price / reference_price
         order = self.order_manager.execute_decision(
             symbol=asset,
             decision=trading_signal,
@@ -881,6 +897,7 @@ class Backtest:
             environment=Environment.BACKTEST,
             trigger_signal_id=db_signal.id if db_signal else None,
             timestamp=current_date,
+            stop_price=stop_price,
         )
 
         if order and order.filled_quantity and order.filled_quantity > 0:

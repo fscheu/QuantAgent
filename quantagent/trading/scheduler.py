@@ -387,6 +387,7 @@ class TradingScheduler:
                 current_price=current_price,
                 environment=self.environment,
                 trigger_signal_id=db_signal.id if db_signal else None,
+                stop_price=stop_loss,
             )
         except Exception as exc:
             self.db.rollback()
