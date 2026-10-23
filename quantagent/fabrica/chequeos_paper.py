@@ -13,3 +13,28 @@ def comparar_pesos(pesos_paper, pesos_sombra, tolerancia=1e-4):
                 f"(tolerancia {tolerancia})"
             )
     return diferencias
+
+
+def reportar_rechazos(ordenes):
+    """List rejected orders and flag any rejection without an explanation."""
+    reportes = []
+    for orden in ordenes:
+        estado = getattr(getattr(orden, "status", None), "value", getattr(orden, "status", None))
+        if str(estado).lower() != "rejected":
+            continue
+        motivo = getattr(orden, "comment", None)
+        simbolo = getattr(orden, "symbol", "")
+        reportes.append(f"{simbolo}: rechazo sin explicación" if not motivo else f"{simbolo}: rechazo, {motivo}")
+    return reportes
+
+
+def reportar_dividendos(dividendos):
+    """List dividend records and flag any event without a recorded treatment."""
+    reportes = []
+    for dividendo in dividendos:
+        simbolo, importe, moneda, tratamiento = dividendo
+        if not tratamiento:
+            reportes.append(f"{simbolo}: dividendo {importe} {moneda}, falta tratamiento")
+        else:
+            reportes.append(f"{simbolo}: dividendo {importe} {moneda}, tratamiento {tratamiento}")
+    return reportes
