@@ -21,6 +21,7 @@ from quantagent.strategy.base import TradingStrategy
 from quantagent.strategy.llm_agent_strategy import LLMAgentStrategy
 from quantagent.backtesting.intrabar_stops import check_intrabar_stops
 from quantagent.trading.order_manager import OrderManager
+from quantagent.trading.alpaca_broker import AlpacaBroker
 from quantagent.trading.position_monitor import PositionMonitor
 from quantagent.trading_graph import TradingGraph
 
@@ -111,6 +112,17 @@ class TradingScheduler:
             coalesce=True,
             max_instances=1,
         )
+        if self.environment == Environment.PAPER and isinstance(
+            self.order_manager.broker, AlpacaBroker
+        ):
+            self.scheduler.add_job(
+                self.reconcile_alpaca_positions,
+                trigger=IntervalTrigger(hours=self.config.interval_hours),
+                id="alpaca_position_reconciliation",
+                replace_existing=True,
+                coalesce=True,
+                max_instances=1,
+            )
         self.scheduler.start()
         self.is_running = True
         logger.info(
@@ -147,6 +159,10 @@ class TradingScheduler:
     def run_once(self) -> Dict[str, float]:
         """Run a single analyze+trade cycle synchronously."""
         return self.analyze_and_trade()
+
+    def reconcile_alpaca_positions(self) -> list[str]:
+        """Compare local PAPER positions with the configured Alpaca broker."""
+        return self.position_monitor.reconcile_alpaca_positions(self.order_manager.broker)
 
     # ------------------------------------------------------------------
     # Core execution

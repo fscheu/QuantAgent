@@ -10,6 +10,8 @@ from quantagent.strategy.base import TradingSignal as StrategyTradingSignal
 from quantagent.trading.scheduler import (
     TradingScheduler,
 )
+from quantagent.trading.alpaca_broker import AlpacaBroker
+from quantagent.trading.paper_broker import PaperBroker
 
 
 def _make_mock_order(side=OrderSide.BUY, quantity="1.0", symbol="BTC-USD"):
@@ -193,6 +195,41 @@ def test_scheduler_start_disabled_config():
     result = scheduler.start()
     assert result is False
     assert scheduler.is_running is False
+
+
+@pytest.mark.parametrize(
+    "broker,expected_jobs", [(AlpacaBroker(Mock()), 2), (PaperBroker(), 1)]
+)
+def test_scheduler_registers_and_runs_alpaca_reconciliation_only_for_alpaca_paper(
+    broker, expected_jobs
+):
+    config = SchedulerSettings(
+        enabled=True, interval_hours=1, assets=["BTC"], environment="paper"
+    )
+    scheduler = TradingScheduler(
+        trading_graph=Mock(),
+        order_manager=Mock(broker=broker),
+        data_provider=Mock(),
+        db_session=DummySession(),
+        scheduler_settings=config,
+        scheduler_factory=DummyScheduler,
+        strategy=Mock(),
+    )
+    reconciled = []
+    scheduler.position_monitor.reconcile_alpaca_positions = (
+        lambda configured: reconciled.append(configured) or []
+    )
+
+    scheduler.start(immediate=False)
+
+    assert len(scheduler.scheduler.jobs) == expected_jobs
+    if expected_jobs == 2:
+        job = scheduler.scheduler.jobs[1]
+        assert job["id"] == "alpaca_position_reconciliation"
+        job["func"]()
+        assert reconciled == [broker]
+    else:
+        assert reconciled == []
 
 
 # ============================================================================
