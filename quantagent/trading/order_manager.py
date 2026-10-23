@@ -302,6 +302,31 @@ class OrderManager:
 
         return filled_order
 
+    def execute_rebalance_order(self, symbol: str, side: OrderSide, qty: float, price: float) -> Optional[Order]:
+        """Execute a portfolio rebalance without strategy risk or per-entry caps."""
+        position = self.portfolio.get_position(symbol)
+        held = float(position.get("qty", 0)) if position else 0.0
+        if side == OrderSide.SELL:
+            qty = min(qty, max(0.0, held))
+        else:
+            qty = self._cap_entry_qty(side, qty, price)
+        if qty <= 0 or (self.orden_minima is not None and qty * price < self.orden_minima - 1e-9):
+            return None
+        order = Order(symbol=symbol, side=side, quantity=qty, price=price, order_type=OrderType.MARKET)
+        try:
+            self.db.add(order)
+            self.db.flush()
+            filled = self.broker.place_order(order)
+            trade = self.portfolio.execute_trade(filled, filled.average_fill_price)
+            self.risk_manager.on_trade_executed(trade)
+            self.db.add(trade)
+            self.db.commit()
+            return filled
+        except Exception as exc:
+            logger.error("%s: Rebalance order failed - %s", symbol, exc)
+            self.db.rollback()
+            return None
+
     def _execute_reversal(
         self,
         symbol: str,
