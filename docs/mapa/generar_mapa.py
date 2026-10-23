@@ -132,6 +132,19 @@ def cargar(args):
     issues, fuentes = cargar_issues(args.issues)
     ses = json.load(open(args.sessions or os.path.join(base, "sessions.json"), encoding="utf-8"))
     cfg = json.load(open(args.lotes or os.path.join(base, "lotes.json"), encoding="utf-8"))
+    nuevos = sorted({label[5:] for issue in issues.values() for label in issue.get("labels", [])
+                     if label.startswith("lote-") and label[5:] not in cfg["lotes"]}, key=nat)
+    for lid in nuevos:
+        cfg["lotes"][lid] = {
+            "nombre": lid,
+            "rama": "",
+            "estado": "propuesto",
+            "punto": "Lote detectado por label; completar nombre/punto en docs/mapa/lotes.json.",
+        }
+        cfg["prioridad_lotes"].append(lid)
+        for milestone in cfg["ms"]:
+            if milestone["id"] == "M3" and "lotes" in milestone:
+                milestone["lotes"].append(lid)
     cfg["_fuentes"] = fuentes
     for L in cfg["lotes"].values():
         if L.get("pr"):
