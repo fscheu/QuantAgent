@@ -216,6 +216,7 @@ def attempts_command(strategy_name: str, symbol: Optional[str]) -> None:
 @click.option("--costos", type=click.Choice(sorted(COSTOS_PERFILES)), default=None, help="Perfil de costos.")
 @click.option("--tamano-posicion", "tamano_posicion", type=click.FloatRange(min=0.0, max=1.0, min_open=True), default=1.0)
 @click.option("--regla-tamano", "regla_tamano", type=click.Choice(PositionSizer.REGLAS), default=None)
+@click.option("--riesgo-por-trade", type=click.FloatRange(min=0.0, min_open=True), default=None)
 @click.option("--orden-minima", "orden_minima", type=click.FloatRange(min=0.0, min_open=True), default=None, help="Monto mínimo en USD por orden de entrada.")
 def sweep_command(
     strategy_name: str,
@@ -229,6 +230,7 @@ def sweep_command(
     costos: Optional[str],
     tamano_posicion: Optional[float],
     regla_tamano: Optional[str],
+    riesgo_por_trade: Optional[float],
     orden_minima: Optional[float],
     llenado: str,
 ) -> None:
@@ -278,7 +280,7 @@ def sweep_command(
     except (SnapshotError, ValueError, FileNotFoundError) as exc:
         raise click.ClickException(str(exc)) from exc
 
-    config = _engine_config(None, costos, tamano_posicion, regla_tamano, orden_minima)
+    config = _engine_config(None, costos, tamano_posicion, regla_tamano, orden_minima, riesgo_por_trade)
 
     param_cols = sorted(combos[0].keys())
     metric_cols = [c for c in COMPARE_COLUMNS if c not in ("estrategia", "activo")]

@@ -177,6 +177,7 @@ class Backtest:
                 "slippage_pct": self.config.get("slippage_pct", settings.TRADING_SLIPPAGE_PCT),
                 "commission_pct": self.config.get("commission_pct", settings.TRADING_COMMISSION_PCT),
                 "regla_tamano": self.config.get("regla_tamano", "confianza"),
+                "riesgo_por_trade_pct": self.config.get("riesgo_por_trade_pct"),
                 "orden_minima": self.config.get("orden_minima"),
                 # Normalize model fields into generic ones; accept both
                 "model_provider": self.config.get(
@@ -652,6 +653,7 @@ class Backtest:
                 "slippage_pct": self.config.get("slippage_pct", settings.TRADING_SLIPPAGE_PCT),
                 "commission_pct": self.config.get("commission_pct", settings.TRADING_COMMISSION_PCT),
                 "regla_tamano": self.config.get("regla_tamano", "confianza"),
+                "riesgo_por_trade_pct": self.config.get("riesgo_por_trade_pct"),
                 "orden_minima": self.config.get("orden_minima"),
                 "model_provider": self.config.get(
                     "agent_llm_provider", self.config.get("model_provider", settings.AGENT_LLM_PROVIDER)

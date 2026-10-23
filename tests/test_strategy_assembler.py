@@ -35,6 +35,14 @@ def test_broker_selector_uses_registered_constructor():
         StrategyAssembler.BROKER_CONSTRUCTORS["alpaca_paper"] = original
 
 
+def test_resolved_risk_per_trade_reaches_position_sizer():
+    db = make_session()
+    resolved = StrategyAssembler.from_snapshot({"riesgo_por_trade_pct": 0.003})
+    components = StrategyAssembler.build_components(resolved, db_session=db, build_graph=False)
+    assert resolved.riesgo_por_trade_pct == 0.003
+    assert components.position_sizer.riesgo_por_trade_pct == 0.003
+
+
 def test_alpaca_paper_builds_configured_broker_and_blocks_live(monkeypatch):
     import sys
     from types import ModuleType
