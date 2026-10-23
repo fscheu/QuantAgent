@@ -43,6 +43,13 @@ def pesos(cierres, piernas, ventana=60, seleccion=None):
     return pd.DataFrame.from_dict(filas, orient="index", columns=columnas).reindex(cierres.index).ffill()
 
 
+def pesos_objetivo(cierres, piernas, fecha, ventana=60, seleccion=None):
+    """Pesos agregados por activo vigentes en `fecha`, con la lógica de `pesos`."""
+    por_pierna = pesos(cierres, piernas, ventana, seleccion)
+    fila = por_pierna.loc[:fecha].iloc[-1]
+    return fila.T.groupby(level=1).sum().to_dict()
+
+
 def combinar(retornos, pesos):
     """Retorno diario de la cartera: Σ peso × retorno de la pierna en cada activo."""
     return (retornos[pesos.columns] * pesos).sum(axis=1)
