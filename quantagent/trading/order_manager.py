@@ -90,6 +90,7 @@ class OrderManager:
         environment=None,
         trigger_signal_id: Optional[int] = None,
         timestamp: Optional[datetime] = None,
+        stop_price: Optional[float] = None,
     ) -> Optional[Order]:
         """
         Execute a trading decision end-to-end.
@@ -112,6 +113,7 @@ class OrderManager:
             trigger_signal_id: ID of signal that triggered this order - optional
             timestamp: Simulated candle time for backtests; None (wall-clock) for
                 live/paper trading
+            stop_price: Signal stop used by the risk-based position sizing rule
 
         Returns:
             Filled Order if executed, None if rejected
@@ -128,6 +130,7 @@ class OrderManager:
             signal_confidence=confidence,
             current_price=current_price,
             portfolio_value=portfolio_value,
+            stop_price=stop_price,
         )
 
         logger.info(

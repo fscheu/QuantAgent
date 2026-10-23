@@ -343,6 +343,7 @@ def _run_one_cycle(
                 current_price=current_price,
                 environment=PILOT_ENVIRONMENT,
                 trigger_signal_id=db_sig.id if db_sig else None,
+                stop_price=sig.stop_loss,
             )
 
             if order:

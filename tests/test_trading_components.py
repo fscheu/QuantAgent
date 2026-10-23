@@ -439,18 +439,24 @@ class TestOrderManager:
         trade = Mock()
         trade.pnl = Decimal("0.00")
         self.portfolio.execute_trade.return_value = trade
+        self.position_sizer.calculate_size = Mock(wraps=self.position_sizer.calculate_size)
 
         result = self.order_manager.execute_decision(
             symbol="BTC",
             decision="LONG",
             confidence=0.8,
             current_price=42000.0,
+            stop_price=41000.0,
         )
 
         assert result is not None
         assert result.symbol == "BTC"
         assert result.side == OrderSide.BUY
         assert result.status == OrderStatus.FILLED
+        self.position_sizer.calculate_size.assert_called_once_with(
+            symbol="BTC", signal_confidence=0.8, current_price=42000.0,
+            portfolio_value=100000.0, stop_price=41000.0,
+        )
 
     def test_execute_decision_short_valid(self):
         """Test SHORT decision executes successfully."""
