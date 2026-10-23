@@ -13,6 +13,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy.orm import Session
 
 from quantagent import settings
+from quantagent.stop_loss import resolve_stop_loss
 from quantagent.data.provider import DataProvider
 from quantagent.models import Environment, SchedulerHeartbeat, Signal, Trade, TradeSignal
 from quantagent.static_util import format_ohlcv_for_agents
@@ -370,6 +371,12 @@ class TradingScheduler:
             )
             return
 
+        stop_loss, default_stop = resolve_stop_loss(
+            signal.stop_loss, trade_signal.value, current_price
+        )
+        signal.stop_loss = stop_loss
+        if default_stop:
+            signal.reasoning = f"{signal.reasoning} (stop por defecto)".strip()
         db_signal = self._persist_signal(symbol, trade_signal, signal, thread_id)
 
         try:
@@ -390,10 +397,6 @@ class TradingScheduler:
 
             # NEW: Open ActivePosition for tracking
             # Extract stop loss and take profit from signal (with fallbacks)
-            stop_loss = getattr(signal, "stop_loss", None) or (
-                current_price * 0.98 if trade_signal == TradeSignal.LONG
-                else current_price * 1.02
-            )
             take_profit = getattr(signal, "take_profit", None) or (
                 current_price * 1.03 if trade_signal == TradeSignal.LONG
                 else current_price * 0.97
@@ -489,6 +492,11 @@ class TradingScheduler:
             state_snapshot={
                 "entry_price": signal.entry_price,
                 "stop_loss": signal.stop_loss,
+                "stop_loss_source": (
+                    "stop por defecto"
+                    if signal.reasoning.endswith("(stop por defecto)")
+                    else "estrategia"
+                ),
                 "take_profit": signal.take_profit,
                 "trailing_stop_pct": signal.trailing_stop_pct,
             },
