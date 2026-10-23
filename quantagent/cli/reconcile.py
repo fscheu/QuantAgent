@@ -5,10 +5,10 @@ from types import SimpleNamespace
 
 import click
 
+from quantagent.fabrica.chequeos_paper import comparar_pesos, reportar_dividendos, reportar_rechazos
 from quantagent.models import Environment
 from quantagent.strategy.assembler import StrategyAssembler
 from quantagent.trading.position_monitor import PositionMonitor
-from quantagent.fabrica.chequeos_paper import comparar_pesos, reportar_dividendos, reportar_rechazos
 
 from . import utils
 
@@ -41,17 +41,20 @@ def reconcile_positions() -> None:
 def paper_digest(archivo) -> None:
     """El JSON contiene paper_weights, shadow_weights, orders y dividends."""
     data = json.load(archivo)
+    diferencias_pesos = comparar_pesos(data["paper_weights"], data["shadow_weights"])
     secciones = (
-        ("Pesos", comparar_pesos(data["paper_weights"], data["shadow_weights"])),
+        ("Pesos", diferencias_pesos),
         ("Rechazos", reportar_rechazos([SimpleNamespace(**order) for order in data["orders"]])),
         ("Dividendos", reportar_dividendos(data["dividends"])),
     )
-    fallo = False
+    fallo = bool(diferencias_pesos) or any(
+        str(orden.get("status")).lower() == "rejected" and not orden.get("comment")
+        for orden in data["orders"]
+    ) or any(not dividendo[3] for dividendo in data["dividends"])
     for titulo, reportes in secciones:
         click.echo(f"{titulo}:")
         for reporte in reportes:
             click.echo(f"- {reporte}")
-            fallo |= titulo == "Pesos" or "sin explicación" in reporte or "falta tratamiento" in reporte
         if not reportes:
             click.echo("- Sin observaciones")
     if fallo:
