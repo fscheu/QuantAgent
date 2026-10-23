@@ -46,7 +46,9 @@
     "L16",
     "L17",
     "L18",
-    "L19"
+    "L19",
+    "L20",
+    "L21"
   ],
   "ms": [
     {
@@ -81,6 +83,7 @@
         "L17",
         "L18",
         "L19",
+        "L20",
         "LOOP",
         "M3S"
       ]
@@ -90,6 +93,7 @@
       "titulo": "Paper trading con Alpaca",
       "detalle": true,
       "lotes": [
+        "L21",
         "M4B",
         "M4P"
       ]
@@ -165,6 +169,33 @@
       "pr": 324,
       "punto": "Mergeado a main (PR #324). Informe con DSR crudo y efectivo, Sharpe por año del holdout, recargo de paper y el criterio nuevo de pase (DC #322). Las tres carteras que cortaron fallan igual contra el benchmark en la etapa 3."
     },
+    "L20": {
+      "rama": "lote/investigacion-edge",
+      "nombre": "Investigación de edge",
+      "estado": "abierto",
+      "pr": 416,
+      "tickets": [
+        "QuantAgent-e4jc"
+      ],
+      "punto": "PR #416 a main. R01: investigación de edge, generador y datos (X06–X18, X20): réplica de F1 y F2, factores y ETFs ampliados, lección y refutador para el generador, chequeos de paper liviano y protocolo de la reserva 2023+."
+    },
+    "L21": {
+      "rama": "lote/paper-alpaca",
+      "nombre": "Paper trading con Alpaca",
+      "estado": "abierto",
+      "pr": 412,
+      "tickets": [
+        "QuantAgent-av1p",
+        "QuantAgent-brwj",
+        "QuantAgent-13a",
+        "QuantAgent-qr6",
+        "QuantAgent-8659",
+        "QuantAgent-yme",
+        "QuantAgent-y62",
+        "QuantAgent-0gh7"
+      ],
+      "punto": "PR #412 a main (plan en PR #410). Paper liviano como prueba del sistema: guard de salida intravela, sizing por riesgo (0gh7.1–.4), interfaz Broker, AlpacaBroker en paper, selector con bloqueo de live, reconciliación y rebalanceador de carteras."
+    },
     "LOOP": {
       "rama": "(sin lote) loop y herramientas",
       "nombre": "Loop y herramientas",
@@ -190,25 +221,20 @@
       "nombre": "Broker Alpaca",
       "estado": "propuesto",
       "tickets": [
-        "QuantAgent-13a",
-        "QuantAgent-qr6",
-        "QuantAgent-yme",
-        "QuantAgent-y62",
         "QuantAgent-b41"
       ],
-      "punto": "Interfaz Broker, guardrails de credenciales, AlpacaBroker en paper, reconciliación y digest diario."
+      "punto": "Digest operativo diario en texto plano para el piloto de paper. El resto del broker (13a, qr6, yme, y62) va en L21."
     },
     "M4P": {
       "rama": "(sin abrir) bugs y decisiones de paper",
       "nombre": "Bugs y decisiones de paper",
       "estado": "propuesto",
       "tickets": [
-        "QuantAgent-8659",
         "QuantAgent-beo",
         "QuantAgent-55x",
         "QuantAgent-yxl1"
       ],
-      "punto": "Puntos abiertos del paper que necesitan decisión de Fede (say y oc0h ya van en L18); yxl1 espera a que haya una cartera finalista; 0gh7 (sizing por riesgo) va antes de la primera corrida paper."
+      "punto": "Puntos abiertos del paper que necesitan decisión de Fede (say y oc0h ya van en L18); yxl1 espera a que haya una cartera finalista. 8659 y 0gh7 (sizing por riesgo) pasaron a L21."
     },
     "L17": {
       "rama": "lote/loop-investigador",
