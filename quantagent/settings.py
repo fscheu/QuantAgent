@@ -75,6 +75,7 @@ TRADING_INITIAL_CASH: float = float(os.getenv("TRADING_INITIAL_CASH", "100000.0"
 TRADING_BASE_POSITION_PCT: float = float(os.getenv("TRADING_BASE_POSITION_PCT", "0.05"))
 TRADING_MAX_DAILY_LOSS_PCT: float = float(os.getenv("TRADING_MAX_DAILY_LOSS_PCT", "0.05"))
 TRADING_MAX_POSITION_PCT: float = float(os.getenv("TRADING_MAX_POSITION_PCT", "0.10"))
+TRADING_RIESGO_POR_TRADE_PCT: float = float(os.getenv("TRADING_RIESGO_POR_TRADE_PCT", "0.0025"))
 TRADING_SLIPPAGE_PCT: float = float(os.getenv("TRADING_SLIPPAGE_PCT", "0.0005"))
 TRADING_COMMISSION_PCT: float = float(os.getenv("TRADING_COMMISSION_PCT", "0"))  # por lado, sobre el nocional
 # Perfiles de costos por lado para `backtest --costos` (QuantAgent-dgi; valores: docs/04_decisions/QuantAgent-ld3-DC-costos-m2.md §6)

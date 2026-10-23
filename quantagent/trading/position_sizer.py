@@ -26,13 +26,15 @@ from typing import Optional
 class PositionSizer:
     """Calculates position size based on capital and signal confidence."""
 
-    REGLAS = ("confianza", "fijo")
+    REGLAS = ("confianza", "fijo", "riesgo")
 
     def __init__(
         self,
         base_position_pct: float = 0.05,
         regla: str = "confianza",
         orden_minima: Optional[float] = None,
+        riesgo_por_trade_pct: Optional[float] = None,
+        max_position_pct: Optional[float] = None,
     ):
         """
         Initialize Position Sizer.
@@ -51,6 +53,9 @@ class PositionSizer:
         self.base_position_pct = base_position_pct
         self.regla = regla
         self.orden_minima = orden_minima
+        from quantagent import settings
+        self.riesgo_por_trade_pct = riesgo_por_trade_pct if riesgo_por_trade_pct is not None else settings.TRADING_RIESGO_POR_TRADE_PCT
+        self.max_position_pct = max_position_pct if max_position_pct is not None else settings.TRADING_MAX_POSITION_PCT
 
     def calculate_size(
         self,
@@ -58,6 +63,7 @@ class PositionSizer:
         signal_confidence: float,
         current_price: float,
         portfolio_value: float,
+        stop_price: Optional[float] = None,
     ) -> float:
         """
         Calculate position size for a trade.
@@ -83,6 +89,15 @@ class PositionSizer:
             raise ValueError("current_price must be positive")
         if portfolio_value <= 0:
             raise ValueError("portfolio_value must be positive")
+
+        if self.regla == "riesgo":
+            distance = abs(current_price - stop_price) if stop_price is not None else current_price * 0.02
+            distance = max(distance, current_price * 0.005)
+            qty = portfolio_value * self.riesgo_por_trade_pct / distance
+            qty = min(qty, portfolio_value * self.max_position_pct / current_price)
+            if self.orden_minima is not None and qty * current_price < self.orden_minima:
+                return 0.0
+            return qty
 
         # Calculate position value: portfolio × base % (× confidence unless regla is "fijo")
         position_value = portfolio_value * self.base_position_pct
