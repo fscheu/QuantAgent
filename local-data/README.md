@@ -141,6 +141,73 @@ solo cubre el segmento que contiene L. Registrar fuente, fecha de descarga, vers
 calendario y ajustes del ETF: una descarga actual puede revisar la historia y no prueba
 disponibilidad en tiempo real en 2007; para señales se necesita fecha de publicación/vintage.
 
+## Selección y snapshot ampliado (QuantAgent-e4jc.8.3)
+
+Selección del **2026-10-22**, posterior a la regla integrada en `0c7a0330`
+y al empalme D-2b en `516c2a85` (ambos ancestros de `origin/lote/investigacion-edge`).
+Inventario inicial por mandato, no censo exhaustivo ni selección por resultados.
+Las fuentes siguientes se consultaron ese día; documentos posteriores acreditan
+hechos históricos, no disponibilidad de precios en tiempo real al corte.
+
+En la tabla, GT = grantor trust fiscal (no partnership); RIC = fondo bajo
+Subchapter M (no PTP). «Sí» significa C1/C2/C3/C4 = sí: cotización estadounidense
+en USD activa al cierre de 2007, clase admitida, objetivo permitido y no PTP.
+«Primera observada» acredita negociación como máximo en esa fecha; no confundir
+inception/NAV con primera transacción bursátil. No se inventan sesiones anteriores.
+
+| Candidato | Clase y objetivo al corte | Lanzamiento / primera observada en el recorte | Estructura y evidencia histórica | Decisión / cobertura hasta 2018-12-31 |
+| --- | --- | --- | --- | --- |
+| FXA | AUD/USD +1x | 2006-06-26 / 2007-01-03 | GT; [10-K 2020, Item 1 y nota 2](https://www.sec.gov/Archives/edgar/data/1353614/000156459021009023/fxa-10k_20201231.htm) | Sí; 3020 filas |
+| FXB | GBP/USD +1x | 2006-06-26 / 2007-01-03 | GT; [10-K 2008, Item 1 y notas](https://www.sec.gov/Archives/edgar/data/1353611/000119312509006139/d10k.htm) | Sí; 3020 filas |
+| FXC | CAD/USD +1x | 2006-06-26 / 2007-01-03 | GT; [10-K 2009, Item 1 y notas](https://www.sec.gov/Archives/edgar/data/1353612/000119312510006518/d10k.htm) | Sí; 3020 filas |
+| FXY | JPY/USD +1x | 2007-02-13 / 2007-02-13 | GT; [10-Q julio 2008, Trust Overview y notas](https://www.sec.gov/Archives/edgar/data/1353613/000089706908001411/cmw3720.htm) | Sí; 2992 filas |
+| LQD | Crédito corporativo IG +1x | 2002-07-22 / 2007-01-03 | RIC; [informe 2007, Federal Income Taxes](https://www.sec.gov/Archives/edgar/data/1100663/000119312507104035/dncsr.htm); fechas [catálogo del emisor](https://www.blackrock.com/americas-offshore/en/products/product-list) | Sí; 3020 filas |
+| HYG | Crédito corporativo HY +1x | 2007-04-04 / 2007-04-11 | RIC; [informe febrero 2008, Federal Income Taxes, p. 91](https://www.sec.gov/Archives/edgar/data/1100663/000119312508105554/dncsr.htm); fechas [emisor](https://www.ishares.com/us/literature/product-brief/ishares-high-yield-corporate-bond-etfs-product-brief-en-us.pdf) | Sí; 2953 filas |
+| EMB | Soberano emergente USD +1x | 2007-12-17 / 2007-12-19 | RIC; [informe febrero 2008, Federal Income Taxes, p. 91](https://www.sec.gov/Archives/edgar/data/1100663/000119312508105554/dncsr.htm); fechas [emisor](https://www.blackrock.com/americas-offshore/en/products/product-list) | Sí; 2777 filas |
+| BWX | Soberano internacional +1x | 2007-10-02 / 2007-10-11 | RIC; [prospecto del emisor 2007, Investment Objective y Non-Diversified Status](https://br.advfn.com/noticias/EDGAR/2007/artigo/22581139); fecha [emisor](https://www.ssga.com/us/en/individual/etfs/state-street-spdr-bloomberg-international-treasury-bond-etf-bwx) | Sí; 2825 filas |
+| EWA | Acciones Australia +1x | 1996-03-12 / 2007-01-03 | RIC; [informe 2007, Federal Income Taxes](https://www.sec.gov/Archives/edgar/data/930667/000119312507238657/dncsr.htm); fecha [emisor](https://www.ishares.com/us/products/etf-investments) | Sí; 3020 filas |
+| SH | S&P500 diario -1x | 2006-06-19 / 2007-01-03 | RIC; [prospecto 2006](https://www.sec.gov/Archives/edgar/data/1174610/000119312506133844/d497.htm); fecha [emisor](https://prod.proshares.com/our-etfs/leveraged-and-inverse/sh) | Sí; 3020 filas |
+| PSQ | Nasdaq100 diario -1x | 2006-06-19 / 2007-01-03 | RIC; mismo prospecto 2006; fecha y mandato [emisor](https://www.proshares.com/our-etfs/leveraged-and-inverse/psq) | Sí; 3020 filas |
+| FXS | SEK/USD +1x | 2006-06-26 / sin precios Yahoo | GT; [10-Q 2006, Trust Overview](https://www.sec.gov/Archives/edgar/data/1353616/000089706906002042/cmw2329.htm) | Sí, dato pendiente; última negociación 2020-02-14 según [OCC 47036, 2020-05-22](https://infomemo.theocc.com/infomemos?number=47036) |
+| UDN | Cesta monedas frente al USD +1x | 2007-02-20 / no descargado | Partnership; [10-Q junio 2018, Income Taxes](https://www.sec.gov/Archives/edgar/data/1371571/000095012318007518/udn-10Q_20180630.htm) | No: C4, PTP; no hace falta resolver las otras condiciones |
+| SSO | S&P500 diario +2x | 2006-06-19 / no descargado | [Mandato y fecha del emisor](https://www.proshares.com/our-etfs/leveraged-and-inverse/sso) | No: C3, apalancado; fiscalidad no evaluada |
+| CEW | Monedas emergentes +1x | 2009-05-06 / no descargado | [Anuncio del emisor 2009-05-06](https://www.wisdomtree.com/us/press-room/wisdomtree-and-dreyfus-launch-emerging-currency-fund-cew) | No: C1, posterior al corte; fiscalidad no evaluada |
+
+Los admitidos descargados siguen activos en las fuentes consultadas; no se detectó
+baja. FXS permanece en el universo elegible: `download_daily("FXS", "2007-01-03")`
+devolvió 0 filas, HTTP 404, el 2026-10-22. El snapshot disponible tiene sesgo de
+supervivencia y no reemplaza ese faltante por otro fondo. No habilita afirmar
+representatividad de todos los ETFs existentes al corte.
+
+Receta ejecutada desde la raíz, usando el destino persistente de entorno:
+
+```bash
+python -m quantagent.cli data snapshot create --name etf-ampliados-1d-2018-20261022 --symbols FXA,FXB,FXC,FXY,LQD,HYG,EMB,BWX,EWA,SH,PSQ --start 2007-01-03 --end 2018-12-31
+python -m quantagent.cli data snapshot verify --name etf-ampliados-1d-2018-20261022
+```
+
+Creación: `Snapshot etf-ampliados-1d-2018-20261022 creado: 11 símbolos, 32687 filas`.
+Fuente Yahoo Finance vía yfinance **1.7.0**, descarga **2026-10-22T21:12:02+00:00**.
+El CLI recibe historia hasta hoy, recorta antes de escribir y congela un nombre nuevo;
+no conserva velas de 2019 en adelante. OHLCV ajustados por splits, `adj_close`
+separado para dividendos; sesiones de bolsa, sin relleno ni interpolación.
+Los Parquet y `manifest.json` viven únicamente en
+`$QUANTAGENT_SNAPSHOT_DIR/etf-ampliados-1d-2018-20261022/`.
+El [manifiesto versionado](../tests/fixtures/snapshots/etf-ampliados-1d-2018-20261022.json)
+registra SHA256 por archivo, filas y extremos reales; `verify` contrasta ambos.
+Verificación real: `OK 11 símbolos, 32687 filas` (exit 0). `snapshot check` salió 0:
+sin sesiones ausentes ni OHLC incoherentes; EMB tiene una fila con volumen cero
+y EWA un salto ajustado >20% el 2008-10-13. Se conservaron sin corrección.
+Los 16 archivos preexistentes conservaron el SHA256 conjunto antes/después
+`741a4c1fc144864b45544287c65614778f74f9175e913cc0e5c6f5bd58f5dcd7`
+(concatenación ordenada de ruta relativa y bytes, excluyendo el directorio nuevo).
+
+Todo precio almacenado es historia observada del ETF; ningún proxy se implementó.
+Aplican las convenciones del [empalme D-2b](#empalme-de-proxies-de-investigación-quantagent-e4jc82).
+FXY comienza en febrero; HYG, BWX y EMB también dejan faltantes iniciales reales.
+No se extendieron hacia atrás ni se calcularon métricas, señales o resultados de
+estrategias, tampoco en 2019–2022 ni en la reserva 2023+.
+
 ## Factores mensuales hasta 2018-12 (QuantAgent-e4jc.7)
 
 Receta de investigación interna: BAB de [AQR](https://www.aqr.com/Insights/Datasets/Betting-Against-Beta-Equity-Factors-Monthly),
