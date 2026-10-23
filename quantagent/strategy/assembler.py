@@ -66,6 +66,7 @@ class ResolvedConfig:
     extras: Optional[Dict] = None
     commission_pct: float = 0.0
     regla_tamano: str = "confianza"
+    riesgo_por_trade_pct: float = 0.0025
     orden_minima: Optional[float] = None
     broker_type: str = "paper_local"
     alpaca_base_url: str = "https://paper-api.alpaca.markets"
@@ -100,6 +101,7 @@ class StrategyAssembler:
         return {
             "initial_cash": settings.TRADING_INITIAL_CASH,
             "base_position_pct": settings.TRADING_BASE_POSITION_PCT,
+            "riesgo_por_trade_pct": settings.TRADING_RIESGO_POR_TRADE_PCT,
             "max_daily_loss_pct": settings.TRADING_MAX_DAILY_LOSS_PCT,
             "max_position_pct": settings.TRADING_MAX_POSITION_PCT,
             "slippage_pct": settings.TRADING_SLIPPAGE_PCT,
@@ -219,6 +221,7 @@ class StrategyAssembler:
         ps = PositionSizer(
             base_position_pct=resolved.base_position_pct,
             regla=resolved.regla_tamano,
+            riesgo_por_trade_pct=resolved.riesgo_por_trade_pct,
             orden_minima=resolved.orden_minima,
         )
         rm = RiskManager(
@@ -370,6 +373,7 @@ class StrategyAssembler:
                 merged.get("commission_pct", StrategyAssembler.DEFAULTS()["commission_pct"])
             ),
             regla_tamano=merged.get("regla_tamano", "confianza"),
+            riesgo_por_trade_pct=float(merged.get("riesgo_por_trade_pct") or StrategyAssembler.DEFAULTS()["riesgo_por_trade_pct"]),
             orden_minima=(
                 float(merged["orden_minima"])
                 if merged.get("orden_minima") is not None

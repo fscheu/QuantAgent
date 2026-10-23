@@ -190,10 +190,12 @@ def _query_cycle_evidence(session, cycle_start: datetime, tickers: List[str]) ->
     )
     return {
         "signal_count": len(signals),
+        "default_stop_count": sum((s.state_snapshot or {}).get("stop_loss_source") == "stop por defecto" for s in signals),
         "order_count": len(orders),
         "fill_count": len([o for o in orders if o.filled_at is not None]),
         "signals_detail": [
-            {"symbol": s.symbol, "signal": s.signal.value, "confidence": s.confidence}
+            {"symbol": s.symbol, "signal": s.signal.value, "confidence": s.confidence,
+             "stop_loss_source": (s.state_snapshot or {}).get("stop_loss_source")}
             for s in signals
         ],
         "orders_detail": [
@@ -568,6 +570,7 @@ def main() -> int:
         "cycles_completed": len(cycle_results),
         "cycles_with_errors": sum(1 for c in cycle_results if c.get("error_count", 0) > 0),
         "total_signals": total_signals,
+        "default_stop_count": sum(c.get("default_stop_count", 0) for c in cycle_results),
         "total_orders": total_orders,
         "total_fills": total_fills,
         "total_errors": total_errors,
@@ -736,6 +739,7 @@ def _write_readiness_report(pilot_id: str, evidence: Dict, output_dir: Path) -> 
 ## Aggregate Results
 
 - Total signals generated: {agg['total_signals']}
+- Entradas con stop por defecto: {agg['default_stop_count']}
 - Total orders placed: {agg['total_orders']}
 - Total trades filled: {agg['total_fills']}
 - Open positions at end: {agg.get('open_positions', 0)}
