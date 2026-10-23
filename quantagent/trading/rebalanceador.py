@@ -1,7 +1,9 @@
 """Paper portfolio target-weight rebalancing."""
 
+from datetime import date
 from math import floor
 
+from quantagent.fabrica.cartera import guardar_sombra
 from quantagent.models import OrderSide
 
 
@@ -19,8 +21,11 @@ def ordenes_rebalanceo(pesos, posiciones, precios, valor):
     return sorted(ajustes, key=lambda row: row[1] == OrderSide.BUY)
 
 
-def rebalancear(pesos, precios, order_manager):
+def rebalancear(
+    pesos, precios, order_manager, archivo_sombra="paper_sombras.json", cartera="paper", fecha=None
+):
     portfolio = order_manager.portfolio
     value = portfolio.get_total_value()
+    guardar_sombra(archivo_sombra, cartera, fecha or date.today(), pesos, value)
     orders = ordenes_rebalanceo(pesos, portfolio.positions, precios, value)
     return [order_manager.execute_rebalance_order(*order) for order in orders]
