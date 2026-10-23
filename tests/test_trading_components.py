@@ -18,6 +18,14 @@ from quantagent.trading.risk_manager import RiskManager
 class TestPositionSizer:
     """Test PositionSizer: calculates order size based on confidence."""
 
+    def test_regla_riesgo_con_tope_piso_y_orden_minima(self):
+        sizer = PositionSizer(regla="riesgo", riesgo_por_trade_pct=0.0025)
+        args = dict(symbol="SPY", signal_confidence=0.1, current_price=100, portfolio_value=100000)
+        assert sizer.calculate_size(**args, stop_price=98) == pytest.approx(100)
+        assert sizer.calculate_size(**args, stop_price=95) == pytest.approx(50)
+        assert PositionSizer(regla="riesgo", riesgo_por_trade_pct=.0025, max_position_pct=1).calculate_size(**args, stop_price=99.9) == pytest.approx(500)
+        assert PositionSizer(regla="riesgo", riesgo_por_trade_pct=.0025, orden_minima=60000).calculate_size(**args, stop_price=98) == 0
+
     def test_init_valid(self):
         """Test PositionSizer initialization with valid parameters."""
         sizer = PositionSizer(base_position_pct=0.05)
