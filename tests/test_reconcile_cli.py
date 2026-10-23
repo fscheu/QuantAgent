@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 from datetime import datetime
+import json
 from types import SimpleNamespace
 
 from click.testing import CliRunner
@@ -9,6 +10,22 @@ from quantagent.cli.__main__ import cli
 from quantagent.models import ActivePosition, Environment, ExitPolicy, OrderSide
 from quantagent.strategy.assembler import StrategyAssembler
 from quantagent.trading.alpaca_broker import AlpacaBroker
+
+
+def test_paper_digest_imprime_tres_secciones_y_falla_en_incumplimientos(tmp_path):
+    entrada = tmp_path / "digest.json"
+    entrada.write_text(json.dumps({
+        "paper_weights": {"SPY": 0.6}, "shadow_weights": {"SPY": 0.5},
+        "orders": [{"status": "rejected", "symbol": "QQQ", "comment": None}],
+        "dividends": [["IWM", 0.5, "USD", None]],
+    }))
+    result = CliRunner().invoke(cli, ["trading", "digest", str(entrada)])
+
+    assert result.exit_code == 1
+    assert all(section in result.output for section in ("Pesos:", "Rechazos:", "Dividendos:"))
+    assert "difiere" in result.output
+    assert "sin explicación" in result.output
+    assert "falta tratamiento" in result.output
 
 
 @pytest.mark.parametrize(
