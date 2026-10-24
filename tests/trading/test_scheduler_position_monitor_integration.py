@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal
 from unittest.mock import MagicMock, Mock
 
@@ -110,6 +111,8 @@ def _create_active_position(
         prediction_horizon=3,
     )
     position.environment = Environment.PAPER
+    # La entrada es la primera vela del fixture: el guard de brwj solo evalúa velas posteriores.
+    position.decision_timestamp = datetime(2024, 1, 1)
     session.commit()
     session.refresh(position)
     return position

@@ -57,6 +57,7 @@ from quantagent.models import (  # noqa: E402
 )
 from quantagent.portfolio.manager import PortfolioManager  # noqa: E402
 from quantagent.static_util import format_ohlcv_for_agents  # noqa: E402
+from quantagent.stop_loss import resolve_stop_loss  # noqa: E402
 from quantagent.strategy.base import TradingSignal as StrategySignal  # noqa: E402
 from quantagent.strategy.fifty_two_week_high_strategy import FiftyTwoWeekHighStrategy  # noqa: E402
 from quantagent.strategy.rsi_strategy import RSIMeanReversionStrategy  # noqa: E402
@@ -189,10 +190,12 @@ def _query_cycle_evidence(session, cycle_start: datetime, tickers: List[str]) ->
     )
     return {
         "signal_count": len(signals),
+        "default_stop_count": sum((s.state_snapshot or {}).get("stop_loss_source") == "stop por defecto" for s in signals),
         "order_count": len(orders),
         "fill_count": len([o for o in orders if o.filled_at is not None]),
         "signals_detail": [
-            {"symbol": s.symbol, "signal": s.signal.value, "confidence": s.confidence}
+            {"symbol": s.symbol, "signal": s.signal.value, "confidence": s.confidence,
+             "stop_loss_source": (s.state_snapshot or {}).get("stop_loss_source")}
             for s in signals
         ],
         "orders_detail": [
@@ -303,6 +306,13 @@ def _run_one_cycle(
                 TradeSignal.LONG if sig.decision.upper() == "LONG" else TradeSignal.SHORT
             )
 
+            stop_loss, default_stop = resolve_stop_loss(
+                sig.stop_loss, trade_signal.value, current_price
+            )
+            sig.stop_loss = stop_loss
+            if default_stop:
+                sig.reasoning = f"{sig.reasoning} (stop por defecto)".strip()
+
             # Persist signal record
             db_sig = Signal(
                 symbol=symbol,
@@ -319,6 +329,7 @@ def _run_one_cycle(
                 state_snapshot={
                     "entry_price": sig.entry_price,
                     "stop_loss": sig.stop_loss,
+                    "stop_loss_source": "stop por defecto" if default_stop else "estrategia",
                     "take_profit": sig.take_profit,
                 },
             )
@@ -334,12 +345,10 @@ def _run_one_cycle(
                 current_price=current_price,
                 environment=PILOT_ENVIRONMENT,
                 trigger_signal_id=db_sig.id if db_sig else None,
+                stop_price=sig.stop_loss,
             )
 
             if order:
-                stop_loss = sig.stop_loss or (
-                    current_price * 0.98 if trade_signal == TradeSignal.LONG else current_price * 1.02
-                )
                 take_profit = sig.take_profit or (
                     current_price * 1.04 if trade_signal == TradeSignal.LONG else current_price * 0.96
                 )
@@ -561,6 +570,7 @@ def main() -> int:
         "cycles_completed": len(cycle_results),
         "cycles_with_errors": sum(1 for c in cycle_results if c.get("error_count", 0) > 0),
         "total_signals": total_signals,
+        "default_stop_count": sum(c.get("default_stop_count", 0) for c in cycle_results),
         "total_orders": total_orders,
         "total_fills": total_fills,
         "total_errors": total_errors,
@@ -729,6 +739,7 @@ def _write_readiness_report(pilot_id: str, evidence: Dict, output_dir: Path) -> 
 ## Aggregate Results
 
 - Total signals generated: {agg['total_signals']}
+- Entradas con stop por defecto: {agg['default_stop_count']}
 - Total orders placed: {agg['total_orders']}
 - Total trades filled: {agg['total_fills']}
 - Open positions at end: {agg.get('open_positions', 0)}

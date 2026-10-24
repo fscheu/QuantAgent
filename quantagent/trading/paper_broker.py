@@ -20,12 +20,16 @@ logger = logging.getLogger(__name__)
 
 
 class Broker(ABC):
-    """Abstract Broker interface."""
+    """Execution contract shared by simulated and external brokers."""
 
     @abstractmethod
-    def place_order(self, order: Order) -> Order:
-        """Place an order and return filled order."""
+    def submit_order(self, order: Order) -> Order:
+        """Submit an order; return its current status and cumulative fills."""
         pass
+
+    def place_order(self, order: Order) -> Order:
+        """Legacy name used by OrderManager."""
+        return self.submit_order(order)
 
     @abstractmethod
     def cancel_order(self, order_id: str) -> bool:
@@ -35,6 +39,11 @@ class Broker(ABC):
     @abstractmethod
     def get_balance(self) -> float:
         """Get account balance."""
+        pass
+
+    @abstractmethod
+    def get_account(self) -> Dict:
+        """Return broker account fields, including cash and buying power."""
         pass
 
     @abstractmethod
@@ -72,7 +81,7 @@ class PaperBroker(Broker):
         self.commission_fixed = commission_fixed
         self.commission_pct = commission_pct
 
-    def place_order(self, order: Order) -> Order:
+    def submit_order(self, order: Order) -> Order:
         """
         Place an order and immediately fill it with slippage.
 
@@ -160,6 +169,10 @@ class PaperBroker(Broker):
     def get_balance(self) -> float:
         """Get account balance (would need to query portfolio in real implementation)."""
         raise NotImplementedError("Use portfolio_manager.get_cash() instead")
+
+    def get_account(self) -> Dict:
+        """Get account details (provided by an external broker in paper trading)."""
+        raise NotImplementedError("PaperBroker does not provide account details")
 
     def get_positions(self) -> Dict:
         """Get open positions (would need to query portfolio in real implementation)."""

@@ -9,17 +9,45 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
 from quantagent.models import Environment
 from quantagent.portfolio.manager import PortfolioManager
-from quantagent.trading.order_manager import OrderManager
-from quantagent.trading.paper_broker import PaperBroker
-from quantagent.trading.position_sizer import PositionSizer
-from quantagent.trading.risk_manager import RiskManager
 from quantagent.trading_graph import TradingGraph
+
+if TYPE_CHECKING:
+    from quantagent.trading.order_manager import OrderManager
+    from quantagent.trading.paper_broker import PaperBroker
+    from quantagent.trading.position_sizer import PositionSizer
+    from quantagent.trading.risk_manager import RiskManager
+
+
+def _build_paper_local(config):
+    from quantagent.trading.paper_broker import PaperBroker
+
+    return PaperBroker(
+        slippage_pct=config.slippage_pct,
+        commission_model="pct" if config.commission_pct > 0 else "none",
+        commission_pct=config.commission_pct,
+    )
+
+
+def _build_alpaca_paper(config):
+    import os
+
+    try:
+        from alpaca.trading.client import TradingClient
+    except ImportError as exc:
+        raise ImportError("alpaca-py is required for broker_type='alpaca_paper'") from exc
+
+    client = TradingClient(
+        os.getenv("ALPACA_API_KEY"), os.getenv("ALPACA_SECRET_KEY"), paper=True
+    )
+    from quantagent.trading.alpaca_broker import AlpacaBroker
+
+    return AlpacaBroker(client)
 
 
 @dataclass(frozen=True)
@@ -38,7 +66,10 @@ class ResolvedConfig:
     extras: Optional[Dict] = None
     commission_pct: float = 0.0
     regla_tamano: str = "confianza"
+    riesgo_por_trade_pct: float = 0.0025
     orden_minima: Optional[float] = None
+    broker_type: str = "paper_local"
+    alpaca_base_url: str = "https://paper-api.alpaca.markets"
 
 
 @dataclass
@@ -54,6 +85,15 @@ class TradingComponents:
 class StrategyAssembler:
     """Factory to resolve strategy config and assemble trading components."""
 
+    BROKER_CONSTRUCTORS: Dict[str, Callable[[ResolvedConfig], object]] = {
+        "paper_local": _build_paper_local,
+        "alpaca_paper": _build_alpaca_paper,
+    }
+
+    @staticmethod
+    def register_broker(name: str, constructor: Callable[[ResolvedConfig], object]) -> None:
+        StrategyAssembler.BROKER_CONSTRUCTORS[name] = constructor
+
     @staticmethod
     def DEFAULTS() -> dict:
         """Default strategy configuration (loaded from settings.py)."""
@@ -61,6 +101,7 @@ class StrategyAssembler:
         return {
             "initial_cash": settings.TRADING_INITIAL_CASH,
             "base_position_pct": settings.TRADING_BASE_POSITION_PCT,
+            "riesgo_por_trade_pct": settings.TRADING_RIESGO_POR_TRADE_PCT,
             "max_daily_loss_pct": settings.TRADING_MAX_DAILY_LOSS_PCT,
             "max_position_pct": settings.TRADING_MAX_POSITION_PCT,
             "slippage_pct": settings.TRADING_SLIPPAGE_PCT,
@@ -71,6 +112,8 @@ class StrategyAssembler:
             "use_checkpointing": settings.TRADING_USE_CHECKPOINTING,
             "universe": settings.get_trading_universe(),
             "orden_minima": None,
+            "broker_type": settings.TRADING_BROKER,
+            "alpaca_base_url": settings.ALPACA_BASE_URL,
         }
 
     @staticmethod
@@ -99,7 +142,7 @@ class StrategyAssembler:
                 k: v
                 for k, v in portfolio_profile.items()
                 if k
-                in {"universe", "base_position_pct", "slippage_pct", "initial_cash"}
+                in {"universe", "base_position_pct", "slippage_pct", "initial_cash", "broker_type", "alpaca_base_url"}
             }
         )
 
@@ -161,6 +204,10 @@ class StrategyAssembler:
         db_session: Session,
         build_graph: bool = True,
     ) -> TradingComponents:
+        from quantagent.trading.order_manager import OrderManager
+        from quantagent.trading.position_sizer import PositionSizer
+        from quantagent.trading.risk_manager import RiskManager
+
         """Construct trading components wired with the resolved config.
 
         build_graph=False skips TradingGraph (and its LLM clients, which need an API key);
@@ -174,6 +221,7 @@ class StrategyAssembler:
         ps = PositionSizer(
             base_position_pct=resolved.base_position_pct,
             regla=resolved.regla_tamano,
+            riesgo_por_trade_pct=resolved.riesgo_por_trade_pct,
             orden_minima=resolved.orden_minima,
         )
         rm = RiskManager(
@@ -182,17 +230,19 @@ class StrategyAssembler:
             max_position_pct=resolved.max_position_pct,
             db=db_session,
         )
-        broker = PaperBroker(
-            slippage_pct=resolved.slippage_pct,
-            commission_model="pct" if resolved.commission_pct > 0 else "none",
-            commission_pct=resolved.commission_pct,
-        )
+        if resolved.broker_type == "alpaca_paper" and resolved.alpaca_base_url != "https://paper-api.alpaca.markets":
+            raise ValueError("alpaca_paper requires https://paper-api.alpaca.markets; live trading is not supported")
+        constructor = StrategyAssembler.BROKER_CONSTRUCTORS.get(resolved.broker_type)
+        if constructor is None:
+            raise ValueError(f"Broker constructor not registered: {resolved.broker_type}")
+        broker = constructor(resolved)
         om = OrderManager(
             position_sizer=ps,
             risk_manager=rm,
             broker=broker,
             portfolio_manager=pm,
             db=db_session,
+            cash_reserve_pct=0.05 if resolved.environment != Environment.BACKTEST else 0.0,
         )
 
         # TradingGraph configuration mapping
@@ -224,6 +274,8 @@ class StrategyAssembler:
             "max_position_pct": resolved.max_position_pct,
             "slippage_pct": resolved.slippage_pct,
             "commission_pct": resolved.commission_pct,
+            "broker_type": resolved.broker_type,
+            "alpaca_base_url": resolved.alpaca_base_url,
             # Align with TradingGraph expected keys (agent_llm_*)
             "agent_llm_provider": resolved.model_provider,
             "agent_llm_model": resolved.model_name,
@@ -321,9 +373,12 @@ class StrategyAssembler:
                 merged.get("commission_pct", StrategyAssembler.DEFAULTS()["commission_pct"])
             ),
             regla_tamano=merged.get("regla_tamano", "confianza"),
+            riesgo_por_trade_pct=float(merged.get("riesgo_por_trade_pct") or StrategyAssembler.DEFAULTS()["riesgo_por_trade_pct"]),
             orden_minima=(
                 float(merged["orden_minima"])
                 if merged.get("orden_minima") is not None
                 else None
             ),
+            broker_type=str(merged.get("broker_type", "paper_local")),
+            alpaca_base_url=str(merged.get("alpaca_base_url", "https://paper-api.alpaca.markets")),
         )

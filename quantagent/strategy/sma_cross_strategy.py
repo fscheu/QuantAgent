@@ -5,11 +5,11 @@ from typing import Dict, List, Optional, Tuple
 import pandas as pd
 
 from ..models import ActivePosition, ExitPolicy
+from ..stop_loss import UNREACHABLE_STOP_LOSS
 from .base import TradingSignal, TradingStrategy
 
 # El modelo de posición exige stop loss y take profit, y el motor reemplaza un valor
 # vacío por 2% / 3%. Estos dos niveles no se pueden tocar: equivalen a "apagado".
-UNREACHABLE_STOP_LOSS = 0.01
 UNREACHABLE_TAKE_PROFIT = 1_000_000_000.0
 
 

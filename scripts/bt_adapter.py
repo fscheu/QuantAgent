@@ -54,6 +54,8 @@ from quantagent.backtesting.fixtures import fixture_metadata  # noqa: E402
 from quantagent.data.snapshot import load_manifest  # noqa: E402
 from quantagent.models import ActivePosition, OrderSide  # noqa: E402
 from quantagent.strategy.registry import build_strategy, cli_aliases  # noqa: E402
+from quantagent.stop_loss import resolve_stop_loss  # noqa: E402
+from quantagent.trading.position_sizer import PositionSizer  # noqa: E402
 
 SCALE = port.SCALE
 INITIAL_CASH = inspect.signature(ProjectBacktest.__init__).parameters["initial_capital"].default
@@ -67,6 +69,7 @@ class StrategyAdapter(Strategy):
     fill_close = True
     slippage = commission = 0.0  # fracciones por lado
     orden_minima = None
+    regla_tamano = "confianza"
 
     def init(self):
         self.entradas_descartadas_orden_minima = 0
@@ -222,7 +225,14 @@ class StrategyAdapter(Strategy):
         long = signal.decision == "LONG"
         # si se cerro en esta misma vela, la libreria todavia no desconto el slippage de esa salida
         equity = self.equity - sum(abs(t.size) for t in self.trades) / SCALE * price * self.slippage
-        qty = equity * settings.TRADING_BASE_POSITION_PCT * signal.confidence / price
+        stop = round(signal.stop_loss or price * (0.98 if long else 1.02), 8)
+        if self.regla_tamano == "riesgo":
+            stop, _ = resolve_stop_loss(signal.stop_loss, signal.decision, price)
+            qty = PositionSizer(regla="riesgo").calculate_size(
+                self.symbol, signal.confidence, price, equity, stop_price=stop
+            )
+        else:
+            qty = equity * settings.TRADING_BASE_POSITION_PCT * signal.confidence / price
         if self.orden_minima is not None and (qty <= 0 or (qty * price) < self.orden_minima - 1e-9):
             self.entradas_descartadas_orden_minima += 1
             return
@@ -237,7 +247,6 @@ class StrategyAdapter(Strategy):
                 units = int(max_qty * SCALE)
         if units < 1:
             return
-        stop = round(signal.stop_loss or price * (0.98 if long else 1.02), 8)
         take = round(signal.take_profit or price * (1.03 if long else 0.97), 8)
         (self.buy if long else self.sell)(size=units, sl=stop / SCALE, tp=take / SCALE,
                                         tag=(signal.confidence, settings.TRADING_BASE_POSITION_PCT,
@@ -256,14 +265,15 @@ class StrategyAdapter(Strategy):
 
 def run_adapter(strategy, df: pd.DataFrame, *, symbol: str, timeframe: str, fill: str = "close",
                 commission_pct: float = 0.0, slippage_pct: float = 0.0, cash: float = INITIAL_CASH,
-                orden_minima: float | None = None):
+                orden_minima: float | None = None, regla_tamano: str = "confianza"):
     """Corre `strategy` sobre `df` (el de crossval_rsi.load_fixture: escalado y con vela centinela)."""
     close = fill == "close"
     bt = Backtest(df if close else df.iloc[:-1], StrategyAdapter, cash=cash, commission=commission_pct, margin=1.0,
                   spread=slippage_pct,
                   trade_on_close=close, hedging=False, exclusive_orders=False, finalize_trades=False)
     return bt.run(strategy=strategy, symbol=symbol, timeframe=timeframe, n_real_bars=len(df) - 1, fill_close=close,
-                  slippage=slippage_pct, commission=commission_pct, orden_minima=orden_minima)
+                  slippage=slippage_pct, commission=commission_pct, orden_minima=orden_minima,
+                  regla_tamano=regla_tamano)
 
 
 def equity_curve(stats) -> pd.Series:

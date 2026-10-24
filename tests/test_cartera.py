@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from quantagent.fabrica.cartera import combinar, evaluar_cartera, pesos
+from quantagent.fabrica.cartera import combinar, curva_cartera, evaluar_cartera, pesos, pesos_objetivo
 
 PIERNAS = {"p1": ["A", "B"], "p2": ["C"]}
 
@@ -21,6 +21,19 @@ def test_igual_riesgo_dentro_de_pierna_y_suma_uno():
     assert w[("p1", "A")] + w[("p1", "B")] == pytest.approx(0.5)
     assert w[("p2", "C")] == pytest.approx(0.5)
     assert w.sum() == pytest.approx(1)
+
+
+def test_pesos_objetivo_fecha_coincide_con_pesos_de_curva():
+    cierres = _cierres()
+    piernas = {"p1": ["A", "B"], "p2": ["C"]}
+    idx = cierres.index[60:]
+    retornos = {(p, a): cierres[a].pct_change().loc[idx] for p, activos in piernas.items() for a in activos}
+    curva = curva_cartera(cierres, piernas, retornos)
+    fecha = cierres.index[80]
+    fecha_curva = curva.index[curva.index <= fecha][-1]
+    esperados = pesos(cierres, piernas).loc[fecha_curva].T.groupby(level=1).sum().to_dict()
+    assert fecha_curva in curva.index
+    assert pesos_objetivo(cierres, piernas, fecha) == pytest.approx(esperados)
 
 
 def test_proporcion_exacta_2_a_1():
