@@ -15,6 +15,7 @@ Flow:
 
 import logging
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -320,19 +321,35 @@ class OrderManager:
             self.db.add(order)
             self.db.flush()
             filled = self.broker.place_order(order)
-            if not filled.filled_quantity:
-                # Pending and rejected orders are durable even without a fill.
-                self.db.commit()
-                return filled
-            trade = self.portfolio.execute_trade(filled, filled.average_fill_price)
-            self.risk_manager.on_trade_executed(trade)
-            self.db.add(trade)
-            self.db.commit()
-            return filled
+            return self.apply_rebalance_fills(filled)
         except Exception as exc:
             logger.error("%s: Rebalance order failed - %s", symbol, exc)
             self.db.rollback()
             return None
+
+    def apply_rebalance_fills(self, order: Order) -> Order:
+        """Apply only remote fills not yet represented by this order's Trades."""
+        if not order.filled_quantity:
+            self.db.commit()
+            return order
+        execution, price = order, order.average_fill_price
+        if order.alpaca_order_id:
+            trades = self.db.query(Trade).filter(Trade.order_id == order.id).all()
+            applied_qty = sum((trade.quantity for trade in trades), Decimal("0"))
+            delta = Decimal(str(order.filled_quantity)) - applied_qty
+            if delta <= 0:
+                self.db.commit()
+                return order
+            applied_notional = sum(
+                (trade.quantity * (trade.exit_price if trade.exit_price is not None else trade.entry_price)
+                 for trade in trades), Decimal("0"))
+            remote_notional = Decimal(str(order.filled_quantity)) * Decimal(str(order.average_fill_price))
+            price = float((remote_notional - applied_notional) / delta)
+            execution = Order(id=order.id, symbol=order.symbol, side=order.side,
+                              quantity=delta, filled_quantity=delta)
+        trade = self.portfolio.execute_trade(execution, price)
+        self.risk_manager.on_trade_executed(trade)
+        return order
 
     def _execute_reversal(
         self,
