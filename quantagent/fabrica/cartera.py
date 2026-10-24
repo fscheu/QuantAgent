@@ -74,19 +74,20 @@ def combinar(retornos, pesos):
     return (retornos[pesos.columns] * pesos).sum(axis=1)
 
 
-def curva_cartera(cierres, piernas, retornos_dict, capital=100_000.0):
+def curva_cartera(cierres, piernas, retornos_dict, capital=100_000.0, seleccion=None):
     """Calcula la curva de equity combinada con pesos por igual riesgo."""
     df_ret = pd.DataFrame(retornos_dict).fillna(0.0)
     if df_ret.empty:
         return None
-    w = pesos(df_ret.index, piernas) if cierres is None else pesos(cierres, piernas).reindex(df_ret.index).ffill().bfill()
+    w = pesos(df_ret.index, piernas, seleccion=seleccion) if cierres is None else pesos(
+        cierres, piernas, seleccion=seleccion).reindex(df_ret.index).ffill().bfill()
     ret = combinar(df_ret, w)
     return capital * (1 + ret).cumprod()
 
 
-def evaluar_cartera(cierres, piernas, retornos_dict, capital=100_000.0):
+def evaluar_cartera(cierres, piernas, retornos_dict, capital=100_000.0, seleccion=None):
     """Combina retornos fuera de muestra con pesos por igual riesgo y devuelve sharpe a tasa 0."""
     from quantagent.backtesting.vbt_filter import equity_metrics
 
-    eq = curva_cartera(cierres, piernas, retornos_dict, capital)
+    eq = curva_cartera(cierres, piernas, retornos_dict, capital, seleccion)
     return None if eq is None else equity_metrics(eq, 0.0)["sharpe"]
