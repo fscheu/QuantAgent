@@ -753,13 +753,20 @@ Los primeros 5 son los más fáciles de revisar.
 | W09 | `QuantAgent-av1p.3` | Sombra por fecha para comparar con paper | Se guarda/lee sombra; cerrado, aún sin integración al scheduler | leer | L21 |
 | W10a | `QuantAgent-av1p.4.1` | Persistir órdenes pendientes/rechazadas sin posiciones ficticias | Sin fill no cambia cartera; parcial aplica solo cantidad real | probar | L21 |
 | W10b | `QuantAgent-av1p.4.2` | Persistir identidad remota de órdenes; depende W10a | ID Alpaca sobrevive reinicio; migración reversible | probar | L21 |
+| W10b-T1 | `QuantAgent-7v45.1` | Transportar selección hasta curva/evaluación; depende W10b | Fixture T4 da 110000; mezcla conserva 1/S | probar | L21 |
+| W10b-T2 | `QuantAgent-7v45.2` | Conservar benchmark en efectivo con pesos cero; depende T1 | Suma cero conserva equity; fórmula positiva y 1/N intactos | probar | L21 |
+| W10b-T3 | `QuantAgent-7v45.3` | Selección ganadora por ventana hasta agregado etapa 1; depende T2 | Panel ganador correcto llega a curva T4 sin recalcular ranking | probar | L21 |
+| W10b-T4 | `QuantAgent-7v45.4` | Lector CSV compartido, validación 2/3 y mismo_peso; depende T3 | Curva y pesos benchmark usan selección; falta de CSV no usa pesos antiguos | probar | L21 |
+| W10b-T5 | `QuantAgent-7v45.5` | Informe futuro con selección y mismos pesos; depende T4 | Curva/pesos T4 o diagnóstico no disponible, sin reescribir evidencia | probar | L21 |
+| W10b-T6 | `QuantAgent-7v45.6` | Criterio desde curvas de consultas nuevas; depende T5 | Ambas etapas usan selección; 1/N y tasas intactos | probar | L21 |
+| W10b-T7 | `QuantAgent-7v45.7` | Objetivo→sombra nueva y adenda sintética; depende T6 | Sombra conserva objetivos T4; ninguna medición histórica nueva | probar | L21 |
 | W10c | `QuantAgent-av1p.4.3` | Consultar estado Alpaca sin reenviar; depende W10b | Pending→partial→filled no reenvía ni duplica Fill | probar | L21 |
 | W10d1 | `QuantAgent-av1p.4.4.1` | Aplicar fills incrementales idempotentes; depende W10c | 0→3→10→10 aplica solo 3 y 7 al precio incremental correcto, incluso al reabrir sesión | probar | L21 |
 | W10d2 | `QuantAgent-av1p.4.4.2` | Consultar pendientes y evitar reenvíos; depende W10d1 | Pending/partial no duplica submit; cancelación/rechazo quedan persistidos con solo fills reales | probar | L21 |
 | W10e | `QuantAgent-av1p.4.5` | Reserva de efectivo compatible con Alpaca; depende del cierre de av1p.4.4 (W10d1/2) | Compra entera respeta reserva sin costos remotos inventados | probar | L21 |
 | W10f | `QuantAgent-av1p.4.6` | Panel y precios por sesión cerrada; depende W10e | No usa barra incompleta ni reopera sábado/feriado | probar | L21 |
 | W10g | `QuantAgent-av1p.4.7` | Exposición por pierna con señales existentes; depende W10f | Momentum/SMA/curva/ranking coinciden con señales del backtest | probar | L21 |
-| W10h | `QuantAgent-av1p.4.8` | Componer pesos y exposición; depende W10g y corrección/decisión QuantAgent-7v45 (contradicción T4/curva) | Efectivo y calendario preservados, con referencia coherente antes de operar | probar | L21 |
+| W10h | `QuantAgent-av1p.4.8` | Componer pesos y exposición; depende W10g y cierre QuantAgent-7v45, corrección T4 ya autorizada por Fede ([partición](docs/loop/particiones/QuantAgent-7v45.md)) | Referencia T4 prospectiva, efectivo/calendario preservados y datos anteriores intactos | probar | L21 |
 | W10i | `QuantAgent-av1p.4.9` | Ciclo paper del scheduler; depende W10h | Pesos→órdenes→posiciones/sombra; live bloqueado, estrategias sueltas sin cambio | probar | L21 |
 | W10j | `QuantAgent-av1p.4.10` | Registro/armado explícito de ambas; depende W10i | Una cartera/cuenta/DB/proceso, sin operación real (decisión Fede 2026-10-24) | probar | L21 |
 | W10k | `QuantAgent-av1p.4.11` | Smoke paper de ambas carteras; depende W10j | Dos ciclos independientes con fills reales/sombra y reinicio idempotente | probar | L21 |
