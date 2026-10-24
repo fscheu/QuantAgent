@@ -754,8 +754,9 @@ Los primeros 5 son los más fáciles de revisar.
 | W10a | `QuantAgent-av1p.4.1` | Persistir órdenes pendientes/rechazadas sin posiciones ficticias | Sin fill no cambia cartera; parcial aplica solo cantidad real | probar | L21 |
 | W10b | `QuantAgent-av1p.4.2` | Persistir identidad remota de órdenes; depende W10a | ID Alpaca sobrevive reinicio; migración reversible | probar | L21 |
 | W10c | `QuantAgent-av1p.4.3` | Consultar estado Alpaca sin reenviar; depende W10b | Pending→partial→filled no reenvía ni duplica Fill | probar | L21 |
-| W10d | `QuantAgent-av1p.4.4` | Aplicar fills incrementales idempotentes; depende W10c | 0→3→10→10 aplica solo 3 y 7 al precio incremental correcto | probar | L21 |
-| W10e | `QuantAgent-av1p.4.5` | Reserva de efectivo compatible con Alpaca; depende W10d | Compra entera respeta reserva sin costos remotos inventados | probar | L21 |
+| W10d1 | `QuantAgent-av1p.4.4.1` | Aplicar fills incrementales idempotentes; depende W10c | 0→3→10→10 aplica solo 3 y 7 al precio incremental correcto, incluso al reabrir sesión | probar | L21 |
+| W10d2 | `QuantAgent-av1p.4.4.2` | Consultar pendientes y evitar reenvíos; depende W10d1 | Pending/partial no duplica submit; cancelación/rechazo quedan persistidos con solo fills reales | probar | L21 |
+| W10e | `QuantAgent-av1p.4.5` | Reserva de efectivo compatible con Alpaca; depende del cierre de av1p.4.4 (W10d1/2) | Compra entera respeta reserva sin costos remotos inventados | probar | L21 |
 | W10f | `QuantAgent-av1p.4.6` | Panel y precios por sesión cerrada; depende W10e | No usa barra incompleta ni reopera sábado/feriado | probar | L21 |
 | W10g | `QuantAgent-av1p.4.7` | Exposición por pierna con señales existentes; depende W10f | Momentum/SMA/curva/ranking coinciden con señales del backtest | probar | L21 |
 | W10h | `QuantAgent-av1p.4.8` | Componer pesos y exposición de ambas carteras; depende W10g | Efectivo y calendario preservados, sin cambiar D1 ni estrategias | probar | L21 |

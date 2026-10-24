@@ -294,4 +294,5 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-21 #375 #376 #377 QuantAgent-ev7d Q13 fix de la salida de paper: merge. #377: los 4 casos con componentes reales quedan planos.
 2026-10-21 #381 QuantAgent-01kb T7 ajuste retroactivo de precios: merge.
 2026-10-21 #369 QuantAgent-oc0h Q11 reversión al 100 %: escalo (queda abierta). Al 100 % la reversión deja la cartera plana; recomendado dejarlo así.
+2026-10-24 · #464 · PM: QuantAgent-av1p.4 vi: once hijos con dependencias y pruebas, cambio JSONL limitado al padre/hijos, smoke 9 trades/561.18 y CI verde; Fede decidió cuentas paper independientes por cartera decido: merge
 ```
