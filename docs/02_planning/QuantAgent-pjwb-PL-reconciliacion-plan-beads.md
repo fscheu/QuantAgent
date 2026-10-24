@@ -19,6 +19,7 @@ Este documento acompaña a [PLAN-CONTINUACION.md](../../PLAN-CONTINUACION.md). L
 | `QuantAgent-e4jc.1`, `.7`, `.8.1`, `.8.2`, `.8.3`, `.9` | Entregas cerradas en rama L20; PR #439 integró el último fragmento D-2 el 2026-10-23. D-2 padre `.8` también queda cerrado. |
 | `QuantAgent-e4jc.13.3` | PR #462 mergeado a `lote/paper-alpaca` el 2026-10-23; cierre de sub-ticket según el flujo de loop. |
 | `QuantAgent-e4jc.13` | Particiones `.13.1`–`.13.3` cerradas; Beads conserva el padre como cerrado. |
+| `QuantAgent-cq4u`, `lwji`, `oc0h`, `v2ll`, `whq0.3` | Cierres sincronizados con las razones ya registradas en Beads (PR #423; #362/#389/#391; decisión R de L18 con pruebas #382; #408; revisión PM de L19). |
 
 `QuantAgent-0gh7` sigue abierto porque Beads tiene una dependencia `blocks` hacia `QuantAgent-beo`, que permanece como decisión de Fede. Sus hijos `.1`–`.5` están cerrados. No se fuerza el cierre del padre en esta reconciliación.
 
