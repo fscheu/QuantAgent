@@ -751,7 +751,17 @@ Los primeros 5 son los más fáciles de revisar.
 | W07 | `QuantAgent-av1p.1` | Pesos objetivo de las carteras por fecha | Coinciden con curva de backtest; cerrado | leer | L21 |
 | W08 | `QuantAgent-av1p.2` | Rebalanceador de pesos y posiciones a órdenes | Caso sintético; cerrado, aún sin integración al scheduler | probar | L21 |
 | W09 | `QuantAgent-av1p.3` | Sombra por fecha para comparar con paper | Se guarda/lee sombra; cerrado, aún sin integración al scheduler | leer | L21 |
-| W10 | `QuantAgent-av1p.4` | Integrar rebalanceador/sombra al ciclo del scheduler; depende W08, W09, W05c | Prueba recorre pesos→órdenes→posiciones/sombra con broker paper; live sigue bloqueado | probar | L21 |
+| W10a | `QuantAgent-av1p.4.1` | Persistir órdenes pendientes/rechazadas sin posiciones ficticias | Sin fill no cambia cartera; parcial aplica solo cantidad real | probar | L21 |
+| W10b | `QuantAgent-av1p.4.2` | Persistir identidad remota de órdenes; depende W10a | ID Alpaca sobrevive reinicio; migración reversible | probar | L21 |
+| W10c | `QuantAgent-av1p.4.3` | Consultar estado Alpaca sin reenviar; depende W10b | Pending→partial→filled no reenvía ni duplica Fill | probar | L21 |
+| W10d | `QuantAgent-av1p.4.4` | Aplicar fills incrementales idempotentes; depende W10c | 0→3→10→10 aplica solo 3 y 7 al precio incremental correcto | probar | L21 |
+| W10e | `QuantAgent-av1p.4.5` | Reserva de efectivo compatible con Alpaca; depende W10d | Compra entera respeta reserva sin costos remotos inventados | probar | L21 |
+| W10f | `QuantAgent-av1p.4.6` | Panel y precios por sesión cerrada; depende W10e | No usa barra incompleta ni reopera sábado/feriado | probar | L21 |
+| W10g | `QuantAgent-av1p.4.7` | Exposición por pierna con señales existentes; depende W10f | Momentum/SMA/curva/ranking coinciden con señales del backtest | probar | L21 |
+| W10h | `QuantAgent-av1p.4.8` | Componer pesos y exposición de ambas carteras; depende W10g | Efectivo y calendario preservados, sin cambiar D1 ni estrategias | probar | L21 |
+| W10i | `QuantAgent-av1p.4.9` | Ciclo paper del scheduler; depende W10h | Pesos→órdenes→posiciones/sombra; live bloqueado, estrategias sueltas sin cambio | probar | L21 |
+| W10j | `QuantAgent-av1p.4.10` | Registro/armado explícito de ambas; depende W10i | Una cartera/cuenta/DB/proceso, sin operación real (decisión Fede 2026-10-24) | probar | L21 |
+| W10k | `QuantAgent-av1p.4.11` | Smoke paper de ambas carteras; depende W10j | Dos ciclos independientes con fills reales/sombra y reinicio idempotente | probar | L21 |
 | W15 | `QuantAgent-b41` | Digest diario de operación; depende W06 y W10 (corrige referencia vieja a W14 inexistente) | Posiciones, órdenes, actividad, warnings y heartbeat | leer | L21 |
 | W16 | `QuantAgent-55x` | Reloj por velas en corridas online; opcional si W10 lo necesita | No reevalúa última vela en sábado/feriado | leer | L21 |
 
