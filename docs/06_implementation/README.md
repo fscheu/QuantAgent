@@ -33,6 +33,7 @@ Implementation documents should include:
 
 ## Active Per-Change Implementation
 
+- [QuantAgent-7v45-IM-normalizacion-transversal.md](./QuantAgent-7v45-IM-normalizacion-transversal.md) - Objetivos T4 en consultas futuras y persistencia de sombra con evidencia sintética.
 - [QuantAgent-v2ll-IM-atribucion.md](./QuantAgent-v2ll-IM-atribucion.md) - Atribución reproducible en pesos, señal y tasa de cuatro carteras (etapa 2 guardada).
 - [QuantAgent-lrf8.3.2-IM-convivencia-fuentes.md](./QuantAgent-lrf8.3.2-IM-convivencia-fuentes.md) - Convivencia de filas `alpaca` con fixture y snapshot en CLI run y verify.
 - [QuantAgent-d4cq.75-IM-punto-de-control-capa-macro.md](./QuantAgent-d4cq.75-IM-punto-de-control-capa-macro.md) - Punto de control L14: comparador sobre datos reales y veredicto por capa.
