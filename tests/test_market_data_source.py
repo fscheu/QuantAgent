@@ -40,7 +40,7 @@ def test_postgres_migration_round_trip():
             conn.execute(text("INSERT INTO market_data VALUES "
                               "(1, 'SPY', '1d', '2020-01-01', 10), "
                               "(2, 'SPY', '1d', '2020-01-01', 20)"))
-        for args in [("stamp", "25efa4fd0a2b"), ("upgrade", "head")]:
+        for args in [("stamp", "25efa4fd0a2b"), ("upgrade", "e2f4a6b8c0d2")]:
             subprocess.run(["python", "-m", "alembic", *args], env=env, check=True)
         with engine.begin() as conn:
             conn.execute(text(f'SET LOCAL search_path TO "{schema}"'))
@@ -48,7 +48,7 @@ def test_postgres_migration_round_trip():
             conn.execute(text("INSERT INTO market_data VALUES (3, 'SPY', '1d', '2020-01-01', 5, 'alpaca')"))
             with pytest.raises(IntegrityError), conn.begin_nested():
                 conn.execute(text("INSERT INTO market_data VALUES (4, 'SPY', '1d', '2020-01-01', 5, 'alpaca')"))
-        subprocess.run(["python", "-m", "alembic", "downgrade", "-1"], env=env, check=True)
+        subprocess.run(["python", "-m", "alembic", "downgrade", "25efa4fd0a2b"], env=env, check=True)
         with engine.connect() as conn:
             assert conn.execute(text(f'SELECT count(*) FROM "{schema}".market_data')).scalar() == 2
     finally:
