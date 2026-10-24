@@ -177,7 +177,7 @@
       "tickets": [
         "QuantAgent-e4jc"
       ],
-      "punto": "PR #416 a main. R01: investigación de edge, generador y datos (X06–X18, X20): réplica de F1 y F2, factores y ETFs ampliados, lección y refutador para el generador, chequeos de paper liviano y protocolo de la reserva 2023+."
+      "punto": "PR #416 a main. R01: alcance X06–X18 y X20; X01–X05 y chequeos P-1 (X19a–c) pasaron a L21. D-2 se desglosó en e4jc.8.1–.3."
     },
     "L21": {
       "rama": "lote/paper-alpaca",
@@ -192,9 +192,13 @@
         "QuantAgent-8659",
         "QuantAgent-yme",
         "QuantAgent-y62",
-        "QuantAgent-0gh7"
+        "QuantAgent-0gh7",
+        "QuantAgent-e4jc.13",
+        "QuantAgent-b41",
+        "QuantAgent-55x",
+        "QuantAgent-av1p.4"
       ],
-      "punto": "PR #412 a main (plan en PR #410). Paper liviano como prueba del sistema: guard de salida intravela, sizing por riesgo (0gh7.1–.4), interfaz Broker, AlpacaBroker en paper, selector con bloqueo de live, reconciliación y rebalanceador de carteras."
+      "punto": "PR #412 a main. Tickets base cerrados incluyen broker, sizing, D1–D3 y chequeos P-1. Falta av1p.4 para conectar rebalanceador y sombra al scheduler, luego b41 (digest) antes del piloto de dos semanas. X01–X05 y X19 pertenecen a L21; W14 no existe."
     },
     "LOOP": {
       "rama": "(sin lote) loop y herramientas",
