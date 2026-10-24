@@ -296,4 +296,5 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-21 #369 QuantAgent-oc0h Q11 reversión al 100 %: escalo (queda abierta). Al 100 % la reversión deja la cartera plana; recomendado dejarlo así.
 2026-10-24 · #464 · PM: QuantAgent-av1p.4 vi: once hijos con dependencias y pruebas, cambio JSONL limitado al padre/hijos, smoke 9 trades/561.18 y CI verde; Fede decidió cuentas paper independientes por cartera decido: merge
 2026-10-24 · #465 · PM: QuantAgent-av1p.4.1 vi: 87 tests dirigidos y 36 oráculos; reproducción independiente conserva pending/rejected tras rollback con cero Trades, caja 9000 y 10 SPY; parcial 3@101 deja 7 SPY/caja 9303; smoke 9 trades/561.18 y CI verde en 66a16a49 decido: merge
+2026-10-24 · #466 · PM: QuantAgent-av1p.4.2 vi: ID de accepted/rejected/filled sobrevive nueva conexión; migración reversible conserva fila previa; local 23 passed/1 skipped PG y smoke 9/561.18; CI fae982a8 da 1659 passed e incluye test_postgres_migration_round_trip PASSED tras acotar revisión del fixture decido: merge
 ```
