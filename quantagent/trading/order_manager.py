@@ -38,6 +38,7 @@ class OrderManager:
         portfolio_manager,  # PortfolioManager instance
         db: Session,
         orden_minima: Optional[float] = None,
+        cash_reserve_pct: float = 0.0,
     ):
         """
         Initialize Order Manager.
@@ -61,17 +62,14 @@ class OrderManager:
             else getattr(position_sizer, "orden_minima", None)
         )
         self.entradas_descartadas_orden_minima = 0
+        self.cash_reserve_pct = cash_reserve_pct
 
     def _cap_entry_qty(self, side: OrderSide, qty: float, price: float) -> float:
-        """Recorta una entrada que compra a lo que el efectivo alcanza a pagar con slippage y comisión (sin apalancar).
-
-        Una entrada en corto conserva su cantidad: la venta suma efectivo, no hay faltante que cubrir.
-        Solo cubre el faltante de costos: si el nocional ya excede el efectivo, no toca la cantidad y
-        RiskManager (check 1) la rechaza como antes. El 1e-9 absorbe el redondeo de flotantes al 100%.
-        """
+        """Limita compras al efectivo disponible después de la reserva y los costos."""
         cash = self.portfolio.cash
         if side != OrderSide.BUY or qty * price > cash * (1 + 1e-9):
             return qty
+        cash *= 1 - self.cash_reserve_pct
         unit_cost = price * (1 + self.broker.slippage_pct)
         if self.broker.commission_model == "pct":
             unit_cost *= 1 + self.broker.commission_pct
@@ -92,6 +90,7 @@ class OrderManager:
         environment=None,
         trigger_signal_id: Optional[int] = None,
         timestamp: Optional[datetime] = None,
+        stop_price: Optional[float] = None,
     ) -> Optional[Order]:
         """
         Execute a trading decision end-to-end.
@@ -114,6 +113,7 @@ class OrderManager:
             trigger_signal_id: ID of signal that triggered this order - optional
             timestamp: Simulated candle time for backtests; None (wall-clock) for
                 live/paper trading
+            stop_price: Signal stop used by the risk-based position sizing rule
 
         Returns:
             Filled Order if executed, None if rejected
@@ -130,6 +130,7 @@ class OrderManager:
             signal_confidence=confidence,
             current_price=current_price,
             portfolio_value=portfolio_value,
+            stop_price=stop_price,
         )
 
         logger.info(
@@ -303,6 +304,35 @@ class OrderManager:
         self.risk_manager.on_trade_executed(trade)
 
         return filled_order
+
+    def execute_rebalance_order(self, symbol: str, side: OrderSide, qty: float, price: float) -> Optional[Order]:
+        """Execute a portfolio rebalance without strategy risk or per-entry caps."""
+        position = self.portfolio.get_position(symbol)
+        held = float(position.get("qty", 0)) if position else 0.0
+        if side == OrderSide.SELL:
+            qty = min(qty, max(0.0, held))
+        else:
+            qty = self._cap_entry_qty(side, qty, price)
+        if qty <= 0 or (self.orden_minima is not None and qty * price < self.orden_minima - 1e-9):
+            return None
+        order = Order(symbol=symbol, side=side, quantity=qty, price=price, order_type=OrderType.MARKET)
+        try:
+            self.db.add(order)
+            self.db.flush()
+            filled = self.broker.place_order(order)
+            if not filled.filled_quantity:
+                # Pending and rejected orders are durable even without a fill.
+                self.db.commit()
+                return filled
+            trade = self.portfolio.execute_trade(filled, filled.average_fill_price)
+            self.risk_manager.on_trade_executed(trade)
+            self.db.add(trade)
+            self.db.commit()
+            return filled
+        except Exception as exc:
+            logger.error("%s: Rebalance order failed - %s", symbol, exc)
+            self.db.rollback()
+            return None
 
     def _execute_reversal(
         self,

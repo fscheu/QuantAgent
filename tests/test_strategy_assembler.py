@@ -18,6 +18,66 @@ def make_session():
     return Session()
 
 
+def test_broker_selector_uses_registered_constructor():
+    db = make_session()
+    marker = object()
+    original = StrategyAssembler.BROKER_CONSTRUCTORS.get("alpaca_paper")
+    StrategyAssembler.register_broker("alpaca_paper", lambda config: marker)
+    try:
+        resolved = StrategyAssembler.from_profiles(
+            portfolio_profile={"broker_type": "alpaca_paper"}
+        )
+        components = StrategyAssembler.build_components(
+            resolved, db_session=db, build_graph=False
+        )
+        assert components.broker is marker
+    finally:
+        StrategyAssembler.BROKER_CONSTRUCTORS["alpaca_paper"] = original
+
+
+def test_resolved_risk_per_trade_reaches_position_sizer():
+    db = make_session()
+    resolved = StrategyAssembler.from_snapshot({"riesgo_por_trade_pct": 0.003})
+    components = StrategyAssembler.build_components(resolved, db_session=db, build_graph=False)
+    assert resolved.riesgo_por_trade_pct == 0.003
+    assert components.position_sizer.riesgo_por_trade_pct == 0.003
+
+
+def test_alpaca_paper_builds_configured_broker_and_blocks_live(monkeypatch):
+    import sys
+    from types import ModuleType
+
+    db = make_session()
+    calls = {}
+
+    class TradingClient:
+        def __init__(self, key, secret, paper):
+            calls.update(key=key, secret=secret, paper=paper)
+
+    alpaca = ModuleType("alpaca")
+    trading = ModuleType("alpaca.trading")
+    client_module = ModuleType("alpaca.trading.client")
+    client_module.TradingClient = TradingClient
+    monkeypatch.setitem(sys.modules, "alpaca", alpaca)
+    monkeypatch.setitem(sys.modules, "alpaca.trading", trading)
+    monkeypatch.setitem(sys.modules, "alpaca.trading.client", client_module)
+    monkeypatch.setenv("ALPACA_API_KEY", "paper-key")
+    monkeypatch.setenv("ALPACA_SECRET_KEY", "paper-secret")
+    resolved = StrategyAssembler.from_profiles(
+        overrides={"broker_type": "alpaca_paper", "alpaca_base_url": "https://api.alpaca.markets"}
+    )
+    with pytest.raises(ValueError, match="live trading is not supported"):
+        StrategyAssembler.build_components(resolved, db_session=db, build_graph=False)
+    paper = StrategyAssembler.from_profiles(
+        overrides={"broker_type": "alpaca_paper"}, environment=Environment.PAPER
+    )
+    components = StrategyAssembler.build_components(paper, db_session=db, build_graph=False)
+    assert components.order_manager.cash_reserve_pct == 0.05
+    from quantagent.trading.alpaca_broker import AlpacaBroker
+    assert isinstance(components.broker, AlpacaBroker)
+    assert calls == {"key": "paper-key", "secret": "paper-secret", "paper": True}
+
+
 @pytest.mark.api
 def test_build_components_from_snapshot():
     db = make_session()
@@ -46,6 +106,7 @@ def test_build_components_from_snapshot():
     assert components.risk_manager is not None
     assert components.broker is not None
     assert components.order_manager is not None
+    assert components.order_manager.cash_reserve_pct == 0.0
     assert components.graph is not None
 
 

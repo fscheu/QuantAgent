@@ -177,6 +177,7 @@ def test_informe_cli_muestra_sharpes_en_exceso_y_sin_datos_indica_ausencia(raiz,
 
 def test_diagnostico_exceso_solo_lee_curvas_y_fechas_guardadas(raiz, monkeypatch):
     import pandas as pd
+
     from quantagent.fabrica import informe as modulo
     from quantagent.fabrica.hipotesis import Hipotesis, Pierna
 
@@ -237,5 +238,72 @@ def test_diagnostico_exceso_solo_lee_curvas_y_fechas_guardadas(raiz, monkeypatch
     assert "Sharpe en exceso de DGS3MO" in out.read_text()
     assert {n: (raiz / n).read_bytes() for n in antes} == antes
     assert modulo.datos_informe("h-corta3")["dsr"] == dsr_antes
+
+
+def test_diagnostico_exceso_transversal_usa_seleccion_t4_y_falla_si_falta_csv(raiz, monkeypatch):
+    import pandas as pd
+
+    from quantagent.data.macro import _escribir
+    from quantagent.fabrica import informe as modulo
+    from quantagent.fabrica.cartera import curva_cartera, pesos
+    from quantagent.fabrica.criterio import curva_benchmark, sharpes_en_exceso
+    from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+
+    fechas = pd.date_range("2020-01-01", periods=8)
+    precios = pd.DataFrame({"A": range(100, 108), "B": range(100, 116, 2), "C": range(100, 92, -1)}, index=fechas)
+    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot",
+                        lambda _s, activo, _b: pd.DataFrame({"close": precios[activo]}))
+    h = Hipotesis("h-t4", "f", "j", piernas=(
+        Pierna("baja-volatilidad", {}, ("A", "B"), "u1"), Pierna("sma", {}, ("C",), "u2")))
+    corrida = raiz / "corrida"
+    equity_dir = corrida / "equity"
+    equity_dir.mkdir(parents=True)
+    curvas = {"A": [100, 102, 101, 105, 107, 110, 108, 112],
+              "B": [100, 99, 103, 101, 106, 104, 109, 107],
+              "C": [100, 101, 102, 100, 104, 106, 105, 109]}
+    for clase, activos in (("baja-volatilidad", ("A", "B")), ("sma", ("C",))):
+        for activo in activos:
+            pd.DataFrame({"date": fechas, "equity": curvas[activo]}).to_csv(
+                equity_dir / f"{clase}-{activo}.csv", index=False)
+    for activo, valor in (("A", 1), ("B", 0)):
+        pd.DataFrame({"timestamp": fechas, "posicion": valor}).to_csv(
+            corrida / f"senal-baja-volatilidad-{activo}.csv", index=False)
+    macro = pd.DataFrame({"fecha": [fechas[0]], "realtime_start": [fechas[0]],
+                          "realtime_end": [pd.Timestamp("2099-01-01")], "valor": [3.0]})
+    _escribir(raiz / "macro-2026-10", "macro-2026-10", {"DGS3MO": macro})
+
+    retornos = {(i, activo): pd.Series(curvas[activo], index=fechas).pct_change().dropna()
+                for i, activos in enumerate((("A", "B"), ("C",))) for activo in activos}
+    seleccion = {0: pd.DataFrame({"A": 1, "B": 0}, index=fechas)}
+    mapa = {0: ["A", "B"], 1: ["C"]}
+    referencia = curva_cartera(precios, mapa, retornos, seleccion=seleccion)
+    benchmark = curva_benchmark(precios, pesos=pesos(precios, mapa, seleccion=seleccion).T.groupby(level=1).sum().T)
+    esperado = sharpes_en_exceso(referencia, benchmark.reindex(referencia.index), base_dir=raiz)
+    curva_real, benchmark_real = {}, {}
+
+    def observar_curva(*args, **kwargs):
+        curva_real["equity"] = curva_cartera_original(*args, **kwargs)
+        return curva_real["equity"]
+
+    def observar_benchmark(cierres, pesos=None, **kwargs):
+        benchmark_real["pesos"] = pesos.copy()
+        return curva_benchmark_original(cierres, pesos=pesos, **kwargs)
+
+    from quantagent.fabrica.cartera import curva_cartera as curva_cartera_original
+    from quantagent.fabrica.criterio import curva_benchmark as curva_benchmark_original
+
+    monkeypatch.setattr("quantagent.fabrica.cartera.curva_cartera", observar_curva)
+    monkeypatch.setattr("quantagent.fabrica.criterio.curva_benchmark", observar_benchmark)
+    resultado = modulo.diagnostico_exceso(h, equity_dir, "snapshot", raiz)
+    assert (resultado["sharpe_cartera"], resultado["sharpe_benchmark"]) == pytest.approx(esperado)
+    retornos_referencia = (retornos[(0, "A")] + retornos[(1, "C")]) / 2
+    pd.testing.assert_series_equal(curva_real["equity"],
+                                   100_000 * (1 + retornos_referencia).cumprod(), check_freq=False)
+    pd.testing.assert_frame_equal(benchmark_real["pesos"],
+                                  pd.DataFrame({"A": 0.5, "B": 0.0, "C": 0.5}, index=fechas), check_freq=False)
+
+    (corrida / "senal-baja-volatilidad-B.csv").unlink()
+    resultado = modulo.diagnostico_exceso(h, equity_dir, "snapshot", raiz)
+    assert resultado["disponible"] is False and "selección faltante" in resultado["motivo"]
 
 

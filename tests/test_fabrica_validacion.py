@@ -12,6 +12,64 @@ from quantagent.fabrica import validacion
 from quantagent.fabrica.hipotesis import cargar_hipotesis
 
 
+@pytest.mark.parametrize("etapa,anio", [("2", 2007), ("3", 2019)])
+def test_seleccion_csv_cartera_t4(tmp_path, monkeypatch, etapa, anio):
+    from quantagent.fabrica import cartera
+    from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+    from quantagent.fabrica.transversal import leer_seleccion
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fechas = pd.bdate_range(f"{anio}-01-30", periods=5)
+    h = Hipotesis("cartera-t4", "autor", "just", piernas=(
+        Pierna("momentum-transversal", {}, ("A", "B", "C"), "U"), Pierna("rsi", {}, ("D",), "U")))
+    retornos = pd.DataFrame({"A": [0, .1, 0, 0, 0], "B": [0, 0, .2, 0, 0],
+                            "C": [0] * 5, "D": [0, .02, .02, .02, .02]}, index=fechas)
+    cierres = 100 * (1 + retornos).cumprod()
+    referencia_w = pd.DataFrame({"A": [.5, .5, 0, 0, 0], "B": [0, 0, .5, .5, .5],
+                                "C": [0.] * 5, "D": [.5] * 5}, index=fechas)
+    referencia_eq = (100_000 * (1 + (retornos * referencia_w).sum(axis=1)).cumprod()).iloc[1:]
+    (tmp_path / "equity").mkdir()
+    for p in h.piernas:
+        for activo in p.activos:
+            pd.DataFrame({"date": fechas, "equity": cierres[activo] * 1000}).to_csv(
+                tmp_path / "equity" / f"{p.clase}-{activo}.csv", index=False)
+    for activo, valores in {"A": [1, 1, 0, 0], "B": [0, 0, 1, 1], "C": [0] * 4}.items():
+        pd.DataFrame({"timestamp": fechas[:-1], "posicion": valores}).to_csv(
+            tmp_path / f"senal-momentum-transversal-{activo}.csv", index=False)
+    seleccion = leer_seleccion(tmp_path, h.piernas, fechas)
+    assert list(seleccion) == [0]
+    assert seleccion[0].iloc[0].to_dict() == {"A": 1, "B": 0, "C": 0}
+    assert seleccion[0].iloc[-1].eq(0).all()
+    curva_real, benchmark_real = cartera.curva_cartera, validacion.sharpe_benchmark
+
+    def curva(*args, **kwargs):
+        resultado = curva_real(*args, **kwargs)
+        pd.testing.assert_series_equal(resultado, referencia_eq, check_freq=False)
+        return resultado
+
+    def benchmark(c, pesos=None):
+        if pesos is not None:
+            pd.testing.assert_frame_equal(pesos, referencia_w, check_names=False, check_freq=False)
+        return benchmark_real(c, pesos=pesos)
+
+    monkeypatch.setattr(cartera, "curva_cartera", curva)
+    monkeypatch.setattr(validacion, "sharpe_benchmark", benchmark)
+    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda _, a: cierres[[a]].rename(columns={a: "close"}))
+    monkeypatch.setattr(validacion, "registrar_intento", lambda *a, **k: None)
+    monkeypatch.setattr(validacion, "dsr_contra_intentos", lambda *a, **k: None)
+    monkeypatch.setattr(validacion, "correr_motor", lambda *a, **k: [{"trades": "0"}])
+    if etapa == "2":
+        validacion.evaluar_etapa2_cartera(h, [], tmp_path, "sintetico")
+    else:
+        _, filas = validacion.validar_etapa3(h, "sintetico", {}, tmp_path)
+        assert filas[0]["benchmark_mismo_peso"] == pytest.approx(benchmark_real(cierres, pesos=referencia_w))
+    with pytest.raises(ValueError, match="cierres"):
+        validacion.evaluar_etapa2_cartera(h, [], tmp_path)
+    (tmp_path / "senal-momentum-transversal-C.csv").unlink()
+    with pytest.raises(FileNotFoundError, match="senal-momentum-transversal-C.csv"):
+        validacion._curva_y_v30_cartera(h, [], tmp_path, "sintetico", etapa, str(fechas[0]), str(fechas[-1]))
+
+
 @pytest.mark.parametrize("cantidad,esperado", [(4, True), (3, False)])
 def test_alarma_mitad_del_filtro(cantidad, esperado):
     resultados = [(str(i), 0.10, 30) for i in range(8)]
