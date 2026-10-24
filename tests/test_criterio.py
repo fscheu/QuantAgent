@@ -3,12 +3,10 @@ import pandas as pd
 import pytest
 
 from quantagent.fabrica.criterio import (
-    AniosPositivos,
-    RecargoPaper,
     anios_positivos,
     curva_benchmark,
-    evaluar_etapa3_cartera,
     error_estandar_delta_sharpe,
+    evaluar_etapa3_cartera,
     recargo_paper,
     sharpe_benchmark,
     sharpe_por_anio,
@@ -163,6 +161,31 @@ def test_curva_benchmark_pesos_cartera_separa_peso_de_senal():
         sharpe_cartera_etapa2=1.0, sharpe_bench2=0.5,
     )
     assert not pasa and any("benchmark" in motivo for motivo in motivos)
+
+
+def test_curva_benchmark_pesos_cero_conserva_efectivo_y_reinvierte():
+    fechas = pd.to_datetime(["2020-01-02", "2020-01-31", "2020-02-03", "2020-02-28",
+                             "2020-03-02", "2020-03-31"])
+    cierres = pd.DataFrame({"A": [100, 110, 110, 121, 121, 133.1],
+                            "B": [100, 100, 100, 100, 100, 100]}, index=fechas)
+    pesos = pd.DataFrame({"A": [1, 1, 0, 0, 1, 1], "B": [0, 0, 0, 0, 0, 0]}, index=fechas)
+
+    eq = curva_benchmark(cierres, pesos=pesos)
+
+    assert eq.iloc[[0, 1, 2, 3, 4, 5]].to_list() == pytest.approx(
+        [100_000, 110_000, 110_000, 110_000, 110_000, 121_000]
+    )
+
+
+def test_curva_benchmark_empieza_en_efectivo_y_entra_despues():
+    fechas = pd.to_datetime(["2020-01-02", "2020-01-31", "2020-02-03", "2020-02-28"])
+    cierres = pd.DataFrame({"A": [100, 110, 110, 121], "B": [100, 100, 100, 100]}, index=fechas)
+    pesos = pd.DataFrame({"A": [0, 0, 1, 1], "B": [0, 0, 0, 0]}, index=fechas)
+
+    eq = curva_benchmark(cierres, pesos=pesos)
+
+    assert eq.iloc[:2].to_list() == pytest.approx([100_000, 100_000])
+    assert eq.iloc[-1] == pytest.approx(110_000)
 
 
 def test_evaluar_etapa3_cartera_casos():
