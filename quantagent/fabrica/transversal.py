@@ -1,4 +1,6 @@
 """Piernas transversales: ranking de activos del universo, un tercio por arriba (QuantAgent P05.1)."""
+from pathlib import Path
+
 import pandas as pd
 
 from quantagent.strategy.momentum_12m_strategy import is_last_session_of_month
@@ -24,6 +26,19 @@ VENTANA_VOLATILIDAD = 252  # sesiones; constante fija, 0 parámetros libres
 def es_transversal(clase):
     """True si `clase` es una métrica transversal registrada (no una `TradingStrategy` de `registry.py`)."""
     return clase in METRICAS
+
+
+def leer_seleccion(carpeta, piernas, indice=None):
+    """Lee paneles guardados por pierna; las fechas sin señal quedan en cero."""
+    seleccion = {}
+    for i, pierna in enumerate(piernas):
+        if es_transversal(pierna.clase):
+            columnas = {}
+            for activo in pierna.activos:
+                archivo = Path(carpeta) / f"senal-{pierna.clase}-{activo}.csv"
+                columnas[activo] = pd.read_csv(archivo, parse_dates=["timestamp"]).set_index("timestamp")["posicion"]
+            seleccion[i] = pd.DataFrame(columnas).reindex(index=indice).fillna(0)
+    return seleccion
 
 
 def baja_volatilidad(cierres):
