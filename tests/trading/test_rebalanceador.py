@@ -1,7 +1,9 @@
 from types import SimpleNamespace
 
+import pandas as pd
 import pytest
 
+from quantagent.fabrica.cartera import curva_cartera, leer_sombra, pesos_objetivo
 from quantagent.models import Order, OrderSide, OrderStatus, Trade
 from quantagent.portfolio.manager import PortfolioManager
 from quantagent.trading.alpaca_broker import AlpacaBroker
@@ -10,6 +12,28 @@ from quantagent.trading.paper_broker import PaperBroker
 from quantagent.trading.position_sizer import PositionSizer
 from quantagent.trading.rebalanceador import ordenes_rebalanceo, rebalancear
 from quantagent.trading.risk_manager import RiskManager
+
+
+def test_t4_target_weights_are_rebalanced_and_saved_to_new_shadow(db_session, tmp_path):
+    fecha = pd.Timestamp("2026-10-01")
+    piernas = {"transversal": ["A", "B"], "base": ["C"]}
+    cierres = pd.DataFrame([[100, 100, 100]], index=[fecha], columns=["A", "B", "C"])
+    panel = pd.DataFrame([[1, 0]], index=[fecha], columns=["A", "B"])
+    seleccion = {"transversal": panel}
+    objetivos = pesos_objetivo(cierres, piernas, fecha, seleccion=seleccion)
+    assert objetivos == pytest.approx({"A": .5, "B": 0, "C": .5})
+
+    retornos = {(pierna, activo): pd.Series([.1 if activo != "B" else 0], index=[fecha])
+                for pierna, activos in piernas.items() for activo in activos}
+    assert curva_cartera(cierres, piernas, retornos, seleccion=seleccion).iloc[-1] == pytest.approx(110000)
+
+    portfolio = PortfolioManager(100000, db=db_session)
+    manager = OrderManager(PositionSizer(), RiskManager(portfolio, db=db_session),
+                           PaperBroker(slippage_pct=0), portfolio, db_session)
+    sombra = tmp_path / "t4-shadow.json"
+    rebalancear(objetivos, {activo: 100 for activo in cierres.columns}, manager,
+                sombra, fecha=fecha.date())
+    assert leer_sombra(sombra, "paper", fecha.date()) == {"pesos": objetivos, "valor": 100000}
 
 
 def test_rebalance_existing_positions_sells_before_buying(db_session, tmp_path):
