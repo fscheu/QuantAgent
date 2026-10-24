@@ -7,7 +7,7 @@ from sqlalchemy import event
 from sqlalchemy.orm import Session
 
 from quantagent.fabrica.cartera import curva_cartera, leer_sombra, pesos_objetivo
-from quantagent.models import Order, OrderSide, OrderStatus, OrderType, Trade
+from quantagent.models import Environment, Order, OrderSide, OrderStatus, OrderType, Trade
 from quantagent.portfolio.manager import PortfolioManager
 from quantagent.trading.alpaca_broker import AlpacaBroker
 from quantagent.trading.order_manager import OrderManager
@@ -147,3 +147,80 @@ def test_rebalance_fills_are_incremental_and_durable(db_session, side):
         assert reopened.query(Order).count() == 1
         assert portfolio.cash == saved_cash
         assert portfolio.positions == saved_positions
+
+
+def test_pending_rebalance_guard_and_refresh_lifecycle(db_session):
+    portfolio = PortfolioManager(10000, db=db_session)
+    remote = SimpleNamespace(status="accepted", filled_qty="0", filled_avg_price=None, reject_reason=None)
+    broker = AlpacaBroker(SimpleNamespace(get_order_by_id=lambda _: remote))
+    manager = OrderManager(PositionSizer(), RiskManager(portfolio, db=db_session), broker, portfolio, db_session)
+    order = Order(symbol="SPY", side=OrderSide.BUY, quantity=10, order_type=OrderType.MARKET,
+                  environment=Environment.PAPER, alpaca_order_id="alp-1")
+    db_session.add(order)
+    db_session.commit()
+
+    assert manager.execute_rebalance_order("SPY", OrderSide.BUY, 5, 100) is None
+
+    bind = db_session.get_bind()
+    with Session(bind) as reopened:
+        reopened_mgr = OrderManager(
+            PositionSizer(), RiskManager(portfolio, db=reopened), broker, portfolio, reopened)
+        assert reopened_mgr.execute_rebalance_order("SPY", OrderSide.BUY, 5, 100) is None
+
+    remote.status, remote.filled_qty, remote.filled_avg_price = "partially_filled", "3", "101"
+    manager.refresh_rebalance_orders()
+    assert [float(t.quantity) for t in db_session.query(Trade).all()] == [3]
+
+    manager.refresh_rebalance_orders()
+    assert db_session.query(Trade).count() == 1
+
+    remote.status, remote.filled_qty, remote.filled_avg_price = "filled", "10", "103"
+    manager.refresh_rebalance_orders()
+    assert [float(t.quantity) for t in db_session.query(Trade).order_by(Trade.id)] == [3, 7]
+    assert order.status == OrderStatus.FILLED
+    assert manager._pending_rebalance_orders().count() == 0
+
+
+def test_pending_rebalance_terminal_states_and_exclusions(db_session):
+    portfolio = PortfolioManager(10000, db=db_session)
+    remote = SimpleNamespace(status="partially_filled", filled_qty="3", filled_avg_price="101", reject_reason=None)
+    broker = AlpacaBroker(SimpleNamespace(get_order_by_id=lambda _: remote))
+    manager = OrderManager(PositionSizer(), RiskManager(portfolio, db=db_session), broker, portfolio, db_session)
+
+    order_partial = Order(symbol="SPY", side=OrderSide.BUY, quantity=10, order_type=OrderType.MARKET,
+                          environment=Environment.PAPER, alpaca_order_id="alp-partial")
+    order_bt = Order(symbol="SPY", side=OrderSide.BUY, quantity=10, order_type=OrderType.MARKET,
+                     environment=Environment.BACKTEST, alpaca_order_id="alp-bt")
+    order_prod = Order(symbol="SPY", side=OrderSide.BUY, quantity=10, order_type=OrderType.MARKET,
+                       environment=Environment.PROD, alpaca_order_id="alp-prod")
+    db_session.add_all([order_partial, order_bt, order_prod])
+    db_session.commit()
+
+    manager.refresh_rebalance_orders()
+    assert db_session.query(Trade).count() == 1
+
+    remote.status = "canceled"
+    manager.refresh_rebalance_orders()
+    assert order_partial.status == OrderStatus.CANCELLED
+    assert db_session.query(Trade).count() == 1
+
+    order_rej = Order(symbol="AAPL", side=OrderSide.BUY, quantity=5, order_type=OrderType.MARKET,
+                      environment=Environment.PAPER, alpaca_order_id="alp-rej")
+    db_session.add(order_rej)
+    db_session.commit()
+    remote.status, remote.filled_qty, remote.filled_avg_price = "rejected", "0", None
+    remote.reject_reason = "insufficient buying power"
+    manager.refresh_rebalance_orders()
+    assert order_rej.status == OrderStatus.REJECTED
+    assert order_rej.comment == "insufficient buying power"
+    assert db_session.query(Trade).filter(Trade.order_id == order_rej.id).count() == 0
+
+    assert manager._pending_rebalance_orders().all() == []
+
+    paper_mgr = OrderManager(PositionSizer(), RiskManager(portfolio, db=db_session),
+                             PaperBroker(slippage_pct=0), portfolio, db_session)
+    order_pending = Order(symbol="MSFT", side=OrderSide.BUY, quantity=5, order_type=OrderType.MARKET,
+                          environment=Environment.PAPER, alpaca_order_id="alp-pend")
+    db_session.add(order_pending)
+    db_session.commit()
+    assert paper_mgr.execute_rebalance_order("MSFT", OrderSide.BUY, 2, 50) is not None
