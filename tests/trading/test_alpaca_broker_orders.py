@@ -1,24 +1,39 @@
+import os
+import subprocess
+import sys
 from decimal import Decimal
+from pathlib import Path
 from types import SimpleNamespace
+
 import pytest
+from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.orm import sessionmaker
+
+from quantagent.database import Base
 from quantagent.models import Order, OrderSide, OrderStatus, OrderType
 from quantagent.trading.alpaca_broker import AlpacaBroker
+
+
 class Client:
     def __init__(self, result=None, error=None, account=None, positions=None):
         self.result, self.error = result, error
         self.account, self.positions = account, positions
     def submit_order(self, order_data):
         self.request = order_data
-        if self.error: raise self.error
+        if self.error:
+            raise self.error
         return self.result
     def cancel_order_by_id(self, order_id):
         self.cancelled = order_id
-        if self.error: raise self.error
+        if self.error:
+            raise self.error
     def get_account(self):
-        if self.error: raise self.error
+        if self.error:
+            raise self.error
         return self.account
     def get_all_positions(self):
-        if self.error: raise self.error
+        if self.error:
+            raise self.error
         return self.positions
 def make_order(kind=OrderType.MARKET):
     return Order(symbol="SPY", side=OrderSide.BUY, order_type=kind, quantity=Decimal("2"), price=Decimal("100"))
@@ -75,3 +90,38 @@ def test_cancel_returns_false_when_alpaca_rejects_cancellation():
     error = Exception("order cannot be canceled")
     error.code = 42210000
     assert not AlpacaBroker(Client(error=error)).cancel_order("id")
+
+def test_remote_order_id_survives_new_session(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'orders.db'}")
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    order = make_order()
+    AlpacaBroker(Client(SimpleNamespace(id="alpaca-durable", status="new", filled_qty="0"))).submit_order(order)
+    with Session() as session:
+        session.add(order)
+        session.commit()
+        order_id = order.id
+    with Session() as session:
+        assert session.get(Order, order_id).alpaca_order_id == "alpaca-durable"
+    engine.dispose()
+
+def test_alpaca_order_id_migration_round_trip(tmp_path):
+    db_path = tmp_path / "migration.db"
+    engine = create_engine(f"sqlite:///{db_path}")
+    with engine.begin() as connection:
+        connection.execute(text("CREATE TABLE orders (id INTEGER PRIMARY KEY, symbol TEXT)"))
+        connection.execute(text("INSERT INTO orders VALUES (1, 'SPY')"))
+    engine.dispose()
+    env = dict(os.environ, DATABASE_URL=f"sqlite:///{db_path}")
+    alembic = [sys.executable, "-m", "alembic"]
+    root = Path(__file__).resolve().parents[2]
+    steps = [("stamp", "4c2a1d8e7f90", False), ("upgrade", "7d2e4a91c6b3", True),
+             ("downgrade", "4c2a1d8e7f90", False), ("upgrade", "7d2e4a91c6b3", True)]
+    for command, revision, has_column in steps:
+        args = (command, revision)
+        subprocess.run([*alembic, *args], cwd=root, env=env, check=True, capture_output=True)
+        engine = create_engine(f"sqlite:///{db_path}")
+        assert ("alpaca_order_id" in {column["name"] for column in inspect(engine).get_columns("orders")}) == has_column
+        with engine.connect() as connection:
+            assert connection.execute(text("SELECT id, symbol FROM orders")).one() == (1, "SPY")
+        engine.dispose()
