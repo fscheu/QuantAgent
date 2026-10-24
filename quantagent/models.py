@@ -84,6 +84,7 @@ class Order(Base):
     filled_quantity = Column(Numeric(precision=18, scale=8), nullable=False, default=0)
     average_fill_price = Column(Numeric(precision=18, scale=8), nullable=True)
     comment = Column(Text, nullable=True)
+    alpaca_order_id = Column(String(100), nullable=True)
 
     # Environment & Provenance (NEW)
     environment = Column(
