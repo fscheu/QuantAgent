@@ -320,6 +320,10 @@ class OrderManager:
             self.db.add(order)
             self.db.flush()
             filled = self.broker.place_order(order)
+            if not filled.filled_quantity:
+                # Pending and rejected orders are durable even without a fill.
+                self.db.commit()
+                return filled
             trade = self.portfolio.execute_trade(filled, filled.average_fill_price)
             self.risk_manager.on_trade_executed(trade)
             self.db.add(trade)
