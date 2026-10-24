@@ -721,11 +721,11 @@ Los primeros 5 son los más fáciles de revisar.
 | X09 | `QuantAgent-e4jc.3` | F1-c (R10): F1 por las etapas 0 a 2 con `--hasta-etapa 2` (VM); depende de X08 y S01 | IM con veredicto; ninguna entrada nueva en el candado; pide a Fede el OK para la reserva | decidir | L20 |
 | X10 | `QuantAgent-e4jc.4` | F2-a (R11): celdas cortas en la cartera y en el control contra `backtesting.py` | Celda corta sintética gana cuando el precio baja; costos simétricos; control coincide | probar | L20 |
 | X11 | `QuantAgent-e4jc.5` | F2-b: cortos y cuenta margin solo en paper (scheduler, OrderManager, AlpacaBroker); depende de X10 | Un corto sintético abre, se monitorea y cierra en paper; en endpoint live queda bloqueado | decidir | L20 |
-| X12 | `QuantAgent-e4jc.6` | F2-c (R12): F2 por las etapas 0 a 2 (VM); depende de X10, S01 y X14 | IM con veredicto y correlación con 1/N; ninguna entrada nueva en el candado | decidir | L20 |
+| X12 | `QuantAgent-e4jc.6` | F2-c (R12): F2 por las etapas 0 a 2 (VM); depende de X10, S01 y X14c | IM con veredicto y correlación con 1/N; ninguna entrada nueva en el candado | decidir | L20 |
 | X13 | `QuantAgent-e4jc.7` | D-1: factores AQR y French cortados en 2018-12; AQR no se versiona | Ninguna fecha posterior a 2018-12; archivos de AQR ignorados por git | leer | L20 |
-| X14a | `QuantAgent-e4jc.8.1` | D-2a: regla de elegibilidad fechada en 2007 | Regla integrada antes de selección | leer | L20 |
-| X14b | `QuantAgent-e4jc.8.2` | D-2b: proxies gratuitos con corte temporal | Fuentes, fórmulas y límites documentados | leer | L20 |
-| X14c | `QuantAgent-e4jc.8.3` | D-2c: seleccionar ETFs y congelar snapshot | Manifiesto y `snapshot verify` pasan | probar | L20 |
+| X14a | `QuantAgent-e4jc.8.1` | D-2a: regla con corte en 2007 antes de seleccionar ETFs; sin PTP | Regla integrada en commit propio, condiciones verificables y ninguna lista de candidatos | leer | L20 |
+| X14b | `QuantAgent-e4jc.8.2` | D-2b: documentar empalme con proxies gratuitos; depende de X14a | Fuentes, unidades, fórmula, fecha del enlace, validación y límites por clase | leer | L20 |
+| X14c | `QuantAgent-e4jc.8.3` | D-2c: aplicar regla integrada y congelar snapshot nuevo; depende de X14b | Evidencia de elegibilidad posterior al commit de la regla; manifiesto versionado; `snapshot verify` pasa | probar | L20 |
 | X15 | `QuantAgent-e4jc.9` | D-3: CSV de pysystemtrade (futuros, hasta 2024-03) como datos de investigación | Manifiesto con fuente y hash; carga de una serie de prueba | leer | L20 |
 | X16 | `QuantAgent-e4jc.10` | G-1: lección escrita por personas en el catálogo e incluida en el pedido, sin cifras de la prueba; depende de S05 y S08 | El pedido contiene la lección; el test confirma que no hay Sharpe, DSR ni ganancias | leer | L20 |
 | X17 | `QuantAgent-e4jc.11` | G-2: refutador de otra familia (Codex), modelo más capaz con esfuerzo alto y búsqueda web; depende de S06 y S08. No correr `hipotesis proponer` antes | Comandos de mentira escriben propuesta y refutación; si el refutador falla no se escribe nada | leer | L20 |
