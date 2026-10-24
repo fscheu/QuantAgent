@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from types import SimpleNamespace
 
-from quantagent.models import Fill, Order, OrderSide, OrderStatus, OrderType
+from quantagent.models import Fill, Order, OrderStatus, OrderType
 from quantagent.trading.paper_broker import Broker
 
 
@@ -35,17 +35,23 @@ class AlpacaBroker(Broker):
                 return order
             raise
         order.alpaca_order_id = str(result.id) if getattr(result, "id", None) else None
+        return self._update_order(order, result)
+
+    def refresh_order(self, order: Order) -> Order:
+        return self._update_order(order, self.client.get_order_by_id(order.alpaca_order_id))
+
+    def _update_order(self, order: Order, result) -> Order:
         status = str(getattr(result.status, "value", result.status)).lower()
         if status == "rejected":
-            order.status = OrderStatus.REJECTED
             order.comment = getattr(result, "reject_reason", None) or getattr(result, "message", None)
-            return order
         cumulative = Decimal(str(getattr(result, "filled_qty", 0) or 0))
         previous_filled = Decimal(str(order.filled_quantity or 0))
         if cumulative > previous_filled:
             delta = cumulative - previous_filled
             price = Decimal(str(result.filled_avg_price))
-            order.fills.append(Fill(order_id=order.id, quantity=delta, price=price,
+            previous_notional = previous_filled * Decimal(str(order.average_fill_price or 0))
+            delta_price = (cumulative * price - previous_notional) / delta
+            order.fills.append(Fill(order_id=order.id, quantity=delta, price=delta_price,
                                     commission=Decimal("0"), filled_at=datetime.utcnow()))
             order.filled_quantity = cumulative
             order.average_fill_price = float(price)

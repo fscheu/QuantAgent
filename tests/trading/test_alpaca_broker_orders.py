@@ -18,10 +18,16 @@ class Client:
     def __init__(self, result=None, error=None, account=None, positions=None):
         self.result, self.error = result, error
         self.account, self.positions = account, positions
+        self.submitted = 0
+        self.queried = []
     def submit_order(self, order_data):
+        self.submitted += 1
         self.request = order_data
         if self.error:
             raise self.error
+        return self.result
+    def get_order_by_id(self, order_id):
+        self.queried.append(order_id)
         return self.result
     def cancel_order_by_id(self, order_id):
         self.cancelled = order_id
@@ -68,7 +74,18 @@ def test_buying_power_api_error_is_rejection():
     ("canceled", OrderStatus.CANCELLED), ("rejected", OrderStatus.REJECTED), ("expired", OrderStatus.EXPIRED)])
 def test_submit_maps_alpaca_statuses(status, expected):
     result = SimpleNamespace(status=status, filled_qty="0")
-    assert AlpacaBroker(Client(result)).submit_order(make_order()).status == expected
+    client = Client(result)
+    broker = AlpacaBroker(client)
+    order = broker.submit_order(make_order())
+    assert order.status == expected and not order.fills
+    for qty, price in [("1", "101"), ("2", "102"), ("2", "102")]:
+        client.result = SimpleNamespace(status=status, filled_qty=qty, filled_avg_price=price)
+        assert broker.refresh_order(order).status == expected
+        assert order.filled_quantity == Decimal(qty)
+        assert order.average_fill_price == Decimal(price)
+    assert [(fill.quantity, fill.price) for fill in order.fills] == [
+        (Decimal("1"), Decimal("101")), (Decimal("1"), Decimal("103"))]
+    assert client.submitted == 1
 
 def test_account_balance_positions_and_api_errors():
     account = SimpleNamespace(cash="1234.50", buying_power="2000")
@@ -91,18 +108,45 @@ def test_cancel_returns_false_when_alpaca_rejects_cancellation():
     error.code = 42210000
     assert not AlpacaBroker(Client(error=error)).cancel_order("id")
 
-def test_remote_order_id_survives_new_session(tmp_path):
+@pytest.mark.parametrize("partial_price,final_price,delta_notional,total_notional", [
+    ("101", "103", "727", "1030"), ("101.25", "103.50", "731.25", "1035")])
+def test_remote_order_id_survives_new_session(tmp_path, partial_price, final_price, delta_notional, total_notional):
     engine = create_engine(f"sqlite:///{tmp_path / 'orders.db'}")
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
     order = make_order()
-    AlpacaBroker(Client(SimpleNamespace(id="alpaca-durable", status="new", filled_qty="0"))).submit_order(order)
+    order.quantity = Decimal("10")
+    client = Client(SimpleNamespace(id="alpaca-durable", status="new", filled_qty="0"))
+    broker = AlpacaBroker(client)
+    broker.submit_order(order)
     with Session() as session:
         session.add(order)
         session.commit()
         order_id = order.id
     with Session() as session:
-        assert session.get(Order, order_id).alpaca_order_id == "alpaca-durable"
+        order = session.get(Order, order_id)
+        assert order.alpaca_order_id == "alpaca-durable"
+        for status, qty, price, expected in [
+            ("accepted", "0", None, OrderStatus.PENDING),
+            ("partially_filled", "3", partial_price, OrderStatus.PARTIALLY_FILLED),
+            ("filled", "10", final_price, OrderStatus.FILLED),
+        ]:
+            client.result = SimpleNamespace(status=status, filled_qty=qty, filled_avg_price=price)
+            assert broker.refresh_order(order) is order
+            assert order.status == expected and order.filled_quantity == Decimal(qty)
+        assert [(fill.quantity, fill.price) for fill in order.fills] == [
+            (Decimal("3"), Decimal(partial_price)), (Decimal("7"), Decimal(delta_notional) / Decimal("7"))]
+        assert sum(fill.quantity * fill.price for fill in order.fills) == Decimal(total_notional)
+        broker.refresh_order(order)
+        assert len(order.fills) == 2
+        session.commit()
+    with Session() as session:
+        order = session.get(Order, order_id)
+        broker.refresh_order(order)
+        assert order.filled_quantity == Decimal("10") and order.average_fill_price == Decimal(final_price)
+        assert len(order.fills) == 2
+    assert client.submitted == 1
+    assert client.queried == ["alpaca-durable"] * 5
     engine.dispose()
 
 def test_alpaca_order_id_migration_round_trip(tmp_path):
