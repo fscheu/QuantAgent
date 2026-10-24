@@ -759,7 +759,7 @@ Los primeros 5 son los más fáciles de revisar.
 | W10e | `QuantAgent-av1p.4.5` | Reserva de efectivo compatible con Alpaca; depende del cierre de av1p.4.4 (W10d1/2) | Compra entera respeta reserva sin costos remotos inventados | probar | L21 |
 | W10f | `QuantAgent-av1p.4.6` | Panel y precios por sesión cerrada; depende W10e | No usa barra incompleta ni reopera sábado/feriado | probar | L21 |
 | W10g | `QuantAgent-av1p.4.7` | Exposición por pierna con señales existentes; depende W10f | Momentum/SMA/curva/ranking coinciden con señales del backtest | probar | L21 |
-| W10h | `QuantAgent-av1p.4.8` | Componer pesos y exposición de ambas carteras; depende W10g | Efectivo y calendario preservados, sin cambiar D1 ni estrategias | probar | L21 |
+| W10h | `QuantAgent-av1p.4.8` | Componer pesos y exposición; depende W10g y corrección/decisión QuantAgent-7v45 (contradicción T4/curva) | Efectivo y calendario preservados, con referencia coherente antes de operar | probar | L21 |
 | W10i | `QuantAgent-av1p.4.9` | Ciclo paper del scheduler; depende W10h | Pesos→órdenes→posiciones/sombra; live bloqueado, estrategias sueltas sin cambio | probar | L21 |
 | W10j | `QuantAgent-av1p.4.10` | Registro/armado explícito de ambas; depende W10i | Una cartera/cuenta/DB/proceso, sin operación real (decisión Fede 2026-10-24) | probar | L21 |
 | W10k | `QuantAgent-av1p.4.11` | Smoke paper de ambas carteras; depende W10j | Dos ciclos independientes con fills reales/sombra y reinicio idempotente | probar | L21 |
