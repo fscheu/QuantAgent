@@ -147,3 +147,24 @@ def test_evaluar_cartera_una_pierna_un_activo_coincide():
     s = evaluar_cartera(c, {"p1": ["A"]}, {("p1", "A"): ret_a})
     eq = 100_000.0 * (1 + ret_a).cumprod()
     assert s == pytest.approx(equity_metrics(eq, 0.0)["sharpe"])
+
+
+def test_curva_y_evaluacion_transversal_usan_seleccion():
+    from quantagent.backtesting.vbt_filter import equity_metrics
+
+    idx = pd.to_datetime(["2024-01-30", "2024-01-31", "2024-02-01"])
+    cierres = pd.DataFrame({"A": [100, 101, 102], "B": [100, 102, 104], "C": [100, 103, 106]}, index=idx)
+    seleccion = {"t": pd.DataFrame({"A": [1, 1, 0], "B": [0, 0, 1], "C": [0, 0, 1]}, index=idx)}
+    retornos = {("t", "A"): pd.Series([0.0, 0.1, 0.0], index=idx),
+                ("t", "B"): pd.Series([0.0, 0.0, 0.02], index=idx),
+                ("t", "C"): pd.Series([0.0, 0.0, 0.02], index=idx)}
+    piernas = {"t": ["A", "B", "C"]}
+
+    solo_a = {"t": pd.DataFrame({"A": 1, "B": 0, "C": 0}, index=idx)}
+    assert curva_cartera(cierres, piernas, retornos, seleccion=solo_a).iloc[-1] == pytest.approx(110_000)
+    curva = curva_cartera(cierres, piernas, retornos, seleccion=seleccion)
+    assert curva.iloc[-1] == pytest.approx(112_200)
+    assert curva_cartera(cierres, piernas, retornos).iloc[-1] == pytest.approx(104_711.1111)
+    sharpe_t4 = evaluar_cartera(cierres, piernas, retornos, seleccion=seleccion)
+    assert sharpe_t4 == pytest.approx(equity_metrics(curva, 0.0)["sharpe"])
+    assert sharpe_t4 != pytest.approx(evaluar_cartera(cierres, piernas, retornos))
