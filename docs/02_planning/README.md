@@ -10,8 +10,9 @@ Agents working in this repository should read planning documents in this order:
    - [phase1_roadmap.md](./phase1_roadmap.md) - Phase 1 development plan and milestones
    - [phase2_roadmap.md](./phase2_roadmap.md) - Phase 2 development plan and milestones
 
-2. **Current operating plan (2026-09)**
-   - [../../PLAN-CONTINUACION.md](../../PLAN-CONTINUACION.md) - **Plan vigente desde 2026-09-26**: cierre de PLAN-30-DIAS, fase 0 del loop nocturno, contrato del loop, cola T01–T25, formato del log de revisión
+2. **Current operating plan (reconciled 2026-10-23)**
+   - [../../PLAN-CONTINUACION.md](../../PLAN-CONTINUACION.md) - **Plan vigente**: cola activa de lotes L20 (investigación edge) y L21 (paper Alpaca), contrato del loop y registro de pendientes fuera de lote
+   - [QuantAgent-pjwb-PL-reconciliacion-plan-beads.md](./QuantAgent-pjwb-PL-reconciliacion-plan-beads.md) - Inventario de Beads abiertos, ubicación por lote y pendientes fuera de cola (corte 2026-10-23)
    - [2026-09-16_retrospectiva_autodev_y_plan_oficina_inversion.md](./2026-09-16_retrospectiva_autodev_y_plan_oficina_inversion.md) - Retrospectiva del loop autodev, loop propuesto (1 ticket → 1 PR → 1 revisión), capas de la "oficina de inversión" y plan de 4 semanas
    - [QuantAgent-lp1-PL-m2-validacion-datos-reales.md](./QuantAgent-lp1-PL-m2-validacion-datos-reales.md) - **Plan de M2** (cerrado 2026-10-09, falta decisión de Fede): cierre de M1, 7 lotes con punto de control, cola V01–V55, riesgos y decisiones previas
    - [QuantAgent-lp1-tickets-m2.md](./QuantAgent-lp1-tickets-m2.md) - Texto completo, listo para BEADS, de los tickets de los lotes 1 y 2 de M2 (V01–V20)
