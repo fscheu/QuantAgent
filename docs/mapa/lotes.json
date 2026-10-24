@@ -1,0 +1,285 @@
+{
+  "ocultar": [
+    "QuantAgent-d4cq.38",
+    "QuantAgent-d4cq.39",
+    "QuantAgent-d4cq.40",
+    "QuantAgent-d4cq.41",
+    "QuantAgent-d4cq.44",
+    "QuantAgent-d4cq.45"
+  ],
+  "mergeados_no_cerrados": {
+    "QuantAgent-d4cq.47": 263,
+    "QuantAgent-vj37": 264,
+    "QuantAgent-br4h": 261,
+    "QuantAgent-okp9": 265,
+    "QuantAgent-2oaf": 266,
+    "QuantAgent-v38v": null,
+    "QuantAgent-d4cq.50.1": 275,
+    "QuantAgent-d4cq.56": 281,
+    "QuantAgent-d4cq.58": 279,
+    "QuantAgent-d4cq.59": 284,
+    "QuantAgent-d4cq.60": 285,
+    "QuantAgent-d4cq.61": 282,
+    "QuantAgent-d4cq.64": 288,
+    "QuantAgent-d4cq.65": 289,
+    "QuantAgent-d4cq.70": 287,
+    "QuantAgent-d4cq.71": 291,
+    "QuantAgent-d4cq.57": 286,
+    "QuantAgent-d4cq.72": 292,
+    "QuantAgent-d4cq.74": 296,
+    "QuantAgent-d4cq.52": 298,
+    "QuantAgent-d4cq.68": 320,
+    "QuantAgent-d4cq.67": 316,
+    "QuantAgent-1dq9": 345,
+    "QuantAgent-jnxy": 368
+  },
+  "prioridad_lotes": [
+    "L8",
+    "L9",
+    "L10",
+    "L11",
+    "L12",
+    "L13",
+    "L14",
+    "LB1",
+    "L15",
+    "L16",
+    "L17",
+    "L18",
+    "L19",
+    "L20",
+    "L21"
+  ],
+  "ms": [
+    {
+      "id": "M1",
+      "titulo": "Backtesting estable",
+      "detalle": false,
+      "label": "m1",
+      "linea": "Cumplido el 2026-10-09 (PR #52). Lotes L1–L3: tres estrategias reproducibles, métricas auditadas, motor igual a backtesting.py trade por trade."
+    },
+    {
+      "id": "M2",
+      "titulo": "Validación con datos reales",
+      "detalle": false,
+      "label": "m2",
+      "linea": "Cerrado con el merge de L7 (PR #132). Lotes L4–L7: datos diarios reales, costos, comparación de 4 estrategias sobre 12 ETFs y veredicto fuera de muestra."
+    },
+    {
+      "id": "M3",
+      "titulo": "Fábrica de estrategias",
+      "detalle": true,
+      "lotes": [
+        "L8",
+        "L9",
+        "L10",
+        "L11",
+        "L12",
+        "LB1",
+        "L13",
+        "L14",
+        "L15",
+        "L16",
+        "L17",
+        "L18",
+        "L19",
+        "L20",
+        "LOOP",
+        "M3S"
+      ]
+    },
+    {
+      "id": "M4",
+      "titulo": "Paper trading con Alpaca",
+      "detalle": true,
+      "lotes": [
+        "L21",
+        "M4B",
+        "M4P"
+      ]
+    }
+  ],
+  "lotes": {
+    "L8": {
+      "rama": "lote/motor-del-filtro",
+      "nombre": "Motor del filtro",
+      "estado": "mergeado",
+      "punto": "vectorbt corre las 4 estrategias de M2 sobre 12 ETFs 2007–2018 con llenado en la apertura siguiente y prueba de truncamiento."
+    },
+    "L9": {
+      "rama": "lote/hipotesis",
+      "nombre": "Hipótesis en YAML",
+      "estado": "mergeado",
+      "punto": "Dos hipótesis en YAML corren de punta a punta en la etapa 1, con admisión, intentos y candado."
+    },
+    "L10": {
+      "rama": "lote/embudo",
+      "nombre": "Embudo etapas 0 a 3",
+      "estado": "mergeado",
+      "punto": "backtest hipotesis correr lleva una hipótesis por las etapas 0 a 3 con control contra backtesting.py y Sharpe deflactado."
+    },
+    "L11": {
+      "rama": "lote/informe-y-tanda",
+      "nombre": "Informe y tanda",
+      "estado": "mergeado",
+      "punto": "backtest hipotesis tanda procesa la carpeta entera sobre datos reales con informe HTML por hipótesis y resumen."
+    },
+    "L12": {
+      "rama": "lote/cartera",
+      "nombre": "Cartera de primas",
+      "estado": "mergeado",
+      "pr": 253,
+      "punto": "Mergeado a main el 2026-10-18 (PR #253). Veredicto: la cartera tendencia + momentum sobre ~30 ETFs (pesos por igual riesgo, control por celda, DSR de la cartera) se cortó en la etapa 3. El pendiente C11.2 (d4cq.76) pasó a «Loop y herramientas» y la propuesta de ampliar UNIVERSO_M2 se descartó: ya está hecha con UNIVERSO_AMPLIO (PR #272)."
+    },
+    "L13": {
+      "rama": "lote/catalogo-de-primas",
+      "nombre": "Catálogo de primas",
+      "estado": "mergeado",
+      "punto": "Mergeado a main. Catálogo de primas aplicables con ETFs corrido como carteras (familias de primas, piernas transversales, estacionalidad), con crítico de carteras y universo congelado. Resultado de P10: cartera-transversal y cartera-estacionalidad cortadas en la etapa 3 (DSR 0.00). Reemplaza los tickets .39–.44 originales (ocultos).",
+      "pr": 277
+    },
+    "L14": {
+      "rama": "lote/capa-macro",
+      "nombre": "Capa macro",
+      "estado": "mergeado",
+      "punto": "Mergeado a main el 2026-10-20 (PR #278). Régimen de mercado como capa aparte (RsiRegimen, pendiente de curva, vintage truncado), aceptada solo si mejora el DSR del núcleo. La capa de curva se aceptó (Sharpe 0.25 → 0.38). Reemplaza el ticket .38 original (oculto).",
+      "pr": 278
+    },
+    "LB1": {
+      "rama": "lote/datos-externos",
+      "nombre": "Datos externos (carril B)",
+      "estado": "mergeado",
+      "pr": 257,
+      "punto": "Mergeado a main el 2026-10-18 (PR #257). Snapshot macro macro-2026-10 punto en el tiempo y AlpacaSource con claves reales. Alimenta L14 y M4."
+    },
+    "L15": {
+      "rama": "lote/gate-por-lote",
+      "nombre": "Gate por lote",
+      "estado": "mergeado",
+      "pr": 315,
+      "tickets": [
+        "QuantAgent-kw84"
+      ],
+      "punto": "El gate del loop toma la entrega previa solo del lote activo (K01, kw84, PR #318). Mergeado a main el 2026-10-19 (PR #315)."
+    },
+    "L16": {
+      "rama": "lote/criterio-etapa3",
+      "nombre": "Criterio de la etapa 3",
+      "estado": "mergeado",
+      "pr": 324,
+      "punto": "Mergeado a main (PR #324). Informe con DSR crudo y efectivo, Sharpe por año del holdout, recargo de paper y el criterio nuevo de pase (DC #322). Las tres carteras que cortaron fallan igual contra el benchmark en la etapa 3."
+    },
+    "L20": {
+      "rama": "lote/investigacion-edge",
+      "nombre": "Investigación de edge",
+      "estado": "abierto",
+      "pr": 416,
+      "tickets": [
+        "QuantAgent-e4jc"
+      ],
+      "punto": "PR #416 a main. R01: alcance X06–X18 y X20; X01–X05 y chequeos P-1 (X19a–c) pasaron a L21. D-2 se desglosó en e4jc.8.1–.3."
+    },
+    "L21": {
+      "rama": "lote/paper-alpaca",
+      "nombre": "Paper trading con Alpaca",
+      "estado": "abierto",
+      "pr": 412,
+      "tickets": [
+        "QuantAgent-av1p",
+        "QuantAgent-brwj",
+        "QuantAgent-13a",
+        "QuantAgent-qr6",
+        "QuantAgent-8659",
+        "QuantAgent-yme",
+        "QuantAgent-y62",
+        "QuantAgent-0gh7",
+        "QuantAgent-e4jc.13",
+        "QuantAgent-b41",
+        "QuantAgent-55x",
+        "QuantAgent-av1p.4"
+      ],
+      "punto": "PR #412 a main. Tickets base cerrados incluyen broker, sizing, D1–D3 y chequeos P-1. Falta av1p.4 para conectar rebalanceador y sombra al scheduler, luego b41 (digest) antes del piloto de dos semanas. X01–X05 y X19 pertenecen a L21; W14 no existe."
+    },
+    "LOOP": {
+      "rama": "(sin lote) loop y herramientas",
+      "nombre": "Loop y herramientas",
+      "estado": "sin_lote",
+      "tickets": [
+        "QuantAgent-d4cq.76"
+      ],
+      "punto": "Mejoras del loop que no son de la fábrica. C11 (d4cq.76) cerrado: reclamo por ticket con CLAIM y RELEASE (d4cq.76.2) quedó estacionado en loop-wip/QuantAgent-d4cq.76."
+    },
+    "M3S": {
+      "rama": "(sin lote)",
+      "nombre": "Sueltos de M3",
+      "estado": "sin_lote",
+      "tickets": [
+        "QuantAgent-62h0",
+        "QuantAgent-ljoj",
+        "QuantAgent-ryaw"
+      ],
+      "punto": "Tickets de M3 que no pertenecen a ningún lote abierto."
+    },
+    "M4B": {
+      "rama": "(sin abrir) broker",
+      "nombre": "Broker Alpaca",
+      "estado": "propuesto",
+      "tickets": [
+        "QuantAgent-b41"
+      ],
+      "punto": "Digest operativo diario en texto plano para el piloto de paper. El resto del broker (13a, qr6, yme, y62) va en L21."
+    },
+    "M4P": {
+      "rama": "(sin abrir) bugs y decisiones de paper",
+      "nombre": "Bugs y decisiones de paper",
+      "estado": "propuesto",
+      "tickets": [
+        "QuantAgent-beo",
+        "QuantAgent-55x",
+        "QuantAgent-yxl1"
+      ],
+      "punto": "Puntos abiertos del paper que necesitan decisión de Fede (say y oc0h ya van en L18); yxl1 espera a que haya una cartera finalista. 8659 y 0gh7 (sizing por riesgo) pasaron a L21."
+    },
+    "L17": {
+      "rama": "lote/loop-investigador",
+      "nombre": "Loop investigador",
+      "estado": "mergeado",
+      "pr": 336,
+      "punto": "Mergeado a main el 2026-10-20 (PR #336). Un ciclo del investigador sin correr nada en el embudo: fichas de postmortem, chequeo de propuestas y de originalidad, comando para aprobar o rechazar. Queda abierto el punto de control I08 (j7bl)."
+    },
+    "L18": {
+      "rama": "lote/m4-prep-curva-puv2",
+      "nombre": "Curva, cambio-de-mes y preparación de M4",
+      "estado": "abierto",
+      "pr": 347,
+      "tickets": [
+        "QuantAgent-ro3w",
+        "QuantAgent-rpna",
+        "QuantAgent-rdcf",
+        "QuantAgent-lgg6",
+        "QuantAgent-dtbv",
+        "QuantAgent-vr3z",
+        "QuantAgent-gjmf",
+        "QuantAgent-1y0i",
+        "QuantAgent-lrf8",
+        "QuantAgent-01kb",
+        "QuantAgent-say",
+        "QuantAgent-oc0h",
+        "QuantAgent-ev7d"
+      ],
+      "punto": "PR #347 a main. Núcleo + curva contra el criterio de paper: falla la etapa 3 (Sharpe 0.38 contra 0.61 del benchmark). cambio-de-mes corta en la etapa 1 (Sharpe −0.46). Datos de Alpaca por fuente (T3 a T7) y diagnósticos de paper (say, oc0h, beo) listos para decidir. Falta el veredicto ro3w.3 y oc0h."
+    },
+    "L19": {
+      "rama": "lote/medicion-y-generador",
+      "nombre": "Medición y generador",
+      "estado": "abierto",
+      "pr": 360,
+      "punto": "PR #360 a main, en borrador. Informe con Sharpe en exceso de la tasa corta, benchmark con los pesos de la cartera y error estándar del ΔSharpe; atribución de las cuatro carteras; pedido al investigador con criterio, inventario y lista negra. S01–S03 y S05–S08 en la notebook con Codex; S04 y S09 en la VM después de L18."
+    }
+  },
+  "deps_extra": {
+    "QuantAgent-d4cq.66": [
+      "QuantAgent-d4cq.62"
+    ]
+  }
+}

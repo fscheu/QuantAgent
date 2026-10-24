@@ -1,0 +1,38 @@
+{
+ "actualizado": "2026-10-21T10:30Z",
+ "activas": [
+  {
+   "sesion": "Lote L18",
+   "maquina": "VM",
+   "ticket": "QuantAgent-oc0h",
+   "rol": "L18 (lote/m4-prep-curva-puv2): último diagnóstico de paper; después ro3w.3 y el punto de control."
+  },
+  {
+   "sesion": "Lote L19",
+   "maquina": "Notebook",
+   "ticket": "QuantAgent-lwji.2.1",
+   "rol": "L19 (lote/medicion-y-generador) con Codex: S01–S03 y S05–S08. Offline si la notebook se duerme."
+  }
+ ],
+ "inactivas": [],
+ "planificadas": [
+  {
+   "ticket": "QuantAgent-ro3w.3",
+   "maquina": "VM",
+   "cuando": "L18, veredicto núcleo + curva"
+  },
+  {
+   "ticket": "QuantAgent-v2ll",
+   "maquina": "VM",
+   "cuando": "L19 S04, después de que cierre L18"
+  },
+  {
+   "ticket": "QuantAgent-cq4u",
+   "maquina": "VM",
+   "cuando": "L19 S09, punto de control"
+  }
+ ],
+ "propuestos": [
+  "0gh7 (sizing por riesgo): antes de la primera corrida paper; espera decisiones de Fede."
+ ]
+}

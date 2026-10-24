@@ -407,7 +407,8 @@ Lotes (definidos por el PM el 2026-10-06; cada uno se abre cuando Fede mergea el
 | L17 | `lote/loop-investigador` | I01–I08 | Un ciclo completo sin correr nada en el embudo: fichas de postmortem de las tres carteras de L16, el pedido al investigador, hasta 3 propuestas en `catalogo/propuestas/` con chequeo de hipótesis y de originalidad, y un comando que las lista para que Fede las revise; nada pasa a `hipotesis/` sin su OK | plan `QuantAgent-vbnh-PL-l16-l17-criterio-etapa3-y-loop.md` §4; reglas decididas por Fede el 2026-10-19 (sin Sharpe del holdout, ideas de literatura, máx. 2 variantes por idea, todo intento suma a N); sale de origin/main |
 | L18 | `lote/m4-prep-curva-puv2` | Q01–Q13 | Veredicto de la cartera núcleo + curva contra el criterio de paper (recalculado de las curvas guardadas, sin abrir 2019–2022); `cambio-de-mes` con su señal corrida hasta la etapa 2; los datos de Alpaca por fuente y los tres diagnósticos de paper (`say`, `oc0h`, `beo`) listos para decidir | plan `QuantAgent-ro3w-PL-l18-curva-puv2-prep-m4.md`; Fede aprobó los tres frentes el 2026-10-20; decisiones previstas: Q01 (si pasa, entra a M4), Q04 (OK para la etapa 3), Q09, Q10–Q12 |
 | L19 | `lote/medicion-y-generador` | S01–S09 | `quantagent backtest hipotesis informe <id>` de las cuatro carteras muestra Sharpe en exceso de la tasa corta, benchmark con los mismos pesos y error estándar del ΔSharpe; hay una tabla que separa la brecha contra 1/N en pesos, señal y tasa; el pedido al investigador sale con criterio, inventario y lista negra de efectos decaídos, y las propuestas pasan por chequeo de DOI contra Crossref | decidido por Fede el 2026-10-21 (revisión del PR #352; plan por S01–S09 sin cambios); no corre nada en el embudo ni abre ventanas; sin sesiones cloud por el cupo semanal: S01–S03 y S05–S08 en la notebook con Codex, S04 y S09 en la VM después de que cierre L18; sale de origin/main |
-| L20 | `lote/investigacion-edge` | X01–X20 | Sizing por riesgo (0,25 % por trade, tope 10 %, stop 2 % por defecto) disponible en backtest, sweep, walkforward y paper; F1 y F2 corridas por las etapas 0 a 2 (sin abrir 2019–2022); cortos y margin en paper; datos gratis incorporados (AQR/French, ETFs ampliados, pysystemtrade); generador con lección, refutador y modelo; chequeos de paper liviano y protocolo de la reserva 2023+ | decididas por Fede el 2026-10-21/22 (`docs/04_decisions/QuantAgent-R01-DC-decisiones-investigacion-edge.md`, PR #400); padre `QuantAgent-e4jc`; sale de origin/main cuando cierre L19; nada abre la reserva ni 2019–2022 sin OK de Fede |
+| L20 | `lote/investigacion-edge` | X06–X18, X20; X01–X05 y X19 movidos a L21 | Riesgo y sizing por trade; F1/F2 hasta etapa 2; datos AQR/French, ETFs ampliados y pysystemtrade; generador con lección/refutador; protocolo de reserva. X14 se desglosa en X14a–c. | R01 (`docs/04_decisions/QuantAgent-R01-DC-decisiones-investigacion-edge.md`); PR #416 desde `origin/main`; ninguna apertura de reserva sin OK de Fede |
+| L21 | `lote/paper-alpaca` | X01–X05, X19a–c y W02–W10, W15–W16 | Dos carteras operan en Alpaca paper desde el scheduler; rebalanceo, sombra, reconciliación y chequeos; digest operativo antes del piloto. | `QuantAgent-av1p` y `docs/02_planning/QuantAgent-L21-PL-paper-alpaca-m4.md`; aprobado por Fede el 2026-10-22; PR #412. La puesta en marcha por dos semanas requiere autorización operativa explícita. |
 
 T13 se adelantó dentro de L1: es un documento de decisión que no depende del resto, así la respuesta de Fede
 llega mientras el lote avanza. T20 pasó a L1 porque congela los números que ese lote audita.
@@ -729,10 +730,32 @@ Los primeros 5 son los más fáciles de revisar.
 | X16 | `QuantAgent-e4jc.10` | G-1: lección escrita por personas en el catálogo e incluida en el pedido, sin cifras de la prueba; depende de S05 y S08 | El pedido contiene la lección; el test confirma que no hay Sharpe, DSR ni ganancias | leer | L20 |
 | X17 | `QuantAgent-e4jc.11` | G-2: refutador de otra familia (Codex), modelo más capaz con esfuerzo alto y búsqueda web; depende de S06 y S08. No correr `hipotesis proponer` antes | Comandos de mentira escriben propuesta y refutación; si el refutador falla no se escribe nada | leer | L20 |
 | X18 | `QuantAgent-e4jc.12` | G-3 (opcional): cupo por tema y marca 'sin prueba ciega en 2019–2022' (§5.3 puntos 6 y 7); depende de S06 | Segunda propuesta del mismo tema en un lote se rechaza; muestra que termina en 2019 o después marca | leer | L20 |
-| X19 | `QuantAgent-e4jc.13` | P-1: chequeos operativos de paper liviano (pesos contra la sombra, órdenes rechazadas, dividendos); depende de X01 | Caso coincidente pasa; peso distinto del redondeo falla con motivo; sale en el digest | probar | L21 |
+| X19a | `QuantAgent-e4jc.13.1` | P-1a: pesos paper contra la sombra | Pesos iguales dentro de tolerancia; diferencia indica activo | probar | L21 |
+| X19b | `QuantAgent-e4jc.13.2` | P-1b: rechazos y dividendos | Sin rechazo inexplicado; cada dividendo tiene tratamiento | probar | L21 |
+| X19c | `QuantAgent-e4jc.13.3` | P-1c: CLI de chequeos; parte de e4jc.13 | CLI muestra las tres secciones y falla ante incumplimiento | probar | L21 |
 | X20 | `QuantAgent-e4jc.14` | P-2 (R13): protocolo de la reserva 2023+ (lista cerrada cartera-transversal, F1, F2; C0 + M1; una apertura); depende de S04 | Documento con lista, criterio y regla de una apertura; sin escalera de incubación | decidir | L20 |
 
-X01–X20 (L20) se agregaron el 2026-10-22 por las decisiones de Fede registradas en `docs/04_decisions/QuantAgent-R01-DC-decisiones-investigacion-edge.md` (PR #400). Paper es prueba de sistema: ningún resultado de paper promueve una estrategia a dinero real ni cuenta como evidencia de edge. Lo que ya cubría L19 (S01–S08: M1–M3, atribución, catálogo, DOI, advertencias y pedido) no se duplica; el rol `diversificador` (C1) queda fuera del pedido y de los campos, y `nb94.1`, `syml` y `55nh` llevan un comentario para que el PM lo revise. Sin ticket por ahora, y registrado en el DC: `cambio-de-mes` y `volatilidad-gestionada` fuera, F3 `carry-futuros` en espera, subastas del Tesoro rechazadas, DBC/USO y retención del 30 % sobre dividendos (se resuelven antes de dinero real; paper sin cambios). Dato para estrategias futuras, no restricción: capital live estimado de USD 1.000–3.000.
+
+| W02 | `QuantAgent-13a` | Contrato Broker para fills parciales, rechazos y nocional | ABC y PaperBroker cubren el contrato documentado | leer | L21 |
+| W03 | `QuantAgent-8659` | Medir rechazo por exceso del poder de compra y fijar regla | Medición paper y regla única en trading | decidir | L21 |
+| W03a | `QuantAgent-8659.1` | Reproducir rechazo por gap entre señal y fill next-open | Caso determinista y test del límite de efectivo | probar | L21 |
+| W03b | `QuantAgent-8659.2` | Reserva de efectivo para compras | Entradas/reversiones reservan efectivo y ventas siguen operativas | leer | L21 |
+| W04 | `QuantAgent-qr6` | Selector de broker y bloqueo del endpoint live | Live bloqueado sin autorización explícita | leer | L21 |
+| W05a | `QuantAgent-yme.1` | Envío/cancelación Alpaca paper | Market/limit, fills, rechazo y cancelación cubiertos | probar | L21 |
+| W05b | `QuantAgent-yme.2` | Consulta cuenta/posiciones y mapeo de estados | Estados, datos y errores API cubiertos | leer | L21 |
+| W05c | `QuantAgent-yme.3` | Registrar AlpacaBroker en StrategyAssembler | Selector paper; live rechazado | probar | L21 |
+| W05d | `QuantAgent-yme.4` | Prueba reproducible contra Alpaca paper | Orden limit remota cancelada; evidencia en entrega | probar | L21 |
+| W06a | `QuantAgent-y62.1` | Auditar ActivePosition contra Alpaca | Divergencias visibles y persistidas como WARNING; no corrige estado | probar | L21 |
+| W06b | `QuantAgent-y62.2` | CLI de reconciliación DB/Alpaca | Reporta diferencias sin mutar posiciones | probar | L21 |
+| W06c | `QuantAgent-y62.3` | Reconciliación periódica para Alpaca paper | Job solo paper; no muta ActivePosition | probar | L21 |
+| W07 | `QuantAgent-av1p.1` | Pesos objetivo de las carteras por fecha | Coinciden con curva de backtest; cerrado | leer | L21 |
+| W08 | `QuantAgent-av1p.2` | Rebalanceador de pesos y posiciones a órdenes | Caso sintético; cerrado, aún sin integración al scheduler | probar | L21 |
+| W09 | `QuantAgent-av1p.3` | Sombra por fecha para comparar con paper | Se guarda/lee sombra; cerrado, aún sin integración al scheduler | leer | L21 |
+| W10 | `QuantAgent-av1p.4` | Integrar rebalanceador/sombra al ciclo del scheduler; depende W08, W09, W05c | Prueba recorre pesos→órdenes→posiciones/sombra con broker paper; live sigue bloqueado | probar | L21 |
+| W15 | `QuantAgent-b41` | Digest diario de operación; depende W06 y W10 (corrige referencia vieja a W14 inexistente) | Posiciones, órdenes, actividad, warnings y heartbeat | leer | L21 |
+| W16 | `QuantAgent-55x` | Reloj por velas en corridas online; opcional si W10 lo necesita | No reevalúa última vela en sábado/feriado | leer | L21 |
+
+X01–X20 se agregaron el 2026-10-22; X01–X05 y X19a–c pertenecen a L21, X06–X18 y X20 a L20. D-2 se partió en X14a–c, según las decisiones de Fede registradas en `docs/04_decisions/QuantAgent-R01-DC-decisiones-investigacion-edge.md` (PR #400). Paper es prueba de sistema: ningún resultado de paper promueve una estrategia a dinero real ni cuenta como evidencia de edge. Lo que ya cubría L19 (S01–S08: M1–M3, atribución, catálogo, DOI, advertencias y pedido) no se duplica; el rol `diversificador` (C1) queda fuera del pedido y de los campos, y `nb94.1`, `syml` y `55nh` llevan un comentario para que el PM lo revise. Sin ticket por ahora, y registrado en el DC: `cambio-de-mes` y `volatilidad-gestionada` fuera, F3 `carry-futuros` en espera, subastas del Tesoro rechazadas, DBC/USO y retención del 30 % sobre dividendos (se resuelven antes de dinero real; paper sin cambios). Dato para estrategias futuras, no restricción: capital live estimado de USD 1.000–3.000.
 
 V08b y V23d se agregaron el 2026-10-12 al revisar V23c (#127): la corrida del agente leyó el tramo de prueba 2019–2022 porque el CLI solo protege la reserva, y con llenado en la apertura siguiente el adaptador cancela órdenes al 100% del capital (21 de 48 celdas). Van antes de V24 para que el markdown salga con la sensibilidad corregida.
 
@@ -833,7 +856,11 @@ revisado
 - Hasta el 2026-10-06 la copiaba el agente en la entrega siguiente. Con un PR escalado abierto y otro en curso,
   los dos agregaban una línea en el mismo lugar y el segundo merge chocaba (#24 y #25). Ahora escribe uno solo.
 
-## 6. Ideas registradas para M3 y siguientes
+## 6. Reconciliación y temas fuera de lote
+
+El inventario de Beads sin cerrar, los tickets integrados y el destino de cada pendiente se mantiene en [QuantAgent-pjwb-PL-reconciliacion-plan-beads.md](docs/02_planning/QuantAgent-pjwb-PL-reconciliacion-plan-beads.md). Los tickets ejecutables de L20 y L21 están en la cola de esta sección; una etiqueta histórica no incorpora automáticamente un ticket a un lote.
+
+## 7. Ideas registradas para M3 y siguientes
 
 | Idea | Ticket | Documento | Cuándo |
 |---|---|---|---|

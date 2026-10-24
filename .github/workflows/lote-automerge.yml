@@ -24,7 +24,7 @@ permissions:
   pull-requests: write
   issues: write
   checks: read
-  actions: read
+  actions: write
 
 jobs:
   resolve:
@@ -97,3 +97,15 @@ jobs:
             args+=(--dry-run)
           fi
           python3 scripts/loop/automerge.py "${args[@]}"
+
+  regenerar-mapa:
+    # Los merges hechos con GITHUB_TOKEN no disparan el push de mapa-lotes.yml; se lo pedimos a mano.
+    needs: automerge
+    if: ${{ !cancelled() && needs.automerge.result == 'success' && !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Disparar mapa de lotes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh workflow run mapa-lotes.yml --ref "${{ github.event.repository.default_branch }}"
