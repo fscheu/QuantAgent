@@ -134,7 +134,7 @@ def admitir_hipotesis(archivo, snapshot_name, prueba_unica=False):
 def filtrar_hipotesis(h, snapshot_name):
     """Filtrar y registrar intento de cartera; devolver métricas, parámetros y veredicto."""
     resultados, parametros, retornos_dict, cierres_dict, filas_tabla = [], {}, {}, {}, []
-    total_trades, piernas_map = 0, {}
+    total_trades, piernas_map, seleccion = 0, {}, {}
     for i, p in enumerate(h.piernas):
         piernas_map[i] = list(p.activos)
         if es_transversal(p.clase):
@@ -149,6 +149,7 @@ def filtrar_hipotesis(h, snapshot_name):
                 except (ValueError, SnapshotError) as exc:
                     raise click.ClickException(str(exc)) from exc
             r = filtrar_pierna(h, p, paneles, costos=COSTOS_PERFILES["etf"], capital=100_000.0)
+            seleccion[i] = r["seleccion"]
             total_trades += r["trades"]
             params = parametros_elegidos(r["ganadores"]) if r["ganadores"] else {}
             for activo in p.activos:
@@ -172,7 +173,9 @@ def filtrar_hipotesis(h, snapshot_name):
                 total_trades += r["trades"]
                 clave = (p.clase, activo) if h.es_cartera else activo
                 parametros[clave] = parametros_elegidos(r["ganadores"])
-    sharpe_car = evaluar_cartera(pd.DataFrame(cierres_dict), piernas_map, retornos_dict)
+    cierres = pd.DataFrame(cierres_dict)
+    seleccion = {i: panel.reindex(cierres.index, fill_value=0) for i, panel in seleccion.items()}
+    sharpe_car = evaluar_cartera(cierres, piernas_map, retornos_dict, seleccion=seleccion)
     veredicto, motivo = veredicto_etapa1(sharpe_car, total_trades)
     combo = h.parametros if len(h.piernas) == 1 else {p.clase: p.parametros for p in h.piernas}
     estrategia = h.clase if len(h.piernas) == 1 else "+".join(p.clase for p in h.piernas)

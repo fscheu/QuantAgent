@@ -10,9 +10,48 @@ import pytest
 import yaml
 from click.testing import CliRunner
 
+from quantagent.backtesting.vbt_filter import equity_metrics
 from quantagent.cli import hipotesis
 from quantagent.cli.backtest import backtest_group
 from quantagent.data.snapshot import write_snapshot
+from quantagent.fabrica.cartera import combinar, pesos
+from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+from tests.test_filtrar_pierna import resultado_ganadores_distintos as resultado_ganadores_distintos
+
+
+@pytest.mark.parametrize("calendario_desigual", [False, True])
+def test_filtrar_hipotesis_transporta_seleccion_oos_al_calculo_real(monkeypatch, resultado_ganadores_distintos, calendario_desigual):
+    h, p, paneles, r = resultado_ganadores_distintos
+    snapshots = {a: v.drop(columns="timestamp") for a, v in paneles.items()}
+    if calendario_desigual:
+        snapshots["TLT"] = pd.DataFrame({c: 100.0 for c in ("open", "high", "low", "close", "volume")},
+                                        index=pd.bdate_range("2009-01-02", "2018-12-31"))
+        h = Hipotesis("t", "a", "x" * 50, piernas=(p, Pierna("halloween", {}, ("TLT",), "sintético")))
+    monkeypatch.setattr(hipotesis, "read_snapshot", lambda snap, activo: snapshots[activo])
+    evaluaciones, evaluar = [], hipotesis.evaluar_cartera
+
+    def observar(cierres, piernas, retornos, *, seleccion):
+        assert set(seleccion) == {0}
+        pd.testing.assert_frame_equal(seleccion[0], r["seleccion"].reindex(cierres.index, fill_value=0))
+        w = pesos(cierres, piernas, seleccion=seleccion)
+        meses = w.index.to_period("M")
+        inicio_mes = ~meses.duplicated()
+        mascara = seleccion[0].reindex(w.index).eq(0).loc[inicio_mes]
+        assert w[0].loc[inicio_mes].where(mascara).fillna(0).eq(0).all().all()
+        df_ret = pd.DataFrame(retornos).fillna(0.0)
+        referencia = 100_000 * (1 + combinar(df_ret, w.reindex(df_ret.index))).cumprod()
+        evaluaciones.append(evaluar(cierres, piernas, retornos, seleccion=seleccion))
+        assert evaluaciones[-1] == pytest.approx(equity_metrics(referencia, 0.0)["sharpe"])
+        return evaluaciones[-1]
+
+    monkeypatch.setattr(hipotesis, "evaluar_cartera", observar)
+    resultado = hipotesis.filtrar_hipotesis(h, "sintetico")
+    assert resultado[4] == evaluaciones[0]
+    esperados = {(p.clase, a) if h.es_cartera else a: hipotesis.parametros_elegidos(r["ganadores"]) for a in p.activos}
+    if calendario_desigual:
+        esperados["halloween", "TLT"] = {}
+    assert resultado[1] == esperados
+    assert resultado[5] >= r["trades"]
 
 
 @pytest.mark.parametrize("rechazo", [True, False])
@@ -545,7 +584,7 @@ def test_filtrar_hipotesis_cartera_dos_piernas_mismo_activo_parametros_por_clase
 
     monkeypatch.setattr(hipotesis, "filtrar_activo", fake_filtrar)
     monkeypatch.setattr(hipotesis, "read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas)}, index=fechas))
-    monkeypatch.setattr(hipotesis, "evaluar_cartera", lambda *a: 0.6)
+    monkeypatch.setattr(hipotesis, "evaluar_cartera", lambda *a, **kw: 0.6)
     monkeypatch.setattr(hipotesis, "registrar_intento", lambda *a, **k: None)
 
     ret = hipotesis.filtrar_hipotesis(h, "sintetico")
