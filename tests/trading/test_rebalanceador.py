@@ -1,10 +1,13 @@
+from decimal import Decimal
 from types import SimpleNamespace
 
 import pandas as pd
 import pytest
+from sqlalchemy import event
+from sqlalchemy.orm import Session
 
 from quantagent.fabrica.cartera import curva_cartera, leer_sombra, pesos_objetivo
-from quantagent.models import Order, OrderSide, OrderStatus, Trade
+from quantagent.models import Order, OrderSide, OrderStatus, OrderType, Trade
 from quantagent.portfolio.manager import PortfolioManager
 from quantagent.trading.alpaca_broker import AlpacaBroker
 from quantagent.trading.order_manager import OrderManager
@@ -86,3 +89,61 @@ def test_alpaca_rebalance_applies_only_real_fills(
     assert db_session.query(Trade).count() == (1 if filled_qty == "3" else 0)
     assert portfolio.positions["SPY"]["qty"] == expected_qty
     assert portfolio.cash == (9303 if filled_qty == "3" else 9000)
+
+
+@pytest.mark.parametrize("side", [OrderSide.BUY, OrderSide.SELL])
+def test_rebalance_fills_are_incremental_and_durable(db_session, side):
+    portfolio = PortfolioManager(10000, db=db_session)
+    portfolio.positions["SPY"] = {
+        "qty": 10 if side == OrderSide.SELL else 0, "avg_cost": 100,
+        "current_price": 100, "pnl": 0, "pnl_pct": 0,
+    }
+    client = SimpleNamespace(get_order_by_id=lambda remote_id: result)
+    broker = AlpacaBroker(client)
+    manager = OrderManager(PositionSizer(), RiskManager(portfolio, db=db_session),
+                           broker, portfolio, db_session)
+    order = Order(symbol="SPY", side=side, quantity=10, order_type=OrderType.MARKET,
+                  filled_quantity=0, alpaca_order_id="synthetic-order")
+    db_session.add(order)
+    db_session.commit()
+    @event.listens_for(db_session, "before_commit")
+    def assert_fill_is_applied(session):
+        for filled in session.query(Order).filter(Order.filled_quantity > 0):
+            applied_qty = sum(trade.quantity for trade in session.query(Trade).filter_by(order_id=filled.id))
+            assert applied_qty == filled.filled_quantity
+
+    for status, quantity, price in [
+        ("accepted", "0", None), ("partially_filled", "3", "101"),
+        ("filled", "10", "103"), ("filled", "10", "103"),
+    ]:
+        result = SimpleNamespace(status=status, filled_qty=quantity, filled_avg_price=price)
+        assert manager.apply_rebalance_fills(broker.refresh_order(order)) is order
+        db_session.rollback()
+        trades = db_session.query(Trade).order_by(Trade.id).all()
+        assert [float(trade.quantity) for trade in trades] == (
+            [] if quantity == "0" else [3] if quantity == "3" else [3, 7])
+        applied = sum(trade.quantity * (trade.exit_price if trade.exit_price is not None
+                                       else trade.entry_price) for trade in trades)
+        expected = 0 if quantity == "0" else 303 if quantity == "3" else 1030
+        assert float(applied) == pytest.approx(expected, rel=0, abs=5e-8)
+        direction = 1 if side == OrderSide.SELL else -1
+        assert portfolio.cash == pytest.approx(10000 + direction * expected, rel=0, abs=5e-8)
+        assert portfolio.positions["SPY"]["qty"] == (10 if direction == 1 else 0) - direction * int(quantity)
+        assert order.filled_quantity == Decimal(quantity)
+        assert order.average_fill_price == (Decimal(price) if price else None)
+    assert float(trades[-1].exit_price if side == OrderSide.SELL else trades[-1].entry_price) == pytest.approx(
+        727 / 7, rel=0, abs=5e-9)
+    assert db_session.query(Order).count() == 1
+    saved_positions = {symbol: position.copy() for symbol, position in portfolio.positions.items()}
+    saved_cash, order_id, bind = portfolio.cash, order.id, db_session.get_bind()
+    db_session.close()
+    with Session(bind) as reopened:
+        manager.db = reopened
+        portfolio.db = reopened
+        order = reopened.get(Order, order_id)
+        manager.apply_rebalance_fills(broker.refresh_order(order))
+        reopened.rollback()
+        assert reopened.query(Trade).count() == 2
+        assert reopened.query(Order).count() == 1
+        assert portfolio.cash == saved_cash
+        assert portfolio.positions == saved_positions
