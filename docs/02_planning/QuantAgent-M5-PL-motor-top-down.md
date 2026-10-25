@@ -15,7 +15,7 @@ Una segunda rama de operación en QuantAgent, en una cuenta paper de Alpaca apar
 
 | # | Decisión | Antes de | Recomendación del PM |
 |---|---|---|---|
-| D1 | ¿Se paga Sharadar (o equivalente) para acciones, composición del S&P 500 y fundamentales? Excepción a R01 #14 | `M5-03` (lote L22) | Sí, si el precio cotizado es razonable para el proyecto. Sin eso, H3/H4 tienen sesgo de supervivencia y solo sirven como prueba del sistema. |
+| D1 | ¿Se paga Sharadar (o equivalente) para acciones, composición del S&P 500 y fundamentales? Excepción a R01 #14 | `M5-03` (lote L22) | **Decidido por Fede (2026-10-25):** se avanza con la **capa gratuita** de Sharadar (cuenta ya creada; muestra de ~30 empresas) para desarrollar y testear M5-03, M5-04, M5-31 y M5-32. El pago (Bundle con historia completa, USD 69/mes o 499/año) se decide al abrir L25, antes de correr H3/H4. |
 | D2 | Sizing del bucket M5: riesgo por trade, tope por posición, heat máximo | `M5-50` (antes de paper) | Partir de R01 (0,25 % y 10 %) y decidir el heat con la tabla de §6. |
 | D3 | Filtro R/R: valor de `rr_min` y objetivo solo estructural | `M5-44` | Objetivo opcional; filtro R/R solo con objetivo estructural; `rr_min` = 2 como en la propuesta. |
 | D4 | Sustituto de ISM New Orders | `M5-01` | Nuevos pedidos de la encuesta de la Fed de Filadelfia (la más larga y mensual); el PM lo confirma en FRED antes. |
