@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
+import pandas as pd
 import pytest
 
 from apps import paper_trading
@@ -85,24 +86,59 @@ def test_portfolio_path_must_exist(tmp_path):
 
 
 def test_each_portfolio_builds_an_isolated_unstarted_scheduler(monkeypatch, tmp_path):
-    source = Path("hipotesis/cartera-nucleo-rsi-regimen.yaml").resolve()
-    second = Path("hipotesis/cartera-nucleo-curva.yaml").resolve()
+    source = Path("hipotesis/cartera-transversal.yaml").resolve()
+    second = Path("hipotesis/cartera-nucleo-rsi-regimen.yaml").resolve()
+    third = Path("hipotesis/cartera-nucleo-curva.yaml").resolve()
     monkeypatch.chdir(tmp_path)
     Path("local-data").mkdir()
     monkeypatch.setattr(paper_trading.StrategyAssembler, "build_components", lambda *a, **k: SimpleNamespace(order_manager=object()))
     monkeypatch.setattr(paper_trading, "build_source", lambda name: SimpleNamespace(name=name))
+    monkeypatch.setattr(paper_trading, "FredClient", lambda: object())
     built = []
     monkeypatch.setattr(paper_trading, "TradingScheduler", lambda **kwargs: built.append(kwargs) or SimpleNamespace())
-    for yaml_path in (source, second):
+    for yaml_path in (source, second, third):
         paper_trading._build_portfolio_scheduler(_FakeConfig(), str(yaml_path))
     configs = [item["paper_portfolio"] for item in built]
-    assert [item["cartera"] for item in configs] == ["cartera-nucleo-rsi-regimen", "cartera-nucleo-curva"]
-    assert len({str(item["sombra"]) for item in configs}) == 2
-    assert len({str(item["db_session"].bind.url) for item in built}) == 2
+    assert [item["cartera"] for item in configs] == ["cartera-transversal", "cartera-nucleo-rsi-regimen", "cartera-nucleo-curva"]
+    assert len({str(item["sombra"]) for item in configs}) == 3
+    assert len({str(item["db_session"].bind.url) for item in built}) == 3
     assert all(item["trading_graph"] is None for item in built)
     assert all(item["data_provider"].source.name == "alpaca" for item in built)
+    assert built[0]["paper_portfolio"]["macro"] is None
+    assert built[1]["paper_portfolio"]["macro"] is None
+    assert built[2]["paper_portfolio"]["macro"] is not None
     for item in built:
         item["db_session"].close()
+
+
+def test_curva_portfolio_uses_injected_fred_client_without_nan(monkeypatch, tmp_path):
+    source = Path("hipotesis/cartera-nucleo-curva.yaml").resolve()
+    monkeypatch.chdir(tmp_path)
+    Path("local-data").mkdir()
+    monkeypatch.setattr(paper_trading.StrategyAssembler, "build_components", lambda *a, **k: SimpleNamespace(order_manager=object()))
+    monkeypatch.setattr(paper_trading, "build_source", lambda name: SimpleNamespace(name=name))
+    client = SimpleNamespace(observaciones=lambda *a, **k: pd.DataFrame({
+        "fecha": [pd.Timestamp("2026-10-24")], "valor": [0.25],
+        "realtime_start": [pd.Timestamp("2026-10-24")], "realtime_end": [pd.Timestamp("2262-04-11")],
+    }))
+    monkeypatch.setattr(paper_trading, "FredClient", lambda: client)
+    built = []
+    monkeypatch.setattr(paper_trading, "TradingScheduler", lambda **kwargs: built.append(kwargs) or SimpleNamespace())
+    scheduler, session = paper_trading._build_portfolio_scheduler(_FakeConfig(), str(source))
+    config = built[0]["paper_portfolio"]
+    assert config["macro"] is client
+    from quantagent.trading.cartera_paper import exposicion_piernas
+    exposure = exposicion_piernas(config["hipotesis"], pd.DataFrame({"TLT": [100]}, index=[pd.Timestamp("2026-10-25")]), macro=config["macro"])
+    assert not exposure[(2, "TLT")].isna().any()
+    session.close()
+
+
+def test_curva_portfolio_fails_clearly_without_fred_key(monkeypatch, tmp_path):
+    source = Path("hipotesis/cartera-nucleo-curva.yaml").resolve()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(paper_trading, "FredClient", lambda: (_ for _ in ()).throw(RuntimeError("falta FRED_API_KEY")))
+    with pytest.raises(RuntimeError, match="falta FRED_API_KEY"):
+        paper_trading._build_portfolio_scheduler(_FakeConfig(), str(source))
 
 
 def test_main_rejects_two_portfolios(monkeypatch):
