@@ -42,6 +42,7 @@ def armar_pedido(catalogo=CATALOGO, postmortem=POSTMORTEM_DIR, n_intentos=None):
     """Arma el pedido para el LLM con el catálogo, reglas D1 y D2, N de intentos y fichas de I01."""
     datos = yaml.safe_load(Path(catalogo).read_text(encoding="utf-8")) if isinstance(catalogo, (str, Path)) and Path(catalogo).exists() else catalogo
     primas = (datos.get("primas", []) if isinstance(datos, dict) else datos) or []
+    lecciones = (datos.get("lecciones", []) if isinstance(datos, dict) else []) or []
     cat = [{**{k: e[k] for k in CLAVES_CAT if k in e},
             "advertencias": advertencias_estructurales({**e, "muestra_de_la_cita": e.get("muestra_de_la_cita", e.get("muestra"))})}
            for e in primas if isinstance(e, dict)]
@@ -60,6 +61,7 @@ def armar_pedido(catalogo=CATALOGO, postmortem=POSTMORTEM_DIR, n_intentos=None):
     return (
         "Sos investigador de una cartera de trading. Proponé entre 0 y 3 entradas nuevas para el catálogo bajo `propuestas:`. Si ninguna cumple todo, devolvé `propuestas: []`; cada propuesta suma un intento.\n"
         "Cómo se evalúa: cada cartera se compara con comprar y mantener los mismos activos con pesos iguales y rebalanceo mensual, por resultado ajustado al riesgo en exceso de la tasa corta, en 2007-2018 y en una prueba única posterior, y después en paper. Una estrategia que solo decide cuándo estar comprada casi nunca supera esa vara: explicá su fuente de retorno adicional.\n"
+        f"Lecciones humanas del catálogo:\n{yaml.safe_dump(lecciones, allow_unicode=True, sort_keys=False).strip()}\n"
         "Qué hay:\n"
         "Las advertencias del catálogo son informativas y no bloquean la admisión.\n"
         f"- Activos y fecha de inicio: {yaml.safe_dump({s: info['start'] for s, info in activos.items()}, allow_unicode=True, sort_keys=True).strip()}\n"

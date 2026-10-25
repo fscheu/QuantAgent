@@ -131,6 +131,9 @@ primas:
     fidelidad: sin implementación
     decaimiento: null
 
+lecciones:
+  - "Los overlays solo largos sobre los activos del benchmark no superaron a comprar y mantener."
+
 descartadas_por_decaimiento:
   - {id: deriva-pre-fomc, tema: calendario, cita: Kurov, Wolfe y Gilbert (2021), doi: 10.1016/j.frl.2020.101781, decaimiento: desaparece después de 2015}
   - {id: deriva-nocturna-sp500, tema: tendencia, cita: Boyarchenko, Larsen y Whelan (2026), doi: 10.59576/lse.20260701, decaimiento: retorno promedio cercano a cero desde 2021}
