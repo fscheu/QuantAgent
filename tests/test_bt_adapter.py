@@ -122,7 +122,7 @@ def _run_scenarios(workdir: Path) -> dict:
     gap_lines = ["timestamp,open,high,low,close,volume"] + [f"{day(d)},{o},{h},{lo},{c},{v}" for d, o, h, lo, c, v in CANDLES_OPENING_GAP]
     gap_path.write_text("\n".join(gap_lines) + "\n")
     gap_strat = MiniStrategy()
-    monkeypatch.setattr(bt_adapter.settings, "TRADING_BASE_POSITION_PCT", 0.05)
+    bt_adapter.settings.TRADING_BASE_POSITION_PCT = 0.05
     gap_stats = bt_adapter.run_adapter(gap_strat, crossval_rsi.load_fixture(gap_path), symbol="XYZ", timeframe="1d")
     out["opening_gap"] = [{**vars(r), "entry_time": r.entry_time.isoformat(), "exit_time": r.exit_time.isoformat()}
                           for r in bt_adapter.trade_rows(gap_stats, "XYZ")]
@@ -372,10 +372,10 @@ def test_corto_con_costos_coincide_con_motor(db_session, tmp_path, monkeypatch):
     path = tmp_path / "short.csv"
     path.write_text("timestamp,open,high,low,close,volume\n" + "".join(
         f"2024-01-0{i + 1},{o},{h},{lo},{c},{v}\n" for i, (o, h, lo, c, v) in enumerate(bars)))
-    sys.path.insert(0, str(ROOT / "scripts"))
+    monkeypatch.syspath_prepend(str(ROOT / "scripts"))
     import bt_adapter
     import crossval_rsi
-    bt_adapter.settings.TRADING_BASE_POSITION_PCT = 0.05
+    monkeypatch.setattr(bt_adapter.settings, "TRADING_BASE_POSITION_PCT", 0.05)
     control = bt_adapter.run_adapter(ShortOnce(), crossval_rsi.load_fixture(path), symbol="SHORT", timeframe="1d",
                                      commission_pct=0.001)
     control_trade = bt_adapter.trade_rows(control, "SHORT")[0]
