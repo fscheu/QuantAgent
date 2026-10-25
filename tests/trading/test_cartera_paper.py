@@ -4,7 +4,12 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 
-from quantagent.trading.cartera_paper import entradas_cartera, sesiones_cerradas_nyse, ultima_sesion_cerrada_nyse
+from quantagent.trading.cartera_paper import (
+    entradas_cartera,
+    exposicion_piernas,
+    sesiones_cerradas_nyse,
+    ultima_sesion_cerrada_nyse,
+)
 
 
 def test_horario_regular_corte_sesion():
@@ -106,3 +111,42 @@ def test_entradas_cartera_excluye_barras_intradia_y_futuras(market):
     assert ultima == pd.Timestamp("2024-05-14")
     assert panel.index[-1] == pd.Timestamp("2024-05-14")
     assert precios["A"] == 100.0
+
+
+def test_exposicion_piernas_momentum_y_sma_cross():
+    idx = pd.bdate_range("2023-01-01", "2023-04-28")
+    panel = pd.DataFrame({"A": [100.0 + i for i in range(len(idx))], "B": [100.0 - i for i in range(50)] + [50.0 + i * 2 for i in range(len(idx) - 50)]}, index=idx)
+    h = SimpleNamespace(timeframe="1d", piernas=[
+        SimpleNamespace(clase="momentum-12m", activos=("A",), parametros={"lookback": 40}),
+        SimpleNamespace(clase="sma-cross", activos=("B",), parametros={"fast": 5, "slow": 15}),
+    ])
+    expos = exposicion_piernas(h, panel)
+    assert (expos[(0, "A")].loc[:"2023-02-27"] == 0).all() and expos[(0, "A")].loc["2023-02-28"] == 1
+    assert (expos[(0, "A")].loc["2023-03-01":"2023-03-31"] == 1).all()
+    assert expos[(1, "B")].iloc[55] == 1 and expos[(1, "B")].iloc[-1] == 1
+
+
+def test_exposicion_piernas_transversal_y_activos_compartidos():
+    idx = pd.bdate_range("2022-01-01", "2023-03-31")
+    panel = pd.DataFrame({a: [100.0 + i * (j + 1) for i in range(len(idx))] for j, a in enumerate(list("ABCDEF"))}, index=idx)
+    h = SimpleNamespace(timeframe="1d", piernas=[
+        SimpleNamespace(clase="momentum-12m", activos=("A", "F"), parametros={"lookback": 20}),
+        SimpleNamespace(clase="momentum-transversal", activos=tuple("ABCDEF"), parametros={}),
+    ])
+    expos = exposicion_piernas(h, panel)
+    assert (0, "A") in expos.columns and (1, "A") in expos.columns and (0, "F") in expos.columns and (1, "F") in expos.columns
+    assert (expos[(1, "F")].loc["2023-01-31":"2023-02-27"] == 1).all()
+    assert (expos[(1, "A")].loc["2023-01-31":"2023-02-27"] == 0).all()
+
+
+def test_exposicion_piernas_sin_mirar_futuro():
+    from quantagent.backtesting.signals import check_no_lookahead
+
+    idx = pd.bdate_range("2021-01-01", periods=300)
+    panel = pd.DataFrame({s: [100.0 + i for i in range(300)] for s in list("ABCDEF")}, index=idx)
+    h = SimpleNamespace(timeframe="1d", piernas=[
+        SimpleNamespace(clase="momentum-12m", activos=("A",), parametros={"lookback": 20}),
+        SimpleNamespace(clase="sma-cross", activos=("B",), parametros={"fast": 3, "slow": 8}),
+        SimpleNamespace(clase="momentum-transversal", activos=tuple("ABCDEF"), parametros={}),
+    ])
+    assert check_no_lookahead(lambda p: exposicion_piernas(h, p), panel, [panel.index[260], panel.index[280]]) == []
