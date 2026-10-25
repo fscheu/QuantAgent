@@ -70,15 +70,28 @@ def entradas_cartera(h, proveedor, reloj, posiciones=None):
     return ultima, panel, precios
 
 
-def exposicion_piernas(h, panel: pd.DataFrame) -> pd.DataFrame:
+def exposicion_piernas(h, panel: pd.DataFrame, macro=None) -> pd.DataFrame:
     """Calcula exposición binaria (1/0) por (pierna_idx, activo) para panel de cierres."""
     aliases, tf = cli_aliases(), getattr(h, "timeframe", "1d")
     cols = [(i, a) for i, p in enumerate(h.piernas) for a in (getattr(p, "activos", None) or ()) if a in panel.columns]
     expos = pd.DataFrame(0, index=panel.index, columns=pd.MultiIndex.from_tuples(cols), dtype=int)
+    bloqueos = []
     for i, p in enumerate(h.piernas):
         clase = getattr(p, "clase", None) or (p.get("clase") if isinstance(p, dict) else None)
         activos = [a for a in (getattr(p, "activos", None) or ()) if a in panel.columns]
         if not activos:
+            continue
+        if clase == "curva-pendiente":
+            try:
+                from quantagent.data.macro_vivo import MacroVencida, serie_vigente
+
+                serie = macro if isinstance(macro, pd.Series) else serie_vigente("T10Y2Y", panel.index, cliente=macro)
+                estados = (serie.reindex(panel.index) > 0).astype(int)
+            except (MacroVencida, RuntimeError) as exc:
+                estados = pd.Series(float("nan"), index=panel.index)
+                bloqueos.append(str(exc))
+            for a in activos:
+                expos[(i, a)] = estados
             continue
         if es_transversal(clase):
             sel = señales_transversales(panel[activos], METRICAS[clase])
@@ -100,4 +113,5 @@ def exposicion_piernas(h, panel: pd.DataFrame) -> pd.DataFrame:
                 pos = 1 if e == 1 else (0 if x else pos)
                 estados.append(pos)
             expos[(i, a)] = estados
+    expos.attrs["bloqueos"] = bloqueos
     return expos
