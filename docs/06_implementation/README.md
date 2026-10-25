@@ -58,6 +58,8 @@ Paper trading admite seleccionar un YAML de cartera con `--portfolio`; crea SQLi
 
 Las carteras con una pierna `curva-pendiente` construyen `FredClient` al preparar el scheduler y lo inyectan en `paper_portfolio`; si falta `FRED_API_KEY`, el arranque falla explícitamente. Las demás carteras no requieren la clave.
 
+`tests/trading/test_scheduler_cartera.py` prueba dos carteras paper aisladas con SQLite y brokers simulados, incluidos fills incrementales y reapertura de sesión.
+
 Per-change implementation documents should follow this naming convention:
 
 ```
