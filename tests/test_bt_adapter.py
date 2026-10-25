@@ -122,7 +122,7 @@ def _run_scenarios(workdir: Path) -> dict:
     gap_lines = ["timestamp,open,high,low,close,volume"] + [f"{day(d)},{o},{h},{lo},{c},{v}" for d, o, h, lo, c, v in CANDLES_OPENING_GAP]
     gap_path.write_text("\n".join(gap_lines) + "\n")
     gap_strat = MiniStrategy()
-    bt_adapter.settings.TRADING_BASE_POSITION_PCT = 0.05
+    monkeypatch.setattr(bt_adapter.settings, "TRADING_BASE_POSITION_PCT", 0.05)
     gap_stats = bt_adapter.run_adapter(gap_strat, crossval_rsi.load_fixture(gap_path), symbol="XYZ", timeframe="1d")
     out["opening_gap"] = [{**vars(r), "entry_time": r.entry_time.isoformat(), "exit_time": r.exit_time.isoformat()}
                           for r in bt_adapter.trade_rows(gap_stats, "XYZ")]
@@ -336,7 +336,8 @@ def test_corto_dimensionado_en_apertura(results):
     assert first["qty"] == round(100000 * 0.05 * 0.5 / 100.5 * 2**27) / 2**27
 
 
-def test_corto_con_costos_coincide_con_motor(db_session, tmp_path):
+def test_corto_con_costos_coincide_con_motor(db_session, tmp_path, monkeypatch):
+    pytest.importorskip("backtesting")
     from quantagent.backtesting.backtest import Backtest as ProjectBacktest
     from quantagent.models import MarketData, Trade
 
