@@ -9,7 +9,13 @@ def build_digest(day: date, portfolios: list[dict], trades: list[dict],
                  cumulative_pnl: float | None = None) -> str:
     """Build a plain-text digest from already queried paper trading data."""
     header = f"Resumen de paper trading — {day.isoformat()}"
-    warning_section = "## Alertas y avisos\n" + ("\n".join(f"- {item}" for item in warnings) if warnings else "- Ninguno")
+    warning_items = [f"- {item}" for item in (warnings or [])]
+    warning_text = "\n".join(warning_items)
+    if len(warning_text) > 1000:
+        warning_items = [item[:980] for item in warning_items[:1]]
+        warning_items.append(f"... y {len(warnings) - 1 if warnings else 0} más")
+        warning_text = "\n".join(warning_items)
+    warning_section = "## Alertas y avisos\n" + (warning_text or "- Ninguno")
     heartbeat_lines = ["## Señal del scheduler"]
     for heartbeat in heartbeats[-3:]:
         heartbeat_lines.append(f"- {heartbeat.get('timestamp')}: {heartbeat.get('status')}")

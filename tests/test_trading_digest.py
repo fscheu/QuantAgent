@@ -48,6 +48,12 @@ def test_digest_keeps_warning_and_heartbeat_with_many_trades():
     assert "ALERT" not in text and "[Resumen truncado]" in text and len(text) < 4000
 
 
+def test_digest_limits_oversized_warnings_and_reports_omitted_count():
+    text = build_digest(date.today(), [], [], [], ["x" * 5000, "second warning"])
+    assert len(text) < 4000
+    assert "... y 1 más" in text
+
+
 def test_digest_alerts_when_heartbeat_is_missing():
     text = build_digest(date.today(), [], [], [])
     assert "ALERT" in text
