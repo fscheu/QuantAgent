@@ -1,8 +1,10 @@
 from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import pandas as pd
+import pytest
 
-from quantagent.trading.cartera_paper import sesiones_cerradas_nyse, ultima_sesion_cerrada_nyse
+from quantagent.trading.cartera_paper import entradas_cartera, sesiones_cerradas_nyse, ultima_sesion_cerrada_nyse
 
 
 def test_horario_regular_corte_sesion():
@@ -44,3 +46,63 @@ def test_ventana_sesiones_sin_futuro_y_reloj_inyectable():
     assert s_naive.is_monotonic_increasing
     assert s_naive[-1] == pd.Timestamp("2024-05-15")
     assert (s_naive <= pd.Timestamp("2024-05-15")).all()
+
+
+class FakeProvider:
+    def __init__(self, dfs):
+        self.dfs = dfs
+        self.calls = []
+
+    def get_ohlc(self, s, tf, start, end):
+        assert start < end
+        self.calls.append((s, start, end))
+        df = self.dfs.get(s, pd.DataFrame(columns=["timestamp", "close"]))
+        return df[(df["timestamp"] >= start) & (df["timestamp"] < end)]
+
+
+@pytest.fixture
+def market():
+    as_of = pd.Timestamp("2024-05-16 05:00:00", tz="UTC")
+    ses = sesiones_cerradas_nyse(as_of, n_sesiones=300)
+    h = SimpleNamespace(piernas=[SimpleNamespace(activos=("A", "B"))])
+    return as_of, ses, pd.DataFrame({"timestamp": ses, "close": 100.0}), h
+
+
+def test_entradas_cartera_panel_completo_y_held_extra_una_barra(market):
+    as_of, ses, df, h = market
+    df_c = pd.DataFrame({"timestamp": [ses[-1]], "close": 50.0})
+    prov = FakeProvider({"A": df, "B": df, "C": df_c})
+    res = entradas_cartera(h, prov, lambda: as_of, {"C": {"qty": 10}})
+    assert res is not None
+    ultima, panel, precios = res
+    assert ultima == pd.Timestamp("2024-05-15")
+    assert panel.shape == (300, 2)
+    assert precios == {"A": 100.0, "B": 100.0, "C": 50.0}
+    assert ("C", pd.Timestamp("2024-05-15"), pd.Timestamp("2024-05-16")) in prov.calls
+
+
+@pytest.mark.parametrize(
+    "mod_a,held",
+    [
+        (lambda df: df.iloc[-200:], []),
+        (lambda df: df.drop(df.index[-50]), []),
+        (lambda df: df.iloc[:-1], []),
+        (lambda df: df, ["C"]),
+    ],
+)
+def test_entradas_cartera_casos_que_impiden_operar(market, mod_a, held):
+    as_of, _, df, h = market
+    prov = FakeProvider({"A": mod_a(df), "B": df})
+    assert entradas_cartera(h, prov, lambda: as_of, held) is None
+
+
+def test_entradas_cartera_excluye_barras_intradia_y_futuras(market):
+    _, _, df, h = market
+    futuro = pd.DataFrame({"timestamp": [pd.Timestamp("2024-05-15"), pd.Timestamp("2024-05-16")], "close": 999.0})
+    prov = FakeProvider({"A": pd.concat([df, futuro]), "B": df})
+    res = entradas_cartera(h, prov, lambda: pd.Timestamp("2024-05-15 14:00:00", tz="UTC"))
+    assert res is not None
+    ultima, panel, precios = res
+    assert ultima == pd.Timestamp("2024-05-14")
+    assert panel.index[-1] == pd.Timestamp("2024-05-14")
+    assert precios["A"] == 100.0
