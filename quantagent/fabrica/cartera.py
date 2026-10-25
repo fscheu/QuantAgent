@@ -2,6 +2,30 @@
 import pandas as pd
 
 
+def pesos_f1(cierres):
+    """Pesos SPY/IEF por fecha para F1; el desvío 60/40 usa cierres hasta la sesión previa."""
+    resultado = pd.DataFrame(0.5, index=cierres.index, columns=["SPY", "IEF"])
+    meses = cierres.index.to_period("M")
+    finales = set()
+    for mes in meses.unique():
+        fechas = cierres.index[meses == mes]
+        finales.update(fechas[-5:])
+    for i, fecha in enumerate(cierres.index):
+        if fecha not in finales or i == 0:
+            continue
+        mes_inicio = meses[i]
+        anteriores = [j for j in range(i) if meses[j] < mes_inicio]
+        if not anteriores:
+            continue
+        ancla = cierres.iloc[anteriores[-1]]
+        previo = cierres.iloc[i - 1]
+        spy = 0.6 * previo["SPY"] / ancla["SPY"]
+        ief = 0.4 * previo["IEF"] / ancla["IEF"]
+        peso_spy = spy / (spy + ief)
+        resultado.loc[fecha] = (1.0, 0.0) if peso_spy < 0.6 else (0.0, 1.0) if peso_spy > 0.6 else (0.5, 0.5)
+    return resultado
+
+
 def pesos(cierres, piernas, ventana=60, seleccion=None):
     """Pesos fecha × (pierna, activo). Cada pierna pesa 1/S; dentro, 1/σ de los últimos `ventana` retornos.
 
