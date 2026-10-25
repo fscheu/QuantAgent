@@ -771,7 +771,8 @@ Los primeros 5 son los más fáciles de revisar.
 | W10h | `QuantAgent-av1p.4.8` | Componer pesos y exposición; depende W10g y cierre QuantAgent-7v45, corrección T4 ya autorizada por Fede ([partición](docs/loop/particiones/QuantAgent-7v45.md)) | Referencia T4 prospectiva, efectivo/calendario preservados y datos anteriores intactos | probar | L21 |
 | W10i | `QuantAgent-av1p.4.9` | Ciclo paper del scheduler; depende W10h | Pesos→órdenes→posiciones/sombra; live bloqueado, estrategias sueltas sin cambio | probar | L21 |
 | W10j | `QuantAgent-av1p.4.10` | Registro/armado explícito de ambas; depende W10i | Una cartera/cuenta/DB/proceso, sin operación real (decisión Fede 2026-10-24) | probar | L21 |
-| W10k | `QuantAgent-av1p.4.11` | Smoke paper de ambas carteras; depende W10j | Dos ciclos independientes con fills reales/sombra y reinicio idempotente | probar | L21 |
+| W10j2 | `QuantAgent-8hih` | Macro FRED explícito en `--portfolio` (curva-pendiente); hueco que dejó #490; depende W10j | Cliente FRED llega a `paper_portfolio`; sin clave y con curva el arranque falla claro | probar | L21 |
+| W10k | `QuantAgent-av1p.4.11` | Smoke paper de ambas carteras; depende W10j2 | Dos ciclos independientes con fills reales/sombra y reinicio idempotente | probar | L21 |
 | W15 | `QuantAgent-b41` | Digest diario de operación; depende W06 y W10 (corrige referencia vieja a W14 inexistente) | Posiciones, órdenes, actividad, warnings y heartbeat | leer | L21 |
 | W16 | `QuantAgent-55x` | Reloj por velas en corridas online; opcional si W10 lo necesita | No reevalúa última vela en sábado/feriado | leer | L21 |
 
