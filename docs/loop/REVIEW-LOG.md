@@ -312,4 +312,5 @@ PM: QuantAgent-d4cq.7.2 vi: período con >= y <=, test con desde 2007-01-03; 15 
 2026-10-24 · #477 · PM: QuantAgent-av1p.4.5 vi: agy74líneas,98tests,16checkout y smoke9/561.18,31oráculosfixtures; PMdetectó cash−900 con SELLpending, regresiónahora cash100 sinBUY; efectivo0/100/250 y feesPaperpct/fixed verificados, legacyintacto; CI verde3b3f02aa decido: merge
 2026-10-24 · #478 · PM: QuantAgent-av1p.4.6 vi: preflightAGY150–170sin código, partición18líneas y doshijoscondeps/criterios/cola coherentes,13tests en checkout y smoke9/561.18; CI verde4a6d76ec; parent.6sigueinprogress hastaintegraramboshijos decido: merge
 2026-10-24 · #479 · PM: QuantAgent-av1p.4.6.1 vi: agy76líneas; PM17tests+20fronterascalendario/DST/cierre±1ns/504sesiones,31oráculosfixtures,checkout17+smoke9/561.18; CI verde5fe34b7c, merge17a09ddc; .6continúaabierto porPR480 decido: merge
+2026-10-25 · #480 · PM: QuantAgent-av1p.4.6.2 vi: revisión previa del PM Codex (23 tests dirigidos, 31 oráculos, smoke), no repetida por Claude; CI y GitGuardian verdes 683a4aa0, merge 818acee6 autorizado por Fede; .6 cerrado con .6.1/.6.2; .7 partido en .7a sy3n y .7b macro 2j54 decido: merge
 ```

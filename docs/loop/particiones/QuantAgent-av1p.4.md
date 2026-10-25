@@ -67,3 +67,10 @@ Archivos de ambos: `quantagent/trading/cartera_paper.py`, `tests/trading/test_ca
 Tests dirigidos: `python -m pytest -q tests/trading/test_cartera_paper.py tests/test_cartera.py`, además `scripts/loop/smoke.sh`; PM corre oráculos al tocar trading. Usar venv principal, `NUMBA_CACHE_DIR=/tmp/numba-cache`, reloj/fuente falsos y SQLite/precios fabricados temporales. No endpoints, credenciales, reserva ni lectura o modificación de evidencia histórica.
 
 Revisión: **probar**. El padre `.6` queda `in_progress` hasta integrar ambos hijos; `.7` conserva su dependencia del padre. La cola reemplaza W10f por W10f1/2. Si una estimación concreta supera 100, subdividir antes de código, sin minificar.
+
+## Adenda 2026-10-25: partición de QuantAgent-av1p.4.7
+
+Solo `cartera-nucleo-curva` usa macro (pierna curva-pendiente, T10Y2Y, snapshot `macro-2026-10`). Se separa para que las demás piernas avancen sin esperar la fuente macro. `.7` queda como paraguas: cierra cuando cierren ambos hijos; `.8` conserva su dependencia de `.7`.
+
+- **`QuantAgent-sy3n` (.7a)** Momentum mensual, cruce SMA y ranking transversal con las señales existentes. Ejecutable ahora; criterio y tests dirigidos como en `.7`, sin la curva.
+- **`QuantAgent-2j54` (.7b)** Curva-pendiente. Bloqueada: falta fuente macro vigente para paper (L14 `capa-macro`, `QuantAgent-577` o decisión de Fede). Con dato vencido la pierna no opera y reporta bloqueo; no se asume `None` ni se reemplaza por efectivo.
