@@ -5,6 +5,10 @@ from datetime import datetime
 import pandas as pd
 import pandas_market_calendars as mcal
 
+from quantagent.backtesting.signals import bar_signals
+from quantagent.fabrica.transversal import METRICAS, es_transversal, señales_transversales
+from quantagent.strategy.registry import STRATEGY_REGISTRY, build_strategy, cli_aliases
+
 _NYSE = mcal.get_calendar("NYSE")
 
 
@@ -64,3 +68,36 @@ def entradas_cartera(h, proveedor, reloj, posiciones=None):
             return None
         precios[s] = float(c.iloc[-1])
     return ultima, panel, precios
+
+
+def exposicion_piernas(h, panel: pd.DataFrame) -> pd.DataFrame:
+    """Calcula exposición binaria (1/0) por (pierna_idx, activo) para panel de cierres."""
+    aliases, tf = cli_aliases(), getattr(h, "timeframe", "1d")
+    cols = [(i, a) for i, p in enumerate(h.piernas) for a in (getattr(p, "activos", None) or ()) if a in panel.columns]
+    expos = pd.DataFrame(0, index=panel.index, columns=pd.MultiIndex.from_tuples(cols), dtype=int)
+    for i, p in enumerate(h.piernas):
+        clase = getattr(p, "clase", None) or (p.get("clase") if isinstance(p, dict) else None)
+        activos = [a for a in (getattr(p, "activos", None) or ()) if a in panel.columns]
+        if not activos:
+            continue
+        if es_transversal(clase):
+            sel = señales_transversales(panel[activos], METRICAS[clase])
+            for a in activos:
+                expos[(i, a)] = sel[a].values
+            continue
+        reg = aliases.get(clase, clase)
+        if reg not in STRATEGY_REGISTRY:
+            continue
+        raw = getattr(p, "parametros", None) or {}
+        params = p.combinaciones()[0] if hasattr(p, "combinaciones") and p.combinaciones() else {k: v[0] if isinstance(v, list) else v for k, v in raw.items()}
+        strat = build_strategy(reg, **params)
+        for a in activos:
+            c = panel[a]
+            candles = pd.DataFrame({"timestamp": panel.index, "open": c, "high": c, "low": c, "close": c, "volume": 1.0}, index=panel.index)
+            sig = bar_signals(strat, candles, a, tf)
+            pos, estados = 0, []
+            for e, x in zip(sig["entry"], sig["exit"]):
+                pos = 1 if e == 1 else (0 if x else pos)
+                estados.append(pos)
+            expos[(i, a)] = estados
+    return expos
