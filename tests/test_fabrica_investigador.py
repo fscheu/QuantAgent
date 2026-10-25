@@ -57,9 +57,10 @@ def test_pedido_sin_cifras_de_sharpe_dsr_ni_pnl(tmp_path):
     (pm / "c1.yaml").write_text(yaml.safe_dump({"id": "c1", "causas": ["pocos_trades"], "sharpe": 0.4321, "dsr": 0.9876, "pnl": -1234.56, "trades": 789}), encoding="utf-8")
     intentos.write_text("hipotesis,sharpe,dsr,pnl,trades\nc1,0.4321,0.9876,-1234.56,789\nc2,0.5555,0.8888,999.0,654\n", encoding="utf-8")
     pedido = armar_pedido("catalogo/primas.yaml", pm, intentos)
-    assert all(e in pedido for e in ("Cómo se evalúa", "comprar y mantener", "AGG: '2007-01-03'", "DGS3MO", "RSIMeanReversionStrategy", "momentum-transversal", "deriva-pre-fomc", "intentos_registrados: 2", "pocos_trades", "tendencia-series-de-tiempo"))
+    pedido_plano = " ".join(pedido.split())
+    assert all(e in pedido_plano for e in ("Cómo se evalúa", "comprar y mantener", "Los overlays solo largos sobre los activos del benchmark no superaron a comprar y mantener.", "AGG: '2007-01-03'", "DGS3MO", "RSIMeanReversionStrategy", "momentum-transversal", "deriva-pre-fomc", "intentos_registrados: 2", "pocos_trades", "tendencia-series-de-tiempo"))
     assert "diversificador" not in pedido
-    assert all(p not in pedido.lower() for p in ("sharpe", "dsr", "pnl", "trades:", "0.4321", "0.9876", "1234.56", "0.5555", "0.8888", "999.0", "789", "654"))
+    assert all(p not in pedido.lower() for p in ("sharpe", "dsr", "ganancias", "pnl", "trades:", "0.4321", "0.9876", "1234.56", "0.5555", "0.8888", "999.0", "789", "654"))
 
 
 def test_pedido_incluye_advertencias_por_entrada_sin_bloquear():
