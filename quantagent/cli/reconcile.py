@@ -1,11 +1,16 @@
 """Paper trading reconciliation commands."""
 
 import json
+import os
 from types import SimpleNamespace
 
 import click
+from sqlalchemy.exc import SQLAlchemyError
 
+from quantagent.digest import build_digest
+from quantagent.digest_datos import consultar_datos_paper
 from quantagent.fabrica.chequeos_paper import comparar_pesos, reportar_dividendos, reportar_rechazos
+from quantagent import settings
 from quantagent.models import Environment
 from quantagent.strategy.assembler import StrategyAssembler
 from quantagent.trading.position_monitor import PositionMonitor
@@ -36,26 +41,44 @@ def reconcile_positions() -> None:
         click.echo("Sin divergencias: posiciones locales y Alpaca coinciden.")
 
 
-@trading_group.command("digest", help="Evaluar pesos, rechazos y dividendos desde un JSON.")
-@click.argument("archivo", type=click.File("r", encoding="utf-8"))
-def paper_digest(archivo) -> None:
-    """El JSON contiene paper_weights, shadow_weights, orders y dividends."""
-    data = json.load(archivo)
-    diferencias_pesos = comparar_pesos(data["paper_weights"], data["shadow_weights"])
-    secciones = (
-        ("Pesos", diferencias_pesos),
-        ("Rechazos", reportar_rechazos([SimpleNamespace(**order) for order in data["orders"]])),
-        ("Dividendos", reportar_dividendos(data["dividends"])),
-    )
-    fallo = bool(diferencias_pesos) or any(
-        str(orden.get("status")).lower() == "rejected" and not orden.get("comment")
-        for orden in data["orders"]
-    ) or any(not dividendo[3] for dividendo in data["dividends"])
-    for titulo, reportes in secciones:
-        click.echo(f"{titulo}:")
-        for reporte in reportes:
-            click.echo(f"- {reporte}")
-        if not reportes:
-            click.echo("- Sin observaciones")
-    if fallo:
-        raise click.exceptions.Exit(1)
+@trading_group.command("digest", help="Mostrar el digest diario de paper trading.")
+@click.argument("archivo", required=False, type=click.File("r", encoding="utf-8"))
+@click.option("--date", "digest_date", type=click.DateTime(formats=["%Y-%m-%d"]))
+@click.option("--db", type=click.Path(dir_okay=False), help="Archivo SQLite; por defecto usa DATABASE_URL.")
+@click.option("--portfolio", default="paper", show_default=True, help="Nombre de la cartera en el digest.")
+def trading_digest(archivo, digest_date, db: str | None, portfolio: str) -> None:
+    if archivo:
+        data = json.load(archivo)
+        differences = comparar_pesos(data["paper_weights"], data["shadow_weights"])
+        sections = (("Pesos", differences),
+                    ("Rechazos", reportar_rechazos([SimpleNamespace(**item) for item in data["orders"]])),
+                    ("Dividendos", reportar_dividendos(data["dividends"])))
+        for title, reports in sections:
+            click.echo(f"{title}:")
+            for report in reports:
+                click.echo(f"- {report}")
+            if not reports:
+                click.echo("- Sin observaciones")
+        if differences or any(str(item.get("status")).lower() == "rejected" and not item.get("comment")
+                              for item in data["orders"]) or any(not item[3] for item in data["dividends"]):
+            raise click.exceptions.Exit(1)
+        return
+    if digest_date is None:
+        raise click.UsageError("Provide --date YYYY-MM-DD.")
+    day = digest_date.date()
+    previous_url = os.environ.get("DATABASE_URL")
+    previous_settings_url = settings.DATABASE_URL
+    if db:
+        os.environ["DATABASE_URL"] = f"sqlite:///{os.path.abspath(db)}"
+    try:
+        with utils.session_scope() as session:
+            portfolios, trades, heartbeats, cumulative_pnl = consultar_datos_paper(session, day, portfolio)
+    except (SQLAlchemyError, ValueError):
+        portfolios, trades, heartbeats, cumulative_pnl = [], [], [], 0.0
+    finally:
+        settings.DATABASE_URL = previous_settings_url
+        if previous_url is None:
+            os.environ.pop("DATABASE_URL", None)
+        else:
+            os.environ["DATABASE_URL"] = previous_url
+    click.echo(build_digest(day, portfolios, trades, heartbeats, cumulative_pnl=cumulative_pnl))
