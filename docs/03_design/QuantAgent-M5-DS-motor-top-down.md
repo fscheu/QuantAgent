@@ -124,13 +124,15 @@ Necesidades, en orden de importancia para que el backtest no mienta:
 
 | Opción | Cubre | Costo | Contras |
 |---|---|---|---|
-| **Sharadar Core US Equities Bundle** (Nasdaq Data Link): precios `SEP`, fundamentales `SF1`, tabla de altas y bajas del S&P 500, `TICKERS` con sector | 1, 2 (vía S&P 500), 3 | Pago, por suscripción; **precio a cotizar** (no lo encontré publicado) | Sector actual por empresa, no histórico (ver §5.3). Licencia personal: verificar si permite el uso de este proyecto. |
+| **Sharadar Core US Equities Bundle** (Nasdaq Data Link): precios `SEP`, fundamentales `SF1`, tabla de altas y bajas del S&P 500, `TICKERS` con sector | 1, 2 (vía S&P 500), 3; también precios de ETFs (`funds`) | Bundle con historia completa: USD 69/mes o 499/año (10 años: 49/399, no llega a 2007). Capa gratuita: solo una muestra de ~30 empresas (tipo Dow Jones), útil para desarrollo y tests | Sector actual por empresa; los cambios de SIC están en `actions`, no los de GICS (ver §5.3). Licencia solo personal; al cancelar hay que borrar los datos en 30 días (vale para backtests propios, no para guardarlos y dejar de pagar) |
 | **SEC EDGAR (XBRL, API `companyfacts`)** | 3 | Gratis, sin clave; límite de pedidos por IP | Hay que armar ROIC, márgenes y aceleraciones a mano. Las restataciones exigen quedarse con el **primer valor publicado** a cada fecha. Mucho trabajo y casos raros. No cubre 1 ni 2. |
 | **Norgate Data** (Platinum) | 1, 2 (incluye composición histórica de índices) | ~USD 630 por año según un blog de 2024 (a verificar) | No trae fundamentales. Hasta donde sé, su cliente corre en Windows: choca con la VM y WSL. |
 | **EODHD** | 1, 3, composición del S&P 500 desde 2012 | Plan pago de fundamentales | Composición solo desde 2012: corta el período 2007–2011. |
 | Lista pública de cambios del S&P 500 (por ejemplo, armada desde Wikipedia) | 2 | Gratis | Calidad variable; no resuelve 1. |
 | **Intrinio** (estimaciones de EPS con 20+ años) | 4 | A cotizar | Probablemente caro para el tamaño del proyecto. |
 | **FMP / Twelve Data** (consenso de EPS) | 4, solo desde hoy | Planes bajos | No guardan historia de revisiones: hay que sacar fotos diarias desde ahora. |
+
+Detalle verificado en `sharadar.com/llms.txt`, FAQ y términos (2026-10-25): API propia (`api.sharadar.com`), descarga masiva por tabla; fundamentales con dimensión `ARQ`/`ART` = tal como se presentaron, indexados por la fecha de presentación a la SEC y sin reescribir por restataciones (lo que pide el backtest); tabla `sp500` con altas y bajas históricas; acciones que dejaron de cotizar en las mismas tablas. No trae estimaciones de analistas.
 
 **Recomendación:** Sharadar como fuente principal de acciones (cubre 1, 2 y 3 con un solo proveedor y un formato), EDGAR como control cruzado de una muestra de empresas, y para las revisiones de EPS:
 
