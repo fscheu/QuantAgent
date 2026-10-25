@@ -81,7 +81,17 @@ def test_consultar_datos_paper_usa_modelos_y_filtra_dia_y_ambiente(tmp_path):
             Trade(symbol="IWM", entry_price=200, exit_price=210, quantity=1,
                   side=OrderSide.SELL, pnl=10, opened_at=datetime(2026, 10, 24, 9),
                   closed_at=datetime(2026, 10, 24, 10), environment=Environment.PAPER),
+            Trade(symbol="DIA", entry_price=300, exit_price=305, quantity=1,
+                  side=OrderSide.SELL, pnl=5, opened_at=datetime(2026, 10, 20, 9),
+                  closed_at=datetime(2026, 10, 20, 10), environment=Environment.PAPER),
+            Trade(symbol="DIA", entry_price=300, exit_price=305, quantity=1,
+                  side=OrderSide.SELL, pnl=100, opened_at=datetime(2026, 10, 26, 9),
+                  closed_at=datetime(2026, 10, 26, 10), environment=Environment.PAPER),
             SchedulerHeartbeat(timestamp=datetime(2026, 10, 25, 10), status="completed",
+                               environment=Environment.PAPER),
+            SchedulerHeartbeat(timestamp=datetime(2026, 10, 22, 10), status="completed",
+                               environment=Environment.PAPER),
+            SchedulerHeartbeat(timestamp=datetime(2026, 10, 26, 10), status="error",
                                environment=Environment.PAPER),
             SchedulerHeartbeat(timestamp=datetime(2026, 10, 25, 10), status="error",
                                environment=Environment.BACKTEST),
@@ -89,11 +99,16 @@ def test_consultar_datos_paper_usa_modelos_y_filtra_dia_y_ambiente(tmp_path):
                                environment=Environment.PAPER),
         ])
         session.commit()
-        portfolios, trades, heartbeats = consultar_datos_paper(session, day, "alpha")
+        portfolios, trades, heartbeats, realized_pnl = consultar_datos_paper(session, day, "alpha")
 
     assert portfolios == [{"name": "alpha", "positions": [
         {"symbol": "SPY", "quantity": 2, "price": 500, "unrealized_pnl": 20}
     ]}]
     assert trades == [{"symbol": "SPY", "side": "sell", "quantity": 1, "pnl": 10}]
-    assert heartbeats == [{"timestamp": datetime(2026, 10, 25, 10),
+    assert heartbeats == [{"timestamp": datetime(2026, 10, 22, 10),
+                           "status": "completed", "error_message": None},
+                          {"timestamp": datetime(2026, 10, 24, 10),
+                           "status": "error", "error_message": None},
+                          {"timestamp": datetime(2026, 10, 25, 10),
                            "status": "completed", "error_message": None}]
+    assert realized_pnl == 25
