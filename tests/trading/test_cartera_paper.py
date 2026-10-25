@@ -7,9 +7,12 @@ import pytest
 from quantagent.trading.cartera_paper import (
     entradas_cartera,
     exposicion_piernas,
+    pesos_operables,
     sesiones_cerradas_nyse,
     ultima_sesion_cerrada_nyse,
 )
+from quantagent.fabrica.cartera import pesos, pesos_objetivo
+from quantagent.fabrica.hipotesis import cargar_hipotesis
 
 
 def test_horario_regular_corte_sesion():
@@ -175,8 +178,53 @@ def test_curva_pendiente_usa_macro_publicada_y_marca_bloqueo():
         serie_vigente("T10Y2Y", sesiones, Vencido())
     bloqueada = exposicion_piernas(h, panel, Vencido())
     assert bloqueada[(0, "TLT")].isna().all() and "vencida" in bloqueada.attrs["bloqueos"][0]
+    operables = pesos_operables(h, panel, sesiones[-1], Vencido())
+    assert operables["TLT"] == 0 and "vencida" in operables.attrs["bloqueos"][0]
     class SinDatos(Cliente):
         def observaciones(self, *args, **kwargs):
             return pd.DataFrame(columns=["fecha", "valor", "realtime_start", "realtime_end"])
     sin_macro = exposicion_piernas(h, panel, SinDatos())
     assert sin_macro[(0, "TLT")].isna().all() and "sin observación" in sin_macro.attrs["bloqueos"][0]
+
+
+def test_pesos_operables_compone_exposicion_y_carga_ambas_yaml():
+    from pathlib import Path
+    from quantagent.fabrica.transversal import es_transversal
+
+    raiz = Path(__file__).resolve().parents[2]
+    macro = pd.Series(0.5, index=pd.bdate_range("2023-01-02", periods=300))
+    for nombre in ("cartera-tendencia-momentum", "cartera-nucleo-curva"):
+        ruta = raiz / "hipotesis" / f"{nombre}.yaml"
+        h = cargar_hipotesis(ruta)
+        idx = macro.index
+        simbolos = sorted({a for p in h.piernas for a in p.activos})
+        panel = pd.DataFrame({a: 100 + j + pd.Series(range(len(idx)), index=idx) for j, a in enumerate(simbolos)}, index=idx)
+        expos = exposicion_piernas(h, panel, macro)
+        seleccion = {i: expos.xs(i, axis=1, level=0) for i, p in enumerate(h.piernas) if es_transversal(p.clase)}
+        referencia = pesos(panel, {i: p.activos for i, p in enumerate(h.piernas)}, seleccion=seleccion).loc[idx[-1]]
+        esperado = {}
+        for (i, activo), peso in referencia.items():
+            esperado[activo] = esperado.get(activo, 0.0) + peso * expos.loc[idx[-1], (i, activo)]
+        resultado = pesos_operables(ruta, panel, idx[-1], macro)
+        assert resultado.to_dict() == pytest.approx(esperado)
+        assert resultado.sum() <= sum(pesos_objetivo(panel, {i: p.activos for i, p in enumerate(h.piernas)}, idx[-1]).values())
+
+
+def test_pesos_operables_suma_simbolo_y_conserva_efectivo_y_calendario(monkeypatch):
+    from types import SimpleNamespace
+    import quantagent.trading.cartera_paper as cartera_paper
+
+    idx = pd.bdate_range("2024-01-02", periods=40)
+    panel = pd.DataFrame(100.0, index=idx, columns=list("ABC"))
+    h = SimpleNamespace(piernas=[SimpleNamespace(clase="momentum-12m", activos=tuple("AB")),
+                                 SimpleNamespace(clase="momentum-12m", activos=tuple("AC"))])
+    expos = pd.DataFrame(0, index=idx, columns=pd.MultiIndex.from_tuples([(0, a) for a in "AB"] + [(1, a) for a in "AC"]))
+    expos[(0, "A")] = expos[(1, "A")] = 1
+    expos.attrs["bloqueos"] = []
+    monkeypatch.setattr(cartera_paper, "exposicion_piernas", lambda *args: expos)
+
+    enero = pesos_operables(h, panel, idx[0])
+    fin_de_enero = pesos_operables(h, panel, idx[20])
+    assert enero.to_dict() == pytest.approx({"A": 0.5, "B": 0.0, "C": 0.0})
+    assert fin_de_enero.to_dict() == pytest.approx(enero.to_dict())
+    assert enero.sum() == pytest.approx(0.5)

@@ -1,11 +1,14 @@
 """Sesiones cerradas de mercado para ejecución paper de carteras."""
 
 from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 import pandas_market_calendars as mcal
 
 from quantagent.backtesting.signals import bar_signals
+from quantagent.fabrica.cartera import pesos
+from quantagent.fabrica.hipotesis import cargar_hipotesis
 from quantagent.fabrica.transversal import METRICAS, es_transversal, señales_transversales
 from quantagent.strategy.registry import STRATEGY_REGISTRY, build_strategy, cli_aliases
 
@@ -115,3 +118,21 @@ def exposicion_piernas(h, panel: pd.DataFrame, macro=None) -> pd.DataFrame:
             expos[(i, a)] = estados
     expos.attrs["bloqueos"] = bloqueos
     return expos
+
+
+def pesos_operables(h, panel: pd.DataFrame, fecha, macro=None) -> pd.Series:
+    """Pesos activos por símbolo; la asignación no expuesta permanece en efectivo."""
+    if isinstance(h, (str, Path)):
+        h = cargar_hipotesis(h)
+    piernas = {i: tuple(p.activos) for i, p in enumerate(h.piernas)}
+    expos = exposicion_piernas(h, panel, macro)
+    seleccion = {i: expos.xs(i, axis=1, level=0) for i, p in enumerate(h.piernas)
+                 if es_transversal(p.clase)}
+    por_pierna = pesos(panel, piernas, seleccion=seleccion).loc[:fecha].iloc[-1]
+    estado = expos.loc[fecha].fillna(0)
+    activos = {}
+    for (i, simbolo), peso in por_pierna.items():
+        activos[simbolo] = activos.get(simbolo, 0.0) + float(peso) * float(estado[(i, simbolo)])
+    resultado = pd.Series(activos, dtype=float)
+    resultado.attrs["bloqueos"] = expos.attrs["bloqueos"]
+    return resultado
