@@ -1,7 +1,6 @@
 # F1 aprobada: decisión 7 de docs/04_decisions/QuantAgent-R01-DC-decisiones-investigacion-edge.md.
-# Datos: los del snapshot etf-1d-2026-10-amplio (SPY, IEF), sin costo. La clase de señal no existe:
-# hace falta una clase nueva, que la cartera acepte pesos objetivo por fecha y llenado al cierre (ticket R09;
-# la corrida es R10).
+# Datos: los del snapshot etf-1d-2026-10-amplio (SPY, IEF), sin costo. La estrategia registrada expone
+# los pesos objetivo por fecha; el llenado al cierre corresponde a QuantAgent-e4jc.2.3.
 # Intentos: 1 cartera, 1 fila de intentos.csv por etapa corrida (hasta 3).
 # QuantAgent-e4jc.1: verificado en la versión NBER de marzo de 2025 (no la revisión de 2026).
 # PDF: https://d1e00ek4ebabms.cloudfront.net/production/uploaded-files/w33554-c27954c3-8c17-44f5-a26f-1800436b6ebf.pdf

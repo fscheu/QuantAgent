@@ -11,6 +11,7 @@ from .llm_agent_strategy import LLMAgentStrategy
 from .momentum_12m_strategy import Momentum12mStrategy
 from .rsi_regimen_strategy import RsiRegimenStrategy
 from .rsi_strategy import RSIMeanReversionStrategy
+from .rebalanceo_fin_de_mes_strategy import RebalanceoFinDeMesStrategy
 from .senal_externa_strategy import SenalExterna
 from .sma_cross_strategy import SmaCrossStrategy
 from .triple_screen_strategy import TripleScreenStrategy
@@ -199,6 +200,7 @@ STRATEGY_REGISTRY: dict[str, dict[str, Any]] = {
     "HalloweenStrategy": {"cls": HalloweenStrategy, "type": "deterministic", "cli_alias": "halloween", "display_name": HalloweenStrategy.describe()["display_name"], "description": HalloweenStrategy.describe()["description"], "min_bars": 1, "params": {}},
     "TurnOfTheMonthStrategy": {"cls": TurnOfTheMonthStrategy, "type": "deterministic", "cli_alias": "turn-of-the-month", "display_name": TurnOfTheMonthStrategy.describe()["display_name"], "description": TurnOfTheMonthStrategy.describe()["description"], "min_bars": 1, "params": {}},
     "SenalExterna": {"cls": SenalExterna, "type": "deterministic", "cli_alias": "senal-externa", "display_name": SenalExterna.describe()["display_name"], "description": SenalExterna.describe()["description"], "min_bars": 1, "params": {"ruta": {"type": str, "default": "", "description": "Ruta al CSV con timestamp, posicion."}}},
+    "RebalanceoFinDeMesStrategy": {"cls": RebalanceoFinDeMesStrategy, "type": "deterministic", "cli_alias": "rebalanceo-fin-de-mes", "display_name": RebalanceoFinDeMesStrategy.describe()["display_name"], "description": RebalanceoFinDeMesStrategy.describe()["description"], "min_bars": 1, "params": {}},
     "LLMAgentStrategy": {
         "cls": LLMAgentStrategy,
         "type": "llm",
@@ -222,6 +224,7 @@ def get_strategy_names() -> list[str]:
 
 def build_strategy(name: str, **kwargs: Any) -> TradingStrategy:
     """Instantiate a registered strategy with optional constructor params."""
+    name = cli_aliases().get(name, name)
     return STRATEGY_REGISTRY[name]["cls"](**kwargs)
 
 
