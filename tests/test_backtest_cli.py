@@ -58,10 +58,15 @@ def test_cli_llenado_real_y_snapshot(cli_runner, monkeypatch, tmp_path, command,
         assert snapshot["fill"] == (fill or "apertura")
         signal = self.db.query(Signal).filter(Signal.backtest_run_id == self.backtest_run_id).order_by(Signal.generated_at).first()
         trade = self.db.query(Trade).filter(Trade.backtest_run_id == self.backtest_run_id).order_by(Trade.opened_at).first()
-        assert trade.opened_at == signal.generated_at + (timedelta() if fill == "cierre" else delta)
-        if fill != "cierre":
-            candle = self.db.query(MarketData).filter_by(symbol="SPY", timestamp=trade.opened_at).one()
-            direction = 1 if trade.side.value == "buy" else -1
+        if fill == "cierre":
+            assert trade.opened_at == signal.generated_at
+        else:
+            assert trade.opened_at == signal.generated_at + delta
+        candle = self.db.query(MarketData).filter_by(symbol="SPY", timestamp=trade.opened_at).one()
+        direction = 1 if trade.side.value == "buy" else -1
+        if fill == "cierre":
+            assert float(trade.entry_price) == pytest.approx(float(candle.close) * (1 + direction * settings.TRADING_SLIPPAGE_PCT))
+        else:
             assert float(trade.entry_price) == pytest.approx(float(candle.open) * (1 + direction * settings.TRADING_SLIPPAGE_PCT))
         observed.append(metrics.total_trades)
         return metrics
