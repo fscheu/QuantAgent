@@ -20,8 +20,9 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from quantagent.models import Order, OrderSide, OrderType, Signal, Trade, TradeSignal
+from quantagent.models import Environment, Order, OrderSide, OrderStatus, OrderType, Signal, Trade, TradeSignal
 
+from .alpaca_broker import AlpacaBroker
 from .position_sizer import PositionSizer
 from .risk_manager import RiskManager
 
@@ -308,6 +309,9 @@ class OrderManager:
 
     def execute_rebalance_order(self, symbol: str, side: OrderSide, qty: float, price: float) -> Optional[Order]:
         """Execute a portfolio rebalance without strategy risk or per-entry caps."""
+        if (isinstance(self.broker, AlpacaBroker) and self.portfolio.environment == Environment.PAPER
+                and self._pending_rebalance_orders().filter(Order.symbol == symbol).first()):
+            return None
         position = self.portfolio.get_position(symbol)
         held = float(position.get("qty", 0)) if position else 0.0
         if side == OrderSide.SELL:
@@ -316,7 +320,8 @@ class OrderManager:
             qty = self._cap_entry_qty(side, qty, price)
         if qty <= 0 or (self.orden_minima is not None and qty * price < self.orden_minima - 1e-9):
             return None
-        order = Order(symbol=symbol, side=side, quantity=qty, price=price, order_type=OrderType.MARKET)
+        order = Order(symbol=symbol, side=side, quantity=qty, price=price, order_type=OrderType.MARKET,
+                      environment=self.portfolio.environment)
         try:
             self.db.add(order)
             self.db.flush()
@@ -326,6 +331,18 @@ class OrderManager:
             logger.error("%s: Rebalance order failed - %s", symbol, exc)
             self.db.rollback()
             return None
+
+    def _pending_rebalance_orders(self):
+        return self.db.query(Order).filter(
+            Order.environment == Environment.PAPER, Order.alpaca_order_id.isnot(None),
+            Order.status.in_([OrderStatus.PENDING, OrderStatus.PARTIALLY_FILLED]))
+
+    def refresh_rebalance_orders(self):
+        """Refresh persisted paper Alpaca orders and apply confirmed fill deltas."""
+        if not isinstance(self.broker, AlpacaBroker) or self.portfolio.environment != Environment.PAPER:
+            return
+        for order in self._pending_rebalance_orders().all():
+            self.apply_rebalance_fills(self.broker.refresh_order(order))
 
     def apply_rebalance_fills(self, order: Order) -> Order:
         """Apply only remote fills not yet represented by this order's Trades."""
