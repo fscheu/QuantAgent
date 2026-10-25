@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 from quantagent.models import Environment, Order, OrderSide, OrderStatus, OrderType, Signal, Trade, TradeSignal
 
 from .alpaca_broker import AlpacaBroker
+from .paper_broker import PaperBroker
 from .position_sizer import PositionSizer
 from .risk_manager import RiskManager
 
@@ -72,11 +73,13 @@ class OrderManager:
         if side != OrderSide.BUY or qty * price > cash * (1 + 1e-9):
             return qty
         cash *= 1 - self.cash_reserve_pct
-        unit_cost = price * (1 + self.broker.slippage_pct)
-        if self.broker.commission_model == "pct":
-            unit_cost *= 1 + self.broker.commission_pct
-        elif self.broker.commission_model == "fixed":
-            cash -= self.broker.commission_fixed
+        unit_cost = price
+        if isinstance(self.broker, PaperBroker):
+            unit_cost = price * (1 + self.broker.slippage_pct)
+            if self.broker.commission_model == "pct":
+                unit_cost *= 1 + self.broker.commission_pct
+            elif self.broker.commission_model == "fixed":
+                cash -= self.broker.commission_fixed
         max_qty = cash / unit_cost
         if qty <= max_qty or max_qty <= 0:
             return qty
@@ -317,7 +320,7 @@ class OrderManager:
         if side == OrderSide.SELL:
             qty = min(qty, max(0.0, held))
         else:
-            qty = self._cap_entry_qty(side, qty, price)
+            qty = int(self._cap_entry_qty(side, min(qty, max(0.0, self.portfolio.cash) / price), price))
         if qty <= 0 or (self.orden_minima is not None and qty * price < self.orden_minima - 1e-9):
             return None
         order = Order(symbol=symbol, side=side, quantity=qty, price=price, order_type=OrderType.MARKET,

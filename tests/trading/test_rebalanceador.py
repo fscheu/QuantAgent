@@ -224,3 +224,62 @@ def test_pending_rebalance_terminal_states_and_exclusions(db_session):
     db_session.add(order_pending)
     db_session.commit()
     assert paper_mgr.execute_rebalance_order("MSFT", OrderSide.BUY, 2, 50) is not None
+
+
+def test_alpaca_rebalance_buy_reserves_cash_and_truncates_to_integer(db_session):
+    client = SimpleNamespace(
+        submit_order=lambda order_data: SimpleNamespace(
+            id="fake-order-buy", status="filled", filled_qty=order_data.qty,
+            filled_avg_price=getattr(order_data, "limit_price", "100.0"), reject_reason=None))
+    portfolio = PortfolioManager(1000, db=db_session)
+    manager = OrderManager(PositionSizer(), RiskManager(portfolio, db=db_session),
+                           AlpacaBroker(client), portfolio, db_session, cash_reserve_pct=0.05)
+    order = manager.execute_rebalance_order("SPY", OrderSide.BUY, 10, 100)
+    assert order is not None
+    assert order.quantity == 9
+    assert order.quantity % 1 == 0
+    assert portfolio.cash == 100
+
+
+@pytest.mark.parametrize("model,kw,expected_qty", [
+    ("pct", {"commission_pct": 0.01}, 93),
+    ("fixed", {"commission_fixed": 50.0}, 93),
+])
+def test_paper_rebalance_buy_preserves_costs_and_truncates_integer(db_session, model, kw, expected_qty):
+    portfolio = PortfolioManager(10000, db=db_session)
+    broker = PaperBroker(slippage_pct=0.01, commission_model=model, **kw)
+    manager = OrderManager(PositionSizer(), RiskManager(portfolio, db=db_session),
+                           broker, portfolio, db_session, cash_reserve_pct=0.05)
+    order = manager.execute_rebalance_order("SPY", OrderSide.BUY, 100, 100)
+    assert order is not None
+    assert order.quantity == expected_qty
+    assert order.quantity % 1 == 0
+
+
+@pytest.mark.parametrize("initial_cash,expected_submits,expected_cash", [
+    (0, [("sell", 10.0)], 0),
+    (100, [("sell", 10.0)], 100),
+    (250, [("sell", 10.0), ("buy", 2.0)], 50),
+])
+def test_rebalance_buy_with_pending_sale_limits_to_available_cash(
+    db_session, tmp_path, initial_cash, expected_submits, expected_cash
+):
+    submitted = []
+
+    def submit(order_data):
+        side = getattr(order_data.side, "value", order_data.side)
+        submitted.append((side, float(order_data.qty)))
+        return SimpleNamespace(
+            id=f"fake-{side}", status="accepted" if side == "sell" else "filled",
+            filled_qty="0" if side == "sell" else order_data.qty,
+            filled_avg_price="100.0", reject_reason=None)
+
+    portfolio = PortfolioManager(initial_cash, db=db_session)
+    portfolio.positions["A"] = dict(qty=10, avg_cost=100, current_price=100, pnl=0, pnl_pct=0)
+    manager = OrderManager(PositionSizer(), RiskManager(portfolio, db=db_session),
+                           AlpacaBroker(SimpleNamespace(submit_order=submit)), portfolio,
+                           db_session, cash_reserve_pct=0.05)
+    rebalancear({"A": 0, "B": 0.95}, {"A": 100, "B": 100}, manager,
+                tmp_path / "shadow.json", fecha="2026-10-24")
+    assert submitted == expected_submits
+    assert portfolio.cash == expected_cash
