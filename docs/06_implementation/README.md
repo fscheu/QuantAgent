@@ -54,6 +54,8 @@ Implementation documents should include:
 
 ## Per-Change Implementation Documents
 
+Paper trading admite seleccionar un YAML de cartera con `--portfolio`; crea SQLite y archivo de sombra por cartera, y no inicia el ciclo. Credenciales siguen entrando por entorno.
+
 Per-change implementation documents should follow this naming convention:
 
 ```
