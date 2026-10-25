@@ -258,6 +258,32 @@ class TestLongPositionPnL:
 class TestShortPositionPnL:
     """Tests for SHORT position P&L calculation (AC-3, AC-4)."""
 
+    def test_short_cell_unrealized_pnl_tracks_price_direction(self, portfolio, test_db):
+        """An open short gains on a price drop and loses on a price rise."""
+        sell_order = Order(
+            symbol="BTC-USD",
+            side=OrderSide.SELL,
+            order_type=OrderType.MARKET,
+            quantity=Decimal("2"),
+            filled_quantity=Decimal("2"),
+            price=Decimal("100"),
+            status=OrderStatus.FILLED,
+            environment=Environment.BACKTEST,
+        )
+        test_db.add(sell_order)
+        test_db.commit()
+        portfolio.execute_trade(sell_order, fill_price=100.0)
+
+        portfolio.update_prices({"BTC-USD": 90.0})
+        assert portfolio.get_position("BTC-USD")["pnl"] == 20.0
+        assert portfolio.get_unrealized_pnl() == 20.0
+        assert portfolio.get_total_value() == 100020.0
+
+        portfolio.update_prices({"BTC-USD": 110.0})
+        assert portfolio.get_position("BTC-USD")["pnl"] == -20.0
+        assert portfolio.get_unrealized_pnl() == -20.0
+        assert portfolio.get_total_value() == 99980.0
+
     def test_short_position_profit(self, portfolio, test_db):
         """AC-3: SHORT position closed at profit calculates positive P&L.
 
