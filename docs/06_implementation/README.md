@@ -56,6 +56,8 @@ Implementation documents should include:
 
 Paper trading admite seleccionar un YAML de cartera con `--portfolio`; crea SQLite y archivo de sombra por cartera, y no inicia el ciclo. Credenciales siguen entrando por entorno.
 
+Las carteras con una pierna `curva-pendiente` construyen `FredClient` al preparar el scheduler y lo inyectan en `paper_portfolio`; si falta `FRED_API_KEY`, el arranque falla explícitamente. Las demás carteras no requieren la clave.
+
 Per-change implementation documents should follow this naming convention:
 
 ```

@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from quantagent import settings
 from quantagent.data.provider import DataProvider
 from quantagent.data.sources import build_source
+from quantagent.data.sources.fred import FredClient
 from quantagent.database import Base, SessionLocal
 from quantagent.logging_config import setup_logging
 from quantagent.models import Environment
@@ -71,6 +72,7 @@ def _build_portfolio_scheduler(config, path: str):
     from quantagent.fabrica.hipotesis import cargar_hipotesis
 
     cartera = cargar_hipotesis(hypothesis)
+    macro = FredClient() if any(p.clase == "curva-pendiente" for p in cartera.piernas) else None
     db_path = Path("local-data") / f"{cartera.id}.db"
     engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
@@ -84,7 +86,7 @@ def _build_portfolio_scheduler(config, path: str):
         scheduler = TradingScheduler(
             trading_graph=None, order_manager=components.order_manager, data_provider=provider,
             db_session=session, scheduler_settings=config,
-            paper_portfolio={"hipotesis": cartera, "reloj": datetime.utcnow,
+            paper_portfolio={"hipotesis": cartera, "reloj": datetime.utcnow, "macro": macro,
                              "sombra": str(db_path.with_suffix(".sombra.json")), "cartera": cartera.id},
         )
         return scheduler, session
