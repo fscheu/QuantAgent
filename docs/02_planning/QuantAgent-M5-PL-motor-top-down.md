@@ -146,4 +146,10 @@ Con stop a 2 ATR (típicamente 3–6 % del precio en acciones), r = 0,25 % da po
 
 ## 7. Lo que no entra en M5
 
-Dinero real, partición de una sola cuenta live entre M4 y M5, cortos, veto del LLM sobre señales (posible hipótesis posterior), acciones por país (Brasil, Argentina), revisiones de EPS históricas pagas.
+Dinero real, partición de una sola cuenta live entre M4 y M5, cortos (registrados como H5, abajo), veto del LLM sobre señales (posible hipótesis posterior), acciones por país (Brasil, Argentina), revisiones de EPS históricas pagas.
+
+## 8. Registrado para después de M5
+
+| Idea | Detalle | Cuándo |
+|---|---|---|
+| H5: pierna corta en sectores bloqueados | Vender en corto los activos con filtro de caída activo y momentum negativo, con arquetipos espejo; se mide contra H4. Motivo de dejarla afuera de v1 y antecedentes en el diseño §7. | Después del punto de control de M5 (Fede, 2026-10-25). Si suma, entra en paper con la cuenta M5; para dinero real requiere cuenta margin (sin fracciones en corto). |
