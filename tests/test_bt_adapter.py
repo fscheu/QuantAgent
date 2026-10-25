@@ -16,6 +16,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
+from quantagent.strategy.base import TradingSignal, TradingStrategy
 
 ROOT = Path(__file__).resolve().parent.parent
 pytestmark = pytest.mark.oraculo  # el subproceso tarda ~5 s en importar el proyecto y la libreria
@@ -333,6 +334,55 @@ def test_corto_dimensionado_en_apertura(results):
     assert first["side"] == "sell"
     assert first["entry_price"] == 100.5
     assert first["qty"] == round(100000 * 0.05 * 0.5 / 100.5 * 2**27) / 2**27
+
+
+def test_corto_con_costos_coincide_con_motor(db_session, tmp_path):
+    from quantagent.backtesting.backtest import Backtest as ProjectBacktest
+    from quantagent.models import MarketData, Trade
+
+    class ShortOnce(TradingStrategy):
+        required_history_bars = 1
+
+        def generate_signal(self, kline_data, symbol, timeframe, current_price):
+            if kline_data[-1]["volume"] == 2:
+                return TradingSignal(decision="SHORT", confidence=1, stop_loss=110, take_profit=80)
+            return None
+
+        def should_exit(self, position, current_price, ohlc_data):
+            return (True, "RULE") if position.candles_since_entry else (False, None)
+
+        def should_reevaluate(self, position, current_price):
+            return False
+
+    start = datetime(2024, 1, 1)
+    bars = [(100, 101, 99, 100, 1), (100, 101, 99, 100, 2), (90, 91, 89, 90, 1)]
+    for i, (opening, high, low, close, volume) in enumerate(bars):
+        db_session.add(MarketData(symbol="SHORT", timeframe="1d", timestamp=datetime(2024, 1, i + 1),
+                                  open=opening, high=high, low=low, close=close, volume=volume))
+    db_session.commit()
+    motor = ProjectBacktest(start, datetime(2024, 1, 3), ["SHORT"], "1d",
+                            config={"offline_data": True, "market_hours_filter": False,
+                                    "base_position_pct": 0.05, "commission_pct": 0.001,
+                                    "slippage_pct": 0}, db_session=db_session,
+                            strategy=ShortOnce(), intrabar_stops=False)
+    motor.run()
+    engine_trade = db_session.query(Trade).filter(Trade.backtest_run_id == motor.backtest_run_id).one()
+
+    path = tmp_path / "short.csv"
+    path.write_text("timestamp,open,high,low,close,volume\n" + "".join(
+        f"2024-01-0{i + 1},{o},{h},{lo},{c},{v}\n" for i, (o, h, lo, c, v) in enumerate(bars)))
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import bt_adapter
+    import crossval_rsi
+    bt_adapter.settings.TRADING_BASE_POSITION_PCT = 0.05
+    control = bt_adapter.run_adapter(ShortOnce(), crossval_rsi.load_fixture(path), symbol="SHORT", timeframe="1d",
+                                     commission_pct=0.001)
+    control_trade = bt_adapter.trade_rows(control, "SHORT")[0]
+    assert control_trade.side == "sell" and engine_trade.side.value.lower() in ("sell", "short")
+    assert float(engine_trade.quantity) == pytest.approx(control_trade.qty)
+    assert float(engine_trade.entry_price) == pytest.approx(control_trade.entry_price)
+    assert float(engine_trade.exit_price) == pytest.approx(control_trade.exit_price)
+    assert float(engine_trade.pnl) == pytest.approx(control_trade.pnl)
 
 
 def test_slippage_con_la_regla_del_paper_broker(results):
