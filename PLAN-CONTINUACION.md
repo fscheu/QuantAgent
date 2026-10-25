@@ -764,8 +764,9 @@ Los primeros 5 son los más fáciles de revisar.
 | W10d1 | `QuantAgent-av1p.4.4.1` | Aplicar fills incrementales idempotentes; depende W10c | 0→3→10→10 aplica solo 3 y 7 al precio incremental correcto, incluso al reabrir sesión | probar | L21 |
 | W10d2 | `QuantAgent-av1p.4.4.2` | Consultar pendientes y evitar reenvíos; depende W10d1 | Pending/partial no duplica submit; cancelación/rechazo quedan persistidos con solo fills reales | probar | L21 |
 | W10e | `QuantAgent-av1p.4.5` | Reserva de efectivo compatible con Alpaca; depende del cierre de av1p.4.4 (W10d1/2) | Compra entera respeta reserva sin costos remotos inventados | probar | L21 |
-| W10f | `QuantAgent-av1p.4.6` | Panel y precios por sesión cerrada; depende W10e | No usa barra incompleta ni reopera sábado/feriado | probar | L21 |
-| W10g | `QuantAgent-av1p.4.7` | Exposición por pierna con señales existentes; depende W10f | Momentum/SMA/curva/ranking coinciden con señales del backtest | probar | L21 |
+| W10f1 | `QuantAgent-av1p.4.6.1` | Calendario de sesión NYSE cerrada; depende W10e | Fines de semana/feriados conservan sesión y cierre temprano usa hora real | probar | L21 |
+| W10f2 | `QuantAgent-av1p.4.6.2` | Panel y precios por sesión cerrada; depende W10f1 | ≥253 cierres completos, held con precio vigente, sin barras incompletas/futuras ni datos rellenados | probar | L21 |
+| W10g | `QuantAgent-av1p.4.7` | Exposición por pierna con señales existentes; depende de .6 cerrado tras W10f1/2 | Momentum/SMA/curva/ranking coinciden con señales del backtest | probar | L21 |
 | W10h | `QuantAgent-av1p.4.8` | Componer pesos y exposición; depende W10g y cierre QuantAgent-7v45, corrección T4 ya autorizada por Fede ([partición](docs/loop/particiones/QuantAgent-7v45.md)) | Referencia T4 prospectiva, efectivo/calendario preservados y datos anteriores intactos | probar | L21 |
 | W10i | `QuantAgent-av1p.4.9` | Ciclo paper del scheduler; depende W10h | Pesos→órdenes→posiciones/sombra; live bloqueado, estrategias sueltas sin cambio | probar | L21 |
 | W10j | `QuantAgent-av1p.4.10` | Registro/armado explícito de ambas; depende W10i | Una cartera/cuenta/DB/proceso, sin operación real (decisión Fede 2026-10-24) | probar | L21 |

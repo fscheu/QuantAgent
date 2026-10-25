@@ -54,3 +54,16 @@ La revisión de diseño estima 110–140 líneas para aplicación incremental, c
 Tests a correr (ambos hijos): `tests/trading/test_rebalanceador.py tests/trading/test_alpaca_broker_orders.py tests/test_trading_components.py tests/test_order_manager_reversal.py tests/test_2mu_error_logging.py tests/test_2mu_error_propagation.py tests/test_quantagent_8vb_conversion_fix.py`. Además `scripts/loop/smoke.sh`; PM corre oráculos. Usar SQLite temporal, `NUMBA_CACHE_DIR=/tmp/numba-cache` y venv principal; sin endpoints reales ni credenciales. Si un hijo supera 100 líneas, partir antes de código, sin minificar.
 
 Reabrir sesión prueba idempotencia del registro persistido; restauración de cartera al reiniciar proceso y posterior sincronización con broker siguen en `.9`. No sincronizar foto remota antes de aplicar deltas sobre el estado local previo. `QuantAgent-av1p.4.4` permanece abierto y `QuantAgent-av1p.4.5` conserva su dependencia del padre; PM cerrará ese padre cuando estén integrados ambos hijos.
+
+## Adenda 2026-10-24: subdivisión de QuantAgent-av1p.4.6
+
+El preflight de agy estima 150–170 líneas para calendario, panel, precios y pruebas completas; no escribió código. PM aprueba dos entregas de ≤100 líneas, sin cambiar el alcance ni habilitar operación.
+
+- **`QuantAgent-av1p.4.6.1` Calendario de sesión cerrada NYSE (70–85 líneas).** Depende de `.5`. Resolver por reloj inyectado la sesión/ventana ya cerrada usando `market_close` real, incluidos cierres tempranos. Esa referencia se reutiliza como corte de barras en el hijo siguiente. Binario: antes del cierre excluye la rueda actual; viernes cerrado, sábado y feriado conservan sesión; cierre temprano se reconoce a su hora real, sin fechas futuras ni corte fijo a las 16 h.
+- **`QuantAgent-av1p.4.6.2` Panel y precios por sesión (75–95 líneas).** Depende de `.6.1`. Reutilizar su calendario y `DataProvider.get_ohlc`, sin clientes nuevos: panel de `h.piernas` con ≥253 cierres consecutivos completos y precios de la sesión vigente para símbolos held adicionales. No exigir historia larga al held que sólo necesita cotización. Binario: panel/precios completos habilitan la entrada; historia insuficiente, huecos, última barra o precio held ausentes la impiden; barras incompletas/futuras quedan excluidas sin retroceder a una sesión vieja ni rellenar datos.
+
+Archivos de ambos: `quantagent/trading/cartera_paper.py`, `tests/trading/test_cartera_paper.py` (nuevos en `.6.1`). API mínima compartida entre hijos; conservar historia cerrada suficiente para las señales mensuales, sin implementar señales, pesos, macro o scheduler.
+
+Tests dirigidos: `python -m pytest -q tests/trading/test_cartera_paper.py tests/test_cartera.py`, además `scripts/loop/smoke.sh`; PM corre oráculos al tocar trading. Usar venv principal, `NUMBA_CACHE_DIR=/tmp/numba-cache`, reloj/fuente falsos y SQLite/precios fabricados temporales. No endpoints, credenciales, reserva ni lectura o modificación de evidencia histórica.
+
+Revisión: **probar**. El padre `.6` queda `in_progress` hasta integrar ambos hijos; `.7` conserva su dependencia del padre. La cola reemplaza W10f por W10f1/2. Si una estimación concreta supera 100, subdividir antes de código, sin minificar.
