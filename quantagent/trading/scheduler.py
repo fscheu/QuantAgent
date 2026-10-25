@@ -24,6 +24,8 @@ from quantagent.backtesting.intrabar_stops import check_intrabar_stops
 from quantagent.trading.order_manager import OrderManager
 from quantagent.trading.alpaca_broker import AlpacaBroker
 from quantagent.trading.position_monitor import PositionMonitor
+from quantagent.trading.cartera_paper import entradas_cartera, pesos_operables
+from quantagent.trading.rebalanceador import rebalancear
 from quantagent.trading_graph import TradingGraph
 
 logger = logging.getLogger(__name__)
@@ -60,6 +62,7 @@ class TradingScheduler:
         scheduler_settings: Optional[settings.SchedulerSettings] = None,
         scheduler_factory: Optional[Callable[[], BackgroundScheduler]] = None,
         strategy: Optional[TradingStrategy] = None,
+        paper_portfolio: Optional[dict] = None,
     ) -> None:
         self.trading_graph = trading_graph
         self.order_manager = order_manager
@@ -70,6 +73,9 @@ class TradingScheduler:
         self.strategy = strategy if strategy is not None else LLMAgentStrategy(
             self.trading_graph
         )
+        if paper_portfolio is not None and self.environment != Environment.PAPER:
+            raise ValueError("paper portfolios require paper environment")
+        self.paper_portfolio = paper_portfolio
 
         # Initialize PositionMonitor for tracking active positions
         self.position_monitor = PositionMonitor(
@@ -175,7 +181,14 @@ class TradingScheduler:
 
         heartbeat = self._upsert_heartbeat_start(cycle_start)
         try:
-            for symbol in self.config.assets:
+            if self.paper_portfolio is not None:
+                try:
+                    self._process_paper_portfolio()
+                    processed = 1
+                except (DataFetchError, ExecutionError) as exc:
+                    errors += 1
+                    logger.error("Paper portfolio cycle failed: %s", exc)
+            for symbol in (() if self.paper_portfolio is not None else self.config.assets):
                 try:
                     self._process_asset(symbol)
                     processed += 1
@@ -254,6 +267,33 @@ class TradingScheduler:
     # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------
+    def _process_paper_portfolio(self) -> None:
+        config = self.paper_portfolio
+        manager = self.order_manager
+        manager.refresh_rebalance_orders()
+        broker = manager.broker
+        if isinstance(broker, AlpacaBroker):
+            account = broker.get_account()
+            manager.portfolio.cash = float(account["cash"])
+            manager.portfolio.positions = {
+                symbol: {"qty": float(pos.qty), "avg_cost": float(pos.avg_entry_price),
+                         "current_price": float(pos.current_price), "pnl": float(pos.unrealized_pl)}
+                for symbol, pos in broker.get_positions().items()
+            }
+        fecha, panel, precios = entradas_cartera(
+            config["hipotesis"], self.data_provider, config["reloj"],
+            manager.portfolio.positions,
+        ) or (None, None, None)
+        if fecha is None:
+            return
+        manager.portfolio.set_date(fecha.date())
+        pesos = pesos_operables(config["hipotesis"], panel, fecha, config.get("macro"))
+        try:
+            rebalancear(pesos.to_dict(), precios, manager, config["sombra"],
+                        cartera=config["cartera"], fecha=fecha.date())
+        except Exception as exc:
+            raise ExecutionError(str(exc)) from exc
+
     def _process_asset(self, symbol: str) -> None:
         df = self._fetch_market_data(symbol)
         kline_data = format_ohlcv_for_agents(df)
