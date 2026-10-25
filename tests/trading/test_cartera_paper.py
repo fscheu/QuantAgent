@@ -150,3 +150,33 @@ def test_exposicion_piernas_sin_mirar_futuro():
         SimpleNamespace(clase="momentum-transversal", activos=tuple("ABCDEF"), parametros={}),
     ])
     assert check_no_lookahead(lambda p: exposicion_piernas(h, p), panel, [panel.index[260], panel.index[280]]) == []
+
+
+def test_curva_pendiente_usa_macro_publicada_y_marca_bloqueo():
+    from quantagent.data.macro_vivo import MacroVencida, serie_vigente
+
+    sesiones = pd.DatetimeIndex(["2024-01-08", "2024-01-09"])
+    class Cliente:
+        def observaciones(self, serie, desde, hasta, todas_las_versiones=True):
+            return pd.DataFrame({"fecha": pd.to_datetime(["2024-01-05", "2024-01-08"]), "valor": [0.25, 0.0],
+                                 "realtime_start": pd.to_datetime(["2024-01-05", "2024-01-08"]),
+                                 "realtime_end": pd.to_datetime(["2262-04-11", "2262-04-11"])})
+    assert serie_vigente("T10Y2Y", sesiones, Cliente()).tolist() == [0.25, 0.0]
+    panel = pd.DataFrame({"TLT": [100.0, 101.0]}, index=sesiones)
+    h = SimpleNamespace(piernas=[SimpleNamespace(clase="curva-pendiente", activos=("TLT",), parametros={})])
+    expos = exposicion_piernas(h, panel, Cliente())
+    assert expos[(0, "TLT")].tolist() == [1, 0] and expos.attrs["bloqueos"] == []
+    class Vencido(Cliente):
+        def observaciones(self, *args, **kwargs):
+            return pd.DataFrame({"fecha": pd.to_datetime(["2024-01-01"]), "valor": [0.25],
+                                 "realtime_start": pd.to_datetime(["2024-01-01"]),
+                                 "realtime_end": pd.to_datetime(["2262-04-11"])})
+    with pytest.raises(MacroVencida, match="vencida"):
+        serie_vigente("T10Y2Y", sesiones, Vencido())
+    bloqueada = exposicion_piernas(h, panel, Vencido())
+    assert bloqueada[(0, "TLT")].isna().all() and "vencida" in bloqueada.attrs["bloqueos"][0]
+    class SinDatos(Cliente):
+        def observaciones(self, *args, **kwargs):
+            return pd.DataFrame(columns=["fecha", "valor", "realtime_start", "realtime_end"])
+    sin_macro = exposicion_piernas(h, panel, SinDatos())
+    assert sin_macro[(0, "TLT")].isna().all() and "sin observación" in sin_macro.attrs["bloqueos"][0]
