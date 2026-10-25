@@ -109,13 +109,34 @@ def escribir_propuestas(respuesta, carpeta=PROPUESTAS_DIR, catalogo=CATALOGO, hi
 
 
 def proponer_con_llm(carpeta=None, catalogo=CATALOGO, postmortem=POSTMORTEM_DIR, hipotesis_dir=HIPOTESIS_DIR, n_intentos=None):
-    """Llama al LLM vía QUANTAGENT_LLM_CMD y valida las propuestas con I04, I02 e I03."""
+    """Genera propuestas, las refuta con otro comando y valida antes de persistir."""
     if not (cmd := os.environ.get("QUANTAGENT_LLM_CMD", "").strip()):
         raise RuntimeError("QUANTAGENT_LLM_CMD no está definido")
     proc = subprocess.run(cmd, input=armar_pedido(catalogo, postmortem, n_intentos), text=True, shell=True, capture_output=True)
     if proc.returncode != 0:
         raise RuntimeError(f"QUANTAGENT_LLM_CMD falló ({proc.returncode}): {(proc.stderr or proc.stdout or '').strip() or 'sin salida'}")
-    rutas, motivo = escribir_propuestas(proc.stdout, PROPUESTAS_DIR if carpeta is None else carpeta, catalogo, hipotesis_dir)
+    texto = re.sub(r"^```\w*\n|\n```$", "", proc.stdout.strip()).strip()
+    try:
+        datos = yaml.safe_load(texto)
+    except yaml.YAMLError as exc:
+        raise RuntimeError(f"YAML inválido: {exc}") from exc
+    lista = datos.get("propuestas") if isinstance(datos, dict) else None
+    if not isinstance(lista, list) or any(not isinstance(p, dict) for p in lista):
+        raise RuntimeError("YAML inválido: se esperaba propuestas como lista")
+    if lista:
+        if not (refutador := os.environ.get("QUANTAGENT_REFUTER_CMD", "").strip()):
+            raise RuntimeError("QUANTAGENT_REFUTER_CMD no está definido")
+        for propuesta in lista:
+            sin_resultados = {k: v for k, v in propuesta.items() if k != "efecto_esperado"}
+            pedido = ("Intentá refutar esta propuesta. Buscá en la web evidencia de decaimiento, réplicas fallidas, "
+                      "costos y desvíos de la cita. Devolvé los hallazgos con sus fuentes. No incluyas métricas ni cifras de resultados.\n\n"
+                      f"Propuesta:\n{yaml.safe_dump(sin_resultados, allow_unicode=True, sort_keys=False)}")
+            respuesta = subprocess.run(refutador, input=pedido, text=True, shell=True, capture_output=True)
+            if respuesta.returncode != 0 or not respuesta.stdout.strip():
+                detalle = (respuesta.stderr or respuesta.stdout or "sin salida").strip()
+                raise RuntimeError(f"QUANTAGENT_REFUTER_CMD falló ({respuesta.returncode}): {detalle}")
+            propuesta["refutacion"] = respuesta.stdout.strip()
+    rutas, motivo = escribir_propuestas(yaml.safe_dump(datos, allow_unicode=True, sort_keys=False), PROPUESTAS_DIR if carpeta is None else carpeta, catalogo, hipotesis_dir)
     if not rutas and motivo and motivo.startswith("YAML inválido"):
         raise RuntimeError(motivo)
     return rutas, (motivo.splitlines() if motivo else [])
