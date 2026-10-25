@@ -4,9 +4,13 @@ from datetime import date, datetime, timedelta
 from quantagent.digest import build_digest
 from quantagent.database import Base
 from quantagent.digest_datos import consultar_datos_paper
+from quantagent import settings
 from quantagent.models import ActivePosition, Environment, ExitPolicy, OrderSide, Position, SchedulerHeartbeat, Trade
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
+from click.testing import CliRunner
+
+from quantagent.cli.__main__ import cli
 
 
 def test_digest_renders_seeded_paper_data(tmp_path):
@@ -112,3 +116,23 @@ def test_consultar_datos_paper_usa_modelos_y_filtra_dia_y_ambiente(tmp_path):
                           {"timestamp": datetime(2026, 10, 25, 10),
                            "status": "completed", "error_message": None}]
     assert realized_pnl == 25
+
+
+def test_trading_digest_cli_reads_selected_sqlite_and_date(tmp_path):
+    previous_database_url = settings.DATABASE_URL
+    db_path = tmp_path / "paper.db"
+    engine = create_engine(f"sqlite:///{db_path}")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        session.add(Trade(symbol="SPY", entry_price=490, exit_price=500, quantity=1,
+                          side=OrderSide.SELL, pnl=12, opened_at=datetime(2026, 10, 24, 9),
+                          closed_at=datetime(2026, 10, 25, 10), environment=Environment.PAPER))
+        session.add(SchedulerHeartbeat(timestamp=datetime(2026, 10, 25, 10), status="completed",
+                                       environment=Environment.PAPER))
+        session.commit()
+
+    result = CliRunner().invoke(cli, ["trading", "digest", "--date", "2026-10-25",
+                                      "--db", str(db_path), "--portfolio", "alpha"])
+    assert result.exit_code == 0, result.output
+    assert "2026-10-25" in result.output and "Posiciones de alpha" in result.output and "P&L realizado acumulado: 12.00" in result.output
+    assert result.output.strip() and len(result.output) < 4000 and settings.DATABASE_URL == previous_database_url

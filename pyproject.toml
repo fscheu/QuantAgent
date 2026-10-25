@@ -58,6 +58,9 @@ dev = [
     "backtesting>=0.6.6,<0.7",  # solo scripts/crossval_rsi.py (oraculo de cross-validation)
 ]
 
+[project.scripts]
+quantagent = "quantagent.cli.__main__:cli"
+
 [tool.setuptools]
 packages = ["quantagent", "apps"]
 

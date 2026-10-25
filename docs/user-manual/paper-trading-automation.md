@@ -88,6 +88,10 @@ Leave the terminal open; the APScheduler background thread will keep firing unti
 
 ## Monitoring Live Runs
 
+To print a daily text digest, run `quantagent trading digest --date YYYY-MM-DD`. It reads paper positions,
+trades, and scheduler heartbeats from `DATABASE_URL`; `--db archivo.db` selects a SQLite database and
+`--portfolio nombre` labels its positions. The output includes daily and accumulated realized P&L.
+
 1. **Dashboard → Dashboard tab → Scheduler Status** gives you a quick health signal:
    - `Active` (green) means the last completed heartbeat is newer than 2 hours.
    - `Stale` (yellow) means the scheduler stopped checking in recently and may need attention.
