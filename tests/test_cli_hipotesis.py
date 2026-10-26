@@ -471,6 +471,21 @@ def test_etapa1_cartera_12_activos_5_trades_pasa(tmp_path, monkeypatch):
     assert len(filas) == 1 and filas[0]["activo"] == "cartera" and int(filas[0]["trades"]) == 60
 
 
+def test_etapa1_pesos_objetivo_pasa_panel_y_suma_ordenes(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fechas = pd.bdate_range("2007-01-01", "2018-12-31")
+    x = np.arange(len(fechas))
+    cierres = pd.DataFrame({"SPY": 100 * np.exp(x * 0.0002 + 0.03 * np.sin(x / 18)),
+                            "IEF": 100 * np.exp(x * 0.0001 - 0.02 * np.sin(x / 18))}, index=fechas)
+    snapshots = {a: pd.DataFrame({c: cierres[a] for c in ("open", "high", "low", "close", "adj_close")}
+                                 | {"volume": 1.0}, index=fechas) for a in ("SPY", "IEF")}
+    write_snapshot("sintetico", snapshots, base_dir=tmp_path)
+    h = Hipotesis(id="f1", autor="test", justificacion="test", clase="rebalanceo-fin-de-mes", activos=("SPY", "IEF"))
+    resultado = hipotesis.filtrar_hipotesis(h, "sintetico")
+    assert [r[0] for r in resultado[0]] == ["SPY", "IEF"]
+    assert resultado[5] == sum(r[2] for r in resultado[0]) > 0
+
+
 def test_etapa1_cartera_dos_piernas_tres_activos_un_intento(tmp_path, monkeypatch):
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     activos, fechas = ["SPY", "TLT", "GLD"], pd.date_range("2007-01-01", periods=100)
