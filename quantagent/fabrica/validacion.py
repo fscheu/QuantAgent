@@ -51,6 +51,34 @@ def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, a
     filas = []
     paneles_trans = {}
     import quantagent.data.snapshot as snap_mod
+    estrategia_objetivo = next((p for p in h.piernas
+                                if (STRATEGY_REGISTRY.get(cli_aliases().get(p.clase, p.clase))
+                                    and hasattr(STRATEGY_REGISTRY[cli_aliases().get(p.clase, p.clase)]["cls"],
+                                                "posiciones_objetivo"))), None)
+    if etapa == "2" and estrategia_objetivo:
+        from quantagent.backtesting.vbt_filter import equity_metrics
+
+        activos = list(estrategia_objetivo.activos)
+        panel = pd.DataFrame({a: snap_mod.read_snapshot(snapshot, a)["close"].loc[desde:hasta]
+                              for a in activos})
+        estrategia = STRATEGY_REGISTRY[cli_aliases().get(estrategia_objetivo.clase,
+                                                         estrategia_objetivo.clase)]["cls"]
+        objetivos = estrategia.posiciones_objetivo(panel)
+        for activo in activos:
+            pesos = objetivos[activo].reindex(panel.index).fillna(0.0)
+            retornos = panel[activo].pct_change().fillna(0.0) * pesos.shift(1, fill_value=0.0)
+            equity = 100_000.0 * (1 + retornos).cumprod()
+            trades = int(pesos.diff().fillna(0.0).ne(0).sum())
+            metricas = equity_metrics(equity, 0.0)
+            nombre = f"{estrategia_objetivo.clase}-{activo}.csv" if h.es_cartera else f"{activo}.csv"
+            (carpeta / "equity").mkdir(parents=True, exist_ok=True)
+            pd.DataFrame({"date": equity.index, "equity": equity.values}).to_csv(
+                carpeta / "equity" / nombre, index=False)
+            filas.append({"activo": activo, "estrategia": estrategia_objetivo.clase,
+                          "trades": str(trades), "pnl": str(round(float(equity.iloc[-1] - 100_000), 2)),
+                          "sharpe_tasa_0": str(round(metricas["sharpe"], 2)),
+                          "max_drawdown": str(round(metricas["max_drawdown"], 6))})
+        return filas
     for p in h.piernas:
         if es_transversal(p.clase) and p.clase not in paneles_trans:
             activos = list(p.activos) or [a for c, a in params_por_activo.keys() if c == p.clase] or list(params_por_activo.keys())
