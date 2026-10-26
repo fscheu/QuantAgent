@@ -752,7 +752,10 @@ Los primeros 5 son los más fáciles de revisar.
 | X19b | `QuantAgent-e4jc.13.2` | P-1b: rechazos y dividendos | Sin rechazo inexplicado; cada dividendo tiene tratamiento | probar | L21 |
 | X19c | `QuantAgent-e4jc.13.3` | P-1c: CLI de chequeos; parte de e4jc.13 | CLI muestra las tres secciones y falla ante incumplimiento | probar | L21 |
 | X20 | `QuantAgent-e4jc.14` | P-2 (R13): protocolo de la reserva 2023+ (lista cerrada cartera-transversal, F1, F2; C0 + M1; una apertura); depende de S04 | Documento con lista, criterio y regla de una apertura; sin escalera de incubación | decidir | L20 |
-| X20b | `QuantAgent-3bby` | Comando `hipotesis reserva` (simulacro por defecto, `--abrir` con pre-registro y apertura única) según el protocolo de X20; la apertura real la hace el PM después de mergear | Tests sintéticos: simulacro sin abrir, rechazo fuera de lista o sin etapa 2 PASA, una sola apertura, pesos objetivo con trades > 0 | decidir | L20 |
+| X20b.1 | `QuantAgent-3bby.1` | Elegibilidad y simulacro del comando de reserva; parte de X20b | Snapshot sintético: rango calculado sin abrir/leer reserva; rechazos de lista, etapa 2 y candado | probar | L20 |
+| X20b.2 | `QuantAgent-3bby.2` | Pre-registro y apertura única bajo `--abrir`; depende de X20b.1 | Pre-registro precede apertura, accesos registrados y segundo intento rechazado en fixture sintético | probar | L20 |
+| X20b.3 | `QuantAgent-3bby.3` | Evaluación C0 + M1, veredicto y registro de intento; depende de X20b.2 | Reserva sintética produce curva, benchmark, veredicto y fila de intento coherentes | probar | L20 |
+| X20b.4 | `QuantAgent-3bby.4` | Camino de pesos objetivo con panel completo; depende de X20b.3 | Estrategia sintética de pesos objetivo cuenta trades > 0 y reproduce pesos/curva | probar | L20 |
 
 
 | W02 | `QuantAgent-13a` | Contrato Broker para fills parciales, rechazos y nocional | ABC y PaperBroker cubren el contrato documentado | leer | L21 |
