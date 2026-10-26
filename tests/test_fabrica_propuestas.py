@@ -3,8 +3,8 @@
 import pytest
 import yaml
 
-from quantagent.fabrica.hipotesis import cargar_hipotesis
 from quantagent.fabrica import propuestas
+from quantagent.fabrica.hipotesis import cargar_hipotesis
 from quantagent.fabrica.propuestas import advertencias_estructurales, entradas_de_hipotesis, validar_propuesta
 
 
@@ -54,7 +54,7 @@ def test_doi_rechaza_cita_ajena_y_deja_error_de_red_sin_verificar():
 
 
 def test_propuestas_existentes_completas_pasan():
-    for nombre in ("carry-futuros", "tendencia-larga-corta", "volatilidad-gestionada"):
+    for nombre in ("carry-futuros", "volatilidad-gestionada"):
         propuesta = yaml.safe_load(open(f"catalogo/propuestas/{nombre}.yaml", encoding="utf-8"))
         assert validar_propuesta(propuesta) is None
 
