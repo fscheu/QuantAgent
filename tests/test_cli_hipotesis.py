@@ -21,6 +21,50 @@ from quantagent.strategy.rebalanceo_fin_de_mes_strategy import RebalanceoFinDeMe
 from tests.test_filtrar_pierna import resultado_ganadores_distintos as resultado_ganadores_distintos
 
 
+def test_reserva_simulacro_valida_y_no_lee_datos(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    archivo = Path(__file__).parents[1] / "hipotesis/rebalanceo-fin-de-mes.yaml"
+    fechas = pd.bdate_range("2022-12-30", "2024-01-02")
+    velas = pd.DataFrame({c: 100.0 for c in ("open", "high", "low", "close", "adj_close", "volume")}, index=fechas)
+    write_snapshot("reserva-sintetica", {"SPY": velas, "IEF": velas}, base_dir=tmp_path)
+    monkeypatch.setattr(hipotesis, "ultimo_estado", lambda _: {"etapa": "2", "veredicto": "PASA"})
+    monkeypatch.setattr(hipotesis, "fecha_apertura", lambda *_: None)
+    monkeypatch.setattr(hipotesis, "read_snapshot", lambda *a, **k: pytest.fail("simulacro leyó velas"))
+    result = CliRunner().invoke(hipotesis.hipotesis_group, ["reserva", str(archivo), "--snapshot", "reserva-sintetica"])
+    assert result.exit_code == 0, result.output
+    assert "reserva 2023-01-01 a 2024-01-02" in result.output
+    assert "no se abrió ni leyó" in result.output
+    assert not (tmp_path / "hipotesis-candado.csv").exists()
+
+
+def test_reserva_rechaza_sin_etapa_dos_pasa(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    archivo = Path(__file__).parents[1] / "hipotesis/rebalanceo-fin-de-mes.yaml"
+    monkeypatch.setattr(hipotesis, "ultimo_estado", lambda _: {"etapa": "1", "veredicto": "PASA"})
+    result = CliRunner().invoke(hipotesis.hipotesis_group, ["reserva", str(archivo), "--snapshot", "ausente"])
+    assert result.exit_code == 1
+    assert "no tiene etapa 2 PASA" in result.output
+
+
+def test_reserva_rechaza_fuera_de_lista_y_apertura_previa(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fuente = yaml.safe_load((Path(__file__).parents[1] / "hipotesis/rebalanceo-fin-de-mes.yaml").read_text())
+    fuente["id"] = "cambio-de-mes"
+    archivo = tmp_path / "fuera.yaml"
+    archivo.write_text(yaml.safe_dump(fuente))
+    monkeypatch.setattr(hipotesis, "ultimo_estado", lambda _: {"etapa": "2", "veredicto": "PASA"})
+    runner = CliRunner()
+    fuera = runner.invoke(hipotesis.hipotesis_group, ["reserva", str(archivo), "--snapshot", "ausente"])
+    assert "fuera de la lista" in fuera.output
+    archivo = Path(__file__).parents[1] / "hipotesis/rebalanceo-fin-de-mes.yaml"
+    candado = tmp_path / "hipotesis-candado.csv"
+    original = "rebalanceo-fin-de-mes,reserva,2026-01-01\n"
+    candado.write_text(original)
+    abierta = runner.invoke(hipotesis.hipotesis_group, ["reserva", str(archivo), "--snapshot", "ausente"])
+    assert "ya fue abierta" in abierta.output
+    assert candado.read_text() == original
+
+
 def test_tendencia_larga_corta_aprobada_pasa_admision_con_snapshots_sinteticos(tmp_path, monkeypatch):
     datos = tmp_path / "datos"
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(datos))
