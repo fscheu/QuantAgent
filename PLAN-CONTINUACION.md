@@ -757,7 +757,8 @@ Los primeros 5 son los más fáciles de revisar.
 | X20b.3a | `QuantAgent-3bby.3.1` | Motor/CLI existente sobre reserva abierta; curva, C0 intacto y benchmark 1/N; parte de X20b.3 | Snapshot sintético produce curva y métricas C0 más benchmark 1/N coherentes, sin leer datos reales | probar | L20 |
 | X20b.3b | `QuantAgent-3bby.3.2` | M1 con DGS3MO, veredicto C0 intacto e intento en CLI; depende de X20b.3a | Fixture sintético produce Sharpe en exceso, veredicto y fila de intento coherentes, sin leer datos reales | probar | L20 |
 | X20b.4 | `QuantAgent-3bby.4` | Camino de pesos objetivo con panel completo; depende de X20b.3 | Estrategia sintética de pesos objetivo cuenta trades > 0 y reproduce pesos/curva | probar | L20 |
-| X20c | `QuantAgent-ku33` | Veredicto de cartera de F1 desde las curvas guardadas de la reserva (ruta {activo}.csv; sin reabrir); depende de X20b.4 | Test con nombres de archivo reales; recuperación idempotente que no llama abrir() | probar | L20 |
+| X20c1 | `QuantAgent-ku33.1` | C0 cartera, DSR y benchmark 1/N desde curvas `{activo}.csv`; parte de ku33 | Test sintético comprueba C0, DSR y benchmark con lectura real de archivos; sin reserva real | probar | L20 |
+| X20c2 | `QuantAgent-ku33.2` | Recuperar veredicto de reserva y M1 idempotente; depende de ku33.1 | M1 coincide con valor esperado; dos ejecuciones dejan un intento/estado y no llaman `abrir()` ni `correr_motor` | probar | L20 |
 
 
 | W02 | `QuantAgent-13a` | Contrato Broker para fills parciales, rechazos y nocional | ABC y PaperBroker cubren el contrato documentado | leer | L21 |
