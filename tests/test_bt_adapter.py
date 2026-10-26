@@ -16,6 +16,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
+
 from quantagent.strategy.base import TradingSignal, TradingStrategy
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -397,6 +398,44 @@ def test_corto_con_costos_coincide_con_motor(db_session, tmp_path, monkeypatch):
     assert float(engine_trade.entry_price) == pytest.approx(control_trade.entry_price)
     assert float(engine_trade.exit_price) == pytest.approx(control_trade.exit_price)
     assert float(engine_trade.pnl) == pytest.approx(control_trade.pnl)
+
+
+def test_adaptador_normaliza_brackets_no_alcanzables_en_corto(tmp_path, monkeypatch):
+    pytest.importorskip("backtesting")
+    monkeypatch.syspath_prepend(str(ROOT / "scripts"))
+    import bt_adapter
+    import crossval_rsi
+
+    from quantagent.stop_loss import UNREACHABLE_STOP_LOSS
+    from quantagent.strategy.base import TradingSignal, TradingStrategy
+    from quantagent.strategy.sma_cross_strategy import UNREACHABLE_TAKE_PROFIT
+
+    class ShortWithSentinels(TradingStrategy):
+        required_history_bars = 1
+
+        def generate_signal(self, kline_data, symbol, timeframe, current_price):
+            if kline_data[-1]["volume"] == 2:
+                return TradingSignal(decision="SHORT", confidence=1, stop_loss=UNREACHABLE_STOP_LOSS,
+                                    take_profit=UNREACHABLE_TAKE_PROFIT)
+            return None
+
+        def should_exit(self, position, current_price, ohlc_data):
+            return (True, "RULE") if position.candles_since_entry else (False, None)
+
+        def should_reevaluate(self, position, current_price):
+            return False
+
+    path = tmp_path / "short-sentinels.csv"
+    path.write_text("timestamp,open,high,low,close,volume\n"
+                    "2024-01-01,100,101,99,100,1\n"
+                    "2024-01-02,100,101,99,100,2\n"
+                    "2024-01-03,90,91,89,90,1\n")
+    stats = bt_adapter.run_adapter(ShortWithSentinels(), crossval_rsi.load_fixture(path),
+                                   symbol="SHORT", timeframe="1d")
+
+    trades = bt_adapter.trade_rows(stats, "SHORT")
+    assert len(trades) == 1
+    assert trades[0].side == "sell"
 
 
 def test_slippage_con_la_regla_del_paper_broker(results):
