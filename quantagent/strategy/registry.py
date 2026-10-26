@@ -15,8 +15,18 @@ from .rebalanceo_fin_de_mes_strategy import RebalanceoFinDeMesStrategy
 from .senal_externa_strategy import SenalExterna
 from .sma_cross_strategy import SmaCrossStrategy
 from .triple_screen_strategy import TripleScreenStrategy
+from .tsmom_largo_corto_strategy import TsmomLargoCortoStrategy
 
 STRATEGY_REGISTRY: dict[str, dict[str, Any]] = {
+    "TsmomLargoCortoStrategy": {
+        "cls": TsmomLargoCortoStrategy,
+        "type": "deterministic",
+        "cli_alias": "tsmom-largo-corto",
+        "display_name": TsmomLargoCortoStrategy.describe()["display_name"],
+        "description": TsmomLargoCortoStrategy.describe()["description"],
+        "min_bars": 253,
+        "params": {"snapshot": {"type": str, "default": None, "description": "Macro snapshot name."}},
+    },
     "RSIMeanReversionStrategy": {
         "cls": RSIMeanReversionStrategy,
         "type": "deterministic",
