@@ -752,6 +752,7 @@ Los primeros 5 son los más fáciles de revisar.
 | X19b | `QuantAgent-e4jc.13.2` | P-1b: rechazos y dividendos | Sin rechazo inexplicado; cada dividendo tiene tratamiento | probar | L21 |
 | X19c | `QuantAgent-e4jc.13.3` | P-1c: CLI de chequeos; parte de e4jc.13 | CLI muestra las tres secciones y falla ante incumplimiento | probar | L21 |
 | X20 | `QuantAgent-e4jc.14` | P-2 (R13): protocolo de la reserva 2023+ (lista cerrada cartera-transversal, F1, F2; C0 + M1; una apertura); depende de S04 | Documento con lista, criterio y regla de una apertura; sin escalera de incubación | decidir | L20 |
+| X20b | `QuantAgent-3bby` | Comando `hipotesis reserva` (simulacro por defecto, `--abrir` con pre-registro y apertura única) según el protocolo de X20; la apertura real la hace el PM después de mergear | Tests sintéticos: simulacro sin abrir, rechazo fuera de lista o sin etapa 2 PASA, una sola apertura, pesos objetivo con trades > 0 | decidir | L20 |
 
 
 | W02 | `QuantAgent-13a` | Contrato Broker para fills parciales, rechazos y nocional | ABC y PaperBroker cubren el contrato documentado | leer | L21 |
