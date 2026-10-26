@@ -93,16 +93,18 @@ def filtrar_pierna(h, pierna, paneles, *, costos: dict, capital: float, train_ye
 
     ventanas = construir_ventanas(cierres.index[0].to_pydatetime(), cierres.index[-1].to_pydatetime(), train_years, test_years)
     ganadores, retornos, de_pierna, trades = [], [], [], 0
+    seleccion = pd.DataFrame(0, index=cierres.index, columns=activos)
     for a, b, c, d in ventanas:
         ajuste = [{"sharpe_tasa_0": equity_metrics(correr(sig, panel, a, b)[3], 0.0)["sharpe"], "params": comb}
                   for comb, panel, sig in candidatas]
         params = seleccionar_ganador(ajuste)["params"]
         _, panel, sig = next(x for x in candidatas if x[0] == params)
         res, ret, pierna_ret, _ = correr(sig, panel, c, d)
+        seleccion.loc[c:d] = panel.loc[c:d]
         ganadores.append({"prueba_desde": c, "prueba_hasta": d, "params": params})
         retornos.append(ret.iloc[1:])
         de_pierna.append(pierna_ret.iloc[1:])
         trades += sum(r["trades"] for r in res.values())
     curva = capital * (1 + pd.concat(de_pierna)).cumprod()
     return {"sharpe_tasa_0": equity_metrics(curva, 0.0)["sharpe"], "trades": trades, "ganadores": ganadores,
-            "retornos": pd.concat(retornos)}
+            "retornos": pd.concat(retornos), "seleccion": seleccion}

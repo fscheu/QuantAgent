@@ -171,12 +171,14 @@ def _resolve_source_and_meta(
 
 def _engine_config(commission_pct: Optional[float], costos: Optional[str] = None,
                    tamano_posicion: Optional[float] = None, regla_tamano: Optional[str] = None,
-                   orden_minima: Optional[float] = None) -> dict:
+                   orden_minima: Optional[float] = None, riesgo_por_trade: Optional[float] = None) -> dict:
     config = {"market_hours_filter": False, "offline_data": True}
     if tamano_posicion is not None:
         config["base_position_pct"] = config["max_position_pct"] = tamano_posicion
     if regla_tamano is not None:
         config["regla_tamano"] = regla_tamano
+    if riesgo_por_trade is not None:
+        config["riesgo_por_trade_pct"] = riesgo_por_trade
     if orden_minima is not None:
         config["orden_minima"] = orden_minima
     if costos is not None:
@@ -197,6 +199,7 @@ def _tamano_options(f):
         "--regla-tamano", "regla_tamano", type=click.Choice(PositionSizer.REGLAS), default=None,
         help="Regla de tamaño: confianza (capital × fracción × confianza de la señal) o fijo. Default: confianza.",
     )(f)
+    f = click.option("--riesgo-por-trade", type=click.FloatRange(min=0.0, min_open=True), default=None)(f)
     return click.option(
         "--tamano-posicion", "tamano_posicion", type=click.FloatRange(min=0.0, max=1.0, min_open=True), default=None,
         help="Fracción del capital por posición, en (0, 1] (1.0 = 100%). Fija base y máximo de la corrida.",
@@ -494,10 +497,11 @@ def run_backtest(
     tamano_posicion: Optional[float],
     regla_tamano: Optional[str],
     orden_minima: Optional[float],
+    riesgo_por_trade: Optional[float],
     params: dict,
     llenado: str,
 ) -> None:
-    config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano, orden_minima)
+    config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano, orden_minima, riesgo_por_trade)
     meta, symbol, to_date = _resolve_source_and_meta(
         "run",
         strategy_name,
@@ -719,10 +723,11 @@ def verify_backtest(
     tamano_posicion: Optional[float],
     regla_tamano: Optional[str],
     orden_minima: Optional[float],
+    riesgo_por_trade: Optional[float],
 ) -> None:
     import difflib
 
-    config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano, orden_minima)
+    config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano, orden_minima, riesgo_por_trade)
     meta, symbol, to_date = _resolve_source_and_meta(
         "verify",
         strategy_name,

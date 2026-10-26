@@ -15,12 +15,15 @@ Flow:
 
 import logging
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from quantagent.models import Order, OrderSide, OrderType, Signal, Trade, TradeSignal
+from quantagent.models import Environment, Order, OrderSide, OrderStatus, OrderType, Signal, Trade, TradeSignal
 
+from .alpaca_broker import AlpacaBroker
+from .paper_broker import PaperBroker
 from .position_sizer import PositionSizer
 from .risk_manager import RiskManager
 
@@ -38,6 +41,7 @@ class OrderManager:
         portfolio_manager,  # PortfolioManager instance
         db: Session,
         orden_minima: Optional[float] = None,
+        cash_reserve_pct: float = 0.0,
     ):
         """
         Initialize Order Manager.
@@ -61,22 +65,21 @@ class OrderManager:
             else getattr(position_sizer, "orden_minima", None)
         )
         self.entradas_descartadas_orden_minima = 0
+        self.cash_reserve_pct = cash_reserve_pct
 
     def _cap_entry_qty(self, side: OrderSide, qty: float, price: float) -> float:
-        """Recorta una entrada que compra a lo que el efectivo alcanza a pagar con slippage y comisión (sin apalancar).
-
-        Una entrada en corto conserva su cantidad: la venta suma efectivo, no hay faltante que cubrir.
-        Solo cubre el faltante de costos: si el nocional ya excede el efectivo, no toca la cantidad y
-        RiskManager (check 1) la rechaza como antes. El 1e-9 absorbe el redondeo de flotantes al 100%.
-        """
+        """Limita compras al efectivo disponible después de la reserva y los costos."""
         cash = self.portfolio.cash
         if side != OrderSide.BUY or qty * price > cash * (1 + 1e-9):
             return qty
-        unit_cost = price * (1 + self.broker.slippage_pct)
-        if self.broker.commission_model == "pct":
-            unit_cost *= 1 + self.broker.commission_pct
-        elif self.broker.commission_model == "fixed":
-            cash -= self.broker.commission_fixed
+        cash *= 1 - self.cash_reserve_pct
+        unit_cost = price
+        if isinstance(self.broker, PaperBroker):
+            unit_cost = price * (1 + self.broker.slippage_pct)
+            if self.broker.commission_model == "pct":
+                unit_cost *= 1 + self.broker.commission_pct
+            elif self.broker.commission_model == "fixed":
+                cash -= self.broker.commission_fixed
         max_qty = cash / unit_cost
         if qty <= max_qty or max_qty <= 0:
             return qty
@@ -92,6 +95,7 @@ class OrderManager:
         environment=None,
         trigger_signal_id: Optional[int] = None,
         timestamp: Optional[datetime] = None,
+        stop_price: Optional[float] = None,
     ) -> Optional[Order]:
         """
         Execute a trading decision end-to-end.
@@ -114,6 +118,7 @@ class OrderManager:
             trigger_signal_id: ID of signal that triggered this order - optional
             timestamp: Simulated candle time for backtests; None (wall-clock) for
                 live/paper trading
+            stop_price: Signal stop used by the risk-based position sizing rule
 
         Returns:
             Filled Order if executed, None if rejected
@@ -130,6 +135,7 @@ class OrderManager:
             signal_confidence=confidence,
             current_price=current_price,
             portfolio_value=portfolio_value,
+            stop_price=stop_price,
         )
 
         logger.info(
@@ -303,6 +309,67 @@ class OrderManager:
         self.risk_manager.on_trade_executed(trade)
 
         return filled_order
+
+    def execute_rebalance_order(self, symbol: str, side: OrderSide, qty: float, price: float) -> Optional[Order]:
+        """Execute a portfolio rebalance without strategy risk or per-entry caps."""
+        if (isinstance(self.broker, AlpacaBroker) and self.portfolio.environment == Environment.PAPER
+                and self._pending_rebalance_orders().filter(Order.symbol == symbol).first()):
+            return None
+        position = self.portfolio.get_position(symbol)
+        held = float(position.get("qty", 0)) if position else 0.0
+        if side == OrderSide.SELL:
+            qty = min(qty, max(0.0, held))
+        else:
+            qty = int(self._cap_entry_qty(side, min(qty, max(0.0, self.portfolio.cash) / price), price))
+        if qty <= 0 or (self.orden_minima is not None and qty * price < self.orden_minima - 1e-9):
+            return None
+        order = Order(symbol=symbol, side=side, quantity=qty, price=price, order_type=OrderType.MARKET,
+                      environment=self.portfolio.environment)
+        try:
+            self.db.add(order)
+            self.db.flush()
+            filled = self.broker.place_order(order)
+            return self.apply_rebalance_fills(filled)
+        except Exception as exc:
+            logger.error("%s: Rebalance order failed - %s", symbol, exc)
+            self.db.rollback()
+            return None
+
+    def _pending_rebalance_orders(self):
+        return self.db.query(Order).filter(
+            Order.environment == Environment.PAPER, Order.alpaca_order_id.isnot(None),
+            Order.status.in_([OrderStatus.PENDING, OrderStatus.PARTIALLY_FILLED]))
+
+    def refresh_rebalance_orders(self):
+        """Refresh persisted paper Alpaca orders and apply confirmed fill deltas."""
+        if not isinstance(self.broker, AlpacaBroker) or self.portfolio.environment != Environment.PAPER:
+            return
+        for order in self._pending_rebalance_orders().all():
+            self.apply_rebalance_fills(self.broker.refresh_order(order))
+
+    def apply_rebalance_fills(self, order: Order) -> Order:
+        """Apply only remote fills not yet represented by this order's Trades."""
+        if not order.filled_quantity:
+            self.db.commit()
+            return order
+        execution, price = order, order.average_fill_price
+        if order.alpaca_order_id:
+            trades = self.db.query(Trade).filter(Trade.order_id == order.id).all()
+            applied_qty = sum((trade.quantity for trade in trades), Decimal("0"))
+            delta = Decimal(str(order.filled_quantity)) - applied_qty
+            if delta <= 0:
+                self.db.commit()
+                return order
+            applied_notional = sum(
+                (trade.quantity * (trade.exit_price if trade.exit_price is not None else trade.entry_price)
+                 for trade in trades), Decimal("0"))
+            remote_notional = Decimal(str(order.filled_quantity)) * Decimal(str(order.average_fill_price))
+            price = float((remote_notional - applied_notional) / delta)
+            execution = Order(id=order.id, symbol=order.symbol, side=order.side,
+                              quantity=delta, filled_quantity=delta)
+        trade = self.portfolio.execute_trade(execution, price)
+        self.risk_manager.on_trade_executed(trade)
+        return order
 
     def _execute_reversal(
         self,

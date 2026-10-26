@@ -1,5 +1,6 @@
 """PositionMonitor for tracking and managing active positions."""
 
+import logging
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional
@@ -7,6 +8,8 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from ..models import ActivePosition, Environment, OrderSide
+
+logger = logging.getLogger(__name__)
 
 
 class PositionMonitor:
@@ -41,6 +44,41 @@ class PositionMonitor:
             query = query.filter(ActivePosition.backtest_run_id == self.backtest_run_id)
 
         return query.order_by(ActivePosition.decision_timestamp.desc()).first()
+
+    def reconcile_alpaca_positions(self, broker) -> list[str]:
+        """Report differences between open PAPER positions and Alpaca, without mutation."""
+        local = {
+            position.symbol: position
+            for position in self.db.query(ActivePosition).filter(
+                ActivePosition.is_active.is_(True),
+                ActivePosition.quantity > Decimal("0"),
+                ActivePosition.environment == Environment.PAPER,
+            ).all()
+        }
+        remote = broker.get_positions()
+        differences = []
+        for symbol in sorted(local.keys() | remote.keys()):
+            position = local.get(symbol)
+            alpaca_position = remote.get(symbol)
+            if position is None:
+                detail = f"remote-only qty={alpaca_position.qty} side={alpaca_position.side}"
+            elif alpaca_position is None:
+                detail = f"local-only qty={position.quantity} side={position.side.value}"
+            else:
+                alpaca_side = getattr(alpaca_position.side, "value", alpaca_position.side)
+                remote_side = "buy" if alpaca_side == "long" else "sell"
+                if position.quantity == Decimal(str(alpaca_position.qty)) and position.side.value == remote_side:
+                    continue
+                detail = (f"local qty={position.quantity} side={position.side.value}; "
+                          f"Alpaca qty={alpaca_position.qty} side={alpaca_side}")
+            differences.append(f"{symbol}: {detail}")
+            logger.warning(
+                "Alpaca position reconciliation divergence: %s",
+                differences[-1],
+                extra={"environment": Environment.PAPER.value, "symbol": symbol,
+                       "event_type": "position_reconciliation", "extra_data": {"detail": detail}},
+            )
+        return differences
 
     def open_position(
         self,

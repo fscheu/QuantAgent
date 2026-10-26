@@ -14,7 +14,7 @@ from quantagent.trading.position_sizer import PositionSizer
 def preparar_walkforward(
     strategy_name, symbol, snapshot_name, grid_path, from_date=None, to_date=None,
     train_years=4, test_years=2, costos=None, tamano_posicion=1.0,
-    regla_tamano=None, orden_minima=None,
+    regla_tamano=None, orden_minima=None, riesgo_por_trade=None,
 ):
     """Valida el ajuste protegido y devuelve grilla, metadatos, config y ventanas."""
     from quantagent.backtesting.fixtures import snapshot_metadata
@@ -41,7 +41,7 @@ def preparar_walkforward(
         raise click.ClickException(str(exc)) from exc
     ventanas = construir_ventanas(meta.start_date, meta.end_date, train_years, test_years)
     ventanas = [(a, b, c, min(d, meta.end_date)) for a, b, c, d in ventanas]
-    config = _engine_config(None, costos, tamano_posicion, regla_tamano, orden_minima)
+    config = _engine_config(None, costos, tamano_posicion, regla_tamano, orden_minima, riesgo_por_trade)
     return combos, meta, config, ventanas
 
 
@@ -59,6 +59,7 @@ def preparar_walkforward(
 @click.option("--costos", type=click.Choice(sorted(COSTOS_PERFILES)))
 @click.option("--tamano-posicion", default=1.0, type=click.FloatRange(min=0.0, max=1.0, min_open=True))
 @click.option("--regla-tamano", type=click.Choice(PositionSizer.REGLAS))
+@click.option("--riesgo-por-trade", type=click.FloatRange(min=0.0, min_open=True))
 @click.option("--orden-minima", type=click.FloatRange(min=0.0, min_open=True))
 def walkforward_command(strategy_name, symbol, snapshot_name, grid_path, out_path, llenado, **options):
     from quantagent.backtesting.fixtures import snapshot_metadata

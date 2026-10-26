@@ -44,7 +44,28 @@ Avanzar ahora tiene como fin tener estrategias para probar paper trading. Paper 
 - **Paper sin cambios.**
 - Antes de operar con dinero real: reemplazar DBC por PDBC (sin K-1) y quitar USO, o antes si Alpaca confirma que aplica la retención del 10 % (sección 1446(f)) sobre el bruto de ventas de PTP a cuentas extranjeras.
 - Argentina no tiene tratado con EE.UU.: 30 % de retención sobre dividendos de todos los ETFs, no modelado en los backtests; modelarlo en el informe antes de dinero real.
-- Fede envió un mail al soporte de Alpaca con las consultas; pendiente de respuesta.
+- Fede envió un mail al soporte de Alpaca con las consultas; respuesta recibida el 2026-10-25 (ver abajo).
+
+### Respuesta de Alpaca (2026-10-25)
+
+Alpaca aclara que no da asesoramiento fiscal y comparte reglas generales para un no residente en EE.UU. con W-8BEN (Argentina):
+
+- Reciben el formulario 1042-S por ingresos de fuente estadounidense. Los dividendos pagan normalmente 30 % de retención; un tratado podría bajarla, y Alpaca no tiene datos del tratado con Argentina.
+- Las ventas de PTP (publicly traded partnerships) por extranjeros sufren una retención del 10 % sobre el **bruto** de la venta, y ciertas distribuciones de PTP también retienen. La venta de un PTP es la única venta de títulos que genera 1042-S. Los dividendos de al menos USD 0,50 en el año generan 1042-S.
+- Las operaciones comunes (compra/venta de acciones y ETFs que no son PTP) no generan comprobante fiscal.
+- Alpaca **no sabe** si DBC o USO son PTP, no conoce un proceso de "qualified notice" ni una lista oficial de símbolos PTP.
+- Paper es simulado: sin retención ni reporte. Las reglas aplican al operar en vivo.
+
+### Qué cambia (y qué no)
+
+- **No bloquea paper.** Nada cambia en el motor ni en las estrategias en paper.
+- **Se confirma el 30 % sobre dividendos** para el modelado antes de dinero real (el tratado con Argentina no ayuda según lo ya anotado arriba; Alpaca no aportó nada en contrario).
+- **DBC y USO son PTP** (verificado en fuentes públicas, 2026-10-25): DBC es un fondo constituido como sociedad que reparte por K-1 y su 10-K lo trata como partnership; USO es un limited partnership (USCF lo declara así y emite K-1). PDBC se vende como "No K-1 ETF" (1099). Estas fuentes no son asesoramiento fiscal; el 10-K y la página de impuestos de cada emisor mandan.
+- **Matiz que Alpaca no conocía:** los emisores publican "qualified notices". Invesco informó (aviso de diciembre 2025) que sus fondos, DBC incluido, cumplen la excepción y quedan exentos de la retención 1446(f), y USCF informó que USO cumple la "excepción del 10 %" porque no operó un negocio en EE.UU. Esa exención se renueva por año y el broker tiene que aplicarla; no se sabe si Alpaca la aplica. Hay que preguntárselo antes de operar en vivo.
+- **Decisión vigente (sin cambios):** antes de dinero real, reemplazar DBC por PDBC y quitar USO, salvo que Alpaca confirme por escrito que aplica los qualified notices. Alpaca no dio esa confirmación, así que la regla no se relaja.
+- Pregunta pendiente para Alpaca antes de dinero real: (a) si aplican los qualified notices de Invesco y USCF para evitar el 10 %; (b) si hay retención en las distribuciones de PTP más allá de los dividendos.
+
+Fuentes: respuesta de soporte de Alpaca (mail de Fede, 2026-10-25); 10-K de Invesco DB Commodity Index Tracking Fund y de United States Oil Fund, LP en SEC EDGAR; aviso de qualified notices de Invesco (2025-12-09); nota de CIBC Mellon sobre 1446(f).
 
 ## Pendiente fuera de este documento
 
