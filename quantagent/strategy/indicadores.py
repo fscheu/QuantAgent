@@ -91,3 +91,39 @@ def safezone_long(df: pd.DataFrame, n: int = 10, coef: float = 2.0) -> pd.Series
         res[n - 1:] = low[n - 1:] - coef * avg_pen[n - 1:]
 
     return pd.Series(res, index=df.index, dtype=float)
+
+
+def force_index(df: pd.DataFrame, n: int = 2) -> pd.Series:
+    """Force Index (Elder): EMA de (Close_t - Close_{t-1}) * Volume_t con período n."""
+    if n <= 0:
+        raise ValueError("n debe ser mayor a 0")
+    if len(df) == 0:
+        return pd.Series(dtype=float, index=df.index)
+    return ((df["close"] - df["close"].shift(1)) * df["volume"]).ewm(span=n, adjust=False).mean()
+
+
+def donchian_high(df: pd.DataFrame, n: int = 20) -> pd.Series:
+    """Canal Donchian superior: máximo de high en n velas terminando en t."""
+    if n <= 0:
+        raise ValueError("n debe ser mayor a 0")
+    return df["high"].rolling(window=n, min_periods=n).max()
+
+
+def bollinger_width(close: pd.Series | pd.DataFrame, n: int = 20, k: float = 2.0) -> pd.Series:
+    """Ancho de bandas de Bollinger: (2 * k * std) / media sobre ventana n."""
+    if n <= 0:
+        raise ValueError("n debe ser mayor a 0")
+    s = close["close"] if isinstance(close, pd.DataFrame) else close
+    if len(s) == 0:
+        return pd.Series(dtype=float, index=s.index)
+    return (2.0 * k * s.rolling(window=n, min_periods=n).std()) / s.rolling(window=n, min_periods=n).mean()
+
+
+def volumen_relativo(df: pd.DataFrame | pd.Series, n: int = 20) -> pd.Series:
+    """Volumen relativo: volumen / promedio móvil de volumen de n velas."""
+    if n <= 0:
+        raise ValueError("n debe ser mayor a 0")
+    v = df["volume"] if isinstance(df, pd.DataFrame) else df
+    if len(v) == 0:
+        return pd.Series(dtype=float, index=v.index)
+    return v / v.rolling(window=n, min_periods=n).mean()
