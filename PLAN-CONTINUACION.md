@@ -759,6 +759,7 @@ Los primeros 5 son los más fáciles de revisar.
 | X20b.4 | `QuantAgent-3bby.4` | Camino de pesos objetivo con panel completo; depende de X20b.3 | Estrategia sintética de pesos objetivo cuenta trades > 0 y reproduce pesos/curva | probar | L20 |
 | X20c1 | `QuantAgent-ku33.1` | C0 cartera, DSR y benchmark 1/N desde curvas `{activo}.csv`; parte de ku33 | Test sintético comprueba C0, DSR y benchmark con lectura real de archivos; sin reserva real | probar | L20 |
 | X20c2 | `QuantAgent-ku33.2` | Recuperar veredicto de reserva y M1 idempotente; depende de ku33.1 | M1 coincide con valor esperado; dos ejecuciones dejan un intento/estado y no llaman `abrir()` ni `correr_motor` | probar | L20 |
+| X19d | `QuantAgent-e4jc.15` | P-1d: chequeos e4jc.13 en `trading digest --date --db --portfolio` desde DB y sombra; aviso si la sombra no tiene la última sesión | DB y sombra coincidentes: código 0; peso fuera de redondeo, rechazo sin comentario o dividendo sin tratamiento: aparece y código 1; aviso de sombra sin fecha | probar | L20 |
 
 
 | W02 | `QuantAgent-13a` | Contrato Broker para fills parciales, rechazos y nocional | ABC y PaperBroker cubren el contrato documentado | leer | L21 |
