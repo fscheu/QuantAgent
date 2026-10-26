@@ -34,6 +34,8 @@ from quantagent.fabrica.transversal import es_transversal
 from quantagent.fabrica.validacion import (
     alarma_cartera,
     alarma_filtro_motor,
+    curva_cartera_guardada,
+    evaluar_c0_cartera,
     validar_etapa2,
     validar_etapa3,
 )
@@ -155,6 +157,52 @@ def reserva_command(archivo, snapshot_name, abrir_reserva):
         click.echo(f"Sharpe en exceso de DGS3MO: cartera {m1['sharpe_cartera']:.2f}; benchmark {m1['sharpe_benchmark']:.2f}")
     else:
         click.echo(f"Simulacro elegible: {h.id}; reserva {desde} a {hasta}; no se abrió ni leyó.")
+
+
+@hipotesis_group.command("reserva-veredicto", help="Recuperar el veredicto desde las curvas guardadas.")
+@click.argument("archivo", type=click.Path(exists=True, dir_okay=False))
+@click.option("--snapshot", "snapshot_name", required=True)
+def reserva_veredicto_command(archivo, snapshot_name):
+    h = cargar_hipotesis(archivo)
+    if fecha_apertura(h.id, "reserva") is None:
+        raise click.ClickException(f"{h.id}/reserva todavía no fue abierta")
+    raiz = snapshot_root()
+    intentos_path = raiz / "intentos.csv"
+    if ultimo_estado(h.id) and ultimo_estado(h.id)["etapa"] == "3" and intentos_path.exists():
+        with intentos_path.open(newline="", encoding="utf-8") as f:
+            if any(r.get("hipotesis") == h.id and r.get("etapa") == "3" and r.get("activo") == "cartera"
+                   and r.get("sharpe_base") == "DGS3MO" for r in csv.DictReader(f)):
+                click.echo(f"Reserva ya recuperada: {h.id}")
+                return
+    from quantagent.data import snapshot as snap_mod
+    from quantagent.fabrica.informe import diagnostico_exceso
+    carpeta = raiz / "reserva" / h.id
+    eq = curva_cartera_guardada(h, carpeta, None)
+    if eq is None or eq.empty:
+        raise click.ClickException("curva de cartera vacía")
+    desde, hasta = eq.index.min(), eq.index.max()
+    activos = list(dict.fromkeys(a for p in h.piernas for a in p.activos))
+    c3 = pd.DataFrame({a: snap_mod.read_snapshot(snapshot_name, a, raiz)["close"].loc[desde:hasta]
+                       for a in activos})
+    c2 = pd.DataFrame({a: snap_mod.read_snapshot(snapshot_name, a, raiz)["close"].loc["2007-01-01":"2018-12-31"]
+                       for a in activos})
+    filas_intentos = list(csv.DictReader(intentos_path.open(newline="", encoding="utf-8"))) if intentos_path.exists() else []
+    s2 = next((float(r["sharpe"]) for r in filas_intentos
+               if r.get("hipotesis") == h.id and r.get("etapa") == "2" and r.get("activo") == "cartera"), None)
+    trades = sum(len(list(csv.DictReader(p.open(newline="", encoding="utf-8"))))
+                 for p in (carpeta / "trades").glob("*.csv"))
+    c0_pasa, _, c0 = evaluar_c0_cartera(eq, c3, c2, s2, trades, filas_intentos, intentos_path)
+    diagnostico = diagnostico_exceso(h, carpeta / "equity", snapshot_name, base_dir=raiz)
+    if not diagnostico["disponible"]:
+        raise click.ClickException(diagnostico["motivo"])
+    veredicto = "PASA" if c0_pasa else "CORTA"
+    registrar_intento("+".join(p.clase for p in h.piernas), "cartera", snapshot_name,
+                      "etf", 1.0, {p.clase: p.parametros for p in h.piernas},
+                      {"desde": str(desde.date()), "hasta": str(hasta.date()), "trades": trades, "pnl": "",
+                       "sharpe": diagnostico["sharpe_cartera"]}, hipotesis=h.id,
+                      etapa="3", sharpe_base="DGS3MO")
+    registrar_estado(h.id, "3", veredicto, "reserva; M1 DGS3MO")
+    click.echo(f"Reserva: {h.id}; M1 cartera {diagnostico['sharpe_cartera']:.2f}; M1 benchmark {diagnostico['sharpe_benchmark']:.2f}; C0: {veredicto}; benchmark {c0['benchmark']:.2f}; trades {trades}")
 
 
 def admitir_hipotesis(archivo, snapshot_name, prueba_unica=False):
