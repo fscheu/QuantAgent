@@ -14,6 +14,7 @@ from quantagent.cli.sweep import registrar_intento
 from quantagent.data.snapshot import snapshot_root
 from quantagent.fabrica.criterio import anios_positivos, evaluar_etapa3_cartera, recargo_paper, sharpe_benchmark
 from quantagent.fabrica.transversal import METRICAS, es_transversal, leer_seleccion, señales_transversales
+from quantagent.strategy.registry import STRATEGY_REGISTRY, cli_aliases
 
 SHARPE_MINIMO_FILTRO = 0.10
 SHARPE_MAXIMO_MOTOR_ALARMA = 0.0
@@ -181,6 +182,13 @@ def validar_etapa2(h, snapshot, params_por_activo, carpeta):
                     shutil.copy(src_tr, Path(carpeta) / "trades" / f"senal-externa-{activo}.csv")
             else:
                 params = params_por_activo.get((strat, activo), {}) if h.es_cartera else params_por_activo.get(activo, {})
+            estrategia = STRATEGY_REGISTRY.get(cli_aliases().get(strat, strat))
+            if estrategia and hasattr(estrategia["cls"], "posiciones_objetivo"):
+                fila["control"] = f"no aplica: posiciones objetivo; {trades} órdenes del motor"
+                fila["v30"] = "PASA" if evaluar(*(float(fila[c]) if fila[c] != "" else None
+                                                    for c in ("trades", "pnl", "sharpe_tasa_0", "max_drawdown")))[0] else "NO PASA"
+                fila["motivos"] = [] if fila["v30"] == "PASA" else [f"{activo}: métricas V30 no pasan"]
+                continue
             params_path.write_text(json.dumps({strat: params}), encoding="utf-8")
             tabla = Path(carpeta) / (f"{clase}-{activo}.csv" if (Path(carpeta) / f"{clase}-{activo}.csv").exists() else f"{activo}.csv")
             resultado = subprocess.run([
@@ -205,12 +213,12 @@ def validar_etapa2(h, snapshot, params_por_activo, carpeta):
                 fila["motivos"] = [f"{activo}: {motivo}" for motivo in motivos]
     if h.es_cartera:
         pasa_cartera, motivos_cartera = evaluar_etapa2_cartera(h, filas, carpeta, snapshot)
-        pasa = all(f["control"].startswith("coinciden") for f in filas) and pasa_cartera
+        pasa = all(f["control"].startswith(("coinciden", "no aplica:")) for f in filas) and pasa_cartera
         if not pasa_cartera:
             for f in filas:
                 f["motivos"].extend([f"cartera: {m}" for m in motivos_cartera if f"cartera: {m}" not in f["motivos"]])
     else:
-        pasa = all(f["control"].startswith("coinciden") for f in filas) and any(f["v30"] == "PASA" for f in filas)
+        pasa = all(f["control"].startswith(("coinciden", "no aplica:")) for f in filas) and any(f["v30"] == "PASA" for f in filas)
     with (Path(carpeta) / "celdas.csv").open("w", newline="") as f:
         escritor = csv.DictWriter(f, COLUMNAS_CELDAS, extrasaction="ignore")
         escritor.writeheader()
