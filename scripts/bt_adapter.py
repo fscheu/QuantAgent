@@ -73,6 +73,10 @@ class StrategyAdapter(Strategy):
 
     def init(self):
         self.entradas_descartadas_orden_minima = 0
+        self.pending_stop_order = None
+        self.pending_stop_bar = None
+        self.pending_expiry = None
+        self.pending_signal = None
         df = self.data.df
         cols = {c.lower(): df[c].values * (1.0 if c == "Volume" else SCALE) for c in df.columns}
         self.bars = pd.DataFrame({"timestamp": df.index, **cols})  # precios reales, columnas del motor
@@ -123,8 +127,8 @@ class StrategyAdapter(Strategy):
             def cap_open_entries():
                 apply_opening_gap()
                 broker = self._broker
-                entries = [o for o in broker.orders if not o.parent_trade]
-                broker.orders[:] = [o for o in broker.orders if o.parent_trade]
+                entries = [o for o in broker.orders if not o.parent_trade and o.stop is None]
+                broker.orders[:] = [o for o in broker.orders if o.parent_trade or o.stop is not None]
                 process_orders()  # primero los cierres pendientes, con sus costos
                 broker.orders.extend(entries)
                 price = float(self.data.Open[-1])
@@ -171,6 +175,32 @@ class StrategyAdapter(Strategy):
         n = len(self.data)
         if n > self.n_real_bars:  # vela centinela: solo procesa las ordenes de la ultima vela real
             return
+        if self.pending_stop_order is not None:
+            if self.position:
+                trade = self.trades[-1]
+                self.key = trade.entry_bar
+                stop = round(self.pending_signal.stop_loss or (trade.entry_price * SCALE * 0.98), 8)
+                take = round(self.pending_signal.take_profit or (trade.entry_price * SCALE * 1.03), 8)
+                self.info[self.key] = {"stop": stop, "reason": "backtest_end", "is_stop": True}
+                self.pos = ActivePosition(
+                    symbol=self.symbol, side=OrderSide.BUY,
+                    entry_price=trade.entry_price * SCALE / (1 + self.slippage),
+                    stop_loss=stop, take_profit=take, quantity=abs(trade.size) / SCALE,
+                    decision_timestamp=self.bars["timestamp"].iloc[trade.entry_bar].to_pydatetime(),
+                    candles_since_entry=0, exit_policy=self.pending_signal.exit_policy,
+                    max_hold_candles=self.pending_signal.max_hold_candles,
+                    trailing_stop_pct=self.pending_signal.trailing_stop_pct,
+                    prediction_horizon=3, candles_direction=[],
+                )
+                self.pending_stop_order = None
+                self.pending_signal = None
+            else:
+                bars_elapsed = n - self.pending_stop_bar
+                if self.pending_expiry is not None and bars_elapsed >= self.pending_expiry:
+                    if self.pending_stop_order in self._broker.orders:
+                        self.pending_stop_order.cancel()
+                    self.pending_stop_order = None
+                    self.pending_signal = None
         if self.pos is not None and not self.position:
             last = self.closed_trades[-1] if self.closed_trades else None
             if last is not None and last.entry_bar == self.key:  # la libreria cerro por sl=/tp=
@@ -187,14 +217,15 @@ class StrategyAdapter(Strategy):
             if self.pos is not None:
                 trade = self.trades[0]
                 # referencia sin slippage (= trade.entry_price * SCALE si slippage es 0), como el motor
-                self.pos.entry_price = float(self.bars["close" if self.fill_close else "open"].iloc[trade.entry_bar])
+                if not self.info.get(trade.entry_bar, {}).get("is_stop"):
+                    self.pos.entry_price = float(self.bars["close" if self.fill_close else "open"].iloc[trade.entry_bar])
                 self.pos.quantity = abs(trade.size) / SCALE
                 should_exit, reason = self.strategy.should_exit(self.pos, price, window)
                 if should_exit and (self.fill_close or n < self.n_real_bars):
                     self._close(reason)
                 elif not should_exit:
                     self.pos.candles_since_entry += 1
-            if self.pos is None and (self.fill_close or n < self.n_real_bars):
+            if self.pos is None and self.pending_stop_order is None and (self.fill_close or n < self.n_real_bars):
                 self._maybe_enter(window, price, n)
         if self.fill_close and n == self.n_real_bars and self.pos is not None:
             self._close("backtest_end")
@@ -248,6 +279,16 @@ class StrategyAdapter(Strategy):
         if units < 1:
             return
         take = round(signal.take_profit or price * (1.03 if long else 0.97), 8)
+        if getattr(signal, "entry_order", "market") == "stop" and long:
+            stop_entry = signal.entry_price or price
+            order = self.buy(size=units, stop=stop_entry / SCALE, sl=stop / SCALE, tp=take / SCALE,
+                             tag=(signal.confidence, settings.TRADING_BASE_POSITION_PCT, stop_entry, "stop"))
+            self.units = units
+            self.pending_stop_order = order
+            self.pending_stop_bar = n
+            self.pending_expiry = getattr(signal, "entry_expiry_bars", None)
+            self.pending_signal = signal
+            return
         (self.buy if long else self.sell)(size=units, sl=stop / SCALE, tp=take / SCALE,
                                         tag=(signal.confidence, settings.TRADING_BASE_POSITION_PCT,
                                              signal.entry_price or price))

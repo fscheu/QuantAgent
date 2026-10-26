@@ -163,3 +163,19 @@ def test_trailing_mark_of_later_trade_does_not_close_reentered_trade():
     equity = cash / (o.iloc[6] * (1 + SLIPPAGE) * (1 + COMMISSION)) * closes[-1]  # A2 abierta hasta el final
     assert r["trades"] == 2
     assert r["pnl"] == pytest.approx(equity - CAPITAL, abs=0.01)
+
+
+@pytest.mark.parametrize("rows, exits, expiry, expected_trades, expected_pnl", [
+    ([(90, 92, 89, 91), (95, 103, 94, 98), (98, 106, 97, 105), (105, 107, 104, 106)], [2], 3, 1, CAPITAL / 100 * 5),
+    ([(90, 92, 89, 91), (105, 110, 103, 108), (108, 112, 107, 110), (108, 110, 106, 107)], [2], 3, 1, CAPITAL / 105 * 3),
+    ([(90, 92, 89, 91), (91, 95, 90, 93), (92, 96, 91, 94), (105, 110, 104, 108)], [], 2, 0, 0.0),
+])
+def test_stop_entry_cases(rows, exits, expiry, expected_trades, expected_pnl):
+    c = _ohlc(rows)
+    s = _signals(c, {0: 1}, exits=exits)
+    s["entry_order"] = ["stop"] + ["market"] * (len(c) - 1)
+    s["entry_price"] = [100.0] + [float("nan")] * (len(c) - 1)
+    s["entry_expiry_bars"] = [expiry] + [float("nan")] * (len(c) - 1)
+    r = run_filter(s, c, commission_pct=0.0, slippage_pct=0.0, capital=CAPITAL)
+    assert r["trades"] == expected_trades
+    assert r["pnl"] == pytest.approx(expected_pnl)
