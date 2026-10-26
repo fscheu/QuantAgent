@@ -13,25 +13,20 @@ from click.testing import CliRunner
 from quantagent.backtesting.vbt_filter import equity_metrics
 from quantagent.cli import hipotesis
 from quantagent.cli.backtest import backtest_group
-from quantagent.data.snapshot import write_snapshot
 from quantagent.data.macro import crear_snapshot_macro
+from quantagent.data.snapshot import write_snapshot
 from quantagent.fabrica.cartera import combinar, pesos
 from quantagent.fabrica.hipotesis import Hipotesis, Pierna
 from tests.test_filtrar_pierna import resultado_ganadores_distintos as resultado_ganadores_distintos
 
 
-def test_aprobar_tendencia_larga_corta_pasa_admision_con_snapshots_sinteticos(tmp_path, monkeypatch):
+def test_tendencia_larga_corta_aprobada_pasa_admision_con_snapshots_sinteticos(tmp_path, monkeypatch):
     datos = tmp_path / "datos"
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(datos))
-    propuesta = Path(__file__).parents[1] / "catalogo/propuestas/tendencia-larga-corta.yaml"
-    propuestas, hipotesis_dir = tmp_path / "propuestas", tmp_path / "hipotesis"
-    propuestas.mkdir()
-    (propuestas / propuesta.name).write_text(propuesta.read_text(encoding="utf-8"), encoding="utf-8")
-    aprobado = CliRunner().invoke(backtest_group, [
-        "hipotesis", "propuestas", "aprobar", "tendencia-larga-corta", "--quien", "test",
-        "--propuestas-dir", str(propuestas), "--hipotesis-dir", str(hipotesis_dir),
-    ])
-    assert aprobado.exit_code == 0, aprobado.output
+    propuesta = Path(__file__).parents[1] / "hipotesis/tendencia-larga-corta.yaml"
+    hipotesis_dir = tmp_path / "hipotesis"
+    hipotesis_dir.mkdir()
+    (hipotesis_dir / propuesta.name).write_text(propuesta.read_text(encoding="utf-8"), encoding="utf-8")
     fechas = pd.bdate_range("2007-01-01", "2018-12-31")
     precios = np.linspace(80, 120, len(fechas))
     velas = pd.DataFrame({"open": precios, "high": precios + 1, "low": precios - 1,

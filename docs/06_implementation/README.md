@@ -33,7 +33,7 @@ Implementation documents should include:
 
 ## Active Per-Change Implementation
 
-- [QuantAgent-e4jc.6-IM-f2-etapas-0-2.md](./QuantAgent-e4jc.6-IM-f2-etapas-0-2.md) - propuesta F2 pendiente; intento detenido antes del backtest porque `tsmom-largo-corto` no está registrada.
+- [QuantAgent-e4jc.6-IM-f2-etapas-0-2.md](./QuantAgent-e4jc.6-IM-f2-etapas-0-2.md) - F2 `tendencia-larga-corta` por etapas 0 a 2: etapa 1 pasa (0,54), etapa 2 corta; correlación 0,86 con 1/N.
 - [QuantAgent-7v45-IM-normalizacion-transversal.md](./QuantAgent-7v45-IM-normalizacion-transversal.md) - Objetivos T4 en consultas futuras y persistencia de sombra con evidencia sintética.
 - [QuantAgent-v2ll-IM-atribucion.md](./QuantAgent-v2ll-IM-atribucion.md) - Atribución reproducible en pesos, señal y tasa de cuatro carteras (etapa 2 guardada).
 - [QuantAgent-lrf8.3.2-IM-convivencia-fuentes.md](./QuantAgent-lrf8.3.2-IM-convivencia-fuentes.md) - Convivencia de filas `alpaca` con fixture y snapshot en CLI run y verify.
