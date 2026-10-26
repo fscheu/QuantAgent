@@ -17,6 +17,7 @@ from quantagent.data.macro import crear_snapshot_macro
 from quantagent.data.snapshot import write_snapshot
 from quantagent.fabrica.cartera import combinar, pesos
 from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+from quantagent.strategy.rebalanceo_fin_de_mes_strategy import RebalanceoFinDeMesStrategy
 from tests.test_filtrar_pierna import resultado_ganadores_distintos as resultado_ganadores_distintos
 
 
@@ -481,9 +482,19 @@ def test_etapa1_pesos_objetivo_pasa_panel_y_suma_ordenes(tmp_path, monkeypatch):
                                  | {"volume": 1.0}, index=fechas) for a in ("SPY", "IEF")}
     write_snapshot("sintetico", snapshots, base_dir=tmp_path)
     h = Hipotesis(id="f1", autor="test", justificacion="test", clase="rebalanceo-fin-de-mes", activos=("SPY", "IEF"))
+    objetivos = pd.DataFrame(0.5, index=fechas, columns=["SPY", "IEF"])
+    cambios_esperados = []
+    for mes in pd.period_range("2011-01", "2018-12", freq="M"):
+        ultimos = fechas[fechas.to_period("M") == mes][-5:]
+        for fecha in ultimos[[0, 2, 4]]:
+            cambios_esperados.append(fecha)
+            objetivos.loc[fecha:] = (1.0, 0.0) if len(cambios_esperados) % 2 else (0.0, 1.0)
+    monkeypatch.setattr(RebalanceoFinDeMesStrategy, "posiciones_objetivo", staticmethod(lambda _: objetivos))
     resultado = hipotesis.filtrar_hipotesis(h, "sintetico")
     assert [r[0] for r in resultado[0]] == ["SPY", "IEF"]
-    assert resultado[5] == sum(r[2] for r in resultado[0]) > 0
+    assert len(cambios_esperados) == 288
+    assert [r[2] for r in resultado[0]] == [288, 288]
+    assert resultado[5] == sum(r[2] for r in resultado[0]) == 576
 
 
 def test_etapa1_cartera_dos_piernas_tres_activos_un_intento(tmp_path, monkeypatch):
