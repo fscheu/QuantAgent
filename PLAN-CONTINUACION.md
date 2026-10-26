@@ -754,7 +754,8 @@ Los primeros 5 son los más fáciles de revisar.
 | X20 | `QuantAgent-e4jc.14` | P-2 (R13): protocolo de la reserva 2023+ (lista cerrada cartera-transversal, F1, F2; C0 + M1; una apertura); depende de S04 | Documento con lista, criterio y regla de una apertura; sin escalera de incubación | decidir | L20 |
 | X20b.1 | `QuantAgent-3bby.1` | Elegibilidad y simulacro del comando de reserva; parte de X20b | Snapshot sintético: rango calculado sin abrir/leer reserva; rechazos de lista, etapa 2 y candado | probar | L20 |
 | X20b.2 | `QuantAgent-3bby.2` | Pre-registro y apertura única bajo `--abrir`; depende de X20b.1 | Pre-registro precede apertura, accesos registrados y segundo intento rechazado en fixture sintético | probar | L20 |
-| X20b.3 | `QuantAgent-3bby.3` | Evaluación C0 + M1, veredicto y registro de intento; depende de X20b.2 | Reserva sintética produce curva, benchmark, veredicto y fila de intento coherentes | probar | L20 |
+| X20b.3a | `QuantAgent-3bby.3.1` | Motor/CLI existente sobre reserva abierta; curva, C0 intacto y benchmark 1/N; parte de X20b.3 | Snapshot sintético produce curva y métricas C0 más benchmark 1/N coherentes, sin leer datos reales | probar | L20 |
+| X20b.3b | `QuantAgent-3bby.3.2` | M1 con DGS3MO, veredicto C0 intacto e intento en CLI; depende de X20b.3a | Fixture sintético produce Sharpe en exceso, veredicto y fila de intento coherentes, sin leer datos reales | probar | L20 |
 | X20b.4 | `QuantAgent-3bby.4` | Camino de pesos objetivo con panel completo; depende de X20b.3 | Estrategia sintética de pesos objetivo cuenta trades > 0 y reproduce pesos/curva | probar | L20 |
 
 
