@@ -189,6 +189,25 @@ def test_etapa2(tmp_path, monkeypatch, caso):
         assert filas[1]["control"].startswith("coinciden")
 
 
+def test_etapa2_cuenta_ordenes_posiciones_objetivo(tmp_path, monkeypatch):
+    from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+
+    h = Hipotesis("h-f1-e2", "autor", "just", "1d", piernas=(
+        Pierna("rebalanceo-fin-de-mes", {}, ("SPY", "IEF"), "U"),))
+    filas = [{"activo": a, "estrategia": "rebalanceo-fin-de-mes", "trades": "288",
+              "pnl": "100", "sharpe_tasa_0": "0.5", "max_drawdown": "0.1"}
+             for a in ("SPY", "IEF")]
+    monkeypatch.setattr(validacion, "correr_motor", lambda *a, **k: filas)
+    monkeypatch.setattr(validacion, "evaluar_etapa2_cartera", lambda *a, **k: (True, []))
+    monkeypatch.setattr(validacion, "_curva_y_v30_cartera", lambda *a, **k: (None, True, []))
+    veredicto, filas = validacion.validar_etapa2(
+        h, "sintetico", {("rebalanceo-fin-de-mes", a): {} for a in ("SPY", "IEF")}, tmp_path)
+    assert veredicto == "PASA"
+    assert [f["trades"] for f in filas] == ["288", "288"]
+    assert sum(int(f["trades"]) for f in filas) == 576
+    assert all(f["control"].startswith("no aplica: posiciones objetivo") for f in filas)
+
+
 @pytest.mark.parametrize("dsr,pnl,esperado", [(0.95, 1, "PASA"), (0.94, 1, "CORTA"),
                                           (0.99, -1, "CORTA"), (None, 1, "CORTA")])
 def test_etapa3_regla(tmp_path, monkeypatch, dsr, pnl, esperado):
