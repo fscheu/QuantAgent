@@ -131,7 +131,28 @@ def reserva_command(archivo, snapshot_name, abrir_reserva):
             raise click.ClickException(str(exc)) from exc
         with (raiz / "reserva-accesos.log").open("a", encoding="utf-8") as f:
             f.write(f"{ahora}\thipotesis reserva {archivo} --snapshot {snapshot_name} --abrir\n")
-        click.echo(f"Reserva abierta: {h.id}; reserva {desde} a {hasta}.")
+        parametros = {(p.clase, activo) if h.es_cartera else activo:
+                      (p.combinaciones()[0] if p.parametros else {})
+                      for p in h.piernas for activo in p.activos}
+        carpeta = raiz / "reserva" / h.id
+        try:
+            veredicto, filas = validar_etapa3(h, snapshot_name, parametros, carpeta, desde, hasta,
+                                               abrir_reserva=True)
+            from quantagent.fabrica.informe import diagnostico_exceso
+            m1 = diagnostico_exceso(h, carpeta / "equity", snapshot_name, base_dir=raiz)
+            if not m1["disponible"]:
+                raise click.ClickException(m1["motivo"])
+            registrar_intento("+".join(p.clase for p in h.piernas), "cartera", snapshot_name,
+                              "etf", 1.0, {p.clase: p.parametros for p in h.piernas},
+                              {"desde": desde, "hasta": hasta,
+                               "trades": sum(int(f.get("trades") or 0) for f in filas),
+                               "pnl": "", "sharpe": m1["sharpe_cartera"]},
+                              hipotesis=h.id, etapa="3", sharpe_base="DGS3MO")
+        except Exception as exc:
+            raise click.ClickException(str(exc)) from exc
+        registrar_estado(h.id, "3", veredicto, "reserva; C0 intacto")
+        click.echo(f"Reserva: {h.id}; {desde} a {hasta}; C0: {veredicto}")
+        click.echo(f"Sharpe en exceso de DGS3MO: cartera {m1['sharpe_cartera']:.2f}; benchmark {m1['sharpe_benchmark']:.2f}")
     else:
         click.echo(f"Simulacro elegible: {h.id}; reserva {desde} a {hasta}; no se abrió ni leyó.")
 
