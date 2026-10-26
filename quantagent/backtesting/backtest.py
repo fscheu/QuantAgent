@@ -13,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from quantagent.agent_models import TradingDecision
-from quantagent.backtesting.intrabar_stops import evaluate_position_exit
+from quantagent.backtesting.intrabar_stops import check_stop_entry, evaluate_position_exit
 from quantagent.data.asset_types import AssetType, get_asset_type
 from quantagent.data.market_calendar import get_market_calendar
 from quantagent.data.provider import DataProvider
@@ -775,6 +775,26 @@ class Backtest:
             if isinstance(pending, str):
                 pos = self.position_monitor.get_active_position(asset)
                 self._close_position_with_trade_sync(pos, pending, opening_price, timestamp=current_date)
+            elif isinstance(pending, dict) and pending.get("type") == "stop":
+                fill_price = check_stop_entry(pending["entry_price"], df.iloc[-1])
+                if fill_price is not None:
+                    self.portfolio.update_prices({asset: fill_price})
+                    self._execute_strategy_signal(
+                        asset,
+                        current_date,
+                        fill_price,
+                        pending["signal"],
+                        pending["trading_signal"],
+                        pending["db_signal"],
+                    )
+                else:
+                    pending["bars_elapsed"] += 1
+                    expiry = pending.get("expiry_bars")
+                    if expiry is None or pending["bars_elapsed"] < expiry:
+                        self._pending_orders[asset] = pending
+                    self.portfolio.update_prices({asset: current_price})
+                    self.total_candles_processed += 1
+                    return
             else:
                 self._execute_strategy_signal(asset, current_date, opening_price, *pending)
         self.portfolio.update_prices({asset: current_price})
@@ -879,6 +899,18 @@ class Backtest:
             current_date=current_date,
         )
 
+        if signal.entry_order == "stop" and trading_signal == TradeSignal.LONG:
+            self._pending_orders[asset] = {
+                "type": "stop",
+                "signal": signal,
+                "trading_signal": trading_signal,
+                "db_signal": db_signal,
+                "entry_price": signal.entry_price or current_price,
+                "expiry_bars": signal.entry_expiry_bars,
+                "bars_elapsed": 0,
+            }
+            return
+
         if self.fill == "apertura":
             self._pending_orders[asset] = (signal, trading_signal, db_signal, signal.entry_price or current_price)
             return
@@ -942,7 +974,7 @@ class Backtest:
             self.position_monitor.open_position(
                 symbol=asset,
                 side=side,
-                entry_price=current_price if self.fill == "apertura" else signal.entry_price or current_price,
+                entry_price=current_price if (self.fill == "apertura" or signal.entry_order == "stop") else signal.entry_price or current_price,
                 stop_loss=stop_loss,
                 take_profit=take_profit,
                 quantity=order.filled_quantity,
