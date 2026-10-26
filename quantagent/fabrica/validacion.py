@@ -56,7 +56,7 @@ def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, a
                                 if (STRATEGY_REGISTRY.get(cli_aliases().get(p.clase, p.clase))
                                     and hasattr(STRATEGY_REGISTRY[cli_aliases().get(p.clase, p.clase)]["cls"],
                                                 "posiciones_objetivo"))), None)
-    if etapa == "2" and estrategia_objetivo:
+    if etapa in ("2", "3") and estrategia_objetivo:
         from quantagent.backtesting.vbt_filter import equity_metrics
 
         activos = list(estrategia_objetivo.activos)
