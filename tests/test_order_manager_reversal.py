@@ -165,6 +165,27 @@ def test_risk_manager_rejects_oversized_short(db_session):
     assert valid is False
     assert "Position too large" in reason
 
+
+def test_risk_manager_rejects_adding_to_short_and_allows_cover(db_session):
+    portfolio = PortfolioManager(
+        initial_cash=100000.0, environment=Environment.PAPER, db=db_session
+    )
+    short = Order(
+        symbol="BTC", side=OrderSide.SELL, quantity=5, price=1000,
+        environment=Environment.PAPER,
+    )
+    short.filled_quantity = Decimal("5")
+    portfolio.execute_trade(short, fill_price=1000)
+    risk = RiskManager(portfolio, db=db_session)
+
+    valid, reason = risk.validate_trade("BTC", OrderSide.SELL, 1, 1000)
+    assert valid is False
+    assert "Cannot add to existing SHORT" in reason
+
+    valid, reason = risk.validate_trade("BTC", OrderSide.BUY, 1, 1000)
+    assert valid is True
+    assert reason is None
+
     def test_reversal_long_to_short_structure(self):
         """
         Test LONG to SHORT reversal produces correct structure.
