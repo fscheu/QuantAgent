@@ -45,7 +45,8 @@ def alarma_cartera(sharpe_filtro, sharpe_motor):
     return float(sharpe_motor) <= SHARPE_MAXIMO_MOTOR_ALARMA
 
 
-def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, abrir_prueba=False):
+def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, abrir_prueba=False,
+                 abrir_reserva=False):
     carpeta = Path(carpeta)
     carpeta.mkdir(parents=True, exist_ok=True)
     filas = []
@@ -111,6 +112,8 @@ def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, a
                 ]
                 if abrir_prueba:
                     comando.append("--abrir-prueba")
+                if abrir_reserva:
+                    comando.append("--abrir-reserva")
                 resultado = subprocess.run(comando, capture_output=True, text=True)
                 if resultado.returncode:
                     raise RuntimeError(resultado.stderr)
@@ -258,17 +261,18 @@ def validar_etapa2(h, snapshot, params_por_activo, carpeta):
     return "PASA" if pasa else "CORTA", filas
 
 
-def validar_etapa3(h, snapshot, params_por_activo, carpeta):
-    """Valida la prueba; el llamador debe abrir el candado antes de invocar."""
-    filas = correr_motor(h, snapshot, params_por_activo, "2019-01-01", "2022-12-31",
-                         carpeta, "3", abrir_prueba=True)
+def validar_etapa3(h, snapshot, params_por_activo, carpeta, desde="2019-01-01", hasta="2022-12-31",
+                   abrir_reserva=False):
+    """Valida la prueba o reserva con C0; el llamador abre el candado antes de invocar."""
+    filas = correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, "3",
+                         abrir_prueba=not abrir_reserva, abrir_reserva=abrir_reserva)
     if h.es_cartera:
         eq_cartera, _, _ = _curva_y_v30_cartera(
-            h, filas, carpeta, snapshot, "3", "2019-01-01", "2022-12-31"
+            h, filas, carpeta, snapshot, "3", desde, hasta
         )
         import quantagent.data.snapshot as snap_mod
         activos = list(dict.fromkeys(a for p in h.piernas for a in p.activos))
-        c3 = pd.DataFrame({a: snap_mod.read_snapshot(snapshot, a)["close"].loc["2019-01-01":"2022-12-31"] for a in activos}) if snapshot else None
+        c3 = pd.DataFrame({a: snap_mod.read_snapshot(snapshot, a)["close"].loc[desde:hasta] for a in activos}) if snapshot else None
         c2 = pd.DataFrame({a: snap_mod.read_snapshot(snapshot, a)["close"].loc["2007-01-01":"2018-12-31"] for a in activos}) if snapshot else None
         sb3 = sharpe_benchmark(c3) if c3 is not None and not c3.empty else 0.0
         sb2 = sharpe_benchmark(c2) if c2 is not None and not c2.empty else None
