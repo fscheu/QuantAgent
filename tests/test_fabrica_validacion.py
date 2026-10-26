@@ -12,8 +12,9 @@ from quantagent.fabrica import validacion
 from quantagent.fabrica.hipotesis import cargar_hipotesis
 
 
-@pytest.mark.parametrize("etapa,anio", [("2", 2007), ("3", 2019)])
+@pytest.mark.parametrize("etapa,anio", [("2", 2007), ("3", 2019), ("3", 2023)])
 def test_seleccion_csv_cartera_t4(tmp_path, monkeypatch, etapa, anio):
+    from quantagent.backtesting.vbt_filter import equity_metrics
     from quantagent.fabrica import cartera
     from quantagent.fabrica.hipotesis import Hipotesis, Pierna
     from quantagent.fabrica.transversal import leer_seleccion
@@ -57,12 +58,21 @@ def test_seleccion_csv_cartera_t4(tmp_path, monkeypatch, etapa, anio):
     monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda _, a: cierres[[a]].rename(columns={a: "close"}))
     monkeypatch.setattr(validacion, "registrar_intento", lambda *a, **k: None)
     monkeypatch.setattr(validacion, "dsr_contra_intentos", lambda *a, **k: None)
-    monkeypatch.setattr(validacion, "correr_motor", lambda *a, **k: [{"trades": "0"}])
+    motor = {}
+    monkeypatch.setattr(validacion, "correr_motor", lambda *a, **k: motor.update(args=a, kwargs=k) or [{"trades": "0"}])
     if etapa == "2":
         validacion.evaluar_etapa2_cartera(h, [], tmp_path, "sintetico")
     else:
-        _, filas = validacion.validar_etapa3(h, "sintetico", {}, tmp_path)
+        _, filas = validacion.validar_etapa3(h, "sintetico", {}, tmp_path,
+                                             str(fechas[0].date()), str(fechas[-1].date()), anio >= 2023)
+        benchmark_1n = benchmark_real(cierres)
+        sharpe_curva = equity_metrics(referencia_eq, 0.0)["sharpe"]
+        assert filas[0]["benchmark"] == pytest.approx(benchmark_1n)
         assert filas[0]["benchmark_mismo_peso"] == pytest.approx(benchmark_real(cierres, pesos=referencia_w))
+        assert filas[0]["sharpe_cartera"] == pytest.approx(round(sharpe_curva, 2))
+        assert filas[0]["v30"] == "NO PASA" and any("trades <" in m for m in filas[0]["motivos"])
+        assert motor["kwargs"]["abrir_reserva"] is (anio >= 2023)
+        assert motor["kwargs"]["abrir_prueba"] is (anio < 2023)
     with pytest.raises(ValueError, match="cierres"):
         validacion.evaluar_etapa2_cartera(h, [], tmp_path)
     (tmp_path / "senal-momentum-transversal-C.csv").unlink()
