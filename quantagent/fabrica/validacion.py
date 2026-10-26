@@ -186,6 +186,11 @@ def curva_cartera_guardada(h, carpeta, cierres):
     seleccion = leer_seleccion(carpeta, h.piernas, cierres.index if cierres is not None else None)
     if seleccion and cierres is None:
         raise ValueError("Faltan cierres para ponderar la selección transversal")
+    if any(STRATEGY_REGISTRY.get(cli_aliases().get(p.clase, p.clase))
+           and hasattr(STRATEGY_REGISTRY[cli_aliases().get(p.clase, p.clase)]["cls"], "posiciones_objetivo")
+           for p in h.piernas):
+        retornos = pd.DataFrame(retornos_dict).fillna(0.0)
+        return 100_000.0 * (1 + retornos.T.groupby(level=1).sum().T.sum(axis=1)).cumprod()
     return curva_cartera(cierres, {i: list(p.activos) for i, p in enumerate(h.piernas)},
                          retornos_dict, seleccion=seleccion)
 
@@ -288,8 +293,9 @@ def validar_etapa3(h, snapshot, params_por_activo, carpeta, desde="2019-01-01", 
     """Valida la prueba o reserva con C0; el llamador abre el candado antes de invocar."""
     filas = correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, "3",
                          abrir_prueba=not abrir_reserva, abrir_reserva=abrir_reserva)
-    estrategia = STRATEGY_REGISTRY.get(cli_aliases().get(h.clase, h.clase))
-    es_pesos_objetivo = estrategia and hasattr(estrategia["cls"], "posiciones_objetivo")
+    es_pesos_objetivo = any(STRATEGY_REGISTRY.get(cli_aliases().get(p.clase, p.clase))
+                            and hasattr(STRATEGY_REGISTRY[cli_aliases().get(p.clase, p.clase)]["cls"], "posiciones_objetivo")
+                            for p in h.piernas)
     if h.es_cartera or es_pesos_objetivo:
         eq_cartera, _, _ = _curva_y_v30_cartera(
             h, filas, carpeta, snapshot, "3", desde, hasta
@@ -301,7 +307,9 @@ def validar_etapa3(h, snapshot, params_por_activo, carpeta, desde="2019-01-01", 
         from quantagent.fabrica.cartera import pesos as pesos_cartera
         piernas = {i: p.activos for i, p in enumerate(h.piernas)}
         seleccion = leer_seleccion(carpeta, h.piernas, c3.index if c3 is not None else None)
-        w = pesos_cartera(c3, piernas, seleccion=seleccion).T.groupby(level=1).sum().T if c3 is not None and not c3.empty else None
+        w = (pd.DataFrame(1 / len(activos), index=c3.index, columns=activos) if es_pesos_objetivo and c3 is not None and not c3.empty
+             else pesos_cartera(c3, piernas, seleccion=seleccion).T.groupby(level=1).sum().T
+             if c3 is not None and not c3.empty else None)
         sb3_mismo_peso = sharpe_benchmark(c3, pesos=w) if w is not None else None
 
         intentos_csv = snapshot_root() / "intentos.csv"

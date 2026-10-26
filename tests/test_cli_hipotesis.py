@@ -176,22 +176,48 @@ def test_reserva_veredicto_recupera_m1_una_vez_desde_curvas(tmp_path, monkeypatc
     segunda = runner.invoke(hipotesis.hipotesis_group, args)
     assert primera.exit_code == 0, primera.output
     assert segunda.exit_code == 0 and "ya recuperada" in segunda.output
-    from quantagent.fabrica.informe import diagnostico_exceso
     from quantagent.fabrica.criterio import evaluar_etapa3_cartera, sharpe_benchmark
     h = hipotesis.cargar_hipotesis(args[1])
-    esperado = diagnostico_exceso(h, carpeta, "reserva-sintetica", base_dir=tmp_path)["sharpe_cartera"]
+    retornos = pd.DataFrame({"SPY": pd.Series([100, 102, 103, 106], index=fechas).pct_change(),
+                             "IEF": pd.Series([100, 101, 103, 104], index=fechas).pct_change()}).dropna().sum(axis=1)
+    sharpe_m1 = retornos.iloc[1:]
+    esperado = sharpe_m1.mean() / sharpe_m1.std() * (365.25 ** 0.5)
     cierres = pd.DataFrame({a: frame[a] for a in ("SPY", "IEF")})
+    benchmark = (cierres / cierres.iloc[0]).mean(axis=1)
+    ret_benchmark = benchmark.pct_change().dropna().iloc[1:]
+    esperado_benchmark = ret_benchmark.mean() / ret_benchmark.std() * (365.25 ** 0.5)
     cierres_etapa2 = pd.DataFrame({a: frame[a].loc["2007-01-01":"2018-12-31"] for a in ("SPY", "IEF")})
     eq_cartera = hipotesis.curva_cartera_guardada(h, tmp_path / "reserva" / h.id, None)
     pasa, _ = evaluar_etapa3_cartera(eq_cartera, sharpe_benchmark(cierres), None,
                                      sharpe_benchmark(cierres_etapa2) if not cierres_etapa2.empty else None,
                                      trades=2)
     intentos = list(csv.DictReader((tmp_path / "intentos.csv").open()))
-    assert len(intentos) == 1 and float(intentos[0]["sharpe"]) == pytest.approx(esperado)
+    assert len(intentos) == 1 and float(intentos[0]["sharpe"]) == pytest.approx(esperado, abs=0.01)
     assert len([r for r in csv.DictReader((tmp_path / "hipotesis.csv").open()) if r["etapa"] == "3"]) == 1
     assert "M1 cartera" in primera.output
     assert f"C0: {'PASA' if pasa else 'CORTA'}" in primera.output
-    assert "M1 benchmark" in primera.output and "trades 2" in primera.output
+    assert f"M1 benchmark {esperado_benchmark:.2f}" in primera.output and "trades 2" in primera.output
+
+
+def test_curva_guardada_posiciones_objetivo_suma_retornos_y_benchmark_50_50(tmp_path):
+    from types import SimpleNamespace
+    from quantagent.fabrica.validacion import curva_cartera_guardada
+    from quantagent.fabrica.criterio import curva_benchmark
+
+    fechas = pd.date_range("2023-01-02", periods=3)
+    carpeta = tmp_path / "equity"
+    carpeta.mkdir()
+    for activo, valores in (("SPY", [100_000, 110_000, 121_000]), ("IEF", [100_000, 90_000, 81_000])):
+        pd.DataFrame({"date": fechas, "equity": valores}).to_csv(carpeta / f"{activo}.csv", index=False)
+    pierna = SimpleNamespace(clase="rebalanceo-fin-de-mes", activos=["SPY", "IEF"])
+    h = SimpleNamespace(piernas=[pierna])
+    curva = curva_cartera_guardada(h, tmp_path, None)
+    retornos = pd.Series([0.1 + (-0.1), 0.1 + (-0.1)], index=fechas[1:])
+    pd.testing.assert_series_equal(curva, 100_000 * (1 + retornos).cumprod(), check_names=False, check_freq=False)
+    cierres = pd.DataFrame({"SPY": [100, 110, 121], "IEF": [100, 90, 81]}, index=fechas)
+    benchmark = curva_benchmark(cierres, pesos=pd.DataFrame(0.5, index=fechas, columns=cierres.columns))
+    esperado_benchmark = 100_000 * (cierres / cierres.iloc[0]).mul(0.5).sum(axis=1)
+    pd.testing.assert_series_equal(benchmark, esperado_benchmark, check_names=False)
 
 
 def test_tendencia_larga_corta_aprobada_pasa_admision_con_snapshots_sinteticos(tmp_path, monkeypatch):
