@@ -2,6 +2,7 @@
 
 import csv
 import json
+import os
 import traceback
 from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime, timezone
@@ -13,7 +14,7 @@ import pandas as pd
 import yaml
 from tabulate import tabulate
 
-from quantagent.data.snapshot import SnapshotError, read_snapshot, snapshot_root
+from quantagent.data.snapshot import SnapshotError, load_manifest, read_snapshot, snapshot_root
 from quantagent.fabrica.admision import admitir
 from quantagent.fabrica.candado import CandadoError, abrir, fecha_apertura
 from quantagent.fabrica.cartera import evaluar_cartera
@@ -97,6 +98,27 @@ def resumen_command(desde, out):
     if out:
         Path(out).write_text(texto)
     click.echo(texto, nl=False)
+
+
+@hipotesis_group.command("reserva", help="Simular elegibilidad y rango de la reserva 2023+.")
+@click.argument("archivo", type=click.Path(exists=True, dir_okay=False))
+@click.option("--snapshot", "snapshot_name", required=True)
+def reserva_command(archivo, snapshot_name):
+    h = cargar_hipotesis(archivo)
+    if h.id not in {"cartera-transversal", "rebalanceo-fin-de-mes", "tendencia-larga-corta"}:
+        raise click.ClickException(f"hipótesis fuera de la lista de reserva: {h.id}")
+    estado = ultimo_estado(h.id)
+    if not estado or estado["etapa"] != "2" or estado["veredicto"] != "PASA":
+        raise click.ClickException(f"{h.id} no tiene etapa 2 PASA")
+    if fecha_apertura(h.id, "reserva") is not None:
+        raise click.ClickException(f"{h.id}/reserva ya fue abierta")
+    desde = os.environ.get("QUANTAGENT_RESERVA_DESDE", "2023-01-01")
+    manifiesto = load_manifest(snapshot_name)
+    activos = [a for p in h.piernas for a in p.activos]
+    hasta = min(manifiesto["symbols"][a]["end"] for a in activos)
+    if desde > hasta:
+        raise click.ClickException(f"sin rango de reserva: {desde} a {hasta}")
+    click.echo(f"Simulacro elegible: {h.id}; reserva {desde} a {hasta}; no se abrió ni leyó.")
 
 
 def admitir_hipotesis(archivo, snapshot_name, prueba_unica=False):
