@@ -105,6 +105,7 @@ def test_registry_has_expected_entries():
         "RSIMeanReversionStrategy",
         "FiftyTwoWeekHighStrategy",
         "TripleScreenStrategy",
+        "ArquetipoAStrategy",
         "SmaCrossStrategy",
         "Momentum12mStrategy",
         "HalloweenStrategy",

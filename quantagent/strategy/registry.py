@@ -2,11 +2,11 @@
 
 from typing import Any
 
+from .arquetipo_a_strategy import ArquetipoAStrategy
 from .base import TradingStrategy
 from .curva_pendiente_strategy import CurvaPendienteStrategy
 from .fifty_two_week_high_strategy import FiftyTwoWeekHighStrategy
 from .halloween_strategy import HalloweenStrategy
-from .turn_of_the_month_strategy import TurnOfTheMonthStrategy
 from .llm_agent_strategy import LLMAgentStrategy
 from .momentum_12m_strategy import Momentum12mStrategy
 from .rsi_regimen_strategy import RsiRegimenStrategy
@@ -14,6 +14,7 @@ from .rsi_strategy import RSIMeanReversionStrategy
 from .senal_externa_strategy import SenalExterna
 from .sma_cross_strategy import SmaCrossStrategy
 from .triple_screen_strategy import TripleScreenStrategy
+from .turn_of_the_month_strategy import TurnOfTheMonthStrategy
 
 STRATEGY_REGISTRY: dict[str, dict[str, Any]] = {
     "RSIMeanReversionStrategy": {
@@ -159,6 +160,33 @@ STRATEGY_REGISTRY: dict[str, dict[str, Any]] = {
                 "default": 0.05,
                 "description": "Trailing stop percentage.",
             },
+        },
+    },
+    "ArquetipoAStrategy": {
+        "cls": ArquetipoAStrategy,
+        "type": "deterministic",
+        "cli_alias": "arquetipo-a",
+        "display_name": ArquetipoAStrategy.describe()["display_name"],
+        "description": ArquetipoAStrategy.describe()["description"],
+        "min_bars": 185,
+        "params": {
+            "weekly_bars": {"type": int, "default": 5, "description": "Bars per higher timeframe bar."},
+            "trend_ema_period": {"type": int, "default": 26, "description": "Weekly EMA trend period."},
+            "macd_fast": {"type": int, "default": 12, "description": "Weekly MACD fast period."},
+            "macd_slow": {"type": int, "default": 26, "description": "Weekly MACD slow period."},
+            "macd_signal": {"type": int, "default": 9, "description": "Weekly MACD signal period."},
+            "force_index_period": {"type": int, "default": 2, "description": "Force Index period."},
+            "rsi_period": {"type": int, "default": 3, "description": "RSI period."},
+            "rsi_oversold": {"type": float, "default": 30.0, "description": "RSI oversold threshold."},
+            "ema_trend_period": {"type": int, "default": 22, "description": "Daily EMA trend period."},
+            "entry_atr_mult": {"type": float, "default": 0.1, "description": "ATR multiple for buy stop."},
+            "entry_expiry_bars": {"type": int, "default": 3, "description": "Expiry bars for buy stop."},
+            "atr_period": {"type": int, "default": 14, "description": "ATR period."},
+            "swing_window": {"type": int, "default": 5, "description": "Lookback for swing low."},
+            "swing_atr_mult": {"type": float, "default": 2.0, "description": "ATR multiple below swing low."},
+            "safezone_period": {"type": int, "default": 10, "description": "SafeZone period."},
+            "safezone_coef": {"type": float, "default": 2.0, "description": "SafeZone coefficient."},
+            "chandelier_mult": {"type": float, "default": 3.0, "description": "ATR multiple for Chandelier exit."},
         },
     },
     "SmaCrossStrategy": {
