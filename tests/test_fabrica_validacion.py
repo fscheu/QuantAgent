@@ -208,6 +208,32 @@ def test_etapa2_cuenta_ordenes_posiciones_objetivo(tmp_path, monkeypatch):
     assert all(f["control"].startswith("no aplica: posiciones objetivo") for f in filas)
 
 
+def test_correr_motor_ejecuta_pesos_objetivo_con_panel_sincronizado(tmp_path, monkeypatch):
+    from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fechas = pd.bdate_range("2007-01-01", "2018-12-31")
+    fase = np.arange(len(fechas))
+    spy = 100 * np.exp(0.0002 * fase + 0.08 * np.sin(fase / 20))
+    ief = 100 * np.exp(0.0001 * fase - 0.08 * np.sin(fase / 20))
+    velas = lambda close: pd.DataFrame({"open": close, "high": close, "low": close,
+                                         "close": close, "adj_close": close, "volume": 1000.0},
+                                        index=fechas)
+    write_snapshot("sintetico", {"SPY": velas(spy), "IEF": velas(ief)}, base_dir=tmp_path)
+    h = Hipotesis("cartera-f1-e2-real", "autor", "just", piernas=(
+        Pierna("rebalanceo-fin-de-mes", {}, ("SPY", "IEF"), "U"),))
+
+    _, filas = validacion.validar_etapa2(
+        h, "sintetico", {("rebalanceo-fin-de-mes", a): {} for a in ("SPY", "IEF")},
+        tmp_path / "salida")
+
+    assert {f["activo"] for f in filas} == {"SPY", "IEF"}
+    assert [int(f["trades"]) for f in filas] == [286, 286]
+    assert all(f["pnl"] and f["sharpe_tasa_0"] for f in filas)
+    for activo in ("SPY", "IEF"):
+        assert (tmp_path / "salida" / "equity" / f"rebalanceo-fin-de-mes-{activo}.csv").exists()
+
+
 @pytest.mark.parametrize("dsr,pnl,esperado", [(0.95, 1, "PASA"), (0.94, 1, "CORTA"),
                                           (0.99, -1, "CORTA"), (None, 1, "CORTA")])
 def test_etapa3_regla(tmp_path, monkeypatch, dsr, pnl, esperado):
