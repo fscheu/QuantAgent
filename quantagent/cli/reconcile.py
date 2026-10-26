@@ -78,10 +78,12 @@ def trading_digest(archivo, digest_date, db: str | None, shadow: str | None, por
         os.environ["DATABASE_URL"] = f"sqlite:///{os.path.abspath(db)}"
     db_path = db or make_url(settings.DATABASE_URL).database
     shadow_path = Path(shadow) if shadow else Path(db_path).with_suffix(".sombra.json")
-    warnings, differences = ["Equity paper = valor invertido; la DB no guarda caja."], []
+    warnings, differences = ["Equity paper = valor invertido; la DB no guarda caja.",
+                             "Dividendos: sin fuente de dividendos."], []
+    orders = []
     try:
         with utils.session_scope() as session:
-            portfolios, trades, heartbeats, cumulative_pnl, _orders = consultar_datos_paper(session, day, portfolio)
+            portfolios, trades, heartbeats, cumulative_pnl, orders = consultar_datos_paper(session, day, portfolio)
             values = {p["symbol"]: float(p["value"]) for p in portfolios[0]["positions"]} if portfolios else {}
             invested = sum(values.values())
             paper_weights = {symbol: value / invested for symbol, value in values.items()} if invested else {}
@@ -93,14 +95,16 @@ def trading_digest(archivo, digest_date, db: str | None, shadow: str | None, por
             else:
                 differences = comparar_pesos(paper_weights, shadow_weights)
     except (SQLAlchemyError, ValueError):
-        portfolios, trades, heartbeats, cumulative_pnl, _orders = [], [], [], 0.0, []
+        portfolios, trades, heartbeats, cumulative_pnl, orders = [], [], [], 0.0, []
     finally:
         settings.DATABASE_URL = previous_settings_url
         if previous_url is None:
             os.environ.pop("DATABASE_URL", None)
         else:
             os.environ["DATABASE_URL"] = previous_url
+    rejection_reports = reportar_rechazos([SimpleNamespace(**order) for order in orders])
     click.echo(build_digest(day, portfolios, trades, heartbeats, warnings=warnings,
-                            reconciliations=differences, cumulative_pnl=cumulative_pnl))
-    if differences:
+                            reconciliations=[*differences, *rejection_reports], cumulative_pnl=cumulative_pnl))
+    if differences or any(str(order.get("status")).lower() == "rejected" and not order.get("comment")
+                          for order in orders):
         raise click.exceptions.Exit(1)
