@@ -53,7 +53,7 @@ def test_rebalanceo_aprobado_pasa_admision_sin_parametros(tmp_path, monkeypatch)
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(datos))
     propuestas_dir, hipotesis_dir = tmp_path / "propuestas", tmp_path / "hipotesis"
     propuestas_dir.mkdir()
-    propuesta = Path(__file__).parents[1] / "catalogo/propuestas/rebalanceo-fin-de-mes.yaml"
+    propuesta = Path(__file__).parents[1] / "hipotesis/rebalanceo-fin-de-mes.yaml"
     (propuestas_dir / propuesta.name).write_text(propuesta.read_text(encoding="utf-8"), encoding="utf-8")
     fechas = pd.bdate_range("2007-01-01", "2018-12-31")
     precios = np.linspace(80, 120, len(fechas))
