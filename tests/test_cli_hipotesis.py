@@ -83,6 +83,9 @@ def test_reserva_abrir_pre_registra_y_rechaza_segunda_apertura(tmp_path, monkeyp
         abiertas.add((hipotesis_id, periodo))
 
     monkeypatch.setattr(hipotesis, "abrir", observar_apertura)
+    monkeypatch.setattr(hipotesis, "validar_etapa3", lambda *a, **k: ("PASA", []))
+    monkeypatch.setattr("quantagent.fabrica.informe.diagnostico_exceso", lambda *a, **k: {
+        "disponible": True, "sharpe_cartera": 0.0, "sharpe_benchmark": 0.0})
     runner = CliRunner()
     args = ["reserva", str(archivo), "--snapshot", "reserva-sintetica", "--abrir"]
     primera = runner.invoke(hipotesis.hipotesis_group, args)
@@ -94,6 +97,56 @@ def test_reserva_abrir_pre_registra_y_rechaza_segunda_apertura(tmp_path, monkeyp
     assert segunda.exit_code == 1
     assert "ya fue abierta" in segunda.output
     assert (tmp_path / "reserva-accesos.log").read_text() == log
+
+
+def test_reserva_abierta_imprime_c0_m1_y_registra_intento(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    monkeypatch.setenv("QUANTAGENT_RESERVA_DESDE", "2023-01-01")
+    archivo = Path(__file__).parents[1] / "hipotesis/rebalanceo-fin-de-mes.yaml"
+    fechas = pd.bdate_range("2022-12-30", "2024-01-02")
+    velas = pd.DataFrame({c: 100.0 for c in ("open", "high", "low", "close", "adj_close", "volume")}, index=fechas)
+    write_snapshot("reserva-sintetica", {"SPY": velas, "IEF": velas}, base_dir=tmp_path)
+    monkeypatch.setattr(hipotesis, "ultimo_estado", lambda _: {"etapa": "2", "veredicto": "PASA"})
+    monkeypatch.setattr(hipotesis, "fecha_apertura", lambda *_: None)
+    monkeypatch.setattr(hipotesis, "abrir", lambda *_: None)
+
+    from quantagent.data.macro import crear_snapshot_macro
+    filas_macro = [(pd.Timestamp(f"{year}-01-01"), 2.0, pd.Timestamp(f"{year}-01-01"),
+                    pd.Timestamp("9999-12-31")) for year in (2023, 2024)]
+    macro = pd.DataFrame(filas_macro, columns=["fecha", "valor", "realtime_start", "realtime_end"])
+
+    class ClienteSintetico:
+        def observaciones(self, *args, **kwargs):
+            return macro
+
+    crear_snapshot_macro("macro-2026-10", ["DGS3MO"], ClienteSintetico(), base_dir=tmp_path)
+
+    def correr_motor(h, snapshot, parametros, desde, hasta, carpeta, etapa, **kwargs):
+        eq_dir = carpeta / "equity"
+        eq_dir.mkdir(parents=True)
+        fechas_eq = pd.bdate_range(desde, periods=4)
+        from quantagent.cli.sweep import registrar_intento
+        for activo in ("SPY", "IEF"):
+            pd.DataFrame({"date": fechas_eq, "equity": [100000, 101000, 100500, 102000]}).to_csv(
+                eq_dir / f"{h.clase}-{activo}.csv", index=False)
+            registrar_intento(h.clase, activo, snapshot, "etf", 1.0, {},
+                              {"desde": desde, "hasta": hasta, "trades": 3, "pnl": 100, "sharpe": 0.3},
+                              hipotesis=h.id, etapa=etapa)
+        return [{"activo": a, "trades": "3", "pnl": "100", "sharpe_tasa_0": "0.3",
+                 "max_drawdown": "0.01"} for a in ("SPY", "IEF")]
+
+    from quantagent.fabrica import validacion
+    monkeypatch.setattr(validacion, "correr_motor", correr_motor)
+    result = CliRunner().invoke(hipotesis.hipotesis_group,
+                                ["reserva", str(archivo), "--snapshot", "reserva-sintetica", "--abrir"])
+    assert result.exit_code == 0, result.output
+    assert "C0: CORTA" in result.output and "Sharpe en exceso de DGS3MO" in result.output
+    with (tmp_path / "intentos.csv").open() as f:
+        intentos = list(csv.DictReader(f))
+    intento = next(f for f in intentos if f["sharpe_base"] == "DGS3MO")
+    assert intento["activo"] == "cartera" and intento["etapa"] == "3"
+    assert intento["desde"] == "2023-01-01" and intento["hasta"] == "2024-01-02"
+    assert "CORTA" in (tmp_path / "hipotesis.csv").read_text()
 
 
 def test_tendencia_larga_corta_aprobada_pasa_admision_con_snapshots_sinteticos(tmp_path, monkeypatch):
