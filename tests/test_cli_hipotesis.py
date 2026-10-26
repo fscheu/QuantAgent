@@ -65,6 +65,37 @@ def test_reserva_rechaza_fuera_de_lista_y_apertura_previa(tmp_path, monkeypatch)
     assert candado.read_text() == original
 
 
+def test_reserva_abrir_pre_registra_y_rechaza_segunda_apertura(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    monkeypatch.setenv("QUANTAGENT_RESERVA_DESDE", "2023-01-01")
+    archivo = Path(__file__).parents[1] / "hipotesis/rebalanceo-fin-de-mes.yaml"
+    fechas = pd.bdate_range("2022-12-30", "2024-01-02")
+    velas = pd.DataFrame({c: 100.0 for c in ("open", "high", "low", "close", "adj_close", "volume")}, index=fechas)
+    write_snapshot("reserva-sintetica", {"SPY": velas, "IEF": velas}, base_dir=tmp_path)
+    monkeypatch.setattr(hipotesis, "ultimo_estado", lambda _: {"etapa": "2", "veredicto": "PASA"})
+    abiertas, orden = set(), []
+    monkeypatch.setattr(hipotesis, "fecha_apertura", lambda h, p: "sintética" if (h, p) in abiertas else None)
+
+    def observar_apertura(hipotesis_id, periodo):
+        preregistro = (tmp_path / "reserva-preregistro.log").read_text()
+        orden.append((hipotesis_id in preregistro, "elegible" in preregistro,
+                      not (tmp_path / "reserva-accesos.log").exists()))
+        abiertas.add((hipotesis_id, periodo))
+
+    monkeypatch.setattr(hipotesis, "abrir", observar_apertura)
+    runner = CliRunner()
+    args = ["reserva", str(archivo), "--snapshot", "reserva-sintetica", "--abrir"]
+    primera = runner.invoke(hipotesis.hipotesis_group, args)
+    assert primera.exit_code == 0, primera.output
+    assert orden == [(True, True, True)]
+    log = (tmp_path / "reserva-accesos.log").read_text()
+    assert "hipotesis reserva" in log and "--abrir" in log
+    segunda = runner.invoke(hipotesis.hipotesis_group, args)
+    assert segunda.exit_code == 1
+    assert "ya fue abierta" in segunda.output
+    assert (tmp_path / "reserva-accesos.log").read_text() == log
+
+
 def test_tendencia_larga_corta_aprobada_pasa_admision_con_snapshots_sinteticos(tmp_path, monkeypatch):
     datos = tmp_path / "datos"
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(datos))
