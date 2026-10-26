@@ -37,7 +37,7 @@ from quantagent.fabrica.validacion import (
     validar_etapa3,
 )
 from quantagent.settings import COSTOS_PERFILES
-from quantagent.strategy.registry import STRATEGY_REGISTRY, cli_aliases
+from quantagent.strategy.registry import STRATEGY_REGISTRY, build_strategy, cli_aliases
 
 from .sweep import registrar_intento
 
@@ -158,6 +158,32 @@ def filtrar_hipotesis(h, snapshot_name):
                 resultados.append([activo, r["sharpe_tasa_0"], r["trades"]])
                 filas_tabla.append([p.clase, activo, r["sharpe_tasa_0"], r["trades"]] if h.es_cartera else [activo, r["sharpe_tasa_0"], r["trades"]])
         else:
+            nombre = cli_aliases().get(p.clase) or p.clase
+            estrategia = build_strategy(nombre, **next(iter(p.combinaciones()), {}))
+            if hasattr(estrategia, "posiciones_objetivo"):
+                panel_cierres = {}
+                panel_velas = {}
+                for activo in p.activos:
+                    try:
+                        v = read_snapshot(snapshot_name, activo).loc["2007-01-01":"2018-12-31"]
+                        if v.empty:
+                            raise ValueError("Sin velas entre 2007 y 2018")
+                        cierres_dict[activo] = v["close"]
+                        panel_cierres[activo] = v["close"]
+                        panel_velas[activo] = v.rename_axis("timestamp").reset_index()
+                    except (ValueError, SnapshotError) as exc:
+                        raise click.ClickException(str(exc)) from exc
+                r = filtrar_activo(p, panel_velas[p.activos[0]], costos=COSTOS_PERFILES["etf"],
+                                   capital=100_000.0, panel_cierres=pd.DataFrame(panel_cierres))
+                for activo, por_activo in r["por_activo"].items():
+                    clave = (p.clase, activo) if h.es_cartera else activo
+                    resultados.append([activo, por_activo["sharpe_tasa_0"], por_activo["trades"]])
+                    filas_tabla.append([p.clase, activo, por_activo["sharpe_tasa_0"], por_activo["trades"]]
+                                       if h.es_cartera else [activo, por_activo["sharpe_tasa_0"], por_activo["trades"]])
+                    retornos_dict[(i, activo)] = por_activo["retornos"]
+                    parametros[clave] = parametros_elegidos(por_activo["ganadores"])
+                    total_trades += por_activo["trades"]
+                continue
             for activo in p.activos:
                 try:
                     v = read_snapshot(snapshot_name, activo).loc["2007-01-01":"2018-12-31"]
