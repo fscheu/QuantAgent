@@ -37,3 +37,17 @@ Salida real: `Etapa 0: PASA (admisión aceptada)`; `Etapa 1: PASA (Sharpe de car
 ## Nota del PM
 
 Entrega recuperada por el PM del log de la corrida de Codex (la rama `loop/QuantAgent-e4jc.3` ya existía por #526 y el wrapper no pudo publicar). Cifras copiadas del IM de Codex, no recalculadas. Salvedad: la etapa 2 muestra 0 trades por activo para una estrategia de pesos objetivo, así que el CORTA de etapa 2 es probablemente otro artefacto de conteo (el control de etapa 2 no ve los rebalanceos). Ticket de seguimiento: QuantAgent-tm5d.
+
+## Repetición f1d tras tso5
+
+Corrida única del 2026-10-26 con el motor de cartera sincronizado. Etapa 0 **PASA** (avisos no bloqueantes `desvio_de_la_cita` y `overlay_solo_largo`); etapa 1 **PASA** (Sharpe de cartera 1,19); etapa 2 **PASA**: SPY e IEF superan V30 y el control coincide en 2 de 2. `celdas.csv` registra 339 trades por activo; PnL de SPY 106.692,64 y de IEF 34.446,72. Las curvas diarias quedaron en `local-data/intentos/f1d/equity/`. La correlación de Pearson de los retornos diarios de la curva combinada F1 (promedio equiponderado de las dos curvas de equity) contra 1/N (promedio equiponderado de los retornos ajustados SPY e IEF) es **0,8735** en **3.019 retornos**. El control coincide para ambos activos.
+
+No se abrió 2019–2022, la reserva 2023+ ni se modificó el candado. Dado que la etapa 2 pasa, se solicita a Fede el OK para incluir F1 en la reserva; no se abrió.
+
+Comando (exit 0):
+
+```bash
+NUMBA_CACHE_DIR=/tmp/numba-cache MPLCONFIGDIR=/tmp/mpl-cache QUANTAGENT_SNAPSHOT_DIR=/home/azureuser/repos/projects/QuantAgent/local-data python -m quantagent.cli backtest hipotesis correr hipotesis/rebalanceo-fin-de-mes.yaml --snapshot etf-1d-2026-10-amplio --carpeta local-data/intentos/f1d --hasta-etapa 2
+```
+
+Salida: `Etapa 0: PASA (admisión aceptada)`; `Etapa 1: PASA (Sharpe de cartera 1.19)`; `Etapa 2: PASA (pasan V30: SPY, IEF; control coincide en 2 de 2)`; `Llegó a la etapa 2: PASA (pasan V30: SPY, IEF; control coincide en 2 de 2)`.
