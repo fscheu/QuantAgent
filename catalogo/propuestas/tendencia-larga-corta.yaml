@@ -16,6 +16,8 @@ clase: tsmom-largo-corto
 ventana:
   lookback: [252]
   tasa_corta: [DGS3MO]
+parametros:
+  snapshot: [macro-2026-10]
 hipotesis_economica: Los precios incorporan la información de a poco y después sobrerreaccionan,
   y los coberturistas pagan por transferir riesgo; por eso el retorno de 12 meses anticipa
   el del mes siguiente en las dos direcciones (Moskowitz, Ooi y Pedersen 2012, en 58
