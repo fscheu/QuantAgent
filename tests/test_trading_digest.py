@@ -176,3 +176,32 @@ def test_trading_digest_reconciles_shadow_weights_and_missing_date(tmp_path):
     shadow_path.write_text('{}')
     result = CliRunner().invoke(cli, args)
     assert result.exit_code == 0 and "Sombra sin datos" in result.output
+
+
+def test_trading_digest_reports_rejections_and_dividend_source_notice(tmp_path):
+    db_path = tmp_path / "paper.db"
+    engine = create_engine(f"sqlite:///{db_path}")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        session.add_all([
+            Order(symbol="SPY", side=OrderSide.BUY, order_type=OrderType.MARKET, quantity=1,
+                  status=OrderStatus.REJECTED, created_at=datetime(2026, 10, 25, 11),
+                  environment=Environment.PAPER),
+            SchedulerHeartbeat(timestamp=datetime(2026, 10, 25, 10), status="completed",
+                               environment=Environment.PAPER),
+        ])
+        session.commit()
+
+    args = ["trading", "digest", "--date", "2026-10-25", "--db", str(db_path)]
+    result = CliRunner().invoke(cli, args)
+    assert result.exit_code == 1
+    assert "SPY: rechazo sin explicación" in result.output
+    assert "Dividendos: sin fuente de dividendos." in result.output
+
+    with Session(engine) as session:
+        session.query(Order).filter_by(symbol="SPY").update({"comment": "saldo insuficiente"})
+        session.commit()
+    result = CliRunner().invoke(cli, args)
+    assert result.exit_code == 0
+    assert "SPY: rechazo, saldo insuficiente" in result.output
+    assert "Dividendos: sin fuente de dividendos." in result.output
