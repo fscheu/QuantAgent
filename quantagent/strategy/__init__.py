@@ -1,3 +1,4 @@
+from .arquetipo_a_strategy import ArquetipoAStrategy
 from .base import TradingSignal, TradingStrategy
 from .fifty_two_week_high_strategy import FiftyTwoWeekHighStrategy
 from .llm_agent_strategy import LLMAgentStrategy
@@ -16,6 +17,7 @@ __all__ = [
     "TradingComponents",
     "TradingStrategy",
     "TradingSignal",
+    "ArquetipoAStrategy",
     "FiftyTwoWeekHighStrategy",
     "LLMAgentStrategy",
     "RSIMeanReversionStrategy",
