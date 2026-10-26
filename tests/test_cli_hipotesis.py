@@ -48,6 +48,26 @@ def test_tendencia_larga_corta_aprobada_pasa_admision_con_snapshots_sinteticos(t
     assert h.parametros == {"snapshot": ["macro-2026-10"]}
 
 
+def test_rebalanceo_aprobado_pasa_admision_sin_parametros(tmp_path, monkeypatch):
+    datos = tmp_path / "datos"
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(datos))
+    propuestas_dir, hipotesis_dir = tmp_path / "propuestas", tmp_path / "hipotesis"
+    propuestas_dir.mkdir()
+    propuesta = Path(__file__).parents[1] / "catalogo/propuestas/rebalanceo-fin-de-mes.yaml"
+    (propuestas_dir / propuesta.name).write_text(propuesta.read_text(encoding="utf-8"), encoding="utf-8")
+    fechas = pd.bdate_range("2007-01-01", "2018-12-31")
+    precios = np.linspace(80, 120, len(fechas))
+    velas = pd.DataFrame({"open": precios, "high": precios + 1, "low": precios - 1,
+                          "close": precios, "adj_close": precios, "volume": 1000.0}, index=fechas)
+    write_snapshot("etf-1d-2026-10-amplio", {"SPY": velas, "IEF": velas}, base_dir=datos)
+    aprobado = CliRunner().invoke(backtest_group, ["hipotesis", "propuestas", "aprobar", "rebalanceo-fin-de-mes",
+        "--quien", "fede", "--propuestas-dir", str(propuestas_dir), "--hipotesis-dir", str(hipotesis_dir)])
+    assert aprobado.exit_code == 0, aprobado.output
+    h, ok, motivos = hipotesis.admitir_hipotesis(hipotesis_dir / propuesta.name, "etf-1d-2026-10-amplio")
+    assert ok, motivos
+    assert h.parametros == {}
+
+
 @pytest.mark.parametrize("calendario_desigual", [False, True])
 def test_filtrar_hipotesis_transporta_seleccion_oos_al_calculo_real(monkeypatch, resultado_ganadores_distintos, calendario_desigual):
     h, p, paneles, r = resultado_ganadores_distintos
