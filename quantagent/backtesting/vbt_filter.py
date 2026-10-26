@@ -59,20 +59,29 @@ def run_filter(signals: pd.DataFrame, candles: pd.DataFrame, *, commission_pct: 
             if pending is not None:
                 if h[i] >= pending["px"]:
                     eff_e[i], eff_p[i] = pending["side"], max(o[i], pending["px"])
-                    for k in STOP_COLUMNS: eff_s[k][i] = pending["s"][k]
+                    for k in STOP_COLUMNS:
+                        eff_s[k][i] = pending["s"][k]
                     eff_tr[i], pending = pending["tr"], None
                 else:
                     pending["el"] += 1
-                    if pending["exp"] and pending["el"] >= pending["exp"]: pending = None
+                    if pending["exp"] and pending["el"] >= pending["exp"]:
+                        pending = None
                 continue
             if s_side:
                 if orders[i] == "stop" and s_side == 1:
                     px = prices[i] if np.isfinite(prices[i]) else c[i]
-                    pending = {"side": int(s_side), "px": float(px), "exp": expiries[i] if np.isfinite(expiries[i]) else None,
-                               "el": 0, "s": {k: s_stops[k][i] for k in STOP_COLUMNS}, "tr": s_tr[i]}
+                    pending = {
+                        "side": int(s_side),
+                        "px": float(px),
+                        "exp": expiries[i] if np.isfinite(expiries[i]) else None,
+                        "el": 0,
+                        "s": {k: s_stops[k][i] for k in STOP_COLUMNS},
+                        "tr": s_tr[i],
+                    }
                 elif i + 1 < n:
                     eff_e[i + 1], eff_p[i + 1] = int(s_side), o[i + 1]
-                    for k in STOP_COLUMNS: eff_s[k][i + 1] = s_stops[k][i]
+                    for k in STOP_COLUMNS:
+                        eff_s[k][i + 1] = s_stops[k][i]
                     eff_tr[i + 1] = s_tr[i]
         entry, entry_price = pd.Series(eff_e, index=signals.index), pd.Series(eff_p, index=signals.index)
         stops = {k: pd.Series(eff_s[k], index=signals.index) for k in STOP_COLUMNS}
