@@ -732,6 +732,7 @@ Los primeros 5 son los más fáciles de revisar.
 | X12a2 | `QuantAgent-t2qp.2` | F2-c0b: integrar señal corta al filtro y cartera; depende de t2qp.1 | Filtro y cartera respetan signo de señal y 1/sigma; long-only intacto | leer | L20 |
 | X12a3 | `QuantAgent-t2qp.3` | F2-c0c: habilitar YAML oficial en CLI hasta etapa 1; depende de t2qp.2 | `hipotesis correr` hasta etapa 1 no falla por estrategia desconocida; YAML no se mueve a `hipotesis/` | probar | L20 |
 | X12 | `QuantAgent-e4jc.6` | F2-c (R12): F2 por las etapas 0 a 2 (VM); depende de X10c, S01 y X14c | IM con veredicto y correlación con 1/N; ninguna entrada nueva en el candado | decidir | L20 |
+| X12b | `QuantAgent-46pk` | F2: diagnóstico de errores del adaptador al validar órdenes cortas en la etapa 2 (hallazgo del IM de e4jc.6, #521); VM con datos reales, sin abrir 2019–2022 | Lista de celdas con error y mensaje exacto; test que lo reproduce; veredicto de F2 con y sin esas celdas | probar | L20 |
 | X13 | `QuantAgent-e4jc.7` | D-1: factores AQR y French cortados en 2018-12; AQR no se versiona | Ninguna fecha posterior a 2018-12; archivos de AQR ignorados por git | leer | L20 |
 | X14a | `QuantAgent-e4jc.8.1` | D-2a: regla con corte en 2007 antes de seleccionar ETFs; sin PTP | Regla integrada en commit propio, condiciones verificables y ninguna lista de candidatos | leer | L20 |
 | X14b | `QuantAgent-e4jc.8.2` | D-2b: documentar empalme con proxies gratuitos; depende de X14a | Fuentes, unidades, fórmula, fecha del enlace, validación y límites por clase | leer | L20 |
