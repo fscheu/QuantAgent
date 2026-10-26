@@ -5,7 +5,7 @@ from quantagent.digest import build_digest
 from quantagent.database import Base
 from quantagent.digest_datos import consultar_datos_paper
 from quantagent import settings
-from quantagent.models import ActivePosition, Environment, ExitPolicy, OrderSide, Position, SchedulerHeartbeat, Trade
+from quantagent.models import ActivePosition, Environment, ExitPolicy, Order, OrderSide, OrderStatus, OrderType, Position, SchedulerHeartbeat, Trade
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from click.testing import CliRunner
@@ -82,6 +82,13 @@ def test_consultar_datos_paper_usa_modelos_y_filtra_dia_y_ambiente(tmp_path):
                            exit_policy=ExitPolicy.SL_TP_ONLY, environment=Environment.PAPER),
         ])
         session.add_all([
+            Order(symbol="SPY", side=OrderSide.BUY, order_type=OrderType.MARKET, quantity=2,
+                  filled_quantity=1, status=OrderStatus.PARTIALLY_FILLED,
+                  created_at=datetime(2026, 10, 25, 11), comment="rebalance", environment=Environment.PAPER),
+            Order(symbol="QQQ", side=OrderSide.BUY, order_type=OrderType.MARKET, quantity=1,
+                  created_at=datetime(2026, 10, 25, 11), environment=Environment.BACKTEST),
+            Order(symbol="IWM", side=OrderSide.SELL, order_type=OrderType.MARKET, quantity=1,
+                  created_at=datetime(2026, 10, 24, 11), environment=Environment.PAPER),
             Trade(symbol="SPY", entry_price=490, exit_price=500, quantity=1,
                   side=OrderSide.SELL, pnl=10, opened_at=datetime(2026, 10, 25, 9),
                   closed_at=datetime(2026, 10, 25, 10), environment=Environment.PAPER),
@@ -109,12 +116,14 @@ def test_consultar_datos_paper_usa_modelos_y_filtra_dia_y_ambiente(tmp_path):
                                environment=Environment.PAPER),
         ])
         session.commit()
-        portfolios, trades, heartbeats, realized_pnl = consultar_datos_paper(session, day, "alpha")
+        portfolios, trades, heartbeats, realized_pnl, orders = consultar_datos_paper(session, day, "alpha")
 
     assert portfolios == [{"name": "alpha", "positions": [
-        {"symbol": "SPY", "quantity": 2, "price": 500, "unrealized_pnl": 20}
+        {"symbol": "SPY", "quantity": 2, "price": 500, "value": 1000, "unrealized_pnl": 20}
     ]}]
     assert trades == [{"symbol": "SPY", "side": "sell", "quantity": 1, "pnl": 10}]
+    assert orders == [{"symbol": "SPY", "side": "buy", "status": "partially_filled",
+                       "quantity": 2, "filled_quantity": 1, "comment": "rebalance"}]
     assert heartbeats == [{"timestamp": datetime(2026, 10, 22, 10),
                            "status": "completed", "error_message": None},
                           {"timestamp": datetime(2026, 10, 24, 10),

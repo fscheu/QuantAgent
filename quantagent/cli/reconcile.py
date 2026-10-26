@@ -72,9 +72,9 @@ def trading_digest(archivo, digest_date, db: str | None, portfolio: str) -> None
         os.environ["DATABASE_URL"] = f"sqlite:///{os.path.abspath(db)}"
     try:
         with utils.session_scope() as session:
-            portfolios, trades, heartbeats, cumulative_pnl = consultar_datos_paper(session, day, portfolio)
+            portfolios, trades, heartbeats, cumulative_pnl, _orders = consultar_datos_paper(session, day, portfolio)
     except (SQLAlchemyError, ValueError):
-        portfolios, trades, heartbeats, cumulative_pnl = [], [], [], 0.0
+        portfolios, trades, heartbeats, cumulative_pnl, _orders = [], [], [], 0.0, []
     finally:
         settings.DATABASE_URL = previous_settings_url
         if previous_url is None:
