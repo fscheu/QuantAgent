@@ -149,6 +149,39 @@ def test_reserva_abierta_imprime_c0_m1_y_registra_intento(tmp_path, monkeypatch)
     assert "CORTA" in (tmp_path / "hipotesis.csv").read_text()
 
 
+def test_reserva_veredicto_recupera_m1_una_vez_desde_curvas(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fechas = pd.date_range("2023-01-02", periods=4)
+    carpeta = tmp_path / "reserva" / "rebalanceo-fin-de-mes" / "equity"
+    carpeta.mkdir(parents=True)
+    for activo, valores in (("SPY", [100, 102, 103, 106]), ("IEF", [100, 101, 103, 104])):
+        pd.DataFrame({"date": fechas, "equity": valores}).to_csv(carpeta / f"{activo}.csv", index=False)
+    frame = pd.DataFrame({a: [100, 101, 102, 103] for a in ("SPY", "IEF")}, index=fechas)
+    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda *a, **k: frame.assign(close=frame[a[1]]))
+    monkeypatch.setattr(hipotesis, "fecha_apertura", lambda *_: "ya abierta")
+    monkeypatch.setattr(hipotesis, "abrir", lambda *_: pytest.fail("abrir llamado"))
+    from quantagent.fabrica import validacion
+    monkeypatch.setattr(validacion, "correr_motor", lambda *a, **k: pytest.fail("motor llamado"))
+    from quantagent.data.macro import _escribir
+    macro = pd.DataFrame({"fecha": [fechas[0]], "realtime_start": [fechas[0]],
+                          "realtime_end": [pd.Timestamp("2099-01-01")], "valor": [0.0]})
+    _escribir(tmp_path / "macro-2026-10", "macro-2026-10", {"DGS3MO": macro})
+    runner = CliRunner()
+    args = ["reserva-veredicto", str(Path(__file__).parents[1] / "hipotesis/rebalanceo-fin-de-mes.yaml"),
+            "--snapshot", "reserva-sintetica"]
+    primera = runner.invoke(hipotesis.hipotesis_group, args)
+    segunda = runner.invoke(hipotesis.hipotesis_group, args)
+    assert primera.exit_code == 0, primera.output
+    assert segunda.exit_code == 0 and "ya recuperada" in segunda.output
+    from quantagent.fabrica.informe import diagnostico_exceso
+    h = hipotesis.cargar_hipotesis(args[1])
+    esperado = diagnostico_exceso(h, carpeta, "reserva-sintetica", base_dir=tmp_path)["sharpe_cartera"]
+    intentos = list(csv.DictReader((tmp_path / "intentos.csv").open()))
+    assert len(intentos) == 1 and float(intentos[0]["sharpe"]) == pytest.approx(esperado)
+    assert len([r for r in csv.DictReader((tmp_path / "hipotesis.csv").open()) if r["etapa"] == "3"]) == 1
+    assert "M1 cartera" in primera.output
+
+
 def test_tendencia_larga_corta_aprobada_pasa_admision_con_snapshots_sinteticos(tmp_path, monkeypatch):
     datos = tmp_path / "datos"
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(datos))
