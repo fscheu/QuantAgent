@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from quantagent.fabrica import filtro
-from quantagent.fabrica.cartera import curva_cartera, pesos
+from quantagent.fabrica.cartera import curva_cartera, pesos, pesos_f1
 from quantagent.fabrica.hipotesis import Hipotesis
 
 COSTOS = {"commission_pct": 0.0, "slippage_pct": 0.0}
@@ -151,3 +151,23 @@ def test_tsmom_largo_corto_llega_a_filtro_y_cartera(monkeypatch):
     assert w.iloc[-1][(0, "DOWN")] > w.iloc[-1][(0, "UP")]
     equity = curva_cartera(cierres, {0: ["DOWN", "UP"]}, retornos)
     assert equity.iloc[-1] > 100_000.0
+
+
+def test_pesos_f1_tiene_rebalances_que_el_conteo_de_senales_ignora():
+    fechas = pd.bdate_range("2007-01-01", "2018-12-31")
+    x = np.arange(len(fechas))
+    cierres = pd.DataFrame({"SPY": 100 * np.exp(x * 0.0002 + 0.03 * np.sin(x / 18)),
+                            "IEF": 100 * np.exp(x * 0.0001 - 0.02 * np.sin(x / 18))}, index=fechas)
+    cambios = pesos_f1(cierres).diff().fillna(0)
+    fechas_con_cambio = int(cambios.abs().sum(axis=1).gt(0).sum())
+    ordenes_objetivo = int(cambios.ne(0).sum().sum())
+    resultados = [filtro.filtrar_activo(
+        Hipotesis(id="f1-test", autor="test", justificacion="sintético", clase="rebalanceo-fin-de-mes",
+                  activos=(activo,)),
+        pd.DataFrame({"timestamp": fechas, "open": cierres[activo], "high": cierres[activo],
+                      "low": cierres[activo], "close": cierres[activo], "volume": 1.0}),
+        costos=COSTOS, capital=100_000.0,
+    ) for activo in ("SPY", "IEF")]
+    assert fechas_con_cambio == 288
+    assert ordenes_objetivo == 576
+    assert [r["trades"] for r in resultados] == [0, 0]
