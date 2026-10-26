@@ -156,6 +156,9 @@ def test_reserva_veredicto_recupera_m1_una_vez_desde_curvas(tmp_path, monkeypatc
     carpeta.mkdir(parents=True)
     for activo, valores in (("SPY", [100, 102, 103, 106]), ("IEF", [100, 101, 103, 104])):
         pd.DataFrame({"date": fechas, "equity": valores}).to_csv(carpeta / f"{activo}.csv", index=False)
+    trades_dir = tmp_path / "reserva" / "rebalanceo-fin-de-mes" / "trades"
+    trades_dir.mkdir()
+    (trades_dir / "rebalanceo-fin-de-mes-SPY.csv").write_text("date,symbol\n2023-01-02,SPY\n2023-01-03,SPY\n")
     frame = pd.DataFrame({a: [100, 101, 102, 103] for a in ("SPY", "IEF")}, index=fechas)
     monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda *a, **k: frame.assign(close=frame[a[1]]))
     monkeypatch.setattr(hipotesis, "fecha_apertura", lambda *_: "ya abierta")
@@ -174,12 +177,21 @@ def test_reserva_veredicto_recupera_m1_una_vez_desde_curvas(tmp_path, monkeypatc
     assert primera.exit_code == 0, primera.output
     assert segunda.exit_code == 0 and "ya recuperada" in segunda.output
     from quantagent.fabrica.informe import diagnostico_exceso
+    from quantagent.fabrica.criterio import evaluar_etapa3_cartera, sharpe_benchmark
     h = hipotesis.cargar_hipotesis(args[1])
     esperado = diagnostico_exceso(h, carpeta, "reserva-sintetica", base_dir=tmp_path)["sharpe_cartera"]
+    cierres = pd.DataFrame({a: frame[a] for a in ("SPY", "IEF")})
+    cierres_etapa2 = pd.DataFrame({a: frame[a].loc["2007-01-01":"2018-12-31"] for a in ("SPY", "IEF")})
+    eq_cartera = hipotesis.curva_cartera_guardada(h, tmp_path / "reserva" / h.id, None)
+    pasa, _ = evaluar_etapa3_cartera(eq_cartera, sharpe_benchmark(cierres), None,
+                                     sharpe_benchmark(cierres_etapa2) if not cierres_etapa2.empty else None,
+                                     trades=2)
     intentos = list(csv.DictReader((tmp_path / "intentos.csv").open()))
     assert len(intentos) == 1 and float(intentos[0]["sharpe"]) == pytest.approx(esperado)
     assert len([r for r in csv.DictReader((tmp_path / "hipotesis.csv").open()) if r["etapa"] == "3"]) == 1
     assert "M1 cartera" in primera.output
+    assert f"C0: {'PASA' if pasa else 'CORTA'}" in primera.output
+    assert "M1 benchmark" in primera.output and "trades 2" in primera.output
 
 
 def test_tendencia_larga_corta_aprobada_pasa_admision_con_snapshots_sinteticos(tmp_path, monkeypatch):
