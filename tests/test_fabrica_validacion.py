@@ -244,6 +244,36 @@ def test_correr_motor_ejecuta_pesos_objetivo_con_panel_sincronizado(tmp_path, mo
         assert (tmp_path / "salida" / "equity" / f"rebalanceo-fin-de-mes-{activo}.csv").exists()
 
 
+def test_etapa3_ejecuta_pesos_objetivo_con_panel_completo(tmp_path, monkeypatch):
+    from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+    from quantagent.fabrica.cartera import pesos_f1
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fechas = pd.bdate_range("2022-12-30", "2024-01-02")
+    fase = np.arange(len(fechas))
+    cierres = pd.DataFrame({"SPY": 100 + fase * 0.2 + 4 * np.sin(fase / 8),
+                            "IEF": 100 + fase * 0.1 - 3 * np.sin(fase / 8)}, index=fechas)
+    velas = {a: pd.DataFrame({"open": s, "high": s, "low": s, "close": s,
+                              "adj_close": s, "volume": 1000.0}) for a, s in cierres.items()}
+    write_snapshot("sintetico", velas, base_dir=tmp_path)
+    h = Hipotesis("cartera-f1-e3-real", "autor", "just", piernas=(
+        Pierna("rebalanceo-fin-de-mes", {}, ("SPY", "IEF"), "U"),))
+
+    _, filas = validacion.validar_etapa3(
+        h, "sintetico", {}, tmp_path / "salida", "2022-12-30", "2024-01-02", abrir_reserva=True)
+
+    objetivos = pesos_f1(cierres)
+    assert sum(int(f["trades"]) for f in filas) > 0
+    for activo in ("SPY", "IEF"):
+        pesos = objetivos[activo].fillna(0.0)
+        esperado = 100_000 * (1 + cierres[activo].pct_change().fillna(0) *
+                              pesos.shift(1, fill_value=0)).cumprod()
+        curva = pd.read_csv(tmp_path / "salida" / "equity" /
+                            f"rebalanceo-fin-de-mes-{activo}.csv", index_col="date", parse_dates=True)
+        pd.testing.assert_series_equal(curva["equity"], esperado, check_names=False,
+                                       check_dtype=False, check_freq=False, rtol=1e-10, atol=1e-8)
+
+
 @pytest.mark.parametrize("dsr,pnl,esperado", [(0.95, 1, "PASA"), (0.94, 1, "CORTA"),
                                           (0.99, -1, "CORTA"), (None, 1, "CORTA")])
 def test_etapa3_regla(tmp_path, monkeypatch, dsr, pnl, esperado):
