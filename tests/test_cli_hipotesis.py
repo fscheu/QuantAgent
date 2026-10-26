@@ -14,9 +14,43 @@ from quantagent.backtesting.vbt_filter import equity_metrics
 from quantagent.cli import hipotesis
 from quantagent.cli.backtest import backtest_group
 from quantagent.data.snapshot import write_snapshot
+from quantagent.data.macro import crear_snapshot_macro
 from quantagent.fabrica.cartera import combinar, pesos
 from quantagent.fabrica.hipotesis import Hipotesis, Pierna
 from tests.test_filtrar_pierna import resultado_ganadores_distintos as resultado_ganadores_distintos
+
+
+def test_aprobar_tendencia_larga_corta_pasa_admision_con_snapshots_sinteticos(tmp_path, monkeypatch):
+    datos = tmp_path / "datos"
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(datos))
+    propuesta = Path(__file__).parents[1] / "catalogo/propuestas/tendencia-larga-corta.yaml"
+    propuestas, hipotesis_dir = tmp_path / "propuestas", tmp_path / "hipotesis"
+    propuestas.mkdir()
+    (propuestas / propuesta.name).write_text(propuesta.read_text(encoding="utf-8"), encoding="utf-8")
+    aprobado = CliRunner().invoke(backtest_group, [
+        "hipotesis", "propuestas", "aprobar", "tendencia-larga-corta", "--quien", "test",
+        "--propuestas-dir", str(propuestas), "--hipotesis-dir", str(hipotesis_dir),
+    ])
+    assert aprobado.exit_code == 0, aprobado.output
+    fechas = pd.bdate_range("2007-01-01", "2018-12-31")
+    precios = np.linspace(80, 120, len(fechas))
+    velas = pd.DataFrame({"open": precios, "high": precios + 1, "low": precios - 1,
+                          "close": precios, "adj_close": precios, "volume": 1000.0}, index=fechas)
+    activos = yaml.safe_load((hipotesis_dir / propuesta.name).read_text())['activos']
+    write_snapshot("etf-1d-2026-10-amplio", dict.fromkeys(activos, velas), base_dir=datos)
+
+    class ClienteSintetico:
+        def observaciones(self, serie, desde, hasta, todas_las_versiones=True):
+            filas = [(pd.Timestamp(f"{anio}-01-01"), 2.0, pd.Timestamp(f"{anio}-01-01"),
+                      pd.Timestamp("9999-12-31")) for anio in range(2007, 2020)]
+            return pd.DataFrame(filas, columns=["fecha", "valor", "realtime_start", "realtime_end"])
+
+    crear_snapshot_macro("macro-2026-10", ["DGS3MO"], ClienteSintetico(), base_dir=datos)
+    h, ok, motivos = hipotesis.admitir_hipotesis(
+        hipotesis_dir / propuesta.name, "etf-1d-2026-10-amplio")
+    assert ok, motivos
+    assert h.clase == "tsmom-largo-corto"
+    assert h.parametros == {"snapshot": ["macro-2026-10"]}
 
 
 @pytest.mark.parametrize("calendario_desigual", [False, True])
