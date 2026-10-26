@@ -19,10 +19,10 @@ idea: Los fondos que rebalancean hacia pesos fijos de acciones y bonos venden a 
   mes el activo que más subió en el mes, y esa venta predecible baja su retorno en
   los últimos días hábiles.
 clase: rebalanceo-fin-de-mes
-ventana:
-  peso_acciones_referencia: [0.6]
-  dias_habiles_antes_de_fin_de_mes: [5]
-  peso_base: [0.5]
+# ventana:
+#   peso_acciones_referencia: [0.6]
+#   dias_habiles_antes_de_fin_de_mes: [5]
+#   peso_base: [0.5]
 hipotesis_economica: Pensiones, fondos con fecha objetivo y otros fondos balanceados
   (unos 20 billones de dólares según los autores) vuelven a pesos fijos de acciones
   y bonos en fechas conocidas. Si en el mes las acciones le ganaron a los bonos, tienen
@@ -50,3 +50,4 @@ universo:
     y Melone miden la presión, el futuro del S&P 500 y el futuro del bono del Tesoro
     a 10 años. Fijado antes de correr; no se agregan otros ETFs de acciones o bonos.
 parametros_libres: 0
+parametros: {}
