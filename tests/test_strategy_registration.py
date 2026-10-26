@@ -97,6 +97,7 @@ def test_alias_actuales_del_cli():
         "turn-of-the-month": "TurnOfTheMonthStrategy",
         "senal-externa": "SenalExterna",
         "rebalanceo-fin-de-mes": "RebalanceoFinDeMesStrategy",
+        "tsmom-largo-corto": "TsmomLargoCortoStrategy",
     }
 
 

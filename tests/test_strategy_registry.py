@@ -114,6 +114,7 @@ def test_registry_has_expected_entries():
         "RsiRegimenStrategy",
         "CurvaPendienteStrategy",
         "SenalExterna",
+        "TsmomLargoCortoStrategy",
     }
     for entry in registry.values():
         assert {"cls", "type", "display_name", "description", "params", "min_bars"} <= set(entry)
