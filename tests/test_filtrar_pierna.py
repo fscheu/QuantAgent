@@ -8,6 +8,8 @@ from quantagent.fabrica.admision import admitir
 from quantagent.fabrica.cartera import combinar, pesos
 from quantagent.fabrica.filtro import filtrar_pierna, veredicto_etapa1
 from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+from quantagent.settings import COSTOS_PERFILES
+from quantagent.strategy.registry import STRATEGY_REGISTRY
 
 COSTOS = {"commission_pct": 0.0, "slippage_pct": 0.0}
 ACTIVOS = ("SPY", "QQQ", "IWM", "EFA", "EEM", "XLE")
@@ -34,6 +36,31 @@ def resultado():
     h, p = _hipotesis()
     paneles = _velas()
     return h, p, paneles, filtrar_pierna(h, p, paneles, costos=COSTOS, capital=100_000.0)
+
+
+@pytest.fixture
+def resultado_ganadores_distintos(monkeypatch):
+    monkeypatch.setitem(transversal.METRICAS, "sintetica", lambda c, signo: signo * c.pct_change(20))
+    monkeypatch.setitem(STRATEGY_REGISTRY, "sintetica", {"params": {"signo": {}}})
+    p = Pierna("sintetica", {"signo": [1, -1]}, ACTIVOS, "sintético")
+    h = Hipotesis("t", "a", "x" * 50, piernas=(p,))
+    paneles = {a: v.loc[:"2018"] for a, v in _velas(n=2350, seed=2).items()}
+    r = filtrar_pierna(h, p, paneles, costos=COSTOS_PERFILES["etf"], capital=100_000.0)
+    return h, p, paneles, r
+
+
+def test_seleccion_es_del_ganador_de_cada_ventana_completa(resultado_ganadores_distintos):
+    _, p, paneles, r = resultado_ganadores_distintos
+    cierres = pd.DataFrame({a: v.set_index("timestamp")["close"] for a, v in paneles.items()})
+    esperado = pd.DataFrame(0, index=cierres.index, columns=list(p.activos))
+    assert {g["params"]["signo"] for g in r["ganadores"]} == {-1, 1}
+    for g in r["ganadores"]:
+        panel = transversal.señales_transversales(cierres, lambda c: g["params"]["signo"] * c.pct_change(20))
+        tramo = panel.loc[g["prueba_desde"]:g["prueba_hasta"]]
+        esperado.loc[tramo.index] = tramo
+        assert tramo.index[0] not in r["retornos"].index
+        assert r["seleccion"].loc[tramo.index[0]].sum() == 2
+    pd.testing.assert_frame_equal(r["seleccion"], esperado)
 
 
 def test_los_retornos_fuera_de_muestra_los_acepta_combinar_junto_a_una_pierna_por_activo(resultado):

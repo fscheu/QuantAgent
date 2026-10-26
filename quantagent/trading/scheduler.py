@@ -13,6 +13,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy.orm import Session
 
 from quantagent import settings
+from quantagent.stop_loss import resolve_stop_loss
 from quantagent.data.provider import DataProvider
 from quantagent.models import Environment, SchedulerHeartbeat, Signal, Trade, TradeSignal
 from quantagent.static_util import format_ohlcv_for_agents
@@ -21,7 +22,10 @@ from quantagent.strategy.base import TradingStrategy
 from quantagent.strategy.llm_agent_strategy import LLMAgentStrategy
 from quantagent.backtesting.intrabar_stops import check_intrabar_stops
 from quantagent.trading.order_manager import OrderManager
+from quantagent.trading.alpaca_broker import AlpacaBroker
 from quantagent.trading.position_monitor import PositionMonitor
+from quantagent.trading.cartera_paper import entradas_cartera, pesos_operables
+from quantagent.trading.rebalanceador import rebalancear
 from quantagent.trading_graph import TradingGraph
 
 logger = logging.getLogger(__name__)
@@ -58,6 +62,7 @@ class TradingScheduler:
         scheduler_settings: Optional[settings.SchedulerSettings] = None,
         scheduler_factory: Optional[Callable[[], BackgroundScheduler]] = None,
         strategy: Optional[TradingStrategy] = None,
+        paper_portfolio: Optional[dict] = None,
     ) -> None:
         self.trading_graph = trading_graph
         self.order_manager = order_manager
@@ -68,6 +73,9 @@ class TradingScheduler:
         self.strategy = strategy if strategy is not None else LLMAgentStrategy(
             self.trading_graph
         )
+        if paper_portfolio is not None and self.environment != Environment.PAPER:
+            raise ValueError("paper portfolios require paper environment")
+        self.paper_portfolio = paper_portfolio
 
         # Initialize PositionMonitor for tracking active positions
         self.position_monitor = PositionMonitor(
@@ -111,6 +119,17 @@ class TradingScheduler:
             coalesce=True,
             max_instances=1,
         )
+        if self.environment == Environment.PAPER and isinstance(
+            self.order_manager.broker, AlpacaBroker
+        ):
+            self.scheduler.add_job(
+                self.reconcile_alpaca_positions,
+                trigger=IntervalTrigger(hours=self.config.interval_hours),
+                id="alpaca_position_reconciliation",
+                replace_existing=True,
+                coalesce=True,
+                max_instances=1,
+            )
         self.scheduler.start()
         self.is_running = True
         logger.info(
@@ -148,6 +167,10 @@ class TradingScheduler:
         """Run a single analyze+trade cycle synchronously."""
         return self.analyze_and_trade()
 
+    def reconcile_alpaca_positions(self) -> list[str]:
+        """Compare local PAPER positions with the configured Alpaca broker."""
+        return self.position_monitor.reconcile_alpaca_positions(self.order_manager.broker)
+
     # ------------------------------------------------------------------
     # Core execution
     # ------------------------------------------------------------------
@@ -158,7 +181,14 @@ class TradingScheduler:
 
         heartbeat = self._upsert_heartbeat_start(cycle_start)
         try:
-            for symbol in self.config.assets:
+            if self.paper_portfolio is not None:
+                try:
+                    self._process_paper_portfolio()
+                    processed = 1
+                except (DataFetchError, ExecutionError) as exc:
+                    errors += 1
+                    logger.error("Paper portfolio cycle failed: %s", exc)
+            for symbol in (() if self.paper_portfolio is not None else self.config.assets):
                 try:
                     self._process_asset(symbol)
                     processed += 1
@@ -237,6 +267,33 @@ class TradingScheduler:
     # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------
+    def _process_paper_portfolio(self) -> None:
+        config = self.paper_portfolio
+        manager = self.order_manager
+        manager.refresh_rebalance_orders()
+        broker = manager.broker
+        if isinstance(broker, AlpacaBroker):
+            account = broker.get_account()
+            manager.portfolio.cash = float(account["cash"])
+            manager.portfolio.positions = {
+                symbol: {"qty": float(pos.qty), "avg_cost": float(pos.avg_entry_price),
+                         "current_price": float(pos.current_price), "pnl": float(pos.unrealized_pl)}
+                for symbol, pos in broker.get_positions().items()
+            }
+        fecha, panel, precios = entradas_cartera(
+            config["hipotesis"], self.data_provider, config["reloj"],
+            manager.portfolio.positions,
+        ) or (None, None, None)
+        if fecha is None:
+            return
+        manager.portfolio.set_date(fecha.date())
+        pesos = pesos_operables(config["hipotesis"], panel, fecha, config.get("macro"))
+        try:
+            rebalancear(pesos.to_dict(), precios, manager, config["sombra"],
+                        cartera=config["cartera"], fecha=fecha.date())
+        except Exception as exc:
+            raise ExecutionError(str(exc)) from exc
+
     def _process_asset(self, symbol: str) -> None:
         df = self._fetch_market_data(symbol)
         kline_data = format_ohlcv_for_agents(df)
@@ -256,7 +313,16 @@ class TradingScheduler:
                 position, current_price, prev_close
             )
 
-            intrabar_exit = check_intrabar_stops(position, df.iloc[-1])
+            candle = df.iloc[-1]
+            candle_time = pd.Timestamp(candle["timestamp"])
+            entry_time = pd.Timestamp(position.decision_timestamp)
+            if candle_time.tzinfo != entry_time.tzinfo:
+                candle_time = candle_time.tz_localize(None)
+                entry_time = entry_time.tz_localize(None)
+            intrabar_exit = (
+                check_intrabar_stops(position, candle)
+                if candle_time > entry_time else None
+            )
             if intrabar_exit:
                 exit_reason, exit_price = intrabar_exit
                 self._execute_position_exit(position, exit_reason, exit_price, symbol)
@@ -345,6 +411,12 @@ class TradingScheduler:
             )
             return
 
+        stop_loss, default_stop = resolve_stop_loss(
+            signal.stop_loss, trade_signal.value, current_price
+        )
+        signal.stop_loss = stop_loss
+        if default_stop:
+            signal.reasoning = f"{signal.reasoning} (stop por defecto)".strip()
         db_signal = self._persist_signal(symbol, trade_signal, signal, thread_id)
 
         try:
@@ -355,6 +427,7 @@ class TradingScheduler:
                 current_price=current_price,
                 environment=self.environment,
                 trigger_signal_id=db_signal.id if db_signal else None,
+                stop_price=stop_loss,
             )
         except Exception as exc:
             self.db.rollback()
@@ -365,10 +438,6 @@ class TradingScheduler:
 
             # NEW: Open ActivePosition for tracking
             # Extract stop loss and take profit from signal (with fallbacks)
-            stop_loss = getattr(signal, "stop_loss", None) or (
-                current_price * 0.98 if trade_signal == TradeSignal.LONG
-                else current_price * 1.02
-            )
             take_profit = getattr(signal, "take_profit", None) or (
                 current_price * 1.03 if trade_signal == TradeSignal.LONG
                 else current_price * 0.97
@@ -464,6 +533,11 @@ class TradingScheduler:
             state_snapshot={
                 "entry_price": signal.entry_price,
                 "stop_loss": signal.stop_loss,
+                "stop_loss_source": (
+                    "stop por defecto"
+                    if signal.reasoning.endswith("(stop por defecto)")
+                    else "estrategia"
+                ),
                 "take_profit": signal.take_profit,
                 "trailing_stop_pct": signal.trailing_stop_pct,
             },

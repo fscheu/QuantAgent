@@ -8,14 +8,20 @@ import logging
 import signal
 import sys
 import time
+from datetime import datetime
+from pathlib import Path
 from typing import List, Optional
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 from sqlalchemy.orm import Session
 
 from quantagent import settings
 from quantagent.data.provider import DataProvider
 from quantagent.data.sources import build_source
-from quantagent.database import SessionLocal
+from quantagent.data.sources.fred import FredClient
+from quantagent.database import Base, SessionLocal
 from quantagent.logging_config import setup_logging
 from quantagent.models import Environment
 from quantagent.strategy.assembler import StrategyAssembler
@@ -59,6 +65,37 @@ def _build_scheduler(
         raise
 
 
+def _build_portfolio_scheduler(config, path: str):
+    hypothesis = Path(path)
+    if not hypothesis.is_file():
+        raise ValueError(f"cartera inexistente: {path}")
+    from quantagent.fabrica.hipotesis import cargar_hipotesis
+
+    cartera = cargar_hipotesis(hypothesis)
+    macro = FredClient() if any(p.clase == "curva-pendiente" for p in cartera.piernas) else None
+    db_path = Path("local-data") / f"{cartera.id}.db"
+    engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
+    Base.metadata.create_all(engine)
+    session = sessionmaker(bind=engine)()
+    try:
+        resolved = StrategyAssembler.from_profiles(
+            overrides={"universe": config.assets}, environment=Environment(config.environment)
+        )
+        components = StrategyAssembler.build_components(resolved, db_session=session, build_graph=False)
+        provider = DataProvider(session, source=build_source("alpaca"))
+        scheduler = TradingScheduler(
+            trading_graph=None, order_manager=components.order_manager, data_provider=provider,
+            db_session=session, scheduler_settings=config,
+            paper_portfolio={"hipotesis": cartera, "reloj": datetime.utcnow, "macro": macro,
+                             "sombra": str(db_path.with_suffix(".sombra.json")), "cartera": cartera.id},
+        )
+        return scheduler, session
+    except Exception:
+        session.close()
+        engine.dispose()
+        raise
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run QuantAgent TradingScheduler for automatic paper trading",
@@ -97,9 +134,10 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--strategy",
         type=str,
-        default="LLMAgentStrategy",
+        default=None,
         help="Strategy name from registry (default: LLMAgentStrategy)",
     )
+    parser.add_argument("--portfolio", action="append", help="Path to a paper portfolio hypothesis YAML")
     parser.add_argument(
         "--strategy-params",
         type=str,
@@ -146,6 +184,9 @@ def main() -> int:
     args = _parse_args()
     config = _apply_overrides(args)
     strategy_params = json.loads(args.strategy_params or "{}")
+    portfolio_paths = getattr(args, "portfolio", None) or []
+    if len(portfolio_paths) > 1 or (portfolio_paths and (args.strategy or strategy_params)):
+        raise ValueError("selección de cartera ambigua: use un YAML sin estrategia suelta")
 
     setup_logging(environment=config.environment)
     logger.info(
@@ -163,10 +204,9 @@ def main() -> int:
         },
     )
 
-    scheduler, session = _build_scheduler(
-        config,
-        strategy_name=args.strategy,
-        strategy_params=strategy_params,
+    scheduler, session = (
+        _build_portfolio_scheduler(config, portfolio_paths[0]) if portfolio_paths else
+        _build_scheduler(config, strategy_name=args.strategy or "LLMAgentStrategy", strategy_params=strategy_params)
     )
 
     def _shutdown(sig=None, _frame=None):

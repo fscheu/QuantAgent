@@ -10,6 +10,7 @@ authors = [{name = "QuantAgent Team"}]
 requires-python = ">=3.9"
 dependencies = [
     "flask",
+    "alpaca-py",
     "click>=8.1",
     "yfinance",
     "pandas",
@@ -56,6 +57,9 @@ dev = [
     "types-requests>=2.31",
     "backtesting>=0.6.6,<0.7",  # solo scripts/crossval_rsi.py (oraculo de cross-validation)
 ]
+
+[project.scripts]
+quantagent = "quantagent.cli.__main__:cli"
 
 [tool.setuptools]
 packages = ["quantagent", "apps"]

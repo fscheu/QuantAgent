@@ -128,8 +128,12 @@ def curva_benchmark(cierres, capital: float = 100_000.0, pesos: pd.DataFrame | N
             rel = (sub / base).mean(axis=1)
         else:
             w = pesos.loc[sub.index[0], df.columns]
-            w = w / w.sum()
-            rel = ((sub / base) * w).sum(axis=1)
+            total = w.sum()
+            if total == 0:
+                rel = pd.Series(1.0, index=sub.index)
+            else:
+                w = w / total
+                rel = ((sub / base) * w).sum(axis=1)
         sub_eq = eq_actual * rel
         equity.loc[sub.index] = sub_eq
         eq_actual = float(sub_eq.iloc[-1])

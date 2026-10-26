@@ -50,6 +50,7 @@ SCENARIOS = {
     "orden_minima_descarta": {"orden_minima": 3000.0},  # QuantAgent-p3yg: entradas de 2500 < 3000 USD
     "orden_minima_ejecuta": {"orden_minima": 2000.0},   # 2500 >= 2000 USD
     "orden_minima_next_open_descarta": {"fill": "next-open", "orden_minima": 3000.0},
+    "riesgo": {"regla_tamano": "riesgo"},
 }
 
 
@@ -105,9 +106,11 @@ def _run_scenarios(workdir: Path) -> dict:
     for name, kwargs in SCENARIOS.items():
         kwargs = dict(kwargs)
         bt_adapter.settings.TRADING_BASE_POSITION_PCT = kwargs.pop("pct", 0.05)
+        regla_tamano = kwargs.pop("regla_tamano", "confianza")
         strategy = MiniStrategy(exit_after=kwargs.pop("exit_after", None), always=kwargs.pop("always", False),
                                 confidence=kwargs.pop("confidence", 0.5), short=kwargs.pop("short", False))
-        stats = bt_adapter.run_adapter(strategy, crossval_rsi.load_fixture(path), symbol="XYZ", timeframe="1d", **kwargs)
+        stats = bt_adapter.run_adapter(strategy, crossval_rsi.load_fixture(path), symbol="XYZ", timeframe="1d",
+                                       regla_tamano=regla_tamano, **kwargs)
         rows = [{**vars(r), "entry_time": r.entry_time.isoformat(), "exit_time": r.exit_time.isoformat()}
                 for r in bt_adapter.trade_rows(stats, "XYZ")]
         out[name] = {
@@ -232,6 +235,16 @@ def test_posicion_abierta_al_final_sale_al_cierre_con_slippage_y_backtest_end(re
     assert (trade["entry_time"], trade["entry_price"]) == (day(3), pytest.approx(102.0 * 1.01))
     assert (trade["exit_time"], trade["exit_reason"]) == (day(3), "backtest_end")
     assert trade["exit_price"] == pytest.approx(104.0 * 0.99)
+
+
+def test_regla_riesgo_dimensiona_con_el_stop_de_la_senal(results):
+    from quantagent.trading.position_sizer import PositionSizer
+
+    trade = results["riesgo"]["rows"][0]
+    motor = PositionSizer(regla="riesgo").calculate_size(
+        "XYZ", signal_confidence=0.5, current_price=100.0, portfolio_value=100000.0, stop_price=95.0
+    )
+    assert trade["qty"] == pytest.approx(motor)
 
 
 def test_salida_por_regla_en_ultima_vela_descarta_regla_y_sale_backtest_end_al_cierre(results):

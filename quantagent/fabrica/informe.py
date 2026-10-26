@@ -14,8 +14,10 @@ from quantagent.fabrica.estado import ESTADO_CSV
 def diagnostico_exceso(hipotesis, carpeta_equity, snapshot, base_dir=None):
     """Calcula Sharpes con tasa libre de riesgo desde curvas guardadas, sin registrar intentos."""
     from quantagent.data import snapshot as snap_mod
-    from quantagent.fabrica.cartera import curva_cartera, pesos as pesos_cartera
+    from quantagent.fabrica.cartera import curva_cartera
+    from quantagent.fabrica.cartera import pesos as pesos_cartera
     from quantagent.fabrica.criterio import curva_benchmark, sharpes_en_exceso
+    from quantagent.fabrica.transversal import leer_seleccion
 
     retornos = {}
     fechas = None
@@ -41,10 +43,14 @@ def diagnostico_exceso(hipotesis, carpeta_equity, snapshot, base_dir=None):
     cierres = pd.DataFrame({a: snap_mod.read_snapshot(snapshot, a, base_dir)["close"].reindex(fechas)
                             for p in hipotesis.piernas for a in p.activos}, index=fechas)
     mapa = {i: list(p.activos) for i, p in enumerate(hipotesis.piernas)}
-    cartera = curva_cartera(cierres, mapa, retornos)
+    try:
+        seleccion = leer_seleccion(Path(carpeta_equity).parent, hipotesis.piernas, indice=cierres.index)
+    except FileNotFoundError as exc:
+        return {"disponible": False, "motivo": f"selección faltante: {exc.filename}"}
+    cartera = curva_cartera(cierres, mapa, retornos, seleccion=seleccion)
     if cartera is None or len(cartera) < 3:
         return {"disponible": False, "motivo": "curvas sin puntos suficientes"}
-    w = pesos_cartera(cierres, mapa).T.groupby(level=1).sum().T
+    w = pesos_cartera(cierres, mapa, seleccion=seleccion).T.groupby(level=1).sum().T
     benchmark = curva_benchmark(cierres, pesos=w).reindex(cartera.index)
     try:
         sharpe_cartera, sharpe_benchmark = sharpes_en_exceso(cartera, benchmark, base_dir=base_dir)

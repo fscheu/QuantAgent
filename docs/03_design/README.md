@@ -39,6 +39,9 @@ These documents represent the current technical design of the system. When imple
 
 ## Active Per-Change Design
 
+- [QuantAgent-8659-DS-alpaca-buying-power.md](./QuantAgent-8659-DS-alpaca-buying-power.md) - Medición de rechazo por buying power en Alpaca paper y propuesta de reserva de efectivo para compras.
+- [QuantAgent-13a-DS-broker-contract.md](./QuantAgent-13a-DS-broker-contract.md) - Contrato `Broker` para órdenes, fills, cuenta y posiciones; enlaza la decisión vigente de fuente de datos.
+
 - [QuantAgent-j2rt-DS-como-agregar-una-estrategia.md](./QuantAgent-j2rt-DS-como-agregar-una-estrategia.md) - Cómo agregar una estrategia: un archivo más una línea de registro; contrato de `TradingStrategy` y tests mínimos (QuantAgent-j2rt)
 - [QuantAgent-beo-DS-regla-de-salida-duplicada.md](./QuantAgent-beo-DS-regla-de-salida-duplicada.md) - Diagnóstico: la regla de salida está duplicada entre backtest (`should_exit`) y paper (scheduler); tabla de diferencias y propuesta de unificación (QuantAgent-beo)
 - [QuantAgent-vfd-DS-suite-performance-diagnosis.md](./QuantAgent-vfd-DS-suite-performance-diagnosis.md) - Suite performance diagnosis, bottleneck analysis and improvement plan (QuantAgent-vfd)

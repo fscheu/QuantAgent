@@ -1,9 +1,11 @@
 import numpy as np
 import pandas as pd
 import pytest
+
 from quantagent.data.snapshot import write_snapshot
 from quantagent.fabrica.candado import abierto
-from scripts.criterio_paper_desde_curvas import calcular_criterio_paper, main
+from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+from scripts.criterio_paper_desde_curvas import calcular_criterio_paper, main, reconstruir_curva_cartera
 
 
 def _velas(fechas, ret):
@@ -70,3 +72,30 @@ def test_criterio_paper_cli(tmp_path, monkeypatch, capsys):
     _, err = capsys.readouterr()
     assert "Curva faltante: sma-cross-TLT" in err
     assert int_csv.read_text(encoding="utf-8") == txt_int and not (tmp_path / "hipotesis.csv").exists()
+
+
+@pytest.mark.parametrize("etapa", ["etapa2", "etapa3"])
+@pytest.mark.parametrize("layout", ["raiz", "corrida", "equity", "plano"])
+def test_reconstruccion_transversal_t4_por_layout(tmp_path, etapa, layout):
+    h = Hipotesis("cartera-sint", "fede", "test", piernas=(Pierna("momentum-transversal", {}, ("SPY", "TLT"), "U"),))
+    inicio = "2007-01-02" if etapa == "etapa2" else "2019-01-02"
+    fechas = pd.bdate_range(inicio, periods=3)
+    cierres = pd.DataFrame({"SPY": [100, 110, 121], "TLT": [100, 90, 81]}, index=fechas)
+    root = tmp_path / etapa
+    corrida = root / h.id if layout in ("raiz", "plano") else root
+    equity = corrida if layout == "plano" else corrida / "equity"
+    equity.mkdir(parents=True)
+    entrada = equity if layout == "equity" else root if layout in ("raiz", "plano") else corrida
+    for activo, valores in (("SPY", [100, 110, 121]), ("TLT", [100, 90, 81])):
+        pd.DataFrame({"date": fechas, "equity": valores}).to_csv(equity / f"momentum-transversal-{activo}.csv", index=False)
+    pd.DataFrame({"timestamp": fechas, "posicion": [1, 1, 1]}).to_csv(
+        corrida / "senal-momentum-transversal-SPY.csv", index=False)
+    pd.DataFrame({"timestamp": fechas, "posicion": [0, 0, 0]}).to_csv(
+        corrida / "senal-momentum-transversal-TLT.csv", index=False)
+
+    curva = reconstruir_curva_cartera(h, entrada, cierres)
+
+    pd.testing.assert_series_equal(curva, pd.Series([110_000.0, 121_000.0], index=fechas[1:], name=None), check_freq=False)
+    (corrida / "senal-momentum-transversal-TLT.csv").unlink()
+    with pytest.raises(FileNotFoundError, match="senal-momentum-transversal-TLT.csv"):
+        reconstruir_curva_cartera(h, entrada, cierres)

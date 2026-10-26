@@ -3,16 +3,19 @@ from __future__ import annotations
 
 import argparse
 import csv
-from pathlib import Path
 import sys
+from pathlib import Path
+
 import pandas as pd
 from tabulate import tabulate
+
 import quantagent.data.snapshot as snap_mod
 from quantagent.backtesting.vbt_filter import equity_metrics
 from quantagent.backtesting.verdict import dsr_contra_intentos, n_efectivo
 from quantagent.fabrica.cartera import curva_cartera
 from quantagent.fabrica.criterio import anios_positivos, evaluar_etapa3_cartera, recargo_paper, sharpe_benchmark
 from quantagent.fabrica.hipotesis import Hipotesis, cargar_hipotesis
+from quantagent.fabrica.transversal import leer_seleccion
 
 
 def reconstruir_curva_cartera(h: Hipotesis, carpeta: str | Path, cierres: pd.DataFrame) -> pd.Series:
@@ -35,7 +38,9 @@ def reconstruir_curva_cartera(h: Hipotesis, carpeta: str | Path, cierres: pd.Dat
             col = "date" if "date" in filas[0] else "timestamp"
             eq = pd.Series([float(r["equity"]) for r in filas], index=pd.to_datetime([r[col] for r in filas]))
             retornos_dict[(i, activo)] = eq.pct_change().dropna()
-    curva = curva_cartera(cierres, piernas_map, retornos_dict)
+    corrida = eq_dir.parent if eq_dir.name == "equity" else base
+    seleccion = leer_seleccion(corrida, h.piernas, cierres.index)
+    curva = curva_cartera(cierres, piernas_map, retornos_dict, seleccion=seleccion)
     if curva is None or curva.empty:
         raise ValueError(f"Curva de cartera vacía en {eq_dir}")
     return curva

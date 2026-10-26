@@ -13,7 +13,7 @@ from quantagent.backtesting.verdict import dsr_contra_intentos, evaluar, n_efect
 from quantagent.cli.sweep import registrar_intento
 from quantagent.data.snapshot import snapshot_root
 from quantagent.fabrica.criterio import anios_positivos, evaluar_etapa3_cartera, recargo_paper, sharpe_benchmark
-from quantagent.fabrica.transversal import METRICAS, es_transversal, señales_transversales
+from quantagent.fabrica.transversal import METRICAS, es_transversal, leer_seleccion, señales_transversales
 
 SHARPE_MINIMO_FILTRO = 0.10
 SHARPE_MAXIMO_MOTOR_ALARMA = 0.0
@@ -127,8 +127,11 @@ def _curva_y_v30_cartera(h, filas, carpeta, snapshot, etapa, desde, hasta):
                     eq = pd.Series([float(r["equity"]) for r in curva], index=pd.to_datetime([r[col] for r in curva]))
                     retornos_dict[(i, activo)] = eq.pct_change().dropna()
 
+    seleccion = leer_seleccion(carpeta, h.piernas, cierres.index if cierres is not None else None)
+    if seleccion and cierres is None:
+        raise ValueError("Faltan cierres para ponderar la selección transversal")
     total_trades = sum(int(f["trades"]) for f in filas if f.get("trades") not in (None, ""))
-    eq_cartera = curva_cartera(cierres, piernas_map, retornos_dict)
+    eq_cartera = curva_cartera(cierres, piernas_map, retornos_dict, seleccion=seleccion)
     if eq_cartera is not None and not eq_cartera.empty:
         m = equity_metrics(eq_cartera, 0.0)
         pasa, motivos = evaluar(total_trades, float(eq_cartera.iloc[-1] - 100_000.0), m["sharpe"], m["max_drawdown"])
@@ -234,8 +237,9 @@ def validar_etapa3(h, snapshot, params_por_activo, carpeta):
         sb3 = sharpe_benchmark(c3) if c3 is not None and not c3.empty else 0.0
         sb2 = sharpe_benchmark(c2) if c2 is not None and not c2.empty else None
         from quantagent.fabrica.cartera import pesos as pesos_cartera
-        piernas = {f"{i}:{p.clase}": p.activos for i, p in enumerate(h.piernas)}
-        w = pesos_cartera(c3, piernas).T.groupby(level=1).sum().T if c3 is not None and not c3.empty else None
+        piernas = {i: p.activos for i, p in enumerate(h.piernas)}
+        seleccion = leer_seleccion(carpeta, h.piernas, c3.index if c3 is not None else None)
+        w = pesos_cartera(c3, piernas, seleccion=seleccion).T.groupby(level=1).sum().T if c3 is not None and not c3.empty else None
         sb3_mismo_peso = sharpe_benchmark(c3, pesos=w) if w is not None else None
 
         intentos_csv = snapshot_root() / "intentos.csv"

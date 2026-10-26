@@ -23,7 +23,13 @@ from quantagent import settings
 from quantagent.backtesting.export import COLUMNS, EQUITY_COLUMNS
 from quantagent.backtesting.fixtures import FIXTURES_DIR, fixture_metadata
 from quantagent.cli.backtest import backtest_group
+from quantagent.cli.backtest import _engine_config
 from quantagent.models import Base, MarketData
+
+
+def test_riesgo_por_trade_se_agrega_a_config_solo_si_se_pide():
+    assert "riesgo_por_trade_pct" not in _engine_config(None)
+    assert _engine_config(None, regla_tamano="riesgo", riesgo_por_trade=0.0025)["riesgo_por_trade_pct"] == 0.0025
 
 
 @pytest.mark.parametrize("command", ["run", "compare"])
