@@ -151,3 +151,28 @@ def test_trading_digest_cli_reads_selected_sqlite_and_date(tmp_path):
     assert result.exit_code == 0, result.output
     assert "2026-10-25" in result.output and "Posiciones de alpha" in result.output and "P&L realizado acumulado: 12.00" in result.output
     assert result.output.strip() and len(result.output) < 4000 and settings.DATABASE_URL == previous_database_url
+
+
+def test_trading_digest_reconciles_shadow_weights_and_missing_date(tmp_path):
+    db_path, shadow_path = tmp_path / "paper.db", tmp_path / "shadow.json"
+    engine = create_engine(f"sqlite:///{db_path}")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        session.add(Position(symbol="SPY", quantity=2, average_entry_price=400, current_price=500,
+                             unrealized_pnl=200, unrealized_pnl_pct=.25, side=OrderSide.BUY))
+        session.add(ActivePosition(symbol="SPY", side=OrderSide.BUY, entry_price=400, stop_loss=300,
+                                   take_profit=600, quantity=2, decision_timestamp=datetime(2026, 10, 25),
+                                   exit_policy=ExitPolicy.SL_TP_ONLY, environment=Environment.PAPER))
+        session.commit()
+
+    shadow_path.write_text('{"2026-10-23":{"alpha":{"pesos":{"SPY":1.0}}}}')
+    args = ["trading", "digest", "--date", "2026-10-25", "--db", str(db_path),
+            "--shadow", str(shadow_path), "--portfolio", "alpha"]
+    result = CliRunner().invoke(cli, args)
+    assert result.exit_code == 0 and "difiere" not in result.output
+    shadow_path.write_text('{"2026-10-23":{"alpha":{"pesos":{"SPY":0.5}}}}')
+    result = CliRunner().invoke(cli, args)
+    assert result.exit_code == 1 and "SPY:" in result.output
+    shadow_path.write_text('{}')
+    result = CliRunner().invoke(cli, args)
+    assert result.exit_code == 0 and "Sombra sin datos" in result.output
