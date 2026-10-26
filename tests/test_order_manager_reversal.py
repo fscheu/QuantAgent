@@ -135,6 +135,36 @@ def test_portfolio_normalizes_short_close_float_residual(db_session):
     assert portfolio.positions["BTC"]["qty"] == 0.0
     assert portfolio.positions["BTC"]["avg_cost"] == 0.0
 
+
+def test_paper_order_manager_opens_and_closes_short(db_session):
+    portfolio = PortfolioManager(
+        initial_cash=100000.0, environment=Environment.PAPER, db=db_session
+    )
+    risk = RiskManager(portfolio, db=db_session)
+    manager = OrderManager(
+        PositionSizer(), risk, PaperBroker(slippage_pct=0), portfolio, db_session
+    )
+
+    sell = Order(symbol="BTC", side=OrderSide.SELL, quantity=5, price=1000)
+    assert manager.execute_decision_with_order(sell, "SHORT", 1.0, 1000) is not None
+    assert portfolio.get_position("BTC")["qty"] == pytest.approx(-5)
+
+    buy = Order(symbol="BTC", side=OrderSide.BUY, quantity=5, price=1000)
+    assert manager.execute_decision_with_order(buy, "LONG", 1.0, 1000) is not None
+    assert portfolio.get_position("BTC")["qty"] == 0
+
+
+def test_risk_manager_rejects_oversized_short(db_session):
+    portfolio = PortfolioManager(
+        initial_cash=100000.0, environment=Environment.PAPER, db=db_session
+    )
+    risk = RiskManager(portfolio, db=db_session)
+
+    valid, reason = risk.validate_trade("BTC", OrderSide.SELL, 11, 1000)
+
+    assert valid is False
+    assert "Position too large" in reason
+
     def test_reversal_long_to_short_structure(self):
         """
         Test LONG to SHORT reversal produces correct structure.
