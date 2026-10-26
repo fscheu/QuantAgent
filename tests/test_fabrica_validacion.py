@@ -727,3 +727,53 @@ def test_etapa3_cartera_sin_etapa2_o_benchmark_corta(tmp_path, monkeypatch):
 
 
 
+def test_etapa3_pesos_objetivo_calcula_c0_desde_curvas_por_activo(tmp_path, monkeypatch):
+    from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fechas = pd.bdate_range("2019-01-01", "2022-12-31")
+    fechas_snap = pd.bdate_range("2007-01-01", "2022-12-31")
+    out = tmp_path / "salida" / "equity"
+    out.mkdir(parents=True)
+    rendimientos = {
+        "SPY": np.where(np.arange(len(fechas)) % 2, 0.002, -0.0002),
+        "IEF": np.where(np.arange(len(fechas)) % 2, 0.001, -0.0001),
+    }
+    for activo, retorno in rendimientos.items():
+        pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + retorno)}).to_csv(
+            out / f"{activo}.csv", index=False)
+    (tmp_path / "intentos.csv").write_text(
+        "activo,hipotesis,etapa,sharpe\ncartera,h-f1,2,20\n", encoding="utf-8")
+    h = Hipotesis("h-f1", "autor", "just", "1d", piernas=(
+        Pierna("rebalanceo-fin-de-mes", {}, ("SPY", "IEF"), "U"),))
+    monkeypatch.setattr(validacion, "correr_motor", lambda *a, **k: [
+        {"activo": a, "estrategia": h.clase, "trades": "150", "pnl": "1000",
+         "sharpe_tasa_0": "0.5", "max_drawdown": "0.05"} for a in h.activos])
+    ret_snap = np.where(np.arange(len(fechas_snap)) % 2, 0.0008, -0.0002)
+    precios = pd.Series(100.0 * np.cumprod(1 + ret_snap), index=fechas_snap)
+    monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": precios}))
+
+    veredicto, filas = validacion.validar_etapa3(
+        h, "sintetico", {(h.clase, a): {} for a in h.activos}, tmp_path / "salida")
+
+    assert veredicto == "PASA"
+    assert filas[0]["v30"] == "PASA"
+    assert filas[0]["motivos"] == []
+    from quantagent.backtesting.vbt_filter import equity_metrics
+
+    from quantagent.fabrica.cartera import curva_cartera
+
+    retornos = {}
+    for activo in h.activos:
+        curva = pd.read_csv(out / f"{activo}.csv", parse_dates=["date"]).set_index("date")["equity"]
+        retornos[(0, activo)] = curva.pct_change().dropna()
+    cierres = pd.DataFrame({a: precios for a in h.activos})
+    expected_eq = curva_cartera(cierres, {0: list(h.activos)}, retornos)
+    assert filas[0]["sharpe_cartera"] == pytest.approx(round(equity_metrics(expected_eq, 0.0)["sharpe"], 2))
+    assert filas[0]["dsr"] == pytest.approx(validacion.dsr_contra_intentos(expected_eq, tmp_path / "intentos.csv"))
+    pesos_1n = pd.DataFrame(0.5, index=cierres.index, columns=cierres.columns)
+    assert filas[0]["benchmark"] == pytest.approx(validacion.sharpe_benchmark(cierres.loc[fechas]))
+    assert filas[0]["benchmark_mismo_peso"] == pytest.approx(
+        validacion.sharpe_benchmark(cierres.loc[fechas], pesos=pesos_1n.loc[fechas]))
+
+

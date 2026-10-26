@@ -266,7 +266,9 @@ def validar_etapa3(h, snapshot, params_por_activo, carpeta, desde="2019-01-01", 
     """Valida la prueba o reserva con C0; el llamador abre el candado antes de invocar."""
     filas = correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, "3",
                          abrir_prueba=not abrir_reserva, abrir_reserva=abrir_reserva)
-    if h.es_cartera:
+    estrategia = STRATEGY_REGISTRY.get(cli_aliases().get(h.clase, h.clase))
+    es_pesos_objetivo = estrategia and hasattr(estrategia["cls"], "posiciones_objetivo")
+    if h.es_cartera or es_pesos_objetivo:
         eq_cartera, _, _ = _curva_y_v30_cartera(
             h, filas, carpeta, snapshot, "3", desde, hasta
         )
