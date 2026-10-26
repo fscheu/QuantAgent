@@ -1,4 +1,3 @@
 fecha_utc,id,decision,quien,motivo
 2026-10-20T18:47:40.141719+00:00,cambio-de-mes,APROBADA,fede,
 2026-10-20T18:47:46.180053+00:00,deriva-pre-fomc,RECHAZADA,fede,Una de las dos citas (10.1017/S0022109013000410) es de otro articulo y falta el calendario de la FOMC en el snapshot; decision de Fede 2026-10-20
-2026-10-26T01:50:55.566395+00:00,tendencia-larga-corta,APROBADA,fede,

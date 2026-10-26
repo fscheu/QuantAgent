@@ -1,8 +1,9 @@
 # QuantAgent-e4jc.6 — F2 hasta etapa 2
 
-La aprobación de F2 quedó registrada el 2026-10-26 por Fede. La decisión 8 de
-`docs/04_decisions/QuantAgent-R01-DC-decisiones-investigacion-edge.md` la habilita
-con C0, sin diversificador, y cuenta como variante de tendencia.
+La propuesta `tendencia-larga-corta` sigue en `catalogo/propuestas/` sin aprobar.
+La decisión 8 de `docs/04_decisions/QuantAgent-R01-DC-decisiones-investigacion-edge.md`
+condiciona su aprobación a que exista la clase `tsmom-largo-corto` (ticket
+QuantAgent-t2qp). El intento registrado abajo no llegó al backtest.
 
 ## Ejecución
 
@@ -11,8 +12,7 @@ Snapshot: `etf-1d-2026-10-amplio`, cargado desde
 `NUMBA_CACHE_DIR=/tmp/numba-cache MPLCONFIGDIR=/tmp/mpl-cache`; no se deshabilitó
 JIT ni se abrieron ventanas 2019–2022 o la reserva.
 
-La aprobación movió el YAML a `hipotesis/tendencia-larga-corta.yaml` y agregó
-`autor: fede`. La corrida se intentó con `--carpeta
+La corrida se intentó con `--carpeta
 /home/azureuser/repos/projects/QuantAgent/local-data/intentos/f2 --hasta-etapa 2`
 y terminó antes del backtest:
 
