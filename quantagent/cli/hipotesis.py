@@ -103,7 +103,8 @@ def resumen_command(desde, out):
 @hipotesis_group.command("reserva", help="Simular elegibilidad y rango de la reserva 2023+.")
 @click.argument("archivo", type=click.Path(exists=True, dir_okay=False))
 @click.option("--snapshot", "snapshot_name", required=True)
-def reserva_command(archivo, snapshot_name):
+@click.option("--abrir", "abrir_reserva", is_flag=True, help="Registrar y abrir la reserva una sola vez.")
+def reserva_command(archivo, snapshot_name, abrir_reserva):
     h = cargar_hipotesis(archivo)
     if h.id not in {"cartera-transversal", "rebalanceo-fin-de-mes", "tendencia-larga-corta"}:
         raise click.ClickException(f"hipótesis fuera de la lista de reserva: {h.id}")
@@ -118,7 +119,21 @@ def reserva_command(archivo, snapshot_name):
     hasta = min(manifiesto["symbols"][a]["end"] for a in activos)
     if desde > hasta:
         raise click.ClickException(f"sin rango de reserva: {desde} a {hasta}")
-    click.echo(f"Simulacro elegible: {h.id}; reserva {desde} a {hasta}; no se abrió ni leyó.")
+    if abrir_reserva:
+        ahora = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        raiz = snapshot_root()
+        raiz.mkdir(parents=True, exist_ok=True)
+        with (raiz / "reserva-preregistro.log").open("a", encoding="utf-8") as f:
+            f.write(f"{ahora}\t{h.id}\telegible\treserva {desde} a {hasta}\n")
+        try:
+            abrir(h.id, "reserva")
+        except CandadoError as exc:
+            raise click.ClickException(str(exc)) from exc
+        with (raiz / "reserva-accesos.log").open("a", encoding="utf-8") as f:
+            f.write(f"{ahora}\thipotesis reserva {archivo} --snapshot {snapshot_name} --abrir\n")
+        click.echo(f"Reserva abierta: {h.id}; reserva {desde} a {hasta}.")
+    else:
+        click.echo(f"Simulacro elegible: {h.id}; reserva {desde} a {hasta}; no se abrió ni leyó.")
 
 
 def admitir_hipotesis(archivo, snapshot_name, prueba_unica=False):
