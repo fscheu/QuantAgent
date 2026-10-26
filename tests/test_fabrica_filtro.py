@@ -161,13 +161,15 @@ def test_pesos_f1_tiene_rebalances_que_el_conteo_de_senales_ignora():
     cambios = pesos_f1(cierres).diff().fillna(0)
     fechas_con_cambio = int(cambios.abs().sum(axis=1).gt(0).sum())
     ordenes_objetivo = int(cambios.ne(0).sum().sum())
-    resultados = [filtro.filtrar_activo(
+    r = filtro.filtrar_activo(
         Hipotesis(id="f1-test", autor="test", justificacion="sintético", clase="rebalanceo-fin-de-mes",
-                  activos=(activo,)),
-        pd.DataFrame({"timestamp": fechas, "open": cierres[activo], "high": cierres[activo],
-                      "low": cierres[activo], "close": cierres[activo], "volume": 1.0}),
-        costos=COSTOS, capital=100_000.0,
-    ) for activo in ("SPY", "IEF")]
+                  activos=("SPY", "IEF")),
+        pd.DataFrame({"timestamp": fechas, "open": cierres["SPY"], "high": cierres["SPY"],
+                      "low": cierres["SPY"], "close": cierres["SPY"], "volume": 1.0}),
+        costos=COSTOS, capital=100_000.0, panel_cierres=cierres,
+    )
     assert fechas_con_cambio == 288
     assert ordenes_objetivo == 576
-    assert [r["trades"] for r in resultados] == [0, 0]
+    assert set(r["por_activo"]) == {"SPY", "IEF"}
+    assert all(x["trades"] > 0 and x["retornos"].notna().all() and x["sharpe_tasa_0"] != 0
+               for x in r["por_activo"].values())
