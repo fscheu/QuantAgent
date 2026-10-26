@@ -170,7 +170,7 @@ WAIT no invoca al modelo. No hay excepciones, no hay acumulación: nunca existen
 por el PM. Las escaladas a Fede sí pueden quedar abiertas mientras el lote sigue con otros tickets.
 
 Pausa manual: si existe `loop/PAUSE` en `origin/main`, el wrapper imprime `⏸ pausado` y termina.
-Se crea o borra desde GitHub mobile.
+Se crea o borra desde GitHub mobile con un PR a `main` (main tiene ruleset: no acepta push directo).
 
 ### 3.2 Regla 2 — Tamaño de entrega
 

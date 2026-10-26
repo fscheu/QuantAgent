@@ -172,8 +172,8 @@ Codex puede lanzarlo.
 | Cambiar el agente por defecto | PR que cambia `LOOP_AGENT` en `loop/config.env` |
 | Cambiar el modelo de `agy` | PR que cambia `LOOP_AGY_MODEL` (lista: `agy models`) |
 | Una corrida con Codex | `echo codex > ~/.local/state/quantagent-loop/next-agent`; con otro modelo de `LOOP_CODEX_MODELS`, además `echo gpt-6-astra > ~/.local/state/quantagent-loop/next-model` |
-| Pausar el loop | Crear `loop/PAUSE` en `main` desde GitHub mobile (cualquier contenido) |
-| Reanudar | Borrar `loop/PAUSE` |
+| Pausar el loop | Crear `loop/PAUSE` (cualquier contenido) desde GitHub mobile con PR a `main` y mergearlo: `main` no acepta push directo |
+| Reanudar | Borrar `loop/PAUSE` con un PR a `main` |
 | Ver logs de una corrida | `ls -t ~/.local/state/quantagent-loop/` |
 | Cortar una corrida en curso | `kill $(cat ~/.local/state/quantagent-loop/running.pid)` |
 | Desinstalar | `hermes cron list`, después `hermes cron remove <id>` para los dos jobs |
