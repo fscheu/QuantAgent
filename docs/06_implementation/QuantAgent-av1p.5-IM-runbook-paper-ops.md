@@ -70,9 +70,9 @@ Los datos viven en `~/paper-ops/QuantAgent/local-data/`: `<cartera-id>.db` (SQLi
 
 ### 4.2 Un ciclo diario, no un daemon
 
-El scheduler del código usa `IntervalTrigger` por horas y corre inmediato al arrancar. Para una cartera diaria sobre barras cerradas es más simple y robusto un **timer de systemd que lanza un proceso `--run-once`** de lunes a viernes, después del cierre de NYSE. Cada ciclo: refresca órdenes pendientes (`refresh_rebalance_orders`), sincroniza caja y posiciones con Alpaca, calcula pesos con la última sesión cerrada, rebalancea y actualiza la sombra. Si el proceso muere, el próximo día arranca limpio y las órdenes pendientes quedan en la DB por su ID de Alpaca.
+El scheduler del código usa `IntervalTrigger` por horas y corre inmediato al arrancar. Para una cartera diaria sobre barras cerradas es más simple y robusto un **timer de systemd que lanza un proceso `--run-once`** de martes a sábado, a primera hora UTC (la rueda anterior ya consolidada). Cada ciclo: refresca órdenes pendientes (`refresh_rebalance_orders`), sincroniza caja y posiciones con Alpaca, calcula pesos con la última sesión cerrada, rebalancea y actualiza la sombra. Si el proceso muere, el próximo día arranca limpio y las órdenes pendientes quedan en la DB por su ID de Alpaca.
 
-Horario: **23:30 UTC (20:30 ART), lunes a viernes.** NYSE cierra 21:00 UTC desde el 2026-11-01 (fin del horario de verano de EE.UU.), y 18:00 UTC en los cierres tempranos (2026-11-27 y 2026-12-24); 23:30 cubre ambos y da margen para que la barra diaria esté publicada. Las órdenes que salen a esa hora son de mercado y llenan en la apertura del día siguiente; el ciclo de ese día las refresca primero.
+Horario: **08:00 UTC (05:00 ART), martes a sábado.** Cada corrida procesa la rueda NYSE cerrada el día anterior (el sábado, la del viernes). No puede correr justo después del cierre: `DataProvider.get_ohlc` descarta una barra diaria hasta que `timestamp + 1 día` queda dentro de la ventana de datos (`provider.py`, filtro `ts + duration <= latest_end`). Alpaca estampa la barra diaria a las 04:00 UTC del mismo día, así que el filtro la deja pasar recién a las ~04:15 UTC del día siguiente. Medido en el primer ensayo (2026-10-27 00:15 UTC): el ciclo terminó `completed`, sin órdenes ni sombra, porque `entradas_cartera` devolvió `None` por falta de la barra del lunes. Con el reloj en las 08:00 UTC, las mismas entradas dan la rueda del 2026-10-26 completa. Las órdenes salen antes de la apertura (14:30 UTC desde el 2026-11-01), son de mercado y llenan en la apertura; el ciclo del día siguiente las refresca primero. El horario de verano de EE.UU. termina el 2026-11-01, y los cierres tempranos (2026-11-27 y 2026-12-24) no cambian nada con este horario.
 
 Unidad (plantilla; `%i` = id de la cartera):
 
@@ -97,10 +97,10 @@ Para `cartera-nucleo-curva` se agrega un drop-in con `EnvironmentFile=/home/azur
 ```ini
 # ~/.config/systemd/user/paper-cartera@.timer
 [Unit]
-Description=Ciclo paper diario de %i (lun-vie tras el cierre NYSE)
+Description=Ciclo paper diario de %i (mar-sab 08:00 UTC, con la rueda anterior ya consolidada)
 
 [Timer]
-OnCalendar=Mon..Fri 23:30:00 UTC
+OnCalendar=Tue..Sat 08:00:00 UTC
 Persistent=true
 
 [Install]
@@ -120,7 +120,7 @@ El linger del usuario ya está habilitado (sobrevive logout), como en `hermes-ga
 
 ## 5. Digest diario por Telegram
 
-El digest sale del CLI existente (`quantagent trading digest`, QuantAgent-b41.2) y se entrega con `hermes send`, que reutiliza las credenciales de Telegram de Hermes **sin LLM y sin tocar su configuración**. Se envía a las 23:50 UTC, veinte minutos después del ciclo.
+El digest sale del CLI existente (`quantagent trading digest`, QuantAgent-b41.2) y se entrega con `hermes send`, que reutiliza las credenciales de Telegram de Hermes **sin LLM y sin tocar su configuración**. Se envía a las 08:20 UTC, veinte minutos después del ciclo; muestra los fills de la rueda anterior, que el ciclo acaba de aplicar.
 
 Contenido útil por cartera, en este orden:
 
@@ -143,7 +143,7 @@ Environment=NUMBA_CACHE_DIR=/tmp/numba-cache
 ExecStart=/bin/bash -c '/home/azureuser/repos/projects/QuantAgent/.venv/bin/python -m quantagent.cli trading digest --date "$(date -u +%%F)" --db local-data/%i.db --portfolio %i | /home/azureuser/.local/bin/hermes send -t telegram -s "Paper %i"'
 ```
 
-con un `paper-digest@.timer` análogo: `OnCalendar=Mon..Fri 23:50:00 UTC`. Si el CLI falla, el pipe no manda nada y el silencio es una señal; por eso en §7 se pide un chequeo de "ausencia de digest".
+con un `paper-digest@.timer` análogo: `OnCalendar=Tue..Sat 08:20:00 UTC`. Si el CLI falla, el pipe no manda nada y el silencio es una señal; por eso en §7 se pide un chequeo de "ausencia de digest".
 
 ## 6. Ensayo previo (antes del 11-02) **[OK Fede]**
 
