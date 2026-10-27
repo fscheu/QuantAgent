@@ -689,4 +689,38 @@ def test_correr_hasta_etapa_fuera_de_rango(tmp_path, monkeypatch, valor):
     assert not (tmp_path / "hipotesis-candado.csv").exists()
 
 
+@pytest.mark.parametrize("archivo,clase_esperada,num_params", [
+    ("arquetipo-a.yaml", "arquetipo-a", 17),
+    ("arquetipo-b.yaml", "arquetipo-b", 12),
+])
+def test_hipotesis_arquetipos_cargan_y_validan(archivo, clase_esperada, num_params):
+    from quantagent.fabrica.admision import admitir
+    from quantagent.fabrica.hipotesis import cargar_hipotesis
+
+    ruta = Path(__file__).resolve().parents[1] / "hipotesis" / archivo
+    h = cargar_hipotesis(ruta)
+    assert h.id == archivo.removesuffix(".yaml")
+    assert h.clase == clase_esperada
+    assert h.timeframe == "1d"
+    assert h.activos == ("XLB", "XLE", "XLF", "XLI", "XLK", "XLP", "XLU", "XLV", "XLY")
+    assert not h.es_cartera
+    combs = h.combinaciones()
+    assert len(combs) == 1
+    assert len(combs[0]) == num_params
+    assert len(h.justificacion.strip()) >= 40
+
+    rng = np.random.default_rng(42)
+    close = 100 * np.exp(np.cumsum(rng.normal(0.0005, 0.01, 600)))
+    idx = pd.bdate_range("2010-01-04", periods=600)
+    velas = pd.DataFrame(
+        {"timestamp": idx, "open": close, "high": close * 1.01, "low": close * 0.99, "close": close,
+         "volume": rng.uniform(500, 2000, 600)},
+        index=idx,
+    )
+    ok, motivos = admitir(h, velas, existentes=[])
+    assert ok, f"Rechazo en admision: {motivos}"
+
+
+
+
 
