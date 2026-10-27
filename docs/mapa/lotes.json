@@ -356,6 +356,7 @@
       "nombre": "M5 screener (H3 y H4)",
       "estado": "propuesto",
       "tickets": [
+        "QuantAgent-fnpr.4",
         "QuantAgent-fnpr.4.1",
         "QuantAgent-fnpr.4.2",
         "QuantAgent-fnpr.4.3",
