@@ -6,6 +6,8 @@ import pytest
 import numpy as np
 
 from quantagent.backtesting.signals import bar_signals, check_no_lookahead
+from quantagent.backtesting.vbt_filter import run_filter
+from quantagent.strategy.base import TradingSignal, TradingStrategy
 from quantagent.strategy.fifty_two_week_high_strategy import FiftyTwoWeekHighStrategy
 from quantagent.strategy.momentum_12m_strategy import Momentum12mStrategy
 from quantagent.strategy.rsi_strategy import RSIMeanReversionStrategy
@@ -104,3 +106,75 @@ def test_media_movil_sin_centrar_no_difiere():
     cuts = [candles.index[49], candles.index[79]]
     causal = lambda c: pd.DataFrame({"m": c["close"].rolling(20).mean()})  # noqa: E731
     assert check_no_lookahead(causal, candles, cuts) == []
+
+
+class _StopProbeStrategy(TradingStrategy):
+    def __init__(self, entry_price: float = 105.0, expiry: int = 3):
+        super().__init__()
+        self.entry_price = entry_price
+        self.expiry = expiry
+
+    @property
+    def required_history_bars(self) -> int:
+        return 1
+
+    def generate_signal(self, kline_data, symbol, timeframe, current_price):
+        if kline_data[-1]["timestamp"] == pd.Timestamp("2020-01-01"):
+            return TradingSignal(
+                decision="LONG",
+                confidence=1.0,
+                entry_order="stop",
+                entry_price=self.entry_price,
+                entry_expiry_bars=self.expiry,
+            )
+        return None
+
+    def should_reevaluate(self, position, current_price):
+        return False
+
+
+@pytest.mark.parametrize("fill_open, fill_high, expected_entry", [
+    (102.0, 107.0, 105.0),
+    (108.0, 110.0, 108.0),
+])
+def test_stop_entry_en_etapa_1(fill_open, fill_high, expected_entry):
+    idx = pd.date_range("2020-01-01", periods=4, freq="D")
+    strat = _StopProbeStrategy(entry_price=105.0, expiry=3)
+
+    candles_no_cross = pd.DataFrame(
+        {
+            "timestamp": idx,
+            "open": [100.0, 101.0, 102.0, 101.0],
+            "high": [101.0, 104.0, 103.0, 102.0],
+            "low": [99.0, 99.0, 100.0, 99.0],
+            "close": [100.5, 102.0, 101.0, 100.0],
+            "volume": 1.0,
+        },
+        index=idx,
+    )
+    sig_no_cross = bar_signals(strat, candles_no_cross, "TEST", "1d")
+    assert sig_no_cross["entry_order"].iloc[0] == "stop"
+    assert sig_no_cross["entry_price"].iloc[0] == 105.0
+    assert sig_no_cross["entry_expiry_bars"].iloc[0] == 3.0
+    assert (sig_no_cross["entry_order"].iloc[1:] == "market").all()
+    assert sig_no_cross["entry_price"].iloc[1:].isna().all()
+    assert sig_no_cross["entry_expiry_bars"].iloc[1:].isna().all()
+
+    r_no_cross = run_filter(sig_no_cross, candles_no_cross, commission_pct=0.0, slippage_pct=0.0, capital=10_000.0)
+    assert r_no_cross["trades"] == 0
+
+    candles_cross = pd.DataFrame(
+        {
+            "timestamp": idx,
+            "open": [100.0, fill_open, 106.0, 105.0],
+            "high": [101.0, fill_high, 108.0, 107.0],
+            "low": [99.0, 100.0, 104.0, 103.0],
+            "close": [100.5, 106.0, 107.0, 106.0],
+            "volume": 1.0,
+        },
+        index=idx,
+    )
+    sig_cross = bar_signals(strat, candles_cross, "TEST", "1d")
+    r_cross = run_filter(sig_cross, candles_cross, commission_pct=0.0, slippage_pct=0.0, capital=10_000.0)
+    assert r_cross["trades"] == 1
+    assert float(r_cross["portfolio"].trades.records["entry_price"][0]) == pytest.approx(expected_entry)
