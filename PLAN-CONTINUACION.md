@@ -762,6 +762,7 @@ Los primeros 5 son los más fáciles de revisar.
 | X19d.1 | `QuantAgent-e4jc.15.1` | P-1d1: consultar posiciones, órdenes y dividendos paper para digest; parte de e4jc.15 | DB SQLite sintética devuelve datos de sesión aislados a PAPER; posiciones cantidad × precio | probar | L20 |
 | X19d.2 | `QuantAgent-e4jc.15.2` | P-1d2: integrar pesos DB-sombra y aviso de sesión faltante; parte de e4jc.15 | Coincidencia da 0, divergencia da 1 y sombra sin última sesión muestra aviso; depende de e4jc.15.1 | probar | L20 |
 | X19d.3 | `QuantAgent-e4jc.15.3` | P-1d3: ejecutar chequeos de órdenes y dividendos desde digest DB; parte de e4jc.15 | Rechazo sin comentario y dividendo sin tratamiento dan 1 con hallazgo; atendidos dan 0; depende de e4jc.15.1 | probar | L20 |
+| X19e | `QuantAgent-xtns` | P-1e: dividendos paper desde actividades DIV de Alpaca en el digest (`--dividendos-alpaca`); decisión de Fede 2026-10-27 | DIV listado con tratamiento y código 0; error de API: aviso y código 1; sin opción sin cambios | probar | L20 |
 
 
 | W02 | `QuantAgent-13a` | Contrato Broker para fills parciales, rechazos y nocional | ABC y PaperBroker cubren el contrato documentado | leer | L21 |
