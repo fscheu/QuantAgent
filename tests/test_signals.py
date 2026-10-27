@@ -178,3 +178,23 @@ def test_stop_entry_en_etapa_1(fill_open, fill_high, expected_entry):
     r_cross = run_filter(sig_cross, candles_cross, commission_pct=0.0, slippage_pct=0.0, capital=10_000.0)
     assert r_cross["trades"] == 1
     assert float(r_cross["portfolio"].trades.records["entry_price"][0]) == pytest.approx(expected_entry)
+
+
+def test_bar_signals_chandelier_dist():
+    class DummyChandStrategy(SmaCrossStrategy):
+        def __init__(self):
+            super().__init__(fast=2, slow=3)
+            self.chandelier_mult = 2.5
+            self.atr_period = 3
+
+    closes = [10.0, 11.0, 12.0, 13.0, 12.0]
+    c = _candles(closes)
+    sig_chand = bar_signals(DummyChandStrategy(), c, "TEST", "1d")
+    assert "chandelier_dist" in sig_chand.columns
+    assert sig_chand["chandelier_dist"].iloc[:2].isna().all()
+    assert sig_chand["chandelier_dist"].iloc[2] == pytest.approx(2.5 * (2 / 3))
+
+    sig_no_chand = bar_signals(SmaCrossStrategy(fast=2, slow=3), c, "TEST", "1d")
+    assert "chandelier_dist" in sig_no_chand.columns
+    assert sig_no_chand["chandelier_dist"].isna().all()
+
