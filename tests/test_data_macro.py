@@ -10,8 +10,10 @@ from quantagent.cli.data import data_group
 from quantagent.data.macro import (
     crear_snapshot_macro,
     serie_punto_en_el_tiempo,
+    transformada_punto_en_el_tiempo,
     valor_conocido,
     verificar_snapshot_macro,
+    zscore_movil,
 )
 from quantagent.data.snapshot import SnapshotError
 
@@ -136,3 +138,56 @@ def test_verify_compara_contra_el_manifiesto_versionado(tmp_path):
     with pytest.raises(SnapshotError) as exc:
         verificar_snapshot_macro("m", base_dir=tmp_path / "datos", versioned_dir=versionado)
     assert "UNRATE" in str(exc.value) and "versionado" in str(exc.value) and "CPIAUCSL" not in str(exc.value)
+
+
+def test_transformada_yoy_punto_en_el_tiempo_con_revision_posterior(tmp_path):
+    class ClienteRevision:
+        def observaciones(self, serie, desde, hasta, todas_las_versiones=True):
+            fin = pd.Timestamp("9999-12-31")
+            filas = [
+                ("2019-03-01", 100.0, "2019-04-05", fin),
+                ("2020-03-01", 110.0, "2020-04-05", "2020-05-02"),
+                ("2020-03-01", 115.0, "2020-05-03", fin),
+            ]
+            return pd.DataFrame(
+                [(pd.Timestamp(f), v, pd.Timestamp(a), pd.Timestamp(b)) for f, v, a, b in filas],
+                columns=["fecha", "valor", "realtime_start", "realtime_end"],
+            )
+
+    crear_snapshot_macro("m_yoy", ["INDPRO"], ClienteRevision(), base_dir=tmp_path)
+    sesiones = ["2020-04-01", "2020-04-20", "2020-05-10"]
+    s = transformada_punto_en_el_tiempo("m_yoy", "INDPRO", sesiones, tipo="yoy", base_dir=tmp_path)
+    assert s.isna().tolist() == [True, False, False]
+    assert s.iloc[1] == pytest.approx(0.10)
+    assert s.iloc[2] == pytest.approx(0.15)
+
+
+def test_transformada_dif12_serie_diaria_con_hueco_fin_de_semana(tmp_path):
+    class ClienteDiario:
+        def observaciones(self, serie, desde, hasta, todas_las_versiones=True):
+            fin = pd.Timestamp("9999-12-31")
+            filas = [
+                ("2020-03-13", 1.50, "2020-03-13", fin),
+                ("2020-03-16", 1.55, "2020-03-16", fin),
+                ("2021-03-15", 2.25, "2021-03-15", fin),
+            ]
+            return pd.DataFrame(
+                [(pd.Timestamp(f), v, pd.Timestamp(a), pd.Timestamp(b)) for f, v, a, b in filas],
+                columns=["fecha", "valor", "realtime_start", "realtime_end"],
+            )
+
+    crear_snapshot_macro("m_dif12", ["DGS10"], ClienteDiario(), base_dir=tmp_path)
+    s = transformada_punto_en_el_tiempo("m_dif12", "DGS10", ["2021-03-15"], tipo="dif12", base_dir=tmp_path)
+    assert s.iloc[0] == pytest.approx(0.75)
+
+
+def test_zscore_movil_valores_a_mano_y_nan_antes_de_36_meses():
+    fechas = pd.date_range("2020-01-01", periods=37, freq="MS")
+    valores = [10.0] * 36 + [20.0]
+    serie = pd.Series(valores, index=fechas, name="INDPRO_yoy")
+
+    z = zscore_movil(serie, meses=36)
+    assert z.loc[:"2022-12-01"].isna().all()
+    esperado = 36.0 / (37.0 ** 0.5)
+    assert z.loc["2023-01-01"] == pytest.approx(esperado)
+
