@@ -30,14 +30,10 @@ def guardar_foto(
     if archivo.exists():
         raise FileExistsError(f"el archivo de consenso para {fecha_str} ya existe: {archivo}")
 
-    metodo = getattr(cliente, "estimaciones_analistas", None) or getattr(cliente, "analyst_estimates", None)
-    if not callable(metodo) and callable(cliente):
-        metodo = cliente
-
     filas = []
     for sym in simbolos:
         try:
-            items = metodo(sym)
+            items = cliente.estimaciones_analistas(sym)
             if not items:
                 print(f"{sym}: sin datos")
                 continue
@@ -50,8 +46,7 @@ def guardar_foto(
         except Exception as exc:
             print(f"{sym}: error ({exc})")
 
-    df = pd.DataFrame(filas)
-    if df.empty:
-        df = pd.DataFrame(columns=["symbol", "date", "fecha_foto", "epsAvg", "epsHigh", "epsLow", "numAnalystsEps", "revenueAvg"])
-    df.to_parquet(archivo, index=False)
+    if not filas:
+        raise RuntimeError(f"ningún símbolo devolvió datos; no se guarda la foto de {fecha_str}")
+    pd.DataFrame(filas).to_parquet(archivo, index=False)
     return archivo

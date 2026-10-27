@@ -1,4 +1,3 @@
-from datetime import date
 import pandas as pd
 import pytest
 from click.testing import CliRunner
@@ -102,3 +101,9 @@ def test_cli_foto_sin_api_key_falla(tmp_path, monkeypatch):
     res = runner.invoke(data_group, ["consenso", "foto", "--simbolos", "AAPL", "--fecha", "2026-10-27"])
     assert res.exit_code != 0
     assert "falta FMP_API_KEY" in res.output
+
+
+def test_sin_datos_no_guarda_archivo(tmp_path):
+    with pytest.raises(RuntimeError, match="ningún símbolo"):
+        guardar_foto(["ROTO"], ClienteFalso(fallos={"ROTO"}), fecha="2026-10-27", base_dir=tmp_path)
+    assert not (tmp_path / "consenso-eps" / "2026-10-27.parquet").exists()

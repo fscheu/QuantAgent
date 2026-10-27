@@ -1,5 +1,6 @@
 import os
 from typing import Any, Dict, List, Optional
+
 import requests
 
 BASE_URL = "https://financialmodelingprep.com/stable/"
@@ -27,5 +28,3 @@ class FmpClient:
         """Devuelve estimaciones de analistas para un símbolo."""
         data = self._get("analyst-estimates", {"symbol": symbol, "period": period})
         return data if isinstance(data, list) else []
-
-    analyst_estimates = estimaciones_analistas
