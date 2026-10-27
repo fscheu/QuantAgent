@@ -48,7 +48,27 @@ def test_rebalance_existing_positions_sells_before_buying(db_session, tmp_path):
     from quantagent.fabrica.cartera import leer_sombra
     assert leer_sombra(tmp_path / "shadow.json", "paper", "2026-10-22") == {"pesos": {"A": .45, "B": .10, "C": .40}, "valor": 10000.0}
     assert [o.side for o in orders if o] == [OrderSide.SELL, OrderSide.BUY, OrderSide.BUY]
-    assert {s: p["qty"] for s, p in portfolio.positions.items()} == {"A": 45, "B": 10, "C": 40}
+    assert {s: p["qty"] for s, p in portfolio.positions.items()} == {"A": 42, "B": 9, "C": 38}
+    assert portfolio.cash >= .05 * portfolio.get_total_value()
+    from quantagent.fabrica.chequeos_paper import comparar_pesos
+    invested = portfolio.get_total_value() - portfolio.cash
+    weights = {symbol: position["qty"] * 100 / invested
+               for symbol, position in portfolio.positions.items()}
+    assert comparar_pesos(weights, {"A": .45 / .95, "B": .10 / .95, "C": .40 / .95}, .01) == []
+
+
+@pytest.mark.parametrize("existing", [False, True])
+def test_full_weight_rebalance_preserves_cash_reserve(db_session, tmp_path, existing):
+    portfolio = PortfolioManager(10000, db=db_session)
+    if existing:
+        portfolio.positions["A"] = dict(qty=20, avg_cost=100, current_price=100, pnl=0, pnl_pct=0)
+        portfolio.cash = 8000
+    manager = OrderManager(PositionSizer(), RiskManager(portfolio, db=db_session),
+                           PaperBroker(slippage_pct=.01), portfolio, db_session,
+                           cash_reserve_pct=.05)
+    rebalancear({"A": .6, "B": .4}, {"A": 100, "B": 100}, manager,
+                tmp_path / f"shadow-{existing}.json", fecha="2026-10-27")
+    assert portfolio.cash >= .05 * portfolio.get_total_value()
 
 
 def test_already_at_weights_creates_no_orders():
@@ -259,7 +279,7 @@ def test_paper_rebalance_buy_preserves_costs_and_truncates_integer(db_session, m
 @pytest.mark.parametrize("initial_cash,expected_submits,expected_cash", [
     (0, [("sell", 10.0)], 0),
     (100, [("sell", 10.0)], 100),
-    (250, [("sell", 10.0), ("buy", 2.0)], 50),
+    (250, [("sell", 10.0), ("buy", 1.0)], 150),
 ])
 def test_rebalance_buy_with_pending_sale_limits_to_available_cash(
     db_session, tmp_path, initial_cash, expected_submits, expected_cash
