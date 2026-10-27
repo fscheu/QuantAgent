@@ -208,13 +208,13 @@ def test_trading_digest_reports_rejections_and_dividend_source_notice(tmp_path):
 
 
 def test_trading_digest_reads_alpaca_dividends_and_reports_api_error(tmp_path):
-    from types import SimpleNamespace
     from quantagent.strategy.assembler import StrategyAssembler
 
     class FakeClient:
         def get(self, path, data):
             assert path == "/account/activities/DIV" and data == {"date": "2026-10-25"}
-            return [SimpleNamespace(symbol="SPY", net_amount="1.25")]
+            return [{"id": "activity-1", "activity_type": "DIV", "date": "2026-10-25",
+                     "net_amount": "1.25", "symbol": "SPY", "per_share_amount": "1.25", "qty": "1"}]
 
     class FakeBroker:
         def __init__(self, client):
@@ -236,6 +236,6 @@ def test_trading_digest_reads_alpaca_dividends_and_reports_api_error(tmp_path):
 
         StrategyAssembler.BROKER_CONSTRUCTORS["alpaca_paper"] = lambda config: FakeBroker(FailingClient())
         result = CliRunner().invoke(cli, args)
-        assert result.exit_code == 1 and "Dividendos: error al consultar Alpaca." in result.output
+        assert result.exit_code == 1 and "Dividendos: error al consultar Alpaca (RuntimeError)." in result.output
     finally:
         StrategyAssembler.BROKER_CONSTRUCTORS["alpaca_paper"] = previous

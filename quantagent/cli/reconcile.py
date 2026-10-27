@@ -93,8 +93,8 @@ def trading_digest(archivo, digest_date, db: str | None, shadow: str | None, por
             )
             client = StrategyAssembler.BROKER_CONSTRUCTORS["alpaca_paper"](resolved).client
             dividendos = leer_dividendos_alpaca(client, day)
-        except Exception:
-            warnings.append("Dividendos: error al consultar Alpaca.")
+        except Exception as exc:
+            warnings.append(f"Dividendos: error al consultar Alpaca ({type(exc).__name__}).")
             dividendos_error = True
         else:
             warnings.extend(reportar_dividendos(dividendos))
