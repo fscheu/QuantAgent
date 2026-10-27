@@ -48,7 +48,15 @@
     "L18",
     "L19",
     "L20",
-    "L21"
+    "L21",
+    "L22",
+    "L23",
+    "L24",
+    "L25",
+    "L25b",
+    "L26",
+    "L27",
+    "M5D"
   ],
   "ms": [
     {
@@ -94,8 +102,24 @@
       "detalle": true,
       "lotes": [
         "L21",
+        "L25",
         "M4B",
         "M4P"
+      ]
+    },
+    {
+      "id": "M5",
+      "titulo": "Motor top-down (régimen, sector y arquetipos)",
+      "detalle": true,
+      "label": "m5",
+      "lotes": [
+        "L22",
+        "L23",
+        "L24",
+        "L25b",
+        "L26",
+        "L27",
+        "M5D"
       ]
     }
   ],
@@ -177,12 +201,12 @@
       "tickets": [
         "QuantAgent-e4jc"
       ],
-      "punto": "PR #416 a main. R01: alcance X06–X18 y X20; X01–X05 y chequeos P-1 (X19a–c) pasaron a L21. D-2 se desglosó en e4jc.8.1–.3."
+      "punto": "PR #416 a main, en borrador. R01: alcance X06–X18 y X20; X01–X05 y chequeos P-1 (X19a–c) pasaron a L21. Hecho: reserva F1 (ku33), P-1d del digest (e4jc.15) y dividendos de Alpaca en el digest (xtns). Sigue abierto el epic e4jc."
     },
     "L21": {
       "rama": "lote/paper-alpaca",
       "nombre": "Paper trading con Alpaca",
-      "estado": "abierto",
+      "estado": "mergeado",
       "pr": 412,
       "tickets": [
         "QuantAgent-av1p",
@@ -198,7 +222,7 @@
         "QuantAgent-55x",
         "QuantAgent-av1p.4"
       ],
-      "punto": "PR #412 a main. Tickets base cerrados incluyen broker, sizing, D1–D3 y chequeos P-1. Falta av1p.4 para conectar rebalanceador y sombra al scheduler, luego b41 (digest) antes del piloto de dos semanas. X01–X05 y X19 pertenecen a L21; W14 no existe."
+      "punto": "Mergeado a main el 2026-10-26 (PR #412). Broker Alpaca, rebalanceador de carteras, sombra, ciclo paper del scheduler y digest operativo (b41). La operación paper en la VM (runbook y puesta en marcha, av1p.5) sigue abierta fuera del lote; el ciclo corre a las 08:00 UTC."
     },
     "LOOP": {
       "rama": "(sin lote) loop y herramientas",
@@ -250,7 +274,7 @@
     "L18": {
       "rama": "lote/m4-prep-curva-puv2",
       "nombre": "Curva, cambio-de-mes y preparación de M4",
-      "estado": "abierto",
+      "estado": "mergeado",
       "pr": 347,
       "tickets": [
         "QuantAgent-ro3w",
@@ -267,14 +291,119 @@
         "QuantAgent-oc0h",
         "QuantAgent-ev7d"
       ],
-      "punto": "PR #347 a main. Núcleo + curva contra el criterio de paper: falla la etapa 3 (Sharpe 0.38 contra 0.61 del benchmark). cambio-de-mes corta en la etapa 1 (Sharpe −0.46). Datos de Alpaca por fuente (T3 a T7) y diagnósticos de paper (say, oc0h, beo) listos para decidir. Falta el veredicto ro3w.3 y oc0h."
+      "punto": "Mergeado a main el 2026-10-21 (PR #347). Núcleo + curva falla la etapa 3 contra el criterio de paper (Sharpe 0.38 contra 0.61 del benchmark); cambio-de-mes corta en la etapa 1. Datos de Alpaca por fuente y diagnósticos de paper (say, oc0h, beo) cerrados."
     },
     "L19": {
       "rama": "lote/medicion-y-generador",
       "nombre": "Medición y generador",
-      "estado": "abierto",
+      "estado": "mergeado",
       "pr": 360,
-      "punto": "PR #360 a main, en borrador. Informe con Sharpe en exceso de la tasa corta, benchmark con los pesos de la cartera y error estándar del ΔSharpe; atribución de las cuatro carteras; pedido al investigador con criterio, inventario y lista negra. S01–S03 y S05–S08 en la notebook con Codex; S04 y S09 en la VM después de L18."
+      "punto": "Mergeado a main el 2026-10-22 (PR #360). Informe con Sharpe en exceso de la tasa corta, benchmark con los pesos de la cartera y error estándar del ΔSharpe; atribución de las cuatro carteras; pedido al investigador con criterio, inventario y lista negra. Punto de control S09 (cq4u) cerrado."
+    },
+    "L25": {
+      "rama": "lote/paper-fix-tz",
+      "nombre": "Fix de zona horaria en paper",
+      "estado": "mergeado",
+      "pr": 560,
+      "tickets": [
+        "QuantAgent-av1p.5.1"
+      ],
+      "punto": "Mergeado a main el 2026-10-27 (PR #560, fix av1p.5.1 en #561). DataProvider.get_ohlc acepta fechas con zona horaria de la fuente Alpaca; destrabó el ensayo de paper hasta entradas_cartera. Ojo: el plan de M5 también llama L25 al screener; acá el screener figura como L25b."
+    },
+    "L22": {
+      "rama": "lote/m5-datos",
+      "nombre": "M5 datos",
+      "estado": "propuesto",
+      "tickets": [
+        "QuantAgent-fnpr.1.1",
+        "QuantAgent-fnpr.1.2",
+        "QuantAgent-fnpr.1.3",
+        "QuantAgent-fnpr.1.4",
+        "QuantAgent-fnpr.1.5"
+      ],
+      "punto": "Snapshot macro con las series de la propuesta y transformaciones punto en el tiempo; acciones y composición del S&P 500 con la capa gratuita de Sharadar (D1); foto diaria del consenso de EPS (M5-05, conviene adelantarla porque junta historia). Sin empezar."
+    },
+    "L23": {
+      "rama": "lote/m5-regimen",
+      "nombre": "M5 régimen (H1 y H2)",
+      "estado": "propuesto",
+      "tickets": [
+        "QuantAgent-fnpr.2.1",
+        "QuantAgent-fnpr.2.2",
+        "QuantAgent-fnpr.2.3",
+        "QuantAgent-fnpr.2.4"
+      ],
+      "punto": "regimen_semanal de 2006 a hoy; H1 (momentum de precio) y H2 (con macro) por las etapas 1–2 del embudo, con H2 contra H1. Depende de L22 y de las decisiones D4 y D7. Sin empezar."
+    },
+    "L24": {
+      "rama": "lote/m5-arquetipos",
+      "nombre": "M5 arquetipos",
+      "estado": "abierto",
+      "tickets": [
+        "QuantAgent-fnpr.3.1",
+        "QuantAgent-fnpr.3.2",
+        "QuantAgent-fnpr.3.3",
+        "QuantAgent-fnpr.3.4",
+        "QuantAgent-fnpr.3.5",
+        "QuantAgent-fnpr.3.6",
+        "QuantAgent-fnpr.3.7"
+      ],
+      "punto": "PR #552 a main, en borrador, PM Copilot en la notebook. Hechos: indicadores (.3.1, .3.2), entradas stop con vencimiento en motor y vbt_filter (.3.3, .3.4) y arquetipos A y B (.3.5, .3.6). Falta M5-24 (.3.7): A y B agrupados sobre 11 ETFs sectoriales hasta la etapa 2, ticket de tipo decidir.",
+      "pr": 552
+    },
+    "L25b": {
+      "rama": "lote/m5-screener",
+      "nombre": "M5 screener (H3 y H4)",
+      "estado": "propuesto",
+      "tickets": [
+        "QuantAgent-fnpr.4.1",
+        "QuantAgent-fnpr.4.2",
+        "QuantAgent-fnpr.4.3",
+        "QuantAgent-fnpr.4.4",
+        "QuantAgent-fnpr.4.5"
+      ],
+      "punto": "Screener por sector sobre acciones: máscara de elegibilidad, fundamentales punto en el tiempo, candidatos_semanales, H3 y H4 hasta la etapa 2. Depende de L22–L24 y de la decisión de pagar Sharadar completo antes de correr H3/H4. En el plan y en Beads se llama L25 (label lote-L25), número que ya usó paper-fix-tz."
+    },
+    "L26": {
+      "rama": "lote/m5-ejecucion",
+      "nombre": "M5 ejecución por trade",
+      "estado": "propuesto",
+      "tickets": [
+        "QuantAgent-fnpr.5.1",
+        "QuantAgent-fnpr.5.2",
+        "QuantAgent-fnpr.5.3",
+        "QuantAgent-fnpr.5.4",
+        "QuantAgent-fnpr.5.5",
+        "QuantAgent-fnpr.5.6"
+      ],
+      "punto": "TradeIntent con stop obligatorio, stops en Alpaca (entrada, salida, reemplazo), nuevo_stop() como único camino para mover el stop, heat del bucket y R/R opcional, job previo a la apertura. Puede ir en paralelo con L22–L23. Depende de D3. Sin empezar."
+    },
+    "L27": {
+      "rama": "lote/m5-paper",
+      "nombre": "M5 paper",
+      "estado": "propuesto",
+      "tickets": [
+        "QuantAgent-fnpr.6.1",
+        "QuantAgent-fnpr.6.2",
+        "QuantAgent-fnpr.6.3",
+        "QuantAgent-fnpr.6.4",
+        "QuantAgent-fnpr.6.5"
+      ],
+      "punto": "Cuenta paper M5 aparte, pipeline semanal y diario, nota macro del LLM, digest diario y dos semanas sin intervención (punto de control de M5). Requiere autorización operativa explícita de Fede. Depende de L23–L26 y de D2 y D6."
+    },
+    "M5D": {
+      "rama": "(sin lote) decisiones",
+      "nombre": "Decisiones de M5",
+      "estado": "sin_lote",
+      "tickets": [
+        "QuantAgent-fnpr.7",
+        "QuantAgent-fnpr.8",
+        "QuantAgent-fnpr.9",
+        "QuantAgent-fnpr.10",
+        "QuantAgent-fnpr.11",
+        "QuantAgent-fnpr.12"
+      ],
+      "punto": "D2 sizing del bucket, D3 filtro R/R, D4 sustituto de ISM, D5 ETFs de país sin etapa 2, D6 capital de la cuenta paper M5 y D7 reserva 2023+. D1 (Sharadar) ya está decidida: capa gratuita para desarrollar; el pago se decide antes de H3/H4."
     }
   },
   "deps_extra": {
