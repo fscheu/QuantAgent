@@ -144,3 +144,46 @@ def verify_macro(name_arg: Optional[str], name: Optional[str]) -> None:
         raise click.ClickException(str(exc))
     click.echo(f"OK {len(series)} series, {sum(i['rows'] for i in series.values())} filas")
 
+
+@data_group.group("consenso", help="Consenso diario de estimaciones (EPS, ingresos).")
+def consenso_group() -> None:
+    """Consenso subcommands."""
+
+
+@consenso_group.command("foto", help="Guarda la foto diaria de consenso de EPS en Parquet.")
+@click.option("--simbolos", default=None, help="Símbolos separados por coma, ej. AAPL,MSFT,NVDA.")
+@click.option("--archivo", default=None, type=click.Path(exists=True, dir_okay=False), help="Archivo con un símbolo por línea.")
+@click.option("--fecha", default=None, help="Fecha de la foto en YYYY-MM-DD (por defecto hoy).")
+def foto_consenso_cmd(simbolos: Optional[str], archivo: Optional[str], fecha: Optional[str]) -> None:
+    from quantagent.data.consenso import guardar_foto
+    from quantagent.data.sources.fmp import FmpClient
+
+    simbolos_lista = []
+    if simbolos:
+        simbolos_lista.extend([s.strip().upper() for s in simbolos.split(",") if s.strip()])
+    if archivo:
+        with open(archivo, "r", encoding="utf-8") as f:
+            for linea in f:
+                s = linea.strip().upper()
+                if s and not s.startswith("#"):
+                    simbolos_lista.append(s)
+
+    simbolos_unicos = list(dict.fromkeys(simbolos_lista))
+    if not simbolos_unicos:
+        raise click.ClickException("Se debe indicar al menos un símbolo mediante --simbolos o --archivo")
+
+    fecha_obj = None
+    if fecha:
+        try:
+            fecha_obj = date.fromisoformat(fecha)
+        except ValueError:
+            raise click.ClickException(f"--fecha '{fecha}' no es una fecha YYYY-MM-DD válida")
+
+    try:
+        cliente = FmpClient()
+        destino = guardar_foto(simbolos_unicos, cliente=cliente, fecha=fecha_obj)
+        click.echo(f"Foto de consenso guardada en {destino}")
+    except (FileExistsError, RuntimeError, SnapshotError) as exc:
+        raise click.ClickException(str(exc))
+
+
