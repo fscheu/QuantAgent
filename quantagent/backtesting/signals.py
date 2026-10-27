@@ -24,9 +24,19 @@ def bar_signals(strategy: TradingStrategy, candles: pd.DataFrame, symbol: str, t
     `candles`: columnas timestamp, open, high, low, close, volume (las que recibe la estrategia).
     Devuelve, con el índice de `candles`: entry (+1 LONG, -1 SHORT, 0), exit (bool, solo la regla propia
     de should_exit), stop_loss_pct, take_profit_pct, trailing_stop_pct (NaN sin señal).
+    Columnas de entrada stop: entry_order ('market' por defecto), entry_price (NaN) y entry_expiry_bars (NaN).
     """
     out = pd.DataFrame(
-        {"entry": 0, "exit": False, "stop_loss_pct": np.nan, "take_profit_pct": np.nan, "trailing_stop_pct": np.nan},
+        {
+            "entry": 0,
+            "exit": False,
+            "stop_loss_pct": np.nan,
+            "take_profit_pct": np.nan,
+            "trailing_stop_pct": np.nan,
+            "entry_order": "market",
+            "entry_price": np.nan,
+            "entry_expiry_bars": np.nan,
+        },
         index=candles.index,
     )
     n = strategy.required_history_bars
@@ -39,6 +49,12 @@ def bar_signals(strategy: TradingStrategy, candles: pd.DataFrame, symbol: str, t
         if signal is not None and signal.decision in _DECISION:
             ref = signal.entry_price or price
             out.iloc[i, out.columns.get_loc("entry")] = _DECISION[signal.decision]
+            if getattr(signal, "entry_order", None) is not None:
+                out.iloc[i, out.columns.get_loc("entry_order")] = signal.entry_order
+            if getattr(signal, "entry_price", None) is not None:
+                out.iloc[i, out.columns.get_loc("entry_price")] = float(signal.entry_price)
+            if getattr(signal, "entry_expiry_bars", None) is not None:
+                out.iloc[i, out.columns.get_loc("entry_expiry_bars")] = float(signal.entry_expiry_bars)
             if signal.stop_loss is not None:
                 out.iloc[i, out.columns.get_loc("stop_loss_pct")] = abs(ref - signal.stop_loss) / ref
             if signal.take_profit is not None:
