@@ -3,6 +3,7 @@
 from typing import Any
 
 from .arquetipo_a_strategy import ArquetipoAStrategy
+from .arquetipo_b_strategy import ArquetipoBStrategy
 from .base import TradingStrategy
 from .curva_pendiente_strategy import CurvaPendienteStrategy
 from .fifty_two_week_high_strategy import FiftyTwoWeekHighStrategy
@@ -187,6 +188,28 @@ STRATEGY_REGISTRY: dict[str, dict[str, Any]] = {
             "safezone_period": {"type": int, "default": 10, "description": "SafeZone period."},
             "safezone_coef": {"type": float, "default": 2.0, "description": "SafeZone coefficient."},
             "chandelier_mult": {"type": float, "default": 3.0, "description": "ATR multiple for Chandelier exit."},
+        },
+    },
+    "ArquetipoBStrategy": {
+        "cls": ArquetipoBStrategy,
+        "type": "deterministic",
+        "cli_alias": "arquetipo-b",
+        "display_name": ArquetipoBStrategy.describe()["display_name"],
+        "description": ArquetipoBStrategy.describe()["description"],
+        "min_bars": 201,
+        "params": {
+            "bollinger_period": {"type": int, "default": 20, "description": "Período del ancho de Bollinger."},
+            "bollinger_k": {"type": float, "default": 2.0, "description": "Multiplicador k de Bollinger."},
+            "bollinger_lookback": {"type": int, "default": 60, "description": "Ventana de sesiones para compresión de Bollinger."},
+            "bollinger_quantile": {"type": float, "default": 0.20, "description": "Percentil para compresión de Bollinger."},
+            "ema_fast": {"type": int, "default": 50, "description": "Período EMA rápida."},
+            "ema_slow": {"type": int, "default": 200, "description": "Período EMA lenta."},
+            "donchian_period": {"type": int, "default": 20, "description": "Período Donchian."},
+            "volume_period": {"type": int, "default": 20, "description": "Período volumen promedio."},
+            "volume_factor": {"type": float, "default": 1.5, "description": "Factor multiplicador de volumen."},
+            "atr_period": {"type": int, "default": 14, "description": "Período ATR."},
+            "stop_atr_mult": {"type": float, "default": 2.5, "description": "Múltiplo ATR stop inicial."},
+            "chandelier_mult": {"type": float, "default": 3.0, "description": "Múltiplo ATR Chandelier exit."},
         },
     },
     "SmaCrossStrategy": {
