@@ -1,0 +1,31 @@
+id: arquetipo-a
+autor: fede
+justificacion: >-
+  Pullback en tendencia alcista segun el marco Triple Screen de Alexander Elder:
+  pantalla 1 macro con tendencia semanal (EMA 26 e histograma MACD al alza),
+  pantalla 2 diaria con retroceso (Force Index 2 negativo o RSI 3 en sobreventa
+  sobre EMA 22 diaria), orden stop de compra y stop inicial normalizado por
+  ATR y SafeZone con salida Chandelier. Parametros fijos por defecto.
+fuente: Alexander Elder (1986, 1993, 2002); Charles LeBeau y David Lucas (1999)
+timeframe: 1d
+clase: arquetipo-a
+parametros:
+  weekly_bars: [5]
+  trend_ema_period: [26]
+  macd_fast: [12]
+  macd_slow: [26]
+  macd_signal: [9]
+  force_index_period: [2]
+  rsi_period: [3]
+  rsi_oversold: [30.0]
+  ema_trend_period: [22]
+  entry_atr_mult: [0.1]
+  entry_expiry_bars: [3]
+  atr_period: [14]
+  swing_window: [5]
+  swing_atr_mult: [2.0]
+  safezone_period: [10]
+  safezone_coef: [2.0]
+  chandelier_mult: [3.0]
+activos: [XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV, XLY]
+universo: 9 ETFs sectoriales de EE.UU. del snapshot etf-1d-2026-10-amplio (sin XLC ni XLRE).
