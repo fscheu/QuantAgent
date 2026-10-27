@@ -14,6 +14,7 @@ from ..data.macro import recortar_snapshot_macro
 from ..data.snapshot import SNAPSHOT_DIR_ENV, snapshot_root
 from ..models import ActivePosition, ExitPolicy, OrderSide
 from ..strategy.base import TradingStrategy
+from ..strategy.indicadores import atr
 
 _DECISION = {"LONG": 1, "SHORT": -1}
 
@@ -25,6 +26,8 @@ def bar_signals(strategy: TradingStrategy, candles: pd.DataFrame, symbol: str, t
     Devuelve, con el índice de `candles`: entry (+1 LONG, -1 SHORT, 0), exit (bool, solo la regla propia
     de should_exit), stop_loss_pct, take_profit_pct, trailing_stop_pct (NaN sin señal).
     Columnas de entrada stop: entry_order ('market' por defecto), entry_price (NaN) y entry_expiry_bars (NaN).
+    Salida Chandelier: chandelier_dist (chandelier_mult × ATR(atr_period) de la ventana en cada vela si la
+    estrategia define ambos atributos; NaN si no).
     """
     out = pd.DataFrame(
         {
@@ -36,15 +39,24 @@ def bar_signals(strategy: TradingStrategy, candles: pd.DataFrame, symbol: str, t
             "entry_order": "market",
             "entry_price": np.nan,
             "entry_expiry_bars": np.nan,
+            "chandelier_dist": np.nan,
         },
         index=candles.index,
     )
     n = strategy.required_history_bars
     if n <= 0:
         n = 30
+    chand_mult = getattr(strategy, "chandelier_mult", None)
+    atr_period = getattr(strategy, "atr_period", None)
+    has_chand = chand_mult is not None and atr_period is not None
+    col_chand = out.columns.get_loc("chandelier_dist")
     for i in range(len(candles)):
         window = candles.iloc[max(0, i + 1 - n): i + 1]
         price = float(window["close"].iloc[-1])
+        if has_chand:
+            atr_s = atr(window, n=int(atr_period))
+            if len(atr_s) > 0 and pd.notna(atr_s.iloc[-1]):
+                out.iloc[i, col_chand] = float(chand_mult * atr_s.iloc[-1])
         signal = strategy.generate_signal(window.to_dict(orient="records"), symbol, timeframe, price)
         if signal is not None and signal.decision in _DECISION:
             ref = signal.entry_price or price

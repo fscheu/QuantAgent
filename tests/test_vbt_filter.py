@@ -179,3 +179,47 @@ def test_stop_entry_cases(rows, exits, expiry, expected_trades, expected_pnl):
     r = run_filter(s, c, commission_pct=0.0, slippage_pct=0.0, capital=CAPITAL)
     assert r["trades"] == expected_trades
     assert r["pnl"] == pytest.approx(expected_pnl)
+
+
+def test_chandelier_exit_long_and_short_synthetic():
+    # Long: sube y cae; dispara en vela 4 (close 108 <= max(high) 115 - 6 = 109), sale al open de vela 5 (107).
+    rows_long = [
+        (100, 100, 100, 100),  # 0: señal
+        (100, 105, 99, 104),   # 1: entra a open 100. max_high=105, stop=100, close=104 > 100
+        (104, 110, 103, 109),  # 2: max_high=110, stop=105, close=109 > 105
+        (109, 115, 108, 114),  # 3: max_high=115, stop=109, close=114 > 109
+        (114, 114, 107, 108),  # 4: max_high=115, stop=109, close=108 <= 109 -> dispara salida
+        (107, 108, 106, 107),  # 5: llena salida al open 107
+        (107, 107, 100, 101),  # 6
+    ]
+    c_long = _ohlc(rows_long)
+    s_long = _signals(c_long, {0: 1})
+    s_long["chandelier_dist"] = [5.0, 5.0, 5.0, 6.0, 6.0, 6.0, 6.0]
+    r_long = run_filter(s_long, c_long, commission_pct=0.0, slippage_pct=0.0, capital=CAPITAL)
+    assert r_long["trades"] == 1
+    recs_long = r_long["portfolio"].trades.records
+    assert int(recs_long["entry_idx"].iloc[0]) == 1
+    assert int(recs_long["exit_idx"].iloc[0]) == 5
+    assert float(recs_long["exit_price"].iloc[0]) == 107.0
+    assert r_long["pnl"] == pytest.approx(CAPITAL / 100.0 * (107.0 - 100.0))
+
+    # Corto: cae y sube; dispara en vela 3 (close 96 >= min(low) 90 + 5 = 95), sale al open de vela 4 (97).
+    rows_short = [
+        (100, 100, 100, 100),  # 0: señal
+        (100, 101, 95, 96),    # 1: entra a open 100. min_low=95, stop=100, close=96 < 100
+        (96, 97, 90, 91),      # 2: min_low=90, stop=95, close=91 < 95
+        (91, 98, 90, 96),      # 3: min_low=90, stop=95, close=96 >= 95 -> dispara salida
+        (97, 99, 95, 98),      # 4: llena salida al open 97
+        (98, 98, 94, 95),      # 5
+    ]
+    c_short = _ohlc(rows_short)
+    s_short = _signals(c_short, {0: -1})
+    s_short["chandelier_dist"] = 5.0
+    r_short = run_filter(s_short, c_short, commission_pct=0.0, slippage_pct=0.0, capital=CAPITAL)
+    assert r_short["trades"] == 1
+    recs_short = r_short["portfolio"].trades.records
+    assert int(recs_short["entry_idx"].iloc[0]) == 1
+    assert int(recs_short["exit_idx"].iloc[0]) == 4
+    assert float(recs_short["exit_price"].iloc[0]) == 97.0
+    assert r_short["pnl"] == pytest.approx(CAPITAL / 100.0 * (100.0 - 97.0))
+

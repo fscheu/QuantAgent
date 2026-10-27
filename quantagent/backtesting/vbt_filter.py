@@ -20,18 +20,34 @@ def equity_metrics(equity: pd.Series, risk_free_rate: float = RISK_FREE_RATE) ->
     return {"sharpe": float(sharpe), "max_drawdown": drawdown}
 
 
-def _trailing_exit_bars(trades, close: np.ndarray, pct: np.ndarray) -> list:
-    """Barras t cuyo cierre dispara el trailing de cada trade (el motor propio: cierre vs máximo/mínimo cierre desde la entrada)."""
+def _trailing_exit_bars(
+    trades, close: np.ndarray, pct: np.ndarray,
+    chand: np.ndarray | None = None, high: np.ndarray | None = None, low: np.ndarray | None = None,
+) -> list:
+    """Barras t cuyo cierre dispara el trailing de cada trade (el motor propio: cierre vs máximo/mínimo cierre desde la entrada, o Chandelier stop)."""
     bars = []
     for r in trades:
         e, x, short = int(r["entry_idx"]), int(r["exit_idx"]), int(r["direction"]) == 1
-        if not pct[e] > 0:
-            continue
-        path = close[e:x]  # t < x: la salida llena en el open de t+1 <= x
-        ref = np.minimum.accumulate(path) if short else np.maximum.accumulate(path)
-        hit = np.nonzero(path > ref * (1 + pct[e]) if short else path < ref * (1 - pct[e]))[0]
-        if len(hit):
-            bars.append(e + int(hit[0]))
+        hits = []
+        if pct is not None and e < len(pct) and pct[e] > 0:
+            path = close[e:x]  # t < x: la salida llena en el open de t+1 <= x
+            ref = np.minimum.accumulate(path) if short else np.maximum.accumulate(path)
+            hit = np.nonzero(path > ref * (1 + pct[e]) if short else path < ref * (1 - pct[e]))[0]
+            if len(hit):
+                hits.append(int(hit[0]))
+        if chand is not None:
+            c_dist = chand[e:x]
+            path = close[e:x]
+            if short:
+                ref = np.minimum.accumulate(low[e:x])
+                hit_c = np.nonzero((path >= ref + c_dist) & np.isfinite(c_dist))[0]
+            else:
+                ref = np.maximum.accumulate(high[e:x])
+                hit_c = np.nonzero((path <= ref - c_dist) & np.isfinite(c_dist))[0]
+            if len(hit_c):
+                hits.append(int(hit_c[0]))
+        if hits:
+            bars.append(e + min(hits))
     return bars
 
 
@@ -41,7 +57,9 @@ def run_filter(signals: pd.DataFrame, candles: pd.DataFrame, *, commission_pct: 
     en entry_expiry_bars. Stops por vela (`stop_loss_pct`, `take_profit_pct`, opcionales) de la señal, medidos
     desde el precio de entrada llenado y evaluados con high/low; si una vela toca stop y take profit sale por
     el stop; un gap más allá del stop sale al open. `trailing_stop_pct` (opcional): sale si el cierre cae bajo el
-    máximo cierre desde la entrada × (1 − pct) (cortos: mínimo × (1 + pct)); llena en el open siguiente, como `exit`. Devuelve trades, pnl, sharpe (tasa 2%), sharpe_tasa_0, max_drawdown (fracción 0-1) y la curva `equity`."""
+    máximo cierre desde la entrada × (1 − pct) (cortos: mínimo × (1 + pct)); llena en el open siguiente, como `exit`.
+    `chandelier_dist` (opcional): sale en la primera vela t con close[t] <= max(high desde la vela de entrada hasta t) − chandelier_dist[t]
+    (cortos: close[t] >= min(low desde entrada hasta t) + chandelier_dist[t]); llena en el open siguiente. Devuelve trades, pnl, sharpe (tasa 2%), sharpe_tasa_0, max_drawdown (fracción 0-1) y la curva `equity`."""
     has_stop = "entry_order" in signals.columns and (signals["entry_order"] == "stop").any()
     if has_stop:
         n = len(candles)
@@ -94,6 +112,8 @@ def run_filter(signals: pd.DataFrame, candles: pd.DataFrame, *, commission_pct: 
 
     exit_ = signals["exit"].astype(bool).shift(1, fill_value=False)
     close = candles["close"].to_numpy(float)
+    high = candles["high"].to_numpy(float)
+    low = candles["low"].to_numpy(float)
     trail_exit = np.zeros(len(close), dtype=bool)  # cierres que disparan el trailing, llenan en el open siguiente
 
     def simulate():
@@ -107,8 +127,10 @@ def run_filter(signals: pd.DataFrame, candles: pd.DataFrame, *, commission_pct: 
         )
 
     pf = simulate()
-    while np.isfinite(trail).any():  # cada pasada fija un trailing más; fijarlo cambia las trades siguientes
-        new = [t for t in _trailing_exit_bars(pf.trades.values, close, trail) if not trail_exit[t]]
+    has_chand = "chandelier_dist" in signals.columns and signals["chandelier_dist"].notna().any()
+    chand = signals["chandelier_dist"].to_numpy(float) if has_chand else None
+    while np.isfinite(trail).any() or has_chand:  # cada pasada fija un trailing más; fijarlo cambia las trades siguientes
+        new = [t for t in _trailing_exit_bars(pf.trades.values, close, trail, chand, high, low) if not trail_exit[t]]
         if not new:
             break
         trail_exit[min(new)] = True  # solo la más temprana: las marcas fijadas siempre son de trades que ya no cambian
