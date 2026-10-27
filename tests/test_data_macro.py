@@ -9,6 +9,7 @@ from click.testing import CliRunner
 from quantagent.cli.data import data_group
 from quantagent.data.macro import (
     crear_snapshot_macro,
+    recortar_snapshot_macro,
     serie_punto_en_el_tiempo,
     transformada_punto_en_el_tiempo,
     valor_conocido,
@@ -190,4 +191,68 @@ def test_zscore_movil_valores_a_mano_y_nan_antes_de_36_meses():
     assert z.loc[:"2022-12-01"].isna().all()
     esperado = 36.0 / (37.0 ** 0.5)
     assert z.loc["2023-01-01"] == pytest.approx(esperado)
+
+
+def test_manifiesto_con_notas_y_sin_notas(tmp_path):
+    m_sin = crear_snapshot_macro("sin_notas", ["UNRATE"], ClienteFalso(), base_dir=tmp_path)
+    assert "notas" not in m_sin
+    manifest_file = json.loads((tmp_path / "sin_notas" / "manifest.json").read_text())
+    assert "notas" not in manifest_file
+
+    m_con = crear_snapshot_macro(
+        "con_notas",
+        ["UNRATE", "CPIAUCSL"],
+        ClienteFalso(),
+        base_dir=tmp_path,
+        notas={"UNRATE": "tasa desempleo"},
+    )
+    assert m_con.get("notas") == {"UNRATE": "tasa desempleo"}
+    manifest_file2 = json.loads((tmp_path / "con_notas" / "manifest.json").read_text())
+    assert manifest_file2.get("notas") == {"UNRATE": "tasa desempleo"}
+
+    with pytest.raises(SnapshotError, match="nota sobre serie ausente"):
+        crear_snapshot_macro(
+            "invalido",
+            ["UNRATE"],
+            ClienteFalso(),
+            base_dir=tmp_path,
+            notas={"NOEXISTE": "algo"},
+        )
+
+
+def test_recortar_conserva_notas(tmp_path):
+    crear_snapshot_macro(
+        "orig",
+        ["UNRATE"],
+        ClienteFalso(),
+        base_dir=tmp_path,
+        notas={"UNRATE": "nota original"},
+    )
+    destino = tmp_path / "recortado"
+    rec = recortar_snapshot_macro("orig", "2020-05-01", destino=destino, base_dir=tmp_path)
+    assert rec.get("notas") == {"UNRATE": "nota original"}
+    manifest_rec = json.loads((destino / "orig" / "manifest.json").read_text())
+    assert manifest_rec.get("notas") == {"UNRATE": "nota original"}
+
+
+def test_cli_nota_parsea_y_valida_formato(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    monkeypatch.setenv("FRED_API_KEY", "clave-falsa")
+    monkeypatch.setattr("quantagent.data.sources.fred.FredClient", lambda: ClienteFalso())
+    runner = CliRunner()
+
+    res = runner.invoke(
+        data_group,
+        ["macro", "create", "--name", "m_cli", "--series", "UNRATE", "--nota", "UNRATE=nota de unrate"],
+    )
+    assert res.exit_code == 0, res.output
+    m = json.loads((tmp_path / "m_cli" / "manifest.json").read_text())
+    assert m.get("notas") == {"UNRATE": "nota de unrate"}
+
+    res_invalido = runner.invoke(
+        data_group,
+        ["macro", "create", "--name", "m_invalido", "--series", "UNRATE", "--nota", "FORMATO_SIN_IGUAL"],
+    )
+    assert res_invalido.exit_code != 0
+    assert "formato inválido" in res_invalido.output.lower()
 
