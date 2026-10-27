@@ -15,7 +15,7 @@ Una segunda rama de operación en QuantAgent, en una cuenta paper de Alpaca apar
 
 | # | Decisión | Antes de | Recomendación del PM |
 |---|---|---|---|
-| D1 | ¿Se paga Sharadar (o equivalente) para acciones, composición del S&P 500 y fundamentales? Excepción a R01 #14 | `M5-03` (lote L22) | **Decidido por Fede (2026-10-25):** se avanza con la **capa gratuita** de Sharadar (cuenta ya creada; muestra de ~30 empresas) para desarrollar y testear M5-03, M5-04, M5-31 y M5-32. El pago (Bundle con historia completa, USD 69/mes o 499/año) se decide al abrir L25, antes de correr H3/H4. |
+| D1 | ¿Se paga Sharadar (o equivalente) para acciones, composición del S&P 500 y fundamentales? Excepción a R01 #14 | `M5-03` (lote L22) | **Decidido por Fede (2026-10-25):** se avanza con la **capa gratuita** de Sharadar (cuenta ya creada; muestra de ~30 empresas) para desarrollar y testear M5-03, M5-04, M5-31 y M5-32. El pago (Bundle con historia completa, USD 69/mes o 499/año) se decide al abrir L28, antes de correr H3/H4. |
 | D2 | Sizing del bucket M5: riesgo por trade, tope por posición, heat máximo | `M5-50` (antes de paper) | Partir de R01 (0,25 % y 10 %) y decidir el heat con la tabla de §6. |
 | D3 | Filtro R/R: valor de `rr_min` y objetivo solo estructural | `M5-44` | Objetivo opcional; filtro R/R solo con objetivo estructural; `rr_min` = 2 como en la propuesta. |
 | D4 | Sustituto de ISM New Orders | `M5-01` | Nuevos pedidos de la encuesta de la Fed de Filadelfia (la más larga y mensual); el PM lo confirma en FRED antes. |
@@ -25,18 +25,18 @@ Una segunda rama de operación en QuantAgent, en una cuenta paper de Alpaca apar
 
 ## 3. Lotes
 
-Seis lotes. L23–L25 son investigación (embudo, backtest); L26 es ejecución y sirve también a las estrategias sueltas de M4; L27 es paper.
+Seis lotes. L23, L24 y L28 son investigación (embudo, backtest); L26 es ejecución y sirve también a las estrategias sueltas de M4; L27 es paper. El screener es L28 y no L25 porque L25 ya lo usó `lote/paper-fix-tz`.
 
 ```mermaid
 flowchart LR
   L22[L22 datos] --> L23[L23 régimen<br/>H1 y H2]
-  L22 --> L25[L25 screener<br/>H3 y H4]
-  L23 --> L25
-  L24[L24 arquetipos] --> L25
+  L22 --> L28[L28 screener<br/>H3 y H4]
+  L23 --> L28
+  L24[L24 arquetipos] --> L28
   L26[L26 ejecución por trade] --> L27[L27 paper M5]
   L23 --> L27
   L24 --> L27
-  L25 --> L27
+  L28 --> L27
 ```
 
 | Lote | Rama | Filas | Punto de control |
@@ -44,13 +44,13 @@ flowchart LR
 | L22 | `lote/m5-datos` | M5-01 a M5-05 | Snapshot macro con las series de la propuesta (o sus sustitutos) y transformaciones punto en el tiempo; snapshot de acciones, composición del S&P 500 por fecha y fundamentales con fecha de publicación; un test por fuente que prueba que una consulta en t no ve nada publicado después de t. |
 | L23 | `lote/m5-regimen` | M5-10 a M5-13 | `regimen_semanal` calculado de 2006 a hoy; H1 y H2 con veredicto de las etapas 1–2 del embudo; tabla H2 contra H1. |
 | L24 | `lote/m5-arquetipos` | M5-20 a M5-24 | Arquetipos A y B, con parámetros comunes, corridos agrupados sobre los 11 ETFs sectoriales hasta la etapa 2; entradas stop con vencimiento en el motor y en el filtro, verificadas contra `backtesting.py`. |
-| L25 | `lote/m5-screener` | M5-30 a M5-34 | `candidatos_semanales` de 2007 a hoy; H3 contra los ETFs de sus sectores y H4 contra H3 con veredicto de etapa 2. |
+| L28 | `lote/m5-screener` | M5-30 a M5-34 | `candidatos_semanales` de 2007 a hoy; H3 contra los ETFs de sus sectores y H4 contra H3 con veredicto de etapa 2. |
 | L26 | `lote/m5-ejecucion` | M5-40 a M5-45 | En la cuenta paper M5, una entrada llenada deja su stop en Alpaca; un cambio de stop reemplaza la orden; un stop llenado en Alpaca cierra la posición local; ningún camino del código baja el stop de un largo (test de propiedad); el heat rechaza con motivo. |
 | L27 | `lote/m5-paper` | M5-50 a M5-54 | Punto de control de M5 (§1). |
 
 **Paralelismo:** L24 y L26 no dependen de los datos nuevos y pueden ir en paralelo con L22–L23 (máquinas distintas, archivos distintos: `strategy/` y `backtesting/` contra `trading/`). L26 puede adelantarse incluso a M5 si M4 necesita stops en el broker.
 
-**Opción de paper en dos tiempos (recomendada):** arrancar L27 con ETFs solamente (H1/H2 + arquetipos) apenas cierren L23, L24 y L26, y sumar acciones cuando cierre L25. Así la prueba de sistema empieza antes y la Etapa 2 entra sobre una ejecución que ya anda.
+**Opción de paper en dos tiempos (recomendada):** arrancar L27 con ETFs solamente (H1/H2 + arquetipos) apenas cierren L23, L24 y L26, y sumar acciones cuando cierre L28. Así la prueba de sistema empieza antes y la Etapa 2 entra sobre una ejecución que ya anda.
 
 ## 4. Tickets
 
@@ -85,7 +85,7 @@ Formato de la cola de `PLAN-CONTINUACION.md` §4. Revisión: **leer**, **decidir
 | M5-23 | Arquetipo B (ruptura después de compresión) | Idem M5-22 | leer |
 | M5-24 | A y B agrupados sobre los 11 ETFs sectoriales hasta la etapa 2 | Veredicto de las dos en `hipotesis.csv`, intentos sumados a N | decidir |
 
-### L25 — screener (Etapa 2, H3 y H4)
+### L28 — screener (Etapa 2, H3 y H4)
 
 | # | Objetivo | Aceptación binaria | Revisión |
 |---|---|---|---|
