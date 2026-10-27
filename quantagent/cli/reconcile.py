@@ -52,7 +52,9 @@ def reconcile_positions() -> None:
 @click.option("--db", type=click.Path(dir_okay=False), help="Archivo SQLite; por defecto usa DATABASE_URL.")
 @click.option("--shadow", type=click.Path(dir_okay=False), help="Archivo JSON de pesos sombra.")
 @click.option("--portfolio", default="paper", show_default=True, help="Nombre de la cartera en el digest.")
-def trading_digest(archivo, digest_date, db: str | None, shadow: str | None, portfolio: str) -> None:
+@click.option("--dividendos-alpaca", is_flag=True, help="Leer dividendos de Alpaca para esa fecha.")
+def trading_digest(archivo, digest_date, db: str | None, shadow: str | None, portfolio: str,
+                   dividendos_alpaca: bool) -> None:
     if archivo:
         data = json.load(archivo)
         differences = comparar_pesos(data["paper_weights"], data["shadow_weights"])
@@ -78,8 +80,24 @@ def trading_digest(archivo, digest_date, db: str | None, shadow: str | None, por
         os.environ["DATABASE_URL"] = f"sqlite:///{os.path.abspath(db)}"
     db_path = db or make_url(settings.DATABASE_URL).database
     shadow_path = Path(shadow) if shadow else Path(db_path).with_suffix(".sombra.json")
-    warnings, differences = ["Equity paper = valor invertido; la DB no guarda caja.",
-                             "Dividendos: sin fuente de dividendos."], []
+    warnings = ["Equity paper = valor invertido; la DB no guarda caja."]
+    if not dividendos_alpaca:
+        warnings.append("Dividendos: sin fuente de dividendos.")
+    differences, dividendos_error = [], False
+    dividendos = []
+    if dividendos_alpaca:
+        try:
+            from quantagent.trading.alpaca_dividendos import leer_dividendos_alpaca
+            resolved = StrategyAssembler.from_profiles(
+                overrides={"broker_type": "alpaca_paper"}, environment=Environment.PAPER
+            )
+            client = StrategyAssembler.BROKER_CONSTRUCTORS["alpaca_paper"](resolved).client
+            dividendos = leer_dividendos_alpaca(client, day)
+        except Exception:
+            warnings.append("Dividendos: error al consultar Alpaca.")
+            dividendos_error = True
+        else:
+            warnings.extend(reportar_dividendos(dividendos))
     orders = []
     try:
         with utils.session_scope() as session:
@@ -105,6 +123,6 @@ def trading_digest(archivo, digest_date, db: str | None, shadow: str | None, por
     rejection_reports = reportar_rechazos([SimpleNamespace(**order) for order in orders])
     click.echo(build_digest(day, portfolios, trades, heartbeats, warnings=warnings,
                             reconciliations=[*differences, *rejection_reports], cumulative_pnl=cumulative_pnl))
-    if differences or any(str(order.get("status")).lower() == "rejected" and not order.get("comment")
+    if dividendos_error or differences or any(str(order.get("status")).lower() == "rejected" and not order.get("comment")
                           for order in orders):
         raise click.exceptions.Exit(1)

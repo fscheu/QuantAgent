@@ -205,3 +205,37 @@ def test_trading_digest_reports_rejections_and_dividend_source_notice(tmp_path):
     assert result.exit_code == 0
     assert "SPY: rechazo, saldo insuficiente" in result.output
     assert "Dividendos: sin fuente de dividendos." in result.output
+
+
+def test_trading_digest_reads_alpaca_dividends_and_reports_api_error(tmp_path):
+    from types import SimpleNamespace
+    from quantagent.strategy.assembler import StrategyAssembler
+
+    class FakeClient:
+        def get(self, path, data):
+            assert path == "/account/activities/DIV" and data == {"date": "2026-10-25"}
+            return [SimpleNamespace(symbol="SPY", net_amount="1.25")]
+
+    class FakeBroker:
+        def __init__(self, client):
+            self.client = client
+
+    class FailingClient:
+        def get(self, path, data):
+            raise RuntimeError("API unavailable")
+
+    previous = StrategyAssembler.BROKER_CONSTRUCTORS["alpaca_paper"]
+    StrategyAssembler.BROKER_CONSTRUCTORS["alpaca_paper"] = lambda config: FakeBroker(FakeClient())
+    try:
+        args = ["trading", "digest", "--date", "2026-10-25", "--db", str(tmp_path / "paper.db"),
+                "--dividendos-alpaca"]
+        result = CliRunner().invoke(cli, args)
+        assert result.exit_code == 0, result.output
+        assert "SPY: dividendo 1.25 USD, tratamiento efectivo en cuenta" in result.output
+        assert "sin fuente de dividendos" not in result.output
+
+        StrategyAssembler.BROKER_CONSTRUCTORS["alpaca_paper"] = lambda config: FakeBroker(FailingClient())
+        result = CliRunner().invoke(cli, args)
+        assert result.exit_code == 1 and "Dividendos: error al consultar Alpaca." in result.output
+    finally:
+        StrategyAssembler.BROKER_CONSTRUCTORS["alpaca_paper"] = previous
