@@ -59,3 +59,35 @@ def permutar_regimenes_bloques(regimenes: pd.Series, seed: int | None = None) ->
     perm = rng.permutation(len(grupos))
     valores = np.concatenate([grupos[i] for i in perm])
     return pd.Series(valores, index=regimenes.index, name=regimenes.name)
+
+
+def price_momentum_score(
+    cierres: pd.DataFrame,
+    ventanas: tuple[int, ...] = (21, 63, 126),
+    ventana_vol: int = 60,
+) -> pd.DataFrame:
+    """PriceMomentumScore: promedio del retorno en ventanas k sobre volatilidad de ventana_vol sesiones."""
+    if not ventanas:
+        return pd.DataFrame(np.nan, index=cierres.index, columns=cierres.columns)
+    ret_diario = cierres.pct_change()
+    vol = ret_diario.rolling(ventana_vol).std(ddof=1)
+    scores = [(cierres / cierres.shift(k) - 1.0) / vol for k in ventanas]
+    res = scores[0]
+    for s in scores[1:]:
+        res = res + s
+    return res / len(ventanas)
+
+
+def filtro_caida(
+    score: pd.DataFrame,
+    cierres_spy: pd.Series,
+    ventana_media: int = 200,
+    pendiente: int = 20,
+) -> pd.DataFrame:
+    """Filtro de caída: True si score < 0 y SPY < SMA(ventana_media) con SMA decreciente en ventana de pendiente."""
+    sma = cierres_spy.rolling(ventana_media).mean()
+    sma_prev = sma.shift(pendiente)
+    caida_spy = (cierres_spy < sma) & (sma < sma_prev)
+    caida_spy = caida_spy.reindex(score.index, fill_value=False).fillna(False).astype(bool)
+    return (score < 0).fillna(False).mul(caida_spy, axis=0).astype(bool)
+
