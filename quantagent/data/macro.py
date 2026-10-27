@@ -135,3 +135,56 @@ def serie_punto_en_el_tiempo(nombre: str, serie: str, sesiones, base_dir: Option
         conocido = _conocido(df, dia)
         valores.append(float("nan") if conocido is None else conocido[1])
     return pd.Series(valores, index=sesiones, name=serie)
+
+
+def _transformada(df: pd.DataFrame, d: pd.Timestamp, tipo: str) -> Optional[float]:
+    vigentes = df[(df["realtime_start"] <= d) & (d <= df["realtime_end"])]
+    if vigentes.empty:
+        return None
+    ultima = vigentes.iloc[-1]
+    previas = vigentes[vigentes["fecha"] <= ultima["fecha"] - pd.DateOffset(months=12)]
+    if previas.empty:
+        return None
+    x_t, x_prev = float(ultima["valor"]), float(previas.iloc[-1]["valor"])
+    if tipo == "yoy":
+        return (x_t / x_prev - 1.0) if x_prev != 0 else float("nan")
+    elif tipo == "dif12":
+        return x_t - x_prev
+    raise ValueError(f"tipo no soportado: {tipo}")
+
+
+def transformada_punto_en_el_tiempo(
+    nombre: str, serie: str, sesiones, tipo: str, base_dir: Optional[Path] = None
+) -> pd.Series:
+    """Para cada sesión, variación interanual ('yoy') o diferencia ('dif12') según la vintage vigente ese día."""
+    if tipo not in ("yoy", "dif12"):
+        raise ValueError(f"tipo no soportado: {tipo}")
+    df = _versiones(nombre, serie, base_dir)
+    sesiones = pd.DatetimeIndex(sesiones)
+    valores = [_transformada(df, dia, tipo) for dia in sesiones]
+    return pd.Series([float("nan") if v is None else v for v in valores], index=sesiones, name=serie)
+
+
+def zscore_movil(s: pd.Series, meses: int = 36) -> pd.Series:
+    """Z-score de cada punto contra la ventana temporal de los últimos `meses` meses (rolling por tiempo, ddof=1).
+
+    NaN mientras la ventana tenga menos de `meses` meses de historia.
+    """
+    if s.empty:
+        return s.copy()
+    idx = pd.DatetimeIndex(s.index)
+    valida = s.dropna()
+    if valida.empty:
+        return pd.Series(float("nan"), index=idx, name=s.name)
+    t_inicio = valida.index.min()
+    res = []
+    for i, t in enumerate(idx):
+        x = s.iloc[i]
+        if pd.isna(x) or t < t_inicio + pd.DateOffset(months=meses):
+            res.append(float("nan"))
+            continue
+        ventana = s.iloc[(idx >= t - pd.DateOffset(months=meses)) & (idx <= t)].dropna()
+        std = ventana.std(ddof=1) if len(ventana) >= 2 else 0.0
+        res.append(float((x - ventana.mean()) / std) if std > 0 else float("nan"))
+    return pd.Series(res, index=idx, name=s.name)
+
