@@ -42,6 +42,7 @@ def armar_pedido(catalogo=CATALOGO, postmortem=POSTMORTEM_DIR, n_intentos=None):
     """Arma el pedido para el LLM con el catálogo, reglas D1 y D2, N de intentos y fichas de I01."""
     datos = yaml.safe_load(Path(catalogo).read_text(encoding="utf-8")) if isinstance(catalogo, (str, Path)) and Path(catalogo).exists() else catalogo
     primas = (datos.get("primas", []) if isinstance(datos, dict) else datos) or []
+    lecciones = (datos.get("lecciones", []) if isinstance(datos, dict) else []) or []
     cat = [{**{k: e[k] for k in CLAVES_CAT if k in e},
             "advertencias": advertencias_estructurales({**e, "muestra_de_la_cita": e.get("muestra_de_la_cita", e.get("muestra"))})}
            for e in primas if isinstance(e, dict)]
@@ -60,6 +61,7 @@ def armar_pedido(catalogo=CATALOGO, postmortem=POSTMORTEM_DIR, n_intentos=None):
     return (
         "Sos investigador de una cartera de trading. Proponé entre 0 y 3 entradas nuevas para el catálogo bajo `propuestas:`. Si ninguna cumple todo, devolvé `propuestas: []`; cada propuesta suma un intento.\n"
         "Cómo se evalúa: cada cartera se compara con comprar y mantener los mismos activos con pesos iguales y rebalanceo mensual, por resultado ajustado al riesgo en exceso de la tasa corta, en 2007-2018 y en una prueba única posterior, y después en paper. Una estrategia que solo decide cuándo estar comprada casi nunca supera esa vara: explicá su fuente de retorno adicional.\n"
+        f"Lecciones humanas del catálogo:\n{yaml.safe_dump(lecciones, allow_unicode=True, sort_keys=False).strip()}\n"
         "Qué hay:\n"
         "Las advertencias del catálogo son informativas y no bloquean la admisión.\n"
         f"- Activos y fecha de inicio: {yaml.safe_dump({s: info['start'] for s, info in activos.items()}, allow_unicode=True, sort_keys=True).strip()}\n"
@@ -107,13 +109,34 @@ def escribir_propuestas(respuesta, carpeta=PROPUESTAS_DIR, catalogo=CATALOGO, hi
 
 
 def proponer_con_llm(carpeta=None, catalogo=CATALOGO, postmortem=POSTMORTEM_DIR, hipotesis_dir=HIPOTESIS_DIR, n_intentos=None):
-    """Llama al LLM vía QUANTAGENT_LLM_CMD y valida las propuestas con I04, I02 e I03."""
+    """Genera propuestas, las refuta con otro comando y valida antes de persistir."""
     if not (cmd := os.environ.get("QUANTAGENT_LLM_CMD", "").strip()):
         raise RuntimeError("QUANTAGENT_LLM_CMD no está definido")
     proc = subprocess.run(cmd, input=armar_pedido(catalogo, postmortem, n_intentos), text=True, shell=True, capture_output=True)
     if proc.returncode != 0:
         raise RuntimeError(f"QUANTAGENT_LLM_CMD falló ({proc.returncode}): {(proc.stderr or proc.stdout or '').strip() or 'sin salida'}")
-    rutas, motivo = escribir_propuestas(proc.stdout, PROPUESTAS_DIR if carpeta is None else carpeta, catalogo, hipotesis_dir)
+    texto = re.sub(r"^```\w*\n|\n```$", "", proc.stdout.strip()).strip()
+    try:
+        datos = yaml.safe_load(texto)
+    except yaml.YAMLError as exc:
+        raise RuntimeError(f"YAML inválido: {exc}") from exc
+    lista = datos.get("propuestas") if isinstance(datos, dict) else None
+    if not isinstance(lista, list) or any(not isinstance(p, dict) for p in lista):
+        raise RuntimeError("YAML inválido: se esperaba propuestas como lista")
+    if lista:
+        if not (refutador := os.environ.get("QUANTAGENT_REFUTER_CMD", "").strip()):
+            raise RuntimeError("QUANTAGENT_REFUTER_CMD no está definido")
+        for propuesta in lista:
+            sin_resultados = {k: v for k, v in propuesta.items() if k != "efecto_esperado"}
+            pedido = ("Intentá refutar esta propuesta. Buscá en la web evidencia de decaimiento, réplicas fallidas, "
+                      "costos y desvíos de la cita. Devolvé los hallazgos con sus fuentes. No incluyas métricas ni cifras de resultados.\n\n"
+                      f"Propuesta:\n{yaml.safe_dump(sin_resultados, allow_unicode=True, sort_keys=False)}")
+            respuesta = subprocess.run(refutador, input=pedido, text=True, shell=True, capture_output=True)
+            if respuesta.returncode != 0 or not respuesta.stdout.strip():
+                detalle = (respuesta.stderr or respuesta.stdout or "sin salida").strip()
+                raise RuntimeError(f"QUANTAGENT_REFUTER_CMD falló ({respuesta.returncode}): {detalle}")
+            propuesta["refutacion"] = respuesta.stdout.strip()
+    rutas, motivo = escribir_propuestas(yaml.safe_dump(datos, allow_unicode=True, sort_keys=False), PROPUESTAS_DIR if carpeta is None else carpeta, catalogo, hipotesis_dir)
     if not rutas and motivo and motivo.startswith("YAML inválido"):
         raise RuntimeError(motivo)
     return rutas, (motivo.splitlines() if motivo else [])

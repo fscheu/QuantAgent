@@ -33,6 +33,10 @@ Implementation documents should include:
 
 ## Active Per-Change Implementation
 
+- [QuantAgent-jpwz-IM-diagnostico-conteo-f1.md](./QuantAgent-jpwz-IM-diagnostico-conteo-f1.md) - F1 tiene cambios de pesos que el conteo por señales omite.
+- [QuantAgent-e4jc.3-IM-f1-etapas-0-2.md](./QuantAgent-e4jc.3-IM-f1-etapas-0-2.md) - F1 pasa etapas 0 a 2 en f1d; pendiente OK de Fede antes de abrir la reserva.
+- [QuantAgent-46pk-IM-diagnostico-adaptador-cortos.md](./QuantAgent-46pk-IM-diagnostico-adaptador-cortos.md) - Diagnóstico F2 etapa 2 y normalización de brackets cortos en el adaptador.
+- [QuantAgent-e4jc.6-IM-f2-etapas-0-2.md](./QuantAgent-e4jc.6-IM-f2-etapas-0-2.md) - F2 `tendencia-larga-corta` por etapas 0 a 2: etapa 1 pasa (0,54), etapa 2 corta; correlación 0,86 con 1/N.
 - [QuantAgent-7v45-IM-normalizacion-transversal.md](./QuantAgent-7v45-IM-normalizacion-transversal.md) - Objetivos T4 en consultas futuras y persistencia de sombra con evidencia sintética.
 - [QuantAgent-av1p.5-IM-runbook-paper-ops.md](./QuantAgent-av1p.5-IM-runbook-paper-ops.md) - Runbook de operación de paper en la VM (propuesta pendiente de OK de Fede: cuentas, secretos, systemd, digest, chequeos).
 - [QuantAgent-v2ll-IM-atribucion.md](./QuantAgent-v2ll-IM-atribucion.md) - Atribución reproducible en pesos, señal y tasa de cuatro carteras (etapa 2 guardada).

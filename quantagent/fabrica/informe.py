@@ -19,6 +19,7 @@ def diagnostico_exceso(hipotesis, carpeta_equity, snapshot, base_dir=None):
     from quantagent.fabrica.cartera import pesos as pesos_cartera
     from quantagent.fabrica.criterio import curva_benchmark, sharpes_en_exceso
     from quantagent.fabrica.transversal import leer_seleccion
+    from quantagent.strategy.registry import STRATEGY_REGISTRY, cli_aliases
 
     retornos = {}
     fechas = None
@@ -48,10 +49,18 @@ def diagnostico_exceso(hipotesis, carpeta_equity, snapshot, base_dir=None):
         seleccion = leer_seleccion(Path(carpeta_equity).parent, hipotesis.piernas, indice=cierres.index)
     except FileNotFoundError as exc:
         return {"disponible": False, "motivo": f"selección faltante: {exc.filename}"}
-    cartera = curva_cartera(cierres, mapa, retornos, seleccion=seleccion)
+    posiciones_objetivo = any(STRATEGY_REGISTRY.get(cli_aliases().get(p.clase, p.clase))
+                              and hasattr(STRATEGY_REGISTRY[cli_aliases().get(p.clase, p.clase)]["cls"], "posiciones_objetivo")
+                              for p in hipotesis.piernas)
+    if posiciones_objetivo:
+        retornos_df = pd.DataFrame(retornos).fillna(0.0)
+        cartera = 100_000.0 * (1 + retornos_df.T.groupby(level=1).sum().T.sum(axis=1)).cumprod()
+    else:
+        cartera = curva_cartera(cierres, mapa, retornos, seleccion=seleccion)
     if cartera is None or len(cartera) < 3:
         return {"disponible": False, "motivo": "curvas sin puntos suficientes"}
-    w = pesos_cartera(cierres, mapa, seleccion=seleccion).T.groupby(level=1).sum().T
+    w = (pd.DataFrame(1 / len(cierres.columns), index=cierres.index, columns=cierres.columns)
+         if posiciones_objetivo else pesos_cartera(cierres, mapa, seleccion=seleccion).T.groupby(level=1).sum().T)
     benchmark = curva_benchmark(cierres, pesos=w).reindex(cartera.index)
     try:
         sharpe_cartera, sharpe_benchmark = sharpes_en_exceso(cartera, benchmark, base_dir=base_dir)

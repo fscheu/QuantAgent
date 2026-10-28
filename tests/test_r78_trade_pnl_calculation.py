@@ -24,6 +24,7 @@ from sqlalchemy.orm import sessionmaker
 from quantagent.models import (
     Base,
     Environment,
+    Fill,
     Order,
     OrderSide,
     OrderStatus,
@@ -257,6 +258,72 @@ class TestLongPositionPnL:
 
 class TestShortPositionPnL:
     """Tests for SHORT position P&L calculation (AC-3, AC-4)."""
+
+    def test_short_cell_unrealized_pnl_tracks_price_direction(self, portfolio, test_db):
+        """An open short gains on a price drop and loses on a price rise."""
+        sell_order = Order(
+            symbol="BTC-USD",
+            side=OrderSide.SELL,
+            order_type=OrderType.MARKET,
+            quantity=Decimal("2"),
+            filled_quantity=Decimal("2"),
+            price=Decimal("100"),
+            status=OrderStatus.FILLED,
+            environment=Environment.BACKTEST,
+        )
+        test_db.add(sell_order)
+        test_db.commit()
+        portfolio.execute_trade(sell_order, fill_price=100.0)
+
+        portfolio.update_prices({"BTC-USD": 90.0})
+        assert portfolio.get_position("BTC-USD")["pnl"] == 20.0
+        assert portfolio.get_unrealized_pnl() == 20.0
+        assert portfolio.get_total_value() == 100020.0
+
+        portfolio.update_prices({"BTC-USD": 110.0})
+        assert portfolio.get_position("BTC-USD")["pnl"] == -20.0
+        assert portfolio.get_unrealized_pnl() == -20.0
+        assert portfolio.get_total_value() == 99980.0
+
+    def test_long_and_short_costs_are_symmetric(self, test_db):
+        """Equal entry notional and favorable move pay equal costs and net P&L."""
+        results = []
+        for symbol, opening_side, closing_side, exit_price in (
+            ("LONG", OrderSide.BUY, OrderSide.SELL, 110),
+            ("SHORT", OrderSide.SELL, OrderSide.BUY, 90),
+        ):
+            portfolio = PortfolioManager(
+                initial_cash=100000.0, environment=Environment.BACKTEST, db=test_db
+            )
+            for side, price in ((opening_side, 100), (closing_side, exit_price)):
+                order = Order(
+                    symbol=symbol,
+                    side=side,
+                    order_type=OrderType.MARKET,
+                    quantity=Decimal("2"),
+                    filled_quantity=Decimal("2"),
+                    price=Decimal(str(price)),
+                    status=OrderStatus.FILLED,
+                    environment=Environment.BACKTEST,
+                    fills=[
+                        Fill(
+                            quantity=Decimal("2"),
+                            price=Decimal(str(price)),
+                            commission=Decimal("1"),
+                        )
+                    ],
+                )
+                test_db.add(order)
+                test_db.commit()
+                closed_trade = portfolio.execute_trade(order, fill_price=float(price))
+            results.append(closed_trade)
+
+        assert [trade.commission for trade in results] == [Decimal("1"), Decimal("1")]
+        assert [trade.pnl for trade in results] == [Decimal("18.00"), Decimal("18.00")]
+        assert [trade.pnl_pct for trade in results] == [9.0, 9.0]
+        for symbol in ("LONG", "SHORT"):
+            commissions = test_db.query(Trade).filter(Trade.symbol == symbol).all()
+            assert sum((trade.commission for trade in commissions), Decimal("0")) == Decimal("2")
 
     def test_short_position_profit(self, portfolio, test_db):
         """AC-3: SHORT position closed at profit calculates positive P&L.

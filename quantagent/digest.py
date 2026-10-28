@@ -6,7 +6,9 @@ from datetime import date, datetime, timedelta
 def build_digest(day: date, portfolios: list[dict], trades: list[dict],
                  heartbeats: list[dict], warnings: list[str] | None = None,
                  reconciliations: list[str] | None = None,
-                 cumulative_pnl: float | None = None) -> str:
+                 cumulative_pnl: float | None = None, *,
+                 valuation: dict | None = None, executions: list[dict] | None = None,
+                 pending: list[dict] | None = None) -> str:
     """Build a plain-text digest from already queried paper trading data."""
     header = f"Resumen de paper trading — {day.isoformat()}"
     warning_items = [f"- {item}" for item in (warnings or [])]
@@ -29,6 +31,12 @@ def build_digest(day: date, portfolios: list[dict], trades: list[dict],
     if not heartbeats:
         heartbeat_lines.append("- Sin heartbeat")
     sections = [header, warning_section, "\n".join(heartbeat_lines)]
+    if valuation is not None:
+        portfolios = valuation["portfolios"]
+        cash_pct = f"{100 * valuation['cash'] / valuation['equity']:.2f} %" if valuation["equity"] else "no disponible"
+        sections.append(f"## Cuenta actual\nEquity: {valuation['equity']:.2f} USD\n"
+                        f"Caja: {valuation['cash']:.2f} USD ({cash_pct}); reserva objetivo 5 %\n"
+                        f"{valuation['notice']} Consultada: {valuation['consulted_at']}")
     if reconciliations:
         sections.append("## Reconciliación\n" + "\n".join(f"- {item}" for item in reconciliations))
     trade_items = [f"- {t['symbol']} {t['side']} {t['quantity']}: P&L {t.get('pnl', 0)}" for t in trades]
@@ -38,16 +46,31 @@ def build_digest(day: date, portfolios: list[dict], trades: list[dict],
     trade_lines.append(f"P&L realizado acumulado: {total_pnl:.2f}")
     if not trades:
         trade_lines.append("Sin actividad de trading")
+        if executions is not None and cumulative_pnl is None:
+            trade_lines = ["## P&L realizado", "Sin datos de P&L realizado"]
     position_groups = []
     position_remaining = []
     for portfolio in portfolios:
         positions = portfolio.get("positions", [])
         lines = [f"## Posiciones de {portfolio['name']}"]
-        lines.extend(f"- {p['symbol']}: {p['quantity']} @ {p['price']} (P&L no realizado {p['unrealized_pnl']})" for p in positions)
+        lines.extend(f"- {p['symbol']}: {p['quantity']} @ {p['price']} "
+                     + (f"(valor de mercado {p['value']:.2f} USD) " if valuation is not None else "")
+                     + f"(P&L no realizado {p['unrealized_pnl']})" for p in positions)
         if not positions:
             lines.append("- Sin posiciones abiertas")
         position_groups.append(lines)
         position_remaining.append(len(positions))
+    for title, items in [
+        ("Ejecuciones del día", None if executions is None else [
+            f"- {e['filled_at']}: {e['symbol']} {e['side']} {e['quantity']} @ {e['price']}; comisión {e['commission']}"
+            for e in executions]),
+        ("Órdenes pendientes", None if pending is None else [
+            f"- {o['symbol']} {o['side']}: {o['status']}, {o['filled_quantity']}/{o['quantity']} ejecutadas"
+            for o in pending]),
+    ]:
+        if items is not None:
+            position_groups.append([f"## {title} ({len(items)})", *(items or ["- Ninguna"])])
+            position_remaining.append(len(items))
     trade_index = len(sections)
     sections.append("\n".join(trade_lines))
     position_indexes = []

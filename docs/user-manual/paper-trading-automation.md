@@ -91,15 +91,27 @@ Leave the terminal open; the APScheduler background thread will keep firing unti
 To print the digest for a date from a SQLite database, run:
 
 ```bash
-python -m quantagent.cli trading digest --date 2026-10-25 --db ./quantagent.db --portfolio paper
+python -m quantagent.cli trading digest --date 2026-10-25 --db ./quantagent.db
 ```
 
 `--db` selects an existing SQLite database with the QuantAgent schema; omit it to use `DATABASE_URL`.
-Replace the example date with the day to inspect. `--portfolio` only sets the position heading. The command
+Replace the example date with the day to inspect. The command
 prints plain text: scheduler signal, activity and realized daily/accumulated P&L, then open positions. With no
 trades it prints `Sin actividad de trading`; if there is no completed heartbeat, it also prints
 `ALERT: sin ciclo completado en más de un día hábil` under the scheduler signal. Empty sections are still
 shown so the missing activity and scheduler state are explicit.
+
+For a dedicated portfolio DB, add `--portfolio <name>`: positions come from that DB, executions
+from the day's fills, and pending orders include earlier days. Alpaca supplies current equity, cash
+(with a 5% reserve target), market values and unrealized P&L; this is not a historical balance for
+`--date`. Realized P&L is unavailable in this mode. Valuation API failures print an error and exit 1.
+
+With `TRADING_BROKER=alpaca_paper`, the digest reads Alpaca DIV activities by default.
+Each dividend shows its symbol, amount in USD and treatment `efectivo en cuenta`: it stays
+in cash until the next rebalance, without automatic reinvestment. No dividends prints
+`Dividendos: Sin observaciones`. API errors or malformed activities print a warning and exit 1.
+Use `--sin-dividendos` to disable the query and show `Dividendos: sin fuente de dividendos.`
+Other brokers only query Alpaca with `--dividendos-alpaca`.
 
 1. **Dashboard → Dashboard tab → Scheduler Status** gives you a quick health signal:
    - `Active` (green) means the last completed heartbeat is newer than 2 hours.
