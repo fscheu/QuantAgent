@@ -236,7 +236,7 @@ def _intentos(path, sharpes):
     with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["estrategia", "sharpe"])
-        w.writerows([["s", v] for v in sharpes])
+        w.writerows([[f"s{i}", v] for i, v in enumerate(sharpes)])
     return path
 
 
@@ -277,11 +277,11 @@ def test_dsr_contra_intentos_ignora_tasa_libre_con_suficientes_tasa_0(tmp_path):
         w = csv.writer(f)
         w.writerow(["estrategia", "sharpe", "sharpe_base"])
         w.writerows([
-            ["s", 0.5, "tasa_0"],
-            ["s", 1.0, "tasa_0"],
-            ["s", 1.5, "tasa_0"],
-            ["s", 10.0, "tasa_libre"],
-            ["s", -10.0, "tasa_libre"],
+            ["s0", 0.5, "tasa_0"],
+            ["s1", 1.0, "tasa_0"],
+            ["s2", 1.5, "tasa_0"],
+            ["s3", 10.0, "tasa_libre"],
+            ["s4", -10.0, "tasa_libre"],
         ])
     r = np.diff(EQUITY_DSR) / np.array(EQUITY_DSR[:-1])
     sr = r.mean() / r.std(ddof=1)
@@ -293,7 +293,7 @@ def test_dsr_contra_intentos_ignora_tasa_libre_con_suficientes_tasa_0(tmp_path):
 
 def test_dsr_contra_intentos_ignora_sharpe_absurdo_inf_y_sintetico(tmp_path):
     cab = "estrategia,snapshot,sharpe,sharpe_base\n"
-    base = "s,real,0.5,tasa_0\ns,real,1.0,tasa_0\ns,real,1.5,tasa_0\n"
+    base = "s0,real,0.5,tasa_0\ns1,real,1.0,tasa_0\ns2,real,1.5,tasa_0\n"
     limpio = tmp_path / "limpio.csv"
     limpio.write_text(cab + base)
     contaminado = tmp_path / "contaminado.csv"
@@ -338,6 +338,18 @@ def test_dsr_contra_intentos_parametro_n_intentos(tmp_path):
     assert dsr_crudo is not None and dsr_k_menor is not None
     assert dsr_k_menor >= dsr_crudo
     assert dsr_contra_intentos(EQUITY_DSR, path, n_intentos=5) == pytest.approx(dsr_crudo, abs=1e-12)
+
+
+def test_dsr_deduplica_n_pero_conserva_varianza_de_repeticiones(tmp_path):
+    path = tmp_path / "intentos.csv"
+    path.write_text("estrategia,sharpe\na,0.5\na,1.0\nb,1.5\n")
+    r = np.diff(EQUITY_DSR) / np.array(EQUITY_DSR[:-1])
+    z = (r - r.mean()) / r.std()
+    esperado = sharpe_deflactado(r.mean() / r.std(ddof=1), 2,
+                                np.var(np.array([0.5, 1.0, 1.5]) / sqrt(252), ddof=1),
+                                len(r), (z**3).mean(), (z**4).mean())
+    assert dsr_contra_intentos(EQUITY_DSR, path) == pytest.approx(esperado, abs=1e-9)
+    assert dsr_contra_intentos(EQUITY_DSR, path, 3) < esperado
 
 
 @pytest.mark.parametrize("excluida", [{"estado": "invalida_bug"}, {"snapshot": "sintetico"}])
