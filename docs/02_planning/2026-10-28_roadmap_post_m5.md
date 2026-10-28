@@ -1,7 +1,7 @@
 # Roadmap después de M5: propuesta
 
 - **Estado:** propuesta para que Fede decida (2026-10-28). Solo planificación: no hay tickets en Beads ni código. Los nombres de hito son provisorios.
-- **Pedido de Fede (2026-10-28):** no perder de vista cuatro ideas para después de M5 y bajarlas a detalle: ciclos continuos de generación hasta encontrar candidatas para producción, la prueba de que una candidata sirve para una cuenta chica, una aplicación web que reemplace Streamlit y la forma de guardar los datos de mercado y fundamentales.
+- **Pedido de Fede (2026-10-28):** no perder de vista cuatro ideas para después de M5 y bajarlas a detalle: ciclos continuos de generación hasta encontrar candidatas para producción, la prueba de que una candidata sirve para una cuenta chica, una aplicación web que reemplace Streamlit y la forma de guardar los datos de mercado y fundamentales. Agregado el mismo día: un manual de usuario actualizado, para leer como páginas de la app (§5).
 - **Cuándo:** nada de esto entra en la cola actual. Primero se mira la primera semana de paper de M4 (L21). Los lotes que quedan de L20 (cupo por tema, sizing por riesgo) esperan a esa semana y no están en este documento.
 - **Contexto leído:** `PLAN-CONTINUACION.md` (§3.7 lotes, §7 ideas), `docs/02_planning/QuantAgent-M5-PL-motor-top-down.md`, `docs/03_design/QuantAgent-M5-DS-motor-top-down.md`, `docs/04_decisions/QuantAgent-R01-DC-decisiones-investigacion-edge.md`, `docs/04_decisions/ui_framework_decision.md`, `local-data/README.md`, `quantagent/models.py`.
 
@@ -222,8 +222,62 @@ Conviene decidir esto **antes de bajar los datos de acciones de M5 (lote L22)**:
 
 ---
 
-## 5. Orden propuesto entre los hitos
+## 5. M-manual: manual de usuario como páginas de la aplicación
 
+Pedido de Fede (2026-10-28): en el desarrollo se sumaron muchas decisiones de diseño, comandos y etapas, y es muy difícil tenerlas todas presentes. Hace falta una ayuda a mano para revisar criterios rápido.
+
+### Objetivo
+
+Un manual en español, organizado por las preguntas que Fede se hace al revisar, que se lea como páginas de la aplicación web (y, hasta que la web exista, como un sitio estático por Tailscale). Tiene que servir para contestar en un minuto cosas como "¿qué pide la etapa 3?", "¿cuál era el riesgo por operación?" o "¿qué comando verifica un snapshot?".
+
+### Qué hay hoy
+
+- `docs/user-manual/` tiene 9 páginas (unas 3.500 líneas) en inglés, que describen la UI de Streamlit, el paper trading y los agentes LLM de mayo de 2026. Su `index.md` dice que está **sin mantenimiento desde el 2026-10-09** (plan de M2, PR #62) y que la fuente vigente es el `README.md`.
+- Streamlit ya tiene una vista que muestra esas páginas (`apps/streamlit/views/manual.py`). La idea de leer el manual dentro de la app ya existe; lo que falta es el contenido actual.
+- Las decisiones están repartidas en 27 documentos de `docs/04_decisions/`, más las tablas de decisiones de cada plan (R01, M5 D1–D7, etc.), y los comandos solo se ven con `--help` en `quantagent/cli/`.
+
+### Contenido propuesto
+
+1. **Cómo funciona el sistema en una página:** del dato a la orden, con un diagrama.
+2. **Glosario** con todos los términos (Sharpe deflactado, reserva, C0, 1/N, sombra, PDT...), en palabras simples y con un ejemplo cada uno.
+3. **El embudo, etapa por etapa:** qué entra, qué se mide, qué criterio hay que pasar y qué decisión lo fijó (con fecha y enlace).
+4. **Criterios vigentes en una tabla corta:** riesgo por operación 0,25 %, tope de posición 10 %, stop por defecto ±2 %, cupo de la reserva, etc. Cada número con la decisión que lo fijó.
+5. **Índice de decisiones:** una línea por decisión de Fede (qué se decidió, cuándo, dónde está el detalle), incluidas las que viven dentro de los planes. Reemplaza tener que buscar en 27 archivos.
+6. **Referencia de comandos:** cada comando de `python -m quantagent.cli` con para qué sirve y un ejemplo. La parte técnica (opciones, valores por defecto) se **genera automáticamente** del `--help`, para que no se desactualice.
+7. **Operación:** paper (cómo se ve que anda, qué hacer si `reconcile` no coincide), el digest diario, datos locales y sus snapshots.
+8. **Cómo trabajamos:** loop, lotes, revisión del PM, qué revisa Fede.
+
+### Cómo se mantiene al día
+
+El manual viejo murió porque nadie lo actualizaba. Propuesta:
+
+- La referencia de comandos se regenera sola y hay un test que falla si un comando de la CLI no tiene su página.
+- El índice de decisiones y la tabla de criterios se actualizan en el mismo PR que registra una decisión nueva: se agrega como regla del contrato del loop y de la revisión del PM.
+- Las páginas explicativas (embudo, operación) se revisan al cerrar cada lote: el PR del lote dice qué páginas tocó o por qué no hacía falta.
+
+### Formato
+
+Markdown en una carpeta nueva del repo (`docs/manual/`, que reemplaza a `docs/user-manual/`), para que lo lean la web, Streamlit y GitHub sin convertir nada. Mientras no exista la web, se publica como sitio estático (por ejemplo con MkDocs, que trae buscador) en la VM, accesible solo por Tailscale. Cuando exista la web, M-web muestra las mismas páginas con buscador y con enlaces desde cada pantalla ("¿qué es esto?" → la página del glosario). El asistente de IA de M-web también puede usar el manual como fuente para contestar.
+
+### Dependencias
+
+Ninguna. Es el único hito que se puede empezar ya sin frenar nada, y además le sirve a Fede para revisar M4 y M5.
+
+### Decisiones para Fede
+
+- **U1.** ¿Se arranca ya, en paralelo con M4/M5? Recomiendo que sí, empezando por glosario, embudo, criterios vigentes e índice de decisiones, que son los que más sirven para revisar.
+- **U2.** ¿Qué hacemos con el manual viejo en inglés? Recomiendo moverlo a un archivo histórico y no traducirlo: describe una versión del sistema que ya no existe.
+- **U3.** ¿Sitio estático por Tailscale mientras no haya web, o alcanza con leerlo en GitHub? Recomiendo el sitio, por el buscador y porque se lee bien en el teléfono.
+
+### Orden dentro del hito
+
+Índice de decisiones y criterios vigentes, después glosario y embudo, después referencia de comandos automática, después operación y cómo trabajamos, y por último la regla de mantenimiento en el contrato del loop.
+
+---
+
+## 6. Orden propuesto entre los hitos
+
+0. **M-manual** ya, en paralelo con todo: no depende de nada y ayuda a revisar lo que está en curso.
 1. **M-datos (decisión)** antes de L22 de M5. La construcción, en paralelo con L22.
 2. **M-web (solo diseño de pantallas)** en cualquier momento, en paralelo con M5: no toca la cola.
 3. **M-ciclos** después de M5, cuando el generador de L20 y paper estén andando. Es el hito más largo porque incluye tiempo de paper.
@@ -241,17 +295,18 @@ flowchart LR
   MC --> MK[M-cuenta]
   MC --> WC
   MK --> LIVE[Dinero real<br/>con OK de Fede]
+  MM[M-manual] --> WC
 ```
 
-## 6. Decisiones que necesita Fede (resumen)
+## 7. Decisiones que necesita Fede (resumen)
 
 - **G1.** Numeración: ¿"M5" en `milestone-tracker.md` se actualiza al motor top-down y el dinero real pasa a ser la salida de M-ciclos + M-cuenta? Recomiendo que sí.
-- **G2.** ¿Este orden (§5) sirve como marco, para que el PM arme los tickets de cada hito cuando toque?
-- **C1–C4** (ciclos), **K1–K3** (cuenta chica), **W1–W3** (web), **D1–D2** (datos): en cada sección.
+- **G2.** ¿Este orden (§6) sirve como marco, para que el PM arme los tickets de cada hito cuando toque?
+- **C1–C4** (ciclos), **K1–K3** (cuenta chica), **W1–W3** (web), **D1–D2** (datos), **U1–U3** (manual): en cada sección.
 
 Ningún ticket se abre en Beads hasta que Fede apruebe.
 
-## 7. Propuesta de actualización de README (no aplicada)
+## 8. Propuesta de actualización de README (no aplicada)
 
 - `docs/02_planning/README.md`, sección "Current operating plan": agregar `2026-10-28_roadmap_post_m5.md` — Propuesta de hitos después de M5: ciclos de generación, cuenta chica, app web y almacenamiento de datos.
 - `PLAN-CONTINUACION.md` **no se toca** (Fede, 2026-10-28: ya está muy grande). Queda para L20, L21 y M5 hasta que cierren. Los hitos de este documento van a un plan nuevo, `PLAN-POST-M5.md` en la raíz, que se crea cuando Fede apruebe esta propuesta, con el mismo formato de cola (§4 de `PLAN-CONTINUACION.md`) y una referencia a este documento.
