@@ -109,6 +109,7 @@ class ArquetipoAStrategy(TradingStrategy):
             entry_expiry_bars=self.entry_expiry_bars,
             stop_loss=stop_loss,
             take_profit=None,
+            sin_take_profit=True,
             exit_policy=ExitPolicy.TRAILING_STOP,
             reasoning=f"Arquetipo A: Buy stop @ {entry_price:.2f}, Stop @ {stop_loss:.2f}",
         )

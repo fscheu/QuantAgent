@@ -42,6 +42,9 @@ class TradingSignal(BaseModel):
     entry_expiry_bars: Optional[int] = Field(
         default=None, description="Expiry in bars for pending entry orders"
     )
+    sin_take_profit: bool = Field(
+        default=False, description="Whether to operate without a take profit target"
+    )
 
 
 class TradingStrategy(ABC):
