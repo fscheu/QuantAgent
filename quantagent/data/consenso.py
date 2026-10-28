@@ -14,6 +14,7 @@ def guardar_foto(
     cliente: Any,
     fecha: Optional[date | str] = None,
     base_dir: Optional[Path] = None,
+    carpeta: str = "consenso-eps",
 ) -> Path:
     """Guarda en Parquet la foto diaria de consenso de EPS para los símbolos indicados."""
     if fecha is None:
@@ -24,9 +25,9 @@ def guardar_foto(
         fecha_obj = fecha
 
     fecha_str = fecha_obj.isoformat()
-    carpeta = snapshot_root(base_dir) / "consenso-eps"
-    carpeta.mkdir(parents=True, exist_ok=True)
-    archivo = carpeta / f"{fecha_str}.parquet"
+    carpeta_path = snapshot_root(base_dir) / carpeta
+    carpeta_path.mkdir(parents=True, exist_ok=True)
+    archivo = carpeta_path / f"{fecha_str}.parquet"
     if archivo.exists():
         raise FileExistsError(f"el archivo de consenso para {fecha_str} ya existe: {archivo}")
 

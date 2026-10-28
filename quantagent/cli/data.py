@@ -170,9 +170,9 @@ def consenso_group() -> None:
 @click.option("--simbolos", default=None, help="Símbolos separados por coma, ej. AAPL,MSFT,NVDA.")
 @click.option("--archivo", default=None, type=click.Path(exists=True, dir_okay=False), help="Archivo con un símbolo por línea.")
 @click.option("--fecha", default=None, help="Fecha de la foto en YYYY-MM-DD (por defecto hoy).")
-def foto_consenso_cmd(simbolos: Optional[str], archivo: Optional[str], fecha: Optional[str]) -> None:
+@click.option("--fuente", default="yahoo", type=click.Choice(["yahoo", "fmp"], case_sensitive=False), help="Fuente de datos (yahoo o fmp).")
+def foto_consenso_cmd(simbolos: Optional[str], archivo: Optional[str], fecha: Optional[str], fuente: str = "yahoo") -> None:
     from quantagent.data.consenso import guardar_foto
-    from quantagent.data.sources.fmp import FmpClient
 
     simbolos_lista = []
     if simbolos:
@@ -196,8 +196,18 @@ def foto_consenso_cmd(simbolos: Optional[str], archivo: Optional[str], fecha: Op
             raise click.ClickException(f"--fecha '{fecha}' no es una fecha YYYY-MM-DD válida")
 
     try:
-        cliente = FmpClient()
-        destino = guardar_foto(simbolos_unicos, cliente=cliente, fecha=fecha_obj)
+        if fuente.lower() == "yahoo":
+            from quantagent.data.sources.yahoo_eps import YahooEpsClient
+
+            cliente = YahooEpsClient()
+            carpeta = "consenso-eps-yahoo"
+        else:
+            from quantagent.data.sources.fmp import FmpClient
+
+            cliente = FmpClient()
+            carpeta = "consenso-eps"
+
+        destino = guardar_foto(simbolos_unicos, cliente=cliente, fecha=fecha_obj, carpeta=carpeta)
         click.echo(f"Foto de consenso guardada en {destino}")
     except (FileExistsError, RuntimeError, SnapshotError) as exc:
         raise click.ClickException(str(exc))

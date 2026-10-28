@@ -4,6 +4,7 @@ from click.testing import CliRunner
 
 from quantagent.cli.data import data_group
 from quantagent.data.consenso import guardar_foto
+from quantagent.data.sources.yahoo_eps import YahooEpsClient
 
 
 class ClienteFalso:
@@ -75,20 +76,20 @@ def test_cli_foto_consenso(tmp_path, monkeypatch):
     monkeypatch.setattr("quantagent.data.sources.fmp.FmpClient", lambda: ClienteFalso())
 
     runner = CliRunner()
-    res = runner.invoke(data_group, ["consenso", "foto", "--simbolos", "AAPL,MSFT", "--fecha", "2026-10-27"])
+    res = runner.invoke(data_group, ["consenso", "foto", "--fuente", "fmp", "--simbolos", "AAPL,MSFT", "--fecha", "2026-10-27"])
     assert res.exit_code == 0, res.output
     assert "Foto de consenso guardada" in res.output
     assert (tmp_path / "consenso-eps" / "2026-10-27.parquet").exists()
 
     # Repetir fecha debe fallar
-    res_rep = runner.invoke(data_group, ["consenso", "foto", "--simbolos", "AAPL", "--fecha", "2026-10-27"])
+    res_rep = runner.invoke(data_group, ["consenso", "foto", "--fuente", "fmp", "--simbolos", "AAPL", "--fecha", "2026-10-27"])
     assert res_rep.exit_code != 0
     assert "ya existe" in res_rep.output
 
     # Desde archivo
     archivo_simbolos = tmp_path / "simbolos.txt"
     archivo_simbolos.write_text("AAPL\n# comentario\nMSFT\n\n", encoding="utf-8")
-    res_arch = runner.invoke(data_group, ["consenso", "foto", "--archivo", str(archivo_simbolos), "--fecha", "2026-10-28"])
+    res_arch = runner.invoke(data_group, ["consenso", "foto", "--fuente", "fmp", "--archivo", str(archivo_simbolos), "--fecha", "2026-10-28"])
     assert res_arch.exit_code == 0, res_arch.output
     assert (tmp_path / "consenso-eps" / "2026-10-28.parquet").exists()
 
@@ -98,9 +99,99 @@ def test_cli_foto_sin_api_key_falla(tmp_path, monkeypatch):
     monkeypatch.delenv("FMP_API_KEY", raising=False)
 
     runner = CliRunner()
-    res = runner.invoke(data_group, ["consenso", "foto", "--simbolos", "AAPL", "--fecha", "2026-10-27"])
+    res = runner.invoke(data_group, ["consenso", "foto", "--fuente", "fmp", "--simbolos", "AAPL", "--fecha", "2026-10-27"])
     assert res.exit_code != 0
     assert "falta FMP_API_KEY" in res.output
+
+
+def test_cli_fuente_yahoo_y_fmp(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    monkeypatch.setattr("quantagent.data.sources.yahoo_eps.YahooEpsClient", lambda: ClienteFalso())
+    monkeypatch.setattr("quantagent.data.sources.fmp.FmpClient", lambda: ClienteFalso())
+
+    runner = CliRunner()
+    # Default es yahoo -> carpeta consenso-eps-yahoo
+    res = runner.invoke(data_group, ["consenso", "foto", "--simbolos", "AAPL", "--fecha", "2026-10-27"])
+    assert res.exit_code == 0, res.output
+    assert (tmp_path / "consenso-eps-yahoo" / "2026-10-27.parquet").exists()
+
+    # Repetir fecha en yahoo falla sin pisar
+    res_rep = runner.invoke(data_group, ["consenso", "foto", "--simbolos", "AAPL", "--fecha", "2026-10-27"])
+    assert res_rep.exit_code != 0
+    assert "ya existe" in res_rep.output
+
+    # Fuente fmp explícita -> carpeta consenso-eps
+    res_fmp = runner.invoke(data_group, ["consenso", "foto", "--fuente", "fmp", "--simbolos", "AAPL", "--fecha", "2026-10-27"])
+    assert res_fmp.exit_code == 0, res_fmp.output
+    assert (tmp_path / "consenso-eps" / "2026-10-27.parquet").exists()
+
+
+class DummyTicker:
+    def __init__(self, sym: str):
+        self.sym = sym
+        if sym == "VACIO":
+            self.eps_trend = pd.DataFrame()
+            self.eps_revisions = pd.DataFrame()
+        elif sym == "ERROR":
+            raise RuntimeError("error simulado")
+        else:
+            self.eps_trend = pd.DataFrame(
+                {
+                    "current": [1.5, 2.0],
+                    "7daysAgo": [1.4, 1.9],
+                    "30daysAgo": [1.3, 1.8],
+                    "60daysAgo": [1.2, 1.7],
+                    "90daysAgo": [1.1, 1.6],
+                    "currency": ["USD", "USD"],
+                },
+                index=["0q", "+1q"],
+            )
+            self.eps_revisions = pd.DataFrame(
+                {
+                    "upLast7days": [1, 2],
+                    "upLast30days": [3, 4],
+                    "downLast30days": [0, 1],
+                    "downLast7Days": [0, 0],
+                    "currency": ["USD", "USD"],
+                },
+                index=["0q", "+1q"],
+            )
+
+
+def test_yahoo_eps_client(monkeypatch):
+    consultados = []
+
+    def mock_ticker(sym, session=None):
+        consultados.append(sym)
+        return DummyTicker(sym)
+
+    monkeypatch.setattr("yfinance.Ticker", mock_ticker)
+
+    client = YahooEpsClient()
+    # Símbolo con punto se consulta con guión y se guarda con punto
+    filas = client.estimaciones_analistas("BRK.B")
+    assert consultados == ["BRK-B"]
+    assert len(filas) == 2
+    por_periodo = {f["period"]: f for f in filas}
+    assert "0q" in por_periodo and "+1q" in por_periodo
+    f0 = por_periodo["0q"]
+    assert f0["symbol"] == "BRK.B"
+    assert f0["period"] == "0q"
+    assert f0["current"] == 1.5
+    assert f0["d7"] == 1.4
+    assert f0["d30"] == 1.3
+    assert f0["d60"] == 1.2
+    assert f0["d90"] == 1.1
+    assert f0["up_7d"] == 1
+    assert f0["up_30d"] == 3
+    assert f0["down_30d"] == 0
+    assert f0["down_7d"] == 0
+    assert f0["currency"] == "USD"
+
+    # Sin datos -> lista vacía
+    assert client.estimaciones_analistas("VACIO") == []
+    # Error -> lista vacía
+    assert client.estimaciones_analistas("ERROR") == []
 
 
 def test_sin_datos_no_guarda_archivo(tmp_path):
