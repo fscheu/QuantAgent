@@ -429,7 +429,7 @@ flowchart LR
 ## 7. Decisiones que necesita Fede (resumen)
 
 - **G1.** Numeración: decidido (2026-10-28), M5 es el motor top-down.
-- **G2.** ¿Este orden (§6) sirve como marco, para que el PM arme los tickets de cada hito cuando toque?
+- **G2.** Decidido (2026-10-28): el orden de §6 es el marco; el PM arma los tickets de cada hito cuando toque.
 - **C1–C4** (ciclos, decididas), **W1–W2** (web, decididas), **W3** (cuándo arrancan las sesiones de diseño), **D1–D3** (datos, decididas), **U1–U4** (manual, decididas): en cada sección.
 - **K1–K3** (cuenta chica): decididas (2026-10-28): USD 2.500, cuenta cash, costo fiscal con contadora.
 
