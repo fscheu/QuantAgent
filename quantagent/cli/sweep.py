@@ -102,7 +102,7 @@ def grilla_vecinos(strategy: str) -> tuple[list[dict[str, Any]], list[str]]:
 
 CAMPOS_INTENTOS = [
     "fecha_utc", "estrategia", "activo", "snapshot", "desde", "hasta", "costos",
-    "tamano", "params", "trades", "pnl", "sharpe", "hipotesis", "etapa", "sharpe_base",
+    "tamano", "params", "trades", "pnl", "sharpe", "hipotesis", "etapa", "sharpe_base", "estado",
 ]
 
 
@@ -152,6 +152,7 @@ def registrar_intento(
         "hipotesis": hipotesis or "",
         "etapa": etapa or "",
         "sharpe_base": sharpe_base or "",
+        "estado": "",
     }
     previas = []
     if intentos_path.exists():
