@@ -205,7 +205,7 @@ El resto de la propuesta:
 - **Frontend en React con TypeScript.** El documento de 2025 decía Angular; propongo React porque tiene más bibliotecas de gráficos financieros (por ejemplo, `lightweight-charts` de TradingView para velas) y más ejemplos, lo que facilita que la IA lo construya y lo mantenga.
 - **Acceso solo por Tailscale**, como el resto de la VM: no se publica a internet, y no hace falta armar usuarios y contraseñas.
 - **Asistente:** Claude vía API con herramientas de solo lectura sobre la misma API (posiciones, embudo, datos). Nunca envía órdenes.
-- Streamlit sigue vivo hasta que la web tenga lo que Fede usa hoy; después se retira.
+- **Streamlit se borra** (Fede, 2026-10-28: quedó en desuso; no convive con la web). Es un ticket de limpieza independiente de la web, que puede ir en cualquier lote: toca `apps/streamlit/`, sus tests (`tests/apps/streamlit/` y unos cinco `tests/test_*` de paper y heartbeat), el contenedor QA (`Dockerfile.qa`, chequeo de salud del puerto 8501 en `.github/workflows/main-ci-deploy.yml`) y la dependencia en `pyproject.toml`. El manual viejo que mostraba `views/manual.py` se archiva aparte (U2).
 
 ### Dependencias
 
@@ -215,8 +215,8 @@ El resto de la propuesta:
 
 ### Decisiones para Fede
 
-- **W1.** ¿Se reemplaza Streamlit por completo o conviven un tiempo? Recomiendo convivir hasta tener Inicio, Cuenta y Embudo, y después retirarlo.
-- **W2.** Stack: FastAPI + React (recomendado), Django o Flask; y React o Angular en el frontend.
+- **W1.** Decidido (2026-10-28): no conviven; Streamlit se borra.
+- **W2.** Decidido (2026-10-28): FastAPI + React. Reemplaza el plan de Angular de `docs/04_decisions/ui_framework_decision.md`, que se marca como superado en la decisión de arquitectura de M-web.
 - **W3.** Diseño visual en sesiones mano a mano con Fede (decidido 2026-10-28); falta acordar cuándo arrancan.
 
 ### Orden dentro del hito
@@ -393,7 +393,7 @@ flowchart LR
 
 - **G1.** Numeración: decidido (2026-10-28), M5 es el motor top-down.
 - **G2.** ¿Este orden (§6) sirve como marco, para que el PM arme los tickets de cada hito cuando toque?
-- **C1–C4** (ciclos, decididas), **W1–W3** (web), **D1–D2** (datos), **U1–U4** (manual): en cada sección.
+- **C1–C4** (ciclos, decididas), **W1–W2** (web, decididas), **W3** (cuándo arrancan las sesiones de diseño), **D1–D2** (datos), **U1–U4** (manual): en cada sección.
 - **K1–K3** (cuenta chica): decididas (2026-10-28): USD 2.500, cuenta cash, costo fiscal con contadora.
 
 Ningún ticket se abre en Beads hasta que Fede apruebe.
