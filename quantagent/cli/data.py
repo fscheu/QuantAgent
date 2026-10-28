@@ -120,11 +120,27 @@ def macro_group() -> None:
 @macro_group.command("create", help="Baja todas las versiones de las series de ALFRED y congela el snapshot (requiere FRED_API_KEY).")
 @click.option("--name", required=True, help="Nombre del snapshot, por ejemplo macro-2026-10.")
 @click.option("--series", required=True, help="Series de FRED separadas por coma, por ejemplo UNRATE,CPIAUCSL.")
-def create_macro(name: str, series: str) -> None:
+@click.option("--nota", "notas_raw", multiple=True, help="Nota sobre una serie en formato SERIE=texto.")
+def create_macro(name: str, series: str, notas_raw: tuple[str, ...]) -> None:
     from quantagent.data.sources.fred import FredClient
 
+    notas = {}
+    for item in notas_raw:
+        if "=" not in item:
+            raise click.ClickException(f"formato inválido en --nota: '{item}', debe ser SERIE=texto")
+        serie, texto = item.split("=", 1)
+        serie = serie.strip().upper()
+        if not serie:
+            raise click.ClickException(f"formato inválido en --nota: '{item}', falta la serie")
+        notas[serie] = texto
+
     try:
-        manifest = crear_snapshot_macro(name, [s.strip().upper() for s in series.split(",") if s.strip()], FredClient())
+        manifest = crear_snapshot_macro(
+            name,
+            [s.strip().upper() for s in series.split(",") if s.strip()],
+            FredClient(),
+            notas=notas or None,
+        )
     except (SnapshotError, RuntimeError) as exc:
         raise click.ClickException(str(exc))
     rows = sum(info["rows"] for info in manifest["series"].values())

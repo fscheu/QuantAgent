@@ -19,11 +19,21 @@ PRIMERA_FECHA = "1776-07-04"
 ULTIMA_FECHA = "9999-12-31"
 
 
-def crear_snapshot_macro(nombre: str, series: Iterable[str], cliente, base_dir: Optional[Path] = None) -> dict:
+def crear_snapshot_macro(
+    nombre: str,
+    series: Iterable[str],
+    cliente,
+    base_dir: Optional[Path] = None,
+    notas: Optional[dict[str, str]] = None,
+) -> dict:
     """Baja todas las versiones de cada serie con `cliente.observaciones` y escribe parquet + manifiesto."""
     series = sorted(set(series))
     if not series:
         raise SnapshotError("no hay series para guardar")
+    if notas:
+        desconocidas = sorted(set(notas) - set(series))
+        if desconocidas:
+            raise SnapshotError(f"nota sobre serie ausente: {', '.join(desconocidas)}")
     carpeta = snapshot_root(base_dir) / nombre
     if carpeta.exists():
         raise SnapshotError(f"el snapshot '{nombre}' ya existe: {carpeta}")
@@ -32,10 +42,10 @@ def crear_snapshot_macro(nombre: str, series: Iterable[str], cliente, base_dir: 
     if vacias:
         raise SnapshotError(f"sin filas: {', '.join(vacias)}")
 
-    return _escribir(carpeta, nombre, frames)
+    return _escribir(carpeta, nombre, frames, notas=notas)
 
 
-def _escribir(carpeta: Path, nombre: str, frames: dict) -> dict:
+def _escribir(carpeta: Path, nombre: str, frames: dict, notas: Optional[dict[str, str]] = None) -> dict:
     carpeta.mkdir(parents=True, exist_ok=True)
     info = {}
     for serie, df in frames.items():
@@ -54,6 +64,8 @@ def _escribir(carpeta: Path, nombre: str, frames: dict) -> dict:
         "downloaded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "series": info,
     }
+    if notas:
+        manifiesto["notas"] = notas
     (carpeta / MANIFEST_NAME).write_text(json.dumps(manifiesto, indent=2, sort_keys=True) + "\n")
     return manifiesto
 
@@ -73,7 +85,7 @@ def recortar_snapshot_macro(nombre: str, al, destino: Path, base_dir: Optional[P
         df = df[df["realtime_start"] <= al].copy()
         df["realtime_end"] = df["realtime_end"].clip(upper=al)
         frames[serie] = df
-    return _escribir(Path(destino) / nombre, nombre, frames)
+    return _escribir(Path(destino) / nombre, nombre, frames, notas=manifiesto.get("notas"))
 
 
 def verificar_snapshot_macro(nombre: str, base_dir: Optional[Path] = None, versioned_dir: Optional[Path] = None) -> dict:
