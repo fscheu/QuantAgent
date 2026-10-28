@@ -254,5 +254,5 @@ Ningún ticket se abre en Beads hasta que Fede apruebe.
 ## 7. Propuesta de actualización de README (no aplicada)
 
 - `docs/02_planning/README.md`, sección "Current operating plan": agregar `2026-10-28_roadmap_post_m5.md` — Propuesta de hitos después de M5: ciclos de generación, cuenta chica, app web y almacenamiento de datos.
-- `PLAN-CONTINUACION.md` §7: una fila por hito, con este documento como referencia y "sin ticket" hasta que Fede apruebe.
+- `PLAN-CONTINUACION.md` **no se toca** (Fede, 2026-10-28: ya está muy grande). Queda para L20, L21 y M5 hasta que cierren. Los hitos de este documento van a un plan nuevo, `PLAN-POST-M5.md` en la raíz, que se crea cuando Fede apruebe esta propuesta, con el mismo formato de cola (§4 de `PLAN-CONTINUACION.md`) y una referencia a este documento.
 - `milestone-tracker.md`: actualizar según G1.
