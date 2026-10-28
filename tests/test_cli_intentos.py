@@ -45,3 +45,35 @@ def test_errores(registro, opciones, error):
     result = CliRunner().invoke(cli, ["intentos", "invalidar", "--hipotesis", "h", "--motivo", "bug", *opciones])
     assert result.exit_code == 1
     assert error in result.output
+
+
+@pytest.mark.parametrize("con_estado", [True, False])
+def test_aplicar_conserva_registro_y_backup(registro, con_estado):
+    with registro.open(newline="") as archivo:
+        filas = list(csv.DictReader(archivo))
+    filas[0]["estado"] = "otro_estado"
+    campos = ["hipotesis", "fecha_utc", "detalle"] + (["estado"] if con_estado else [])
+    for i, fila in enumerate(filas):
+        fila["detalle"] = f'dato {i}, con "comillas" y ñ\nsiguiente línea'
+        if not con_estado:
+            del fila["estado"]
+    with registro.open("w", newline="", encoding="utf-8") as archivo:
+        writer = csv.DictWriter(archivo, fieldnames=campos)
+        writer.writeheader()
+        writer.writerows(filas)
+    original = registro.read_bytes()
+    result = CliRunner().invoke(cli, ["intentos", "invalidar", "--hipotesis", "h", "--motivo", "bug",
+                                     "--desde", "2026-01-02T00:00:00Z", "--hasta", "2026-01-04T00:00:00Z",
+                                     "--aplicar"])
+    assert result.exit_code == 0, result.output
+    assert "Aplicado: 3 filas" in result.output
+    backups = list(registro.parent.glob("intentos.csv.bak-*"))
+    assert len(backups) == 1
+    assert backups[0].read_bytes() == original
+    with registro.open(newline="", encoding="utf-8") as archivo:
+        reader = csv.DictReader(archivo)
+        nuevas = list(reader)
+        assert reader.fieldnames == campos + ([] if con_estado else ["estado"])
+    esperadas = [dict(fila, estado="invalida_bug" if i in (1, 2, 3) else fila.get("estado", ""))
+                 for i, fila in enumerate(filas)]
+    assert nuevas == esperadas
