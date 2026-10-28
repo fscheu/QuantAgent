@@ -1,0 +1,4 @@
+ticker_sp500,ticker_fuente,fuente,nota
+BF.B,BF-B,yahoo,Yahoo escribe las clases de acciones con guion
+BRK.B,BRK-B,yahoo,Yahoo escribe las clases de acciones con guion
+SUNEQ,SUNE,wiki,WIKI no tiene el sufijo Q de quiebra de SunEdison (fja05680 usa SUNEQ)

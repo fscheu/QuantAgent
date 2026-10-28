@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import json
 from datetime import date
+from pathlib import Path
 from typing import Dict, Optional
 
 import click
 import pandas as pd
 
+from quantagent.data.acciones import crear_snapshot_acciones, reporte_cobertura
 from quantagent.data.macro import crear_snapshot_macro, verificar_snapshot_macro
 from quantagent.data.snapshot import (
     SnapshotError,
@@ -213,3 +216,35 @@ def foto_consenso_cmd(simbolos: Optional[str], archivo: Optional[str], fecha: Op
         raise click.ClickException(str(exc))
 
 
+@data_group.group("acciones", help="Snapshot de acciones del S&P 500 2007-2018 (Yahoo o Quandl WIKI por ticker).")
+def acciones_group() -> None:
+    """Acciones snapshot subcommands."""
+
+
+@acciones_group.command("create", help="Arma el snapshot: Yahoo si cubre la pertenencia al índice, si no WIKI_PRICES.csv.")
+@click.option("--name", required=True, help="Nombre del snapshot, por ejemplo acciones-sp500-2026-10.")
+@click.option("--wiki-csv", default="/tmp/wiki/WIKI_PRICES.csv", type=click.Path(exists=True, dir_okay=False), show_default=True)
+def create_acciones(name: str, wiki_csv: str) -> None:
+    try:
+        manifest = crear_snapshot_acciones(name, Path(wiki_csv))
+    except SnapshotError as exc:
+        raise click.ClickException(str(exc))
+    fuentes = pd.Series(manifest["fuentes"]).value_counts().to_dict()
+    click.echo(f"Snapshot {name} creado: {len(manifest['symbols'])} símbolos, fuentes {fuentes}")
+
+
+@acciones_group.command("cobertura", help="Reporte de cobertura de precios sobre los miembro-días 2007-2018; lo guarda en la carpeta del snapshot.")
+@click.option("--name", required=True)
+def cobertura_acciones(name: str) -> None:
+    try:
+        reporte = reporte_cobertura(name)
+    except SnapshotError as exc:
+        raise click.ClickException(str(exc))
+    carpeta = snapshot_root() / name
+    (carpeta / "cobertura.json").write_text(json.dumps(reporte, indent=2, ensure_ascii=False) + "\n")
+    pd.DataFrame(reporte["por_ticker"]).to_csv(carpeta / "cobertura.csv", index=False)
+    click.echo(f"Miembro-días con precio: {reporte['pct_global']:.2f}% ({reporte['miembro_dias_con_precio']}/{reporte['miembro_dias']})")
+    click.echo("Por año: " + ", ".join(f"{a}: {p:.2f}%" for a, p in reporte["pct_por_anio"].items()))
+    click.echo(f"Sin precio ({len(reporte['sin_precio'])}): {', '.join(reporte['sin_precio'])}")
+    click.echo(f"Terminan antes de su salida ({len(reporte['terminan_antes'])}): {reporte['terminan_antes']}")
+    click.echo(f"Saltos >50% ({len(reporte['saltos'])}): {reporte['saltos']}")
