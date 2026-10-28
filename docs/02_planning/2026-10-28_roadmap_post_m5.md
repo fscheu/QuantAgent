@@ -75,6 +75,28 @@ Hay tres cosas que se gastan y que el ciclo tiene que administrar:
 - **C3.** Tiempo mínimo en paper antes de ser candidata. Recomiendo 3 meses en Alpaca después de la sombra; menos que eso casi no distingue suerte de método en estrategias diarias.
 - **C4.** ¿Se guarda una parte de la reserva 2023+ para futuros ciclos o se acepta que, gastada la reserva, el paper es la única prueba fuera de muestra?
 
+**Decidido por Fede (2026-10-28):** C1 mensual; C2 5 hipótesis por ciclo; C3 3 meses en paper de Alpaca; C4 no se guarda parte de la reserva 2023+. Con C4, una vez gastada la reserva, **el paper es la única prueba fuera de muestra**: por eso los 3 meses de C3 pesan.
+
+### Aprendizaje del generador sin contaminar la prueba
+
+Duda de Fede: si el generador no sabe qué funcionó y qué no, ¿cómo evoluciona? La respuesta corta es que **ya aprende, pero de las causas y no de los números**, y que lo que se protege es la prueba final, no la investigación.
+
+Qué ve hoy el generador (`quantagent/fabrica/investigador.py`, `armar_pedido`):
+
+- las **fichas de postmortem** (`catalogo/postmortem/`), que dicen por qué cortó cada cartera solo con causas estructurales (pocos trades, demasiada rotación, costos que se comen la ganancia, una pierna que domina), sin Sharpe ni P&L (`quantagent/fabrica/postmortem.py`);
+- las **lecciones escritas por personas** en el catálogo (R01 #11);
+- la **cantidad de intentos**, para que sepa que cada idea nueva sube la vara.
+
+Por qué no se le pasan los números: si ve que la variante con media de 50 días dio Sharpe 0,6 y la de 60 dio 0,4, va a proponer 55, y eso es ajustar la muestra hasta que dé bien. Aprender que "las ideas de alta rotación mueren por costos" es investigar como un científico; aprender "qué parámetro dio mejor en 2007–2018" es sobreajustar.
+
+El costo del aprendizaje ya está pagado de dos formas: cada intento cuenta en el N del Sharpe deflactado, y la decisión final se toma con datos que nadie vio (la reserva mientras dure, después 3 meses de paper). Mientras esas dos reglas se cumplan, el generador puede aprender todo lo que quiera de los fracasos anteriores.
+
+Propuesta para M-ciclos:
+
+- **Postmortem también de paper:** cuando una candidata se cae en paper, su ficha dice la causa (se alejó de su backtest, rechazos, costos reales, caída mayor que la peor histórica), también sin cifras.
+- **Ficha por familia de idea** (tendencia, reversión, estacionalidad, carry...): cuántos intentos lleva y en qué etapa murió cada uno, para que el generador no repita ideas muertas y el PM vea qué familias están agotadas.
+- **Revisión trimestral de las lecciones** por Fede y el PM: qué se aprendió en los últimos 3 ciclos, escrito en palabras.
+
 ### Orden dentro del hito
 
 Primero los números de la escalera y el registro único de estado; después el calendario automático; al final el informe por ciclo.
