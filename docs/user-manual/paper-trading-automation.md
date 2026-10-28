@@ -101,6 +101,13 @@ trades it prints `Sin actividad de trading`; if there is no completed heartbeat,
 `ALERT: sin ciclo completado en más de un día hábil` under the scheduler signal. Empty sections are still
 shown so the missing activity and scheduler state are explicit.
 
+With `TRADING_BROKER=alpaca_paper`, the digest reads Alpaca DIV activities by default.
+Each dividend shows its symbol, amount in USD and treatment `efectivo en cuenta`: it stays
+in cash until the next rebalance, without automatic reinvestment. No dividends prints
+`Dividendos: Sin observaciones`. API errors or malformed activities print a warning and exit 1.
+Use `--sin-dividendos` to disable the query and show `Dividendos: sin fuente de dividendos.`
+Other brokers only query Alpaca with `--dividendos-alpaca`.
+
 1. **Dashboard → Dashboard tab → Scheduler Status** gives you a quick health signal:
    - `Active` (green) means the last completed heartbeat is newer than 2 hours.
    - `Stale` (yellow) means the scheduler stopped checking in recently and may need attention.

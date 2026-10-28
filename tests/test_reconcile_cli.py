@@ -7,10 +7,50 @@ import pytest
 from click.testing import CliRunner
 
 from quantagent.cli.__main__ import cli
+from quantagent.fabrica.cartera import guardar_sombra
 from quantagent.models import ActivePosition, Environment, ExitPolicy, OrderSide, Position
 from quantagent.strategy.assembler import StrategyAssembler
 from quantagent.trading.alpaca_broker import AlpacaBroker
-from quantagent.fabrica.cartera import guardar_sombra
+
+
+@pytest.mark.parametrize("activity, status, disabled, code, text", [
+    ({"symbol": "SPY", "net_amount": "1.25"}, 200, False, 0,
+     "SPY: dividendo 1.25 USD, tratamiento efectivo en cuenta"),
+    (None, 200, False, 0, "Dividendos: Sin observaciones"),
+    ({}, 200, True, 0, "Dividendos: sin fuente de dividendos."),
+    ({}, 403, False, 1, "error al consultar Alpaca (APIError)"),
+    ({"net_amount": "1.25"}, 200, False, 1, "falta symbol válido"),
+    ({"symbol": " "}, 200, False, 1, "falta symbol válido"),
+    *[({"symbol": "SPY", **amount}, 200, False, 1, "net_amount debe ser numérico y finito")
+      for amount in ({}, {"net_amount": "invalid"}, {"net_amount": "NaN"},
+                     {"net_amount": "Infinity"}, {"net_amount": None})],
+])
+def test_digest_dividendos_por_defecto_cliente_real(tmp_path, monkeypatch, activity, status, disabled, code, text):
+    from alpaca.trading.client import TradingClient
+    from requests import Response
+
+    client = TradingClient("fake-key", "fake-secret", paper=True)
+    calls = []
+
+    def request(method, url, **kwargs):
+        calls.append(url)
+        assert method == "GET" and url == "https://paper-api.alpaca.markets/v2/account/activities/DIV"
+        assert kwargs["params"] == {"date": "2026-10-27"}
+        assert not disabled
+        response = Response()
+        response.status_code = status
+        response._content = json.dumps([activity] if activity is not None else []).encode()
+        return response
+
+    monkeypatch.setattr(client._session, "request", request)
+    monkeypatch.setattr("quantagent.cli.reconcile.settings.TRADING_BROKER", "alpaca_paper")
+    monkeypatch.setitem(StrategyAssembler.BROKER_CONSTRUCTORS, "alpaca_paper", lambda config: AlpacaBroker(client))
+    result = CliRunner().invoke(cli, ["trading", "digest", "--date", "2026-10-27",
+                                      "--db", str(tmp_path / "paper.db"),
+                                      *(["--sin-dividendos"] if disabled else [])])
+    assert result.exit_code == code, result.output
+    assert text in result.output
+    assert len(calls) == (0 if disabled else 1)
 
 
 @pytest.mark.parametrize("spy, extra, weight, code", [
