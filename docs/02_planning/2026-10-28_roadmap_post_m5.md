@@ -144,6 +144,8 @@ Lo que hay que revisar, punto por punto:
 - **K2.** Cuenta cash o margin para la primera cuenta real. Recomiendo **cash**: sin PDT, sin deuda posible, y las estrategias de rebalanceo mensual no sufren la liquidación T+1. Implica dejar afuera las estrategias con cortos para la primera cuenta.
 - **K3.** ¿Se pide a un contador argentino el costo fiscal real antes de abrir la cuenta? Recomiendo que sí, y que ese costo entre al modo cuenta chica.
 
+**Decidido por Fede (2026-10-28):** K1 USD 2.500 (pruebas de sensibilidad a 1.000 y 5.000); K2 cuenta **cash**, así que las estrategias con cortos quedan fuera de la primera cuenta real; K3 sí, Fede lo revisa con una contadora de confianza y el costo fiscal que resulte entra al modo cuenta chica.
+
 ### Orden dentro del hito
 
 Modo cuenta chica en el backtest, después la prueba de sensibilidad sobre las candidatas que haya, después la puerta escrita y la cuenta paper al capital real.
@@ -391,8 +393,8 @@ flowchart LR
 
 - **G1.** Numeración: decidido (2026-10-28), M5 es el motor top-down.
 - **G2.** ¿Este orden (§6) sirve como marco, para que el PM arme los tickets de cada hito cuando toque?
-- **C1–C4** (ciclos), **K1–K3** (cuenta chica), **W1–W3** (web), **D1–D2** (datos), **U1–U4** (manual): en cada sección.
-- **K1–K3** (cuenta chica): Fede las tiene presentes y las ve más adelante (2026-10-28).
+- **C1–C4** (ciclos, decididas), **W1–W3** (web), **D1–D2** (datos), **U1–U4** (manual): en cada sección.
+- **K1–K3** (cuenta chica): decididas (2026-10-28): USD 2.500, cuenta cash, costo fiscal con contadora.
 
 Ningún ticket se abre en Beads hasta que Fede apruebe.
 
