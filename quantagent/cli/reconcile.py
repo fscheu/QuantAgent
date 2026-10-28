@@ -53,8 +53,9 @@ def reconcile_positions() -> None:
 @click.option("--shadow", type=click.Path(dir_okay=False), help="Archivo JSON de pesos sombra.")
 @click.option("--portfolio", default="paper", show_default=True, help="Nombre de la cartera en el digest.")
 @click.option("--dividendos-alpaca", is_flag=True, help="Leer dividendos de Alpaca para esa fecha.")
+@click.option("--sin-dividendos", is_flag=True, help="Desactivar la consulta de dividendos de Alpaca.")
 def trading_digest(archivo, digest_date, db: str | None, shadow: str | None, portfolio: str,
-                   dividendos_alpaca: bool) -> None:
+                   dividendos_alpaca: bool, sin_dividendos: bool) -> None:
     if archivo:
         data = json.load(archivo)
         differences = comparar_pesos(data["paper_weights"], data["shadow_weights"])
@@ -81,6 +82,7 @@ def trading_digest(archivo, digest_date, db: str | None, shadow: str | None, por
     db_path = db or make_url(settings.DATABASE_URL).database
     shadow_path = Path(shadow) if shadow else Path(db_path).with_suffix(".sombra.json")
     warnings = ["Equity paper = valor invertido; la DB no guarda caja."]
+    dividendos_alpaca = not sin_dividendos and (dividendos_alpaca or settings.TRADING_BROKER == "alpaca_paper")
     if not dividendos_alpaca:
         warnings.append("Dividendos: sin fuente de dividendos.")
     differences, dividendos_error = [], False
@@ -95,9 +97,11 @@ def trading_digest(archivo, digest_date, db: str | None, shadow: str | None, por
             dividendos = leer_dividendos_alpaca(client, day)
         except Exception as exc:
             warnings.append(f"Dividendos: error al consultar Alpaca ({type(exc).__name__}).")
+            if isinstance(exc, ValueError):
+                warnings.append(f"Dividendos: {exc}")
             dividendos_error = True
         else:
-            warnings.extend(reportar_dividendos(dividendos))
+            warnings.extend(reportar_dividendos(dividendos) or ["Dividendos: Sin observaciones"])
     orders = []
     try:
         with utils.session_scope() as session:
