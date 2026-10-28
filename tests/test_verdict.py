@@ -340,3 +340,39 @@ def test_dsr_contra_intentos_parametro_n_intentos(tmp_path):
     assert dsr_contra_intentos(EQUITY_DSR, path, n_intentos=5) == pytest.approx(dsr_crudo, abs=1e-12)
 
 
+@pytest.mark.parametrize("excluida", [{"estado": "invalida_bug"}, {"snapshot": "sintetico"}])
+@pytest.mark.parametrize("estado", [None, "", "otro"])
+def test_filtro_valido_compartido_por_dsr_y_conteos(tmp_path, monkeypatch, excluida, estado):
+    from quantagent.cli.sweep import contar_intentos
+    from quantagent.fabrica.comparar import _n_intentos
+    from quantagent.fabrica.estado import registrar_estado, resumen_tanda
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    path = tmp_path / "intentos.csv"
+    campos = ["estrategia", "sharpe", "hipotesis", "snapshot"] + ([] if estado is None else ["estado"])
+    filas = [{"estrategia": s, "sharpe": sr, "hipotesis": h, "snapshot": "real"}
+             for s, sr, h in [("a", 0.5, "h1"), ("b", 1.0, "h2")]]
+    if estado is not None:
+        filas = [{**f, "estado": estado} for f in filas]
+    with path.open("w", newline="") as f:
+        w = csv.DictWriter(f, campos)
+        w.writeheader()
+        w.writerows(filas)
+    esperado = dsr_contra_intentos(EQUITY_DSR, path)
+    assert esperado is not None
+    # Encabezado viejo sin estado también acepta el filtro por snapshot.
+    campos = list(dict.fromkeys([*campos, *excluida]))
+    filas.append({**filas[0], "estrategia": "bug", "sharpe": 50, **excluida})
+    with path.open("w", newline="") as f:
+        w = csv.DictWriter(f, campos)
+        w.writeheader()
+        w.writerows(filas)
+    assert dsr_contra_intentos(EQUITY_DSR, path) == pytest.approx(esperado, abs=1e-12)
+    assert n_efectivo(filas) == 2
+    assert _n_intentos(path) == contar_intentos() == 2
+    assert contar_intentos("h1") == contar_intentos("h2") == 1
+    registrar_estado("h1", "0", "PASA")
+    registrar_estado("h2", "0", "PASA")
+    assert "Intentos: 2\n" in resumen_tanda()
+
+

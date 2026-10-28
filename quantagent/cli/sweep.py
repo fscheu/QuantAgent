@@ -11,6 +11,7 @@ from typing import Any, Optional
 import click
 from tabulate import tabulate
 
+from quantagent.backtesting.verdict import filas_validas
 from quantagent.settings import COSTOS_PERFILES
 from quantagent.strategy.registry import STRATEGY_REGISTRY, cli_aliases
 from quantagent.trading.position_sizer import PositionSizer
@@ -107,14 +108,14 @@ CAMPOS_INTENTOS = [
 
 
 def contar_intentos(hipotesis: Optional[str] = None) -> int:
-    """Cuenta filas de intentos.csv; con `hipotesis`, solo las de esa hipótesis."""
+    """Cuenta filas válidas de intentos.csv; con `hipotesis`, solo las de esa hipótesis."""
     from quantagent.data.snapshot import snapshot_root
 
     path = snapshot_root() / "intentos.csv"
     if not path.exists():
         return 0
     with path.open(newline="", encoding="utf-8") as f:
-        return sum(1 for r in csv.DictReader(f) if hipotesis is None or r.get("hipotesis") == hipotesis)
+        return sum(1 for r in filas_validas(csv.DictReader(f)) if hipotesis is None or r.get("hipotesis") == hipotesis)
 
 
 def registrar_intento(
