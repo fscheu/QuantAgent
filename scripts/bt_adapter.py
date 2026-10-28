@@ -53,8 +53,8 @@ from quantagent.backtesting.export import TradeRow, trades_to_csv  # noqa: E402
 from quantagent.backtesting.fixtures import fixture_metadata  # noqa: E402
 from quantagent.data.snapshot import load_manifest  # noqa: E402
 from quantagent.models import ActivePosition, OrderSide  # noqa: E402
-from quantagent.strategy.registry import build_strategy, cli_aliases  # noqa: E402
 from quantagent.stop_loss import resolve_stop_loss  # noqa: E402
+from quantagent.strategy.registry import build_strategy, cli_aliases  # noqa: E402
 from quantagent.trading.position_sizer import PositionSizer  # noqa: E402
 
 SCALE = port.SCALE
@@ -142,8 +142,9 @@ class StrategyAdapter(Strategy):
                         continue
                     open_real = price * SCALE
                     new_stop = round(open_real * (order.sl * SCALE) / ref_price, 8)
-                    new_take = round(open_real * (order.tp * SCALE) / ref_price, 8)
-                    order._replace(size=units if order.is_long else -units, sl_price=new_stop / SCALE, tp_price=new_take / SCALE)
+                    new_take = None if order.tp is None else round(open_real * (order.tp * SCALE) / ref_price, 8)
+                    order._replace(size=units if order.is_long else -units, sl_price=new_stop / SCALE,
+                                   tp_price=None if new_take is None else new_take / SCALE)
                     self.info[self.key]["stop"] = new_stop
                     if self.pos is not None:
                         self.pos.entry_price = open_real
