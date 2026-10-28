@@ -1,8 +1,8 @@
-"""Inspección de corridas que se invalidarían, sin modificar el registro."""
+"""Inspección e invalidación de corridas con backup del registro."""
 
 import csv
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import click
 
@@ -24,26 +24,46 @@ def intentos_group():
     pass
 
 
-@intentos_group.command("invalidar", help="Listar las filas que se invalidarían (dry-run).")
+@intentos_group.command("invalidar", help="Listar filas; invalidarlas con backup solo con --aplicar.")
 @click.option("--hipotesis", required=True)
 @click.option("--desde")
 @click.option("--hasta")
 @click.option("--motivo", required=True)
-def invalidar(hipotesis, desde, hasta, motivo):
+@click.option("--aplicar", is_flag=True)
+def invalidar(hipotesis, desde, hasta, motivo, aplicar):
     desde = _fecha_utc(desde) if desde is not None else None
     hasta = _fecha_utc(hasta) if hasta is not None else None
     path = snapshot_root() / "intentos.csv"
     filas = []
     if path.exists():
         with path.open(newline="", encoding="utf-8") as archivo:
-            filas = [fila for fila in csv.DictReader(archivo) if fila["hipotesis"] == hipotesis]
-    if not filas:
+            reader = csv.DictReader(archivo)
+            campos = reader.fieldnames
+            filas = list(reader)
+    if not any(fila["hipotesis"] == hipotesis for fila in filas):
         raise click.ClickException(f"Hipótesis inexistente en intentos.csv: {hipotesis}")
     seleccionadas = []
     for fila in filas:
+        if fila["hipotesis"] != hipotesis:
+            continue
         fecha = _fecha_utc(fila["fecha_utc"])
         if (desde is None or fecha >= desde) and (hasta is None or fecha <= hasta):
             seleccionadas.append(fila)
-    click.echo(f"Dry-run: {len(seleccionadas)} filas; motivo: {motivo}")
+    if aplicar:
+        marca = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
+        backup = path.with_name(f"{path.name}.bak-{marca}")
+        with backup.open("xb") as archivo:
+            archivo.write(path.read_bytes())
+        if "estado" not in campos:
+            campos.append("estado")
+        for fila in seleccionadas:
+            fila["estado"] = "invalida_bug"
+        with path.open("w", newline="", encoding="utf-8") as archivo:
+            writer = csv.DictWriter(archivo, fieldnames=campos)
+            writer.writeheader()
+            writer.writerows(filas)
+        click.echo(f"Aplicado: {len(seleccionadas)} filas; motivo: {motivo}; backup: {backup}")
+    else:
+        click.echo(f"Dry-run: {len(seleccionadas)} filas; motivo: {motivo}")
     for fila in seleccionadas:
         click.echo(json.dumps(fila, ensure_ascii=False))
