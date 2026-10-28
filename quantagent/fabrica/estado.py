@@ -4,6 +4,7 @@ import re
 from collections import Counter
 from datetime import datetime, timezone
 
+from quantagent.backtesting.verdict import filas_validas
 from quantagent.data.snapshot import snapshot_root
 
 ESTADO_CSV = "hipotesis.csv"
@@ -59,7 +60,7 @@ def resumen_tanda(desde=None):
                      for causa in {re.sub(r"\b[A-Z][A-Z0-9.-]*:\s*", "", c).strip()
                                    for c in r["motivo"].split(";")
                                    if re.sub(r"\b[A-Z][A-Z0-9.-]*:\s*", "", c).strip()})
-    intentos = sum(r.get("hipotesis") in ultimos for r in registros["intentos.csv"])
+    intentos = sum(r.get("hipotesis") in ultimos for r in filas_validas(registros["intentos.csv"]))
     lineas = ["# Resumen de la tanda", "", "| Etapa | Veredicto | Hipótesis |",
               "| --- | --- | ---: |"]
     lineas += [f"| {e} | {v} | {n} |" for (e, v), n in sorted(conteos.items())]

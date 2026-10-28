@@ -77,6 +77,11 @@ def sharpe_deflactado(sr, n_intentos, var_sr_intentos, n_obs, asimetria, curtosi
     return float(norm.cdf((sr - sr0) * sqrt(n_obs - 1) / denominador))
 
 
+def filas_validas(filas):
+    """Excluye intentos invalidados por bug y corridas sintéticas."""
+    return [f for f in filas if f.get("estado") != "invalida_bug" and f.get("snapshot") != "sintetico"]
+
+
 def n_efectivo(filas) -> int:
     """Cuenta intentos distintos por (estrategia, params, activo, desde, hasta)."""
     distintos = {
@@ -87,24 +92,22 @@ def n_efectivo(filas) -> int:
             f.get("desde"),
             f.get("hasta"),
         )
-        for f in filas
+        for f in filas_validas(filas)
     }
     return len(distintos)
 
 
 def dsr_contra_intentos(equity, intentos_path, n_intentos: int | None = None) -> float | None:
-    """Sharpe deflactado de una curva contra el registro `intentos.csv` (N = filas válidas o n_intentos)."""
+    """Sharpe deflactado contra `intentos.csv` (N = configuraciones distintas o n_intentos)."""
     curva = np.asarray(equity, dtype=float)
     retornos = curva[1:] / curva[:-1] - 1
     if len(retornos) < 3 or np.std(retornos, ddof=1) == 0:
         return None
     with open(intentos_path, newline="", encoding="utf-8") as f:
         filas = list(csv.DictReader(f))
-    filas_validas = []
+    filas_con_sharpe = []
     sharpes, sharpes_tasa_0 = [], []
-    for fila in filas:
-        if fila.get("snapshot") == "sintetico":
-            continue
+    for fila in filas_validas(filas):
         raw = fila.get("sharpe")
         if raw is not None and raw != "":
             try:
@@ -117,11 +120,11 @@ def dsr_contra_intentos(equity, intentos_path, n_intentos: int | None = None) ->
             sharpes.append(s)
             if fila.get("sharpe_base") == "tasa_0":
                 sharpes_tasa_0.append(s)
-        filas_validas.append(fila)
+        filas_con_sharpe.append(fila)
     sharpes_var = sharpes_tasa_0 if len(sharpes_tasa_0) >= 2 else sharpes
     var_sr = float(np.var(sharpes_var, ddof=1)) if len(sharpes_var) >= 2 else 0.0
     sr = float(np.mean(retornos) / np.std(retornos, ddof=1))
-    n = max(n_intentos if n_intentos is not None else len(filas_validas), 1)
+    n = max(n_intentos if n_intentos is not None else n_efectivo(filas_con_sharpe), 1)
     return sharpe_deflactado(
         sr, n, var_sr, len(retornos),
         float(skew(retornos)), float(kurtosis(retornos, fisher=False)),

@@ -1,6 +1,6 @@
 """Tests for DataProvider (data caching layer)."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch
 
 import pandas as pd
@@ -507,6 +507,15 @@ class TestSourceDelegation:
         DataProvider(db_session, source=source).get_ohlc("BTC", "1h", self.START, self.END)
 
         assert source.calls == [("BTC", "1h", earliest, latest)]
+
+    def test_aware_source_limits_clamp_naive_request(self, db_session):
+        earliest = (self.START + timedelta(hours=3)).replace(tzinfo=timezone.utc)
+        latest = (self.START + timedelta(hours=7)).replace(tzinfo=timezone.utc)
+        source = FakeSource(earliest=earliest, latest=latest)
+
+        DataProvider(db_session, source=source).get_ohlc("BTC", "1h", self.START, self.END)
+
+        assert source.calls == [("BTC", "1h", self.START + timedelta(hours=3), self.START + timedelta(hours=7))]
 
     def test_range_entirely_outside_source_limits_skips_source(self, db_session):
         source = FakeSource(earliest=self.END + timedelta(days=1))
