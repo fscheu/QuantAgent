@@ -1,6 +1,8 @@
 """Tests de composición histórica y sector GICS del S&P 500 (QuantAgent-fnpr.1.4)."""
 
 import json
+import os
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -37,6 +39,7 @@ def _armar_csvs_chicos(csv_dir):
             {"Symbol": "GOOGL", "Security": "Alphabet Inc.", "GICS Sector": "Communication Services"},
             {"Symbol": "MSFT", "Security": "Microsoft", "GICS Sector": "Information Technology"},
             {"Symbol": "SPG", "Security": "Simon Property Group", "GICS Sector": "Real Estate"},
+            {"Symbol": "TSLA", "Security": "Tesla, Inc.", "GICS Sector": "Consumer Discretionary"},
             {"Symbol": "V", "Security": "Visa Inc.", "GICS Sector": "Financials"},
         ]
     )
@@ -131,9 +134,64 @@ def test_sector_reclasificaciones_googl_reit_v_y_salidos(tmp_path, monkeypatch):
 def test_tablas_versionadas_existen_y_tienen_formato_esperado():
     df_salidos = pd.read_csv(SALIDOS_CSV, keep_default_na=False)
     assert list(df_salidos.columns) == ["ticker", "sector", "fuente"]
-    assert len(df_salidos) == 398
+    assert len(df_salidos) == 429
     assert df_salidos["ticker"].is_unique
 
     df_recl = pd.read_csv(RECLASIFICACIONES_CSV, keep_default_na=False)
     assert list(df_recl.columns) == ["ticker", "desde", "sector_anterior", "sector_nuevo"]
     assert {"2016-09-01", "2018-09-24", "2023-03-17"}.issubset(set(df_recl["desde"]))
+
+
+def test_miembros_2019_hoy_tienen_sector_en_cada_fin_de_mes(tmp_path):
+    snap_env = os.environ.get("QUANTAGENT_SNAPSHOT_DIR")
+    candidatos = [
+        Path(snap_env) if snap_env else None,
+        Path("local-data"),
+        Path("/home/baiscf/repos/QuantAgent/local-data"),
+    ]
+    base_dir = next((p for p in candidatos if p and (p / "sp500-2026-10").exists()), None)
+    if base_dir is not None:
+        snap = "sp500-2026-10"
+    else:
+        csv_dir, base_dir = tmp_path / "csv", tmp_path / "datos"
+        _armar_csvs_chicos(csv_dir)
+        hist_path = csv_dir / HISTORICAL_CSV
+        df_hist = pd.read_csv(hist_path)
+        salidos_2019 = (
+            "AAPL,AMTM,BBWI,BIO,CDAY,CTLT,CTRA,CZR,DAY,ENPH,EPAM,ETSY,FI,FRC,LUMN,"
+            "MKTX,MOH,MTCH,NLOK,OGN,PARA,PAYC,PEAK,PENN,POOL,SATS,SBNY,SEDG,SOLS,TFX,VIAC,VNT"
+        )
+        df_hist = pd.concat(
+            [df_hist, pd.DataFrame([{"date": "2020-06-22", "tickers": salidos_2019}])],
+            ignore_index=True,
+        )
+        df_hist.to_csv(hist_path, index=False)
+        snap = "sp500-test"
+        crear_snapshot_sp500(snap, base_dir=base_dir, csv_dir=csv_dir)
+
+    df_salidos = pd.read_csv(SALIDOS_CSV, keep_default_na=False)
+    desconocidos = set(
+        df_salidos[df_salidos["fuente"].astype(str).str.strip() == "desconocido"]["ticker"]
+        .astype(str)
+        .str.strip()
+        .str.upper()
+    )
+    hoy = pd.Timestamp.today().normalize()
+    fines_de_mes = [
+        pd.Timestamp(anio, mes, 1) + pd.offsets.MonthEnd(0)
+        for anio in range(2019, hoy.year + 1)
+        for mes in range(1, 13)
+        if (anio, mes) <= (hoy.year, hoy.month)
+    ]
+    sector_por_ticker = {}
+    for fin_mes in fines_de_mes:
+        for t in miembros(snap, fin_mes, base_dir=base_dir):
+            if t not in sector_por_ticker:
+                sector_por_ticker[t] = sector(snap, t, fin_mes, base_dir=base_dir)
+        sin_sector = [
+            t
+            for t in miembros(snap, fin_mes, base_dir=base_dir)
+            if t not in desconocidos and sector_por_ticker[t] is None
+        ]
+        assert sin_sector == [], f"{fin_mes.date()}: {sin_sector}"
+
