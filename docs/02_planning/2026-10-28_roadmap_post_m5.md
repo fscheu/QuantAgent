@@ -321,7 +321,7 @@ Conviene escribir la decisión y el catálogo **antes de que los datos de accion
 
 - **D1.** Decidido (2026-10-28): opción C. Parquet para lo histórico, DuckDB para consultar, registros del embudo a Postgres.
 - **D2.** Decidido (2026-10-28): congelado mensual.
-- **D3.** Duda de Fede: ¿SQLite en lugar de Postgres, para ahorrarse un contenedor? Es viable a nuestra escala, y los tests ya corren sobre SQLite. En contra: SQLite admite un solo proceso escribiendo a la vez, y vamos a tener varios (scheduler de M4, el de M5, la API de la web, el loop); las migraciones de Alembic usan tipos propios de Postgres (`ENUM`, `JSONB`) y habría que rehacerlas; y la base de paper de M4 vive hoy en Postgres, así que el cambio no se hace con paper corriendo. Recomendación del PM: **quedarse con Postgres**; el contenedor ya está y no da trabajo. Si Fede prefiere SQLite, es un ticket aparte después de la prueba de paper de M4.
+- **D3.** Decidido (2026-10-28): **Postgres**, no SQLite. Duda de Fede: ¿SQLite en lugar de Postgres, para ahorrarse un contenedor? Es viable a nuestra escala, y los tests ya corren sobre SQLite. En contra: SQLite admite un solo proceso escribiendo a la vez, y vamos a tener varios (scheduler de M4, el de M5, la API de la web, el loop); las migraciones de Alembic usan tipos propios de Postgres (`ENUM`, `JSONB`) y habría que rehacerlas; y la base de paper de M4 vive hoy en Postgres, así que el cambio no se hace con paper corriendo. Recomendación del PM: **quedarse con Postgres**; el contenedor ya está y no da trabajo. Si Fede prefiere SQLite, es un ticket aparte después de la prueba de paper de M4.
 
 ---
 
@@ -415,7 +415,7 @@ flowchart LR
 
 - **G1.** Numeración: decidido (2026-10-28), M5 es el motor top-down.
 - **G2.** ¿Este orden (§6) sirve como marco, para que el PM arme los tickets de cada hito cuando toque?
-- **C1–C4** (ciclos, decididas), **W1–W2** (web, decididas), **W3** (cuándo arrancan las sesiones de diseño), **D1–D2** (datos, decididas), **D3** (SQLite o Postgres), **U1–U4** (manual): en cada sección.
+- **C1–C4** (ciclos, decididas), **W1–W2** (web, decididas), **W3** (cuándo arrancan las sesiones de diseño), **D1–D3** (datos, decididas), **U1–U4** (manual): en cada sección.
 - **K1–K3** (cuenta chica): decididas (2026-10-28): USD 2.500, cuenta cash, costo fiscal con contadora.
 
 Ningún ticket se abre en Beads hasta que Fede apruebe.
