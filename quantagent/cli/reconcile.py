@@ -7,17 +7,17 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import click
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.engine import make_url
+from sqlalchemy.exc import SQLAlchemyError
 
+from quantagent import settings
 from quantagent.digest import build_digest
 from quantagent.digest_datos import consultar_datos_paper
-from quantagent.fabrica.chequeos_paper import comparar_pesos, reportar_dividendos, reportar_rechazos
 from quantagent.fabrica.cartera import leer_sombra
-from quantagent.trading.cartera_paper import ultima_sesion_cerrada_nyse
-from quantagent import settings
-from quantagent.models import Environment
+from quantagent.fabrica.chequeos_paper import comparar_pesos, reportar_dividendos, reportar_rechazos
+from quantagent.models import Environment, Position
 from quantagent.strategy.assembler import StrategyAssembler
+from quantagent.trading.cartera_paper import ultima_sesion_cerrada_nyse
 from quantagent.trading.position_monitor import PositionMonitor
 
 from . import utils
@@ -111,7 +111,12 @@ def trading_digest(archivo, digest_date, db: str | None, shadow: str | None, por
             except (KeyError, FileNotFoundError):
                 warnings.append(f"Sombra sin datos para {portfolio} en {session_day}")
             else:
-                differences = comparar_pesos(paper_weights, shadow_weights)
+                tolerancias = {
+                    symbol: float(price) / invested
+                    for symbol, price in session.query(Position.symbol, Position.current_price)
+                    .filter(Position.symbol.in_(set(paper_weights) | set(shadow_weights))).all()
+                } if invested else {}
+                differences = comparar_pesos(paper_weights, shadow_weights, tolerancias=tolerancias)
     except (SQLAlchemyError, ValueError):
         portfolios, trades, heartbeats, cumulative_pnl, orders = [], [], [], 0.0, []
     finally:

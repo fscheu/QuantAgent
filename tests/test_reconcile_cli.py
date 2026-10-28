@@ -7,9 +7,48 @@ import pytest
 from click.testing import CliRunner
 
 from quantagent.cli.__main__ import cli
-from quantagent.models import ActivePosition, Environment, ExitPolicy, OrderSide
+from quantagent.models import ActivePosition, Environment, ExitPolicy, OrderSide, Position
 from quantagent.strategy.assembler import StrategyAssembler
 from quantagent.trading.alpaca_broker import AlpacaBroker
+from quantagent.fabrica.cartera import guardar_sombra
+
+
+@pytest.mark.parametrize("spy, extra, weight, code", [
+    (.1171, "IWM", .001, 0), (.13, "IWM", .001, 1),
+    (.1171, "IWM", .003, 1), (.1171, "UNKNOWN", .0002, 1),
+    (.1171, "UNKNOWN", .00005, 0),
+    (12120 / 99941, "IWM", .001, 0),
+])
+def test_digest_tolera_una_accion_con_db_y_sombra(db_session, tmp_path, monkeypatch, spy, extra, weight, code):
+    for symbol, quantity, price in [("SPY", 19.2, 600), ("QQQ", 88.421, 1000), ("IWM", 0, 200)]:
+        db_session.add(Position(symbol=symbol, quantity=quantity, current_price=price,
+                                average_entry_price=price, unrealized_pnl=0,
+                                unrealized_pnl_pct=0, side=OrderSide.BUY))
+        if quantity:
+            db_session.add(ActivePosition(
+                symbol=symbol, side=OrderSide.BUY, entry_price=price, quantity=quantity,
+                stop_loss=price / 2, take_profit=price * 2, is_active=True,
+                decision_timestamp=datetime(2026, 10, 26),
+                exit_policy=ExitPolicy.SL_TP_ONLY, environment=Environment.PAPER))
+    db_session.commit()
+
+    @contextmanager
+    def session_scope():
+        yield db_session
+
+    monkeypatch.setattr("quantagent.cli.reconcile.utils.session_scope", session_scope)
+    shadow = tmp_path / "shadow.json"
+    guardar_sombra(shadow, "alpha", "2026-10-27", {"SPY": spy, "QQQ": 1 - spy - weight, extra: weight}, 99941)
+    result = CliRunner().invoke(cli, ["trading", "digest", "--date", "2026-10-27",
+                                      "--shadow", str(shadow), "--portfolio", "alpha"])
+    assert result.exit_code == code, result.output
+    if code:
+        symbol = "SPY" if spy == .13 else extra
+        tolerance = {"SPY": 600 / 99941, "IWM": 200 / 99941}.get(symbol, 1e-4)
+        assert f"{symbol}: peso paper" in result.output
+        assert f"(tolerancia {tolerance})" in result.output
+    else:
+        assert "difiere" not in result.output
 
 
 @pytest.mark.parametrize(
