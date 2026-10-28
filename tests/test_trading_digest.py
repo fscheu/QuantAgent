@@ -17,6 +17,39 @@ from quantagent.cli.__main__ import cli
 from quantagent.trading.alpaca_broker import AlpacaBroker
 
 
+@pytest.mark.parametrize("count", [0, 1, 200])
+def test_digest_cartera_valuacion_ejecuciones_y_pendientes(count):
+    snapshot = {"equity": 1000, "cash": 50, "consulted_at": datetime(2026, 10, 28),
+                "notice": "Foto actual de Alpaca; no es saldo histórico de --date.",
+                "portfolios": [{"name": "alpha", "positions": [
+                    {"symbol": "SPY", "quantity": 2, "price": 475, "value": 950, "unrealized_pnl": -30}]}]}
+    executions = [{"symbol": "SPY", "side": "buy", "quantity": 2, "price": 475,
+                   "commission": 1, "filled_at": datetime(2026, 10, 25, 12)}] * count
+    pending = [{"symbol": "QQQ", "side": "sell", "status": "partially_filled",
+                "quantity": 5, "filled_quantity": 2}] * count
+    text = build_digest(date(2026, 10, 25), [], [], [], valuation=snapshot,
+                        executions=executions, pending=pending)
+    assert "Equity: 1000.00 USD" in text and "Caja: 50.00 USD (5.00 %)" in text
+    assert "reserva objetivo 5 %" in text and snapshot["notice"] in text
+    assert "Consultada: 2026-10-28" in text and "2026-10-25" in text
+    assert "valor de mercado 950.00 USD" in text and "P&L no realizado -30" in text
+    assert "Sin datos de P&L realizado" in text and "P&L realizado diario: 0" not in text
+    assert f"Ejecuciones del día ({count})" in text and f"Órdenes pendientes ({count})" in text
+    if count == 1:
+        assert "SPY buy 2 @ 475; comisión 1" in text
+        assert "QQQ sell: partially_filled, 2/5 ejecutadas" in text
+    assert len(text) < 4000
+    assert ("[Resumen truncado]" in text) == (count == 200)
+
+
+def test_digest_sin_datos_nuevos_conserva_formato():
+    text = build_digest(date(2026, 10, 25), [], [], [])
+    assert text == ("Resumen de paper trading — 2026-10-25\n\n## Alertas y avisos\n- Ninguno\n\n"
+                    "## Señal del scheduler\n- ALERT: sin ciclo completado en más de un día hábil\n"
+                    "- Sin heartbeat\n\n## Actividad y P&L (0 operaciones)\nP&L realizado diario: 0.00\n"
+                    "P&L realizado acumulado: 0.00\nSin actividad de trading")
+
+
 @pytest.mark.parametrize("failure", [None, "account", "positions", "missing"])
 def test_valuacion_actual_alpaca_sin_api_real(failure):
     class Client:
