@@ -170,7 +170,7 @@ def test_trading_digest_reconciles_shadow_weights_and_missing_date(tmp_path):
             "--shadow", str(shadow_path), "--portfolio", "alpha"]
     result = CliRunner().invoke(cli, args)
     assert result.exit_code == 0 and "difiere" not in result.output
-    shadow_path.write_text('{"2026-10-23":{"alpha":{"pesos":{"SPY":0.5}}}}')
+    shadow_path.write_text('{"2026-10-23":{"alpha":{"pesos":{"SPY":0.4}}}}')
     result = CliRunner().invoke(cli, args)
     assert result.exit_code == 1 and "SPY:" in result.output
     shadow_path.write_text('{}')
