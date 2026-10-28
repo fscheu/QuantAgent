@@ -1,7 +1,7 @@
 """Data provider with caching layer for market data."""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Callable, Optional
 
 import pandas as pd
@@ -136,7 +136,11 @@ class DataProvider:
 
             for gap_start, gap_end in missing_ranges:
                 if earliest_start is not None:
+                    if gap_start.tzinfo is None and earliest_start.tzinfo is not None:
+                        earliest_start = earliest_start.astimezone(timezone.utc).replace(tzinfo=None)
                     gap_start = max(gap_start, earliest_start)
+                if gap_end.tzinfo is None and latest_end.tzinfo is not None:
+                    latest_end = latest_end.astimezone(timezone.utc).replace(tzinfo=None)
                 gap_end = min(gap_end, latest_end)
                 if gap_start >= gap_end:
                     logger.warning(

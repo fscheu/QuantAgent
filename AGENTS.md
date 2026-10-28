@@ -155,6 +155,23 @@ No parallel documentation systems are used.
 
 ---
 
+## Development Loop (PM + implementers)
+
+Day-to-day work runs through a loop: a PM session (`.claude/agents/pm-revisor.md`) writes Beads tickets,
+launches one implementer session per ticket (agy, codex or claude, usually cheaper models), reviews each
+delivery and merges it into a `lote/*` branch. Fede reviews and merges each lot into `main`.
+
+- Loop contract (gate, delivery size, PR summary, review protocol): `PLAN-CONTINUACION.md` §3.
+- Implementer prompt: `loop/PROMPT.md`. Ticket format: `docs/loop/FORMATO-TICKET.md`.
+- Operations, blockers and partitions: `docs/loop/`. Scripts: `scripts/loop/`.
+
+Inside the loop, the loop contract overrides the generic rules of this file: branches are `loop/<ID>` with
+PRs against `lote/*` (not `feature/`), deliveries do not stop to ask (they deliver a blocker or a partition),
+and per-change docs are only written when the ticket asks for them. `main` is protected: every change
+enters through a PR.
+
+---
+
 ## Documentation as a Single System (`docs/`)
 
 The documentation lives in `docs/` folder.

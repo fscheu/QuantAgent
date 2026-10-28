@@ -9,7 +9,7 @@ from tempfile import TemporaryDirectory
 
 import pandas as pd
 
-from quantagent.backtesting.verdict import dsr_contra_intentos, evaluar, n_efectivo
+from quantagent.backtesting.verdict import dsr_contra_intentos, evaluar, filas_validas, n_efectivo
 from quantagent.cli.sweep import registrar_intento
 from quantagent.data.snapshot import snapshot_root
 from quantagent.fabrica.criterio import anios_positivos, evaluar_etapa3_cartera, recargo_paper, sharpe_benchmark
@@ -203,7 +203,7 @@ def evaluar_c0_cartera(eq_cartera, c3, c2, sharpe_etapa2, trades, filas_intentos
     neff = n_efectivo(filas_intentos) if filas_intentos else None
     try:
         dsr_eff = dsr_contra_intentos(eq_cartera, intentos_csv, neff) if eq_cartera is not None else None
-        dsr_crudo = dsr_contra_intentos(eq_cartera, intentos_csv) if eq_cartera is not None else None
+        dsr_crudo = dsr_contra_intentos(eq_cartera, intentos_csv, len(filas_validas(filas_intentos))) if eq_cartera is not None else None
     except FileNotFoundError:
         dsr_eff, dsr_crudo = None, None
     ap = anios_positivos(eq_cartera) if eq_cartera is not None and not eq_cartera.empty else None

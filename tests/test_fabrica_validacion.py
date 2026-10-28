@@ -518,6 +518,31 @@ def test_etapa2_cartera_dos_piernas_mismo_activo_parametros_distintos(tmp_path, 
     assert recibidos_control[("sma-cross", "SPY")] == {"sma-cross": {"fast": 50, "slow": 200}}
 
 
+@pytest.mark.parametrize("extra", ["", "bug,50,invalida_bug,real\n", "fake,50,,sintetico\n"])
+def test_etapa3_dsr_real_distingue_configuraciones_y_filas(tmp_path, monkeypatch, extra):
+    from quantagent.fabrica.hipotesis import Hipotesis, Pierna
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    path = tmp_path / "intentos.csv"
+    path.write_text("estrategia,sharpe,estado,snapshot\na,0.5,,real\na,1.5,,real\n" + extra)
+    equity = pd.Series([100, 101, 99.5, 102, 103.5, 102.8, 105],
+                       index=pd.bdate_range("2019-01-01", periods=7))
+    h = Hipotesis("h", "autor", "just", "1d", piernas=(
+        Pierna("rsi", {}, ("SPY",), "U"), Pierna("sma", {}, ("TLT",), "U")))
+    monkeypatch.setattr(validacion, "correr_motor", lambda *a, **k: [{"trades": "4"}])
+    monkeypatch.setattr(validacion, "_curva_y_v30_cartera", lambda *a: (equity, None, None))
+    _, filas = validacion.validar_etapa3(h, None, {}, tmp_path)
+    dsr = validacion.dsr_contra_intentos(equity, path)
+    crudo = validacion.dsr_contra_intentos(equity, path, 2)
+    assert filas[0]["n_efectivo"] == 1
+    assert filas[0]["dsr"] == pytest.approx(dsr)
+    assert filas[0]["dsr_crudo"] == pytest.approx(crudo)
+    assert dsr > crudo
+    path.write_text("estrategia,sharpe,estado,snapshot\na,0.5,,real\na,1.5,,real\n")
+    assert dsr == pytest.approx(validacion.dsr_contra_intentos(equity, path))
+    assert crudo == pytest.approx(validacion.dsr_contra_intentos(equity, path, 2))
+
+
 def test_etapa3_cartera_criterio_pasa_con_dsr_bajo(tmp_path, monkeypatch):
     """Cartera con DSR bajo pero Sharpe > 0, > benchmark, >=3 años positivos y DD bajo PASA."""
     from quantagent.fabrica.hipotesis import Hipotesis, Pierna
