@@ -9,7 +9,7 @@ from tempfile import TemporaryDirectory
 
 import pandas as pd
 
-from quantagent.backtesting.verdict import dsr_contra_intentos, evaluar, n_efectivo
+from quantagent.backtesting.verdict import dsr_contra_intentos, evaluar, filas_validas, n_efectivo
 from quantagent.cli.sweep import registrar_intento
 from quantagent.data.snapshot import snapshot_root
 from quantagent.fabrica.criterio import anios_positivos, evaluar_etapa3_cartera, recargo_paper, sharpe_benchmark
@@ -260,7 +260,7 @@ def validar_etapa3(h, snapshot, params_por_activo, carpeta):
         neff = n_efectivo(todas_filas) if todas_filas else None
         try:
             dsr_eff = dsr_contra_intentos(eq_cartera, intentos_csv, neff) if eq_cartera is not None else None
-            dsr_crudo = dsr_contra_intentos(eq_cartera, intentos_csv) if eq_cartera is not None else None
+            dsr_crudo = dsr_contra_intentos(eq_cartera, intentos_csv, len(filas_validas(todas_filas))) if eq_cartera is not None else None
         except FileNotFoundError:
             dsr_eff, dsr_crudo = None, None
 
