@@ -4,7 +4,40 @@ from datetime import date, datetime, time, timedelta
 
 from sqlalchemy.orm import Session
 
-from quantagent.models import ActivePosition, Environment, Order, Position, SchedulerHeartbeat, Trade
+from quantagent.models import ActivePosition, Environment, Fill, Order, OrderStatus, Position, SchedulerHeartbeat, Trade
+
+
+def consultar_datos_cartera(session: Session, day: date, portfolio_name: str) -> tuple[list[dict], list[dict], list[dict]]:
+    """Read a dedicated portfolio DB; fills are executions, not realized P&L.
+
+    Positions and pending statuses are the current local snapshot, not historical balances.
+    """
+    start = datetime.combine(day, time.min)
+    end = start + timedelta(days=1)
+    positions = session.query(Position).order_by(Position.symbol).all()
+    fills = (
+        session.query(Fill, Order).join(Order, Fill.order_id == Order.id)
+        .filter(Order.environment == Environment.PAPER, Fill.filled_at >= start, Fill.filled_at < end)
+        .order_by(Fill.filled_at, Fill.id).all()
+    )
+    pending = (
+        session.query(Order)
+        .filter(Order.environment == Environment.PAPER,
+                Order.status.in_([OrderStatus.PENDING, OrderStatus.PARTIALLY_FILLED]))
+        .order_by(Order.created_at, Order.id).all()
+    )
+    return (
+        [{"name": portfolio_name, "positions": [
+            {"symbol": p.symbol, "quantity": p.quantity, "price": p.current_price,
+             "value": p.quantity * p.current_price, "unrealized_pnl": p.unrealized_pnl}
+            for p in positions]}],
+        [{"symbol": o.symbol, "side": o.side.value, "quantity": f.quantity,
+          "price": f.price, "commission": f.commission, "filled_at": f.filled_at}
+         for f, o in fills],
+        [{"symbol": o.symbol, "side": o.side.value, "status": o.status.value,
+          "quantity": o.quantity, "filled_quantity": o.filled_quantity, "comment": o.comment}
+         for o in pending],
+    )
 
 
 def consultar_datos_paper(session: Session, day: date, portfolio_name: str) -> tuple[list[dict], list[dict], list[dict], float, list[dict]]:

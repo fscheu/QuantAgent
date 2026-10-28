@@ -3,14 +3,52 @@ from datetime import date, datetime, timedelta
 
 from quantagent.digest import build_digest
 from quantagent.database import Base
-from quantagent.digest_datos import consultar_datos_paper
+from quantagent.digest_datos import consultar_datos_cartera, consultar_datos_paper
 from quantagent import settings
-from quantagent.models import ActivePosition, Environment, ExitPolicy, Order, OrderSide, OrderStatus, OrderType, Position, SchedulerHeartbeat, Trade
+from quantagent.models import ActivePosition, Environment, ExitPolicy, Fill, Order, OrderSide, OrderStatus, OrderType, Position, SchedulerHeartbeat, Trade
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from click.testing import CliRunner
 
 from quantagent.cli.__main__ import cli
+
+
+def test_consultar_cartera_sin_active_position_ni_trade(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'cartera.db'}")
+    Base.metadata.create_all(engine, tables=[Position.__table__, Order.__table__, Fill.__table__])
+    start = datetime(2026, 10, 25)
+    with Session(engine) as session:
+        session.add(Position(symbol="SPY", quantity=2, average_entry_price=490,
+                             current_price=500, unrealized_pnl=20,
+                             unrealized_pnl_pct=0.02, side=OrderSide.BUY))
+        for symbol, status, environment, offsets in [
+            ("SPY", OrderStatus.FILLED, Environment.PAPER, [-1, 0, 86400]),
+            ("QQQ", OrderStatus.PARTIALLY_FILLED, Environment.PAPER, [3600, 7200]),
+            ("IWM", OrderStatus.PENDING, Environment.PAPER, []),
+            ("DIA", OrderStatus.FILLED, Environment.PAPER, []),
+            ("LIVE", OrderStatus.PARTIALLY_FILLED, Environment.PROD, [0]),
+            ("BT", OrderStatus.PENDING, Environment.BACKTEST, [0]),
+            ("CANCEL", OrderStatus.CANCELLED, Environment.PAPER, []),
+            ("REJECT", OrderStatus.REJECTED, Environment.PAPER, []),
+            ("EXPIRE", OrderStatus.EXPIRED, Environment.PAPER, []),
+        ]:
+            session.add(Order(symbol=symbol, side=OrderSide.BUY, order_type=OrderType.MARKET,
+                              quantity=10, filled_quantity=len(offsets), status=status,
+                              environment=environment, created_at=start - timedelta(days=2),
+                              fills=[Fill(quantity=1, price=500, commission=1,
+                                          filled_at=start + timedelta(seconds=offset)) for offset in offsets]))
+        session.commit()
+        portfolios, fills, pending = consultar_datos_cartera(session, start.date(), "alpha")
+        assert portfolios == [{"name": "alpha", "positions": [
+            {"symbol": "SPY", "quantity": 2, "price": 500, "value": 1000, "unrealized_pnl": 20}]}]
+        assert fills == [
+            {"symbol": symbol, "side": "buy", "quantity": 1, "price": 500,
+             "commission": 1, "filled_at": start + timedelta(seconds=offset)}
+            for symbol, offset in [("SPY", 0), ("QQQ", 3600), ("QQQ", 7200)]]
+        assert pending == [
+            {"symbol": symbol, "side": "buy", "status": status, "quantity": 10,
+             "filled_quantity": quantity, "comment": None}
+            for symbol, status, quantity in [("QQQ", "partially_filled", 2), ("IWM", "pending", 0)]]
 
 
 def test_digest_renders_seeded_paper_data(tmp_path):
