@@ -458,5 +458,59 @@ def test_motor_y_adaptador_coinciden_con_slippage(tmp_path, strategy, fixture, p
         assert float(first_cost) == pytest.approx(100000.0, abs=1e-4)
 
 
+def test_adaptador_stop_entry_sin_take_profit(tmp_path):
+    """QuantAgent-fnpr.3.10: Señal stop-entry sin_take_profit en velas sintéticas llena y sale por stop sin error."""
+    pytest.importorskip("backtesting")
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import bt_adapter
+    import crossval_rsi
+    from quantagent.strategy.base import TradingSignal, TradingStrategy
+
+    class StopEntrySinTp(TradingStrategy):
+        required_history_bars = 2
+
+        def __init__(self):
+            self.emitted = False
+
+        def generate_signal(self, kline_data, symbol, timeframe, current_price):
+            if not self.emitted:
+                self.emitted = True
+                return TradingSignal(
+                    decision="LONG",
+                    confidence=1.0,
+                    entry_order="stop",
+                    entry_price=105.0,
+                    stop_loss=95.0,
+                    take_profit=None,
+                    sin_take_profit=True,
+                )
+            return None
+
+        def should_exit(self, position, current_price, ohlc_data):
+            return False, None
+
+        def should_reevaluate(self, position, current_price):
+            return False
+
+    csv_file = tmp_path / "stop_sin_tp.csv"
+    csv_file.write_text(
+        "timestamp,open,high,low,close,volume\n"
+        "2024-01-01T00:00:00,100,101,99,100,1000\n"
+        "2024-01-02T00:00:00,100,101,99,100,1000\n"
+        "2024-01-03T00:00:00,102,108,101,106,1000\n"
+        "2024-01-04T00:00:00,104,104,90,92,1000\n"
+        "2024-01-05T00:00:00,92,93,91,92,1000\n"
+    )
+    fixture_df = crossval_rsi.load_fixture(csv_file)
+    stats = bt_adapter.run_adapter(
+        StopEntrySinTp(), fixture_df, symbol="XYZ", timeframe="1d", fill="next-open"
+    )
+    rows = bt_adapter.trade_rows(stats, "XYZ")
+    assert len(rows) == 1
+    assert rows[0].exit_reason == "STOP_LOSS"
+    assert rows[0].entry_price == pytest.approx(105.0)
+    assert rows[0].exit_price == pytest.approx(95.0)
+
+
 if __name__ == "__main__":
     print(json.dumps(_run_scenarios(Path(sys.argv[1]))))

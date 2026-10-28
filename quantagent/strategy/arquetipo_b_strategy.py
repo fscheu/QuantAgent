@@ -127,6 +127,7 @@ class ArquetipoBStrategy(TradingStrategy):
             entry_price=current_price,
             stop_loss=stop_loss,
             take_profit=None,
+            sin_take_profit=True,
             exit_policy=ExitPolicy.TRAILING_STOP,
             reasoning=f"Arquetipo B: Breakout @ {c:.2f}, Stop @ {stop_loss:.2f}",
         )

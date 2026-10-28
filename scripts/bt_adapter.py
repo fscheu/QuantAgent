@@ -180,7 +180,7 @@ class StrategyAdapter(Strategy):
                 trade = self.trades[-1]
                 self.key = trade.entry_bar
                 stop = round(self.pending_signal.stop_loss or (trade.entry_price * SCALE * 0.98), 8)
-                take = round(self.pending_signal.take_profit or (trade.entry_price * SCALE * 1.03), 8)
+                take = None if getattr(self.pending_signal, "sin_take_profit", False) else round(self.pending_signal.take_profit or (trade.entry_price * SCALE * 1.03), 8)
                 self.info[self.key] = {"stop": stop, "reason": "backtest_end", "is_stop": True}
                 self.pos = ActivePosition(
                     symbol=self.symbol, side=OrderSide.BUY,
@@ -278,10 +278,12 @@ class StrategyAdapter(Strategy):
                 units = int(max_qty * SCALE)
         if units < 1:
             return
-        take = round(signal.take_profit or price * (1.03 if long else 0.97), 8)
+        sin_tp = bool(getattr(signal, "sin_take_profit", False))
+        take = None if sin_tp else round(signal.take_profit or price * (1.03 if long else 0.97), 8)
+        tp_arg = None if sin_tp else take / SCALE
         if getattr(signal, "entry_order", "market") == "stop" and long:
             stop_entry = signal.entry_price or price
-            order = self.buy(size=units, stop=stop_entry / SCALE, sl=stop / SCALE, tp=take / SCALE,
+            order = self.buy(size=units, stop=stop_entry / SCALE, sl=stop / SCALE, tp=tp_arg,
                              tag=(signal.confidence, settings.TRADING_BASE_POSITION_PCT, stop_entry, "stop"))
             self.units = units
             self.pending_stop_order = order
@@ -289,7 +291,7 @@ class StrategyAdapter(Strategy):
             self.pending_expiry = getattr(signal, "entry_expiry_bars", None)
             self.pending_signal = signal
             return
-        (self.buy if long else self.sell)(size=units, sl=stop / SCALE, tp=take / SCALE,
+        (self.buy if long else self.sell)(size=units, sl=stop / SCALE, tp=tp_arg,
                                         tag=(signal.confidence, settings.TRADING_BASE_POSITION_PCT,
                                              signal.entry_price or price))
         self.units = units if long else -units

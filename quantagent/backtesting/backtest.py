@@ -593,9 +593,13 @@ class Backtest:
                     )
                 ),
                 take_profit=(
-                    current_price * 1.03
-                    if side == OrderSide.BUY
-                    else current_price * 0.97
+                    0.0
+                    if snapshot.get("sin_take_profit")
+                    else (
+                        current_price * 1.03
+                        if side == OrderSide.BUY
+                        else current_price * 0.97
+                    )
                 ),
                 quantity=order.filled_quantity,
                 exit_policy="sl_tp_only",
@@ -948,6 +952,7 @@ class Backtest:
                 if trade:
                     trade_id = trade.id
 
+            sin_tp = bool(getattr(signal, "sin_take_profit", False))
             if self.fill == "apertura" and reference_price:
                 stop_loss = (
                     current_price * signal.stop_loss / reference_price
@@ -955,9 +960,13 @@ class Backtest:
                     else (current_price * 0.98 if side == OrderSide.BUY else current_price * 1.02)
                 )
                 take_profit = (
-                    current_price * signal.take_profit / reference_price
-                    if signal.take_profit
-                    else (current_price * 1.03 if side == OrderSide.BUY else current_price * 0.97)
+                    0.0
+                    if sin_tp
+                    else (
+                        current_price * signal.take_profit / reference_price
+                        if signal.take_profit
+                        else (current_price * 1.03 if side == OrderSide.BUY else current_price * 0.97)
+                    )
                 )
             else:
                 stop_loss = signal.stop_loss or (
@@ -965,10 +974,17 @@ class Backtest:
                     if side == OrderSide.BUY
                     else current_price * 1.02
                 )
-                take_profit = signal.take_profit or (
-                    current_price * 1.03
-                    if side == OrderSide.BUY
-                    else current_price * 0.97
+                take_profit = (
+                    0.0
+                    if sin_tp
+                    else (
+                        signal.take_profit
+                        or (
+                            current_price * 1.03
+                            if side == OrderSide.BUY
+                            else current_price * 0.97
+                        )
+                    )
                 )
 
             self.position_monitor.open_position(

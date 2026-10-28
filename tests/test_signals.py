@@ -198,3 +198,12 @@ def test_bar_signals_chandelier_dist():
     assert "chandelier_dist" in sig_no_chand.columns
     assert sig_no_chand["chandelier_dist"].isna().all()
 
+
+def test_trading_signal_sin_take_profit_defaults():
+    sig_default = TradingSignal(decision="LONG", confidence=1.0)
+    assert sig_default.sin_take_profit is False
+
+    sig_custom = TradingSignal(decision="LONG", confidence=1.0, sin_take_profit=True)
+    assert sig_custom.sin_take_profit is True
+
+

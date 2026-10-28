@@ -65,7 +65,7 @@ def test_stops_and_entries_atr_multiples():
     sig = strategy.generate_signal(df.to_dict(orient="records"), "TEST", "1d", float(df["close"].iloc[-1]))
 
     assert sig is not None and sig.decision == "LONG" and sig.entry_order == "stop"
-    assert sig.entry_expiry_bars == 3 and sig.take_profit is None and sig.exit_policy == ExitPolicy.TRAILING_STOP
+    assert sig.entry_expiry_bars == 3 and sig.take_profit is None and sig.sin_take_profit is True and sig.exit_policy == ExitPolicy.TRAILING_STOP
 
     atr_val = float(atr(df, n=14).iloc[-1])
     expected_entry = float(df["high"].iloc[-1]) + 0.1 * atr_val
@@ -149,3 +149,28 @@ def test_stop_de_salida_en_misma_vela_del_llenado_stop_cierre(db_session):
     assert float(trade.entry_price) == pytest.approx(100.0)
     assert trade.opened_at < trade.closed_at
     assert trade.exit_signal == "STOP_LOSS"
+
+
+@pytest.mark.snapshot
+def test_arquetipo_a_xlk_motor_sin_take_profit():
+    """QuantAgent-fnpr.3.10: Arquetipo A en XLK no tiene salidas TAKE_PROFIT."""
+    import os
+    from pathlib import Path
+    from quantagent.cli.backtest import _engine_config, _resolve_source_and_meta, correr_par
+
+    snapshot_dir = os.environ.get("QUANTAGENT_SNAPSHOT_DIR")
+    if not snapshot_dir or not (Path(snapshot_dir) / "etf-1d-2026-10-amplio").exists():
+        pytest.skip("Snapshot amplio no disponible")
+
+    config = _engine_config(None, "etf", None, "confianza", None, None)
+    meta, symbol, to_date = _resolve_source_and_meta(
+        "run", "arquetipo-a", None, "etf-1d-2026-10-amplio", "XLK",
+        None, None, False, False,
+    )
+    r = correr_par(
+        "arquetipo-a", meta, config, "etf", None, "etf-1d-2026-10-amplio", "XLK",
+        None, to_date, True, False, con_filas=True, fill="cierre",
+    )
+    assert r["trades"] > 0
+    assert not any(f.exit_reason == "TAKE_PROFIT" for f in r["filas"])
+

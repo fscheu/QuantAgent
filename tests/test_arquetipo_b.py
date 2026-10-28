@@ -93,6 +93,8 @@ def test_arquetipo_b_signal_generation_and_atr_stop():
     assert sig.decision == "LONG"
     assert sig.entry_order == "market"
     assert sig.exit_policy == ExitPolicy.TRAILING_STOP
+    assert sig.sin_take_profit is True
+    assert sig.take_profit is None
 
     # Verificación del stop inicial en múltiplo de ATR (2.5 ATR)
     atr_val = float(atr(df, n=14).iloc[-1])
