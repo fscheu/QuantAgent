@@ -47,7 +47,10 @@ Hay tres cosas que se gastan y que el ciclo tiene que administrar:
 1. Etapas 0–3 como hoy, con un **cupo de intentos por ciclo** (por ejemplo, 5 hipótesis por ciclo y 2 por idea, como el cupo de R01 #8).
 2. Reserva 2023+ con cupo por ciclo, mientras quede reserva útil.
 3. **Paper en sombra local** para todas las que pasan la etapa 3: barato, sin límite de cuentas, sirve para medir cuánto se aleja lo operado de lo que decía el backtest.
-4. **Paper en Alpaca** para las pocas mejores de la sombra (Alpaca permite pocas cuentas paper por usuario; verificar cuántas). Aquí se prueban órdenes reales, rechazos, dividendos y redondeos.
+4. **Paper en Alpaca** para las pocas mejores de la sombra. Aquí se prueban órdenes reales, rechazos, dividendos y redondeos. **Alpaca permite tres cuentas paper por usuario** (Fede, 2026-10-28). M4 ya usa una (`~/secrets/alpaca.env`) y M5 planea otra (`alpaca-m5.env`), así que para candidatas queda **una** mientras esas dos sigan activas. Opciones si hace falta más:
+   - rotar: cuando M4 termine su prueba de sistema, su cuenta pasa a candidatas;
+   - una cuenta por candidata solo en la etapa final, y la sombra local para el resto;
+   - más usuarios con otros mails (idea de Fede). Antes de hacerlo, revisar los términos de Alpaca: algunos brokers limitan las cuentas por persona y podrían cerrar todas, incluida la que después sería la real.
 5. **Escalera de incubación** (R01 #4, pendiente de definir antes de dinero real): tiempo mínimo en paper, distancia máxima entre el paper y su backtest, y un percentil de corte. Recién quien la pasa es **candidata a producción**.
 6. **Puerta de cuenta chica** (M-cuenta, §2). Pasarla habilita el pedido a Fede de operar con dinero real.
 
