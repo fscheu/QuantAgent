@@ -12,7 +12,9 @@ Hoy hay dos M5 distintos en el repo:
 - En `milestone-tracker.md` (y en el `CLAUDE.md` de la VM), M5 es **"live con capital mínimo"**: la primera semana con dinero real.
 - En el plan del 2026-10-25, M5 es el **motor top-down** (macro y momentum eligen sectores, screener elige acciones, stops en el broker), con lotes L22–L27, todo en paper.
 
-Leo el pedido como "después del motor top-down", porque Fede dice que llegar a producción viene después. Propongo que el dinero real deje de ser un hito con número fijo y pase a ser la **salida** de las cuatro piezas de abajo: una candidata pasa los filtros (M-ciclos) y además sirve para el tamaño de cuenta (M-cuenta). Hasta que Fede decida el orden, uso nombres por tema (M-ciclos, M-cuenta, M-web, M-datos) en lugar de M6, M7, etc. Ver decisión **G1**.
+Leo el pedido como "después del motor top-down", porque Fede dice que llegar a producción viene después. Propongo que el dinero real deje de ser un hito con número fijo y pase a ser la **salida** de las cuatro piezas de abajo: una candidata pasa los filtros (M-ciclos) y además sirve para el tamaño de cuenta (M-cuenta). Hasta que Fede decida el orden, uso nombres por tema (M-ciclos, M-cuenta, M-web, M-datos) en lugar de M6, M7, etc.
+
+**Decidido por Fede (2026-10-28, G1):** M5 es el motor top-down. El dinero real es la salida de M-ciclos + M-cuenta, no un hito con número propio.
 
 ## Glosario corto
 
@@ -155,7 +157,22 @@ Pantallas propuestas (primer borrador):
 
 Cada pantalla tiene que leerse bien en el teléfono: tarjetas apiladas, nada de tablas anchas (lo que Fede pidió en octubre para los informes).
 
-### Propuesta técnica (para discutir, no decidida)
+### Dos diseños distintos
+
+Fede (2026-10-28) separa dos trabajos que van antes del código:
+
+- **Diseño visual:** cómo se ven las pantallas. Se hace en **sesiones aparte, mano a mano con Fede**, que además quiere aprender a usar las herramientas de diseño web para su trabajo. Esas sesiones explican cómo funcionan las herramientas mientras se diseñan las pantallas de QuantAgent.
+- **Diseño de arquitectura:** qué piezas tiene la aplicación, con qué framework, cómo lee los datos y cómo se despliega. Se escribe como documento de diseño (`docs/03_design/`) y una decisión (`docs/04_decisions/`) antes de abrir tickets.
+
+### Propuesta de arquitectura (para discutir, no decidida)
+
+Fede preguntó si conviene Django, Flask o FastAPI. Recomiendo **FastAPI**:
+
+- **Django** trae su propio ORM, su admin y sus plantillas HTML. Nosotros ya tenemos SQLAlchemy + Alembic para la base y el frontend iría aparte, así que usaríamos poco de Django y pelearíamos con lo que trae.
+- **Flask** es el que usa hoy `apps/flask/` (health server y una interfaz vieja). Sirve, pero no valida datos ni documenta la API por sí solo; hay que sumar piezas a mano.
+- **FastAPI** valida la entrada y la salida con Pydantic (que el proyecto ya usa), genera la documentación de la API sola y permite generar del lado del frontend los tipos de cada respuesta. Es el estándar actual para una API en Python que consume un frontend separado.
+
+El resto de la propuesta:
 
 - **API en Python (FastAPI)** encima del código actual: reusa `quantagent`, los modelos de la base y el estado del embudo. La aplicación nunca toca el broker directamente; lee estado y, como mucho, pide acciones que pasan por las mismas reglas que hoy.
 - **Frontend en React con TypeScript.** El documento de 2025 decía Angular; propongo React porque tiene más bibliotecas de gráficos financieros (por ejemplo, `lightweight-charts` de TradingView para velas) y más ejemplos, lo que facilita que la IA lo construya y lo mantenga.
@@ -172,12 +189,12 @@ Cada pantalla tiene que leerse bien en el teléfono: tarjetas apiladas, nada de 
 ### Decisiones para Fede
 
 - **W1.** ¿Se reemplaza Streamlit por completo o conviven un tiempo? Recomiendo convivir hasta tener Inicio, Cuenta y Embudo, y después retirarlo.
-- **W2.** Stack: FastAPI + React (recomendado) o mantener Angular como decía la decisión anterior.
-- **W3.** ¿Arrancamos el diseño de pantallas ya, en paralelo con M5? Es solo diseño, no toca código ni la cola. Recomiendo que sí.
+- **W2.** Stack: FastAPI + React (recomendado), Django o Flask; y React o Angular en el frontend.
+- **W3.** Diseño visual en sesiones mano a mano con Fede (decidido 2026-10-28); falta acordar cuándo arrancan.
 
 ### Orden dentro del hito
 
-Diseño de pantallas, después API de solo lectura, después Inicio y Cuenta, después Embudo y Ficha, después Mercado, y el asistente al final.
+Sesiones de diseño visual y documento de arquitectura (en paralelo), después API de solo lectura, después Inicio y Cuenta, después Embudo y Ficha, después Mercado, y el asistente al final.
 
 ---
 
@@ -204,21 +221,58 @@ Decidir dónde viven los datos: seguir con carpetas de Parquet y CSV, pasar todo
   - Los **registros del embudo** (intentos, hipótesis, veredictos, ciclos) pasan de CSV a **Postgres**, junto al estado operativo. Son pocos datos pero muy consultados, se escriben desde varios procesos y la web los necesita; un CSV con copias `.bak` ya muestra el límite.
   - Las bases especializadas en series de tiempo (TimescaleDB, ClickHouse) quedan descartadas por ahora: resuelven escalas que no tenemos y agregan un servicio más para mantener.
 
+**Fede (2026-10-28):** de acuerdo con que lo histórico quede en Parquet. Las acciones de M5 ya se están bajando a archivos desde la notebook; si hace falta, se convierten después según esta decisión. Dudas abiertas: cómo se suman los datos nuevos (activos que empezamos a seguir ahora, días que pasan) y cómo se documenta dónde va cada dato. Las dos subsecciones siguientes las responden.
+
+### Datos nuevos: dos capas, histórica y viva
+
+Un snapshot nunca se modifica: es la foto contra la que un backtest se puede repetir. Los datos que llegan cada día no pueden escribirse ahí. Propuesta:
+
+1. **Capa histórica (congelada).** Snapshots Parquet con manifiesto, como hoy. Los backtests y el embudo leen siempre un snapshot con nombre, nunca la capa viva.
+2. **Capa viva (se agrega).** Un job después del cierre del mercado suma los datos del día a una carpeta por fuente, en archivos por mes (`vivo/precios/2026-11.parquet`), sin pisar lo anterior. Cada fila guarda **cuándo se bajó**, no solo la fecha del dato, para saber qué se sabía cada día. Paper y la web leen esta capa.
+3. **Congelado periódico.** Una vez por mes, un comando junta la historia anterior con la capa viva y congela un snapshot nuevo (`etf-1d-2026-11`), con su manifiesto. Los backtests pasan a ese snapshot solo cuando alguien lo pide; ninguno cambia de datos por sorpresa.
+4. **Activo nuevo.** Cuando empezamos a seguir un activo, se baja su historia una sola vez (con la fecha de descarga en el manifiesto) y desde ese día entra al job diario. Entra a los backtests con el próximo congelado mensual.
+
+Frecuencia por tipo de dato:
+
+- **Precios diarios:** todos los días hábiles, después del cierre (con la salvedad conocida de que Alpaca puede liberar la última vela recién a medianoche UTC).
+- **Macro (FRED/ALFRED):** cada semana, guardando todas las versiones publicadas, porque las series económicas se revisan (`macro_vivo.py` ya las lee así para paper).
+- **Fundamentales:** a diario los cambios de Sharadar (o EDGAR); en la práctica se mueven con cada presentación trimestral de las empresas.
+- **Consenso de EPS (M5-05):** una foto diaria, porque el proveedor no guarda la historia.
+- **Congelado de snapshots:** mensual.
+
+### Mapa de datos: dónde va cada dato
+
+Para que cada dato nuevo se guarde igual que los anteriores, propongo un **catálogo de datos**: un archivo por dataset (por ejemplo `catalogo/datos/precios-etf.yaml`) con:
+
+- fuente y licencia (incluida la regla de borrar de Sharadar);
+- campos y unidades;
+- la columna que dice **cuándo se supo** el dato (fecha de publicación, de presentación o de descarga);
+- frecuencia de la capa viva y del congelado;
+- carpeta donde vive y snapshots que lo contienen;
+- qué código lo lee (estrategias, embudo, paper, web).
+
+Los **indicadores** (medias, ATR, z-scores, `SectorScore`) no se guardan como datos: se calculan desde los datos crudos con código versionado, así un cambio de fórmula no deja datos viejos inconsistentes. Solo se guarda en caché lo que es caro de calcular, y con la versión del código que lo generó.
+
+Un test recorre el catálogo y falla si una carpeta de datos no tiene su archivo, o si un archivo apunta a una carpeta que no existe. El catálogo es además la fuente de la página "Data" del manual (§5).
+
 ### Alcance
 
-- Una decisión escrita (ADR) con la opción elegida.
-- Un catálogo DuckDB que registre los snapshots existentes y exponga vistas "punto en el tiempo".
+- Una decisión escrita (ADR) con la opción elegida, la capa viva y el congelado.
+- Catálogo de datos con un archivo por dataset existente (ETFs, macro, ETFs ampliados, factores, acciones y fundamentales de M5) y su test.
+- Job diario de la capa viva y comando de congelado mensual.
+- Un catálogo DuckDB que registre los snapshots y la capa viva, y exponga vistas "punto en el tiempo".
 - Migración de los registros del embudo a Postgres, con un test que compare el resultado con los CSV actuales.
 - Política de retención: qué snapshots se guardan, cuáles se pueden borrar, y la regla de licencia de Sharadar.
+- Pasar las descargas de acciones que hoy se hacen desde la notebook a este formato, si no coinciden.
 
 ### Dependencias y momento
 
-Conviene decidir esto **antes de bajar los datos de acciones de M5 (lote L22)**: si los datos nuevos entran ya en el formato final, no hay que migrarlos después. La decisión no frena M5; la construcción puede ir en paralelo con L22.
+Conviene escribir la decisión y el catálogo **antes de que los datos de acciones de M5 entren al repo (lote L22)**. La descarga desde la notebook no se frena: si el formato difiere, se convierte una vez.
 
 ### Decisiones para Fede
 
-- **D1.** Opción A, B o C. Recomiendo **C** (Parquet inmutable + DuckDB para consultar + Postgres para el embudo y la operación).
-- **D2.** ¿Se adelanta la decisión antes de L22, como recomiendo, o se deja para después de M5?
+- **D1.** Opción C, con capa histórica en Parquet (de acuerdo según Fede, 2026-10-28). Falta confirmar DuckDB para consultar y Postgres para el embudo.
+- **D2.** Congelado mensual de snapshots (recomendado) o trimestral.
 
 ---
 
@@ -228,7 +282,9 @@ Pedido de Fede (2026-10-28): en el desarrollo se sumaron muchas decisiones de di
 
 ### Objetivo
 
-Un manual en español, organizado por las preguntas que Fede se hace al revisar, que se lea como páginas de la aplicación web (y, hasta que la web exista, como un sitio estático por Tailscale). Tiene que servir para contestar en un minuto cosas como "¿qué pide la etapa 3?", "¿cuál era el riesgo por operación?" o "¿qué comando verifica un snapshot?".
+**Idioma (Fede, 2026-10-28): inglés.** Es el idioma universal y sirve si algún día otra persona usa QuantAgent. Este documento de planificación sigue en español como el resto de `docs/02_planning/`.
+
+Un manual organizado por las preguntas que Fede se hace al revisar, que se lea como páginas de la aplicación web (y, hasta que la web exista, como un sitio estático por Tailscale). Tiene que servir para contestar en un minuto cosas como "¿qué pide la etapa 3?", "¿cuál era el riesgo por operación?" o "¿qué comando verifica un snapshot?".
 
 ### Qué hay hoy
 
@@ -251,7 +307,8 @@ Un manual en español, organizado por las preguntas que Fede se hace al revisar,
 
 El manual viejo murió porque nadie lo actualizaba. Propuesta:
 
-- La referencia de comandos se regenera sola y hay un test que falla si un comando de la CLI no tiene su página.
+- **Referencia de comandos generada desde el código** (de acuerdo según Fede). La CLI usa `click` en todos los comandos (`quantagent/cli/*.py`), y `click` ya guarda el texto de ayuda de cada comando y opción. Un script (o el plugin `mkdocs-click`) recorre los grupos y escribe una página por grupo; un test falla si un comando o una opción no tiene texto de ayuda. Para que esto funcione, se suman reglas a `AGENTS.md` sobre cómo escribir los comandos (borrador abajo).
+- **Choque de idioma a resolver:** la ayuda de la CLI hoy está en español (`help="Datos de mercado congelados."`). Si el manual es en inglés, la referencia generada saldría en español. Ver U4.
 - El índice de decisiones y la tabla de criterios se actualizan en el mismo PR que registra una decisión nueva: se agrega como regla del contrato del loop y de la revisión del PM.
 - Las páginas explicativas (embudo, operación) se revisan al cerrar cada lote: el PR del lote dice qué páginas tocó o por qué no hacía falta.
 
@@ -266,8 +323,15 @@ Ninguna. Es el único hito que se puede empezar ya sin frenar nada, y además le
 ### Decisiones para Fede
 
 - **U1.** ¿Se arranca ya, en paralelo con M4/M5? Recomiendo que sí, empezando por glosario, embudo, criterios vigentes e índice de decisiones, que son los que más sirven para revisar.
-- **U2.** ¿Qué hacemos con el manual viejo en inglés? Recomiendo moverlo a un archivo histórico y no traducirlo: describe una versión del sistema que ya no existe.
+- **U2.** ¿Qué hacemos con el manual viejo? Recomiendo moverlo a un archivo histórico y escribir el nuevo desde cero: describe una versión del sistema que ya no existe, aunque esté en el mismo idioma.
 - **U3.** ¿Sitio estático por Tailscale mientras no haya web, o alcanza con leerlo en GitHub? Recomiendo el sitio, por el buscador y porque se lee bien en el teléfono.
+- **U4.** Idioma de la ayuda de la CLI. Recomiendo pasarla a inglés en un ticket (es texto, no lógica) y que los comandos nuevos ya se escriban en inglés. La alternativa es dejar la referencia de comandos en español dentro de un manual en inglés.
+
+### Borrador de reglas para `AGENTS.md` (no aplicado)
+
+> **CLI commands and the user manual.** Every `click` command and group must have a `help=` text: one sentence saying what it does, written for a user, not for a developer. Every option must have a `help=` text that names its unit and its default when it has one. Add an `epilog` with at least one example invocation for commands a user runs by hand. Do not document a command only in a docstring or a comment: the manual is generated from `help`, `epilog` and option metadata. A PR that adds or changes a command must regenerate the command reference and pass the manual coverage test.
+>
+> **Decisions and criteria.** A PR that records a new decision of Fede (a `-DC-` document or a decision table in a plan) must add one line to the manual's decision index and update the current-criteria table if a number changes.
 
 ### Orden dentro del hito
 
@@ -300,9 +364,10 @@ flowchart LR
 
 ## 7. Decisiones que necesita Fede (resumen)
 
-- **G1.** Numeración: ¿"M5" en `milestone-tracker.md` se actualiza al motor top-down y el dinero real pasa a ser la salida de M-ciclos + M-cuenta? Recomiendo que sí.
+- **G1.** Numeración: decidido (2026-10-28), M5 es el motor top-down.
 - **G2.** ¿Este orden (§6) sirve como marco, para que el PM arme los tickets de cada hito cuando toque?
-- **C1–C4** (ciclos), **K1–K3** (cuenta chica), **W1–W3** (web), **D1–D2** (datos), **U1–U3** (manual): en cada sección.
+- **C1–C4** (ciclos), **K1–K3** (cuenta chica), **W1–W3** (web), **D1–D2** (datos), **U1–U4** (manual): en cada sección.
+- **K1–K3** (cuenta chica): Fede las tiene presentes y las ve más adelante (2026-10-28).
 
 Ningún ticket se abre en Beads hasta que Fede apruebe.
 
