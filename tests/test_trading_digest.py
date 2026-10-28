@@ -1,9 +1,12 @@
 import sqlite3
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
+from types import SimpleNamespace
+
+import pytest
 
 from quantagent.digest import build_digest
 from quantagent.database import Base
-from quantagent.digest_datos import consultar_datos_cartera, consultar_datos_paper
+from quantagent.digest_datos import consultar_datos_cartera, consultar_datos_paper, consultar_valuacion_actual
 from quantagent import settings
 from quantagent.models import ActivePosition, Environment, ExitPolicy, Fill, Order, OrderSide, OrderStatus, OrderType, Position, SchedulerHeartbeat, Trade
 from sqlalchemy import create_engine
@@ -11,6 +14,44 @@ from sqlalchemy.orm import Session
 from click.testing import CliRunner
 
 from quantagent.cli.__main__ import cli
+from quantagent.trading.alpaca_broker import AlpacaBroker
+
+
+@pytest.mark.parametrize("failure", [None, "account", "positions", "missing"])
+def test_valuacion_actual_alpaca_sin_api_real(failure):
+    class Client:
+        def get_account(self):
+            if failure == "account":
+                raise RuntimeError("unavailable")
+            return SimpleNamespace(equity="1000", cash="50")
+
+        def get_all_positions(self):
+            if failure == "positions":
+                raise RuntimeError("unavailable")
+            return [SimpleNamespace(symbol=symbol, current_price="475", market_value="950",
+                                    unrealized_pl="-30") for symbol in ["QQQ", "SPY"]
+                    if failure != "missing" or symbol != "SPY"]
+
+    local = [{"name": "alpha", "positions": [
+        {"symbol": "SPY", "quantity": 2, "price": 500, "value": 1000, "unrealized_pnl": 20}]}]
+    broker = AlpacaBroker(Client())
+    if failure in ("account", "positions"):
+        with pytest.raises(RuntimeError, match="Valuación actual: error al consultar Alpaca"):
+            consultar_valuacion_actual(broker, local)
+    elif failure == "missing":
+        with pytest.raises(ValueError, match="Alpaca sin valuación para SPY"):
+            consultar_valuacion_actual(broker, local)
+    else:
+        before = datetime.now(timezone.utc)
+        snapshot = consultar_valuacion_actual(broker, local)
+        assert snapshot["equity"] == 1000 and snapshot["cash"] == 50
+        assert snapshot["portfolios"] == [{"name": "alpha", "positions": [
+            {"symbol": "SPY", "quantity": 2, "price": 475, "value": 950, "unrealized_pnl": -30}]}]
+        assert snapshot["source"] == "Alpaca"
+        assert before <= snapshot["consulted_at"] <= datetime.now(timezone.utc)
+        assert snapshot["notice"] == "Foto actual de Alpaca; no es saldo histórico de --date."
+    assert local[0]["positions"][0] == {
+        "symbol": "SPY", "quantity": 2, "price": 500, "value": 1000, "unrealized_pnl": 20}
 
 
 def test_consultar_cartera_sin_active_position_ni_trade(tmp_path):
