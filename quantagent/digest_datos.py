@@ -1,10 +1,39 @@
 """Paper trading data queries used by the operational digest."""
 
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
 from quantagent.models import ActivePosition, Environment, Fill, Order, OrderStatus, Position, SchedulerHeartbeat, Trade
+
+
+def consultar_valuacion_actual(broker, portfolios: list[dict]) -> dict:
+    """Read AlpacaBroker's current snapshot, independently of the digest's --date.
+
+    Return enriched copies; failures must be surfaced by the caller, never replaced
+    with local entry prices or stored P&L.
+    """
+    consulted_at = datetime.now(timezone.utc)
+    try:
+        account = broker.get_account()
+        valuations = broker.get_positions()
+    except Exception as exc:
+        raise RuntimeError(f"Valuación actual: error al consultar Alpaca ({type(exc).__name__}).") from exc
+    valued_portfolios = []
+    for portfolio in portfolios:
+        positions = []
+        for position in portfolio["positions"]:
+            symbol = position["symbol"]
+            if symbol not in valuations:
+                raise ValueError(f"Valuación actual: Alpaca sin valuación para {symbol}.")
+            remote = valuations[symbol]
+            positions.append({**position, "price": float(remote.current_price),
+                              "value": float(remote.market_value),
+                              "unrealized_pnl": float(remote.unrealized_pl)})
+        valued_portfolios.append({**portfolio, "positions": positions})
+    return {"equity": float(account["equity"]), "cash": float(account["cash"]),
+            "portfolios": valued_portfolios, "source": "Alpaca", "consulted_at": consulted_at,
+            "notice": "Foto actual de Alpaca; no es saldo histórico de --date."}
 
 
 def consultar_datos_cartera(session: Session, day: date, portfolio_name: str) -> tuple[list[dict], list[dict], list[dict]]:
