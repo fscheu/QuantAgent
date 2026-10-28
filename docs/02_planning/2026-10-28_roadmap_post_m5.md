@@ -267,6 +267,27 @@ Frecuencia por tipo de dato:
 - **Consenso de EPS (M5-05):** una foto diaria, porque el proveedor no guarda la historia.
 - **Congelado de snapshots:** mensual.
 
+### Ajustes por dividendos, splits, revisiones y restataciones
+
+Duda de Fede (2026-10-28): si la historia de AAPL bajada hoy de Yahoo viene ajustada por dividendos, lo que se suma cada día después no va a estar ajustado igual; ¿pasa lo mismo con earnings y macro?
+
+Sí, ese es el problema, y la regla para resolverlo es una sola: **se guarda el dato tal como se conoció, y cualquier ajuste se calcula al leer, nunca se guarda.**
+
+**Precios.** Un precio ajustado por dividendos cambia cada vez que la empresa paga un dividendo nuevo: todo el pasado se recalcula. Si se guarda el ajustado y después se le pegan días nuevos, la serie queda con dos bases distintas.
+
+- Hoy el snapshot ya guarda el cierre **sin** ajuste por dividendos más la columna `adj_close` de Yahoo, y `read_snapshot` calcula el ajuste al leer (`quantagent/data/snapshot.py`). Eso sirve para un snapshot cerrado, pero `adj_close` vale solo hasta el día de la descarga.
+- Los precios de Yahoo y de Alpaca (`adjustment: "split"`) vienen **ajustados por splits a la fecha de descarga**. Si AAPL hace un split 4 a 1 en marzo, los días que se agreguen después estarán en la escala nueva y los viejos en la anterior: un salto falso de 75 %. El chequeo `saltos` de `snapshot verify` (variación diaria mayor a 20 %) lo detectaría, pero no lo arregla.
+- Propuesta: la capa viva guarda, además de los precios, una tabla de **eventos corporativos** (dividendos con fecha ex y monto, splits con fecha y proporción), también con su fecha de descarga. Al leer, o al congelar el snapshot mensual, el factor de ajuste se recalcula desde los eventos para toda la historia. Así historia y días nuevos quedan siempre en la misma base.
+- El ajuste por dividendos no mete información del futuro en los **retornos** (el retorno ajustado es el retorno total real), pero sí cambia los **niveles de precio** del pasado. Por eso la admisión de hipótesis (etapa 0) ya rechaza umbrales de precio absolutos.
+
+**Fundamentales.** No se ajustan: el riesgo es la **restatación** (la empresa corrige un balance viejo). Sharadar `ARQ`/`ART` da el dato tal como se presentó, indexado por fecha de presentación a la SEC (M5 §5.2). Una restatación entra como fila nueva con su propia fecha; nunca se pisa la anterior. El backtest en la fecha t usa la última versión presentada hasta t (M5-31).
+
+**Macro.** Las series económicas (empleo, producción, inflación) se revisan meses después. ALFRED guarda cada versión con la fecha desde la que fue válida (`realtime_start`), y `macro_vivo.py` ya consulta así. La capa viva guarda todas las versiones, una fila por revisión; las series de mercado (tasas, VIX) no se revisan.
+
+**Consenso de EPS.** La foto diaria es de por sí "lo que se sabía ese día"; no hay ajuste.
+
+En resumen: precios crudos + eventos, fundamentales tal como se presentaron, macro con todas sus versiones. Nada ajustado se guarda; el catálogo de datos dice para cada dataset cuál es su columna de "cuándo se supo".
+
 ### Mapa de datos: dónde va cada dato
 
 Para que cada dato nuevo se guarde igual que los anteriores, propongo un **catálogo de datos**: un archivo por dataset (por ejemplo `catalogo/datos/precios-etf.yaml`) con:
@@ -298,8 +319,9 @@ Conviene escribir la decisión y el catálogo **antes de que los datos de accion
 
 ### Decisiones para Fede
 
-- **D1.** Opción C, con capa histórica en Parquet (de acuerdo según Fede, 2026-10-28). Falta confirmar DuckDB para consultar y Postgres para el embudo.
-- **D2.** Congelado mensual de snapshots (recomendado) o trimestral.
+- **D1.** Decidido (2026-10-28): opción C. Parquet para lo histórico, DuckDB para consultar, registros del embudo a Postgres.
+- **D2.** Decidido (2026-10-28): congelado mensual.
+- **D3.** Duda de Fede: ¿SQLite en lugar de Postgres, para ahorrarse un contenedor? Es viable a nuestra escala, y los tests ya corren sobre SQLite. En contra: SQLite admite un solo proceso escribiendo a la vez, y vamos a tener varios (scheduler de M4, el de M5, la API de la web, el loop); las migraciones de Alembic usan tipos propios de Postgres (`ENUM`, `JSONB`) y habría que rehacerlas; y la base de paper de M4 vive hoy en Postgres, así que el cambio no se hace con paper corriendo. Recomendación del PM: **quedarse con Postgres**; el contenedor ya está y no da trabajo. Si Fede prefiere SQLite, es un ticket aparte después de la prueba de paper de M4.
 
 ---
 
@@ -393,7 +415,7 @@ flowchart LR
 
 - **G1.** Numeración: decidido (2026-10-28), M5 es el motor top-down.
 - **G2.** ¿Este orden (§6) sirve como marco, para que el PM arme los tickets de cada hito cuando toque?
-- **C1–C4** (ciclos, decididas), **W1–W2** (web, decididas), **W3** (cuándo arrancan las sesiones de diseño), **D1–D2** (datos), **U1–U4** (manual): en cada sección.
+- **C1–C4** (ciclos, decididas), **W1–W2** (web, decididas), **W3** (cuándo arrancan las sesiones de diseño), **D1–D2** (datos, decididas), **D3** (SQLite o Postgres), **U1–U4** (manual): en cada sección.
 - **K1–K3** (cuenta chica): decididas (2026-10-28): USD 2.500, cuenta cash, costo fiscal con contadora.
 
 Ningún ticket se abre en Beads hasta que Fede apruebe.
