@@ -363,7 +363,9 @@ El manual viejo murió porque nadie lo actualizaba. Propuesta:
 
 ### Formato
 
-Markdown en una carpeta nueva del repo (`docs/manual/`, que reemplaza a `docs/user-manual/`), para que lo lean la web, Streamlit y GitHub sin convertir nada. Mientras no exista la web, se publica como sitio estático (por ejemplo con MkDocs, que trae buscador) en la VM, accesible solo por Tailscale. Cuando exista la web, M-web muestra las mismas páginas con buscador y con enlaces desde cada pantalla ("¿qué es esto?" → la página del glosario). El asistente de IA de M-web también puede usar el manual como fuente para contestar.
+Markdown en una carpeta nueva del repo, `docs/manual/`. Al principio Fede lo lee en GitHub, sin sitio aparte (U3). Cuando exista la web, M-web renderiza esos mismos archivos dentro de sus páginas, con buscador y con enlaces desde cada pantalla ("what is this?" → la página del glosario). El asistente de IA de M-web también puede usar el manual como fuente para contestar.
+
+Para que GitHub hoy y la web mañana muestren lo mismo sin convertir nada: Markdown de GitHub sin extensiones raras, enlaces relativos entre páginas, diagramas en bloques `mermaid` (GitHub los dibuja y React también, con su biblioteca) y una página por tema con un índice en `docs/manual/README.md`.
 
 ### Dependencias
 
@@ -371,20 +373,33 @@ Ninguna. Es el único hito que se puede empezar ya sin frenar nada, y además le
 
 ### Decisiones para Fede
 
-- **U1.** ¿Se arranca ya, en paralelo con M4/M5? Recomiendo que sí, empezando por glosario, embudo, criterios vigentes e índice de decisiones, que son los que más sirven para revisar.
-- **U2.** ¿Qué hacemos con el manual viejo? Recomiendo moverlo a un archivo histórico y escribir el nuevo desde cero: describe una versión del sistema que ya no existe, aunque esté en el mismo idioma.
-- **U3.** ¿Sitio estático por Tailscale mientras no haya web, o alcanza con leerlo en GitHub? Recomiendo el sitio, por el buscador y porque se lee bien en el teléfono.
-- **U4.** Idioma de la ayuda de la CLI. Recomiendo pasarla a inglés en un ticket (es texto, no lógica) y que los comandos nuevos ya se escriban en inglés. La alternativa es dejar la referencia de comandos en español dentro de un manual en inglés.
+- **U1.** Decidido (2026-10-28): se arranca ya, en paralelo con M4/M5.
+- **U2.** Decidido (2026-10-28): el manual viejo (`docs/user-manual/`) **se borra**; moverlo a un archivo es mantener basura en el repo. Git conserva la historia.
+- **U3.** Decidido (2026-10-28): archivos Markdown que después renderiza la web; por ahora se leen en GitHub, sin sitio por Tailscale.
+- **U4.** Decidido (2026-10-28): inglés. Toda la ayuda actual de la CLI (`help=` de comandos y opciones de `click`) pasa a inglés de una vez, y los comandos nuevos se escriben en inglés.
 
-### Borrador de reglas para `AGENTS.md` (no aplicado)
+### Reglas para `AGENTS.md` (se aplican en el ticket MAN-04)
 
 > **CLI commands and the user manual.** Every `click` command and group must have a `help=` text: one sentence saying what it does, written for a user, not for a developer. Every option must have a `help=` text that names its unit and its default when it has one. Add an `epilog` with at least one example invocation for commands a user runs by hand. Do not document a command only in a docstring or a comment: the manual is generated from `help`, `epilog` and option metadata. A PR that adds or changes a command must regenerate the command reference and pass the manual coverage test.
 >
 > **Decisions and criteria.** A PR that records a new decision of Fede (a `-DC-` document or a decision table in a plan) must add one line to the manual's decision index and update the current-criteria table if a number changes.
 
-### Orden dentro del hito
+### Lote propuesto (L-manual)
 
-Índice de decisiones y criterios vigentes, después glosario y embudo, después referencia de comandos automática, después operación y cómo trabajamos, y por último la regla de mantenimiento en el contrato del loop.
+Un lote de 8 tickets, provisorios hasta que el PM los cree en Beads como hijos de un issue padre. Rama sugerida: `lote/manual`. Punto de control del lote: `docs/manual/` tiene índice, criterios, decisiones, glosario, embudo, operación y referencia de comandos generada; el test de cobertura de la CLI pasa; Streamlit y el manual viejo ya no están en el repo.
+
+| # | Objetivo | Aceptación binaria |
+|---|---|---|
+| MAN-01 | Borrar Streamlit y el manual viejo: `apps/streamlit/`, `docs/user-manual/`, sus tests, el contenedor QA y el chequeo del puerto 8501 en `main-ci-deploy.yml`, la dependencia en `pyproject.toml` | `grep -ri streamlit` sin resultados fuera de docs históricos; CI verde |
+| MAN-02 | Ayuda de la CLI en inglés: todos los `help=` y `epilog` de `quantagent/cli/` | Test: cada comando, grupo y opción tiene `help` no vacío; ningún `help` contiene caracteres propios del español (á, é, í, ó, ú, ñ, ¿) |
+| MAN-03 | Generador de la referencia de comandos: recorre los grupos de `click` y escribe `docs/manual/reference/cli/*.md` | Test: regenerar no produce diferencias con lo comiteado (falla si alguien cambió un comando sin regenerar) |
+| MAN-04 | Reglas de `AGENTS.md` (arriba) | Las dos reglas están en `AGENTS.md` y el contrato de lote las cita |
+| MAN-05 | Índice de decisiones y criterios vigentes | Una línea por cada documento de `docs/04_decisions/` y por cada tabla de decisiones de los planes (R01, M5 D1–D7, este roadmap); cada número de la tabla de criterios enlaza a su decisión |
+| MAN-06 | Glosario | Cada término de la lista de §5 y de los glosarios de los planes tiene definición y ejemplo; los demás documentos del manual enlazan al glosario |
+| MAN-07 | El embudo, etapa por etapa | Una sección por etapa (0, 1, 2, 3, reserva, sombra, paper, candidata) con entrada, medida, criterio, comando y decisión de origen |
+| MAN-08 | Cómo funciona el sistema, operación (paper, `reconcile`, digest, datos locales) y cómo trabajamos (loop, lotes, revisión) | Cada procedimiento de operación tiene el comando exacto y qué salida esperar |
+
+La página de datos (catálogo de M-datos) se suma cuando exista el catálogo.
 
 ---
 
@@ -415,7 +430,7 @@ flowchart LR
 
 - **G1.** Numeración: decidido (2026-10-28), M5 es el motor top-down.
 - **G2.** ¿Este orden (§6) sirve como marco, para que el PM arme los tickets de cada hito cuando toque?
-- **C1–C4** (ciclos, decididas), **W1–W2** (web, decididas), **W3** (cuándo arrancan las sesiones de diseño), **D1–D3** (datos, decididas), **U1–U4** (manual): en cada sección.
+- **C1–C4** (ciclos, decididas), **W1–W2** (web, decididas), **W3** (cuándo arrancan las sesiones de diseño), **D1–D3** (datos, decididas), **U1–U4** (manual, decididas): en cada sección.
 - **K1–K3** (cuenta chica): decididas (2026-10-28): USD 2.500, cuenta cash, costo fiscal con contadora.
 
 Ningún ticket se abre en Beads hasta que Fede apruebe.
