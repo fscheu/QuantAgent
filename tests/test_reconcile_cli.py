@@ -78,9 +78,9 @@ def test_digest_tolera_una_accion_con_db_y_sombra(db_session, tmp_path, monkeypa
 
     monkeypatch.setattr("quantagent.cli.reconcile.utils.session_scope", session_scope)
     shadow = tmp_path / "shadow.json"
-    guardar_sombra(shadow, "alpha", "2026-10-27", {"SPY": spy, "QQQ": 1 - spy - weight, extra: weight}, 99941)
+    guardar_sombra(shadow, "paper", "2026-10-27", {"SPY": spy, "QQQ": 1 - spy - weight, extra: weight}, 99941)
     result = CliRunner().invoke(cli, ["trading", "digest", "--date", "2026-10-27",
-                                      "--shadow", str(shadow), "--portfolio", "alpha"])
+                                      "--shadow", str(shadow)])
     assert result.exit_code == code, result.output
     if code:
         symbol = "SPY" if spy == .13 else extra

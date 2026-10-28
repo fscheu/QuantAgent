@@ -12,7 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from quantagent import settings
 from quantagent.digest import build_digest
-from quantagent.digest_datos import consultar_datos_paper
+from quantagent.digest_datos import consultar_datos_cartera, consultar_datos_paper, consultar_valuacion_actual
 from quantagent.fabrica.cartera import leer_sombra
 from quantagent.fabrica.chequeos_paper import comparar_pesos, reportar_dividendos, reportar_rechazos
 from quantagent.models import Environment, Position
@@ -51,7 +51,7 @@ def reconcile_positions() -> None:
 @click.option("--date", "digest_date", type=click.DateTime(formats=["%Y-%m-%d"]))
 @click.option("--db", type=click.Path(dir_okay=False), help="Archivo SQLite; por defecto usa DATABASE_URL.")
 @click.option("--shadow", type=click.Path(dir_okay=False), help="Archivo JSON de pesos sombra.")
-@click.option("--portfolio", default="paper", show_default=True, help="Nombre de la cartera en el digest.")
+@click.option("--portfolio", help="Cartera dedicada: posiciones, ejecuciones y valuación actual de Alpaca.")
 @click.option("--dividendos-alpaca", is_flag=True, help="Leer dividendos de Alpaca para esa fecha.")
 @click.option("--sin-dividendos", is_flag=True, help="Desactivar la consulta de dividendos de Alpaca.")
 def trading_digest(archivo, digest_date, db: str | None, shadow: str | None, portfolio: str,
@@ -75,13 +75,16 @@ def trading_digest(archivo, digest_date, db: str | None, shadow: str | None, por
     if digest_date is None:
         raise click.UsageError("Provide --date YYYY-MM-DD.")
     day = digest_date.date()
+    dedicated = portfolio is not None
+    portfolio = portfolio or "paper"
+    valuation, executions, pending = None, None, None
     previous_url = os.environ.get("DATABASE_URL")
     previous_settings_url = settings.DATABASE_URL
     if db:
         os.environ["DATABASE_URL"] = f"sqlite:///{os.path.abspath(db)}"
     db_path = db or make_url(settings.DATABASE_URL).database
     shadow_path = Path(shadow) if shadow else Path(db_path).with_suffix(".sombra.json")
-    warnings = ["Equity paper = valor invertido; la DB no guarda caja."]
+    warnings = [] if dedicated else ["Equity paper = valor invertido; la DB no guarda caja."]
     dividendos_alpaca = not sin_dividendos and (dividendos_alpaca or settings.TRADING_BROKER == "alpaca_paper")
     if not dividendos_alpaca:
         warnings.append("Dividendos: sin fuente de dividendos.")
@@ -106,6 +109,18 @@ def trading_digest(archivo, digest_date, db: str | None, shadow: str | None, por
     try:
         with utils.session_scope() as session:
             portfolios, trades, heartbeats, cumulative_pnl, orders = consultar_datos_paper(session, day, portfolio)
+            if dedicated:
+                portfolios, executions, pending = consultar_datos_cartera(session, day, portfolio)
+                trades, cumulative_pnl = [], None
+                try:
+                    resolved = StrategyAssembler.from_profiles(
+                        overrides={"broker_type": "alpaca_paper"}, environment=Environment.PAPER
+                    )
+                    broker = StrategyAssembler.BROKER_CONSTRUCTORS["alpaca_paper"](resolved)
+                    valuation = consultar_valuacion_actual(broker, portfolios)
+                except (RuntimeError, ValueError) as exc:
+                    raise click.ClickException(str(exc)) from exc
+                portfolios = valuation["portfolios"]
             values = {p["symbol"]: float(p["value"]) for p in portfolios[0]["positions"]} if portfolios else {}
             invested = sum(values.values())
             paper_weights = {symbol: value / invested for symbol, value in values.items()} if invested else {}
@@ -121,7 +136,9 @@ def trading_digest(archivo, digest_date, db: str | None, shadow: str | None, por
                     .filter(Position.symbol.in_(set(paper_weights) | set(shadow_weights))).all()
                 } if invested else {}
                 differences = comparar_pesos(paper_weights, shadow_weights, tolerancias=tolerancias)
-    except (SQLAlchemyError, ValueError):
+    except (SQLAlchemyError, ValueError) as exc:
+        if dedicated:
+            raise click.ClickException(f"Cartera: error al consultar datos ({type(exc).__name__}).") from exc
         portfolios, trades, heartbeats, cumulative_pnl, orders = [], [], [], 0.0, []
     finally:
         settings.DATABASE_URL = previous_settings_url
@@ -131,7 +148,8 @@ def trading_digest(archivo, digest_date, db: str | None, shadow: str | None, por
             os.environ["DATABASE_URL"] = previous_url
     rejection_reports = reportar_rechazos([SimpleNamespace(**order) for order in orders])
     click.echo(build_digest(day, portfolios, trades, heartbeats, warnings=warnings,
-                            reconciliations=[*differences, *rejection_reports], cumulative_pnl=cumulative_pnl))
+                            reconciliations=[*differences, *rejection_reports], cumulative_pnl=cumulative_pnl,
+                            valuation=valuation, executions=executions, pending=pending))
     if dividendos_error or differences or any(str(order.get("status")).lower() == "rejected" and not order.get("comment")
                           for order in orders):
         raise click.exceptions.Exit(1)

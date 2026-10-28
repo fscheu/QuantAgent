@@ -87,9 +87,10 @@ def test_valuacion_actual_alpaca_sin_api_real(failure):
         "symbol": "SPY", "quantity": 2, "price": 500, "value": 1000, "unrealized_pnl": 20}
 
 
-def test_consultar_cartera_sin_active_position_ni_trade(tmp_path):
+@pytest.mark.parametrize("api_failure", [False, True])
+def test_consultar_cartera_sin_active_position_ni_trade(tmp_path, monkeypatch, api_failure):
     engine = create_engine(f"sqlite:///{tmp_path / 'cartera.db'}")
-    Base.metadata.create_all(engine, tables=[Position.__table__, Order.__table__, Fill.__table__])
+    Base.metadata.create_all(engine)
     start = datetime(2026, 10, 25)
     with Session(engine) as session:
         session.add(Position(symbol="SPY", quantity=2, average_entry_price=490,
@@ -108,7 +109,8 @@ def test_consultar_cartera_sin_active_position_ni_trade(tmp_path):
         ]:
             session.add(Order(symbol=symbol, side=OrderSide.BUY, order_type=OrderType.MARKET,
                               quantity=10, filled_quantity=len(offsets), status=status,
-                              environment=environment, created_at=start - timedelta(days=2),
+                              environment=environment, comment="motivo" if symbol == "REJECT" else None,
+                              created_at=start if symbol == "REJECT" else start - timedelta(days=2),
                               fills=[Fill(quantity=1, price=500, commission=1,
                                           filled_at=start + timedelta(seconds=offset)) for offset in offsets]))
         session.commit()
@@ -123,6 +125,36 @@ def test_consultar_cartera_sin_active_position_ni_trade(tmp_path):
             {"symbol": symbol, "side": "buy", "status": status, "quantity": 10,
              "filled_quantity": quantity, "comment": None}
             for symbol, status, quantity in [("QQQ", "partially_filled", 2), ("IWM", "pending", 0)]]
+    from quantagent.strategy.assembler import StrategyAssembler
+
+    class Client:
+        def get_account(self):
+            if api_failure:
+                raise RuntimeError("unavailable")
+            return SimpleNamespace(equity="1000", cash="50")
+
+        def get_all_positions(self):
+            return [SimpleNamespace(symbol="SPY", current_price="475", market_value="950", unrealized_pl="-30")]
+
+    monkeypatch.setitem(StrategyAssembler.BROKER_CONSTRUCTORS, "alpaca_paper", lambda config: AlpacaBroker(Client()))
+    result = CliRunner().invoke(cli, ["trading", "digest", "--date", "2026-10-25", "--sin-dividendos",
+                                      "--db", str(tmp_path / "cartera.db"), "--portfolio", "alpha"])
+    assert result.exit_code == (1 if api_failure else 0), result.output
+    if api_failure:
+        assert "Valuación actual: error al consultar Alpaca (RuntimeError)" in result.output
+        assert "@ 500" not in result.output
+    else:
+        for text in ("Posiciones de alpha", "SPY: 2.00000000 @ 475.0", "valor de mercado 950.00 USD",
+                     "Equity: 1000.00 USD", "Caja: 50.00 USD (5.00 %)", "Sin datos de P&L realizado",
+                     "Ejecuciones del día (3)", "SPY buy 1.00000000 @ 500.00000000", "Órdenes pendientes (2)",
+                     "IWM buy: pending", "REJECT: rechazo, motivo"):
+            assert text in result.output
+        shadow = tmp_path / "shadow.json"
+        shadow.write_text('{"2026-10-23":{"alpha":{"pesos":{"SPY":0.4}}}}')
+        result = CliRunner().invoke(cli, ["trading", "digest", "--date", "2026-10-25", "--sin-dividendos",
+                                          "--db", str(tmp_path / "cartera.db"), "--portfolio", "alpha",
+                                          "--shadow", str(shadow)])
+        assert result.exit_code == 1 and "SPY: peso paper 1.0 difiere" in result.output
 
 
 def test_digest_renders_seeded_paper_data(tmp_path):
@@ -259,9 +291,9 @@ def test_trading_digest_cli_reads_selected_sqlite_and_date(tmp_path):
         session.commit()
 
     result = CliRunner().invoke(cli, ["trading", "digest", "--date", "2026-10-25",
-                                      "--db", str(db_path), "--portfolio", "alpha"])
+                                      "--db", str(db_path)])
     assert result.exit_code == 0, result.output
-    assert "2026-10-25" in result.output and "Posiciones de alpha" in result.output and "P&L realizado acumulado: 12.00" in result.output
+    assert "2026-10-25" in result.output and "Posiciones de paper" in result.output and "P&L realizado acumulado: 12.00" in result.output
     assert result.output.strip() and len(result.output) < 4000 and settings.DATABASE_URL == previous_database_url
 
 
@@ -277,12 +309,12 @@ def test_trading_digest_reconciles_shadow_weights_and_missing_date(tmp_path):
                                    exit_policy=ExitPolicy.SL_TP_ONLY, environment=Environment.PAPER))
         session.commit()
 
-    shadow_path.write_text('{"2026-10-23":{"alpha":{"pesos":{"SPY":1.0}}}}')
+    shadow_path.write_text('{"2026-10-23":{"paper":{"pesos":{"SPY":1.0}}}}')
     args = ["trading", "digest", "--date", "2026-10-25", "--db", str(db_path),
-            "--shadow", str(shadow_path), "--portfolio", "alpha"]
+            "--shadow", str(shadow_path)]
     result = CliRunner().invoke(cli, args)
     assert result.exit_code == 0 and "difiere" not in result.output
-    shadow_path.write_text('{"2026-10-23":{"alpha":{"pesos":{"SPY":0.4}}}}')
+    shadow_path.write_text('{"2026-10-23":{"paper":{"pesos":{"SPY":0.4}}}}')
     result = CliRunner().invoke(cli, args)
     assert result.exit_code == 1 and "SPY:" in result.output
     shadow_path.write_text('{}')
