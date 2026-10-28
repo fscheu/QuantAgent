@@ -464,6 +464,7 @@ def test_adaptador_stop_entry_sin_take_profit(tmp_path):
     sys.path.insert(0, str(ROOT / "scripts"))
     import bt_adapter
     import crossval_rsi
+
     from quantagent.strategy.base import TradingSignal, TradingStrategy
 
     class StopEntrySinTp(TradingStrategy):
@@ -510,6 +511,49 @@ def test_adaptador_stop_entry_sin_take_profit(tmp_path):
     assert rows[0].exit_reason == "STOP_LOSS"
     assert rows[0].entry_price == pytest.approx(105.0)
     assert rows[0].exit_price == pytest.approx(95.0)
+
+
+def test_adaptador_chandelier_actualiza_sl_y_dimensiona_stop_al_100_pct(tmp_path, monkeypatch):
+    """QuantAgent-fnpr.3.11: should_exit que sube stop_loss actualiza trade.sl y stop-entry al 100% no se cancela."""
+    pytest.importorskip("backtesting")
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import bt_adapter
+    import crossval_rsi
+
+    from quantagent import settings
+    from quantagent.strategy.base import TradingSignal, TradingStrategy
+
+    class ChandelierStopStrat(TradingStrategy):
+        required_history_bars = 2
+
+        def generate_signal(self, kline_data, symbol, timeframe, current_price):
+            if kline_data[-1]["volume"] == 2:
+                return TradingSignal(decision="LONG", confidence=1.0, entry_order="stop",
+                                     entry_price=105.0, entry_expiry_bars=2, stop_loss=95.0, sin_take_profit=True)
+            return None
+
+        def should_exit(self, position, current_price, ohlc_data):
+            position.stop_loss = max(float(position.stop_loss), 103.0)
+            return False, None
+
+        def should_reevaluate(self, position, current_price):
+            return False
+
+    monkeypatch.setattr(settings, "TRADING_BASE_POSITION_PCT", 1.0)
+    monkeypatch.setattr(bt_adapter.settings, "TRADING_BASE_POSITION_PCT", 1.0)
+    csv_file = tmp_path / "chand_stop.csv"
+    csv_file.write_text("\n".join([
+        "timestamp,open,high,low,close,volume",
+        "2024-01-01T00:00:00,100,101,99,100,1", "2024-01-02T00:00:00,100,101,99,100,2",
+        "2024-01-03T00:00:00,106,108,104,107,1", "2024-01-04T00:00:00,106,107,102,105,1",
+        "2024-01-05T00:00:00,105,106,104,105,1", "",
+    ]))
+    for fill in ("next-open", "close"):
+        stats = bt_adapter.run_adapter(ChandelierStopStrat(), crossval_rsi.load_fixture(csv_file),
+                                       symbol="XYZ", timeframe="1d", fill=fill, slippage_pct=0.0005)
+        (row,) = bt_adapter.trade_rows(stats, "XYZ")
+        assert (row.entry_price, row.stop_loss) == (pytest.approx(106.0 * 1.0005), pytest.approx(103.0))
+        assert (row.exit_price, row.exit_reason) == (pytest.approx(103.0 * (1 - 0.0005)), "STOP_LOSS")
 
 
 if __name__ == "__main__":

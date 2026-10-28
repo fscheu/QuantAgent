@@ -13,7 +13,9 @@ commission=, su efectivo y su equity). El adaptador solo traduce:
   la senal van como sl=/tp= (si faltan, los defaults del motor: 2 % y 3 %), redondeados a 8 decimales.
 - posicion -> ActivePosition sin persistir (mismos campos que crea PositionMonitor.open_position) para
   should_exit(posicion, close, ventana). entry_price y quantity son los del fill de la libreria. Si no
-  sale, candles_since_entry += 1 (lo que hace el motor en update_candle_tracking).
+  sale, propaga posicion.stop_loss a trade.sl (QuantAgent-fnpr.3.11: el adaptador descartaba el Chandelier
+  que should_exit sube en los arquetipos, mientras el motor lo evalua en evaluate_position_exit intrabar
+  con STOP_LOSS) y suma candles_since_entry += 1 (update_candle_tracking).
 - cierre por regla -> cierra la posicion; despues se evalua la senal de esa misma vela, como el motor.
 
 Llenado: `close` = al cierre de la vela de la senal (trade_on_close=True, vela centinela y orden de
@@ -123,12 +125,34 @@ class StrategyAdapter(Strategy):
                     self.info[trade.entry_bar]["reason"] = reason
                     self._broker._close_trade(trade, open_val, self._broker._i)
 
+        def cap_stop_entries():
+            broker = self._broker
+            for order in list(broker.orders):
+                if order.parent_trade or order.stop is None or float(self.data.High[-1]) < order.stop:
+                    continue
+                confidence, fraction = order.tag[:2]
+                price = max(float(self.data.Open[-1]), float(order.stop))
+                if self.regla_tamano == "riesgo":
+                    qty = PositionSizer(regla="riesgo").calculate_size(
+                        self.symbol, confidence, price * SCALE, broker._cash, stop_price=order.sl * SCALE
+                    )
+                    units = round(qty * SCALE)
+                else:
+                    units = round(broker._cash * fraction * confidence / price)
+                max_units = int(broker._cash / (price * (1 + self.slippage) * (1 + self.commission)))
+                units = min(units, max_units)
+                if units < 1:
+                    order.cancel()
+                else:
+                    order._replace(size=units)
+
         if not self.fill_close:
             def cap_open_entries():
                 apply_opening_gap()
                 broker = self._broker
                 entries = [o for o in broker.orders if not o.parent_trade and o.stop is None]
                 broker.orders[:] = [o for o in broker.orders if o.parent_trade or o.stop is not None]
+                cap_stop_entries()
                 process_orders()  # primero los cierres pendientes, con sus costos
                 broker.orders.extend(entries)
                 price = float(self.data.Open[-1])
@@ -163,7 +187,20 @@ class StrategyAdapter(Strategy):
         else:
             def process_orders_gap():
                 apply_opening_gap()
-                process_orders()
+                broker = self._broker
+                stops = [o for o in broker.orders if not o.parent_trade and o.stop is not None]
+                if stops:
+                    broker.orders[:] = [o for o in broker.orders if o.parent_trade or o.stop is None]
+                    process_orders()
+                    broker.orders.extend(stops)
+                    cap_stop_entries()
+                    broker._trade_on_close = False
+                    try:
+                        process_orders()
+                    finally:
+                        broker._trade_on_close = True
+                else:
+                    process_orders()
 
             self._broker._process_orders = process_orders_gap
 
@@ -195,6 +232,15 @@ class StrategyAdapter(Strategy):
                 )
                 self.pending_stop_order = None
                 self.pending_signal = None
+            elif self.closed_trades and self.closed_trades[-1].entry_bar == n - 1:
+                trade = self.closed_trades[-1]
+                stop = round(self.pending_signal.stop_loss or (trade.entry_price * SCALE * 0.98), 8)
+                hit_stop = trade.exit_price <= stop / SCALE
+                self.info[trade.entry_bar] = {
+                    "stop": stop, "reason": "STOP_LOSS" if hit_stop else "TAKE_PROFIT", "is_stop": True,
+                }
+                self.pending_stop_order = None
+                self.pending_signal = None
             else:
                 bars_elapsed = n - self.pending_stop_bar
                 if self.pending_expiry is not None and bars_elapsed >= self.pending_expiry:
@@ -202,6 +248,7 @@ class StrategyAdapter(Strategy):
                         self.pending_stop_order.cancel()
                     self.pending_stop_order = None
                     self.pending_signal = None
+                return
         if self.pos is not None and not self.position:
             last = self.closed_trades[-1] if self.closed_trades else None
             if last is not None and last.entry_bar == self.key:  # la libreria cerro por sl=/tp=
@@ -225,6 +272,10 @@ class StrategyAdapter(Strategy):
                 if should_exit and (self.fill_close or n < self.n_real_bars):
                     self._close(reason)
                 elif not should_exit:
+                    if self.pos.stop_loss is not None:
+                        new_stop = round(float(self.pos.stop_loss), 8)
+                        trade.sl = new_stop / SCALE
+                        self.info[self.key]["stop"] = new_stop
                     self.pos.candles_since_entry += 1
             if self.pos is None and self.pending_stop_order is None and (self.fill_close or n < self.n_real_bars):
                 self._maybe_enter(window, price, n)
