@@ -1,5 +1,6 @@
 import csv
 import json
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from click.testing import CliRunner
@@ -77,3 +78,33 @@ def test_aplicar_conserva_registro_y_backup(registro, con_estado):
     esperadas = [dict(fila, estado="invalida_bug" if i in (1, 2, 3) else fila.get("estado", ""))
                  for i, fila in enumerate(filas)]
     assert nuevas == esperadas
+
+
+@pytest.mark.parametrize("desde", ["2026-01-02T03:04:05Z", "2026-01-02T03:04:05+00:00"])
+def test_epoca_limpia(registro, desde):
+    original = registro.read_bytes()
+    antes = datetime.now(timezone.utc)
+    result = CliRunner().invoke(cli, ["intentos", "epoca-limpia", "--desde", desde,
+                                     "--motivo", "Corrección de cálculo: época nueva"])
+    despues = datetime.now(timezone.utc)
+    assert result.exit_code == 0, result.output
+    path = registro.parent / "epoca_limpia.json"
+    marca = json.loads(path.read_text(encoding="utf-8"))
+    assert set(marca) == {"desde_utc", "motivo", "creada_utc"}
+    assert datetime.fromisoformat(marca["desde_utc"]) == datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+    assert marca["motivo"] == "Corrección de cálculo: época nueva"
+    creada = datetime.fromisoformat(marca["creada_utc"])
+    assert creada.utcoffset() == timedelta(0)
+    assert antes <= creada <= despues
+    assert registro.read_bytes() == original
+    assert set(registro.parent.iterdir()) == {registro, path}
+
+
+@pytest.mark.parametrize("desde", ["mal", "2026-01-01", "2026-01-01T00:00:00", "2026-01-01T00:00:00+03:00"])
+def test_epoca_limpia_fecha_invalida(registro, desde):
+    original = registro.read_bytes()
+    result = CliRunner().invoke(cli, ["intentos", "epoca-limpia", "--desde", desde, "--motivo", "bug"])
+    assert result.exit_code == 1
+    assert "ISO con zona UTC" in result.output
+    assert registro.read_bytes() == original
+    assert list(registro.parent.iterdir()) == [registro]

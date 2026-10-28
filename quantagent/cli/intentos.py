@@ -24,6 +24,21 @@ def intentos_group():
     pass
 
 
+@intentos_group.command("epoca-limpia", help="Guardar el inicio de la época limpia.")
+@click.option("--desde", required=True)
+@click.option("--motivo", required=True)
+def epoca_limpia(desde, motivo):
+    desde = _fecha_utc(desde)
+    path = snapshot_root() / "epoca_limpia.json"
+    marca = {
+        "desde_utc": desde.isoformat(),
+        "motivo": motivo,
+        "creada_utc": datetime.now(timezone.utc).isoformat(),
+    }
+    path.write_text(json.dumps(marca, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    click.echo(f"Época limpia guardada: {path}")
+
+
 @intentos_group.command("invalidar", help="Listar filas; invalidarlas con backup solo con --aplicar.")
 @click.option("--hipotesis", required=True)
 @click.option("--desde")
