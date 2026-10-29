@@ -9,8 +9,9 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  digest       Show the daily paper trading digest.
-  reconciliar  Compare local PAPER positions with Alpaca.
+  digest        Show the daily paper trading digest.
+  pre-apertura  Prepare paper stops and expire stale entry orders before...
+  reconciliar   Compare local PAPER positions with Alpaca.
 ```
 
 ## `quantagent trading digest`
@@ -39,6 +40,19 @@ Options and defaults:
 - `--portfolio` — default: `None`
 - `--dividendos-alpaca` — default: `False`
 - `--sin-dividendos` — default: `False`
+
+## `quantagent trading pre-apertura`
+
+```text
+Usage: quantagent trading pre-apertura [OPTIONS]
+
+  Prepare paper stops and expire stale entry orders before market open.
+
+Options:
+  --help  Show this message and exit.
+
+  Example: quantagent trading pre-apertura
+```
 
 ## `quantagent trading reconciliar`
 
