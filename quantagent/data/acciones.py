@@ -18,7 +18,11 @@ COMPOSICION = "sp500-2026-10"
 INICIO, FIN = pd.Timestamp("2007-01-01"), pd.Timestamp("2018-12-31")
 DESDE_YAHOO = "2006-01-01"
 TOLERANCIA = pd.Timedelta(days=7)
+FIN_WIKI = pd.Timestamp("2018-03-27")
+MIN_COINCIDENCIA = 0.9
 ALIAS_CSV = Path(__file__).resolve().parent / "tablas" / "alias_tickers.csv"
+# Tickers sin WIKI cuya serie de Yahoo es de otra empresa (reúso), revisados a mano en fnpr.1.8.
+DESCARTADOS_YAHOO = frozenset({"BUD", "CCU", "EP", "EQ", "GENZ", "KG", "MI", "SII", "TT", "UST", "WB"})
 _WIKI_COLUMNAS = {
     "adj_open": "open",
     "adj_high": "high",
@@ -54,13 +58,22 @@ def _leer_wiki(wiki_csv: Path, nombres: set) -> Dict[str, pd.DataFrame]:
     columnas = ["ticker", "date", *_WIKI_COLUMNAS]
     trozos = [c[c["ticker"].isin(nombres)] for c in pd.read_csv(wiki_csv, usecols=columnas, chunksize=1_000_000)]
     frames = {}
-    for ticker, df in pd.concat(trozos).groupby("ticker"):
-        df = df.assign(timestamp=pd.to_datetime(df["date"])).set_index("timestamp").sort_index()
-        df = df.rename(columns=_WIKI_COLUMNAS)[list(_WIKI_COLUMNAS.values())]
-        df["adj_close"] = df["close"]
-        df["volume"] = df["volume"].astype("int64")
-        frames[ticker] = df[["open", "high", "low", "close", "adj_close", "volume"]]
+    if trozos:
+        for ticker, df in pd.concat(trozos).groupby("ticker"):
+            df = df.assign(timestamp=pd.to_datetime(df["date"])).set_index("timestamp").sort_index()
+            df = df.rename(columns=_WIKI_COLUMNAS)[list(_WIKI_COLUMNAS.values())]
+            df["adj_close"] = df["close"]
+            df["volume"] = df["volume"].astype("int64")
+            frames[ticker] = df[["open", "high", "low", "close", "adj_close", "volume"]]
     return frames
+
+
+def _coincidencia(yahoo: pd.DataFrame, wiki: pd.DataFrame) -> Optional[float]:
+    """Fracción de sesiones 2007..2018-03 en que los retornos diarios de Yahoo y WIKI difieren menos de 0,5 %."""
+    ret_y = yahoo["adj_close"].loc[INICIO:FIN_WIKI].pct_change()
+    ret_w = wiki["close"].loc[INICIO:FIN_WIKI].pct_change()
+    dif = (ret_y - ret_w).dropna()
+    return float((dif.abs() < 0.005).mean()) if len(dif) >= 10 else None
 
 
 def crear_snapshot_acciones(
@@ -70,38 +83,55 @@ def crear_snapshot_acciones(
     base_dir: Optional[Path] = None,
     yahoo: Callable[[str, str], pd.DataFrame] = _descargar_yahoo,
 ) -> dict:
-    """Arma el snapshot de todos los tickers que fueron miembros del S&P 500 entre 2007 y 2018."""
+    """Arma el snapshot de todos los tickers que fueron miembros del S&P 500 entre 2007 y 2018.
+
+    Por ticker: Yahoo si cubre la pertenencia y coincide con WIKI (si WIKI lo tiene); si no, WIKI; si tampoco, el
+    parcial de Yahoo. Una coincidencia < MIN_COINCIDENCIA indica reúso del ticker en Yahoo por otra empresa.
+    """
     alias = _alias()
-    por_sesion = _miembros_por_sesion(composicion, base_dir)
-    sesiones = _sesiones()
     periodos = {}
-    for fecha, tickers in zip(sesiones, por_sesion):
+    for fecha, tickers in zip(_sesiones(), _miembros_por_sesion(composicion, base_dir)):
         for t in tickers:
             periodos[t] = (periodos[t][0] if t in periodos else fecha, fecha)
+    wiki = _leer_wiki(wiki_csv, {alias.get((t, "wiki"), t) for t in periodos})
 
     frames: Dict[str, pd.DataFrame] = {}
     fuentes: Dict[str, str] = {}
-    parcial_yahoo = {}
+    reuso: Dict[str, float] = {}
+    yahoo_sin_wiki: Dict[str, dict] = {}
     for t, (ini, fin) in sorted(periodos.items()):
-        df = yahoo(alias.get((t, "yahoo"), t), DESDE_YAHOO)
-        if df.empty:
-            continue
-        df = df[df.index <= FIN]
-        if df.empty:
-            continue
-        if df.index.min() <= ini + TOLERANCIA and df.index.max() >= fin - TOLERANCIA:
-            frames[t], fuentes[t] = df, "yahoo"
-        else:
-            parcial_yahoo[t] = df
+        df_w = wiki.get(alias.get((t, "wiki"), t))
+        df_y = yahoo(alias.get((t, "yahoo"), t), DESDE_YAHOO)
+        df_y = df_y[df_y.index <= FIN] if not df_y.empty else df_y
+        if not df_y.empty and df_w is None:
+            yahoo_sin_wiki[t] = {
+                "start": df_y.index.min().date().isoformat(),
+                "end": df_y.index.max().date().isoformat(),
+                "close_min": round(float(df_y["close"].min()), 4),
+                "close_max": round(float(df_y["close"].max()), 4),
+                "descartado": t in DESCARTADOS_YAHOO,
+            }
+        if df_y.empty or t in DESCARTADOS_YAHOO:
+            df_y = None
+        elif df_w is not None:
+            coinc = _coincidencia(df_y, df_w)
+            if coinc is not None and coinc < MIN_COINCIDENCIA:
+                reuso[t], df_y = round(coinc, 4), None
 
-    pendientes = {alias.get((t, "wiki"), t): t for t in periodos if t not in frames}
-    wiki = _leer_wiki(wiki_csv, set(pendientes)) if pendientes else {}
-    for nombre_wiki, t in pendientes.items():
-        if nombre_wiki in wiki:
-            frames[t], fuentes[t] = wiki[nombre_wiki][lambda d: d.index <= FIN], "wiki"
-        elif t in parcial_yahoo:
-            frames[t], fuentes[t] = parcial_yahoo[t], "yahoo"
-    return write_snapshot(nombre, frames, source="yahoo+wiki", base_dir=base_dir, fuentes=fuentes)
+        if df_y is not None and df_y.index.min() <= ini + TOLERANCIA and df_y.index.max() >= fin - TOLERANCIA:
+            frames[t], fuentes[t] = df_y, "yahoo"
+        elif df_w is not None:
+            frames[t], fuentes[t] = df_w[df_w.index <= FIN], "wiki"
+        elif df_y is not None:
+            frames[t], fuentes[t] = df_y, "yahoo"
+    return write_snapshot(
+        nombre,
+        frames,
+        source="yahoo+wiki",
+        base_dir=base_dir,
+        fuentes=fuentes,
+        extra={"reuso_cambiados_a_wiki": reuso, "yahoo_sin_wiki": yahoo_sin_wiki},
+    )
 
 
 def reporte_cobertura(nombre: str, composicion: str = COMPOSICION, base_dir: Optional[Path] = None) -> dict:
@@ -143,5 +173,7 @@ def reporte_cobertura(nombre: str, composicion: str = COMPOSICION, base_dir: Opt
         "sin_precio": sin_precio,
         "terminan_antes": terminan_antes,
         "saltos": saltos,
+        "reuso_cambiados_a_wiki": manifiesto.get("reuso_cambiados_a_wiki", {}),
+        "yahoo_sin_wiki": manifiesto.get("yahoo_sin_wiki", {}),
         "por_ticker": filas,
     }
