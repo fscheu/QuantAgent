@@ -164,16 +164,16 @@ def verify_macro(name_arg: Optional[str], name: Optional[str]) -> None:
     click.echo(f"OK {len(series)} series, {sum(i['rows'] for i in series.values())} filas")
 
 
-@data_group.group("consenso", help="Consenso diario de estimaciones (EPS, ingresos).")
+@data_group.group("consenso", help="Manage daily earnings and revenue estimates.")
 def consenso_group() -> None:
     """Consenso subcommands."""
 
 
-@consenso_group.command("foto", help="Guarda la foto diaria de consenso de EPS en Parquet.")
-@click.option("--simbolos", default=None, help="Símbolos separados por coma, ej. AAPL,MSFT,NVDA.")
-@click.option("--archivo", default=None, type=click.Path(exists=True, dir_okay=False), help="Archivo con un símbolo por línea.")
-@click.option("--fecha", default=None, help="Fecha de la foto en YYYY-MM-DD (por defecto hoy).")
-@click.option("--fuente", default="yahoo", type=click.Choice(["yahoo", "fmp"], case_sensitive=False), help="Fuente de datos (yahoo o fmp).")
+@consenso_group.command("foto", help="Save a daily EPS consensus snapshot in Parquet format.")
+@click.option("--simbolos", default=None, help="Comma-separated ticker symbols, for example AAPL,MSFT,NVDA.")
+@click.option("--archivo", default=None, type=click.Path(exists=True, dir_okay=False), help="File with one ticker symbol per line.")
+@click.option("--fecha", default=None, help="Snapshot date in YYYY-MM-DD format (defaults to today).")
+@click.option("--fuente", default="yahoo", type=click.Choice(["yahoo", "fmp"], case_sensitive=False), help="Data source: yahoo or fmp.")
 def foto_consenso_cmd(simbolos: Optional[str], archivo: Optional[str], fecha: Optional[str], fuente: str = "yahoo") -> None:
     from quantagent.data.consenso import guardar_foto
 
@@ -216,14 +216,14 @@ def foto_consenso_cmd(simbolos: Optional[str], archivo: Optional[str], fecha: Op
         raise click.ClickException(str(exc))
 
 
-@data_group.group("acciones", help="Snapshot de acciones del S&P 500 2007-2018 (Yahoo o Quandl WIKI por ticker).")
+@data_group.group("acciones", help="Manage S&P 500 stock snapshots for 2007-2018 using Yahoo or Quandl WIKI.")
 def acciones_group() -> None:
     """Acciones snapshot subcommands."""
 
 
-@acciones_group.command("create", help="Arma el snapshot: Yahoo si cubre la pertenencia al índice, si no WIKI_PRICES.csv.")
-@click.option("--name", required=True, help="Nombre del snapshot, por ejemplo acciones-sp500-2026-10.")
-@click.option("--wiki-csv", default="/tmp/wiki/WIKI_PRICES.csv", type=click.Path(exists=True, dir_okay=False), show_default=True)
+@acciones_group.command("create", help="Create a snapshot using Yahoo when index membership is covered, otherwise WIKI_PRICES.csv.")
+@click.option("--name", required=True, help="Snapshot name, for example acciones-sp500-2026-10.")
+@click.option("--wiki-csv", default="/tmp/wiki/WIKI_PRICES.csv", type=click.Path(exists=True, dir_okay=False), show_default=True, help="Path to the Quandl WIKI_PRICES.csv file.")
 def create_acciones(name: str, wiki_csv: str) -> None:
     try:
         manifest = crear_snapshot_acciones(name, Path(wiki_csv))
@@ -233,8 +233,8 @@ def create_acciones(name: str, wiki_csv: str) -> None:
     click.echo(f"Snapshot {name} creado: {len(manifest['symbols'])} símbolos, fuentes {fuentes}")
 
 
-@acciones_group.command("cobertura", help="Reporte de cobertura de precios sobre los miembro-días 2007-2018; lo guarda en la carpeta del snapshot.")
-@click.option("--name", required=True)
+@acciones_group.command("cobertura", help="Report price coverage for 2007-2018 index member-days in the snapshot directory.")
+@click.option("--name", required=True, help="Snapshot name to report.")
 def cobertura_acciones(name: str) -> None:
     try:
         reporte = reporte_cobertura(name)
