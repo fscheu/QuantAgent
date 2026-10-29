@@ -2,6 +2,7 @@
 
 - **Estado:** propuesta para que Fede decida (2026-10-28). Solo planificación: no hay tickets en Beads ni código. Los nombres de hito son provisorios.
 - **Pedido de Fede (2026-10-28):** no perder de vista cuatro ideas para después de M5 y bajarlas a detalle: ciclos continuos de generación hasta encontrar candidatas para producción, la prueba de que una candidata sirve para una cuenta chica, una aplicación web que reemplace Streamlit y la forma de guardar los datos de mercado y fundamentales. Agregado el mismo día: un manual de usuario actualizado, para leer como páginas de la app (§5).
+- **Revisión crítica aplicada (2026-10-28):** Fede aceptó los 8 cambios de [`2026-10-28_revision_critica_roadmap_post_m5.md`](./2026-10-28_revision_critica_roadmap_post_m5.md) §4; este documento ya los incorpora.
 - **Cuándo:** nada de esto entra en la cola actual. Primero se mira la primera semana de paper de M4 (L21). Los lotes que quedan de L20 (cupo por tema, sizing por riesgo) esperan a esa semana y no están en este documento.
 - **Contexto leído:** `PLAN-CONTINUACION.md` (§3.7 lotes, §7 ideas), `docs/02_planning/QuantAgent-M5-PL-motor-top-down.md`, `docs/03_design/QuantAgent-M5-DS-motor-top-down.md`, `docs/04_decisions/QuantAgent-R01-DC-decisiones-investigacion-edge.md`, `docs/04_decisions/ui_framework_decision.md`, `local-data/README.md`, `quantagent/models.py`.
 
@@ -15,6 +16,8 @@ Hoy hay dos M5 distintos en el repo:
 Leo el pedido como "después del motor top-down", porque Fede dice que llegar a producción viene después. Propongo que el dinero real deje de ser un hito con número fijo y pase a ser la **salida** de las cuatro piezas de abajo: una candidata pasa los filtros (M-ciclos) y además sirve para el tamaño de cuenta (M-cuenta). Hasta que Fede decida el orden, uso nombres por tema (M-ciclos, M-cuenta, M-web, M-datos) en lugar de M6, M7, etc.
 
 **Decidido por Fede (2026-10-28, G1):** M5 es el motor top-down. El dinero real es la salida de M-ciclos + M-cuenta, no un hito con número propio.
+
+**Qué es la primera cuenta real (revisión, cambio 1).** Con USD 2.500, una estrategia que le gane a comprar y mantener por 2–3 % al año suma USD 50–75 al año; Sharadar completo cuesta USD 499 al año. La primera cuenta real es una **prueba del sistema con dinero de verdad**, no una fuente de ingresos, y lo que se paga y construye antes de ella se mide con esa vara. Para pasar al dinero real, una candidata (M5 incluida) tiene que **ganarle a comprar y mantener SPY con USD 2.500**, con los mismos costos e impuestos.
 
 ## Glosario corto
 
@@ -47,12 +50,10 @@ Hay tres cosas que se gastan y que el ciclo tiene que administrar:
 1. Etapas 0–3 como hoy, con un **cupo de intentos por ciclo** (por ejemplo, 5 hipótesis por ciclo y 2 por idea, como el cupo de R01 #8).
 2. Reserva 2023+ con cupo por ciclo, mientras quede reserva útil.
 3. **Paper en sombra local** para todas las que pasan la etapa 3: barato, sin límite de cuentas, sirve para medir cuánto se aleja lo operado de lo que decía el backtest.
-4. **Paper en Alpaca** para las pocas mejores de la sombra. Aquí se prueban órdenes reales, rechazos, dividendos y redondeos. **Alpaca permite tres cuentas paper por usuario** (Fede, 2026-10-28). M4 ya usa una (`~/secrets/alpaca.env`) y M5 planea otra (`alpaca-m5.env`), así que para candidatas queda **una** mientras esas dos sigan activas. Opciones si hace falta más:
-   - rotar: cuando M4 termine su prueba de sistema, su cuenta pasa a candidatas;
-   - una cuenta por candidata solo en la etapa final, y la sombra local para el resto;
-   - más usuarios con otros mails (idea de Fede). Antes de hacerlo, revisar los términos de Alpaca: algunos brokers limitan las cuentas por persona y podrían cerrar todas, incluida la que después sería la real.
-5. **Escalera de incubación** (R01 #4, pendiente de definir antes de dinero real): tiempo mínimo en paper, distancia máxima entre el paper y su backtest, y un percentil de corte. Recién quien la pasa es **candidata a producción**.
-6. **Puerta de cuenta chica** (M-cuenta, §2). Pasarla habilita el pedido a Fede de operar con dinero real.
+4. **Incubación en la sombra local** (revisión, cambio 4): los 3 meses de C3 corren en la sombra, sin límite de cuentas. M4 ya prueba que órdenes, rechazos, dividendos y redondeos andan en Alpaca; repetirlo por cada candidata no agrega información.
+5. **Paper en Alpaca solo para la última candidata antes del dinero real**, como ensayo final de ejecución. Alpaca permite tres cuentas paper por usuario (Fede, 2026-10-28): M4 usa una (`~/secrets/alpaca.env`), M5 planea otra (`alpaca-m5.env`) y la tercera queda para ese ensayo. **No se abren usuarios extra.**
+6. **Escalera de incubación** (R01 #4, pendiente de definir antes de dinero real): tiempo mínimo en paper, distancia máxima entre el paper y su backtest, y un percentil de corte. Recién quien la pasa es **candidata a producción**.
+7. **Puerta de cuenta chica** (M-cuenta, §2). Pasarla habilita el pedido a Fede de operar con dinero real.
 
 ### Alcance
 
@@ -97,6 +98,10 @@ Propuesta para M-ciclos:
 - **Ficha por familia de idea** (tendencia, reversión, estacionalidad, carry...): cuántos intentos lleva y en qué etapa murió cada uno, para que el generador no repita ideas muertas y el PM vea qué familias están agotadas.
 - **Revisión trimestral de las lecciones** por Fede y el PM: qué se aprendió en los últimos 3 ciclos, escrito en palabras.
 
+### Punto de corte (revisión, cambio 3)
+
+Con datos diarios gratis de ETFs líquidos, cada ciclo sube la vara del Sharpe deflactado. Si **después de 6 ciclos ninguna hipótesis pasa la etapa 3**, se frena y se revisa el enfoque (otra frecuencia, otros datos, otro tipo de activo) en lugar de seguir con más ciclos iguales. La ficha por familia y la revisión de lecciones arrancan como una tabla a mano en el catálogo; se automatizan solo si se vuelve molesto.
+
 ### Orden dentro del hito
 
 Primero los números de la escalera y el registro único de estado; después el calendario automático; al final el informe por ciclo.
@@ -134,9 +139,11 @@ Lo que hay que revisar, punto por punto:
 - Una **puerta escrita**: qué tiene que cumplir la candidata a ese capital (por ejemplo, que el Sharpe no caiga más de cierto porcentaje contra la versión de USD 100.000 y que ninguna posición planificada quede sin abrir).
 - La cuenta paper con el capital real. M5 D6 ya recomienda USD 3.000; la idea es usar ese mismo criterio en todas las cuentas paper que lleguen a candidatas.
 
-### Dependencias
+### Dependencias y momento (revisión, cambio 2)
 
-- Ninguna fuerte: el modo cuenta chica se puede construir apenas haya una candidata para probar, y conviene tenerlo antes de la escalera de incubación de M-ciclos, para que la incubación ya se haga al capital real.
+- Ninguna fuerte. Se **adelanta**: se corre sobre las carteras de M4 apenas exista el modo cuenta chica, y sobre M5 **antes de decidir el pago de Sharadar** (D1 de M5, al abrir L25). Puede descartar ramas enteras: el screener de M5 con 3 acciones por sector en 11 sectores son 33 posiciones de unos USD 75.
+- Incluye la comparación contra comprar y mantener SPY a USD 2.500 (§0).
+- Con cuenta cash y sin cortos (K2), PDT queda cubierto con un test: ninguna estrategia abre y cierra el mismo día.
 
 ### Decisiones para Fede
 
@@ -180,7 +187,9 @@ Pantallas propuestas (primer borrador):
 - **Embudo:** cuántas hipótesis hay en cada etapa (0, 1, 2, 3, reserva, sombra, paper, candidata, producción) y por qué cayeron las que cayeron; filtro por ciclo.
 - **Ficha de hipótesis:** el YAML en palabras, su recorrido por el embudo, sus métricas y sus informes.
 - **Mercado:** gráfico de velas de cualquier activo con indicadores, comparación de activos, series macro con ayuda por término (glosario expandible, como pidió Fede para la nota macro).
-- **Asistente (después):** panel lateral que ve la pantalla actual y responde preguntas.
+- **Asistente:** no es una pantalla. Ver abajo (servidor MCP).
+
+**Primera entrega (revisión, cambio 6): solo Cuenta y Embudo, de solo lectura.** Inicio sale casi gratis de esas dos; Ficha y Mercado esperan a que las primeras se usen.
 
 Cada pantalla tiene que leerse bien en el teléfono: tarjetas apiladas, nada de tablas anchas (lo que Fede pidió en octubre para los informes).
 
@@ -204,7 +213,8 @@ El resto de la propuesta:
 - **API en Python (FastAPI)** encima del código actual: reusa `quantagent`, los modelos de la base y el estado del embudo. La aplicación nunca toca el broker directamente; lee estado y, como mucho, pide acciones que pasan por las mismas reglas que hoy.
 - **Frontend en React con TypeScript.** El documento de 2025 decía Angular; propongo React porque tiene más bibliotecas de gráficos financieros (por ejemplo, `lightweight-charts` de TradingView para velas) y más ejemplos, lo que facilita que la IA lo construya y lo mantenga.
 - **Acceso solo por Tailscale**, como el resto de la VM: no se publica a internet, y no hace falta armar usuarios y contraseñas.
-- **Asistente:** Claude vía API con herramientas de solo lectura sobre la misma API (posiciones, embudo, datos). Nunca envía órdenes.
+- **Asistente = servidor MCP de solo lectura** sobre la misma API (revisión, cambio 6), en lugar de un chat propio en la web. Fede ya habla con Claude; con el MCP, cualquier Claude (claude.ai, Claude Code, este proyecto) ve cuentas, embudo y datos con las mismas herramientas, y no hay que construir ni mantener un chat. Reglas tomadas de `dexter` y `financial-chat` (ver la revisión, §3): lista explícita de herramientas permitidas y nada que llegue al broker; las herramientas hacen las cuentas, el modelo no; errores devueltos como resultado; resultados grandes recortados; registro de cada llamada. Referencia de forma de herramientas: `wshobson/maverick-mcp`.
+- **Gráficos con bibliotecas hechas:** `lightweight-charts` para velas, ECharts para el resto.
 - **Streamlit se borra** (Fede, 2026-10-28: quedó en desuso; no convive con la web). Es un ticket de limpieza independiente de la web, que puede ir en cualquier lote: toca `apps/streamlit/`, sus tests (`tests/apps/streamlit/` y unos cinco `tests/test_*` de paper y heartbeat), el contenedor QA (`Dockerfile.qa`, chequeo de salud del puerto 8501 en `.github/workflows/main-ci-deploy.yml`) y la dependencia en `pyproject.toml`. El manual viejo que mostraba `views/manual.py` se archiva aparte (U2).
 
 ### Dependencias
@@ -221,7 +231,7 @@ El resto de la propuesta:
 
 ### Orden dentro del hito
 
-Sesiones de diseño visual y documento de arquitectura (en paralelo), después API de solo lectura, después Inicio y Cuenta, después Embudo y Ficha, después Mercado, y el asistente al final.
+Sesiones de diseño visual y documento de arquitectura (en paralelo), después API de solo lectura, después Cuenta y Embudo (con Inicio), después el servidor MCP. Ficha y Mercado, solo si las primeras se usan.
 
 ---
 
@@ -250,7 +260,17 @@ Decidir dónde viven los datos: seguir con carpetas de Parquet y CSV, pasar todo
 
 **Fede (2026-10-28):** de acuerdo con que lo histórico quede en Parquet. Las acciones de M5 ya se están bajando a archivos desde la notebook; si hace falta, se convierten después según esta decisión. Dudas abiertas: cómo se suman los datos nuevos (activos que empezamos a seguir ahora, días que pasan) y cómo se documenta dónde va cada dato. Las dos subsecciones siguientes las responden.
 
-### Datos nuevos: dos capas, histórica y viva
+### Datos nuevos (versión simplificada por la revisión, cambio 5)
+
+**Lo que se hace:** una vez por mes se **baja de nuevo la historia completa** de cada fuente y se congela como snapshot nuevo (`etf-1d-2026-11`), igual que hoy. Con 12–50 ETFs tarda segundos y el proveedor ya entrega la historia ajustada a esa fecha, así que no hace falta una tabla propia de dividendos y splits. Un activo nuevo entra al próximo congelado. Paper sigue leyendo los precios del día desde Alpaca, como hoy, y sus decisiones quedan en la base.
+
+**Lo único que se guarda día a día** es lo que el proveedor no guarda: la foto del consenso de EPS (M5-05). La macro ya la guarda ALFRED con todas sus versiones.
+
+**DuckDB** entra cuando llegue el universo de acciones de M5, no antes: para ETFs alcanza con pandas. La **migración del embudo a Postgres** se hace cuando la web la necesite (DuckDB también lee CSV). Sigue conviniendo **ahora** el catálogo de datos (abajo).
+
+El esquema de dos capas que sigue queda como referencia por si el volumen crece (por ejemplo, si una bajada completa mensual de acciones deja de ser práctica).
+
+### Referencia: dos capas, histórica y viva
 
 Un snapshot nunca se modifica: es la foto contra la que un backtest se puede repetir. Los datos que llegan cada día no pueden escribirse ahí. Propuesta:
 
@@ -307,9 +327,9 @@ Un test recorre el catálogo y falla si una carpeta de datos no tiene su archivo
 
 - Una decisión escrita (ADR) con la opción elegida, la capa viva y el congelado.
 - Catálogo de datos con un archivo por dataset existente (ETFs, macro, ETFs ampliados, factores, acciones y fundamentales de M5) y su test.
-- Job diario de la capa viva y comando de congelado mensual.
-- Un catálogo DuckDB que registre los snapshots y la capa viva, y exponga vistas "punto en el tiempo".
-- Migración de los registros del embudo a Postgres, con un test que compare el resultado con los CSV actuales.
+- Comando de bajada completa y congelado mensual (sin job diario de precios; foto diaria solo para el consenso de EPS).
+- Catálogo DuckDB con vistas "punto en el tiempo", **cuando llegue el universo de acciones**.
+- Migración de los registros del embudo a Postgres **cuando la web la necesite**, con un test que compare contra los CSV actuales.
 - Política de retención: qué snapshots se guardan, cuáles se pueden borrar, y la regla de licencia de Sharadar.
 - Pasar las descargas de acciones que hoy se hacen desde la notebook a este formato, si no coinciden.
 
@@ -347,7 +367,7 @@ Un manual organizado por las preguntas que Fede se hace al revisar, que se lea c
 2. **Glosario** con todos los términos (Sharpe deflactado, reserva, C0, 1/N, sombra, PDT...), en palabras simples y con un ejemplo cada uno.
 3. **El embudo, etapa por etapa:** qué entra, qué se mide, qué criterio hay que pasar y qué decisión lo fijó (con fecha y enlace).
 4. **Criterios vigentes en una tabla corta:** riesgo por operación 0,25 %, tope de posición 10 %, stop por defecto ±2 %, cupo de la reserva, etc. Cada número con la decisión que lo fijó.
-5. **Índice de decisiones:** una línea por decisión de Fede (qué se decidió, cuándo, dónde está el detalle), incluidas las que viven dentro de los planes. Reemplaza tener que buscar en 27 archivos.
+5. **Índice de decisiones:** una línea por decisión de Fede (qué se decidió, cuándo, dónde está el detalle). **Se genera** desde los encabezados de los documentos `-DC-` (título, estado, fecha), igual que la referencia de comandos (revisión, cambio 7); las decisiones que viven en tablas de planes se enlazan a mano. Reemplaza tener que buscar en 27 archivos.
 6. **Referencia de comandos:** cada comando de `python -m quantagent.cli` con para qué sirve y un ejemplo. La parte técnica (opciones, valores por defecto) se **genera automáticamente** del `--help`, para que no se desactualice.
 7. **Operación:** paper (cómo se ve que anda, qué hacer si `reconcile` no coincide), el digest diario, datos locales y sus snapshots.
 8. **Cómo trabajamos:** loop, lotes, revisión del PM, qué revisa Fede.
@@ -409,9 +429,9 @@ La página de datos (catálogo de M-datos) se suma cuando exista el catálogo.
 1. **M-datos (decisión)** antes de L22 de M5. La construcción, en paralelo con L22.
 2. **M-web (solo diseño de pantallas)** en cualquier momento, en paralelo con M5: no toca la cola.
 3. **M-ciclos** después de M5, cuando el generador de L20 y paper estén andando. Es el hito más largo porque incluye tiempo de paper.
-4. **M-cuenta** apenas haya una candidata para probar, y antes de su incubación, para que la incubación ya corra al capital real.
+4. **M-cuenta** adelantado: sobre M4 apenas exista el modo cuenta chica, y sobre M5 antes de decidir el pago de Sharadar (L25).
 5. **M-web (construcción)** cuando M-datos y el registro único del embudo existan.
-6. **Dinero real:** la primera candidata que pase la escalera de incubación y la puerta de cuenta chica, con autorización explícita de Fede.
+6. **Dinero real:** la primera candidata que pase la escalera de incubación y la puerta de cuenta chica, y que le gane a comprar y mantener SPY a USD 2.500, con autorización explícita de Fede.
 
 ```mermaid
 flowchart LR
@@ -419,8 +439,10 @@ flowchart LR
   MD --> MDc[M-datos<br/>construcción]
   WD[M-web<br/>diseño] --> WC[M-web<br/>construcción]
   MDc --> WC
+  M4[M4 paper] --> MK[M-cuenta]
+  MK --> L25[L25 y pago<br/>de Sharadar]
   M5[M5 completo] --> MC[M-ciclos]
-  MC --> MK[M-cuenta]
+  MC --> MK
   MC --> WC
   MK --> LIVE[Dinero real<br/>con OK de Fede]
   MM[M-manual] --> WC
@@ -433,10 +455,10 @@ flowchart LR
 - **C1–C4** (ciclos, decididas), **W1–W2** (web, decididas), **W3** (cuándo arrancan las sesiones de diseño), **D1–D3** (datos, decididas), **U1–U4** (manual, decididas): en cada sección.
 - **K1–K3** (cuenta chica): decididas (2026-10-28): USD 2.500, cuenta cash, costo fiscal con contadora.
 
-Ningún ticket se abre en Beads hasta que Fede apruebe.
+Ningún ticket se abre en Beads hasta que Fede apruebe, salvo el lote del manual (U1), que ya pasó al PM.
 
 ## 8. Propuesta de actualización de README (no aplicada)
 
 - `docs/02_planning/README.md`, sección "Current operating plan": agregar `2026-10-28_roadmap_post_m5.md` — Propuesta de hitos después de M5: ciclos de generación, cuenta chica, app web y almacenamiento de datos.
-- `PLAN-CONTINUACION.md` **no se toca** (Fede, 2026-10-28: ya está muy grande). Queda para L20, L21 y M5 hasta que cierren. Los hitos de este documento van a un plan nuevo, `PLAN-POST-M5.md` en la raíz, que se crea cuando Fede apruebe esta propuesta, con el mismo formato de cola (§4 de `PLAN-CONTINUACION.md`) y una referencia a este documento.
+- `PLAN-CONTINUACION.md` **no se toca** (Fede, 2026-10-28: ya está muy grande). Queda para L20, L21 y M5 hasta que cierren. Los hitos de este documento van a un plan nuevo, `PLAN-POST-M5.md` en la raíz, que se crea cuando Fede apruebe esta propuesta, **corto: una pantalla por hito** (objetivo, punto de control, decisiones tomadas, cola) y una referencia a este documento para el detalle (revisión, cambio 8).
 - `milestone-tracker.md`: actualizar según G1.
