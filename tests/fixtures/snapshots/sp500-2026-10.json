@@ -1,0 +1,23 @@
+{
+  "downloaded_at": "2026-10-28T13:24:29+00:00",
+  "end": "2026-08-18",
+  "files": {
+    "composicion": {
+      "end": "2026-08-18",
+      "file": "composicion.parquet",
+      "rows": 2720,
+      "sha256": "86802cfefe3794a5cbc7bf82592b773b8f5fe918c7f407004257e5e9931b0472",
+      "start": "1996-01-02"
+    },
+    "sp500": {
+      "file": "sp500.parquet",
+      "rows": 503,
+      "sha256": "0c7e23c854af9a6f976f3d556b68eb46008ec0a63ce59ecc3a24beeba0e1b74d"
+    }
+  },
+  "name": "sp500-2026-10",
+  "rows": 2720,
+  "sha": "a2430f2af0c79ddf0748e91de11bdeb1616ab5a7",
+  "source": "fja05680/sp500",
+  "start": "1996-01-02"
+}

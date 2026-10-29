@@ -1,0 +1,72 @@
+ticker,desde,sector_anterior,sector_nuevo
+AIV,2016-09-01,Financials,Real Estate
+AMT,2016-09-01,Financials,Real Estate
+AVB,2016-09-01,Financials,Real Estate
+BXP,2016-09-01,Financials,Real Estate
+CBRE,2016-09-01,Financials,Real Estate
+CCI,2016-09-01,Financials,Real Estate
+DLR,2016-09-01,Financials,Real Estate
+EQIX,2016-09-01,Financials,Real Estate
+EQR,2016-09-01,Financials,Real Estate
+ESS,2016-09-01,Financials,Real Estate
+EXR,2016-09-01,Financials,Real Estate
+FRT,2016-09-01,Financials,Real Estate
+GGP,2016-09-01,Financials,Real Estate
+HCP,2016-09-01,Financials,Real Estate
+HST,2016-09-01,Financials,Real Estate
+IRM,2016-09-01,Financials,Real Estate
+KIM,2016-09-01,Financials,Real Estate
+MAC,2016-09-01,Financials,Real Estate
+O,2016-09-01,Financials,Real Estate
+PLD,2016-09-01,Financials,Real Estate
+PSA,2016-09-01,Financials,Real Estate
+SLG,2016-09-01,Financials,Real Estate
+SPG,2016-09-01,Financials,Real Estate
+UDR,2016-09-01,Financials,Real Estate
+VNO,2016-09-01,Financials,Real Estate
+VTR,2016-09-01,Financials,Real Estate
+WELL,2016-09-01,Financials,Real Estate
+WY,2016-09-01,Financials,Real Estate
+ATVI,2018-09-24,Information Technology,Communication Services
+CBS,2018-09-24,Consumer Discretionary,Communication Services
+CHTR,2018-09-24,Consumer Discretionary,Communication Services
+CMCSA,2018-09-24,Consumer Discretionary,Communication Services
+CTL,2018-09-24,Telecommunication Services,Communication Services
+DIS,2018-09-24,Consumer Discretionary,Communication Services
+DISCA,2018-09-24,Consumer Discretionary,Communication Services
+DISCK,2018-09-24,Consumer Discretionary,Communication Services
+DISH,2018-09-24,Consumer Discretionary,Communication Services
+EA,2018-09-24,Information Technology,Communication Services
+EBAY,2018-09-24,Information Technology,Consumer Discretionary
+FB,2018-09-24,Information Technology,Communication Services
+FOX,2018-09-24,Consumer Discretionary,Communication Services
+FOXA,2018-09-24,Consumer Discretionary,Communication Services
+GOOG,2018-09-24,Information Technology,Communication Services
+GOOGL,2018-09-24,Information Technology,Communication Services
+IPG,2018-09-24,Consumer Discretionary,Communication Services
+META,2018-09-24,Information Technology,Communication Services
+NFLX,2018-09-24,Consumer Discretionary,Communication Services
+NWS,2018-09-24,Consumer Discretionary,Communication Services
+NWSA,2018-09-24,Consumer Discretionary,Communication Services
+OMC,2018-09-24,Consumer Discretionary,Communication Services
+T,2018-09-24,Telecommunication Services,Communication Services
+TMUS,2018-09-24,Telecommunication Services,Communication Services
+TRIP,2018-09-24,Consumer Discretionary,Communication Services
+TTWO,2018-09-24,Information Technology,Communication Services
+TWTR,2018-09-24,Information Technology,Communication Services
+VIAB,2018-09-24,Consumer Discretionary,Communication Services
+VZ,2018-09-24,Telecommunication Services,Communication Services
+ADP,2023-03-17,Information Technology,Industrials
+BR,2023-03-17,Information Technology,Industrials
+DG,2023-03-17,Consumer Discretionary,Consumer Staples
+DLTR,2023-03-17,Consumer Discretionary,Consumer Staples
+FIS,2023-03-17,Information Technology,Financials
+FISV,2023-03-17,Information Technology,Financials
+FLT,2023-03-17,Information Technology,Financials
+GPN,2023-03-17,Information Technology,Financials
+JKHY,2023-03-17,Information Technology,Financials
+MA,2023-03-17,Information Technology,Financials
+PAYX,2023-03-17,Information Technology,Industrials
+PYPL,2023-03-17,Information Technology,Financials
+TGT,2023-03-17,Consumer Discretionary,Consumer Staples
+V,2023-03-17,Information Technology,Financials

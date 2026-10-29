@@ -51,6 +51,8 @@ def write_snapshot(
     source: str = "yahoo",
     timeframe: str = "1d",
     base_dir: Optional[Path] = None,
+    fuentes: Optional[Dict[str, str]] = None,
+    extra: Optional[dict] = None,
 ) -> dict:
     """Escribe un Parquet por símbolo y `manifest.json`. Falla si `name` ya existe."""
     if not frames:
@@ -87,6 +89,9 @@ def write_snapshot(
         "yfinance_version": yf_version,
         "symbols": symbols,
     }
+    if fuentes:
+        manifest["fuentes"] = dict(sorted(fuentes.items()))
+    manifest.update(extra or {})
     (folder / MANIFEST_NAME).write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     return manifest
 
