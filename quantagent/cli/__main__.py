@@ -9,7 +9,7 @@ from .profile import profile_group
 from .reconcile import trading_group
 
 
-@click.group(help="QuantAgent command-line interface.")
+@click.group(help="QuantAgent command-line interface.", epilog="Run 'quantagent COMMAND --help' for command details.")
 def cli() -> None:
     """Top-level CLI group."""
 

@@ -1,0 +1,26 @@
+id: arquetipo-b
+autor: fede
+justificacion: >-
+  Ruptura de rango tras compresion de volatilidad: compresion del ancho de
+  Bandas de Bollinger en el 20% inferior de las ultimas 60 sesiones en favor
+  de la tendencia (EMA 50 > EMA 200). Entrada por ruptura de canal Donchian 20
+  con volumen superior al promedio, stop inicial y salida Chandelier en
+  multiplos de ATR. Parametros fijos por defecto.
+fuente: John Bollinger (2001); Richard Donchian (1960); Charles LeBeau y David Lucas (1999)
+timeframe: 1d
+clase: arquetipo-b
+parametros:
+  bollinger_period: [20]
+  bollinger_k: [2.0]
+  bollinger_lookback: [60]
+  bollinger_quantile: [0.20]
+  ema_fast: [50]
+  ema_slow: [200]
+  donchian_period: [20]
+  volume_period: [20]
+  volume_factor: [1.5]
+  atr_period: [14]
+  stop_atr_mult: [2.5]
+  chandelier_mult: [3.0]
+activos: [XLB, XLE, XLF, XLI, XLK, XLP, XLU, XLV, XLY]
+universo: 9 ETFs sectoriales de EE.UU. del snapshot etf-1d-2026-10-amplio (sin XLC ni XLRE).

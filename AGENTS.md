@@ -72,13 +72,6 @@ Main Python package containing all trading, backtesting, and agent logic.
 
 End-user applications built on top of the core engine.
 
-#### Streamlit App
-- `apps/streamlit/`
-  - `app.py` — Main entry point
-  - `views/` — UI pages (dashboard, backtesting, configuration, replay, etc.)
-  - `services/` — DB and backend services
-  - `utils/` — UI helpers
-
 #### Flask App (legacy / demo)
 - `apps/flask/`
   - `web_interface.py` — Flask demo app
@@ -173,6 +166,18 @@ enters through a PR.
 ---
 
 ## Documentation as a Single System (`docs/`)
+
+### CLI commands and the user manual
+
+Every click command and group must have a help= text: one sentence saying what it does, written for a user. Every option must have a help= text naming its unit and its default when it has one. Add an epilog with at least one example invocation for commands a user runs by hand. Do not document a command only in a docstring or comment: the manual is generated from help, epilog and option metadata. A PR that adds or changes a command must regenerate the command reference and pass the manual coverage test.
+
+### Decisions and criteria
+
+A PR that records a new decision of Fede (a -DC- document or a decision table in a plan) must add one line to the manual's decision index and update the current-criteria table if a number changes.
+
+### Manual review at lote close
+
+Before a `lote/*` PR is marked ready for Fede's review, the PM reviews `docs/manual/` against what the lote changed (new or changed commands, criteria, stages, operating procedures, glossary terms) and fixes or adds the pages that are out of date. The lote PR body has a `Manual:` line that lists the pages reviewed and changed, or says why none was needed. A lote that changes behavior and leaves that line empty is not ready.
 
 The documentation lives in `docs/` folder.
 

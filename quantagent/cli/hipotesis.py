@@ -45,15 +45,15 @@ from quantagent.strategy.registry import STRATEGY_REGISTRY, build_strategy, cli_
 from .sweep import registrar_intento
 
 
-@click.group("hipotesis", help="Evaluar hipótesis de la fábrica de estrategias.")
+@click.group("hipotesis", help="Evaluate strategy factory hypotheses.")
 def hipotesis_group():
     pass
 
 
-@hipotesis_group.command("tanda", help="Procesar los YAML en orden y guardar informes, logs y resumen.")
+@hipotesis_group.command("tanda", help="Process YAML files in order and save reports, logs, and a summary.")
 @click.argument("carpeta_yaml", type=click.Path(exists=True, file_okay=False))
-@click.option("--snapshot", "snapshot_name", required=True)
-@click.option("--carpeta", type=click.Path(file_okay=False), required=True)
+@click.option("--snapshot", "snapshot_name", required=True, help="Snapshot to evaluate against.")
+@click.option("--carpeta", type=click.Path(file_okay=False), required=True, help="Directory for reports and run logs.")
 @click.pass_context
 def tanda_command(ctx, carpeta_yaml, snapshot_name, carpeta):
     desde = datetime.now(timezone.utc)
@@ -89,10 +89,10 @@ def tanda_command(ctx, carpeta_yaml, snapshot_name, carpeta):
     click.echo(f"Tanda terminada: {destino / 'resumen.md'}")
 
 
-@hipotesis_group.command("resumen", help="Resumir los últimos estados y los intentos de la tanda.")
+@hipotesis_group.command("resumen", help="Summarize recent statuses and batch attempts.")
 @click.option("--desde", type=click.DateTime(["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S%z"]),
-              help="Inicio UTC inclusivo (fecha o fecha y hora con zona).")
-@click.option("--out", type=click.Path(dir_okay=False))
+              help="Inclusive UTC start date or timezone-aware datetime.")
+@click.option("--out", type=click.Path(dir_okay=False), help="Write the summary to this file.")
 def resumen_command(desde, out):
     if desde is not None:
         desde = desde.replace(tzinfo=timezone.utc) if desde.tzinfo is None else desde
@@ -102,10 +102,10 @@ def resumen_command(desde, out):
     click.echo(texto, nl=False)
 
 
-@hipotesis_group.command("reserva", help="Simular elegibilidad y rango de la reserva 2023+.")
+@hipotesis_group.command("reserva", help="Check eligibility and date range for the 2023+ reserve period.")
 @click.argument("archivo", type=click.Path(exists=True, dir_okay=False))
-@click.option("--snapshot", "snapshot_name", required=True)
-@click.option("--abrir", "abrir_reserva", is_flag=True, help="Registrar y abrir la reserva una sola vez.")
+@click.option("--snapshot", "snapshot_name", required=True, help="Snapshot used to determine the available date range.")
+@click.option("--abrir", "abrir_reserva", is_flag=True, help="Register and open the reserve period once.")
 def reserva_command(archivo, snapshot_name, abrir_reserva):
     h = cargar_hipotesis(archivo)
     if h.id not in {"cartera-transversal", "rebalanceo-fin-de-mes", "tendencia-larga-corta"}:
@@ -159,9 +159,9 @@ def reserva_command(archivo, snapshot_name, abrir_reserva):
         click.echo(f"Simulacro elegible: {h.id}; reserva {desde} a {hasta}; no se abrió ni leyó.")
 
 
-@hipotesis_group.command("reserva-veredicto", help="Recuperar el veredicto desde las curvas guardadas.")
+@hipotesis_group.command("reserva-veredicto", help="Recover the verdict from saved equity curves.")
 @click.argument("archivo", type=click.Path(exists=True, dir_okay=False))
-@click.option("--snapshot", "snapshot_name", required=True)
+@click.option("--snapshot", "snapshot_name", required=True, help="Snapshot used for the evaluation.")
 def reserva_veredicto_command(archivo, snapshot_name):
     h = cargar_hipotesis(archivo)
     if fecha_apertura(h.id, "reserva") is None:
@@ -320,10 +320,10 @@ def filtrar_hipotesis(h, snapshot_name):
     return resultados, parametros, veredicto, motivo, sharpe_car, total_trades, filas_tabla
 
 
-@hipotesis_group.command("filtrar", help="Cargar y admitir una hipótesis sobre 2007–2018.")
+@hipotesis_group.command("filtrar", help="Load and admit a hypothesis over 2007–2018.")
 @click.argument("archivo", type=click.Path(exists=True, dir_okay=False))
-@click.option("--snapshot", "snapshot_name", required=True)
-@click.option("--out", type=click.Path(dir_okay=False), help="CSV de resultados y parámetros por activo.")
+@click.option("--snapshot", "snapshot_name", required=True, help="Snapshot used for evaluation.")
+@click.option("--out", type=click.Path(dir_okay=False), help="Write results and per-symbol parameters to this CSV.")
 def filtrar_command(archivo, snapshot_name, out):
     h, ok, motivos = admitir_hipotesis(archivo, snapshot_name)
     if not ok:
@@ -367,12 +367,13 @@ def motivo_etapa3_cartera(base, fila):
     return f"{base}; {sufijo}" if base else sufijo
 
 
-@hipotesis_group.command("correr", help="Ejecutar las etapas 0 a 3, con corte temprano y estado.")
+@hipotesis_group.command("correr", help="Run stages 0 through 3 with early stopping and status tracking.")
 @click.argument("archivo", type=click.Path(exists=True, dir_okay=False))
-@click.option("--snapshot", "snapshot_name", required=True)
-@click.option("--carpeta", type=click.Path(file_okay=False), required=True)
+@click.option("--snapshot", "snapshot_name", required=True, help="Snapshot used for evaluation.")
+@click.option("--carpeta", type=click.Path(file_okay=False), required=True, help="Directory for stage outputs.")
 @click.option("--hasta-etapa", type=click.IntRange(0, 3), default=3, show_default=True, expose_value=False,
-              callback=lambda ctx, _p, v: setattr(ctx, "hasta_etapa", v))
+              callback=lambda ctx, _p, v: setattr(ctx, "hasta_etapa", v),
+              help="Stop after this stage (0 through 3).")
 def correr_command(archivo, snapshot_name, carpeta, hasta_etapa=None):
     hasta_etapa = getattr(click.get_current_context(silent=True), "hasta_etapa", 3) if hasta_etapa is None else hasta_etapa
     h, ok, motivos = admitir_hipotesis(archivo, snapshot_name, True)
@@ -442,12 +443,12 @@ def correr_command(archivo, snapshot_name, carpeta, hasta_etapa=None):
     raise click.exceptions.Exit(int(veredicto != "PASA"))
 
 
-@hipotesis_group.command("informe", help="Página HTML con el veredicto y los motivos de una hipótesis.")
+@hipotesis_group.command("informe", help="Generate an HTML page with a hypothesis verdict and its reasons.")
 @click.argument("hipotesis_id")
-@click.option("--out", type=click.Path(dir_okay=False), required=True)
-@click.option("--archivo", type=click.Path(exists=True, dir_okay=False), help="YAML de la hipótesis.")
-@click.option("--carpeta-equity", type=click.Path(file_okay=False), help="Carpeta con curvas equity guardadas.")
-@click.option("--snapshot", "snapshot_name", help="Snapshot usado para reconstruir el benchmark.")
+@click.option("--out", type=click.Path(dir_okay=False), required=True, help="Output HTML file.")
+@click.option("--archivo", type=click.Path(exists=True, dir_okay=False), help="Hypothesis YAML file.")
+@click.option("--carpeta-equity", type=click.Path(file_okay=False), help="Directory containing saved equity curves.")
+@click.option("--snapshot", "snapshot_name", help="Snapshot used to rebuild the benchmark.")
 def informe_command(hipotesis_id, out, archivo, carpeta_equity, snapshot_name):
     try:
         h = cargar_hipotesis(archivo) if archivo else None
@@ -468,8 +469,8 @@ def informe_command(hipotesis_id, out, archivo, carpeta_equity, snapshot_name):
     click.echo(f"Informe en {out}")
 
 
-@hipotesis_group.command("proponer", help="Pedir propuestas al LLM vía QUANTAGENT_LLM_CMD y validarlas.")
-@click.option("--carpeta", type=click.Path(file_okay=False), help="Carpeta donde guardar las propuestas aceptadas.")
+@hipotesis_group.command("proponer", help="Request proposals from the LLM via QUANTAGENT_LLM_CMD and validate them.")
+@click.option("--carpeta", type=click.Path(file_okay=False), help="Directory for accepted proposals.")
 def proponer_command(carpeta):
     try:
         rutas, rechazadas = proponer_con_llm(carpeta=carpeta)
@@ -492,16 +493,16 @@ def _registrar_propuesta(carpeta, prop_id, decision, quien, motivo=""):
     return fecha
 
 
-@hipotesis_group.group("propuestas", help="Revisar propuestas del catálogo (aprobar o rechazar).")
+@hipotesis_group.group("propuestas", help="Review catalog proposals by approving or rejecting them.")
 def propuestas_group():
     pass
 
 
-@propuestas_group.command("aprobar", help="Mover una propuesta de catalogo/propuestas/ a hipotesis/ y registrar el OK.")
+@propuestas_group.command("aprobar", help="Move a proposal from catalog/proposals to hypotheses and record approval.")
 @click.argument("propuesta_id")
-@click.option("--quien", "--autor", "quien", required=True)
-@click.option("--propuestas-dir", type=click.Path(file_okay=False), default=None)
-@click.option("--hipotesis-dir", type=click.Path(file_okay=False), default=None)
+@click.option("--quien", "--autor", "quien", required=True, help="Name of the approver.")
+@click.option("--propuestas-dir", type=click.Path(file_okay=False), default=None, help="Proposal directory (defaults to the catalog directory).")
+@click.option("--hipotesis-dir", type=click.Path(file_okay=False), default=None, help="Hypothesis directory (defaults to the configured directory).")
 def aprobar_command(propuesta_id, quien, propuestas_dir, hipotesis_dir):
     pid, quien = Path(propuesta_id).stem, (quien or "").strip()
     p_dir, h_dir = Path(propuestas_dir or PROPUESTAS_DIR), Path(hipotesis_dir or HIPOTESIS_DIR)
@@ -526,11 +527,11 @@ def aprobar_command(propuesta_id, quien, propuestas_dir, hipotesis_dir):
     click.echo(f"APROBADA {pid}: {destino} (OK de {quien} el {_registrar_propuesta(p_dir, pid, 'APROBADA', quien)})")
 
 
-@propuestas_group.command("rechazar", help="Archivar una propuesta con su motivo.")
+@propuestas_group.command("rechazar", help="Archive a proposal with a reason.")
 @click.argument("propuesta_id")
-@click.option("--motivo", required=True)
-@click.option("--quien", "--autor", "quien", required=True)
-@click.option("--propuestas-dir", type=click.Path(file_okay=False), default=None)
+@click.option("--motivo", required=True, help="Reason for rejection.")
+@click.option("--quien", "--autor", "quien", required=True, help="Name of the reviewer.")
+@click.option("--propuestas-dir", type=click.Path(file_okay=False), default=None, help="Proposal directory (defaults to the catalog directory).")
 def rechazar_command(propuesta_id, motivo, quien, propuestas_dir):
     pid, motivo, quien, p_dir = Path(propuesta_id).stem, (motivo or "").strip(), (quien or "").strip(), Path(propuestas_dir or PROPUESTAS_DIR)
     origen, destino = p_dir / f"{pid}.yaml", p_dir / "rechazadas" / f"{pid}.yaml"
@@ -560,16 +561,16 @@ def correr_cartera(archivo, snapshot_name, desde, hasta, carpeta, abrir_prueba=F
     return h.id, eq
 
 
-@hipotesis_group.command("comparar", help="Comparar una cartera núcleo con la misma más una capa (ΔSharpe, ΔDSR).")
+@hipotesis_group.command("comparar", help="Compare a core portfolio with the same portfolio plus one overlay (ΔSharpe, ΔDSR).")
 @click.argument("nucleo", type=click.Path(exists=True, dir_okay=False))
 @click.argument("con_capa", type=click.Path(exists=True, dir_okay=False))
-@click.option("--snapshot", "snapshot_name", required=True)
-@click.option("--carpeta", type=click.Path(file_okay=False), required=True)
-@click.option("--margen", type=float, required=True, help="ΔDSR mínimo para aceptar la capa; lo fija Fede antes de correr.")
-@click.option("--desde", default="2007-01-01", show_default=True)
-@click.option("--hasta", default="2018-12-31", show_default=True)
-@click.option("--out", type=click.Path(dir_okay=False), help="Informe HTML de la comparación.")
-@click.option("--abrir-prueba", is_flag=True, help="Corre sobre la prueba (desde 2019-01-01) y abre su candado para la cartera con capa; se abre una sola vez.")
+@click.option("--snapshot", "snapshot_name", required=True, help="Snapshot used for evaluation.")
+@click.option("--carpeta", type=click.Path(file_okay=False), required=True, help="Directory for comparison outputs.")
+@click.option("--margen", type=float, required=True, help="Minimum ΔDSR for accepting the overlay; set before running.")
+@click.option("--desde", default="2007-01-01", show_default=True, help="First date in the evaluation period.")
+@click.option("--hasta", default="2018-12-31", show_default=True, help="Last date in the evaluation period.")
+@click.option("--out", type=click.Path(dir_okay=False), help="Write the comparison report to this HTML file.")
+@click.option("--abrir-prueba", is_flag=True, help="Run the test period from 2019-01-01 and open its lock once for the overlaid portfolio.")
 def comparar_command(nucleo, con_capa, snapshot_name, carpeta, margen, desde, hasta, out, abrir_prueba):
     if hasta >= "2019-01-01" and not abrir_prueba:
         raise click.ClickException("La comparación no corre sobre la prueba (desde 2019-01-01) sin --abrir-prueba")

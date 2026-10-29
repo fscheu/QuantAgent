@@ -304,8 +304,10 @@ termina cuando cierra su punto de control.
 3. El PM revisa cada entrega (protocolo abajo), comenta la línea `PM:` y, si decide merge, mergea el PR en la
    rama del lote. La Action `lote-automerge` puede hacer ese merge cuando la línea `PM:` dice `decido: merge`, el CI está verde y la base es `lote/*`; el pase lote → main sigue manual con la `R:` de Fede. Después lanza la siguiente corrida. Tope: 10 entregas por día. La tanda la arranca el aviso del
    cron (§3.5) o un pedido de Fede; el PM frena si la cuota del agente baja del 20% de la ventana de 5 horas.
-4. Cuando no quedan filas elegibles, el PM corre el punto de control sobre la rama del lote, completa el cuerpo
-   del PR del lote y lo marca listo para revisión. Desde ahí el gate espera.
+4. Cuando no quedan filas elegibles, el PM corre el punto de control sobre la rama del lote, **revisa el manual
+   (`docs/manual/`) contra lo que cambió el lote** (qué páginas hay que corregir o agregar; ver
+   [Manual review at lote close](AGENTS.md#manual-review-at-lote-close)), completa el cuerpo del PR del lote y
+   lo marca listo para revisión. Desde ahí el gate espera.
 5. Fede prueba el punto de control, comenta `R: lote-<nombre> vi: <...> decido: merge` y mergea a `main`.
 6. El PM abre el lote siguiente.
 
@@ -323,6 +325,9 @@ es señal de que los tickets están mal definidos, no de que falte velocidad.
    borde, un valor recalculado por otro camino, un test que debería fallar si se rompe la lógica y no falla.
 5. Decidir y comentar la línea `PM:`. En `vi:` va el dato de la comprobación propia del paso 4.
 6. Al cerrar la revisión, agregar la línea a `docs/loop/REVIEW-LOG.md` en la rama del lote (§5.4).
+
+Para cambios de CLI, aplicar también la regla [CLI commands and the user manual](AGENTS.md#cli-commands-and-the-user-manual): help y epilog generan la referencia; regenerarla y pasar el test de cobertura.
+Para decisiones de Fede, aplicar también [Decisions and criteria](AGENTS.md#decisions-and-criteria): sumar la decisión al índice del manual y actualizar criterios cuando cambie un número.
 
 **Revisor mecánico (Codex), desde el 2026-10-11.** Para no gastar el cupo del PM en correr comandos, los pasos 3
 y 4 los puede hacer Codex con `scripts/loop/codex_review.sh` (instalación en `docs/loop/SETUP-HERMES.md`). Codex
@@ -358,6 +363,7 @@ Decidir: <preguntas abiertas con recomendación, o "nada">
 
 Entregas: <ticket> · #<pr> · <una línea: qué cambió y qué comprobó el PM>
 Encontrado en revisión: <lo que el PM rechazó, pidió cambiar o descubrió>
+Manual: <páginas de docs/manual/ revisadas, cuáles se cambiaron o agregaron, o por qué no hacía falta>
 Qué NO se hizo: <lista corta>
 ```
 
@@ -413,6 +419,7 @@ Lotes (definidos por el PM el 2026-10-06; cada uno se abre cuando Fede mergea el
 | L29 | `lote/paper-broker-explicito` | P02 | El ciclo de cartera en paper falla con error claro si `TRADING_BROKER` no está definido, y avisa si se usa el broker simulado de forma explícita. | `QuantAgent-av1p.5.2` (hijo de `QuantAgent-av1p.5`); hallado en el ensayo del 2026-10-27 08:00 UTC; sale de origin/main. |
 | L30 | `lote/paper-rebalanceo-reserva` | P03 | El rebalanceo de la cartera paper deja al menos 5 % del equity en caja; la sombra sigue con los pesos de la estrategia (suman 100 %) y el chequeo e4jc.13 compara sobre lo invertido. | `QuantAgent-av1p.5.3` (hijo de `QuantAgent-av1p.5`); hallado en el ensayo del 2026-10-27 (caja 0,9 %); sale de origin/main; debe estar en main antes del 2026-11-02. |
 | L31 | `lote/intentos-epoca` | I01, I02 | `intentos.csv` admite `estado=invalida_bug` sin borrar filas, el N del DSR cuenta configuraciones distintas entre las válidas y existe la marca de época limpia con comandos para invalidar corridas. | `QuantAgent-1gw0` (hijos .1 y .2); decidido por Fede 2026-10-27; implementa Codex; no pisa L20 ni paper; qué corridas se invalidan y la fecha de la época las confirma Fede. |
+| L32 | `lote/manual` | MAN-01–MAN-08 | `docs/manual/` (inglés) tiene índice, criterios, decisiones, glosario, embudo, operación y referencia de comandos generada desde `click`; el test de cobertura de la CLI pasa; Streamlit y `docs/user-manual/` ya no están en el repo. | `QuantAgent-dpr3` (padre); plan en `docs/02_planning/2026-10-28_roadmap_post_m5.md` §5 (PR #612); decisiones de Fede 2026-10-28 (U1–U4); sale de origin/main; sin tocar paper-ops. |
 
 T13 se adelantó dentro de L1: es un documento de decisión que no depende del resto, así la respuesta de Fede
 llega mientras el lote avanza. T20 pasó a L1 porque congela los números que ese lote audita.
@@ -828,6 +835,40 @@ Los primeros 5 son los más fáciles de revisar.
 | I02b | `QuantAgent-1gw0.2.2` | `invalidar --aplicar` con backup; depende de I02a | Backup idéntico, mismo número/orden de filas; solo cambia estado seleccionado, incluso con encabezado viejo | probar | L31 |
 | I02c | `QuantAgent-1gw0.2.3` | Marca `epoca-limpia`; depende de I02b | JSON con desde_utc/motivo/creada_utc; CSV intacto | probar | L31 |
 | I02d | `QuantAgent-1gw0.2.4` | Época y conteos en informe; depende de I02c | Fixture muestra época y válidos/invalidados; sin marca/estado sigue funcionando | probar | L31 |
+| MAN-01a | `QuantAgent-dpr3.1.1` | Borrar vista Streamlit del manual y su prueba específica | Ambos archivos no existen | probar | L32 |
+| MAN-01b | `QuantAgent-dpr3.1.2` | Borrar vistas Streamlit restantes | No existe `apps/streamlit/views/` | probar | L32 |
+| MAN-01c.1 | `QuantAgent-dpr3.1.3.1` | Borrar entrada y utilidades Streamlit; dejar el servicio hasta retirar sus tests | No existen app.py/utilidades y el test de heartbeats pasa | probar | L32 |
+| MAN-01c.2 | `QuantAgent-dpr3.1.3.2` | Quitar primeras tres pruebas de DbHandle del test mixto | Esos tests no existen y el archivo pasa | probar | L32 |
+| MAN-01c.3 | `QuantAgent-dpr3.1.3.3` | Quitar pruebas DbHandle restantes e import; borrar servicio | No existe apps/streamlit ni quedan imports/tests de esa app; test de heartbeats pasa | probar | L32 |
+| MAN-01d.1 | `QuantAgent-dpr3.1.4.1` | Quitar artefactos Docker QA y dependencia Streamlit | Dockerfile.qa y docker-compose.qa.yml no existen; pyproject.toml no declara Streamlit | probar | L32 |
+| MAN-01d.2 | `QuantAgent-dpr3.1.4.2` | Quitar despliegue QA y healthcheck Streamlit del CI | No hay deploy-qa activo ni referencias activas Streamlit/8501 en el workflow | probar | L32 |
+| MAN-01e | `QuantAgent-dpr3.1.5` | Quitar refs vigentes de README, docs/README e inventario de ramas | Esos tres docs no mencionan Streamlit ni sus rutas/puerto | leer | L32 |
+| MAN-01f | `QuantAgent-dpr3.1.6` | Borrar las nueve páginas de `docs/user-manual/` | No existe `docs/user-manual/` | leer | L32 |
+| MAN-01g | `QuantAgent-dpr3.1.7` | Verificar aceptación final, suite e inventario de excepciones históricas | Escaneo limpio fuera de históricos, suite sin tests Streamlit borrados pasa y CI verde | probar | L32 |
+| MAN-02a | `QuantAgent-dpr3.2.1` | Ayuda inglesa de `backtest.py` (46 declaraciones) | Todos los help/epilog cubiertos están en inglés y no tienen caracteres españoles; tests dirigidos pasan | probar | L32 |
+| MAN-02b | `QuantAgent-dpr3.2.2` | Ayuda inglesa de `hipotesis.py`, `data.py` e `intentos.py` (40 declaraciones) | Todos los help/epilog cubiertos están en inglés y no tienen caracteres españoles; tests dirigidos pasan | probar | L32 |
+| MAN-02c | `QuantAgent-dpr3.2.3` | Resto de ayuda CLI (12 declaraciones) y test global | Todos los comandos/grupos/opciones tienen help no vacío sin caracteres españoles; tests dirigidos pasan | probar | L32 |
+| MAN-02d | `QuantAgent-dpr3.2.4` | Ayuda inglesa de `sweep.py` y `profile.py` (30 declaraciones) | Todos los help/epilog cubiertos están en inglés y no tienen caracteres españoles; tests dirigidos pasan | probar | L32 |
+| MAN-03a | `QuantAgent-dpr3.3.1` | Renderizador determinista de referencia CLI en memoria | Renderiza todos los grupos y opciones sin dependencias nuevas | leer | L32 |
+| MAN-03b | `QuantAgent-dpr3.3.2` | Prueba del renderizador: diferencias, orden estable y help | El test detecta cambios sin regenerar, orden inestable y help faltante | probar | L32 |
+| MAN-03c | `QuantAgent-dpr3.3.3` | Referencia CLI de backtest e hipótesis | Páginas coinciden con el generador y reflejan help/defaults actuales | probar | L32 |
+| MAN-03d | `QuantAgent-dpr3.3.4` | Referencia CLI de trading, data e intentos | Páginas coinciden con el generador y reflejan help/defaults actuales | probar | L32 |
+| MAN-03e | `QuantAgent-dpr3.3.5` | Referencia CLI de walkforward, sweep, verdict y profile | Páginas coinciden con el generador y reflejan help/defaults actuales | probar | L32 |
+| MAN-03f | `QuantAgent-dpr3.3.6` | Índice de referencia CLI con enlaces relativos | README enlaza cada página existente con rutas relativas válidas | leer | L32 |
+| MAN-04 | `QuantAgent-dpr3.4` | Reglas de `AGENTS.md` sobre comandos y decisiones; el contrato de lote las cita | Las dos reglas están en `AGENTS.md` y el contrato de lote las cita | leer | L32 |
+| MAN-05 | `QuantAgent-dpr3.5` | Índice de decisiones y tabla de criterios vigentes en `docs/manual/` | Una línea por documento de `docs/04_decisions/` y por tabla de decisiones de los planes; cada número de criterios enlaza a su decisión | leer | L32 |
+| MAN-06 | `QuantAgent-dpr3.6` | Glosario en `docs/manual/glossary.md` | Cada término de la lista y de los glosarios de los planes tiene definición y ejemplo; los demás documentos enlazan al glosario | leer | L32 |
+| MAN-06a | `QuantAgent-dpr3.6.1` | Glosario y test (roadmap §0/§5, M2 §14, tablero §2/§13; máximo 2 archivos y 100 líneas) | Cada término extraído tiene encabezado, definición y ejemplo; el test detecta omisiones | probar | L32 |
+| MAN-06b | `QuantAgent-dpr3.6.2` | Enlaces al inicio de `criteria.md` y `decisions.md` | Ambas páginas enlazan antes del contenido y las rutas relativas resuelven | leer | L32 |
+| MAN-06c | `QuantAgent-dpr3.6.3` | Enlaces desde páginas CLI de primer nivel, con generador sincronizado | Cada página de primer nivel enlaza al glosario y coincide con el generador | probar | L32 |
+| MAN-06d | `QuantAgent-dpr3.6.4` | Enlaces desde páginas CLI anidadas, con generador sincronizado | Cada página anidada enlaza al glosario y coincide con el generador | probar | L32 |
+| MAN-07 | `QuantAgent-dpr3.7` | El embudo etapa por etapa (depende de MAN-05) | Una sección por etapa con entrada, medida, criterio, comando y decisión de origen | leer | L32 |
+| MAN-08 | `QuantAgent-dpr3.8` | Visión general, operación y cómo trabajamos; `docs/manual/README.md` (depende de MAN-03) | Cada procedimiento de operación tiene el comando exacto y qué salida esperar | leer | L32 |
+| MAN-01h | `QuantAgent-dpr3.9` | Restaurar tests de `get_environment_metrics` (clase `TestGetEnvironmentMetrics`, borrada de más con `test_s62_operational_observability.py`) en `tests/test_llm_telemetry_environment_metrics.py`, copiada de origin/main sin cambios de lógica | Los tests de `get_environment_metrics` pasan y no hay imports de `apps.streamlit` en tests | probar | L32 |
+| MAN-03c.1 | `QuantAgent-dpr3.3.3.10` | Generador: una página por subgrupo de comandos y opción para escribir a disco | El generador separa cada subgrupo en una página y escribe a disco; conserva help y defaults | probar | L32 |
+| MAN-03c.2 | `QuantAgent-dpr3.3.3.11` | Páginas generadas de backtest (tanda 1, ~251 líneas) y de hipótesis básicas (69); tope 350 líneas generadas | Las páginas coinciden con Click | probar | L32 |
+| MAN-03c.3 | `QuantAgent-dpr3.3.3.12` | Páginas generadas de backtest (tanda 2, ~251 líneas) y de propuestas de hipótesis (73); tope 350 | Las páginas coinciden con Click | probar | L32 |
+| MAN-03c.4 | `QuantAgent-dpr3.3.3.13` | Páginas generadas de backtest (tanda 3, ~252 líneas) y de flujo de hipótesis (90); tope 350 | Las páginas coinciden con Click | probar | L32 |
 
 X01–X20 se agregaron el 2026-10-22; X01–X05 y X19a–c pertenecen a L21, X06–X18 y X20 a L20. D-2 se partió en X14a–c, según las decisiones de Fede registradas en `docs/04_decisions/QuantAgent-R01-DC-decisiones-investigacion-edge.md` (PR #400). Paper es prueba de sistema: ningún resultado de paper promueve una estrategia a dinero real ni cuenta como evidencia de edge. Lo que ya cubría L19 (S01–S08: M1–M3, atribución, catálogo, DOI, advertencias y pedido) no se duplica; el rol `diversificador` (C1) queda fuera del pedido y de los campos, y `nb94.1`, `syml` y `55nh` llevan un comentario para que el PM lo revise. Sin ticket por ahora, y registrado en el DC: `cambio-de-mes` y `volatilidad-gestionada` fuera, F3 `carry-futuros` en espera, subastas del Tesoro rechazadas, DBC/USO y retención del 30 % sobre dividendos (se resuelven antes de dinero real; paper sin cambios). Dato para estrategias futuras, no restricción: capital live estimado de USD 1.000–3.000.
 

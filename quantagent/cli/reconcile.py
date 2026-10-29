@@ -46,14 +46,14 @@ def reconcile_positions() -> None:
         click.echo("Sin divergencias: posiciones locales y Alpaca coinciden.")
 
 
-@trading_group.command("digest", help="Mostrar el digest diario de paper trading.")
+@trading_group.command("digest", help="Show the daily paper trading digest.")
 @click.argument("archivo", required=False, type=click.File("r", encoding="utf-8"))
-@click.option("--date", "digest_date", type=click.DateTime(formats=["%Y-%m-%d"]))
-@click.option("--db", type=click.Path(dir_okay=False), help="Archivo SQLite; por defecto usa DATABASE_URL.")
-@click.option("--shadow", type=click.Path(dir_okay=False), help="Archivo JSON de pesos sombra.")
-@click.option("--portfolio", help="Cartera dedicada: posiciones, ejecuciones y valuación actual de Alpaca.")
-@click.option("--dividendos-alpaca", is_flag=True, help="Leer dividendos de Alpaca para esa fecha.")
-@click.option("--sin-dividendos", is_flag=True, help="Desactivar la consulta de dividendos de Alpaca.")
+@click.option("--date", "digest_date", type=click.DateTime(formats=["%Y-%m-%d"]), help="Digest date in YYYY-MM-DD format.")
+@click.option("--db", type=click.Path(dir_okay=False), help="SQLite file; defaults to DATABASE_URL.")
+@click.option("--shadow", type=click.Path(dir_okay=False), help="JSON file with shadow weights.")
+@click.option("--portfolio", help="Dedicated portfolio for positions, executions, and current Alpaca valuation.")
+@click.option("--dividendos-alpaca", is_flag=True, help="Read Alpaca dividends for the selected date.")
+@click.option("--sin-dividendos", is_flag=True, help="Disable the Alpaca dividend query.")
 def trading_digest(archivo, digest_date, db: str | None, shadow: str | None, portfolio: str,
                    dividendos_alpaca: bool, sin_dividendos: bool) -> None:
     if archivo:
