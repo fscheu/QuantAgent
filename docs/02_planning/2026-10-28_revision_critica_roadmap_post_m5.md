@@ -1,6 +1,6 @@
 # Revisión crítica del roadmap después de M5
 
-- **Estado:** revisión para Fede (2026-10-28). No cambia `2026-10-28_roadmap_post_m5.md`; los cambios que propone se aplican allí solo si Fede los acepta.
+- **Estado:** Fede aceptó los 8 cambios de §4 (2026-10-28); ya están aplicados en `2026-10-28_roadmap_post_m5.md`.
 - **Pedido de Fede:** detectar qué del plan puede ser sobreingeniería o un camino improductivo, y qué se puede traer de dos repos públicos: [`virattt/dexter`](https://github.com/virattt/dexter) y [`wshobson/financial-chat`](https://github.com/wshobson/financial-chat).
 - **Cómo se hizo:** los dos repos se clonaron y se leyeron (sin ejecutar nada) en dos análisis en paralelo con un modelo más barato; la revisión del plan la hizo el PM contra el código y las decisiones vigentes.
 
@@ -86,7 +86,7 @@ Para **no** traer: el código (sin licencia, APIs que ya no existen), LangServe,
 
 **Proyecto relacionado que sí vale mirar:** [`wshobson/maverick-mcp`](https://github.com/wshobson/maverick-mcp), del mismo autor, MIT, activo (octubre 2026): un servidor MCP en Python con unas 38 herramientas de mercado sobre yfinance, sin envío de órdenes. Solo se leyó su README. Sirve como referencia de nombres y forma de las herramientas para nuestro servidor MCP, y encaja con la preferencia de Fede por herramientas hechas y gratis. No reemplaza nuestros datos: no tiene control punto en el tiempo.
 
-## 4. Cambios propuestos al roadmap (no aplicados)
+## 4. Cambios al roadmap (aceptados por Fede el 2026-10-28 y aplicados)
 
 1. Escribir en el roadmap que la primera cuenta real es prueba de sistema con dinero, no fuente de ingresos, y sumar la comparación contra comprar y mantener a USD 2.500.
 2. Adelantar M-cuenta: correrla sobre M4 apenas exista y sobre M5 antes de decidir el pago de Sharadar.
