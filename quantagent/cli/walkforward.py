@@ -45,22 +45,22 @@ def preparar_walkforward(
     return combos, meta, config, ventanas
 
 
-@click.command("walkforward", help="Elegir parámetros en ajuste y medir el ganador en la ventana siguiente.")
-@click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="apertura", show_default=True)
-@click.option("--strategy", "strategy_name", required=True)
-@click.option("--symbol", required=True)
-@click.option("--snapshot", "snapshot_name", required=True)
-@click.option("--grid", "grid_path", required=True, type=click.Path(dir_okay=False))
-@click.option("--out", "out_path", required=True, type=click.Path(dir_okay=False, writable=True))
-@click.option("--from", "from_date", type=click.DateTime(formats=["%Y-%m-%d"]))
-@click.option("--to", "to_date", type=click.DateTime(formats=["%Y-%m-%d"]))
-@click.option("--train-years", default=4, type=click.IntRange(min=1))
-@click.option("--test-years", default=2, type=click.IntRange(min=1))
-@click.option("--costos", type=click.Choice(sorted(COSTOS_PERFILES)))
-@click.option("--tamano-posicion", default=1.0, type=click.FloatRange(min=0.0, max=1.0, min_open=True))
-@click.option("--regla-tamano", type=click.Choice(PositionSizer.REGLAS))
-@click.option("--riesgo-por-trade", type=click.FloatRange(min=0.0, min_open=True))
-@click.option("--orden-minima", type=click.FloatRange(min=0.0, min_open=True))
+@click.command("walkforward", help="Select parameters on training data and evaluate the winner on the next window.")
+@click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="apertura", show_default=True, help="Fill orders at the open or close.")
+@click.option("--strategy", "strategy_name", required=True, help="Strategy to evaluate.")
+@click.option("--symbol", required=True, help="Market symbol to evaluate.")
+@click.option("--snapshot", "snapshot_name", required=True, help="Market data snapshot name.")
+@click.option("--grid", "grid_path", required=True, type=click.Path(dir_okay=False), help="Parameter grid YAML file.")
+@click.option("--out", "out_path", required=True, type=click.Path(dir_okay=False, writable=True), help="Output CSV file.")
+@click.option("--from", "from_date", type=click.DateTime(formats=["%Y-%m-%d"]), help="First date in YYYY-MM-DD format.")
+@click.option("--to", "to_date", type=click.DateTime(formats=["%Y-%m-%d"]), help="Last date in YYYY-MM-DD format.")
+@click.option("--train-years", default=4, type=click.IntRange(min=1), help="Training window length in years.")
+@click.option("--test-years", default=2, type=click.IntRange(min=1), help="Test window length in years.")
+@click.option("--costos", type=click.Choice(sorted(COSTOS_PERFILES)), help="Trading cost profile.")
+@click.option("--tamano-posicion", default=1.0, type=click.FloatRange(min=0.0, max=1.0, min_open=True), help="Position size as a fraction of equity.")
+@click.option("--regla-tamano", type=click.Choice(PositionSizer.REGLAS), help="Position sizing rule.")
+@click.option("--riesgo-por-trade", type=click.FloatRange(min=0.0, min_open=True), help="Risk per trade as a fraction of equity.")
+@click.option("--orden-minima", type=click.FloatRange(min=0.0, min_open=True), help="Minimum order value.")
 def walkforward_command(strategy_name, symbol, snapshot_name, grid_path, out_path, llenado, **options):
     from quantagent.backtesting.fixtures import snapshot_metadata
     from quantagent.cli.backtest import _isolated_sqlite_db, correr_par
