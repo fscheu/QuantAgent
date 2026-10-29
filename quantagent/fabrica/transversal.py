@@ -11,6 +11,11 @@ from quantagent.strategy.momentum_12m_strategy import is_last_session_of_month
 # Lo llenan P06 y P07; las clases transversales no son `TradingStrategy`, por eso no van en `registry.py`.
 METRICAS = {}
 
+# Máscaras de elegibilidad que una pierna puede declarar (`elegibilidad:` en la hipótesis): nombre -> función pura
+# del panel de cierres que devuelve un panel bool fecha × activo (True = elegible). Misma regla que `METRICAS`:
+# solo mira filas hasta la fecha de cada fila.
+MASCARAS = {}
+
 # Universo de la pierna de baja volatilidad (P07): los ETFs de acciones del universo amplio. Se define por clase
 # de activo, no por resultados: rankear bonos contra acciones mide otra cosa ("baja volatilidad" sería "bonos").
 # Mismo criterio que `*acciones` de catalogo/primas.yaml; el test lo verifica. Excluye bonos, materias primas,
@@ -70,7 +75,7 @@ def momentum_12m_menos_1m(cierres):
 METRICAS["momentum-transversal"] = momentum_12m_menos_1m
 
 
-def señales_transversales(cierres, metrica, fraccion=1 / 3):
+def señales_transversales(cierres, metrica, fraccion=1 / 3, mascara=None):
     """Panel 0/1 fecha × activo: 1 = el activo está en el tercio superior vigente; se mantiene desde la apertura siguiente.
 
     La decisión se toma solo en la última sesión de cada mes (calendario NYSE). Ese día se ordenan los activos
@@ -81,8 +86,16 @@ def señales_transversales(cierres, metrica, fraccion=1 / 3):
     Límite: el control de la etapa 2 contra `backtesting.py` ejecuta esta misma serie en los dos motores, así que
     NO valida que el ranking esté bien calculado. Eso lo cubren los tests de este módulo (valores conocidos,
     truncamiento sobre el panel y una implementación independiente por bucle).
+
+    `mascara` (opcional, de `MASCARAS`): función pura de los cierres a un panel bool fecha × activo (True = elegible).
+    La métrica se pone en NaN fuera de la máscara antes de rankear (k cuenta solo elegibles) y la señal es 0 en las
+    fechas en que el activo no es elegible, aunque lo haya elegido la última decisión mensual.
     """
     valores = metrica(cierres)
+    elegible = None
+    if mascara is not None:
+        elegible = mascara(cierres).reindex_like(cierres).fillna(False).astype(bool)
+        valores = valores.where(elegible)
     estado = pd.DataFrame(float("nan"), index=cierres.index, columns=cierres.columns)
     for fecha in cierres.index:
         if not is_last_session_of_month(fecha):
@@ -95,4 +108,5 @@ def señales_transversales(cierres, metrica, fraccion=1 / 3):
             elegidos = orden[:k]
         estado.loc[fecha] = 0.0
         estado.loc[fecha, elegidos] = 1.0
-    return estado.ffill().fillna(0.0).astype(int)
+    estado = estado.ffill().fillna(0.0).astype(int)
+    return estado if elegible is None else estado.where(elegible, 0)

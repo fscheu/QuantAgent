@@ -13,7 +13,7 @@ from quantagent.backtesting.verdict import dsr_contra_intentos, evaluar, filas_v
 from quantagent.cli.sweep import registrar_intento
 from quantagent.data.snapshot import snapshot_root
 from quantagent.fabrica.criterio import anios_positivos, evaluar_etapa3_cartera, recargo_paper, sharpe_benchmark
-from quantagent.fabrica.transversal import METRICAS, es_transversal, leer_seleccion, señales_transversales
+from quantagent.fabrica.transversal import MASCARAS, METRICAS, es_transversal, leer_seleccion, señales_transversales
 from quantagent.strategy.registry import STRATEGY_REGISTRY, cli_aliases
 
 SHARPE_MINIMO_FILTRO = 0.10
@@ -84,7 +84,7 @@ def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, a
         if es_transversal(p.clase) and p.clase not in paneles_trans:
             activos = list(p.activos) or [a for c, a in params_por_activo.keys() if c == p.clase] or list(params_por_activo.keys())
             cierres = pd.DataFrame({a: snap_mod.read_snapshot(snapshot, a)["close"].loc[:hasta] for a in activos})
-            paneles_trans[p.clase] = señales_transversales(cierres, METRICAS[p.clase])
+            paneles_trans[p.clase] = señales_transversales(cierres, METRICAS[p.clase], mascara=MASCARAS.get(p.elegibilidad))
             for a in activos:
                 pd.DataFrame({"timestamp": cierres.index, "posicion": paneles_trans[p.clase][a].values}).to_csv(
                     carpeta / f"senal-{p.clase}-{a}.csv", index=False)
