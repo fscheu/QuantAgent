@@ -18,11 +18,12 @@ def should_exit_at_close(
     elif current_price >= float(position.stop_loss):
         return (True, STOP_LOSS)
 
-    if position.side == OrderSide.BUY:
-        if current_price >= float(position.take_profit):
+    if position.take_profit is not None and float(position.take_profit) > 0:
+        if position.side == OrderSide.BUY:
+            if current_price >= float(position.take_profit):
+                return (True, TAKE_PROFIT)
+        elif current_price <= float(position.take_profit):
             return (True, TAKE_PROFIT)
-    elif current_price <= float(position.take_profit):
-        return (True, TAKE_PROFIT)
 
     if position.exit_policy == ExitPolicy.TRAILING_STOP and check_trailing_stop(
         position, current_price

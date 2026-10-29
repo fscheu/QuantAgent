@@ -7,7 +7,6 @@ import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from apps.streamlit.services.db import DbHandle
 from quantagent.models import (
     ActivePosition,
     Environment,
@@ -173,74 +172,6 @@ def test_analyze_and_trade_continues_when_heartbeat_start_fails():
         assert scheduler._upsert_heartbeat_complete.call_args.args[0] is None
 
 
-def test_db_handle_returns_latest_heartbeat_dict():
-    SessionLocal = _make_session(
-        ["signals", "orders", "trades", "scheduler_heartbeats", "active_positions"]
-    )
-    started = datetime.utcnow() - timedelta(minutes=10)
-    completed = datetime.utcnow() - timedelta(minutes=9)
-    with SessionLocal() as session:
-        session.add(
-            SchedulerHeartbeat(
-                timestamp=started,
-                completed_at=completed,
-                status="completed",
-                environment=Environment.PAPER,
-                assets=["BTC"],
-                stats={"processed": 1, "errors": 0, "duration_seconds": 60.0, "total": 1},
-                last_trade_id=7,
-            )
-        )
-        session.commit()
-
-    db = DbHandle(ok=True, error=None, SessionLocal=SessionLocal)
-    heartbeat = db.get_latest_heartbeat("paper")
-
-    assert heartbeat is not None
-    assert heartbeat["status"] == "completed"
-    assert heartbeat["environment"] == "paper"
-    assert heartbeat["assets"] == ["BTC"]
-    assert heartbeat["stats"]["processed"] == 1
-    assert heartbeat["last_trade_id"] == 7
-
-
-def test_db_handle_recent_heartbeats_are_limited_and_sorted_desc():
-    SessionLocal = _make_session(
-        ["signals", "orders", "trades", "scheduler_heartbeats", "active_positions"]
-    )
-    base = datetime.utcnow()
-    with SessionLocal() as session:
-        session.add_all(
-            [
-                SchedulerHeartbeat(
-                    timestamp=base - timedelta(minutes=offset),
-                    completed_at=base - timedelta(minutes=offset - 1),
-                    status="completed",
-                    environment=Environment.PAPER,
-                    assets=["BTC"],
-                    stats={"processed": 1, "errors": 0, "duration_seconds": 5.0, "total": 1},
-                )
-                for offset in range(12)
-            ]
-        )
-        session.commit()
-
-    db = DbHandle(ok=True, error=None, SessionLocal=SessionLocal)
-    recent = db.get_recent_heartbeats("paper", limit=10)
-
-    assert len(recent) == 10
-    timestamps = [item["timestamp"] for item in recent]
-    assert timestamps == sorted(timestamps, reverse=True)
-
-
-def test_db_handle_missing_heartbeat_table_fails_closed():
-    SessionLocal = _make_session(["signals", "orders", "trades"])
-    db = DbHandle(ok=True, error=None, SessionLocal=SessionLocal)
-
-    assert db.get_latest_heartbeat("paper") is None
-    assert db.get_recent_heartbeats("paper", limit=10) == []
-
-
 # ---------------------------------------------------------------------------
 # Additional coverage: full cycle integration + edge cases
 # ---------------------------------------------------------------------------
@@ -280,32 +211,3 @@ def test_analyze_and_trade_per_asset_error_completes_heartbeat_with_error_count(
         assert hb.status == "completed"
         assert stats["errors"] == 1
         assert stats["processed"] == 0
-
-
-def test_db_handle_returns_none_for_different_environment():
-    """Edge Case 3: 'paper' heartbeat is not returned when querying 'backtest'."""
-    SessionLocal = _make_session(
-        ["signals", "orders", "trades", "scheduler_heartbeats", "active_positions"]
-    )
-    with SessionLocal() as session:
-        session.add(
-            SchedulerHeartbeat(
-                timestamp=datetime.utcnow() - timedelta(minutes=5),
-                status="completed",
-                environment=Environment.PAPER,
-                assets=["BTC"],
-                stats={"processed": 1, "errors": 0, "duration_seconds": 1.0, "total": 1},
-            )
-        )
-        session.commit()
-
-    db = DbHandle(ok=True, error=None, SessionLocal=SessionLocal)
-    assert db.get_latest_heartbeat("backtest") is None
-    assert db.get_recent_heartbeats("backtest", limit=10) == []
-
-
-def test_db_handle_ok_false_short_circuits_queries():
-    """DbHandle.ok=False short-circuits without touching the DB."""
-    db = DbHandle(ok=False, error="DB unavailable", SessionLocal=None)
-    assert db.get_latest_heartbeat("paper") is None
-    assert db.get_recent_heartbeats("paper", limit=10) == []

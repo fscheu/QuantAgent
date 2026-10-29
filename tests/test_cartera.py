@@ -2,7 +2,14 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from quantagent.fabrica.cartera import combinar, curva_cartera, evaluar_cartera, pesos, pesos_objetivo
+from quantagent.fabrica.cartera import (
+    combinar,
+    curva_cartera,
+    evaluar_cartera,
+    pesos,
+    pesos_f1,
+    pesos_objetivo,
+)
 
 PIERNAS = {"p1": ["A", "B"], "p2": ["C"]}
 
@@ -68,6 +75,26 @@ def test_pesos_solo_cambian_primera_sesion_del_mes():
 def test_antes_de_ventana_pesan_por_igual():
     w = pesos(_cierres(), PIERNAS, ventana=60).iloc[0]
     assert w[("p1", "A")] == w[("p1", "B")] == pytest.approx(0.25)
+
+
+def test_f1_usa_desvio_60_40_en_los_ultimos_cinco_cierres():
+    idx = pd.bdate_range("2024-01-31", periods=7)
+    cierres = pd.DataFrame({"SPY": [100, 90, 110, 100, 100, 100, 100], "IEF": [100] * 7}, index=idx)
+    w = pesos_f1(cierres)
+    assert tuple(w.loc[idx[1]]) == (0.5, 0.5)  # fuera de los últimos cinco
+    assert tuple(w.loc[idx[2]]) == (1.0, 0.0)  # SPY bajo 60 % al cierre previo
+    cierres.loc[idx[2], "SPY"] = 110
+    assert tuple(pesos_f1(cierres).loc[idx[3]]) == (0.0, 1.0)
+    cierres.loc[idx[2], "SPY"] = 100
+    assert tuple(pesos_f1(cierres).loc[idx[3]]) == (0.5, 0.5)  # exactamente 60 %
+
+
+def test_f1_no_consulta_cierres_posteriores_a_la_decision():
+    cierres = pd.DataFrame({"SPY": [100, 90, 110, 100, 100, 100, 100], "IEF": [100] * 7}, index=pd.bdate_range("2024-01-31", periods=7))
+    fecha = cierres.index[3]
+    alterados = cierres.copy()
+    alterados.loc[alterados.index > fecha] *= 3
+    pd.testing.assert_series_equal(pesos_f1(cierres).loc[fecha], pesos_f1(alterados).loc[fecha])
 
 
 def _seleccion(cierres, elegidos_por_mes):

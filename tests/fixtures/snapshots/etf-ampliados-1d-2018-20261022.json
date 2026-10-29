@@ -1,0 +1,86 @@
+{
+  "downloaded_at": "2026-10-22T21:12:02+00:00",
+  "name": "etf-ampliados-1d-2018-20261022",
+  "source": "yahoo",
+  "symbols": {
+    "BWX": {
+      "end": "2018-12-31",
+      "file": "BWX.parquet",
+      "rows": 2825,
+      "sha256": "9b76c4f366391f4767e770bed998deb65e9f848f92be6197f58fd76948b61b38",
+      "start": "2007-10-11"
+    },
+    "EMB": {
+      "end": "2018-12-31",
+      "file": "EMB.parquet",
+      "rows": 2777,
+      "sha256": "b2342fd132a65ca65087f12a94d82cd60e30855d3a2d2df903b75169eda2b818",
+      "start": "2007-12-19"
+    },
+    "EWA": {
+      "end": "2018-12-31",
+      "file": "EWA.parquet",
+      "rows": 3020,
+      "sha256": "55e218d42df2a5dfedc34e51de85376262b6288cb63f8672cd31c93f69823e90",
+      "start": "2007-01-03"
+    },
+    "FXA": {
+      "end": "2018-12-31",
+      "file": "FXA.parquet",
+      "rows": 3020,
+      "sha256": "8d9196c28446c7e74ec4fac1ac7a700730948f1d9448c7bae5d05791d944266e",
+      "start": "2007-01-03"
+    },
+    "FXB": {
+      "end": "2018-12-31",
+      "file": "FXB.parquet",
+      "rows": 3020,
+      "sha256": "f54c136ff713d7a466eecaa6df85dd308661d64b42a90c7c46d128a40e573c01",
+      "start": "2007-01-03"
+    },
+    "FXC": {
+      "end": "2018-12-31",
+      "file": "FXC.parquet",
+      "rows": 3020,
+      "sha256": "483305694287ba738e815e5ad1b0e582258159ebfc4789bf7d4c8ac8462df6ce",
+      "start": "2007-01-03"
+    },
+    "FXY": {
+      "end": "2018-12-31",
+      "file": "FXY.parquet",
+      "rows": 2992,
+      "sha256": "8561118f1f5e45a6ec5445957f0e61092432a45a48fc1685fab4520285a38611",
+      "start": "2007-02-13"
+    },
+    "HYG": {
+      "end": "2018-12-31",
+      "file": "HYG.parquet",
+      "rows": 2953,
+      "sha256": "e2ebc04bf11aa5398fa529d217e8968041797184b3a82f80b4e328ee557028ec",
+      "start": "2007-04-11"
+    },
+    "LQD": {
+      "end": "2018-12-31",
+      "file": "LQD.parquet",
+      "rows": 3020,
+      "sha256": "a097f874e2a64237219c9aa91c2b219372602f18820d657b6f889ad700ac3a2c",
+      "start": "2007-01-03"
+    },
+    "PSQ": {
+      "end": "2018-12-31",
+      "file": "PSQ.parquet",
+      "rows": 3020,
+      "sha256": "599aacc15b3624319799ce8a9064faddb5e68ed4220e35a25fc104e594bf10f4",
+      "start": "2007-01-03"
+    },
+    "SH": {
+      "end": "2018-12-31",
+      "file": "SH.parquet",
+      "rows": 3020,
+      "sha256": "ab7cd145623eab8043b0eb01dbd2c28aacf705fd25d7731704dfbf9ddfa9512b",
+      "start": "2007-01-03"
+    }
+  },
+  "timeframe": "1d",
+  "yfinance_version": "1.7.0"
+}

@@ -27,5 +27,7 @@ def rebalancear(
     portfolio = order_manager.portfolio
     value = portfolio.get_total_value()
     guardar_sombra(archivo_sombra, cartera, fecha or date.today(), pesos, value)
-    orders = ordenes_rebalanceo(pesos, portfolio.positions, precios, value)
+    reserve = order_manager.cash_reserve_pct
+    investable_value = value * (1 - reserve)
+    orders = ordenes_rebalanceo(pesos, portfolio.positions, precios, investable_value)
     return [order_manager.execute_rebalance_order(*order) for order in orders]

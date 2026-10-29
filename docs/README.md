@@ -83,12 +83,9 @@ Welcome! This folder contains all documentation for transforming QuantAgent into
 **Purpose**: Architecture decision records
 
 - **[ui_framework_decision.md](04_decisions/ui_framework_decision.md)**
-  - Why Streamlit for MVP
-  - Why FastAPI+Angular for Phase 2
-  - Hybrid migration strategy
-  - Code examples
+  - Historical UI framework decision
 
-Note on UI: Current UI in this repo is Flask (`apps/flask/web_interface.py`). Streamlit dashboard is proposed for MVP and is marked as Planned in the UI document.
+Current UI in this repo is Flask (`apps/flask/web_interface.py`).
 
 Language: Documentation is bilingual (English/Spanish). Dev tools and workflow guides are in Spanish; most architecture and planning docs are in English.
 
@@ -104,7 +101,7 @@ Language: Documentation is bilingual (English/Spanish). Dev tools and workflow g
 | **MVP Scope** | Paper trading + Backtesting | Validate before execution |
 | **Future Agents** | Macro agents in Phase 2 | Don't overcomplicate MVP |
 | **Docker** | Lightweight setup | Portability + corporate friendly |
-| **UI Framework** | Streamlit → FastAPI+Angular | Fast MVP, professional Phase 2 |
+| **UI Framework** | Flask | Current web interface |
 
 ---
 
@@ -116,7 +113,7 @@ Phase 1: MVP Paper Trading (8-10 weeks)
 ├─ Week 3-4:  Portfolio + Risk Management
 ├─ Week 5-6:  Paper Broker + Order Execution
 ├─ Week 7-8:  Backtesting + Data Caching
-└─ Week 9-10: Streamlit Dashboard + Integration
+└─ Week 9-10: Dashboard + Integration
 
 Phase 2: Production Ready (8-10 weeks, after MVP validation)
 ├─ Week 1-2:  Real Broker Integration

@@ -1,4 +1,5 @@
 import csv
+import json
 from pathlib import Path
 
 import pytest
@@ -55,6 +56,47 @@ def test_corte_en_etapa_3_usa_solo_activos_de_esa_etapa(raiz):
 def test_hipotesis_desconocida_falla(raiz):
     r, out = informe(raiz, "nada")
     assert r.exit_code != 0 and "desconocida" in r.output and not out.exists()
+
+
+@pytest.mark.parametrize("con_estado", [False, True])
+@pytest.mark.parametrize("con_epoca", [False, True])
+def test_informe_epoca_y_conteos_globales_sin_modificar_registros(raiz, con_estado, con_epoca):
+    from quantagent.fabrica.informe import datos_informe
+
+    path = raiz / "intentos.csv"
+    campos = CAMPOS_INTENTOS if con_estado else CAMPOS_INTENTOS[:-1]
+    with path.open("w", newline="", encoding="utf-8") as archivo:
+        writer = csv.DictWriter(archivo, fieldnames=campos, restval="")
+        writer.writeheader()
+        for hid, snapshot, estado in (("h-corta1", "real", ""), ("otra", "real", ""),
+                                       ("otra", "real", "invalida_bug"),
+                                       ("otra", "sintetico", "")):
+            fila = {"hipotesis": hid, "etapa": "1", "activo": "SPY", "snapshot": snapshot}
+            if con_estado:
+                fila["estado"] = estado
+            writer.writerow(fila)
+    marca = raiz / "epoca_limpia.json"
+    epoca = {"desde_utc": "2026-10-27T00:00:00+00:00", "motivo": '<script>bug & "arreglo"</script>',
+             "creada_utc": "2026-10-28T00:00:00+00:00"}
+    if con_epoca:
+        marca.write_text(json.dumps(epoca), encoding="utf-8")
+    antes = {p: p.read_bytes() for p in (path, marca) if p.exists()}
+    datos = datos_informe("h-corta1")
+    assert datos["intentos_validos"] == (2 if con_estado else 3)
+    assert datos["intentos_invalidados"] == (1 if con_estado else 0)
+    assert datos["epoca_limpia"] == (epoca if con_epoca else None)
+    assert datos["n_total"] == 4 and datos["dsr"] == "no evaluado"
+    resultado, out = informe(raiz, "h-corta1")
+    assert resultado.exit_code == 0, resultado.output
+    html = out.read_text()
+    assert f"Registro global de intentos: {2 if con_estado else 3} válidos; {1 if con_estado else 0} invalidados por bug" in html
+    if con_epoca:
+        assert epoca["desde_utc"] in html
+        assert "&lt;script&gt;bug &amp; &quot;arreglo&quot;&lt;/script&gt;" in html
+        assert epoca["motivo"] not in html
+    else:
+        assert "Época limpia: no definida" in html and not marca.exists()
+    assert {p: p.read_bytes() for p in antes} == antes
 
 
 @pytest.mark.parametrize("hid", ["cartera-tendencia-momentum", "cartera-transversal",

@@ -3,13 +3,13 @@ import csv
 from pathlib import Path
 
 from quantagent.backtesting.vbt_filter import equity_metrics
-from quantagent.backtesting.verdict import dsr_contra_intentos
+from quantagent.backtesting.verdict import dsr_contra_intentos, filas_validas
 from quantagent.fabrica.criterio import anios_positivos, error_estandar_delta_sharpe
 
 
 def _n_intentos(intentos_path):
     with Path(intentos_path).open(newline="", encoding="utf-8") as f:
-        return sum(1 for _ in csv.DictReader(f))
+        return len(filas_validas(csv.DictReader(f)))
 
 
 def comparar(eq_nucleo, eq_capa, intentos_path, margen):

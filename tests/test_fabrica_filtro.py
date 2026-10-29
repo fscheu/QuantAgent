@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 from quantagent.fabrica import filtro
+from quantagent.fabrica.cartera import curva_cartera, pesos, pesos_f1
 from quantagent.fabrica.hipotesis import Hipotesis
 
 COSTOS = {"commission_pct": 0.0, "slippage_pct": 0.0}
@@ -105,3 +106,70 @@ def test_filtrar_activo_soporta_pierna_sin_timeframe(espia):
 
     r = filtro.filtrar_activo(FakePierna(), _velas(), costos=COSTOS, capital=10_000.0, train_years=3, test_years=1)
     assert r["trades"] > 0
+
+
+def test_tsmom_largo_corto_llega_a_filtro_y_cartera(monkeypatch):
+    import pandas_market_calendars as mcal
+
+    consultas = []
+
+    def tasa_vintage(snapshot, serie, fecha):
+        consultas.append((snapshot, serie, pd.Timestamp(fecha)))
+        return pd.Timestamp(fecha), 3.0
+
+    monkeypatch.setattr("quantagent.strategy.tsmom_largo_corto_strategy.valor_conocido", tasa_vintage)
+    fechas = mcal.get_calendar("NYSE").valid_days("2007-01-01", "2020-12-31").tz_localize(None)
+    n = len(fechas)
+    datos = {}
+    retornos = {}
+    for activo, direccion, amplitud in (("DOWN", -1, 0.01), ("UP", 1, 0.03)):
+        consultas.clear()
+        x = np.arange(n)
+        close = 100 * (1 + direccion * 0.0003) ** x * (1 + amplitud * np.sin(x / 7))
+        velas = pd.DataFrame({"timestamp": fechas, "open": close, "high": close, "low": close,
+                              "close": close, "volume": 1.0})
+        h = Hipotesis(id="f2-test", autor="test", justificacion="sintético", clase="tsmom-largo-corto",
+                      parametros={"snapshot": ["macro-test"]}, activos=(activo,))
+        estrategia = filtro.build_strategy("TsmomLargoCortoStrategy", snapshot="macro-test")
+        señales = filtro.bar_signals(estrategia, velas, activo, "1d")
+        indices = np.flatnonzero(señales["entry"].to_numpy())
+        esperado = -1 if direccion < 0 else 1
+        assert set(señales.loc[señales["entry"] != 0, "entry"]) == {esperado}
+        assert consultas == [("macro-test", "DGS3MO", fechas[i - 252]) for i in indices]
+        consultas.clear()
+        r = filtro.filtrar_activo(h, velas, costos=COSTOS, capital=100_000.0)
+        assert r["trades"] > 0 and r["retornos"].mean() > 0
+        if direccion > 0:
+            long_only = filtro.build_strategy("Momentum12mStrategy")
+            señales_largas = filtro.bar_signals(long_only, velas, activo, "1d")
+            assert set(señales_largas.loc[señales_largas["entry"] != 0, "entry"]) == {1}
+        datos[activo] = pd.Series(close, index=fechas)
+        retornos[(0, activo)] = r["retornos"]
+
+    cierres = pd.DataFrame(datos)
+    w = pesos(cierres, {0: ["DOWN", "UP"]})
+    assert w.iloc[-1][(0, "DOWN")] > w.iloc[-1][(0, "UP")]
+    equity = curva_cartera(cierres, {0: ["DOWN", "UP"]}, retornos)
+    assert equity.iloc[-1] > 100_000.0
+
+
+def test_pesos_f1_tiene_rebalances_que_el_conteo_de_senales_ignora():
+    fechas = pd.bdate_range("2007-01-01", "2018-12-31")
+    x = np.arange(len(fechas))
+    cierres = pd.DataFrame({"SPY": 100 * np.exp(x * 0.0002 + 0.03 * np.sin(x / 18)),
+                            "IEF": 100 * np.exp(x * 0.0001 - 0.02 * np.sin(x / 18))}, index=fechas)
+    cambios = pesos_f1(cierres).diff().fillna(0)
+    fechas_con_cambio = int(cambios.abs().sum(axis=1).gt(0).sum())
+    ordenes_objetivo = int(cambios.ne(0).sum().sum())
+    r = filtro.filtrar_activo(
+        Hipotesis(id="f1-test", autor="test", justificacion="sintético", clase="rebalanceo-fin-de-mes",
+                  activos=("SPY", "IEF")),
+        pd.DataFrame({"timestamp": fechas, "open": cierres["SPY"], "high": cierres["SPY"],
+                      "low": cierres["SPY"], "close": cierres["SPY"], "volume": 1.0}),
+        costos=COSTOS, capital=100_000.0, panel_cierres=cierres,
+    )
+    assert fechas_con_cambio == 288
+    assert ordenes_objetivo == 576
+    assert set(r["por_activo"]) == {"SPY", "IEF"}
+    assert all(x["trades"] > 0 and x["retornos"].notna().all() and x["sharpe_tasa_0"] != 0
+               for x in r["por_activo"].values())

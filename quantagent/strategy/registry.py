@@ -2,20 +2,33 @@
 
 from typing import Any
 
+from .arquetipo_a_strategy import ArquetipoAStrategy
+from .arquetipo_b_strategy import ArquetipoBStrategy
 from .base import TradingStrategy
 from .curva_pendiente_strategy import CurvaPendienteStrategy
 from .fifty_two_week_high_strategy import FiftyTwoWeekHighStrategy
 from .halloween_strategy import HalloweenStrategy
-from .turn_of_the_month_strategy import TurnOfTheMonthStrategy
 from .llm_agent_strategy import LLMAgentStrategy
 from .momentum_12m_strategy import Momentum12mStrategy
+from .rebalanceo_fin_de_mes_strategy import RebalanceoFinDeMesStrategy
 from .rsi_regimen_strategy import RsiRegimenStrategy
 from .rsi_strategy import RSIMeanReversionStrategy
 from .senal_externa_strategy import SenalExterna
 from .sma_cross_strategy import SmaCrossStrategy
 from .triple_screen_strategy import TripleScreenStrategy
+from .tsmom_largo_corto_strategy import TsmomLargoCortoStrategy
+from .turn_of_the_month_strategy import TurnOfTheMonthStrategy
 
 STRATEGY_REGISTRY: dict[str, dict[str, Any]] = {
+    "TsmomLargoCortoStrategy": {
+        "cls": TsmomLargoCortoStrategy,
+        "type": "deterministic",
+        "cli_alias": "tsmom-largo-corto",
+        "display_name": TsmomLargoCortoStrategy.describe()["display_name"],
+        "description": TsmomLargoCortoStrategy.describe()["description"],
+        "min_bars": 253,
+        "params": {"snapshot": {"type": str, "default": None, "description": "Macro snapshot name."}},
+    },
     "RSIMeanReversionStrategy": {
         "cls": RSIMeanReversionStrategy,
         "type": "deterministic",
@@ -161,6 +174,55 @@ STRATEGY_REGISTRY: dict[str, dict[str, Any]] = {
             },
         },
     },
+    "ArquetipoAStrategy": {
+        "cls": ArquetipoAStrategy,
+        "type": "deterministic",
+        "cli_alias": "arquetipo-a",
+        "display_name": ArquetipoAStrategy.describe()["display_name"],
+        "description": ArquetipoAStrategy.describe()["description"],
+        "min_bars": 185,
+        "params": {
+            "weekly_bars": {"type": int, "default": 5, "description": "Bars per higher timeframe bar."},
+            "trend_ema_period": {"type": int, "default": 26, "description": "Weekly EMA trend period."},
+            "macd_fast": {"type": int, "default": 12, "description": "Weekly MACD fast period."},
+            "macd_slow": {"type": int, "default": 26, "description": "Weekly MACD slow period."},
+            "macd_signal": {"type": int, "default": 9, "description": "Weekly MACD signal period."},
+            "force_index_period": {"type": int, "default": 2, "description": "Force Index period."},
+            "rsi_period": {"type": int, "default": 3, "description": "RSI period."},
+            "rsi_oversold": {"type": float, "default": 30.0, "description": "RSI oversold threshold."},
+            "ema_trend_period": {"type": int, "default": 22, "description": "Daily EMA trend period."},
+            "entry_atr_mult": {"type": float, "default": 0.1, "description": "ATR multiple for buy stop."},
+            "entry_expiry_bars": {"type": int, "default": 3, "description": "Expiry bars for buy stop."},
+            "atr_period": {"type": int, "default": 14, "description": "ATR period."},
+            "swing_window": {"type": int, "default": 5, "description": "Lookback for swing low."},
+            "swing_atr_mult": {"type": float, "default": 2.0, "description": "ATR multiple below swing low."},
+            "safezone_period": {"type": int, "default": 10, "description": "SafeZone period."},
+            "safezone_coef": {"type": float, "default": 2.0, "description": "SafeZone coefficient."},
+            "chandelier_mult": {"type": float, "default": 3.0, "description": "ATR multiple for Chandelier exit."},
+        },
+    },
+    "ArquetipoBStrategy": {
+        "cls": ArquetipoBStrategy,
+        "type": "deterministic",
+        "cli_alias": "arquetipo-b",
+        "display_name": ArquetipoBStrategy.describe()["display_name"],
+        "description": ArquetipoBStrategy.describe()["description"],
+        "min_bars": 201,
+        "params": {
+            "bollinger_period": {"type": int, "default": 20, "description": "Período del ancho de Bollinger."},
+            "bollinger_k": {"type": float, "default": 2.0, "description": "Multiplicador k de Bollinger."},
+            "bollinger_lookback": {"type": int, "default": 60, "description": "Ventana de sesiones para compresión de Bollinger."},
+            "bollinger_quantile": {"type": float, "default": 0.20, "description": "Percentil para compresión de Bollinger."},
+            "ema_fast": {"type": int, "default": 50, "description": "Período EMA rápida."},
+            "ema_slow": {"type": int, "default": 200, "description": "Período EMA lenta."},
+            "donchian_period": {"type": int, "default": 20, "description": "Período Donchian."},
+            "volume_period": {"type": int, "default": 20, "description": "Período volumen promedio."},
+            "volume_factor": {"type": float, "default": 1.5, "description": "Factor multiplicador de volumen."},
+            "atr_period": {"type": int, "default": 14, "description": "Período ATR."},
+            "stop_atr_mult": {"type": float, "default": 2.5, "description": "Múltiplo ATR stop inicial."},
+            "chandelier_mult": {"type": float, "default": 3.0, "description": "Múltiplo ATR Chandelier exit."},
+        },
+    },
     "SmaCrossStrategy": {
         "cls": SmaCrossStrategy,
         "type": "deterministic",
@@ -199,6 +261,7 @@ STRATEGY_REGISTRY: dict[str, dict[str, Any]] = {
     "HalloweenStrategy": {"cls": HalloweenStrategy, "type": "deterministic", "cli_alias": "halloween", "display_name": HalloweenStrategy.describe()["display_name"], "description": HalloweenStrategy.describe()["description"], "min_bars": 1, "params": {}},
     "TurnOfTheMonthStrategy": {"cls": TurnOfTheMonthStrategy, "type": "deterministic", "cli_alias": "turn-of-the-month", "display_name": TurnOfTheMonthStrategy.describe()["display_name"], "description": TurnOfTheMonthStrategy.describe()["description"], "min_bars": 1, "params": {}},
     "SenalExterna": {"cls": SenalExterna, "type": "deterministic", "cli_alias": "senal-externa", "display_name": SenalExterna.describe()["display_name"], "description": SenalExterna.describe()["description"], "min_bars": 1, "params": {"ruta": {"type": str, "default": "", "description": "Ruta al CSV con timestamp, posicion."}}},
+    "RebalanceoFinDeMesStrategy": {"cls": RebalanceoFinDeMesStrategy, "type": "deterministic", "cli_alias": "rebalanceo-fin-de-mes", "display_name": RebalanceoFinDeMesStrategy.describe()["display_name"], "description": RebalanceoFinDeMesStrategy.describe()["description"], "min_bars": 1, "params": {}},
     "LLMAgentStrategy": {
         "cls": LLMAgentStrategy,
         "type": "llm",
@@ -222,6 +285,7 @@ def get_strategy_names() -> list[str]:
 
 def build_strategy(name: str, **kwargs: Any) -> TradingStrategy:
     """Instantiate a registered strategy with optional constructor params."""
+    name = cli_aliases().get(name, name)
     return STRATEGY_REGISTRY[name]["cls"](**kwargs)
 
 

@@ -96,6 +96,10 @@ def test_alias_actuales_del_cli():
         "halloween": "HalloweenStrategy",
         "turn-of-the-month": "TurnOfTheMonthStrategy",
         "senal-externa": "SenalExterna",
+        "arquetipo-a": "ArquetipoAStrategy",
+        "arquetipo-b": "ArquetipoBStrategy",
+        "rebalanceo-fin-de-mes": "RebalanceoFinDeMesStrategy",
+        "tsmom-largo-corto": "TsmomLargoCortoStrategy",
     }
 
 

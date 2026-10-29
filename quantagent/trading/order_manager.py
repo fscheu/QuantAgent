@@ -67,12 +67,12 @@ class OrderManager:
         self.entradas_descartadas_orden_minima = 0
         self.cash_reserve_pct = cash_reserve_pct
 
-    def _cap_entry_qty(self, side: OrderSide, qty: float, price: float) -> float:
+    def _cap_entry_qty(self, side: OrderSide, qty: float, price: float, preserve_reserve=False) -> float:
         """Limita compras al efectivo disponible después de la reserva y los costos."""
         cash = self.portfolio.cash
-        if side != OrderSide.BUY or qty * price > cash * (1 + 1e-9):
+        if side != OrderSide.BUY or (not preserve_reserve and qty * price > cash * (1 + 1e-9)):
             return qty
-        cash *= 1 - self.cash_reserve_pct
+        cash -= (self.portfolio.get_total_value() if preserve_reserve else cash) * self.cash_reserve_pct
         unit_cost = price
         if isinstance(self.broker, PaperBroker):
             unit_cost = price * (1 + self.broker.slippage_pct)
@@ -81,10 +81,12 @@ class OrderManager:
             elif self.broker.commission_model == "fixed":
                 cash -= self.broker.commission_fixed
         max_qty = cash / unit_cost
-        if qty <= max_qty or max_qty <= 0:
-            return qty
-        logger.info(f"Entry qty capped to cash: {qty:.6f} -> {max_qty:.6f}")
-        return max_qty
+        if max_qty <= 0:
+            return 0.0 if preserve_reserve else qty
+        if qty > max_qty:
+            logger.info(f"Entry qty capped to cash: {qty:.6f} -> {max_qty:.6f}")
+            return max_qty
+        return qty
 
     def execute_decision(
         self,
@@ -320,7 +322,7 @@ class OrderManager:
         if side == OrderSide.SELL:
             qty = min(qty, max(0.0, held))
         else:
-            qty = int(self._cap_entry_qty(side, min(qty, max(0.0, self.portfolio.cash) / price), price))
+            qty = int(self._cap_entry_qty(side, qty, price, preserve_reserve=True))
         if qty <= 0 or (self.orden_minima is not None and qty * price < self.orden_minima - 1e-9):
             return None
         order = Order(symbol=symbol, side=side, quantity=qty, price=price, order_type=OrderType.MARKET,

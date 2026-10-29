@@ -43,21 +43,21 @@ def download_daily(symbol: str, start: str) -> pd.DataFrame:
     return df
 
 
-@click.group("data", help="Datos de mercado congelados.")
+@click.group("data", help="Manage frozen market data.")
 def data_group() -> None:
     """Root command group for data operations."""
 
 
-@data_group.group("snapshot", help="Snapshots en Parquet fuera del repo ($QUANTAGENT_SNAPSHOT_DIR).")
+@data_group.group("snapshot", help="Manage Parquet snapshots outside the repository ($QUANTAGENT_SNAPSHOT_DIR).")
 def snapshot_group() -> None:
     """Snapshot subcommands."""
 
 
-@snapshot_group.command("create", help="Baja los símbolos de Yahoo (ajustados por splits, sin ajuste por dividendos) y congela el snapshot.")
-@click.option("--name", required=True, help="Nombre del snapshot, por ejemplo etf-1d-2026-10.")
-@click.option("--symbols", required=True, help="Símbolos separados por coma.")
-@click.option("--start", required=True, help="Primera fecha, YYYY-MM-DD.")
-@click.option("--end", required=True, help="Última sesión incluida, YYYY-MM-DD. Debe ser anterior a hoy (la vela del día en curso no está cerrada).")
+@snapshot_group.command("create", help="Download Yahoo symbols (split-adjusted, not dividend-adjusted) and freeze the snapshot.")
+@click.option("--name", required=True, help="Snapshot name, for example etf-1d-2026-10.")
+@click.option("--symbols", required=True, help="Comma-separated ticker symbols.")
+@click.option("--start", required=True, help="First date, YYYY-MM-DD.")
+@click.option("--end", required=True, help="Last included session, YYYY-MM-DD. Must be before today because today's candle is not closed.")
 def create_snapshot(name: str, symbols: str, start: str, end: str) -> None:
     try:
         last = date.fromisoformat(end)
@@ -81,9 +81,9 @@ def create_snapshot(name: str, symbols: str, start: str, end: str) -> None:
     click.echo(f"Snapshot {name} creado: {len(frames)} símbolos, {rows} filas")
 
 
-@snapshot_group.command("verify", help="Recalcula los hashes contra el manifiesto.")
+@snapshot_group.command("verify", help="Recalculate hashes and compare them with the manifest.")
 @click.argument("name_arg", required=False, default=None)
-@click.option("--name", default=None)
+@click.option("--name", default=None, help="Snapshot name to verify.")
 def verify_snapshot_cmd(name_arg: Optional[str], name: Optional[str]) -> None:
     snapshot_name = name or name_arg
     if not snapshot_name:
@@ -96,8 +96,8 @@ def verify_snapshot_cmd(name_arg: Optional[str], name: Optional[str]) -> None:
     click.echo(f"OK {len(symbols)} símbolos, {sum(i['rows'] for i in symbols.values())} filas")
 
 
-@snapshot_group.command("check", help="Reporte de calidad contra el calendario NYSE. Exit 1 solo si faltan sesiones.")
-@click.option("--name", required=True)
+@snapshot_group.command("check", help="Check data quality against the NYSE calendar. Exit 1 only when sessions are missing.")
+@click.option("--name", required=True, help="Snapshot name to check.")
 def check_snapshot_cmd(name: str) -> None:
     try:
         report = check_snapshot(name)
@@ -115,15 +115,15 @@ def check_snapshot_cmd(name: str) -> None:
         raise SystemExit(1)
 
 
-@data_group.group("macro", help="Snapshots macro de ALFRED (todas las versiones) en Parquet.")
+@data_group.group("macro", help="Manage ALFRED macro snapshots (all vintages) in Parquet.")
 def macro_group() -> None:
     """Macro snapshot subcommands."""
 
 
-@macro_group.command("create", help="Baja todas las versiones de las series de ALFRED y congela el snapshot (requiere FRED_API_KEY).")
-@click.option("--name", required=True, help="Nombre del snapshot, por ejemplo macro-2026-10.")
-@click.option("--series", required=True, help="Series de FRED separadas por coma, por ejemplo UNRATE,CPIAUCSL.")
-@click.option("--nota", "notas_raw", multiple=True, help="Nota sobre una serie en formato SERIE=texto.")
+@macro_group.command("create", help="Download all ALFRED series vintages and freeze the snapshot (requires FRED_API_KEY).")
+@click.option("--name", required=True, help="Snapshot name, for example macro-2026-10.")
+@click.option("--series", required=True, help="Comma-separated FRED series, for example UNRATE,CPIAUCSL.")
+@click.option("--nota", "notas_raw", multiple=True, help="Note about a series in SERIES=text format.")
 def create_macro(name: str, series: str, notas_raw: tuple[str, ...]) -> None:
     from quantagent.data.sources.fred import FredClient
 
@@ -150,9 +150,9 @@ def create_macro(name: str, series: str, notas_raw: tuple[str, ...]) -> None:
     click.echo(f"Snapshot macro {name} creado: {len(manifest['series'])} series, {rows} filas")
 
 
-@macro_group.command("verify", help="Recalcula los hashes contra el manifiesto.")
+@macro_group.command("verify", help="Recalculate hashes and compare them with the manifest.")
 @click.argument("name_arg", required=False, default=None)
-@click.option("--name", default=None)
+@click.option("--name", default=None, help="Macro snapshot name to verify.")
 def verify_macro(name_arg: Optional[str], name: Optional[str]) -> None:
     snapshot_name = name or name_arg
     if not snapshot_name:
