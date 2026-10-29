@@ -96,3 +96,9 @@ Para **no** traer: el código (sin licencia, APIs que ya no existen), LangServe,
 6. M-web: arrancar con Cuenta y Embudo; el asistente pasa a ser un servidor MCP de solo lectura sobre la API, con las ideas de §3.
 7. M-manual: índice de decisiones generado desde los encabezados.
 8. `PLAN-POST-M5.md` corto, una pantalla por hito.
+
+## 5. Núcleo pasivo contra M5 (conversación del 2026-10-28)
+
+El PM propuso un hito "M-núcleo": que el sistema administre los ahorros reales de Fede en una cartera fija de ETFs diversificados con rebalanceo periódico, y que M5 la ajuste solo si pasa su escalera. **Fede prefiere ir directo con M5** para el dinero real: cree que una buena lectura del mercado y de indicadores puede superar a comprar y mantener. No se agrega M-núcleo.
+
+Lo que sí queda: comprar y mantener (SPY o una cartera simple de ETFs) a USD 2.500, con los mismos costos e impuestos, es la **vara de M5 para el dinero real** (cambio 1 de §4). Si M5 no le gana, queda a la vista antes de poner la plata.
