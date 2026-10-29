@@ -12,6 +12,9 @@ Agents working in this repository should read planning documents in this order:
 
 2. **Current operating plan (reconciled 2026-10-23)**
    - [../../PLAN-CONTINUACION.md](../../PLAN-CONTINUACION.md) - **Plan vigente**: cola activa de lotes L20 (investigación edge) y L21 (paper Alpaca), contrato del loop y registro de pendientes fuera de lote
+   - [../../PLAN-POST-M5.md](../../PLAN-POST-M5.md) - Plan de los hitos después de M5 (M-manual, M-datos, M-web, M-ciclos, M-cuenta): una pantalla por hito
+   - [2026-10-28_roadmap_post_m5.md](./2026-10-28_roadmap_post_m5.md) - Propuesta de hitos después de M5: ciclos de generación, cuenta chica, app web y almacenamiento de datos (detalle de `PLAN-POST-M5.md`)
+   - [2026-10-29_inventario_koyfin_para_m_web.md](./2026-10-29_inventario_koyfin_para_m_web.md) - Inventario de funciones y gráficos de Koyfin (sector, país, macro) mapeado a M-web, con datos que tenemos o faltan y lista corta para fases posteriores
    - [QuantAgent-pjwb-PL-reconciliacion-plan-beads.md](./QuantAgent-pjwb-PL-reconciliacion-plan-beads.md) - Inventario de Beads abiertos, ubicación por lote y pendientes fuera de cola (corte 2026-10-23)
    - [2026-09-16_retrospectiva_autodev_y_plan_oficina_inversion.md](./2026-09-16_retrospectiva_autodev_y_plan_oficina_inversion.md) - Retrospectiva del loop autodev, loop propuesto (1 ticket → 1 PR → 1 revisión), capas de la "oficina de inversión" y plan de 4 semanas
    - [QuantAgent-lp1-PL-m2-validacion-datos-reales.md](./QuantAgent-lp1-PL-m2-validacion-datos-reales.md) - **Plan de M2** (cerrado 2026-10-09, falta decisión de Fede): cierre de M1, 7 lotes con punto de control, cola V01–V55, riesgos y decisiones previas
