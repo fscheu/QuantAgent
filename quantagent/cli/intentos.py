@@ -19,14 +19,14 @@ def _fecha_utc(texto):
         raise click.ClickException(f"Fecha inválida: {texto!r}; se requiere ISO con zona UTC") from exc
 
 
-@click.group("intentos", help="Administrar el registro de intentos.")
+@click.group("intentos", help="Manage the run attempts log.")
 def intentos_group():
     pass
 
 
-@intentos_group.command("epoca-limpia", help="Guardar el inicio de la época limpia.")
-@click.option("--desde", required=True)
-@click.option("--motivo", required=True)
+@intentos_group.command("epoca-limpia", help="Record the start of the clean period.")
+@click.option("--desde", required=True, help="Start timestamp in ISO 8601 UTC format.")
+@click.option("--motivo", required=True, help="Reason for recording the clean period.")
 def epoca_limpia(desde, motivo):
     desde = _fecha_utc(desde)
     path = snapshot_root() / "epoca_limpia.json"
@@ -39,12 +39,12 @@ def epoca_limpia(desde, motivo):
     click.echo(f"Época limpia guardada: {path}")
 
 
-@intentos_group.command("invalidar", help="Listar filas; invalidarlas con backup solo con --aplicar.")
-@click.option("--hipotesis", required=True)
-@click.option("--desde")
-@click.option("--hasta")
-@click.option("--motivo", required=True)
-@click.option("--aplicar", is_flag=True)
+@intentos_group.command("invalidar", help="List matching rows; invalidate them with a backup only when --aplicar is set.")
+@click.option("--hipotesis", required=True, help="Hypothesis ID whose attempts should be selected.")
+@click.option("--desde", help="Inclusive start timestamp in ISO 8601 UTC format.")
+@click.option("--hasta", help="Inclusive end timestamp in ISO 8601 UTC format.")
+@click.option("--motivo", required=True, help="Reason for invalidating the selected attempts.")
+@click.option("--aplicar", is_flag=True, help="Write invalidation marks and create a backup; otherwise show a dry run.")
 def invalidar(hipotesis, desde, hasta, motivo, aplicar):
     desde = _fecha_utc(desde) if desde is not None else None
     hasta = _fecha_utc(hasta) if hasta is not None else None
