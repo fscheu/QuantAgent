@@ -15,7 +15,7 @@ from quantagent.fabrica.critico import (
     registrar_universo,
 )
 from quantagent.fabrica.hipotesis import Hipotesis, Pierna
-from quantagent.fabrica.transversal import MASCARAS, METRICAS, es_transversal, señales_transversales
+from quantagent.fabrica.transversal import MASCARAS, METRICAS, PRIORS_M5, REGLAS, es_transversal, señales_transversales
 from quantagent.strategy.registry import STRATEGY_REGISTRY, build_strategy
 
 CLASE_INTERNA = "senal-externa"  # P05.4 (SenalExterna) lee una ruta arbitraria: solo la usa el motor
@@ -69,7 +69,7 @@ def admitir(h: Hipotesis, velas: pd.DataFrame, existentes: list[Hipotesis] | Non
             motivos.append(f"clase no registrada: {p.clase}")
         if p.elegibilidad is not None and p.elegibilidad not in MASCARAS:
             motivos.append(f"elegibilidad no registrada: {p.elegibilidad}")
-    ajenos = sorted({a for p in h.piernas for a in p.activos} - UNIVERSO_AMPLIO)
+    ajenos = sorted({a for p in h.piernas for a in p.activos} - UNIVERSO_AMPLIO - set(PRIORS_M5["universo"]))
     if ajenos:
         motivos.append(f"activos fuera del universo amplio: {', '.join(ajenos)}")
     if "timestamp" in velas.columns:
@@ -83,7 +83,7 @@ def admitir(h: Hipotesis, velas: pd.DataFrame, existentes: list[Hipotesis] | Non
             idx = cierres.index
             if p.elegibilidad is not None and p.elegibilidad not in MASCARAS:
                 continue
-            difs = check_no_lookahead(lambda c, p=p: señales_transversales(c, METRICAS[p.clase], mascara=MASCARAS.get(p.elegibilidad)), cierres,
+            difs = check_no_lookahead(lambda c, p=p: señales_transversales(c, METRICAS[p.clase], mascara=MASCARAS.get(p.elegibilidad), **REGLAS.get(p.clase, {})), cierres,
                                       [idx[len(idx) // 2], idx[(3 * len(idx)) // 4]])
             if difs:
                 motivos.append(f"prueba de truncamiento fallida en {p.clase}: {difs[0]}")

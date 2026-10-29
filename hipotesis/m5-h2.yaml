@@ -1,0 +1,17 @@
+id: m5-h2
+autor: fede
+justificacion: >-
+  H2 de la escalera M5: H1 con SectorScore 50/50, mitad MacroThemeScore (z de
+  36 meses de los temas macro por la matriz de signos versionada en
+  catalogo/m5-priors.yaml) y mitad PriceMomentumScore. Misma regla que H1:
+  semanal, los 3 mejores con score mayor que 0, efectivo si SPY está en
+  risk-off, pesos 1/σ. Benchmark: H1 (¿la macro suma sobre el momentum?).
+  Sin parámetros libres: la matriz y la ventana se fijaron antes de correr.
+fuente: docs/03_design/QuantAgent-M5-DS-motor-top-down.md §6.1 y §7 ; catalogo/m5-priors.yaml
+timeframe: 1d
+piernas:
+  - clase: sector-score-h2
+    parametros: {}
+    elegibilidad: sin-caida-m5
+    activos: [XLB, XLC, XLE, XLF, XLI, XLK, XLP, XLRE, XLU, XLV, XLY, SPY, EEM, EWZ]
+    universo: Los 14 ETFs de catalogo/m5-priors.yaml (11 sectores SPDR, SPY, EEM y EWZ) en un único ranking semanal.

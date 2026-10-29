@@ -279,7 +279,7 @@ def test_filtrar_hipotesis_transporta_seleccion_oos_al_calculo_real(monkeypatch,
     monkeypatch.setattr(hipotesis, "read_snapshot", lambda snap, activo: snapshots[activo])
     evaluaciones, evaluar = [], hipotesis.evaluar_cartera
 
-    def observar(cierres, piernas, retornos, *, seleccion):
+    def observar(cierres, piernas, retornos, *, seleccion, semanales=()):
         assert set(seleccion) == {0}
         pd.testing.assert_frame_equal(seleccion[0], r["seleccion"].reindex(cierres.index, fill_value=0))
         w = pesos(cierres, piernas, seleccion=seleccion)
