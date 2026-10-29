@@ -2,7 +2,9 @@
 from pathlib import Path
 
 import pandas as pd
+import yaml
 
+from quantagent.fabrica.regimen import macro_theme_score, price_momentum_score, sector_score, z_series_macro, z_temas
 from quantagent.strategy.momentum_12m_strategy import is_last_session_of_month
 
 # Registro propio de métricas transversales: nombre de clase del YAML -> función pura del panel de cierres
@@ -68,6 +70,25 @@ def momentum_12m_menos_1m(cierres):
 
 
 METRICAS["momentum-transversal"] = momentum_12m_menos_1m
+
+PRIORS_M5 = yaml.safe_load((Path(__file__).parents[2] / "catalogo" / "m5-priors.yaml").read_text(encoding="utf-8"))
+
+
+def _sector_score(peso_macro):
+    def metrica(cierres):
+        cierres = cierres[[a for a in PRIORS_M5["universo"] if a in cierres.columns]]
+        if peso_macro == 0:
+            macro = pd.DataFrame(0.0, index=cierres.index, columns=cierres.columns)
+        else:
+            z_tema = z_temas(z_series_macro(PRIORS_M5, cierres.index), PRIORS_M5)
+            macro = macro_theme_score(z_tema, PRIORS_M5).reindex(columns=cierres.columns)
+        return sector_score(macro, price_momentum_score(cierres), peso_macro)
+
+    return metrica
+
+
+METRICAS["sector-score-h1"] = _sector_score(0.0)
+METRICAS["sector-score-h2"] = _sector_score(0.5)
 
 
 def señales_transversales(cierres, metrica, fraccion=1 / 3):
