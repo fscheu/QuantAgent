@@ -173,19 +173,19 @@ class OrderManager:
                 stop_price=stop_price,
             )
 
+        if self.orden_minima is not None and (qty <= 0 or (qty * current_price) < self.orden_minima - 1e-9):
+            self.entradas_descartadas_orden_minima += 1
+            logger.info(
+                f"{symbol}: Entry discarded due to min order size {self.orden_minima} USD "
+                f"(qty: {qty:.6f}, value: ${qty * current_price:.2f})"
+            )
+            return None
+
         if qty <= 0:
             logger.info(
                 f"{symbol}: Entry discarded - tamano_cero",
                 extra={"event_type": "order_rejected", "symbol": symbol,
                        "extra_data": {"reason": "tamano_cero"}},
-            )
-            return None
-
-        if self.orden_minima is not None and qty * current_price < self.orden_minima - 1e-9:
-            self.entradas_descartadas_orden_minima += 1
-            logger.info(
-                f"{symbol}: Entry discarded due to min order size {self.orden_minima} USD "
-                f"(qty: {qty:.6f}, value: ${qty * current_price:.2f})"
             )
             return None
 
