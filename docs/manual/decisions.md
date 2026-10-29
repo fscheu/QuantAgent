@@ -1,5 +1,7 @@
 # Decisions
 
+> Terms are defined in the [glossary](glossary.md).
+
 | Decision | Date | Record |
 |---|---|---|
 | Decision log index | Date not applicable | [Source index](../04_decisions/README.md) |
