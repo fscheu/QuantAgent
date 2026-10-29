@@ -172,7 +172,7 @@ def registrar_intento(
         writer.writerow(intento)
 
 
-@click.command("attempts", help="Contar corridas y combinaciones registradas por sweep.")
+@click.command("attempts", help="Count runs and parameter combinations recorded by sweep.")
 @click.option("--strategy", "strategy_name", required=True)
 @click.option("--symbol", default=None)
 def attempts_command(strategy_name: str, symbol: Optional[str]) -> None:
@@ -205,21 +205,21 @@ def attempts_command(strategy_name: str, symbol: Optional[str]) -> None:
     click.echo(f"Combinaciones distintas: {len(combinaciones)}")
 
 
-@click.command("sweep", help="Correr una grilla de parámetros de una estrategia sobre un activo.")
+@click.command("sweep", help="Run a strategy parameter grid against an asset.")
 @click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="apertura", show_default=True)
-@click.option("--strategy", "strategy_name", required=True, help="Estrategia a optimizar.")
-@click.option("--symbol", "symbol", required=True, help="Símbolo del activo (ej: SPY).")
-@click.option("--snapshot", "snapshot_name", required=True, help="Snapshot en $QUANTAGENT_SNAPSHOT_DIR (velas ajustadas).")
-@click.option("--grid", "grid_path", type=click.Path(dir_okay=False), help="Archivo JSON con la grilla de parámetros.")
-@click.option("--vecinos-20", is_flag=True, help="Default y ±20% por parámetro, uno por vez; excluye --grid.")
-@click.option("--out", "out_path", required=True, type=click.Path(dir_okay=False, writable=True), help="CSV de salida.")
-@click.option("--from", "from_date", type=click.DateTime(formats=["%Y-%m-%d"]), default=None, help="Primera sesión.")
-@click.option("--to", "to_date", type=click.DateTime(formats=["%Y-%m-%d"]), default=None, help="Última sesión.")
-@click.option("--costos", type=click.Choice(sorted(COSTOS_PERFILES)), default=None, help="Perfil de costos.")
+@click.option("--strategy", "strategy_name", required=True, help="Strategy to optimize.")
+@click.option("--symbol", "symbol", required=True, help="Asset symbol (e.g. SPY).")
+@click.option("--snapshot", "snapshot_name", required=True, help="Snapshot in $QUANTAGENT_SNAPSHOT_DIR (adjusted candles).")
+@click.option("--grid", "grid_path", type=click.Path(dir_okay=False), help="JSON file containing the parameter grid.")
+@click.option("--vecinos-20", is_flag=True, help="Default and ±20% per parameter, one at a time; excludes --grid.")
+@click.option("--out", "out_path", required=True, type=click.Path(dir_okay=False, writable=True), help="Output CSV file.")
+@click.option("--from", "from_date", type=click.DateTime(formats=["%Y-%m-%d"]), default=None, help="First session.")
+@click.option("--to", "to_date", type=click.DateTime(formats=["%Y-%m-%d"]), default=None, help="Last session.")
+@click.option("--costos", type=click.Choice(sorted(COSTOS_PERFILES)), default=None, help="Cost profile.")
 @click.option("--tamano-posicion", "tamano_posicion", type=click.FloatRange(min=0.0, max=1.0, min_open=True), default=1.0)
 @click.option("--regla-tamano", "regla_tamano", type=click.Choice(PositionSizer.REGLAS), default=None)
 @click.option("--riesgo-por-trade", type=click.FloatRange(min=0.0, min_open=True), default=None)
-@click.option("--orden-minima", "orden_minima", type=click.FloatRange(min=0.0, min_open=True), default=None, help="Monto mínimo en USD por orden de entrada.")
+@click.option("--orden-minima", "orden_minima", type=click.FloatRange(min=0.0, min_open=True), default=None, help="Minimum USD amount per entry order.")
 def sweep_command(
     strategy_name: str,
     symbol: str,
