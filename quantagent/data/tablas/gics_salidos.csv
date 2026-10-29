@@ -1,0 +1,430 @@
+ticker,sector,fuente
+AABA,Information Technology,manual
+AAL,Industrials,manual
+AAP,Consumer Discretionary,manual
+ABC,Health Care,manual
+ABI,Health Care,manual
+ABKFQ,Financials,manual
+ABMD,Health Care,manual
+ACAS,Financials,manual
+ACS,Information Technology,manual
+ADCT,Information Technology,manual
+ADS,Information Technology,manual
+ADT,Industrials,manual
+AET,Health Care,manual
+AGN,Health Care,manual
+AIV,Real Estate,manual
+AKS,Materials,manual
+ALK,Industrials,manual
+ALTR,Information Technology,manual
+ALXN,Health Care,manual
+AMG,Financials,manual
+AMTM,Industrials,manual
+AN,Consumer Discretionary,manual
+ANDV,Energy,manual
+ANF,Consumer Discretionary,manual
+ANRZQ,Energy,manual
+ANSS,Information Technology,manual
+ANTM,Health Care,manual
+APC,Energy,manual
+APCC,Industrials,manual
+APOL,Consumer Discretionary,manual
+ARG,Materials,manual
+ARNC,Industrials,manual
+ASH,Materials,manual
+ASN,Financials,manual
+AT,Telecommunication Services,manual
+ATGE,Consumer Discretionary,manual
+ATI,Materials,manual
+ATVI,Communication Services,manual
+AV,Information Technology,manual
+AVB,Real Estate,manual
+AVP,Consumer Staples,manual
+AW,Industrials,manual
+AYE,Utilities,manual
+AYI,Industrials,manual
+BBBY,Consumer Discretionary,manual
+BBT,Financials,manual
+BBWI,Consumer Discretionary,manual
+BC,Consumer Discretionary,manual
+BCR,Health Care,manual
+BDK,Consumer Discretionary,manual
+BEAM,Consumer Staples,manual
+BHF,Financials,manual
+BHGE,Energy,manual
+BIG,Consumer Discretionary,manual
+BIO,Health Care,manual
+BJS,Energy,manual
+BK,Financials,manual
+BLL,Materials,manual
+BMC,Information Technology,manual
+BMET,Health Care,manual
+BMS,Materials,manual
+BNI,Industrials,manual
+BOL,Health Care,manual
+BRCM,Information Technology,manual
+BRL,Health Care,manual
+BSC,Financials,manual
+BTUUQ,Energy,manual
+BUD,Consumer Staples,manual
+BWA,Consumer Discretionary,manual
+BXLT,Health Care,manual
+CA,Information Technology,manual
+CAG,Consumer Staples,manual
+CAM,Energy,manual
+CBE,Industrials,manual
+CBH,Financials,manual
+CBS,Communication Services,manual
+CBSS,Financials,manual
+CCE,Consumer Staples,manual
+CCEP,Consumer Staples,manual
+CCTYQ,Consumer Discretionary,manual
+CCU,Consumer Discretionary,manual
+CDAY,Industrials,manual
+CE,Materials,manual
+CELG,Health Care,manual
+CEPH,Health Care,manual
+CERN,Health Care,manual
+CFC,Financials,manual
+CFN,Health Care,manual
+CHK,Energy,manual
+CITGQ,Financials,manual
+CLF,Materials,manual
+CMA,Financials,manual
+CMCSK,Consumer Discretionary,manual
+CMVT,Information Technology,manual
+CMX,Health Care,manual
+CNX,Energy,manual
+COG,Energy,manual
+COL,Industrials,manual
+COTY,Consumer Staples,manual
+COV,Health Care,manual
+CPB,Consumer Staples,manual
+CPGX,Energy,manual
+CPRI,Consumer Discretionary,manual
+CPWR,Information Technology,manual
+CSRA,Information Technology,manual
+CTL,Communication Services,manual
+CTLT,Health Care,manual
+CTRA,Energy,manual
+CTX,Consumer Discretionary,manual
+CTXS,Information Technology,manual
+CVC,Consumer Discretionary,manual
+CVG,Information Technology,manual
+CVH,Health Care,manual
+CXO,Energy,manual
+CZR,Consumer Discretionary,manual
+DAY,Industrials,manual
+DDR,Financials,manual
+DDS,Consumer Discretionary,manual
+DF,Consumer Staples,manual
+DFS,Financials,manual
+DISCA,Communication Services,manual
+DISCK,Communication Services,manual
+DISH,Communication Services,manual
+DJ,Consumer Discretionary,manual
+DNB,Industrials,manual
+DNR,Energy,manual
+DO,Energy,manual
+DRE,Real Estate,manual
+DTV,Consumer Discretionary,manual
+DWDP,Materials,manual
+DXC,Information Technology,manual
+DYN,Utilities,manual
+EA,Communication Services,manual
+EDS,Information Technology,manual
+EKDKQ,Consumer Discretionary,manual
+EMC,Information Technology,manual
+EMN,Materials,manual
+ENDP,Health Care,manual
+ENPH,Information Technology,manual
+EOP,Financials,manual
+EP,Energy,manual
+EPAM,Information Technology,manual
+EQ,Telecommunication Services,manual
+EQR,Real Estate,manual
+ESRX,Health Care,manual
+ESV,Energy,manual
+ETFC,Financials,manual
+ETSY,Consumer Discretionary,manual
+EVHC,Health Care,manual
+FB,Communication Services,manual
+FBHS,Industrials,manual
+FCPT,Financials,manual
+FDC,Information Technology,manual
+FDO,Consumer Discretionary,manual
+FHN,Financials,manual
+FI,Financials,manual
+FII,Financials,manual
+FL,Consumer Discretionary,manual
+FLIR,Information Technology,manual
+FLR,Industrials,manual
+FLS,Industrials,manual
+FLT,Financials,manual
+FMC,Materials,manual
+FMCC,Financials,manual
+FNMA,Financials,manual
+FOSL,Consumer Discretionary,manual
+FRC,Financials,manual
+FRX,Health Care,manual
+FTI,Energy,manual
+FTR,Telecommunication Services,manual
+GAS,Utilities,manual
+GENZ,Health Care,manual
+GGP,Real Estate,manual
+GHC,Consumer Discretionary,manual
+GMCR,Consumer Staples,manual
+GME,Consumer Discretionary,manual
+GNW,Financials,manual
+GPS,Consumer Discretionary,manual
+GR,Industrials,manual
+GT,Consumer Discretionary,manual
+H,Financials,manual
+HAR,Consumer Discretionary,manual
+HBI,Consumer Discretionary,manual
+HCBK,Financials,manual
+HCP,Real Estate,manual
+HCR,Health Care,manual
+HES,Energy,manual
+HET,Consumer Discretionary,manual
+HFC,Energy,manual
+HMA,Health Care,manual
+HNZ,Consumer Staples,manual
+HOG,Consumer Discretionary,manual
+HOLX,Health Care,manual
+HOT,Consumer Discretionary,manual
+HP,Energy,manual
+HPC,Materials,manual
+HRB,Consumer Discretionary,manual
+HRS,Information Technology,manual
+HSH,Consumer Staples,manual
+HSP,Health Care,manual
+IAC,Consumer Discretionary,manual
+IGT,Consumer Discretionary,manual
+ILMN,Health Care,manual
+INFO,Industrials,manual
+IPG,Communication Services,manual
+IPGP,Information Technology,manual
+ITT,Industrials,manual
+JAVA,Information Technology,manual
+JCP,Consumer Discretionary,manual
+JEC,Industrials,manual
+JEF,Financials,manual
+JNPR,Information Technology,manual
+JNS,Financials,manual
+JNY,Consumer Discretionary,manual
+JOY,Industrials,manual
+JWN,Consumer Discretionary,manual
+K,Consumer Staples,manual
+KATE,Consumer Discretionary,manual
+KBH,Consumer Discretionary,manual
+KG,Health Care,manual
+KMX,Consumer Discretionary,manual
+KORS,Consumer Discretionary,manual
+KRFT,Consumer Staples,manual
+KSE,Utilities,manual
+KSS,Consumer Discretionary,manual
+KSU,Industrials,manual
+LB,Consumer Discretionary,manual
+LEG,Consumer Discretionary,manual
+LEHMQ,Financials,manual
+LIFE,Health Care,manual
+LKQ,Consumer Discretionary,manual
+LLL,Industrials,manual
+LLTC,Information Technology,manual
+LM,Financials,manual
+LNC,Financials,manual
+LO,Consumer Staples,manual
+LSI,Information Technology,manual
+LUMN,Communication Services,manual
+LVLT,Telecommunication Services,manual
+LW,Consumer Staples,manual
+LXK,Information Technology,manual
+M,Consumer Discretionary,manual
+MAC,Real Estate,manual
+MAT,Consumer Discretionary,manual
+MBI,Financials,manual
+MDP,Consumer Discretionary,manual
+MEDI,Health Care,manual
+MEE,Energy,manual
+MEL,Financials,manual
+MER,Financials,manual
+MFE,Information Technology,manual
+MHK,Consumer Discretionary,manual
+MHS,Health Care,manual
+MI,Financials,manual
+MIL,Health Care,manual
+MJN,Consumer Staples,manual
+MKTX,Financials,manual
+MMC,Financials,manual
+MMI,Information Technology,manual
+MNK,Health Care,manual
+MOH,Health Care,manual
+MOLX,Information Technology,manual
+MON,Materials,manual
+MRO,Energy,manual
+MTCH,Communication Services,manual
+MTG,Financials,manual
+MTLQQ,Consumer Discretionary,manual
+MTW,Industrials,manual
+MUR,Energy,manual
+MWV,Materials,manual
+MWW,Industrials,manual
+MXIM,Information Technology,manual
+MYL,Health Care,manual
+NAVI,Financials,manual
+NBL,Energy,manual
+NBR,Energy,manual
+NCC,Financials,manual
+NCR,Information Technology,manual
+NE,Energy,manual
+NFX,Energy,manual
+NKTR,Health Care,manual
+NLOK,Information Technology,manual
+NLSN,Industrials,manual
+NOV,Energy,manual
+NOVL,Information Technology,manual
+NSM,Information Technology,manual
+NVLS,Information Technology,manual
+NWL,Consumer Discretionary,manual
+NYT,Consumer Discretionary,manual
+NYX,Financials,manual
+ODP,Consumer Discretionary,manual
+OGN,Health Care,manual
+OI,Materials,manual
+OMX,Consumer Discretionary,manual
+PARA,Communication Services,manual
+PAYC,Industrials,manual
+PBCT,Financials,manual
+PBG,Consumer Staples,manual
+PBI,Industrials,manual
+PCL,Financials,manual
+PCP,Industrials,manual
+PD,Materials,manual
+PDCO,Health Care,manual
+PEAK,Real Estate,manual
+PENN,Consumer Discretionary,manual
+PETM,Consumer Discretionary,manual
+PGL,Utilities,manual
+PGN,Utilities,manual
+PKI,Health Care,manual
+PLL,Industrials,manual
+PMCS,Information Technology,manual
+POM,Utilities,manual
+POOL,Consumer Discretionary,manual
+PRGO,Health Care,manual
+PTV,Materials,manual
+PVH,Consumer Discretionary,manual
+PX,Materials,manual
+PXD,Energy,manual
+QEP,Energy,manual
+QLGC,Information Technology,manual
+QRVO,Information Technology,manual
+R,Industrials,manual
+RAI,Consumer Staples,manual
+RDC,Energy,manual
+RE,Financials,manual
+RHI,Industrials,manual
+RHT,Information Technology,manual
+RIG,Energy,manual
+ROH,Materials,manual
+RRC,Energy,manual
+RRD,Industrials,manual
+RSHCQ,Consumer Discretionary,manual
+RTN,Industrials,manual
+RX,Health Care,manual
+S,Telecommunication Services,manual
+SAF,Financials,manual
+SANM,Information Technology,manual
+SATS,Communication Services,manual
+SBL,Information Technology,manual
+SBNY,Financials,manual
+SCG,Utilities,manual
+SE,Energy,manual
+SEDG,Information Technology,manual
+SEE,Materials,manual
+SGP,Health Care,manual
+SHLD,Consumer Discretionary,manual
+SIAL,Materials,manual
+SIG,Consumer Discretionary,manual
+SII,Energy,manual
+SIVB,Financials,manual
+SLG,Real Estate,manual
+SLM,Financials,manual
+SLR,Information Technology,manual
+SNI,Consumer Discretionary,manual
+SNV,Financials,manual
+SOLS,Materials,manual
+SOV,Financials,manual
+SPLS,Consumer Discretionary,manual
+SRCL,Industrials,manual
+SSP,Consumer Discretionary,manual
+STI,Financials,manual
+STJ,Health Care,manual
+STR,Utilities,manual
+SUN,Energy,manual
+SUNEQ,Information Technology,manual
+SVU,Consumer Staples,manual
+SWN,Energy,manual
+SWY,Consumer Staples,manual
+SYMC,Information Technology,manual
+TDC,Information Technology,manual
+TE,Utilities,manual
+TEG,Utilities,manual
+TEK,Information Technology,manual
+TEX,Industrials,manual
+TFX,Health Care,manual
+TGNA,Consumer Discretionary,manual
+THC,Health Care,manual
+TIE,Materials,manual
+TIF,Consumer Discretionary,manual
+TIN,Materials,manual
+TLAB,Information Technology,manual
+TMK,Financials,manual
+TRB,Consumer Discretionary,manual
+TRIP,Communication Services,manual
+TSG,Information Technology,manual
+TSS,Information Technology,manual
+TWC,Consumer Discretionary,manual
+TWTR,Communication Services,manual
+TWX,Consumer Discretionary,manual
+TXU,Utilities,manual
+UA,Consumer Discretionary,manual
+UAA,Consumer Discretionary,manual
+UIS,Information Technology,manual
+UNM,Financials,manual
+URBN,Consumer Discretionary,manual
+UST,Consumer Staples,manual
+UTX,Industrials,manual
+UVN,Consumer Discretionary,manual
+VAR,Health Care,manual
+VFC,Consumer Discretionary,manual
+VIAB,Communication Services,manual
+VIAC,Communication Services,manual
+VIAV,Information Technology,manual
+VNO,Real Estate,manual
+VNT,Information Technology,manual
+WAMUQ,Financials,manual
+WB,Financials,manual
+WBA,Consumer Staples,manual
+WCG,Health Care,manual
+WEN,Consumer Discretionary,manual
+WFM,Consumer Staples,manual
+WFT,Energy,manual
+WHR,Consumer Discretionary,manual
+WIN,Telecommunication Services,manual
+WLTW,Financials,manual
+WPX,Energy,manual
+WRK,Materials,manual
+WU,Information Technology,manual
+WWY,Consumer Staples,manual
+WYE,Health Care,manual
+WYND,Consumer Discretionary,manual
+X,Materials,manual
+XEC,Energy,manual
+XL,Financials,manual
+XLNX,Information Technology,manual
+XRAY,Health Care,manual
+XRX,Information Technology,manual
+XTO,Energy,manual
+ZION,Financials,manual

@@ -1,0 +1,129 @@
+{
+  "downloaded_at": "2026-10-27T23:38:17+00:00",
+  "name": "macro-m5-2026-10",
+  "notas": {
+    "NEWORDER": "Sustituto de ISM New Orders (D4): es la \u00fanica serie de pedidos con vintages en ALFRED desde 1997; Philly Fed (NOCDFSA066MSFRBPHI) y Empire (NOCDISA066MSFRBNY) s\u00f3lo tienen vintages desde 2014-2015 y no cubren el in-sample 2007-2018 punto en el tiempo."
+  },
+  "series": {
+    "BAA10Y": {
+      "end": "2026-10-26",
+      "file": "BAA10Y.parquet",
+      "rows": 10662,
+      "sha256": "d80a3b12b364a129a535a9a5865479df288ff89c21ea1ef477310b8c39e2b8e1",
+      "start": "1986-01-02"
+    },
+    "CPIAUCSL": {
+      "end": "2026-09-01",
+      "file": "CPIAUCSL.parquet",
+      "rows": 3363,
+      "sha256": "5768e33fff9a05701c1811147a6a85d10c02f94b9e4f7d7538099d76d4bfc262",
+      "start": "1947-01-01"
+    },
+    "DFII10": {
+      "end": "2026-10-26",
+      "file": "DFII10.parquet",
+      "rows": 6214,
+      "sha256": "cc403cf7ca3677b1342c25360538b1d96934b3f2ffe0545f141a1a093f9427c2",
+      "start": "2003-01-02"
+    },
+    "DGS10": {
+      "end": "2026-10-26",
+      "file": "DGS10.parquet",
+      "rows": 16917,
+      "sha256": "1ca0b5381ba61ec28e485ae81d5da0c2b3d5d6bf88d56f0d9454930e8388374f",
+      "start": "1962-01-02"
+    },
+    "DGS2": {
+      "end": "2026-10-26",
+      "file": "DGS2.parquet",
+      "rows": 13158,
+      "sha256": "a316902d4540fdeaff1a48e7bc2441c963c66e7c1f73f391573d57ed146dcef1",
+      "start": "1976-06-01"
+    },
+    "DGS3MO": {
+      "end": "2026-10-26",
+      "file": "DGS3MO.parquet",
+      "rows": 11786,
+      "sha256": "447ef62f2347485316ece78dfe52e2bc44e8ec82d3fb331e09d7ab943ba3d147",
+      "start": "1981-09-01"
+    },
+    "DTWEXBGS": {
+      "end": "2026-10-23",
+      "file": "DTWEXBGS.parquet",
+      "rows": 22107,
+      "sha256": "bf8ebd317ae040e99e851ea8fd68ae3376f06ec5159fcc4ff8ca00ce40876081",
+      "start": "2006-01-02"
+    },
+    "FEDFUNDS": {
+      "end": "2026-09-01",
+      "file": "FEDFUNDS.parquet",
+      "rows": 921,
+      "sha256": "ae0edc921e2489a265afb1337fc1431ade2fee115015b6d1b874710fefd46e67",
+      "start": "1954-07-01"
+    },
+    "ICSA": {
+      "end": "2026-10-17",
+      "file": "ICSA.parquet",
+      "rows": 7803,
+      "sha256": "66a893fe12d457895b1bdd4924c48d1f1a3121c23a60f466a26da219647c05eb",
+      "start": "1967-01-07"
+    },
+    "INDPRO": {
+      "end": "2026-09-01",
+      "file": "INDPRO.parquet",
+      "rows": 39368,
+      "sha256": "4530e1db34c9735c8207811d0ad9c3b385359b2f5fd0a068b72ccca78abf905e",
+      "start": "1919-01-01"
+    },
+    "NEWORDER": {
+      "end": "2026-09-01",
+      "file": "NEWORDER.parquet",
+      "rows": 7029,
+      "sha256": "9e3ff32e15840db24ebd0c85db92405f1e08df4ef0dd57b4401fd734fe738871",
+      "start": "1968-02-01"
+    },
+    "PAYEMS": {
+      "end": "2026-09-01",
+      "file": "PAYEMS.parquet",
+      "rows": 13691,
+      "sha256": "91554d6940d01a8b9f4ae41b66ce20985b8c80ddbae4dd914bb0b24ca6e6875e",
+      "start": "1939-01-01"
+    },
+    "T10Y2Y": {
+      "end": "2026-10-27",
+      "file": "T10Y2Y.parquet",
+      "rows": 13155,
+      "sha256": "dfcacaf2e960659651da7cb2bf53df3a9bfac7f0bcadab431a1e8edd2f6db816",
+      "start": "1976-06-01"
+    },
+    "T10YIE": {
+      "end": "2026-10-27",
+      "file": "T10YIE.parquet",
+      "rows": 6216,
+      "sha256": "079d051b620546949f3ded5100a484f0914d9e45012d93f44a6af4c36b53eb6e",
+      "start": "2003-01-02"
+    },
+    "T5YIE": {
+      "end": "2026-10-27",
+      "file": "T5YIE.parquet",
+      "rows": 6216,
+      "sha256": "471b9bd60a9851d762064a127af8489e616dff76113b8b7a005d1121a3e9f666",
+      "start": "2003-01-02"
+    },
+    "UNRATE": {
+      "end": "2026-09-01",
+      "file": "UNRATE.parquet",
+      "rows": 2199,
+      "sha256": "345cd189989192073f9b38ebebc3fb4c78190a9def848357b1568e559b050cd7",
+      "start": "1948-01-01"
+    },
+    "VIXCLS": {
+      "end": "2026-10-26",
+      "file": "VIXCLS.parquet",
+      "rows": 9627,
+      "sha256": "abb4fc98f8e893c10525f733cc53f8df5300f2b095f5d18e086c008d02595f8e",
+      "start": "1990-01-02"
+    }
+  },
+  "source": "alfred"
+}

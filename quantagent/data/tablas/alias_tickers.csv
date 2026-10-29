@@ -1,0 +1,30 @@
+ticker_sp500,ticker_fuente,fuente,nota
+BF.B,BF-B,yahoo,Yahoo escribe las clases de acciones con guion
+BRK.B,BRK-B,yahoo,Yahoo escribe las clases de acciones con guion
+SUNEQ,SUNE,wiki,WIKI no tiene el sufijo Q de quiebra de SunEdison (fja05680 usa SUNEQ)
+AABA,YHOO,wiki,Altaba (ex Yahoo) en WIKI está como YHOO
+ABC,COR,yahoo,AmerisourceBergen pasó a llamarse Cencora (COR)
+ADS,BFH,yahoo,Alliance Data Systems pasó a llamarse Bread Financial (BFH)
+ANTM,ELV,yahoo,Anthem pasó a llamarse Elevance Health (ELV)
+BHGE,BKR,yahoo,Baker Hughes a GE Co pasó a llamarse Baker Hughes Company (BKR)
+BK,BNY,yahoo,The Bank of New York Mellon cambió su ticker a BNY
+BLL,BALL,yahoo,Ball Corporation cambió su ticker a BALL
+CTL,LUMN,yahoo,CenturyLink pasó a llamarse Lumen Technologies (LUMN)
+DWDP,DD,yahoo,DowDuPont escindió Corteva y Dow; DuPont (DD) conserva la serie
+FB,META,yahoo,Facebook pasó a llamarse Meta Platforms (META)
+FBHS,FBIN,yahoo,Fortune Brands Home & Security pasó a llamarse Fortune Brands Innovations (FBIN)
+FLT,CPAY,yahoo,FleetCor pasó a llamarse Corpay (CPAY)
+GPS,GAP,yahoo,The Gap cambió su ticker histórico de GPS a GAP
+HCP,DOC,yahoo,Healthpeak Properties pasó a DOC (tras fusionarse con Healthcare Realty)
+HFC,DINO,yahoo,HollyFrontier se fusionó y pasó a llamarse HF Sinclair (DINO)
+HRS,LHX,yahoo,Harris Corporation se fusionó con L3 y formó L3Harris (LHX)
+JEC,J,yahoo,Jacobs Engineering cambió su ticker a J
+KORS,CPRI,yahoo,Michael Kors pasó a llamarse Capri Holdings (CPRI)
+LB,BBWI,yahoo,L Brands pasó a llamarse Bath & Body Works (BBWI)
+MMC,MRSH,yahoo,Marsh McLennan cambió su ticker a MRSH
+MYL,VTRS,yahoo,Mylan se fusionó con Upjohn y pasó a llamarse Viatris (VTRS)
+PKI,RVTY,yahoo,PerkinElmer pasó a llamarse Revvity (RVTY)
+SYMC,GEN,yahoo,Symantec pasó a llamarse Gen Digital (GEN)
+TMK,GL,yahoo,Torchmark pasó a llamarse Globe Life (GL)
+UTX,RTX,yahoo,United Technologies se fusionó con Raytheon y pasó a llamarse RTX
+WLTW,WTW,yahoo,Willis Towers Watson cambió su ticker a WTW
