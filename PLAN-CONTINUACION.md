@@ -839,7 +839,10 @@ Los primeros 5 son los más fáciles de revisar.
 | MAN-01e | `QuantAgent-dpr3.1.5` | Quitar refs vigentes de README, docs/README e inventario de ramas | Esos tres docs no mencionan Streamlit ni sus rutas/puerto | leer | L32 |
 | MAN-01f | `QuantAgent-dpr3.1.6` | Borrar las nueve páginas de `docs/user-manual/` | No existe `docs/user-manual/` | leer | L32 |
 | MAN-01g | `QuantAgent-dpr3.1.7` | Verificar aceptación final, suite e inventario de excepciones históricas | Escaneo limpio fuera de históricos, suite sin tests Streamlit borrados pasa y CI verde | probar | L32 |
-| MAN-02 | `QuantAgent-dpr3.2` | Ayuda de la CLI en inglés: todos los `help=` y `epilog` de `quantagent/cli/` | Test: cada comando, grupo y opción tiene `help` no vacío; ningún `help` contiene á é í ó ú ñ ¿ | probar | L32 |
+| MAN-02a | `QuantAgent-dpr3.2.1` | Ayuda inglesa de `backtest.py` (46 declaraciones) | Todos los help/epilog cubiertos están en inglés y no tienen caracteres españoles; tests dirigidos pasan | probar | L32 |
+| MAN-02b | `QuantAgent-dpr3.2.2` | Ayuda inglesa de `hipotesis.py`, `data.py` e `intentos.py` (40 declaraciones) | Todos los help/epilog cubiertos están en inglés y no tienen caracteres españoles; tests dirigidos pasan | probar | L32 |
+| MAN-02c | `QuantAgent-dpr3.2.3` | Resto de ayuda CLI (12 declaraciones) y test global | Todos los comandos/grupos/opciones tienen help no vacío sin caracteres españoles; tests dirigidos pasan | probar | L32 |
+| MAN-02d | `QuantAgent-dpr3.2.4` | Ayuda inglesa de `sweep.py` y `profile.py` (30 declaraciones) | Todos los help/epilog cubiertos están en inglés y no tienen caracteres españoles; tests dirigidos pasan | probar | L32 |
 | MAN-03 | `QuantAgent-dpr3.3` | Generador de la referencia de comandos desde `click` a `docs/manual/reference/cli/*.md` (depende de MAN-02) | Test: regenerar no produce diferencias con lo comiteado | probar | L32 |
 | MAN-04 | `QuantAgent-dpr3.4` | Reglas de `AGENTS.md` sobre comandos y decisiones; el contrato de lote las cita | Las dos reglas están en `AGENTS.md` y el contrato de lote las cita | leer | L32 |
 | MAN-05 | `QuantAgent-dpr3.5` | Índice de decisiones y tabla de criterios vigentes en `docs/manual/` | Una línea por documento de `docs/04_decisions/` y por tabla de decisiones de los planes; cada número de criterios enlaza a su decisión | leer | L32 |
