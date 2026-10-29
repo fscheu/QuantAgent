@@ -248,3 +248,7 @@ def cobertura_acciones(name: str) -> None:
     click.echo(f"Sin precio ({len(reporte['sin_precio'])}): {', '.join(reporte['sin_precio'])}")
     click.echo(f"Terminan antes de su salida ({len(reporte['terminan_antes'])}): {reporte['terminan_antes']}")
     click.echo(f"Saltos >50% ({len(reporte['saltos'])}): {reporte['saltos']}")
+    if reporte.get("reuso_cambiados_a_wiki"):
+        click.echo(f"Reúso cambiados a WIKI ({len(reporte['reuso_cambiados_a_wiki'])}): {reporte['reuso_cambiados_a_wiki']}")
+    if reporte.get("yahoo_sin_wiki"):
+        click.echo(f"Yahoo sin WIKI ({len(reporte['yahoo_sin_wiki'])}): {list(reporte['yahoo_sin_wiki'].keys())}")

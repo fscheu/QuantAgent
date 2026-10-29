@@ -95,7 +95,30 @@ def test_fuente_por_ticker_mapeo_alias_y_deslistada(entorno):
 
     leh = manifest["symbols"]["LEHMQ"]  # la deslistada conserva sus precios hasta el último día
     assert (leh["start"], leh["end"]) == ("2007-01-03", "2008-09-15")
+    assert "CCC" in manifest["yahoo_sin_wiki"]
     assert verify_snapshot("acc", entorno)["name"] == "acc"
+
+
+def test_reuso_ticker_coincidencia_baja_usa_wiki(entorno):
+    fechas = pd.date_range("2007-01-03", periods=15, freq="B")
+    wiki_path = entorno / "WIKI_REUSO.csv"
+    pd.DataFrame(
+        [("AAA", f.strftime("%Y-%m-%d"), 10.0 + i, 10.0 + i, 10.0 + i, 10.0 + i, 100.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0)
+         for i, f in enumerate(fechas)],
+        columns=["ticker", "date", "adj_open", "adj_high", "adj_low", "adj_close", "adj_volume", "open", "high", "low", "close", "volume", "ex-dividend", "split_ratio"],
+    ).to_csv(wiki_path, index=False)
+
+    # Yahoo para AAA con serie completamente distinta (precios que caen en vez de subir -> dif retorno > 0.5%)
+    def yahoo_divergente(symbol, start):
+        if symbol == "AAA":
+            p = [100.0 - i * 5 for i in range(len(fechas))]
+            return _frame(fechas, p)
+        return pd.DataFrame()
+
+    manifest = crear_snapshot_acciones("reuso_snap", wiki_path, base_dir=entorno, yahoo=yahoo_divergente)
+    assert manifest["fuentes"]["AAA"] == "wiki"
+    assert "AAA" in manifest["reuso_cambiados_a_wiki"]
+    assert manifest["reuso_cambiados_a_wiki"]["AAA"] < 0.9
 
 
 def test_reporte_cobertura_con_datos_a_mano(entorno):
