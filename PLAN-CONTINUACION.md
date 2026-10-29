@@ -831,7 +831,9 @@ Los primeros 5 son los más fáciles de revisar.
 | I02d | `QuantAgent-1gw0.2.4` | Época y conteos en informe; depende de I02c | Fixture muestra época y válidos/invalidados; sin marca/estado sigue funcionando | probar | L31 |
 | MAN-01a | `QuantAgent-dpr3.1.1` | Borrar vista Streamlit del manual y su prueba específica | Ambos archivos no existen | probar | L32 |
 | MAN-01b | `QuantAgent-dpr3.1.2` | Borrar vistas Streamlit restantes | No existe `apps/streamlit/views/` | probar | L32 |
-| MAN-01c | `QuantAgent-dpr3.1.3` | Borrar entrada, servicios, utilidades y pruebas específicas restantes | No existe `apps/streamlit/` ni quedan imports/tests específicos | probar | L32 |
+| MAN-01c.1 | `QuantAgent-dpr3.1.3.1` | Borrar entrada y utilidades Streamlit; dejar el servicio hasta retirar sus tests | No existen app.py/utilidades y el test de heartbeats pasa | probar | L32 |
+| MAN-01c.2 | `QuantAgent-dpr3.1.3.2` | Quitar primeras tres pruebas de DbHandle del test mixto | Esos tests no existen y el archivo pasa | probar | L32 |
+| MAN-01c.3 | `QuantAgent-dpr3.1.3.3` | Quitar pruebas DbHandle restantes e import; borrar servicio | No existe apps/streamlit ni quedan imports/tests de esa app; test de heartbeats pasa | probar | L32 |
 | MAN-01d | `QuantAgent-dpr3.1.4` | Quitar Dockerfile QA, compose, healthcheck/puerto CI, dependencia y lockfile | No quedan configuración ni dependencia activas para Streamlit | probar | L32 |
 | MAN-01e | `QuantAgent-dpr3.1.5` | Quitar refs vigentes de README, docs/README e inventario de ramas | Esos tres docs no mencionan Streamlit ni sus rutas/puerto | leer | L32 |
 | MAN-01f | `QuantAgent-dpr3.1.6` | Borrar las nueve páginas de `docs/user-manual/` | No existe `docs/user-manual/` | leer | L32 |
