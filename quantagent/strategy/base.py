@@ -1,7 +1,7 @@
 """Base classes for trading strategies with Template Method Pattern."""
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Literal, Optional, Tuple
 
 import pandas as pd
 from pydantic import BaseModel, Field
@@ -35,6 +35,15 @@ class TradingSignal(BaseModel):
     )
     max_hold_candles: Optional[int] = Field(
         default=None, description="Maximum candles to hold position"
+    )
+    entry_order: Literal["market", "stop"] = Field(
+        default="market", description="Entry order type: 'market' or 'stop'"
+    )
+    entry_expiry_bars: Optional[int] = Field(
+        default=None, description="Expiry in bars for pending entry orders"
+    )
+    sin_take_profit: bool = Field(
+        default=False, description="Whether to operate without a take profit target"
     )
 
 
