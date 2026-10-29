@@ -8,6 +8,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from ..models import ActivePosition, Environment, Order, OrderSide, OrderStatus, Trade
+from .stop_management import StopDecision, nuevo_stop
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,14 @@ class PositionMonitor:
         self.db = db_session
         self.backtest_run_id = backtest_run_id
         self.environment = environment
+
+    def actualizar_stop(self, position: ActivePosition, propuesto: float) -> StopDecision:
+        """Actualiza el stop solo si la propuesta lo ajusta a favor."""
+        decision = nuevo_stop(position.stop_loss, propuesto, position.side)
+        if decision.stop != position.stop_loss:
+            position.stop_loss = decision.stop
+            self.db.commit()
+        return decision
 
     def get_active_position(self, symbol: str) -> Optional[ActivePosition]:
         """Get active position for a symbol (ignores zero-quantity positions)."""
