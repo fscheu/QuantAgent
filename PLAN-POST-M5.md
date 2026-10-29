@@ -6,12 +6,12 @@ Marco (Fede, 2026-10-28): M5 es el motor top-down. El dinero real no es un hito 
 
 Orden: M-manual ya y en paralelo; M-datos (decisión) antes de L22; M-web (solo diseño) en paralelo con M5; M-ciclos después de M5; M-cuenta adelantado sobre M4 y M5; M-web (construcción) cuando existan M-datos y el registro único del embudo.
 
-## M-manual (en curso)
+## M-manual (hecho 2026-10-29)
 
 - **Objetivo:** un manual en inglés, en Markdown, para contestar en un minuto qué pide cada etapa, qué criterio rige y qué comando usar.
 - **Punto de control:** `docs/manual/` tiene índice, criterios, decisiones, glosario, embudo, operación y referencia de comandos generada desde `click`; el test de cobertura de la CLI pasa; Streamlit y `docs/user-manual/` ya no están en el repo.
 - **Decidido:** arrancar ya; borrar el manual viejo; inglés; se lee en GitHub y la web lo renderiza después; toda la ayuda de la CLI a inglés (U1–U4, W1).
-- **Cola:** lote L32 `lote/manual`, PR #615, padre `QuantAgent-dpr3`, MAN-01..MAN-08.
+- **Cola:** lote L32 `lote/manual`, PR #615 mergeado a `main` el 2026-10-29; padre `QuantAgent-dpr3` cerrado. El manual vive en `docs/manual/` y se revisa al cerrar cada lote (regla en `AGENTS.md`).
 
 ## M-datos
 
