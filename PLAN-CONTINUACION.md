@@ -843,7 +843,12 @@ Los primeros 5 son los más fáciles de revisar.
 | MAN-02b | `QuantAgent-dpr3.2.2` | Ayuda inglesa de `hipotesis.py`, `data.py` e `intentos.py` (40 declaraciones) | Todos los help/epilog cubiertos están en inglés y no tienen caracteres españoles; tests dirigidos pasan | probar | L32 |
 | MAN-02c | `QuantAgent-dpr3.2.3` | Resto de ayuda CLI (12 declaraciones) y test global | Todos los comandos/grupos/opciones tienen help no vacío sin caracteres españoles; tests dirigidos pasan | probar | L32 |
 | MAN-02d | `QuantAgent-dpr3.2.4` | Ayuda inglesa de `sweep.py` y `profile.py` (30 declaraciones) | Todos los help/epilog cubiertos están en inglés y no tienen caracteres españoles; tests dirigidos pasan | probar | L32 |
-| MAN-03 | `QuantAgent-dpr3.3` | Generador de la referencia de comandos desde `click` a `docs/manual/reference/cli/*.md` (depende de MAN-02) | Test: regenerar no produce diferencias con lo comiteado | probar | L32 |
+| MAN-03a | `QuantAgent-dpr3.3.1` | Renderizador determinista de referencia CLI en memoria | Renderiza todos los grupos y opciones sin dependencias nuevas | leer | L32 |
+| MAN-03b | `QuantAgent-dpr3.3.2` | Prueba del renderizador: diferencias, orden estable y help | El test detecta cambios sin regenerar, orden inestable y help faltante | probar | L32 |
+| MAN-03c | `QuantAgent-dpr3.3.3` | Referencia CLI de backtest e hipótesis | Páginas coinciden con el generador y reflejan help/defaults actuales | probar | L32 |
+| MAN-03d | `QuantAgent-dpr3.3.4` | Referencia CLI de trading, data e intentos | Páginas coinciden con el generador y reflejan help/defaults actuales | probar | L32 |
+| MAN-03e | `QuantAgent-dpr3.3.5` | Referencia CLI de walkforward, sweep, verdict y profile | Páginas coinciden con el generador y reflejan help/defaults actuales | probar | L32 |
+| MAN-03f | `QuantAgent-dpr3.3.6` | Índice de referencia CLI con enlaces relativos | README enlaza cada página existente con rutas relativas válidas | leer | L32 |
 | MAN-04 | `QuantAgent-dpr3.4` | Reglas de `AGENTS.md` sobre comandos y decisiones; el contrato de lote las cita | Las dos reglas están en `AGENTS.md` y el contrato de lote las cita | leer | L32 |
 | MAN-05 | `QuantAgent-dpr3.5` | Índice de decisiones y tabla de criterios vigentes en `docs/manual/` | Una línea por documento de `docs/04_decisions/` y por tabla de decisiones de los planes; cada número de criterios enlaza a su decisión | leer | L32 |
 | MAN-06 | `QuantAgent-dpr3.6` | Glosario en `docs/manual/glossary.md` | Cada término de la lista y de los glosarios de los planes tiene definición y ejemplo; los demás documentos enlazan al glosario | leer | L32 |
