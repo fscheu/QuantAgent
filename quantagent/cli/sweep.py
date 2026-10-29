@@ -173,8 +173,8 @@ def registrar_intento(
 
 
 @click.command("attempts", help="Count runs and parameter combinations recorded by sweep.")
-@click.option("--strategy", "strategy_name", required=True)
-@click.option("--symbol", default=None)
+@click.option("--strategy", "strategy_name", required=True, help="Strategy whose attempts to count.")
+@click.option("--symbol", default=None, help="Limit the count to this symbol.")
 def attempts_command(strategy_name: str, symbol: Optional[str]) -> None:
     from quantagent.data.snapshot import snapshot_root
 
@@ -206,7 +206,7 @@ def attempts_command(strategy_name: str, symbol: Optional[str]) -> None:
 
 
 @click.command("sweep", help="Run a strategy parameter grid against an asset.")
-@click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="apertura", show_default=True)
+@click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="apertura", show_default=True, help="Fill orders at the open or close.")
 @click.option("--strategy", "strategy_name", required=True, help="Strategy to optimize.")
 @click.option("--symbol", "symbol", required=True, help="Asset symbol (e.g. SPY).")
 @click.option("--snapshot", "snapshot_name", required=True, help="Snapshot in $QUANTAGENT_SNAPSHOT_DIR (adjusted candles).")
@@ -216,9 +216,9 @@ def attempts_command(strategy_name: str, symbol: Optional[str]) -> None:
 @click.option("--from", "from_date", type=click.DateTime(formats=["%Y-%m-%d"]), default=None, help="First session.")
 @click.option("--to", "to_date", type=click.DateTime(formats=["%Y-%m-%d"]), default=None, help="Last session.")
 @click.option("--costos", type=click.Choice(sorted(COSTOS_PERFILES)), default=None, help="Cost profile.")
-@click.option("--tamano-posicion", "tamano_posicion", type=click.FloatRange(min=0.0, max=1.0, min_open=True), default=1.0)
-@click.option("--regla-tamano", "regla_tamano", type=click.Choice(PositionSizer.REGLAS), default=None)
-@click.option("--riesgo-por-trade", type=click.FloatRange(min=0.0, min_open=True), default=None)
+@click.option("--tamano-posicion", "tamano_posicion", type=click.FloatRange(min=0.0, max=1.0, min_open=True), default=1.0, help="Position size as a fraction of equity.")
+@click.option("--regla-tamano", "regla_tamano", type=click.Choice(PositionSizer.REGLAS), default=None, help="Position sizing rule.")
+@click.option("--riesgo-por-trade", type=click.FloatRange(min=0.0, min_open=True), default=None, help="Risk per trade as a fraction of equity.")
 @click.option("--orden-minima", "orden_minima", type=click.FloatRange(min=0.0, min_open=True), default=None, help="Minimum USD amount per entry order.")
 def sweep_command(
     strategy_name: str,
