@@ -19,6 +19,7 @@ from quantagent.models import Environment, Position
 from quantagent.strategy.assembler import StrategyAssembler
 from quantagent.trading.cartera_paper import ultima_sesion_cerrada_nyse
 from quantagent.trading.position_monitor import PositionMonitor
+from quantagent.trading.pre_apertura import correr_pre_apertura
 
 from . import utils
 
@@ -44,6 +45,30 @@ def reconcile_positions() -> None:
             click.echo(difference)
     else:
         click.echo("Sin divergencias: posiciones locales y Alpaca coinciden.")
+
+
+@trading_group.command("pre-apertura", help="Prepare paper stops and expire stale entry orders before market open.",
+                       epilog="Example: quantagent trading pre-apertura")
+def pre_apertura() -> None:
+    with utils.session_scope() as session:
+        resolved = StrategyAssembler.from_profiles(
+            overrides={"broker_type": "alpaca_paper"}, environment=Environment.PAPER
+        )
+        broker = StrategyAssembler.build_components(
+            resolved, db_session=session, build_graph=False
+        ).broker
+        informe = correr_pre_apertura(session, broker)
+    for symbol in informe["reenviados"]:
+        click.echo(f"Stop reenviado: {symbol}")
+    for order_id in informe["entradas_vencidas"]:
+        click.echo(f"Entrada vencida cancelada: {order_id}")
+    for aviso in informe["avisos"]:
+        click.echo(aviso)
+    if informe["sin_stop"]:
+        for symbol in informe["sin_stop"]:
+            click.echo(f"ALARMA: {symbol} sin stop de venta abierto")
+        raise click.exceptions.Exit(1)
+    click.echo("Preapertura verificada: todas las posiciones tienen stop de venta abierto.")
 
 
 @trading_group.command("digest", help="Show the daily paper trading digest.")

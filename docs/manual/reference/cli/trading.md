@@ -10,6 +10,8 @@ Options:
 
 Commands:
   digest       Show the daily paper trading digest.
+  pre-apertura  Prepare paper stops and expire stale entry orders before
+                market open.
   reconciliar  Compare local PAPER positions with Alpaca.
 ```
 
@@ -49,4 +51,17 @@ Usage: quantagent trading reconciliar [OPTIONS]
 
 Options:
   --help  Show this message and exit.
+```
+
+## `quantagent trading pre-apertura`
+
+```text
+Usage: quantagent trading pre-apertura [OPTIONS]
+
+  Prepare paper stops and expire stale entry orders before market open.
+
+Options:
+  --help  Show this message and exit.
+
+Example: quantagent trading pre-apertura
 ```
