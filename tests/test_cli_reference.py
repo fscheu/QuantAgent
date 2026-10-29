@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 import click
 from click.core import Group, Option
@@ -26,7 +27,13 @@ def test_cli_reference_is_stable_complete_and_matches_approved_pages():
     with cli.make_context("quantagent", [], resilient_parsing=True) as context:
         check_help(cli, "quantagent", context)
 
-    approved = Path("docs/manual/reference/cli")
+    approved = Path(__file__).resolve().parents[1] / "docs/manual/reference/cli"
+    assert approved.joinpath("index.md").is_file()
+    assert {f"{name}.md" for name in cli.commands} <= pages.keys()
+    readme = (approved / "README.md").read_text()
+    links = set(re.findall(r"\]\(([^)]+)\)", readme))
+    assert set(pages) == links
+    assert all((approved / link).is_file() for link in links)
     for filename, rendered in pages.items():
         reference = approved / filename
         if reference.exists():
