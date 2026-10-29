@@ -25,6 +25,7 @@ Options:
   --name TEXT    Snapshot name, for example macro-2026-10.  [required]
   --series TEXT  Comma-separated FRED series, for example UNRATE,CPIAUCSL.
                  [required]
+  --nota TEXT    Note about a series in SERIES=text format.
   --help         Show this message and exit.
 ```
 
@@ -32,6 +33,7 @@ Options and defaults:
 
 - `--name` — default: `None`
 - `--series` — default: `None`
+- `--nota` — default: `None`
 
 ## `quantagent backtest data macro verify`
 
