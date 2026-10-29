@@ -2,17 +2,22 @@
 
 import json
 import os
+from datetime import datetime, time
+from pathlib import Path
 from types import SimpleNamespace
 
 import click
+from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 
-from quantagent.digest import build_digest
-from quantagent.digest_datos import consultar_datos_paper
-from quantagent.fabrica.chequeos_paper import comparar_pesos, reportar_dividendos, reportar_rechazos
 from quantagent import settings
-from quantagent.models import Environment
+from quantagent.digest import build_digest
+from quantagent.digest_datos import consultar_datos_cartera, consultar_datos_paper, consultar_valuacion_actual
+from quantagent.fabrica.cartera import leer_sombra
+from quantagent.fabrica.chequeos_paper import comparar_pesos, reportar_dividendos, reportar_rechazos
+from quantagent.models import Environment, Position
 from quantagent.strategy.assembler import StrategyAssembler
+from quantagent.trading.cartera_paper import ultima_sesion_cerrada_nyse
 from quantagent.trading.position_monitor import PositionMonitor
 
 from . import utils
@@ -45,8 +50,12 @@ def reconcile_positions() -> None:
 @click.argument("archivo", required=False, type=click.File("r", encoding="utf-8"))
 @click.option("--date", "digest_date", type=click.DateTime(formats=["%Y-%m-%d"]))
 @click.option("--db", type=click.Path(dir_okay=False), help="Archivo SQLite; por defecto usa DATABASE_URL.")
-@click.option("--portfolio", default="paper", show_default=True, help="Nombre de la cartera en el digest.")
-def trading_digest(archivo, digest_date, db: str | None, portfolio: str) -> None:
+@click.option("--shadow", type=click.Path(dir_okay=False), help="Archivo JSON de pesos sombra.")
+@click.option("--portfolio", help="Cartera dedicada: posiciones, ejecuciones y valuación actual de Alpaca.")
+@click.option("--dividendos-alpaca", is_flag=True, help="Leer dividendos de Alpaca para esa fecha.")
+@click.option("--sin-dividendos", is_flag=True, help="Desactivar la consulta de dividendos de Alpaca.")
+def trading_digest(archivo, digest_date, db: str | None, shadow: str | None, portfolio: str,
+                   dividendos_alpaca: bool, sin_dividendos: bool) -> None:
     if archivo:
         data = json.load(archivo)
         differences = comparar_pesos(data["paper_weights"], data["shadow_weights"])
@@ -66,19 +75,81 @@ def trading_digest(archivo, digest_date, db: str | None, portfolio: str) -> None
     if digest_date is None:
         raise click.UsageError("Provide --date YYYY-MM-DD.")
     day = digest_date.date()
+    dedicated = portfolio is not None
+    portfolio = portfolio or "paper"
+    valuation, executions, pending = None, None, None
     previous_url = os.environ.get("DATABASE_URL")
     previous_settings_url = settings.DATABASE_URL
     if db:
         os.environ["DATABASE_URL"] = f"sqlite:///{os.path.abspath(db)}"
+    db_path = db or make_url(settings.DATABASE_URL).database
+    shadow_path = Path(shadow) if shadow else Path(db_path).with_suffix(".sombra.json")
+    warnings = [] if dedicated else ["Equity paper = valor invertido; la DB no guarda caja."]
+    dividendos_alpaca = not sin_dividendos and (dividendos_alpaca or settings.TRADING_BROKER == "alpaca_paper")
+    if not dividendos_alpaca:
+        warnings.append("Dividendos: sin fuente de dividendos.")
+    differences, dividendos_error = [], False
+    dividendos = []
+    if dividendos_alpaca:
+        try:
+            from quantagent.trading.alpaca_dividendos import leer_dividendos_alpaca
+            resolved = StrategyAssembler.from_profiles(
+                overrides={"broker_type": "alpaca_paper"}, environment=Environment.PAPER
+            )
+            client = StrategyAssembler.BROKER_CONSTRUCTORS["alpaca_paper"](resolved).client
+            dividendos = leer_dividendos_alpaca(client, day)
+        except Exception as exc:
+            warnings.append(f"Dividendos: error al consultar Alpaca ({type(exc).__name__}).")
+            if isinstance(exc, ValueError):
+                warnings.append(f"Dividendos: {exc}")
+            dividendos_error = True
+        else:
+            warnings.extend(reportar_dividendos(dividendos) or ["Dividendos: Sin observaciones"])
+    orders = []
     try:
         with utils.session_scope() as session:
-            portfolios, trades, heartbeats, cumulative_pnl = consultar_datos_paper(session, day, portfolio)
-    except (SQLAlchemyError, ValueError):
-        portfolios, trades, heartbeats, cumulative_pnl = [], [], [], 0.0
+            portfolios, trades, heartbeats, cumulative_pnl, orders = consultar_datos_paper(session, day, portfolio)
+            if dedicated:
+                portfolios, executions, pending = consultar_datos_cartera(session, day, portfolio)
+                trades, cumulative_pnl = [], None
+                try:
+                    resolved = StrategyAssembler.from_profiles(
+                        overrides={"broker_type": "alpaca_paper"}, environment=Environment.PAPER
+                    )
+                    broker = StrategyAssembler.BROKER_CONSTRUCTORS["alpaca_paper"](resolved)
+                    valuation = consultar_valuacion_actual(broker, portfolios)
+                except (RuntimeError, ValueError) as exc:
+                    raise click.ClickException(str(exc)) from exc
+                portfolios = valuation["portfolios"]
+            values = {p["symbol"]: float(p["value"]) for p in portfolios[0]["positions"]} if portfolios else {}
+            invested = sum(values.values())
+            paper_weights = {symbol: value / invested for symbol, value in values.items()} if invested else {}
+            session_day = ultima_sesion_cerrada_nyse(datetime.combine(day, time.max)).date()
+            try:
+                shadow_weights = leer_sombra(shadow_path, portfolio, session_day)["pesos"]
+            except (KeyError, FileNotFoundError):
+                warnings.append(f"Sombra sin datos para {portfolio} en {session_day}")
+            else:
+                tolerancias = {
+                    symbol: float(price) / invested
+                    for symbol, price in session.query(Position.symbol, Position.current_price)
+                    .filter(Position.symbol.in_(set(paper_weights) | set(shadow_weights))).all()
+                } if invested else {}
+                differences = comparar_pesos(paper_weights, shadow_weights, tolerancias=tolerancias)
+    except (SQLAlchemyError, ValueError) as exc:
+        if dedicated:
+            raise click.ClickException(f"Cartera: error al consultar datos ({type(exc).__name__}).") from exc
+        portfolios, trades, heartbeats, cumulative_pnl, orders = [], [], [], 0.0, []
     finally:
         settings.DATABASE_URL = previous_settings_url
         if previous_url is None:
             os.environ.pop("DATABASE_URL", None)
         else:
             os.environ["DATABASE_URL"] = previous_url
-    click.echo(build_digest(day, portfolios, trades, heartbeats, cumulative_pnl=cumulative_pnl))
+    rejection_reports = reportar_rechazos([SimpleNamespace(**order) for order in orders])
+    click.echo(build_digest(day, portfolios, trades, heartbeats, warnings=warnings,
+                            reconciliations=[*differences, *rejection_reports], cumulative_pnl=cumulative_pnl,
+                            valuation=valuation, executions=executions, pending=pending))
+    if dividendos_error or differences or any(str(order.get("status")).lower() == "rejected" and not order.get("comment")
+                          for order in orders):
+        raise click.exceptions.Exit(1)

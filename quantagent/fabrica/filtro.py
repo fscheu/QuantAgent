@@ -9,7 +9,7 @@ from quantagent.backtesting.signals import bar_signals
 from quantagent.backtesting.vbt_filter import equity_metrics, run_filter
 from quantagent.cli.walkforward import construir_ventanas, seleccionar_ganador
 from quantagent.fabrica.cartera import combinar, pesos
-from quantagent.fabrica.transversal import METRICAS, señales_transversales
+from quantagent.fabrica.transversal import MASCARAS, METRICAS, señales_transversales
 from quantagent.strategy.registry import build_strategy, cli_aliases
 
 
@@ -30,7 +30,7 @@ def veredicto_etapa1(sharpe_cartera, trades_totales) -> tuple:
     return "PASA", f"Sharpe de cartera {sharpe_cartera:.2f}"
 
 
-def filtrar_activo(h, velas: pd.DataFrame, *, costos: dict, capital: float, train_years: int = 4, test_years: int = 2) -> dict:
+def filtrar_activo(h, velas: pd.DataFrame, *, costos: dict, capital: float, panel_cierres: pd.DataFrame | None = None, train_years: int = 4, test_years: int = 2) -> dict:
     """Elige por ventana la combinación de mayor sharpe_tasa_0 en el ajuste y la corre en la prueba.
 
     `velas`: timestamp, open, high, low, close, volume; `costos`: commission_pct y slippage_pct.
@@ -41,6 +41,30 @@ def filtrar_activo(h, velas: pd.DataFrame, *, costos: dict, capital: float, trai
     velas.index = pd.DatetimeIndex(velas["timestamp"])
     nombre = cli_aliases().get(h.clase) or h.clase
     timeframe = getattr(h, "timeframe", "1d")
+    estrategia = build_strategy(nombre, **next(iter(h.combinaciones()), {}))
+    if hasattr(estrategia, "posiciones_objetivo"):
+        if panel_cierres is None:
+            raise ValueError("La estrategia de posiciones objetivo requiere cierres sincronizados")
+        cierres = panel_cierres.copy()
+        cierres.index = pd.DatetimeIndex(cierres.index)
+        objetivos = estrategia.posiciones_objetivo(cierres)
+        ventanas = construir_ventanas(velas.index[0].to_pydatetime(), velas.index[-1].to_pydatetime(), train_years, test_years)
+        por_activo = {}
+        for activo in h.activos:
+            objetivo = objetivos[activo].reindex(cierres.index).fillna(0.0)
+            cambios = objetivo.diff().fillna(0.0).ne(0)
+            retornos, trades, ganadores = [], 0, []
+            for _, _, c, d in ventanas:
+                peso = objetivo.loc[c:d]
+                ret = cierres.loc[c:d, activo].pct_change().fillna(0.0) * peso.shift(1, fill_value=0.0)
+                retornos.append(ret.iloc[1:])
+                trades += int(cambios.loc[c:d].sum())
+                ganadores.append({"prueba_desde": c, "prueba_hasta": d, "params": {}})
+            ret = pd.concat(retornos)
+            equity = capital * (1 + ret).cumprod()
+            por_activo[activo] = {"sharpe_tasa_0": equity_metrics(equity, 0.0)["sharpe"], "trades": trades,
+                                  "ganadores": ganadores, "retornos": ret}
+        return {**por_activo[h.activos[0]], "por_activo": por_activo}
     señales = [(c, bar_signals(build_strategy(nombre, **c), velas, h.activos[0], timeframe)) for c in h.combinaciones()]
     def correr(sig, a, b):
         return run_filter(sig.loc[a:b], velas.loc[a:b], capital=capital, **costos)
@@ -78,7 +102,7 @@ def filtrar_pierna(h, pierna, paneles, *, costos: dict, capital: float, train_ye
     combinaciones = pierna.combinaciones() if pierna.parametros else [{}]
     candidatas = []
     for comb in combinaciones:
-        panel = señales_transversales(cierres, partial(METRICAS[pierna.clase], **comb))
+        panel = señales_transversales(cierres, partial(METRICAS[pierna.clase], **comb), mascara=MASCARAS.get(pierna.elegibilidad))
         previo = panel.shift(1, fill_value=0)
         señales = {a: pd.DataFrame({"entry": ((panel[a] == 1) & (previo[a] == 0)).astype(int),
                                     "exit": (panel[a] == 0) & (previo[a] == 1)}) for a in activos}

@@ -2,6 +2,7 @@
 
 import csv
 import json
+import os
 import traceback
 from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime, timezone
@@ -13,7 +14,7 @@ import pandas as pd
 import yaml
 from tabulate import tabulate
 
-from quantagent.data.snapshot import SnapshotError, read_snapshot, snapshot_root
+from quantagent.data.snapshot import SnapshotError, load_manifest, read_snapshot, snapshot_root
 from quantagent.fabrica.admision import admitir
 from quantagent.fabrica.candado import CandadoError, abrir, fecha_apertura
 from quantagent.fabrica.cartera import evaluar_cartera
@@ -33,11 +34,13 @@ from quantagent.fabrica.transversal import es_transversal
 from quantagent.fabrica.validacion import (
     alarma_cartera,
     alarma_filtro_motor,
+    curva_cartera_guardada,
+    evaluar_c0_cartera,
     validar_etapa2,
     validar_etapa3,
 )
 from quantagent.settings import COSTOS_PERFILES
-from quantagent.strategy.registry import STRATEGY_REGISTRY, cli_aliases
+from quantagent.strategy.registry import STRATEGY_REGISTRY, build_strategy, cli_aliases
 
 from .sweep import registrar_intento
 
@@ -99,6 +102,109 @@ def resumen_command(desde, out):
     click.echo(texto, nl=False)
 
 
+@hipotesis_group.command("reserva", help="Simular elegibilidad y rango de la reserva 2023+.")
+@click.argument("archivo", type=click.Path(exists=True, dir_okay=False))
+@click.option("--snapshot", "snapshot_name", required=True)
+@click.option("--abrir", "abrir_reserva", is_flag=True, help="Registrar y abrir la reserva una sola vez.")
+def reserva_command(archivo, snapshot_name, abrir_reserva):
+    h = cargar_hipotesis(archivo)
+    if h.id not in {"cartera-transversal", "rebalanceo-fin-de-mes", "tendencia-larga-corta"}:
+        raise click.ClickException(f"hipótesis fuera de la lista de reserva: {h.id}")
+    estado = ultimo_estado(h.id)
+    if not estado or estado["etapa"] != "2" or estado["veredicto"] != "PASA":
+        raise click.ClickException(f"{h.id} no tiene etapa 2 PASA")
+    if fecha_apertura(h.id, "reserva") is not None:
+        raise click.ClickException(f"{h.id}/reserva ya fue abierta")
+    desde = os.environ.get("QUANTAGENT_RESERVA_DESDE", "2023-01-01")
+    manifiesto = load_manifest(snapshot_name)
+    activos = [a for p in h.piernas for a in p.activos]
+    hasta = min(manifiesto["symbols"][a]["end"] for a in activos)
+    if desde > hasta:
+        raise click.ClickException(f"sin rango de reserva: {desde} a {hasta}")
+    if abrir_reserva:
+        ahora = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        raiz = snapshot_root()
+        raiz.mkdir(parents=True, exist_ok=True)
+        with (raiz / "reserva-preregistro.log").open("a", encoding="utf-8") as f:
+            f.write(f"{ahora}\t{h.id}\telegible\treserva {desde} a {hasta}\n")
+        try:
+            abrir(h.id, "reserva")
+        except CandadoError as exc:
+            raise click.ClickException(str(exc)) from exc
+        with (raiz / "reserva-accesos.log").open("a", encoding="utf-8") as f:
+            f.write(f"{ahora}\thipotesis reserva {archivo} --snapshot {snapshot_name} --abrir\n")
+        parametros = {(p.clase, activo) if h.es_cartera else activo:
+                      (p.combinaciones()[0] if p.parametros else {})
+                      for p in h.piernas for activo in p.activos}
+        carpeta = raiz / "reserva" / h.id
+        try:
+            veredicto, filas = validar_etapa3(h, snapshot_name, parametros, carpeta, desde, hasta,
+                                               abrir_reserva=True)
+            from quantagent.fabrica.informe import diagnostico_exceso
+            m1 = diagnostico_exceso(h, carpeta / "equity", snapshot_name, base_dir=raiz)
+            if not m1["disponible"]:
+                raise click.ClickException(m1["motivo"])
+            registrar_intento("+".join(p.clase for p in h.piernas), "cartera", snapshot_name,
+                              "etf", 1.0, {p.clase: p.parametros for p in h.piernas},
+                              {"desde": desde, "hasta": hasta,
+                               "trades": sum(int(f.get("trades") or 0) for f in filas),
+                               "pnl": "", "sharpe": m1["sharpe_cartera"]},
+                              hipotesis=h.id, etapa="3", sharpe_base="DGS3MO")
+        except Exception as exc:
+            raise click.ClickException(str(exc)) from exc
+        registrar_estado(h.id, "3", veredicto, "reserva; C0 intacto")
+        click.echo(f"Reserva: {h.id}; {desde} a {hasta}; C0: {veredicto}")
+        click.echo(f"Sharpe en exceso de DGS3MO: cartera {m1['sharpe_cartera']:.2f}; benchmark {m1['sharpe_benchmark']:.2f}")
+    else:
+        click.echo(f"Simulacro elegible: {h.id}; reserva {desde} a {hasta}; no se abrió ni leyó.")
+
+
+@hipotesis_group.command("reserva-veredicto", help="Recuperar el veredicto desde las curvas guardadas.")
+@click.argument("archivo", type=click.Path(exists=True, dir_okay=False))
+@click.option("--snapshot", "snapshot_name", required=True)
+def reserva_veredicto_command(archivo, snapshot_name):
+    h = cargar_hipotesis(archivo)
+    if fecha_apertura(h.id, "reserva") is None:
+        raise click.ClickException(f"{h.id}/reserva todavía no fue abierta")
+    raiz = snapshot_root()
+    intentos_path = raiz / "intentos.csv"
+    if ultimo_estado(h.id) and ultimo_estado(h.id)["etapa"] == "3" and intentos_path.exists():
+        with intentos_path.open(newline="", encoding="utf-8") as f:
+            if any(r.get("hipotesis") == h.id and r.get("etapa") == "3" and r.get("activo") == "cartera"
+                   and r.get("sharpe_base") == "DGS3MO" for r in csv.DictReader(f)):
+                click.echo(f"Reserva ya recuperada: {h.id}")
+                return
+    from quantagent.data import snapshot as snap_mod
+    from quantagent.fabrica.informe import diagnostico_exceso
+    carpeta = raiz / "reserva" / h.id
+    eq = curva_cartera_guardada(h, carpeta, None)
+    if eq is None or eq.empty:
+        raise click.ClickException("curva de cartera vacía")
+    desde, hasta = eq.index.min(), eq.index.max()
+    activos = list(dict.fromkeys(a for p in h.piernas for a in p.activos))
+    c3 = pd.DataFrame({a: snap_mod.read_snapshot(snapshot_name, a, raiz)["close"].loc[desde:hasta]
+                       for a in activos})
+    c2 = pd.DataFrame({a: snap_mod.read_snapshot(snapshot_name, a, raiz)["close"].loc["2007-01-01":"2018-12-31"]
+                       for a in activos})
+    filas_intentos = list(csv.DictReader(intentos_path.open(newline="", encoding="utf-8"))) if intentos_path.exists() else []
+    s2 = next((float(r["sharpe"]) for r in filas_intentos
+               if r.get("hipotesis") == h.id and r.get("etapa") == "2" and r.get("activo") == "cartera"), None)
+    trades = sum(len(list(csv.DictReader(p.open(newline="", encoding="utf-8"))))
+                 for p in (carpeta / "trades").glob("*.csv"))
+    c0_pasa, _, c0 = evaluar_c0_cartera(eq, c3, c2, s2, trades, filas_intentos, intentos_path)
+    diagnostico = diagnostico_exceso(h, carpeta / "equity", snapshot_name, base_dir=raiz)
+    if not diagnostico["disponible"]:
+        raise click.ClickException(diagnostico["motivo"])
+    veredicto = "PASA" if c0_pasa else "CORTA"
+    registrar_intento("+".join(p.clase for p in h.piernas), "cartera", snapshot_name,
+                      "etf", 1.0, {p.clase: p.parametros for p in h.piernas},
+                      {"desde": str(desde.date()), "hasta": str(hasta.date()), "trades": trades, "pnl": "",
+                       "sharpe": diagnostico["sharpe_cartera"]}, hipotesis=h.id,
+                      etapa="3", sharpe_base="DGS3MO")
+    registrar_estado(h.id, "3", veredicto, "reserva; M1 DGS3MO")
+    click.echo(f"Reserva: {h.id}; M1 cartera {diagnostico['sharpe_cartera']:.2f}; M1 benchmark {diagnostico['sharpe_benchmark']:.2f}; C0: {veredicto}; benchmark {c0['benchmark']:.2f}; trades {trades}")
+
+
 def admitir_hipotesis(archivo, snapshot_name, prueba_unica=False):
     """Admitir y registrar el rechazo, devolviendo hipótesis y motivos."""
     try:
@@ -158,6 +264,32 @@ def filtrar_hipotesis(h, snapshot_name):
                 resultados.append([activo, r["sharpe_tasa_0"], r["trades"]])
                 filas_tabla.append([p.clase, activo, r["sharpe_tasa_0"], r["trades"]] if h.es_cartera else [activo, r["sharpe_tasa_0"], r["trades"]])
         else:
+            nombre = cli_aliases().get(p.clase) or p.clase
+            estrategia = build_strategy(nombre, **next(iter(p.combinaciones()), {}))
+            if hasattr(estrategia, "posiciones_objetivo"):
+                panel_cierres = {}
+                panel_velas = {}
+                for activo in p.activos:
+                    try:
+                        v = read_snapshot(snapshot_name, activo).loc["2007-01-01":"2018-12-31"]
+                        if v.empty:
+                            raise ValueError("Sin velas entre 2007 y 2018")
+                        cierres_dict[activo] = v["close"]
+                        panel_cierres[activo] = v["close"]
+                        panel_velas[activo] = v.rename_axis("timestamp").reset_index()
+                    except (ValueError, SnapshotError) as exc:
+                        raise click.ClickException(str(exc)) from exc
+                r = filtrar_activo(p, panel_velas[p.activos[0]], costos=COSTOS_PERFILES["etf"],
+                                   capital=100_000.0, panel_cierres=pd.DataFrame(panel_cierres))
+                for activo, por_activo in r["por_activo"].items():
+                    clave = (p.clase, activo) if h.es_cartera else activo
+                    resultados.append([activo, por_activo["sharpe_tasa_0"], por_activo["trades"]])
+                    filas_tabla.append([p.clase, activo, por_activo["sharpe_tasa_0"], por_activo["trades"]]
+                                       if h.es_cartera else [activo, por_activo["sharpe_tasa_0"], por_activo["trades"]])
+                    retornos_dict[(i, activo)] = por_activo["retornos"]
+                    parametros[clave] = parametros_elegidos(por_activo["ganadores"])
+                    total_trades += por_activo["trades"]
+                continue
             for activo in p.activos:
                 try:
                     v = read_snapshot(snapshot_name, activo).loc["2007-01-01":"2018-12-31"]

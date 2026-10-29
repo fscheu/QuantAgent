@@ -85,13 +85,15 @@ def test_portfolio_path_must_exist(tmp_path):
         paper_trading._build_portfolio_scheduler(_FakeConfig(), str(tmp_path / "missing.yaml"))
 
 
-def test_each_portfolio_builds_an_isolated_unstarted_scheduler(monkeypatch, tmp_path):
+def test_each_portfolio_builds_an_isolated_unstarted_scheduler(monkeypatch, tmp_path, caplog):
     source = Path("hipotesis/cartera-transversal.yaml").resolve()
     second = Path("hipotesis/cartera-nucleo-rsi-regimen.yaml").resolve()
     third = Path("hipotesis/cartera-nucleo-curva.yaml").resolve()
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("TRADING_BROKER", "alpaca_paper")
     Path("local-data").mkdir()
-    monkeypatch.setattr(paper_trading.StrategyAssembler, "build_components", lambda *a, **k: SimpleNamespace(order_manager=object()))
+    broker_types = []
+    monkeypatch.setattr(paper_trading.StrategyAssembler, "build_components", lambda resolved, **k: broker_types.append(resolved.broker_type) or SimpleNamespace(order_manager=object()))
     monkeypatch.setattr(paper_trading, "build_source", lambda name: SimpleNamespace(name=name))
     monkeypatch.setattr(paper_trading, "FredClient", lambda: object())
     built = []
@@ -107,13 +109,49 @@ def test_each_portfolio_builds_an_isolated_unstarted_scheduler(monkeypatch, tmp_
     assert built[0]["paper_portfolio"]["macro"] is None
     assert built[1]["paper_portfolio"]["macro"] is None
     assert built[2]["paper_portfolio"]["macro"] is not None
+    assert broker_types == ["alpaca_paper"] * 3
+    assert "broker simulado" not in caplog.text
     for item in built:
         item["db_session"].close()
+
+
+def test_portfolio_requires_explicit_broker_before_building_components(monkeypatch, tmp_path):
+    source = Path("hipotesis/cartera-transversal.yaml").resolve()
+    monkeypatch.delenv("TRADING_BROKER", raising=False)
+    monkeypatch.chdir(tmp_path)
+    Path("local-data").mkdir()
+    build = lambda *a, **k: pytest.fail("broker components must not be built")
+    monkeypatch.setattr(paper_trading.StrategyAssembler, "build_components", build)
+    with pytest.raises(ValueError, match="TRADING_BROKER.*alpaca_paper, paper_local"):
+        paper_trading._build_portfolio_scheduler(_FakeConfig(), str(source))
+
+
+def test_explicit_simulated_broker_warns_and_builds(monkeypatch, tmp_path, caplog):
+    source = Path("hipotesis/cartera-transversal.yaml").resolve()
+    monkeypatch.chdir(tmp_path)
+    Path("local-data").mkdir()
+    monkeypatch.setenv("TRADING_BROKER", "paper_local")
+    constructor = paper_trading.StrategyAssembler.BROKER_CONSTRUCTORS["paper_local"]
+    constructed = []
+    def build_broker(config):
+        broker = constructor(config)
+        constructed.append((config.broker_type, broker))
+        return broker
+    monkeypatch.setitem(paper_trading.StrategyAssembler.BROKER_CONSTRUCTORS, "paper_local", build_broker)
+    monkeypatch.setattr(paper_trading, "build_source", lambda name: SimpleNamespace(name=name))
+    monkeypatch.setattr(paper_trading, "TradingScheduler", lambda **kwargs: SimpleNamespace())
+    scheduler, session = paper_trading._build_portfolio_scheduler(_FakeConfig(), str(source))
+    assert "broker simulado: no se envían órdenes a Alpaca" in caplog.text
+    assert constructed[0][0] == "paper_local"
+    from quantagent.trading.paper_broker import PaperBroker
+    assert isinstance(constructed[0][1], PaperBroker)
+    session.close()
 
 
 def test_curva_portfolio_uses_injected_fred_client_without_nan(monkeypatch, tmp_path):
     source = Path("hipotesis/cartera-nucleo-curva.yaml").resolve()
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("TRADING_BROKER", "alpaca_paper")
     Path("local-data").mkdir()
     monkeypatch.setattr(paper_trading.StrategyAssembler, "build_components", lambda *a, **k: SimpleNamespace(order_manager=object()))
     monkeypatch.setattr(paper_trading, "build_source", lambda name: SimpleNamespace(name=name))
@@ -136,6 +174,7 @@ def test_curva_portfolio_uses_injected_fred_client_without_nan(monkeypatch, tmp_
 def test_curva_portfolio_fails_clearly_without_fred_key(monkeypatch, tmp_path):
     source = Path("hipotesis/cartera-nucleo-curva.yaml").resolve()
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("TRADING_BROKER", "alpaca_paper")
     monkeypatch.setattr(paper_trading, "FredClient", lambda: (_ for _ in ()).throw(RuntimeError("falta FRED_API_KEY")))
     with pytest.raises(RuntimeError, match="falta FRED_API_KEY"):
         paper_trading._build_portfolio_scheduler(_FakeConfig(), str(source))

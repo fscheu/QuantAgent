@@ -7,6 +7,10 @@ import pytest
 from quantagent.models import Environment, OrderSide, TradeSignal
 from quantagent.settings import SchedulerSettings
 from quantagent.strategy.base import TradingSignal as StrategyTradingSignal
+from quantagent.portfolio.manager import PortfolioManager
+from quantagent.trading.order_manager import OrderManager
+from quantagent.trading.position_sizer import PositionSizer
+from quantagent.trading.risk_manager import RiskManager
 from quantagent.trading.scheduler import (
     TradingScheduler,
 )
@@ -398,6 +402,42 @@ def test_trading_scheduler_short_signal_executes_order():
     assert kwargs["environment"] == Environment.PAPER
     assert kwargs["symbol"] == "SPX"
     assert kwargs["decision"] == TradeSignal.SHORT
+
+
+def test_scheduler_paper_short_is_monitored_and_closed(db_session):
+    config = SchedulerSettings(
+        enabled=True, assets=["BTC"], environment="paper", timeframe="1h"
+    )
+    portfolio = PortfolioManager(100_000, environment=Environment.PAPER, db=db_session)
+    order_manager = OrderManager(
+        PositionSizer(), RiskManager(portfolio, db=db_session),
+        PaperBroker(slippage_pct=0), portfolio, db_session,
+    )
+    data_provider = MagicMock()
+    data_provider.now.return_value = datetime(2024, 1, 2, 15)
+    data_provider.get_ohlc.return_value = _sample_df()
+    strategy = Mock()
+    strategy.generate_signal.return_value = StrategyTradingSignal(
+        decision="SHORT", confidence=1, stop_loss=110, take_profit=90,
+    )
+    strategy.should_exit.return_value = (True, "test_exit")
+    scheduler = TradingScheduler(
+        trading_graph=Mock(), order_manager=order_manager,
+        data_provider=data_provider, db_session=db_session,
+        scheduler_settings=config, scheduler_factory=DummyScheduler,
+        strategy=strategy,
+    )
+
+    scheduler.run_once()
+    assert portfolio.get_position("BTC")["qty"] < 0
+    active = scheduler.position_monitor.get_active_position("BTC")
+    assert active.side == OrderSide.SELL
+
+    scheduler.run_once()
+
+    assert portfolio.get_position("BTC")["qty"] == pytest.approx(0)
+    assert scheduler.position_monitor.get_active_position("BTC") is None
+    strategy.should_exit.assert_called_once()
 
 
 # ============================================================================

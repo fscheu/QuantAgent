@@ -9,11 +9,12 @@ from tempfile import TemporaryDirectory
 
 import pandas as pd
 
-from quantagent.backtesting.verdict import dsr_contra_intentos, evaluar, n_efectivo
+from quantagent.backtesting.verdict import dsr_contra_intentos, evaluar, filas_validas, n_efectivo
 from quantagent.cli.sweep import registrar_intento
 from quantagent.data.snapshot import snapshot_root
 from quantagent.fabrica.criterio import anios_positivos, evaluar_etapa3_cartera, recargo_paper, sharpe_benchmark
-from quantagent.fabrica.transversal import METRICAS, es_transversal, leer_seleccion, señales_transversales
+from quantagent.fabrica.transversal import MASCARAS, METRICAS, es_transversal, leer_seleccion, señales_transversales
+from quantagent.strategy.registry import STRATEGY_REGISTRY, cli_aliases
 
 SHARPE_MINIMO_FILTRO = 0.10
 SHARPE_MAXIMO_MOTOR_ALARMA = 0.0
@@ -44,17 +45,46 @@ def alarma_cartera(sharpe_filtro, sharpe_motor):
     return float(sharpe_motor) <= SHARPE_MAXIMO_MOTOR_ALARMA
 
 
-def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, abrir_prueba=False):
+def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, abrir_prueba=False,
+                 abrir_reserva=False):
     carpeta = Path(carpeta)
     carpeta.mkdir(parents=True, exist_ok=True)
     filas = []
     paneles_trans = {}
     import quantagent.data.snapshot as snap_mod
+    estrategia_objetivo = next((p for p in h.piernas
+                                if (STRATEGY_REGISTRY.get(cli_aliases().get(p.clase, p.clase))
+                                    and hasattr(STRATEGY_REGISTRY[cli_aliases().get(p.clase, p.clase)]["cls"],
+                                                "posiciones_objetivo"))), None)
+    if etapa in ("2", "3") and estrategia_objetivo:
+        from quantagent.backtesting.vbt_filter import equity_metrics
+
+        activos = list(estrategia_objetivo.activos)
+        panel = pd.DataFrame({a: snap_mod.read_snapshot(snapshot, a)["close"].loc[desde:hasta]
+                              for a in activos})
+        estrategia = STRATEGY_REGISTRY[cli_aliases().get(estrategia_objetivo.clase,
+                                                         estrategia_objetivo.clase)]["cls"]
+        objetivos = estrategia.posiciones_objetivo(panel)
+        for activo in activos:
+            pesos = objetivos[activo].reindex(panel.index).fillna(0.0)
+            retornos = panel[activo].pct_change().fillna(0.0) * pesos.shift(1, fill_value=0.0)
+            equity = 100_000.0 * (1 + retornos).cumprod()
+            trades = int(pesos.diff().fillna(0.0).ne(0).sum())
+            metricas = equity_metrics(equity, 0.0)
+            nombre = f"{estrategia_objetivo.clase}-{activo}.csv" if h.es_cartera else f"{activo}.csv"
+            (carpeta / "equity").mkdir(parents=True, exist_ok=True)
+            pd.DataFrame({"date": equity.index, "equity": equity.values}).to_csv(
+                carpeta / "equity" / nombre, index=False)
+            filas.append({"activo": activo, "estrategia": estrategia_objetivo.clase,
+                          "trades": str(trades), "pnl": str(round(float(equity.iloc[-1] - 100_000), 2)),
+                          "sharpe_tasa_0": str(round(metricas["sharpe"], 2)),
+                          "max_drawdown": str(round(metricas["max_drawdown"], 6))})
+        return filas
     for p in h.piernas:
         if es_transversal(p.clase) and p.clase not in paneles_trans:
             activos = list(p.activos) or [a for c, a in params_por_activo.keys() if c == p.clase] or list(params_por_activo.keys())
             cierres = pd.DataFrame({a: snap_mod.read_snapshot(snapshot, a)["close"].loc[:hasta] for a in activos})
-            paneles_trans[p.clase] = señales_transversales(cierres, METRICAS[p.clase])
+            paneles_trans[p.clase] = señales_transversales(cierres, METRICAS[p.clase], mascara=MASCARAS.get(p.elegibilidad))
             for a in activos:
                 pd.DataFrame({"timestamp": cierres.index, "posicion": paneles_trans[p.clase][a].values}).to_csv(
                     carpeta / f"senal-{p.clase}-{a}.csv", index=False)
@@ -82,6 +112,8 @@ def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, a
                 ]
                 if abrir_prueba:
                     comando.append("--abrir-prueba")
+                if abrir_reserva:
+                    comando.append("--abrir-reserva")
                 resultado = subprocess.run(comando, capture_output=True, text=True)
                 if resultado.returncode:
                     raise RuntimeError(resultado.stderr)
@@ -104,7 +136,6 @@ def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, a
 
 def _curva_y_v30_cartera(h, filas, carpeta, snapshot, etapa, desde, hasta):
     from quantagent.backtesting.vbt_filter import equity_metrics
-    from quantagent.fabrica.cartera import curva_cartera
 
     cierres = None
     if snapshot is not None:
@@ -112,26 +143,8 @@ def _curva_y_v30_cartera(h, filas, carpeta, snapshot, etapa, desde, hasta):
         cierres = pd.DataFrame({a: snap_mod.read_snapshot(snapshot, a)["close"].loc[desde:hasta]
                                 for p in h.piernas for a in p.activos})
 
-    piernas_map = {i: list(p.activos) for i, p in enumerate(h.piernas)}
-    retornos_dict = {}
-    for i, p in enumerate(h.piernas):
-        for activo in p.activos:
-            p_eq = Path(carpeta) / "equity" / f"{p.clase}-{activo}.csv"
-            if not p_eq.exists():
-                p_eq = Path(carpeta) / "equity" / f"{activo}.csv"
-            if p_eq.exists():
-                with p_eq.open(newline="") as f:
-                    curva = list(csv.DictReader(f))
-                if len(curva) >= 2:
-                    col = "date" if "date" in curva[0] else "timestamp"
-                    eq = pd.Series([float(r["equity"]) for r in curva], index=pd.to_datetime([r[col] for r in curva]))
-                    retornos_dict[(i, activo)] = eq.pct_change().dropna()
-
-    seleccion = leer_seleccion(carpeta, h.piernas, cierres.index if cierres is not None else None)
-    if seleccion and cierres is None:
-        raise ValueError("Faltan cierres para ponderar la selección transversal")
+    eq_cartera = curva_cartera_guardada(h, carpeta, cierres)
     total_trades = sum(int(f["trades"]) for f in filas if f.get("trades") not in (None, ""))
-    eq_cartera = curva_cartera(cierres, piernas_map, retornos_dict, seleccion=seleccion)
     if eq_cartera is not None and not eq_cartera.empty:
         m = equity_metrics(eq_cartera, 0.0)
         pasa, motivos = evaluar(total_trades, float(eq_cartera.iloc[-1] - 100_000.0), m["sharpe"], m["max_drawdown"])
@@ -150,6 +163,52 @@ def _curva_y_v30_cartera(h, filas, carpeta, snapshot, etapa, desde, hasta):
             )
         return eq_cartera, pasa, motivos
     return None, False, ["curva de cartera vacía"]
+
+
+def curva_cartera_guardada(h, carpeta, cierres):
+    """Reconstruye la curva combinada desde los CSV de equity de la etapa."""
+    from quantagent.fabrica.cartera import curva_cartera
+
+    retornos_dict = {}
+    for i, p in enumerate(h.piernas):
+        for activo in p.activos:
+            archivo = Path(carpeta) / "equity" / f"{p.clase}-{activo}.csv"
+            if not archivo.exists():
+                archivo = Path(carpeta) / "equity" / f"{activo}.csv"
+            if archivo.exists():
+                with archivo.open(newline="") as f:
+                    filas = list(csv.DictReader(f))
+                if len(filas) >= 2:
+                    col = "date" if "date" in filas[0] else "timestamp"
+                    equity = pd.Series([float(r["equity"]) for r in filas],
+                                       index=pd.to_datetime([r[col] for r in filas]))
+                    retornos_dict[(i, activo)] = equity.pct_change().dropna()
+    seleccion = leer_seleccion(carpeta, h.piernas, cierres.index if cierres is not None else None)
+    if seleccion and cierres is None:
+        raise ValueError("Faltan cierres para ponderar la selección transversal")
+    if any(STRATEGY_REGISTRY.get(cli_aliases().get(p.clase, p.clase))
+           and hasattr(STRATEGY_REGISTRY[cli_aliases().get(p.clase, p.clase)]["cls"], "posiciones_objetivo")
+           for p in h.piernas):
+        retornos = pd.DataFrame(retornos_dict).fillna(0.0)
+        return 100_000.0 * (1 + retornos.T.groupby(level=1).sum().T.sum(axis=1)).cumprod()
+    return curva_cartera(cierres, {i: list(p.activos) for i, p in enumerate(h.piernas)},
+                         retornos_dict, seleccion=seleccion)
+
+
+def evaluar_c0_cartera(eq_cartera, c3, c2, sharpe_etapa2, trades, filas_intentos, intentos_csv):
+    """Aplica C0 de etapa 3 a una curva guardada y devuelve sus métricas compartidas."""
+    sb3 = sharpe_benchmark(c3) if c3 is not None and not c3.empty else 0.0
+    sb2 = sharpe_benchmark(c2) if c2 is not None and not c2.empty else None
+    pasa, motivos = evaluar_etapa3_cartera(eq_cartera, sb3, sharpe_etapa2, sb2, trades=trades)
+    neff = n_efectivo(filas_intentos) if filas_intentos else None
+    try:
+        dsr_eff = dsr_contra_intentos(eq_cartera, intentos_csv, neff) if eq_cartera is not None else None
+        dsr_crudo = dsr_contra_intentos(eq_cartera, intentos_csv, len(filas_validas(filas_intentos))) if eq_cartera is not None else None
+    except FileNotFoundError:
+        dsr_eff, dsr_crudo = None, None
+    ap = anios_positivos(eq_cartera) if eq_cartera is not None and not eq_cartera.empty else None
+    return pasa, motivos, {"benchmark": sb3, "benchmark_etapa2": sb2, "dsr": dsr_eff,
+                           "dsr_crudo": dsr_crudo, "n_efectivo": neff, "anios_positivos": ap}
 
 
 def evaluar_etapa2_cartera(h, filas, carpeta, snapshot=None):
@@ -181,6 +240,13 @@ def validar_etapa2(h, snapshot, params_por_activo, carpeta):
                     shutil.copy(src_tr, Path(carpeta) / "trades" / f"senal-externa-{activo}.csv")
             else:
                 params = params_por_activo.get((strat, activo), {}) if h.es_cartera else params_por_activo.get(activo, {})
+            estrategia = STRATEGY_REGISTRY.get(cli_aliases().get(strat, strat))
+            if estrategia and hasattr(estrategia["cls"], "posiciones_objetivo"):
+                fila["control"] = f"no aplica: posiciones objetivo; {trades} órdenes del motor"
+                fila["v30"] = "PASA" if evaluar(*(float(fila[c]) if fila[c] != "" else None
+                                                    for c in ("trades", "pnl", "sharpe_tasa_0", "max_drawdown")))[0] else "NO PASA"
+                fila["motivos"] = [] if fila["v30"] == "PASA" else [f"{activo}: métricas V30 no pasan"]
+                continue
             params_path.write_text(json.dumps({strat: params}), encoding="utf-8")
             tabla = Path(carpeta) / (f"{clase}-{activo}.csv" if (Path(carpeta) / f"{clase}-{activo}.csv").exists() else f"{activo}.csv")
             resultado = subprocess.run([
@@ -205,12 +271,12 @@ def validar_etapa2(h, snapshot, params_por_activo, carpeta):
                 fila["motivos"] = [f"{activo}: {motivo}" for motivo in motivos]
     if h.es_cartera:
         pasa_cartera, motivos_cartera = evaluar_etapa2_cartera(h, filas, carpeta, snapshot)
-        pasa = all(f["control"].startswith("coinciden") for f in filas) and pasa_cartera
+        pasa = all(f["control"].startswith(("coinciden", "no aplica:")) for f in filas) and pasa_cartera
         if not pasa_cartera:
             for f in filas:
                 f["motivos"].extend([f"cartera: {m}" for m in motivos_cartera if f"cartera: {m}" not in f["motivos"]])
     else:
-        pasa = all(f["control"].startswith("coinciden") for f in filas) and any(f["v30"] == "PASA" for f in filas)
+        pasa = all(f["control"].startswith(("coinciden", "no aplica:")) for f in filas) and any(f["v30"] == "PASA" for f in filas)
     with (Path(carpeta) / "celdas.csv").open("w", newline="") as f:
         escritor = csv.DictWriter(f, COLUMNAS_CELDAS, extrasaction="ignore")
         escritor.writeheader()
@@ -222,24 +288,28 @@ def validar_etapa2(h, snapshot, params_por_activo, carpeta):
     return "PASA" if pasa else "CORTA", filas
 
 
-def validar_etapa3(h, snapshot, params_por_activo, carpeta):
-    """Valida la prueba; el llamador debe abrir el candado antes de invocar."""
-    filas = correr_motor(h, snapshot, params_por_activo, "2019-01-01", "2022-12-31",
-                         carpeta, "3", abrir_prueba=True)
-    if h.es_cartera:
+def validar_etapa3(h, snapshot, params_por_activo, carpeta, desde="2019-01-01", hasta="2022-12-31",
+                   abrir_reserva=False):
+    """Valida la prueba o reserva con C0; el llamador abre el candado antes de invocar."""
+    filas = correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, "3",
+                         abrir_prueba=not abrir_reserva, abrir_reserva=abrir_reserva)
+    es_pesos_objetivo = any(STRATEGY_REGISTRY.get(cli_aliases().get(p.clase, p.clase))
+                            and hasattr(STRATEGY_REGISTRY[cli_aliases().get(p.clase, p.clase)]["cls"], "posiciones_objetivo")
+                            for p in h.piernas)
+    if h.es_cartera or es_pesos_objetivo:
         eq_cartera, _, _ = _curva_y_v30_cartera(
-            h, filas, carpeta, snapshot, "3", "2019-01-01", "2022-12-31"
+            h, filas, carpeta, snapshot, "3", desde, hasta
         )
         import quantagent.data.snapshot as snap_mod
         activos = list(dict.fromkeys(a for p in h.piernas for a in p.activos))
-        c3 = pd.DataFrame({a: snap_mod.read_snapshot(snapshot, a)["close"].loc["2019-01-01":"2022-12-31"] for a in activos}) if snapshot else None
+        c3 = pd.DataFrame({a: snap_mod.read_snapshot(snapshot, a)["close"].loc[desde:hasta] for a in activos}) if snapshot else None
         c2 = pd.DataFrame({a: snap_mod.read_snapshot(snapshot, a)["close"].loc["2007-01-01":"2018-12-31"] for a in activos}) if snapshot else None
-        sb3 = sharpe_benchmark(c3) if c3 is not None and not c3.empty else 0.0
-        sb2 = sharpe_benchmark(c2) if c2 is not None and not c2.empty else None
         from quantagent.fabrica.cartera import pesos as pesos_cartera
         piernas = {i: p.activos for i, p in enumerate(h.piernas)}
         seleccion = leer_seleccion(carpeta, h.piernas, c3.index if c3 is not None else None)
-        w = pesos_cartera(c3, piernas, seleccion=seleccion).T.groupby(level=1).sum().T if c3 is not None and not c3.empty else None
+        w = (pd.DataFrame(1 / len(activos), index=c3.index, columns=activos) if es_pesos_objetivo and c3 is not None and not c3.empty
+             else pesos_cartera(c3, piernas, seleccion=seleccion).T.groupby(level=1).sum().T
+             if c3 is not None and not c3.empty else None)
         sb3_mismo_peso = sharpe_benchmark(c3, pesos=w) if w is not None else None
 
         intentos_csv = snapshot_root() / "intentos.csv"
@@ -255,16 +325,11 @@ def validar_etapa3(h, snapshot, params_por_activo, carpeta):
                         pass
 
         tot_trades = sum(int(f["trades"]) for f in filas if f.get("trades") not in (None, ""))
-        pasa, motivos = evaluar_etapa3_cartera(eq_cartera, sb3, s2, sb2, trades=tot_trades)
+        pasa, motivos, c0 = evaluar_c0_cartera(eq_cartera, c3, c2, s2, tot_trades,
+                                                todas_filas, intentos_csv)
+        dsr_eff, dsr_crudo = c0["dsr"], c0["dsr_crudo"]
 
-        neff = n_efectivo(todas_filas) if todas_filas else None
-        try:
-            dsr_eff = dsr_contra_intentos(eq_cartera, intentos_csv, neff) if eq_cartera is not None else None
-            dsr_crudo = dsr_contra_intentos(eq_cartera, intentos_csv) if eq_cartera is not None else None
-        except FileNotFoundError:
-            dsr_eff, dsr_crudo = None, None
-
-        ap = anios_positivos(eq_cartera) if eq_cartera is not None and not eq_cartera.empty else None
+        sb3, neff, ap = c0["benchmark"], c0["n_efectivo"], c0["anios_positivos"]
         recargo = recargo_paper(dsr_eff)
         for fila in filas:
             fila.update(v30="PASA" if pasa else "NO PASA", dsr=dsr_eff, dsr_crudo=dsr_crudo, recargo=recargo,

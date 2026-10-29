@@ -14,6 +14,17 @@ def test_diferencia_de_pesos_informa_activo_y_motivo():
     assert "difiere" in diferencias[0]
 
 
+def test_tolerancias_por_activo_incluyen_limite_y_fallback():
+    tolerancias = {"SPY": 600 / 99941}
+    assert comparar_pesos({}, {"SPY": tolerancias["SPY"]}, tolerancias=tolerancias) == []
+    assert comparar_pesos({"SPY": 11520 / 99941}, {"SPY": 12120 / 99941}, tolerancias=tolerancias) == []
+    assert comparar_pesos({}, {"SPY": tolerancias["SPY"] + 1e-10}, tolerancias=tolerancias)
+    diferencias = comparar_pesos({}, {"SPY": .01, "QQQ": .0002}, tolerancias=tolerancias)
+    assert len(diferencias) == 2
+    assert f"(tolerancia {tolerancias['SPY']})" in diferencias[1]
+    assert "QQQ: peso paper 0.0 difiere de sombra 0.0002 (tolerancia 0.0001)" == diferencias[0]
+
+
 def test_rechazos_reportan_motivo_y_falla_si_falta():
     reportes = reportar_rechazos([
         SimpleNamespace(status="rejected", symbol="SPY", comment="sin poder de compra"),

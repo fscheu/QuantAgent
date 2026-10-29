@@ -219,3 +219,32 @@ def test_momentum_transversal_no_mira_el_futuro():
     c = _aleatorio()
     cortes = [c.index[i] for i in (300, 420, 480, 560, 640)]
     assert check_no_lookahead(lambda p: señales_transversales(p, METRICAS["momentum-transversal"]), c, cortes) == []
+
+
+def _sin_a(cierres):
+    return pd.DataFrame({c: cierres.index < pd.Timestamp("2023-03-01") if c == "A" else True for c in cierres.columns}, index=cierres.index)
+
+
+def test_sin_mascara_igual_que_antes():
+    c = _paneles_dos_regimenes()
+    todos = lambda x: pd.DataFrame(True, index=x.index, columns=x.columns)  # noqa: E731
+    assert señales_transversales(c, _retorno_5, mascara=todos).equals(señales_transversales(c, _retorno_5))
+
+
+def test_activo_fuera_de_la_mascara_no_recibe_senal_aunque_sea_el_mejor():
+    c = _paneles_dos_regimenes()
+    # el 2023-02-28 el ranking se invierte y A pasa a ser de los mejores; desde 2023-03-01 no es elegible
+    base = señales_transversales(c, _retorno_5)
+    s = señales_transversales(c, _retorno_5, mascara=_sin_a)
+    assert base.loc["2023-03-30", "A"] == 1
+    assert s.loc["2023-03-01":, "A"].sum() == 0
+    assert s.loc["2023-02-28", "A"] == 1  # antes de la baja sigue elegible
+
+
+def test_k_se_cuenta_sobre_los_elegibles():
+    c = _paneles_dos_regimenes()
+    fuera = lambda x: pd.DataFrame({a: a not in "AB" for a in x.columns}, index=x.index)  # noqa: E731
+    s = señales_transversales(c, _retorno_5, mascara=fuera)
+    # 4 elegibles (C-F) -> k = 1; antes de invertirse el ranking gana F, después C
+    assert list(s.columns[s.loc["2023-01-31"] == 1]) == ["F"]
+    assert list(s.columns[s.loc["2023-03-30"] == 1]) == ["C"]
