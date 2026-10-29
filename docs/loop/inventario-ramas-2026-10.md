@@ -5,7 +5,7 @@ Worktrees: listado de la VM del 2026-10-08 copiado tal cual (no visible desde es
 
 ## 1. Ramas remotas
 
-Total: 82 ramas (sin `origin/HEAD`).
+Total: 81 ramas (sin `origin/HEAD`).
 
 | Rama | Ticket | Estado ticket | Último commit | Contra origin/main | Commits ausentes en main |
 |---|---|---|---|---|---|
@@ -16,7 +16,6 @@ Total: 82 ramas (sin `origin/HEAD`).
 | `feat/LangGraph-Improve` | - | sin ticket | c82e46c9 2025-11-26 | merged | - |
 | `feat/LangGraph-Parallel` | - | sin ticket | 368f8b16 2025-11-30 | merged | - |
 | `feat/Project-Setup` | - | sin ticket | 5812e215 2025-11-25 | merged | - |
-| `feat/Streamlit-App` | - | sin ticket | 619d09ce 2025-11-30 | merged | - |
 | `feature/QuantAgent-046-hotfix-ci-failure-in-ci-commit-d46effc` | QuantAgent-046 | closed | 4bf6ac80 2026-02-24 | merged | - |
 | `feature/QuantAgent-0b5-integrate-positionmonitor-into-tradingsc` | QuantAgent-0b5 | closed | 782a3f9e 2026-04-27 | merged | - |
 | `feature/QuantAgent-0tk-ci-alembic-migrations` | QuantAgent-0tk | closed | 90d42799 2026-05-30 | merged | - |
@@ -123,7 +122,7 @@ Nota: la clasificación sale solo del comando git. Una rama integrada con squash
 
 Las PRs abiertas NO se consultaron (sin API de GitHub); se protegen las ramas citadas en el encargo (`lote/engine-y-cierre-m1`, `loop/QuantAgent-832.1`) y las ramas con worktree.
 
-Total 82 = 51 + 13 + 18 = 82.
+Total 81 = 50 + 13 + 18 = 81.
 
 ### Mergeada, se puede borrar (51)
 
@@ -134,7 +133,6 @@ Total 82 = 51 + 13 + 18 = 82.
 - `feat/LangGraph-Improve`
 - `feat/LangGraph-Parallel`
 - `feat/Project-Setup`
-- `feat/Streamlit-App`
 - `feature/QuantAgent-046-hotfix-ci-failure-in-ci-commit-d46effc`
 - `feature/QuantAgent-0b5-integrate-positionmonitor-into-tradingsc`
 - `feature/QuantAgent-0tk-ci-alembic-migrations`
@@ -228,7 +226,6 @@ git push origin --delete feat/Core-State-Mgmnt
 git push origin --delete feat/LangGraph-Improve
 git push origin --delete feat/LangGraph-Parallel
 git push origin --delete feat/Project-Setup
-git push origin --delete feat/Streamlit-App
 git push origin --delete feature/QuantAgent-046-hotfix-ci-failure-in-ci-commit-d46effc
 git push origin --delete feature/QuantAgent-0b5-integrate-positionmonitor-into-tradingsc
 git push origin --delete feature/QuantAgent-0tk-ci-alembic-migrations

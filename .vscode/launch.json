@@ -23,18 +23,6 @@
             "justMyCode": true
         },
         {
-            "name": "Python Debugger: Streamlit",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "streamlit",
-            "args": [
-                "run",
-                "apps/streamlit/app.py"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
             "name": "Python Debugger: Backtest Script",
             "type": "debugpy",
             "request": "launch",
