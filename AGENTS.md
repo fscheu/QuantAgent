@@ -167,6 +167,14 @@ enters through a PR.
 
 ## Documentation as a Single System (`docs/`)
 
+### CLI commands and the user manual
+
+Every click command and group must have a help= text: one sentence saying what it does, written for a user. Every option must have a help= text naming its unit and its default when it has one. Add an epilog with at least one example invocation for commands a user runs by hand. Do not document a command only in a docstring or comment: the manual is generated from help, epilog and option metadata. A PR that adds or changes a command must regenerate the command reference and pass the manual coverage test.
+
+### Decisions and criteria
+
+A PR that records a new decision of Fede (a -DC- document or a decision table in a plan) must add one line to the manual's decision index and update the current-criteria table if a number changes.
+
 The documentation lives in `docs/` folder.
 
 It serves two complementary purposes:
