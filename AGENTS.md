@@ -72,13 +72,6 @@ Main Python package containing all trading, backtesting, and agent logic.
 
 End-user applications built on top of the core engine.
 
-#### Streamlit App
-- `apps/streamlit/`
-  - `app.py` — Main entry point
-  - `views/` — UI pages (dashboard, backtesting, configuration, replay, etc.)
-  - `services/` — DB and backend services
-  - `utils/` — UI helpers
-
 #### Flask App (legacy / demo)
 - `apps/flask/`
   - `web_interface.py` — Flask demo app
