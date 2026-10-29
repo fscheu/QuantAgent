@@ -9,8 +9,39 @@ Options:
   --help  Show this message and exit.
 
 Commands:
+  acciones  Manage S&P 500 stock snapshots for 2007-2018 using Yahoo or...
+  consenso  Manage daily earnings and revenue estimates.
   macro     Manage ALFRED macro snapshots (all vintages) in Parquet.
   snapshot  Manage Parquet snapshots outside the repository...
+```
+
+## `quantagent data acciones`
+
+```text
+Usage: quantagent data acciones [OPTIONS] COMMAND [ARGS]...
+
+  Manage S&P 500 stock snapshots for 2007-2018 using Yahoo or Quandl WIKI.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  cobertura  Report price coverage for 2007-2018 index member-days in the...
+  create     Create a snapshot using Yahoo when index membership is...
+```
+
+## `quantagent data consenso`
+
+```text
+Usage: quantagent data consenso [OPTIONS] COMMAND [ARGS]...
+
+  Manage daily earnings and revenue estimates.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  foto  Save a daily EPS consensus snapshot in Parquet format.
 ```
 
 ## `quantagent data macro`
