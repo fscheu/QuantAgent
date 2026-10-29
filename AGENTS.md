@@ -175,6 +175,10 @@ Every click command and group must have a help= text: one sentence saying what i
 
 A PR that records a new decision of Fede (a -DC- document or a decision table in a plan) must add one line to the manual's decision index and update the current-criteria table if a number changes.
 
+### Manual review at lote close
+
+Before a `lote/*` PR is marked ready for Fede's review, the PM reviews `docs/manual/` against what the lote changed (new or changed commands, criteria, stages, operating procedures, glossary terms) and fixes or adds the pages that are out of date. The lote PR body has a `Manual:` line that lists the pages reviewed and changed, or says why none was needed. A lote that changes behavior and leaves that line empty is not ready.
+
 The documentation lives in `docs/` folder.
 
 It serves two complementary purposes:
