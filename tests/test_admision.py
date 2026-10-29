@@ -144,3 +144,10 @@ def test_hipotesis_rechazada_no_congela_universo(velas, tmp_path, monkeypatch):
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     ok, _ = admitir(replace(H, justificacion="corta"), velas, [])
     assert not ok and not (tmp_path / "hipotesis-universos.csv").exists()
+
+
+def test_elegibilidad_desconocida_se_rechaza(velas):
+    h = replace(H, piernas=(replace(H.piernas[0], elegibilidad="no-existe"),))
+    ok, motivos = admitir(h, velas)
+    assert not ok
+    assert any("elegibilidad no registrada: no-existe" in m for m in motivos)
