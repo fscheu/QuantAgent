@@ -2,14 +2,17 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 import yaml
 
+from quantagent.fabrica import regimen
 from quantagent.fabrica.regimen import (
     clasificar_regimen,
     filtro_caida,
     macro_theme_score,
     permutar_regimenes_bloques,
     price_momentum_score,
+    sector_score,
     sharpe_por_regimen,
     z_temas,
 )
@@ -158,3 +161,59 @@ def test_priors_m5_versionados_completos():
         for celda in d["signos"].values():
             assert set(celda["activos"]) <= set(priors["universo"]), tema
             assert celda["fuentes"] and all(f["cita"] and f["link"] for f in celda["fuentes"]), tema
+
+
+def test_sector_score_calculado_a_mano():
+    idx = pd.to_datetime(["2020-01-03", "2020-01-10"])
+    momentum = pd.DataFrame({"A": [1.0, 1.0], "B": [2.0, 3.0], "C": [3.0, np.nan]}, index=idx)
+    macro = pd.DataFrame({"A": [3.0, 1.0], "B": [1.0, 5.0], "C": [2.0, 9.0]}, index=idx)
+    # fila 1: z(mom) = [-1, 0, 1], z(macro) = [1, -1, 0]
+    mixto = sector_score(macro, momentum, 0.5)
+    assert mixto.iloc[0].tolist() == [0.0, -0.5, 0.5]
+    assert sector_score(macro, momentum, 0.0).iloc[0].tolist() == [-1.0, 0.0, 1.0]
+    # fila 2: C sin momentum queda NaN y no entra en el z transversal de los otros dos
+    r = 0.5 ** 0.5
+    assert mixto.iloc[1, :2].tolist() == pytest.approx([-r, r])
+    assert np.isnan(mixto.iloc[1, 2])
+
+
+PRIORS_SINTETICOS = {
+    "version": 7,
+    "universo": ["SPY", "A", "B"],
+    "temas": {
+        "crecimiento": {"series": [{"serie": "s1"}], "signos": {"positivo": {"activos": ["A"]}}},
+        "estres": {"series": [{"serie": "s2"}], "signos": {"negativo": {"activos": ["B"]}}},
+    },
+}
+
+
+@pytest.fixture
+def cierres_sinteticos(monkeypatch):
+    monkeypatch.setattr(
+        regimen, "z_series_macro", lambda priors, sesiones, base_dir=None: pd.DataFrame({"s1": 0.5, "s2": 0.0}, index=sesiones)
+    )
+    idx = pd.bdate_range("2005-01-03", "2008-12-31")
+    rng = np.random.default_rng(1)
+    c = pd.DataFrame({a: 100 * np.exp(np.cumsum(rng.normal(0.0005, 0.01, len(idx)))) for a in ("SPY", "A", "B")}, index=idx)
+    c.loc[:"2007-06-01", "B"] = np.nan  # B sin historia hasta mediados de 2007
+    return c
+
+
+def test_regimen_semanal_una_fila_por_semana_y_activo_sin_historia(cierres_sinteticos):
+    tabla = regimen.regimen_semanal(cierres_sinteticos, PRIORS_SINTETICOS, 0.5)
+    sesiones = cierres_sinteticos.loc["2006-01-01":].index
+    assert len(tabla) == sesiones.to_series().groupby(sesiones.to_period("W")).ngroups
+    assert tabla["fecha"].is_unique and tabla["fecha"].min() >= pd.Timestamp("2006-01-01")
+    assert (tabla["version"] == 7).all() and set(tabla["estado"]) <= {"risk-on", "neutral", "risk-off"}
+    # B tiene momentum recién ~126 sesiones después de su primer cierre
+    sin_historia = tabla[tabla["fecha"] < "2007-11-01"]
+    assert sin_historia["score_B"].isna().all()
+    assert not sin_historia["habilitados"].str.contains("B").any()
+    assert tabla["score_B"].notna().any() and tabla["habilitados"].str.contains("A").any()
+
+
+def test_regimen_semanal_no_mira_el_futuro(cierres_sinteticos):
+    completa = regimen.regimen_semanal(cierres_sinteticos, PRIORS_SINTETICOS, 0.5)
+    t = completa["fecha"].iloc[100]
+    truncada = regimen.regimen_semanal(cierres_sinteticos.loc[:t], PRIORS_SINTETICOS, 0.5)
+    pd.testing.assert_frame_equal(truncada.iloc[[-1]].reset_index(drop=True), completa.iloc[[100]].reset_index(drop=True))

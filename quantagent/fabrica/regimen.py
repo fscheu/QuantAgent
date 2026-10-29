@@ -113,3 +113,55 @@ def macro_theme_score(z_tema: pd.DataFrame, priors: dict) -> pd.DataFrame:
     suma = z.fillna(0.0) @ signos
     cuenta = z.notna().astype(float) @ (signos != 0).astype(float)
     return (suma / cuenta.where(cuenta > 0)).fillna(0.0)
+
+
+def z_series_macro(priors: dict, sesiones, base_dir=None) -> pd.DataFrame:
+    """z móvil de la transformada punto en el tiempo de cada serie macro de los priors, por sesión."""
+    from quantagent.data.macro import transformada_punto_en_el_tiempo, zscore_movil
+
+    series = {s["serie"]: s["transformada"] for d in priors["temas"].values() for s in d["series"]}
+    return pd.DataFrame({
+        serie: zscore_movil(
+            transformada_punto_en_el_tiempo(priors["snapshot_macro"], serie, sesiones, tipo, base_dir),
+            priors["ventana_z_meses"],
+        )
+        for serie, tipo in series.items()
+    })
+
+
+def _z_transversal(panel: pd.DataFrame) -> pd.DataFrame:
+    return panel.sub(panel.mean(axis=1), axis=0).div(panel.std(axis=1, ddof=1), axis=0)
+
+
+def sector_score(macro: pd.DataFrame, momentum: pd.DataFrame, peso_macro: float) -> pd.DataFrame:
+    """SectorScore = peso_macro × z(macro) + (1 - peso_macro) × z(momentum), z transversal por fecha. NaN donde momentum es NaN."""
+    z_macro = _z_transversal(macro.where(momentum.notna())).fillna(0.0)
+    z_mom = _z_transversal(momentum).fillna(0.0)
+    return (peso_macro * z_macro + (1.0 - peso_macro) * z_mom).where(momentum.notna())
+
+
+def regimen_semanal(cierres: pd.DataFrame, priors: dict, peso_macro: float, base_dir=None) -> pd.DataFrame:
+    """Una fila por última sesión de cada semana desde 2006: z por tema, score por activo, habilitados, bloqueados y estado."""
+    cierres = cierres[priors["universo"]]
+    momentum = price_momentum_score(cierres)
+    ultimas = cierres.index.to_series().groupby(cierres.index.to_period("W")).max()
+    semanas = pd.DatetimeIndex(ultimas[ultimas >= "2006-01-01"])
+    z_tema = z_temas(z_series_macro(priors, semanas, base_dir), priors)
+    mom = momentum.loc[semanas]
+    score = sector_score(macro_theme_score(z_tema, priors), mom, peso_macro)
+    bloqueo = filtro_caida(mom, cierres["SPY"])
+    risk_off = filtro_caida(pd.DataFrame({"SPY": -1.0}, index=semanas), cierres["SPY"])["SPY"]
+    filas = []
+    for t in semanas:
+        elegibles = score.loc[t][(score.loc[t] > 0) & ~bloqueo.loc[t]].sort_values(ascending=False, kind="stable")
+        estado = "risk-off" if risk_off[t] else "neutral" if z_tema.loc[t, "estres"] > 1 else "risk-on"
+        filas.append({
+            "fecha": t,
+            "version": priors["version"],
+            **{f"z_{c}": z_tema.loc[t, c] for c in z_tema},
+            **{f"score_{a}": score.loc[t, a] for a in score},
+            "habilitados": ",".join(elegibles.index[:3]),
+            "bloqueados": ",".join(bloqueo.columns[bloqueo.loc[t]]),
+            "estado": estado,
+        })
+    return pd.DataFrame(filas)
