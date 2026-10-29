@@ -23,11 +23,17 @@ _TAX_BT = [
     "IncomeLossFromContinuingOperationsBeforeIncomeTaxes",
 ]
 CONCEPTOS_FALLBACK = {
-    "ingresos": ["Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax", "SalesRevenueNet"],
-    "OperatingIncomeLoss": ["OperatingIncomeLoss"], "EarningsPerShareDiluted": ["EarningsPerShareDiluted"],
+    "ingresos": [
+        "Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax", "RevenueFromContractWithCustomerIncludingAssessedTax",
+        "SalesRevenueNet", "RevenuesNetOfInterestExpense",
+    ],
+    # sin OperatingIncomeLoss (XOM, bancos) se usa el resultado antes de impuestos como aproximación
+    "OperatingIncomeLoss": ["OperatingIncomeLoss", *_TAX_BT], "EarningsPerShareDiluted": ["EarningsPerShareDiluted"],
     "StockholdersEquity": ["StockholdersEquity"], "deuda": ["LongTermDebtNoncurrent", "LongTermDebt"],
     "IncomeTaxExpenseBenefit": ["IncomeTaxExpenseBenefit"], "IncomeLossFromContinuingOperationsBeforeIncomeTaxes": _TAX_BT,
 }
+# tickers cuyo CIK actual (company_tickers.json) es una holding nueva sin el historial anterior
+CIK_PREVIOS = {"XOM": [34088], "BLK": [1364742], "BG": [1144519], "APO": [1411494]}
 FORMULARIOS_VALIDOS = frozenset({"10-Q", "10-Q/A", "10-K", "10-K/A"})
 CONCEPTOS_FLUJO = frozenset({"ingresos", "OperatingIncomeLoss", "EarningsPerShareDiluted", "IncomeTaxExpenseBenefit", "IncomeLossFromContinuingOperationsBeforeIncomeTaxes"})
 
@@ -83,88 +89,86 @@ def extraer_hechos(ticker: str, json_data: dict) -> pd.DataFrame:
     return pd.DataFrame(filas).drop(columns=["prioridad"]) if filas else pd.DataFrame(columns=cols)
 
 
-def procesar_ticker(df_ticker: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """Deduplica según primer publicado y deriva Q4 = FY - 9M."""
-    if df_ticker.empty:
-        return pd.DataFrame(), pd.DataFrame()
-    df = df_ticker.copy()
+METRICAS = ["roic_4t", "margen_op_yoy", "aceleracion_ingresos", "crecimiento_eps"]
+MAX_ANTIGUEDAD_DIAS = 200
+
+
+def preparar_ticker(df_ticker: pd.DataFrame) -> pd.DataFrame:
+    """Parsea fechas y ordena por presentación (filed, accn)."""
+    df = df_ticker.reset_index(drop=True)
     df["filed"], df["end_dt"], df["start_dt"] = pd.to_datetime(df["filed"]), pd.to_datetime(df["end"]), pd.to_datetime(df["start"])
     df["days"] = (df["end_dt"] - df["start_dt"]).dt.days.fillna(0)
-    df = df.sort_values(by=["filed", "accn"]).drop_duplicates(subset=["concepto", "start", "end"], keep="first").reset_index(drop=True)
-
-    filas_q4 = []
-    flujos = df[df["concepto"].isin(CONCEPTOS_FLUJO)]
-    for (concepto, fy), grupo in flujos.groupby(["concepto", "fy"]):
-        if pd.isna(fy):
-            continue
-        anuales = grupo[(grupo["fp"] == "FY") | (grupo["days"].between(330, 395))]
-        nueve_m = grupo[(grupo["fp"] == "Q3") | (grupo["days"].between(240, 305))]
-        if not anuales.empty and not nueve_m.empty:
-            anual, nueve = anuales.iloc[0], nueve_m.iloc[0]
-            filas_q4.append({
-                "ticker": anual["ticker"], "concepto": concepto, "start": nueve["end"], "end": anual["end"],
-                "val": anual["val"] - nueve["val"], "fy": fy, "fp": "Q4", "form": anual["form"],
-                "filed": max(anual["filed"], nueve["filed"]), "accn": anual["accn"],
-                "end_dt": anual["end_dt"], "start_dt": nueve["end_dt"], "days": (anual["end_dt"] - nueve["end_dt"]).days,
-            })
-    df = pd.concat([df, pd.DataFrame(filas_q4)], ignore_index=True) if filas_q4 else df
-    flujos_trim = df[df["concepto"].isin(CONCEPTOS_FLUJO) & (df["days"].between(60, 115) | (df["fp"] == "Q4"))].sort_values("filed").drop_duplicates(subset=["concepto", "end"], keep="first")
-    balances = df[df["concepto"].isin(["StockholdersEquity", "deuda"])].sort_values("filed").drop_duplicates(subset=["concepto", "end"], keep="first")
-    return flujos_trim, balances
+    return df.sort_values(["filed", "accn"], kind="stable")
 
 
-def calcular_metricas_ticker(flujos: pd.DataFrame, balances: pd.DataFrame, sesiones: pd.DatetimeIndex) -> Dict[str, pd.Series]:
-    """Calcula las 4 métricas para un ticker sobre las sesiones dadas con reindex ffill."""
-    vacio = {m: pd.Series(np.nan, index=sesiones, dtype=float) for m in ["roic_4t", "margen_op_yoy", "aceleracion_ingresos", "crecimiento_eps"]}
-    if flujos.empty:
-        return vacio
-    piv_f, filed_f = flujos.pivot(index="end_dt", columns="concepto", values="val").sort_index(), flujos.groupby("end_dt")["filed"].max()
-    piv_b = balances.pivot(index="end_dt", columns="concepto", values="val").sort_index() if not balances.empty else pd.DataFrame()
-    filed_b = balances.groupby("end_dt")["filed"].max() if not balances.empty else pd.Series(dtype="datetime64[ns]")
+def vista_punto_en_el_tiempo(df: pd.DataFrame, f: pd.Timestamp) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Con lo presentado hasta f (última presentación por período) arma flujos trimestrales (Q4 = anual - 9M) y balances."""
+    v = df[df["filed"] <= f].drop_duplicates(subset=["concepto", "start", "end"], keep="last")
+    fl = v[v["concepto"].isin(CONCEPTOS_FLUJO)]
+    q4 = fl[fl["days"].between(330, 395)].merge(fl[fl["days"].between(240, 305)], on=["concepto", "start"], suffixes=("_a", "_n"))
+    q4 = q4[(q4["end_dt_a"] - q4["end_dt_n"]).dt.days.between(60, 115)]
+    q4 = pd.DataFrame({"concepto": q4["concepto"], "end_dt": q4["end_dt_a"], "val": q4["val_a"] - q4["val_n"]})
+    trim = pd.concat([fl[fl["days"].between(60, 115)][["concepto", "end_dt", "val"]], q4]).drop_duplicates(subset=["concepto", "end_dt"], keep="first")
+    bal = v[v["concepto"].isin(["StockholdersEquity", "deuda"])]
+    return trim.pivot(index="end_dt", columns="concepto", values="val").sort_index(), bal.pivot(index="end_dt", columns="concepto", values="val").sort_index()
 
-    trimestres, puntos = piv_f.index, []
-    for i in range(len(trimestres)):
-        max_filed = max([d for d in [filed_f.get(trimestres[i]), filed_b.get(trimestres[i])] if pd.notna(d)], default=pd.NaT)
-        if pd.isna(max_filed):
-            continue
-        t_vis = max_filed.normalize() + pd.Timedelta(days=1)
-        sub_f, n_trim = piv_f.iloc[:i + 1], i + 1
-        roic, margen_yoy, acel, eps_crec = np.nan, np.nan, np.nan, np.nan
 
-        if n_trim >= 4 and "OperatingIncomeLoss" in sub_f.columns:
-            op_4t = sub_f["OperatingIncomeLoss"].iloc[-4:].sum()
-            tax = sub_f["IncomeTaxExpenseBenefit"].iloc[-4:].sum() if "IncomeTaxExpenseBenefit" in sub_f.columns else np.nan
-            ebt = sub_f["IncomeLossFromContinuingOperationsBeforeIncomeTaxes"].iloc[-4:].sum() if "IncomeLossFromContinuingOperationsBeforeIncomeTaxes" in sub_f.columns else np.nan
-            tasa = 0.21 if (pd.isna(tax) or pd.isna(ebt) or ebt <= 0) else max(0.0, min(0.5, float(tax / ebt)))
-            eq = piv_b.loc[piv_b.index <= trimestres[i], "StockholdersEquity"].dropna().iloc[-1] if not piv_b.empty and "StockholdersEquity" in piv_b.columns and not piv_b.loc[piv_b.index <= trimestres[i], "StockholdersEquity"].dropna().empty else np.nan
-            deuda = piv_b.loc[piv_b.index <= trimestres[i], "deuda"].dropna().iloc[-1] if not piv_b.empty and "deuda" in piv_b.columns and not piv_b.loc[piv_b.index <= trimestres[i], "deuda"].dropna().empty else 0.0
-            if not pd.isna(eq) and (eq + deuda) > 0:
-                roic = float(op_4t * (1.0 - tasa) / (eq + deuda))
+def _ventana(piv: pd.DataFrame, cols: List[str], n: int) -> Optional[pd.DataFrame]:
+    """Últimos n trimestres con todas las columnas, o None si faltan o hay huecos entre ends."""
+    if piv.empty or any(c not in piv.columns for c in cols):
+        return None
+    w = piv[cols].dropna().iloc[-n:]
+    if len(w) < n or not w.index.to_series().diff().dt.days.iloc[1:].between(75, 105).all():
+        return None
+    return w
 
-        if n_trim >= 8 and "OperatingIncomeLoss" in sub_f.columns and "ingresos" in sub_f.columns:
-            rh, oh, rp, op = sub_f["ingresos"].iloc[-4:].sum(), sub_f["OperatingIncomeLoss"].iloc[-4:].sum(), sub_f["ingresos"].iloc[-8:-4].sum(), sub_f["OperatingIncomeLoss"].iloc[-8:-4].sum()
-            if rh > 0 and rp > 0:
-                margen_yoy = float((oh / rh) - (op / rp))
 
-        if n_trim >= 6 and "ingresos" in sub_f.columns:
-            r0, r4, r1, r5 = sub_f["ingresos"].iloc[-1], sub_f["ingresos"].iloc[-5], sub_f["ingresos"].iloc[-2], sub_f["ingresos"].iloc[-6]
-            if r4 > 0 and r5 > 0:
-                acel = float(((r0 - r4) / r4) - ((r1 - r5) / r5))
+def _balance(piv_b: pd.DataFrame, concepto: str, end: pd.Timestamp) -> float:
+    if concepto not in piv_b.columns:
+        return np.nan
+    s = piv_b.loc[piv_b.index <= end, concepto].dropna()
+    return float(s.iloc[-1]) if not s.empty and (end - s.index[-1]).days <= 120 else np.nan
 
-        if n_trim >= 8 and "EarningsPerShareDiluted" in sub_f.columns:
-            eh, ep = sub_f["EarningsPerShareDiluted"].iloc[-4:].sum(), sub_f["EarningsPerShareDiluted"].iloc[-8:-4].sum()
-            if ep > 0:
-                eps_crec = float((eh / ep) - 1.0)
 
-        puntos.append({"fecha": t_vis, "roic_4t": roic, "margen_op_yoy": margen_yoy, "aceleracion_ingresos": acel, "crecimiento_eps": eps_crec})
-
-    if not puntos:
-        return vacio
-    df_p = pd.DataFrame(puntos).drop_duplicates(subset=["fecha"], keep="last").set_index("fecha").sort_index()
+def metricas_en_vista(piv_f: pd.DataFrame, piv_b: pd.DataFrame) -> Dict[str, Tuple[float, pd.Timestamp]]:
+    """Las 4 métricas con la vista dada: {métrica: (valor, end del último trimestre usado)}."""
     res = {}
-    for col in ["roic_4t", "margen_op_yoy", "aceleracion_ingresos", "crecimiento_eps"]:
-        s = df_p[col].dropna()
-        res[col] = pd.Series(np.nan, index=sesiones, dtype=float) if s.empty else df_p[col].reindex(df_p.index.union(sesiones)).ffill().reindex(sesiones)
+    if (w := _ventana(piv_f, ["OperatingIncomeLoss"], 4)) is not None:
+        fin = w.index[-1]
+        imp = piv_f.reindex(w.index)[["IncomeTaxExpenseBenefit", "IncomeLossFromContinuingOperationsBeforeIncomeTaxes"]] if "IncomeTaxExpenseBenefit" in piv_f.columns and "IncomeLossFromContinuingOperationsBeforeIncomeTaxes" in piv_f.columns else None
+        tasa = 0.21
+        if imp is not None and not imp.isna().any().any() and imp.iloc[:, 1].sum() > 0:
+            tasa = max(0.0, min(0.5, float(imp.iloc[:, 0].sum() / imp.iloc[:, 1].sum())))
+        eq, deuda = _balance(piv_b, "StockholdersEquity", fin), _balance(piv_b, "deuda", fin)
+        deuda = 0.0 if np.isnan(deuda) else deuda
+        if not np.isnan(eq) and eq + deuda > 0:
+            res["roic_4t"] = (float(w["OperatingIncomeLoss"].sum() * (1.0 - tasa) / (eq + deuda)), fin)
+    if (w := _ventana(piv_f, ["ingresos", "OperatingIncomeLoss"], 8)) is not None:
+        rh, oh, rp, op = w["ingresos"].iloc[4:].sum(), w["OperatingIncomeLoss"].iloc[4:].sum(), w["ingresos"].iloc[:4].sum(), w["OperatingIncomeLoss"].iloc[:4].sum()
+        if rh > 0 and rp > 0:
+            res["margen_op_yoy"] = (float(oh / rh - op / rp), w.index[-1])
+    if (w := _ventana(piv_f, ["ingresos"], 6)) is not None:
+        r = w["ingresos"].to_numpy()
+        if r[1] > 0 and r[0] > 0:
+            res["aceleracion_ingresos"] = (float((r[5] - r[1]) / r[1] - (r[4] - r[0]) / r[0]), w.index[-1])
+    if (w := _ventana(piv_f, ["EarningsPerShareDiluted"], 8)) is not None:
+        ep = w["EarningsPerShareDiluted"].iloc[:4].sum()
+        if ep > 0:
+            res["crecimiento_eps"] = (float(w["EarningsPerShareDiluted"].iloc[4:].sum() / ep - 1.0), w.index[-1])
+    return res
+
+
+def calcular_metricas_ticker(df: pd.DataFrame, sesiones: pd.DatetimeIndex) -> Dict[str, pd.Series]:
+    """Métricas de un ticker en las sesiones: recalcula en cada fecha de presentación f y rige desde f+1 día."""
+    puntos = {}
+    for f in df["filed"].drop_duplicates():
+        puntos[f.normalize() + pd.Timedelta(days=1)] = metricas_en_vista(*vista_punto_en_el_tiempo(df, f))
+    res = {}
+    for m in METRICAS:
+        valor = pd.Series({t: p[m][0] if m in p else np.nan for t, p in puntos.items()}, index=list(puntos), dtype=float)
+        fin = pd.Series({t: p[m][1] if m in p else pd.NaT for t, p in puntos.items()}, index=list(puntos), dtype="datetime64[ns]")
+        v, e = valor.reindex(sesiones, method="ffill"), fin.reindex(sesiones, method="ffill")
+        res[m] = v.where((v.index.to_series() - e).dt.days <= MAX_ANTIGUEDAD_DIAS)
     return res
 
 
@@ -172,7 +176,7 @@ def crear_snapshot_fundamentales(
     nombre: str, tickers: List[str], base_dir: Optional[Path] = None, delay: float = 0.2, downloader: Optional[Callable[[int], dict]] = None,
 ) -> dict:
     """Descarga facts de sec.gov para cada ticker con CIK y congela un snapshot versionado."""
-    ciks, frames, sin_cik, con_cik = mapa_tickers_cik(), {}, [], {}
+    ciks, frames, sin_cik, con_cik, fallidos = mapa_tickers_cik(), {}, [], {}, []
     downloader_fn = downloader or descargar_facts_cik
     for t in sorted(set(tickers)):
         cik = ciks.get(t.upper())
@@ -182,15 +186,15 @@ def crear_snapshot_fundamentales(
             con_cik[t] = cik
     for i, (t, cik) in enumerate(sorted(con_cik.items())):
         try:
-            df = extraer_hechos(t, downloader_fn(cik))
+            df = pd.concat([extraer_hechos(t, downloader_fn(c)) for c in [cik, *CIK_PREVIOS.get(t, [])]], ignore_index=True)
             if not df.empty:
                 df.index = pd.to_datetime(df["end"])
                 frames[t] = df
-        except Exception:
-            pass
+        except Exception as exc:
+            fallidos.append(f"{t}: {type(exc).__name__}")
         if delay > 0 and downloader is None and i < len(con_cik) - 1:
             time.sleep(delay)
-    return write_snapshot(nombre, frames, source="sec-edgar", timeframe="quarterly", base_dir=base_dir, extra={"sin_cik": sin_cik, "tickers_solicitados": len(tickers)})
+    return write_snapshot(nombre, frames, source="sec-edgar", timeframe="quarterly", base_dir=base_dir, extra={"sin_cik": sin_cik, "fallidos": fallidos, "tickers_solicitados": len(tickers)})
 
 
 def leer_fundamentales(nombre: str, ticker: str, base_dir: Optional[Path] = None) -> pd.DataFrame:
@@ -205,8 +209,7 @@ def metricas_fundamentales(nombre: str, tickers: List[str], sesiones: pd.Datetim
     res = {m: pd.DataFrame(np.nan, index=sesiones, columns=tickers, dtype=float) for m in ["roic_4t", "margen_op_yoy", "aceleracion_ingresos", "crecimiento_eps"]}
     for t in tickers:
         if t in simbolos:
-            flujos, balances = procesar_ticker(leer_fundamentales(nombre, t, base_dir=base_dir))
-            m_t = calcular_metricas_ticker(flujos, balances, sesiones)
+            m_t = calcular_metricas_ticker(preparar_ticker(leer_fundamentales(nombre, t, base_dir=base_dir)), sesiones)
             for m_name in res:
                 res[m_name][t] = m_t[m_name]
     return res
