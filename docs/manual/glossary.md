@@ -1,46 +1,32 @@
 # Glossary
 
-Each entry gives a plain definition and a quick example.
+Each entry gives a plain definition, a quick example, and its source.
 
 ## Research and workflow
 
-### Hypothesis — A testable strategy idea; for example, buy when a moving average crosses upward.
-### Funnel — The stages that screen a hypothesis; for example, a candidate moves from stage 1 to stage 2.
-### Sharpe deflated — A Sharpe score raised against the number of attempts; for example, 100 trials need stronger evidence than one.
-### Reserve — Untouched data for a final check; for example, 2023+ is opened once per hypothesis.
-### C0 — The initial cycle budget; for example, five hypotheses enter one monthly cycle.
-### 1/N — The equal-weight benchmark across N choices; for example, 1/N across 10 strategies assigns 10% to each.
-### Shadow — Local simulated trading without a broker; for example, compare its fills with backtest fills.
-### Paper — Simulated broker trading; for example, submit an order to an Alpaca paper account.
-### PDT — Pattern day trader rule for certain small margin accounts; for example, four same-day round trips in five business days trigger it.
-### Snapshot — A frozen data download; for example, two runs use the same ETF snapshot.
-### Manifest — A file listing data hashes; for example, matching hashes show both runs used the same files.
-### Train, test, and reserve — Data periods for fitting, judging, and a final untouched check; for example, train on 2007–2018 and test on 2019–2022.
-### Buy and hold — Buy at the start and sell at the end; for example, compare a strategy with SPY over the same dates.
-### Intrabar — Within a candle's high and low; for example, check whether a stop was hit before the close.
-### Control (backtesting.py) — An independent backtest implementation; for example, matching trades provide a cross-check.
-### Golden test — A saved expected result; for example, fail when a trade or metric changes.
-### Walk-forward — Fit on one period and measure on the next; for example, roll the training window forward yearly.
-
-## Bonds and markets
-
-### Sovereign bond — A loan to a government; for example, an Argentine bond pays coupons and principal.
-### Yield to maturity (YTM, TIR) — Annualized return if held to maturity; for example, a lower purchase price raises its yield.
-### Duration — Approximate price sensitivity to rates; for example, duration 5 implies about a 5% loss for a 1-point rate rise.
-### Convexity — The adjustment for changing duration as rates move; for example, gains and losses are not symmetric.
-### Yield curve — Yields plotted against maturities; for example, higher long yields make an upward curve.
-### VWAP — Volume-weighted average price; for example, 100 shares at $10 and 10 at $20 give a VWAP near $10.91.
-### TNA and TEM — Nominal annual and effective monthly rates; for example, report a loan rate in either unit.
-### Peso instruments — Local rate products such as CER and BADLAR; for example, CER adjusts with inflation.
-### MEP, CCL, official, and swap dollar — Ways to price or obtain dollars; for example, the gap between MEP and official rates is a spread.
-### Implied rate — A rate inferred from a market price; for example, a dollar future price implies a peso rate.
-### Open interest — Outstanding contracts; for example, it counts futures positions still open.
-### Implied forward — A future rate inferred from today's curve; for example, 1-year and 2-year yields imply a rate for year two.
-### Cointegration — Prices that tend to return to a stable relationship; for example, trade a pair when its spread is unusually wide.
-### Nelson–Siegel / Diebold–Li — Formulas that fit a smooth yield curve; for example, compare a bond yield with the fitted curve.
-### Breakeven — The point where two choices have equal value; for example, inflation that makes CER and fixed-rate bonds equivalent.
-### Country risk — Extra yield demanded over US Treasuries; for example, compare Argentine dollar bonds with Treasury yields.
-### DV01 — Dollar price change for a one-basis-point rate move; for example, DV01 $20 means about $20 lost if rates rise 0.01%.
-### Butterfly — A comparison of a middle maturity with the two ends; for example, compare 5-year yield with 2- and 10-year yields.
-### Real yield — Yield after accounting for inflation; for example, TIPS report US real yields.
-### Basis point — One hundredth of a percentage point; for example, 50 basis points equal 0.50%.
+### Hypothesis — A strategy idea recorded with its rules; for example, a YAML file says to buy when a moving average crosses upward. [Roadmap §0](../02_planning/2026-10-28_roadmap_post_m5.md#0-contexto-y-glosario)
+### Funnel — The screening stages for a hypothesis; for example, a strategy advances from stage 1 to stage 2. [Roadmap §0](../02_planning/2026-10-28_roadmap_post_m5.md#0-contexto-y-glosario)
+### Sharpe deflated — The Sharpe criterion adjusted for the number of attempts N, so more attempts raise the bar; for example, 100 tested ideas require stronger evidence than one. [Roadmap §0](../02_planning/2026-10-28_roadmap_post_m5.md#0-contexto-y-glosario)
+### Reserve — Untouched data held for a final check; for example, each admitted hypothesis opens 2023+ once. [Reservation protocol](../04_decisions/QuantAgent-e4jc.14-DC-protocolo-reserva-2023.md)
+### Reserva 2023+ with cap 3 — The final data period is limited to three prelisted hypotheses; for example, F1 enters only after passing stage 2. [R01, decision 5](../04_decisions/QuantAgent-R01-DC-decisiones-investigacion-edge.md#decisiones)
+### C0 — The stage 3 verdict criterion, with measurement corrections; it is not a cycle budget and has no C1 or C2 path; for example, the reserve is assessed with C0 plus M1. [R01, decisions 1 and 5](../04_decisions/QuantAgent-R01-DC-decisiones-investigacion-edge.md#decisiones)
+### M1 — Reporting Sharpe in excess of the short rate; for example, report the portfolio and benchmark using DGS3MO excess returns. [R01, decision 2](../04_decisions/QuantAgent-R01-DC-decisiones-investigacion-edge.md#decisiones)
+### N (attempts) — The count of strategy tests used in the deflated Sharpe correction; for example, opening the reserve adds an attempt to N even when it fails. [Reservation protocol](../04_decisions/QuantAgent-e4jc.14-DC-protocolo-reserva-2023.md)
+### Stages 0–3 — Admission, quick vectorbt screen, candle-by-candle engine check, then stage 3 verdict; for example, a hypothesis must clear stage 2 before stage 3. [Roadmap §0](../02_planning/2026-10-28_roadmap_post_m5.md#0-contexto-y-glosario)
+### Candidate — A strategy that survives the funnel and matures through paper checks; for example, a strategy that passes the stage 3 gate enters local shadow. [Roadmap §1](../02_planning/2026-10-28_roadmap_post_m5.md#1-m-ciclos-generar-filtrar-y-madurar-candidatas-de-forma-continua)
+### 1/N — The equal-weight benchmark across N choices; for example, 1/N across 10 strategies assigns 10% to each. [R01, decision 3](../04_decisions/QuantAgent-R01-DC-decisiones-investigacion-edge.md#decisiones)
+### Shadow (local) — Simulated trading run by our code without a broker; for example, compare its fills with backtest fills. [Roadmap §0](../02_planning/2026-10-28_roadmap_post_m5.md#0-contexto-y-glosario)
+### Sombra local — The broker-free local simulation; for example, every strategy passing stage 3 can be run in local shadow. [Roadmap §0](../02_planning/2026-10-28_roadmap_post_m5.md#0-contexto-y-glosario)
+### Paper — Trading with simulated money at Alpaca; for example, submit a simulated order to check execution. [Roadmap §0](../02_planning/2026-10-28_roadmap_post_m5.md#0-contexto-y-glosario)
+### Fraccionable — An asset Alpaca allows buying in fractional shares; for example, buy 0.3 shares when the asset is fractionable. [Roadmap §0](../02_planning/2026-10-28_roadmap_post_m5.md#0-contexto-y-glosario)
+### Cuenta cash — A brokerage account without borrowing or short selling; for example, a purchase must fit available cash. [Roadmap §2](../02_planning/2026-10-28_roadmap_post_m5.md#2-m-cuenta-que-la-candidata-funcione-en-una-cuenta-de-usd-20003000)
+### Época limpia (intentos invalida_bug) — A valid attempt-history period excluding contaminated synthetic rows and invalid bug results; for example, synthetic snapshots must not enter the real attempts ledger. [Stage 3 decision](../04_decisions/2026-10-19-DC-criterio-etapa3-y-loop-de-mejora.md#d1-rol-del-dsr-en-la-etapa-3)
+### PDT — Pattern day trader rule for certain small margin accounts; for example, four same-day round trips in five business days trigger it. [Roadmap §0](../02_planning/2026-10-28_roadmap_post_m5.md#0-contexto-y-glosario)
+### Snapshot — A frozen data download; for example, two runs use the same ETF snapshot. [Roadmap §4](../02_planning/2026-10-28_roadmap_post_m5.md#4-m-datos-dnde-guardar-los-datos-de-mercado-y-fundamentales)
+### Manifest — A file listing data hashes; for example, matching hashes show both runs used the same files. [Roadmap §4](../02_planning/2026-10-28_roadmap_post_m5.md#4-m-datos-dnde-guardar-los-datos-de-mercado-y-fundamentales)
+### Train, test, and reserve — Data periods for fitting, judging, and a final untouched check; for example, train on 2007–2018 and test on 2019–2022. [Roadmap §0](../02_planning/2026-10-28_roadmap_post_m5.md#0-contexto-y-glosario)
+### Buy and hold — Buy at the start and sell at the end; for example, compare a strategy with SPY over the same dates. [Roadmap §2](../02_planning/2026-10-28_roadmap_post_m5.md#2-m-cuenta-que-la-candidata-funcione-en-una-cuenta-de-usd-20003000)
+### Intrabar — Within a candle's high and low; for example, check whether a stop was hit before the close. [Roadmap §0](../02_planning/2026-10-28_roadmap_post_m5.md#0-contexto-y-glosario)
+### Control (backtesting.py) — An independent backtest implementation; for example, matching trades provide a cross-check. [Edge research §3](../02_planning/2026-10-20_investigacion_edge_y_generacion.md#3)
+### Golden test — A saved expected result; for example, fail when a trade or metric changes. [Edge research §3](../02_planning/2026-10-20_investigacion_edge_y_generacion.md#3)
+### Walk-forward — Fit on one period and measure on the next; for example, roll the training window forward yearly. [Edge research §3](../02_planning/2026-10-20_investigacion_edge_y_generacion.md#3)
