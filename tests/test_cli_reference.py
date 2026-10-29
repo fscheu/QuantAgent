@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import click
 from click.core import Group, Option
 
 from quantagent.cli.__main__ import cli
@@ -30,3 +31,31 @@ def test_cli_reference_is_stable_complete_and_matches_approved_pages():
         reference = approved / filename
         if reference.exists():
             assert reference.read_text() == rendered
+
+
+def test_cli_reference_writes_a_page_for_each_group(tmp_path):
+    @click.group()
+    def root():
+        pass
+
+    @root.group()
+    def nested():
+        pass
+
+    @nested.group()
+    def run():
+        pass
+
+    @run.command()
+    @click.option("--count", default=3, help="Number of items.")
+    def execute(count):
+        pass
+
+    pages = render_cli_reference(root, tmp_path)
+
+    assert "nested.md" in pages
+    assert "nested/run.md" in pages
+    assert all((tmp_path / path).read_text() == page for path, page in pages.items())
+    assert "--help" in pages["nested.md"]
+    assert "--count" in pages["nested/run.md"]
+    assert "default: `3`" in pages["nested/run.md"]
