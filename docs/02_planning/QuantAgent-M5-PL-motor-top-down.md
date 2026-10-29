@@ -18,7 +18,7 @@ Una segunda rama de operación en QuantAgent, en una cuenta paper de Alpaca apar
 | D1 | ¿Se paga Sharadar (o equivalente) para acciones, composición del S&P 500 y fundamentales? Excepción a R01 #14 | `M5-03` (lote L22) | **Decidido por Fede (2026-10-25):** se avanza con la **capa gratuita** de Sharadar (cuenta ya creada; muestra de ~30 empresas) para desarrollar y testear M5-03, M5-04, M5-31 y M5-32. El pago (Bundle con historia completa, USD 69/mes o 499/año) se decide al abrir L28, antes de correr H3/H4. |
 | D2 | Sizing del bucket M5: riesgo por trade, tope por posición, heat máximo | `M5-50` (antes de paper) | Partir de R01 (0,25 % y 10 %) y decidir el heat con la tabla de §6. |
 | D3 | Filtro R/R: valor de `rr_min` y objetivo solo estructural | `M5-44` | Objetivo opcional; filtro R/R solo con objetivo estructural; `rr_min` = 2 como en la propuesta. |
-| D4 | Sustituto de ISM New Orders | `M5-01` | Nuevos pedidos de la encuesta de la Fed de Filadelfia (la más larga y mensual); el PM lo confirma en FRED antes. |
+| D4 | Sustituto de ISM New Orders | `M5-01` | **Decidido:** NEWORDER (yoy). Única serie de pedidos con vintages en ALFRED desde 1997 que cubre el in-sample 2007-2018 punto en el tiempo. |
 | D5 | ETFs de país sin Etapa 2 | `M5-32` | Sí: pasan directo a la Etapa 3. |
 | D6 | Capital inicial de la cuenta paper M5 | `M5-50` | Un monto cercano al de dinero real futuro (por ejemplo USD 3.000) en vez de los USD 100.000 por defecto: así paper ejercita fracciones, redondeos y tamaños mínimos. |
 | D7 | ¿Alguna hipótesis de M5 entra a la reserva 2023+? | `M5-13` | Decidir con el resultado de la etapa 2 de H1/H2; hoy la lista de R01 está llena (3 de 3). |

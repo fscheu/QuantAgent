@@ -19,11 +19,21 @@ PRIMERA_FECHA = "1776-07-04"
 ULTIMA_FECHA = "9999-12-31"
 
 
-def crear_snapshot_macro(nombre: str, series: Iterable[str], cliente, base_dir: Optional[Path] = None) -> dict:
+def crear_snapshot_macro(
+    nombre: str,
+    series: Iterable[str],
+    cliente,
+    base_dir: Optional[Path] = None,
+    notas: Optional[dict[str, str]] = None,
+) -> dict:
     """Baja todas las versiones de cada serie con `cliente.observaciones` y escribe parquet + manifiesto."""
     series = sorted(set(series))
     if not series:
         raise SnapshotError("no hay series para guardar")
+    if notas:
+        desconocidas = sorted(set(notas) - set(series))
+        if desconocidas:
+            raise SnapshotError(f"nota sobre serie ausente: {', '.join(desconocidas)}")
     carpeta = snapshot_root(base_dir) / nombre
     if carpeta.exists():
         raise SnapshotError(f"el snapshot '{nombre}' ya existe: {carpeta}")
@@ -32,10 +42,10 @@ def crear_snapshot_macro(nombre: str, series: Iterable[str], cliente, base_dir: 
     if vacias:
         raise SnapshotError(f"sin filas: {', '.join(vacias)}")
 
-    return _escribir(carpeta, nombre, frames)
+    return _escribir(carpeta, nombre, frames, notas=notas)
 
 
-def _escribir(carpeta: Path, nombre: str, frames: dict) -> dict:
+def _escribir(carpeta: Path, nombre: str, frames: dict, notas: Optional[dict[str, str]] = None) -> dict:
     carpeta.mkdir(parents=True, exist_ok=True)
     info = {}
     for serie, df in frames.items():
@@ -54,6 +64,8 @@ def _escribir(carpeta: Path, nombre: str, frames: dict) -> dict:
         "downloaded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "series": info,
     }
+    if notas:
+        manifiesto["notas"] = notas
     (carpeta / MANIFEST_NAME).write_text(json.dumps(manifiesto, indent=2, sort_keys=True) + "\n")
     return manifiesto
 
@@ -73,7 +85,7 @@ def recortar_snapshot_macro(nombre: str, al, destino: Path, base_dir: Optional[P
         df = df[df["realtime_start"] <= al].copy()
         df["realtime_end"] = df["realtime_end"].clip(upper=al)
         frames[serie] = df
-    return _escribir(Path(destino) / nombre, nombre, frames)
+    return _escribir(Path(destino) / nombre, nombre, frames, notas=manifiesto.get("notas"))
 
 
 def verificar_snapshot_macro(nombre: str, base_dir: Optional[Path] = None, versioned_dir: Optional[Path] = None) -> dict:
@@ -135,3 +147,56 @@ def serie_punto_en_el_tiempo(nombre: str, serie: str, sesiones, base_dir: Option
         conocido = _conocido(df, dia)
         valores.append(float("nan") if conocido is None else conocido[1])
     return pd.Series(valores, index=sesiones, name=serie)
+
+
+def _transformada(df: pd.DataFrame, d: pd.Timestamp, tipo: str) -> Optional[float]:
+    vigentes = df[(df["realtime_start"] <= d) & (d <= df["realtime_end"])]
+    if vigentes.empty:
+        return None
+    ultima = vigentes.iloc[-1]
+    previas = vigentes[vigentes["fecha"] <= ultima["fecha"] - pd.DateOffset(months=12)]
+    if previas.empty:
+        return None
+    x_t, x_prev = float(ultima["valor"]), float(previas.iloc[-1]["valor"])
+    if tipo == "yoy":
+        return (x_t / x_prev - 1.0) if x_prev != 0 else float("nan")
+    elif tipo == "dif12":
+        return x_t - x_prev
+    raise ValueError(f"tipo no soportado: {tipo}")
+
+
+def transformada_punto_en_el_tiempo(
+    nombre: str, serie: str, sesiones, tipo: str, base_dir: Optional[Path] = None
+) -> pd.Series:
+    """Para cada sesión, variación interanual ('yoy') o diferencia ('dif12') según la vintage vigente ese día."""
+    if tipo not in ("yoy", "dif12"):
+        raise ValueError(f"tipo no soportado: {tipo}")
+    df = _versiones(nombre, serie, base_dir)
+    sesiones = pd.DatetimeIndex(sesiones)
+    valores = [_transformada(df, dia, tipo) for dia in sesiones]
+    return pd.Series([float("nan") if v is None else v for v in valores], index=sesiones, name=serie)
+
+
+def zscore_movil(s: pd.Series, meses: int = 36) -> pd.Series:
+    """Z-score de cada punto contra la ventana temporal de los últimos `meses` meses (rolling por tiempo, ddof=1).
+
+    NaN mientras la ventana tenga menos de `meses` meses de historia.
+    """
+    if s.empty:
+        return s.copy()
+    idx = pd.DatetimeIndex(s.index)
+    valida = s.dropna()
+    if valida.empty:
+        return pd.Series(float("nan"), index=idx, name=s.name)
+    t_inicio = valida.index.min()
+    res = []
+    for i, t in enumerate(idx):
+        x = s.iloc[i]
+        if pd.isna(x) or t < t_inicio + pd.DateOffset(months=meses):
+            res.append(float("nan"))
+            continue
+        ventana = s.iloc[(idx >= t - pd.DateOffset(months=meses)) & (idx <= t)].dropna()
+        std = ventana.std(ddof=1) if len(ventana) >= 2 else 0.0
+        res.append(float((x - ventana.mean()) / std) if std > 0 else float("nan"))
+    return pd.Series(res, index=idx, name=s.name)
+

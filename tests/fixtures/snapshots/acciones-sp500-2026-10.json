@@ -1,0 +1,5539 @@
+{
+  "downloaded_at": "2026-10-28T20:39:50+00:00",
+  "fuentes": {
+    "A": "yahoo",
+    "AAL": "yahoo",
+    "AAP": "yahoo",
+    "AAPL": "yahoo",
+    "ABBV": "yahoo",
+    "ABC": "wiki",
+    "ABMD": "wiki",
+    "ABT": "yahoo",
+    "ACAS": "wiki",
+    "ACN": "yahoo",
+    "ADBE": "yahoo",
+    "ADI": "yahoo",
+    "ADM": "yahoo",
+    "ADP": "yahoo",
+    "ADS": "wiki",
+    "ADSK": "yahoo",
+    "ADT": "wiki",
+    "AEE": "yahoo",
+    "AEP": "yahoo",
+    "AES": "yahoo",
+    "AET": "wiki",
+    "AFL": "yahoo",
+    "AGN": "wiki",
+    "AIG": "yahoo",
+    "AIV": "yahoo",
+    "AIZ": "yahoo",
+    "AJG": "yahoo",
+    "AKAM": "yahoo",
+    "AKS": "wiki",
+    "ALB": "yahoo",
+    "ALGN": "yahoo",
+    "ALK": "yahoo",
+    "ALL": "yahoo",
+    "ALLE": "yahoo",
+    "ALTR": "wiki",
+    "ALXN": "wiki",
+    "AMAT": "yahoo",
+    "AMD": "yahoo",
+    "AME": "yahoo",
+    "AMG": "yahoo",
+    "AMGN": "yahoo",
+    "AMP": "yahoo",
+    "AMT": "yahoo",
+    "AMZN": "yahoo",
+    "AN": "yahoo",
+    "ANDV": "wiki",
+    "ANET": "yahoo",
+    "ANF": "yahoo",
+    "ANSS": "wiki",
+    "ANTM": "wiki",
+    "AON": "yahoo",
+    "AOS": "yahoo",
+    "APA": "yahoo",
+    "APC": "wiki",
+    "APD": "yahoo",
+    "APH": "yahoo",
+    "APOL": "wiki",
+    "APTV": "yahoo",
+    "ARE": "yahoo",
+    "ARG": "wiki",
+    "ARNC": "wiki",
+    "ASH": "yahoo",
+    "AT": "wiki",
+    "ATI": "yahoo",
+    "ATVI": "wiki",
+    "AVB": "wiki",
+    "AVGO": "yahoo",
+    "AVP": "wiki",
+    "AVY": "yahoo",
+    "AWK": "yahoo",
+    "AXP": "yahoo",
+    "AYI": "yahoo",
+    "AZO": "yahoo",
+    "BA": "yahoo",
+    "BAC": "yahoo",
+    "BAX": "yahoo",
+    "BBBY": "wiki",
+    "BBT": "yahoo",
+    "BBY": "yahoo",
+    "BC": "yahoo",
+    "BCR": "wiki",
+    "BDX": "yahoo",
+    "BEAM": "wiki",
+    "BEN": "yahoo",
+    "BF.B": "yahoo",
+    "BHF": "yahoo",
+    "BHGE": "wiki",
+    "BIG": "wiki",
+    "BIIB": "yahoo",
+    "BK": "wiki",
+    "BKNG": "yahoo",
+    "BLK": "yahoo",
+    "BLL": "wiki",
+    "BMS": "wiki",
+    "BMY": "yahoo",
+    "BR": "yahoo",
+    "BRCM": "wiki",
+    "BRK.B": "yahoo",
+    "BSX": "yahoo",
+    "BUD": "yahoo",
+    "BWA": "yahoo",
+    "BXLT": "wiki",
+    "BXP": "yahoo",
+    "C": "yahoo",
+    "CA": "wiki",
+    "CAG": "yahoo",
+    "CAH": "yahoo",
+    "CAM": "wiki",
+    "CAT": "yahoo",
+    "CB": "yahoo",
+    "CBOE": "yahoo",
+    "CBRE": "yahoo",
+    "CBS": "wiki",
+    "CCE": "wiki",
+    "CCEP": "yahoo",
+    "CCI": "yahoo",
+    "CCL": "yahoo",
+    "CCU": "yahoo",
+    "CDNS": "yahoo",
+    "CE": "yahoo",
+    "CELG": "wiki",
+    "CERN": "wiki",
+    "CF": "yahoo",
+    "CFG": "yahoo",
+    "CFN": "wiki",
+    "CHD": "yahoo",
+    "CHK": "wiki",
+    "CHRW": "yahoo",
+    "CHTR": "yahoo",
+    "CI": "yahoo",
+    "CIEN": "yahoo",
+    "CINF": "yahoo",
+    "CL": "yahoo",
+    "CLF": "yahoo",
+    "CLX": "yahoo",
+    "CMA": "wiki",
+    "CMCSA": "yahoo",
+    "CMCSK": "wiki",
+    "CME": "yahoo",
+    "CMG": "yahoo",
+    "CMI": "yahoo",
+    "CMS": "yahoo",
+    "CNC": "yahoo",
+    "CNP": "yahoo",
+    "CNX": "yahoo",
+    "COF": "yahoo",
+    "COG": "wiki",
+    "COL": "wiki",
+    "COO": "yahoo",
+    "COP": "yahoo",
+    "COST": "yahoo",
+    "COTY": "yahoo",
+    "COV": "wiki",
+    "CPB": "yahoo",
+    "CPGX": "wiki",
+    "CPRI": "yahoo",
+    "CPRT": "yahoo",
+    "CPWR": "yahoo",
+    "CRM": "yahoo",
+    "CSCO": "yahoo",
+    "CSRA": "wiki",
+    "CSX": "yahoo",
+    "CTAS": "yahoo",
+    "CTL": "wiki",
+    "CTSH": "yahoo",
+    "CTXS": "wiki",
+    "CVC": "wiki",
+    "CVG": "wiki",
+    "CVS": "yahoo",
+    "CVX": "yahoo",
+    "CXO": "wiki",
+    "D": "yahoo",
+    "DAL": "yahoo",
+    "DD": "yahoo",
+    "DDR": "wiki",
+    "DDS": "yahoo",
+    "DE": "yahoo",
+    "DELL": "wiki",
+    "DF": "wiki",
+    "DFS": "wiki",
+    "DG": "wiki",
+    "DGX": "yahoo",
+    "DHI": "yahoo",
+    "DHR": "yahoo",
+    "DIS": "yahoo",
+    "DISCA": "wiki",
+    "DISCK": "wiki",
+    "DISH": "wiki",
+    "DLR": "yahoo",
+    "DLTR": "yahoo",
+    "DNB": "wiki",
+    "DNR": "wiki",
+    "DO": "wiki",
+    "DOV": "yahoo",
+    "DOW": "wiki",
+    "DRE": "wiki",
+    "DRI": "yahoo",
+    "DTE": "yahoo",
+    "DTV": "wiki",
+    "DUK": "yahoo",
+    "DVA": "yahoo",
+    "DVN": "yahoo",
+    "DWDP": "wiki",
+    "DXC": "yahoo",
+    "DYN": "wiki",
+    "EA": "wiki",
+    "EBAY": "yahoo",
+    "ECL": "yahoo",
+    "ED": "yahoo",
+    "EFX": "yahoo",
+    "EIX": "yahoo",
+    "EL": "yahoo",
+    "EMC": "wiki",
+    "EMN": "yahoo",
+    "EMR": "yahoo",
+    "ENDP": "wiki",
+    "EOG": "yahoo",
+    "EP": "yahoo",
+    "EQ": "yahoo",
+    "EQIX": "yahoo",
+    "EQR": "wiki",
+    "EQT": "yahoo",
+    "ES": "yahoo",
+    "ESRX": "wiki",
+    "ESS": "yahoo",
+    "ESV": "wiki",
+    "ETFC": "wiki",
+    "ETN": "yahoo",
+    "ETR": "yahoo",
+    "EVHC": "wiki",
+    "EVRG": "yahoo",
+    "EW": "yahoo",
+    "EXC": "yahoo",
+    "EXPD": "yahoo",
+    "EXPE": "yahoo",
+    "EXR": "yahoo",
+    "F": "yahoo",
+    "FANG": "yahoo",
+    "FAST": "yahoo",
+    "FB": "wiki",
+    "FBHS": "wiki",
+    "FCPT": "yahoo",
+    "FCX": "yahoo",
+    "FDO": "wiki",
+    "FDX": "yahoo",
+    "FE": "yahoo",
+    "FFIV": "yahoo",
+    "FHN": "yahoo",
+    "FII": "wiki",
+    "FIS": "yahoo",
+    "FISV": "yahoo",
+    "FITB": "yahoo",
+    "FL": "wiki",
+    "FLIR": "wiki",
+    "FLR": "yahoo",
+    "FLS": "yahoo",
+    "FLT": "wiki",
+    "FMC": "yahoo",
+    "FMCC": "yahoo",
+    "FNMA": "yahoo",
+    "FOSL": "yahoo",
+    "FOX": "wiki",
+    "FOXA": "wiki",
+    "FRT": "yahoo",
+    "FRX": "wiki",
+    "FSLR": "yahoo",
+    "FTI": "yahoo",
+    "FTNT": "yahoo",
+    "FTR": "wiki",
+    "FTV": "yahoo",
+    "GAS": "wiki",
+    "GD": "yahoo",
+    "GE": "yahoo",
+    "GENZ": "yahoo",
+    "GGP": "wiki",
+    "GHC": "yahoo",
+    "GILD": "yahoo",
+    "GIS": "yahoo",
+    "GLW": "yahoo",
+    "GM": "yahoo",
+    "GMCR": "wiki",
+    "GME": "yahoo",
+    "GNW": "yahoo",
+    "GOOG": "yahoo",
+    "GOOGL": "yahoo",
+    "GPC": "yahoo",
+    "GPN": "yahoo",
+    "GPS": "wiki",
+    "GRMN": "yahoo",
+    "GS": "yahoo",
+    "GT": "yahoo",
+    "GWW": "yahoo",
+    "H": "wiki",
+    "HAL": "yahoo",
+    "HAR": "wiki",
+    "HAS": "yahoo",
+    "HBAN": "yahoo",
+    "HBI": "wiki",
+    "HCA": "yahoo",
+    "HCBK": "wiki",
+    "HCP": "wiki",
+    "HD": "yahoo",
+    "HES": "wiki",
+    "HFC": "wiki",
+    "HIG": "yahoo",
+    "HII": "yahoo",
+    "HLT": "wiki",
+    "HOG": "yahoo",
+    "HOLX": "wiki",
+    "HON": "yahoo",
+    "HOT": "wiki",
+    "HP": "yahoo",
+    "HPE": "yahoo",
+    "HPQ": "yahoo",
+    "HRB": "yahoo",
+    "HRL": "yahoo",
+    "HRS": "wiki",
+    "HSH": "wiki",
+    "HSIC": "yahoo",
+    "HSP": "wiki",
+    "HST": "yahoo",
+    "HSY": "yahoo",
+    "HUM": "yahoo",
+    "IBM": "yahoo",
+    "ICE": "yahoo",
+    "IDXX": "yahoo",
+    "IFF": "yahoo",
+    "IGT": "wiki",
+    "ILMN": "yahoo",
+    "INCY": "yahoo",
+    "INFO": "wiki",
+    "INTC": "yahoo",
+    "INTU": "yahoo",
+    "IP": "yahoo",
+    "IPG": "wiki",
+    "IPGP": "yahoo",
+    "IQV": "yahoo",
+    "IR": "wiki",
+    "IRM": "yahoo",
+    "ISRG": "yahoo",
+    "IT": "yahoo",
+    "ITT": "yahoo",
+    "ITW": "yahoo",
+    "IVZ": "yahoo",
+    "JBHT": "yahoo",
+    "JBL": "yahoo",
+    "JCI": "yahoo",
+    "JCP": "wiki",
+    "JEC": "wiki",
+    "JEF": "yahoo",
+    "JKHY": "yahoo",
+    "JNJ": "yahoo",
+    "JNPR": "wiki",
+    "JNS": "wiki",
+    "JNY": "wiki",
+    "JOY": "wiki",
+    "JPM": "yahoo",
+    "JWN": "wiki",
+    "K": "wiki",
+    "KBH": "yahoo",
+    "KDP": "yahoo",
+    "KEY": "yahoo",
+    "KEYS": "yahoo",
+    "KG": "yahoo",
+    "KHC": "yahoo",
+    "KIM": "yahoo",
+    "KLAC": "yahoo",
+    "KMB": "yahoo",
+    "KMI": "wiki",
+    "KMX": "yahoo",
+    "KO": "yahoo",
+    "KORS": "wiki",
+    "KR": "yahoo",
+    "KRFT": "wiki",
+    "KSS": "yahoo",
+    "KSU": "wiki",
+    "L": "yahoo",
+    "LB": "wiki",
+    "LDOS": "yahoo",
+    "LEG": "wiki",
+    "LEN": "yahoo",
+    "LH": "yahoo",
+    "LIFE": "wiki",
+    "LIN": "yahoo",
+    "LKQ": "yahoo",
+    "LLL": "wiki",
+    "LLTC": "wiki",
+    "LLY": "yahoo",
+    "LM": "wiki",
+    "LMT": "yahoo",
+    "LNC": "yahoo",
+    "LNT": "yahoo",
+    "LO": "wiki",
+    "LOW": "yahoo",
+    "LRCX": "yahoo",
+    "LSI": "wiki",
+    "LUV": "yahoo",
+    "LVLT": "wiki",
+    "LW": "yahoo",
+    "LXK": "wiki",
+    "LYB": "yahoo",
+    "M": "yahoo",
+    "MA": "yahoo",
+    "MAA": "yahoo",
+    "MAC": "yahoo",
+    "MAR": "yahoo",
+    "MAS": "yahoo",
+    "MAT": "yahoo",
+    "MBI": "yahoo",
+    "MCD": "yahoo",
+    "MCHP": "yahoo",
+    "MCK": "yahoo",
+    "MCO": "yahoo",
+    "MDLZ": "yahoo",
+    "MDP": "wiki",
+    "MDT": "yahoo",
+    "MET": "yahoo",
+    "MGM": "yahoo",
+    "MHK": "yahoo",
+    "MI": "yahoo",
+    "MIL": "wiki",
+    "MJN": "wiki",
+    "MKC": "yahoo",
+    "MLM": "yahoo",
+    "MMC": "wiki",
+    "MMI": "wiki",
+    "MMM": "yahoo",
+    "MNK": "wiki",
+    "MNST": "yahoo",
+    "MO": "yahoo",
+    "MON": "wiki",
+    "MOS": "yahoo",
+    "MPC": "yahoo",
+    "MRK": "yahoo",
+    "MRO": "wiki",
+    "MS": "yahoo",
+    "MSCI": "yahoo",
+    "MSFT": "yahoo",
+    "MSI": "yahoo",
+    "MTB": "yahoo",
+    "MTD": "yahoo",
+    "MTG": "yahoo",
+    "MTW": "yahoo",
+    "MU": "yahoo",
+    "MUR": "yahoo",
+    "MWV": "wiki",
+    "MWW": "wiki",
+    "MXIM": "wiki",
+    "MYL": "wiki",
+    "NAVI": "yahoo",
+    "NBL": "wiki",
+    "NBR": "yahoo",
+    "NCLH": "yahoo",
+    "NCR": "wiki",
+    "NDAQ": "yahoo",
+    "NE": "wiki",
+    "NEE": "yahoo",
+    "NEM": "yahoo",
+    "NFLX": "yahoo",
+    "NFX": "wiki",
+    "NI": "yahoo",
+    "NKE": "yahoo",
+    "NKTR": "yahoo",
+    "NLSN": "wiki",
+    "NOC": "yahoo",
+    "NOV": "yahoo",
+    "NRG": "yahoo",
+    "NSC": "yahoo",
+    "NSM": "wiki",
+    "NTAP": "yahoo",
+    "NTRS": "yahoo",
+    "NUE": "yahoo",
+    "NVDA": "yahoo",
+    "NWL": "yahoo",
+    "NWS": "yahoo",
+    "NWSA": "yahoo",
+    "NYT": "yahoo",
+    "O": "yahoo",
+    "ODP": "wiki",
+    "OI": "yahoo",
+    "OKE": "yahoo",
+    "OMC": "yahoo",
+    "ORCL": "yahoo",
+    "ORLY": "yahoo",
+    "OXY": "yahoo",
+    "PAYX": "yahoo",
+    "PBCT": "wiki",
+    "PBI": "yahoo",
+    "PCAR": "yahoo",
+    "PCG": "yahoo",
+    "PCL": "wiki",
+    "PCP": "wiki",
+    "PDCO": "wiki",
+    "PEG": "yahoo",
+    "PEP": "yahoo",
+    "PETM": "wiki",
+    "PFE": "yahoo",
+    "PFG": "yahoo",
+    "PG": "yahoo",
+    "PGR": "yahoo",
+    "PH": "yahoo",
+    "PHM": "yahoo",
+    "PKG": "yahoo",
+    "PKI": "wiki",
+    "PLD": "yahoo",
+    "PLL": "wiki",
+    "PM": "yahoo",
+    "PMCS": "wiki",
+    "PNC": "yahoo",
+    "PNR": "yahoo",
+    "PNW": "yahoo",
+    "POM": "wiki",
+    "PPG": "yahoo",
+    "PPL": "yahoo",
+    "PRGO": "yahoo",
+    "PRU": "yahoo",
+    "PSA": "yahoo",
+    "PSX": "yahoo",
+    "PVH": "yahoo",
+    "PWR": "yahoo",
+    "PX": "wiki",
+    "PXD": "wiki",
+    "PYPL": "yahoo",
+    "Q": "wiki",
+    "QCOM": "yahoo",
+    "QEP": "wiki",
+    "QLGC": "wiki",
+    "QRVO": "wiki",
+    "R": "yahoo",
+    "RAI": "wiki",
+    "RCL": "yahoo",
+    "RDC": "wiki",
+    "RE": "wiki",
+    "REG": "yahoo",
+    "REGN": "yahoo",
+    "RF": "yahoo",
+    "RHI": "yahoo",
+    "RHT": "wiki",
+    "RIG": "yahoo",
+    "RJF": "yahoo",
+    "RL": "yahoo",
+    "RMD": "yahoo",
+    "ROK": "yahoo",
+    "ROL": "yahoo",
+    "ROP": "yahoo",
+    "ROST": "yahoo",
+    "RRC": "yahoo",
+    "RRD": "wiki",
+    "RSG": "yahoo",
+    "RTN": "wiki",
+    "S": "wiki",
+    "SANM": "yahoo",
+    "SBAC": "yahoo",
+    "SBUX": "yahoo",
+    "SCG": "wiki",
+    "SCHW": "yahoo",
+    "SE": "wiki",
+    "SEE": "wiki",
+    "SHLD": "wiki",
+    "SHW": "yahoo",
+    "SIAL": "wiki",
+    "SIG": "yahoo",
+    "SII": "yahoo",
+    "SIVB": "wiki",
+    "SJM": "yahoo",
+    "SLB": "yahoo",
+    "SLG": "yahoo",
+    "SLM": "yahoo",
+    "SNA": "yahoo",
+    "SNDK": "wiki",
+    "SNI": "wiki",
+    "SNPS": "yahoo",
+    "SNV": "wiki",
+    "SO": "yahoo",
+    "SPG": "yahoo",
+    "SPGI": "yahoo",
+    "SPLS": "wiki",
+    "SRCL": "wiki",
+    "SRE": "yahoo",
+    "SSP": "yahoo",
+    "STI": "wiki",
+    "STJ": "wiki",
+    "STR": "wiki",
+    "STT": "yahoo",
+    "STX": "yahoo",
+    "STZ": "yahoo",
+    "SUN": "wiki",
+    "SUNEQ": "wiki",
+    "SVU": "wiki",
+    "SWK": "yahoo",
+    "SWKS": "yahoo",
+    "SWN": "wiki",
+    "SWY": "wiki",
+    "SYF": "yahoo",
+    "SYK": "yahoo",
+    "SYMC": "wiki",
+    "SYY": "yahoo",
+    "T": "yahoo",
+    "TAP": "yahoo",
+    "TDC": "yahoo",
+    "TDG": "yahoo",
+    "TE": "wiki",
+    "TEG": "wiki",
+    "TEL": "yahoo",
+    "TER": "yahoo",
+    "TEX": "yahoo",
+    "TGNA": "wiki",
+    "TGT": "yahoo",
+    "THC": "yahoo",
+    "TIF": "wiki",
+    "TJX": "yahoo",
+    "TMK": "wiki",
+    "TMO": "yahoo",
+    "TMUS": "yahoo",
+    "TPR": "yahoo",
+    "TRIP": "yahoo",
+    "TROW": "yahoo",
+    "TRV": "yahoo",
+    "TSCO": "yahoo",
+    "TSN": "yahoo",
+    "TSS": "wiki",
+    "TT": "yahoo",
+    "TTWO": "yahoo",
+    "TWC": "wiki",
+    "TWTR": "wiki",
+    "TWX": "wiki",
+    "TXN": "yahoo",
+    "TXT": "yahoo",
+    "UA": "yahoo",
+    "UAA": "yahoo",
+    "UAL": "yahoo",
+    "UDR": "yahoo",
+    "UHS": "yahoo",
+    "UIS": "yahoo",
+    "ULTA": "yahoo",
+    "UNH": "yahoo",
+    "UNM": "yahoo",
+    "UNP": "yahoo",
+    "UPS": "yahoo",
+    "URBN": "yahoo",
+    "URI": "yahoo",
+    "USB": "yahoo",
+    "UST": "yahoo",
+    "UTX": "wiki",
+    "V": "yahoo",
+    "VAR": "wiki",
+    "VFC": "yahoo",
+    "VIAB": "wiki",
+    "VIAV": "yahoo",
+    "VLO": "yahoo",
+    "VMC": "yahoo",
+    "VNO": "yahoo",
+    "VRSK": "yahoo",
+    "VRSN": "yahoo",
+    "VRTX": "yahoo",
+    "VTR": "yahoo",
+    "VZ": "yahoo",
+    "WAT": "yahoo",
+    "WB": "yahoo",
+    "WBA": "wiki",
+    "WCG": "wiki",
+    "WDC": "yahoo",
+    "WEC": "yahoo",
+    "WELL": "yahoo",
+    "WEN": "yahoo",
+    "WFC": "yahoo",
+    "WFM": "wiki",
+    "WHR": "yahoo",
+    "WIN": "wiki",
+    "WLTW": "wiki",
+    "WM": "yahoo",
+    "WMB": "yahoo",
+    "WMT": "yahoo",
+    "WPX": "wiki",
+    "WRK": "wiki",
+    "WU": "yahoo",
+    "WY": "yahoo",
+    "WYNN": "yahoo",
+    "X": "wiki",
+    "XEC": "wiki",
+    "XEL": "yahoo",
+    "XL": "wiki",
+    "XLNX": "wiki",
+    "XOM": "yahoo",
+    "XRAY": "yahoo",
+    "XRX": "yahoo",
+    "XYL": "yahoo",
+    "YUM": "yahoo",
+    "ZBH": "yahoo",
+    "ZION": "yahoo",
+    "ZTS": "yahoo"
+  },
+  "name": "acciones-sp500-2026-10",
+  "source": "yahoo+wiki",
+  "symbols": {
+    "A": {
+      "end": "2018-12-31",
+      "file": "A.parquet",
+      "rows": 3271,
+      "sha256": "e73f61a516d3e1186597a6a0e41d85cea459c44a1314caaf2a3f48debcbd5c15",
+      "start": "2006-01-03"
+    },
+    "AAL": {
+      "end": "2018-12-31",
+      "file": "AAL.parquet",
+      "rows": 3271,
+      "sha256": "280a05e07e123c4588fdd5e95bfdc2af577d400ee928a2a2f3cc79fdf609565d",
+      "start": "2006-01-03"
+    },
+    "AAP": {
+      "end": "2018-12-31",
+      "file": "AAP.parquet",
+      "rows": 3271,
+      "sha256": "a5c50b5c34f7cd786bc6384032ad645ab39575780d7efd6fc0f835e5cbf2e8ff",
+      "start": "2006-01-03"
+    },
+    "AAPL": {
+      "end": "2018-12-31",
+      "file": "AAPL.parquet",
+      "rows": 3271,
+      "sha256": "52cf20e60fbb483fef0fa9a08e1c9c1b6ab3ff1c9eb6c1fd6006b54ebaebc001",
+      "start": "2006-01-03"
+    },
+    "ABBV": {
+      "end": "2018-12-31",
+      "file": "ABBV.parquet",
+      "rows": 1510,
+      "sha256": "c8b0ba5aa588a6aff9be37baf8a00884eb0889bbfc9ab09a84cf8b8fd58ffdc1",
+      "start": "2013-01-02"
+    },
+    "ABC": {
+      "end": "2018-03-27",
+      "file": "ABC.parquet",
+      "rows": 5785,
+      "sha256": "7aba9ec2622a23bcd1319316e5a0093e1742e4bbd016388b0b7b2e33243ae410",
+      "start": "1995-04-04"
+    },
+    "ABMD": {
+      "end": "2018-03-27",
+      "file": "ABMD.parquet",
+      "rows": 7727,
+      "sha256": "f93a10b1a0c4efac12bf302c30d2cc34c7826152b8081de3789373a1c3f37bf8",
+      "start": "1987-07-30"
+    },
+    "ABT": {
+      "end": "2018-12-31",
+      "file": "ABT.parquet",
+      "rows": 3271,
+      "sha256": "8b3f499cce2e2135e6fe0a3e84bd97a5f6e1f420ce4b5d8913d10fd2af8bfd1a",
+      "start": "2006-01-03"
+    },
+    "ACAS": {
+      "end": "2017-01-03",
+      "file": "ACAS.parquet",
+      "rows": 4867,
+      "sha256": "e8d478945e1367ad8bf1c3b2e480bcfc1d450bf2fe9ea4b965f757d8a86d277c",
+      "start": "1997-09-02"
+    },
+    "ACN": {
+      "end": "2018-12-31",
+      "file": "ACN.parquet",
+      "rows": 3271,
+      "sha256": "32a90cdafff17965aca5948ca87ed5c6a2f9e255eefbca2723cbbf8ef5eb42de",
+      "start": "2006-01-03"
+    },
+    "ADBE": {
+      "end": "2018-12-31",
+      "file": "ADBE.parquet",
+      "rows": 3271,
+      "sha256": "208ac905aff8ea2ac05f73caeb533a789f683bbb872469b727912b2a00a3174a",
+      "start": "2006-01-03"
+    },
+    "ADI": {
+      "end": "2018-12-31",
+      "file": "ADI.parquet",
+      "rows": 3271,
+      "sha256": "00d706f2923f4603f8b9a65f65351c3ebb285f947f6939f3b6726d58cee31473",
+      "start": "2006-01-03"
+    },
+    "ADM": {
+      "end": "2018-12-31",
+      "file": "ADM.parquet",
+      "rows": 3271,
+      "sha256": "9adb01db7aaaa30e14cd6e83390c7fb27cc38e8f577d5012fb72973be6db329e",
+      "start": "2006-01-03"
+    },
+    "ADP": {
+      "end": "2018-12-31",
+      "file": "ADP.parquet",
+      "rows": 3271,
+      "sha256": "2f719669c6e007ee66048963594061dc077df6cf847b3b5b83425f9eed62de56",
+      "start": "2006-01-03"
+    },
+    "ADS": {
+      "end": "2018-03-27",
+      "file": "ADS.parquet",
+      "rows": 4220,
+      "sha256": "6e6aee7e3fc0c376bb0a8338e169ed9aa132cf66afb5a580f94442889f69d851",
+      "start": "2001-06-15"
+    },
+    "ADSK": {
+      "end": "2018-12-31",
+      "file": "ADSK.parquet",
+      "rows": 3271,
+      "sha256": "0d4aba3f5e9e28852dddc84bc90c37ada158658047087f971d3f1a3a08511ea8",
+      "start": "2006-01-03"
+    },
+    "ADT": {
+      "end": "2018-03-07",
+      "file": "ADT.parquet",
+      "rows": 905,
+      "sha256": "f0f281f9e5b6cd2d93d584058eb9e99a3aff2295a5a4e5f16cbf8838c95c536a",
+      "start": "2012-10-01"
+    },
+    "AEE": {
+      "end": "2018-12-31",
+      "file": "AEE.parquet",
+      "rows": 3271,
+      "sha256": "cd36a102394c072ced4efcb4ff3df956cde60dd3f378f83ad08957eeb2fb44df",
+      "start": "2006-01-03"
+    },
+    "AEP": {
+      "end": "2018-12-31",
+      "file": "AEP.parquet",
+      "rows": 3271,
+      "sha256": "1fe213fc383cae0355120827aeaad1e65242caf227f7f4e831e9093cd6a96e58",
+      "start": "2006-01-03"
+    },
+    "AES": {
+      "end": "2018-12-31",
+      "file": "AES.parquet",
+      "rows": 3271,
+      "sha256": "a830b843261eab075f6233382295d68b9a5de1befcb40e7dae6350e895e5e2f6",
+      "start": "2006-01-03"
+    },
+    "AET": {
+      "end": "2018-03-27",
+      "file": "AET.parquet",
+      "rows": 10399,
+      "sha256": "62ee0118787ac3932e9438b38b0e4b2a0461d859a48bc25478b1d4c805d316d8",
+      "start": "1977-01-03"
+    },
+    "AFL": {
+      "end": "2018-12-31",
+      "file": "AFL.parquet",
+      "rows": 3271,
+      "sha256": "bdfb48727b6f27816daac51cbe1e2497bc08a7176c7e40cd5c4e7beb978942a0",
+      "start": "2006-01-03"
+    },
+    "AGN": {
+      "end": "2018-03-27",
+      "file": "AGN.parquet",
+      "rows": 7247,
+      "sha256": "deb77a5d277efaba798c20541483a041c8b059b10e2bf76399933f406f91f5a3",
+      "start": "1989-06-22"
+    },
+    "AIG": {
+      "end": "2018-12-31",
+      "file": "AIG.parquet",
+      "rows": 3271,
+      "sha256": "3fa0ab6b2c03f108a6ccc9fdb2eaa59a5c1ea421273482943fe3622e937c65c1",
+      "start": "2006-01-03"
+    },
+    "AIV": {
+      "end": "2018-12-31",
+      "file": "AIV.parquet",
+      "rows": 3271,
+      "sha256": "205e2e429f0943d2e393b8120754c27becde2193e16e4440f5384e164fc121d2",
+      "start": "2006-01-03"
+    },
+    "AIZ": {
+      "end": "2018-12-31",
+      "file": "AIZ.parquet",
+      "rows": 3271,
+      "sha256": "bf4125f099b9c28d4c6335b125784d8ede72b45dd8ac9bbd27733dfd72f471ab",
+      "start": "2006-01-03"
+    },
+    "AJG": {
+      "end": "2018-12-31",
+      "file": "AJG.parquet",
+      "rows": 3271,
+      "sha256": "b5b6fc7fe4e8a649a6dbb641b50c2388dd135d9475e24139a969032ddafb8d32",
+      "start": "2006-01-03"
+    },
+    "AKAM": {
+      "end": "2018-12-31",
+      "file": "AKAM.parquet",
+      "rows": 3271,
+      "sha256": "7f98a4c8047561206b975469d65abc3f8319558a26dae62e75cbf5e6e1707d54",
+      "start": "2006-01-03"
+    },
+    "AKS": {
+      "end": "2018-03-27",
+      "file": "AKS.parquet",
+      "rows": 6040,
+      "sha256": "fccc8dc0540a2139ccaca04a6573267a92fba48a163d5725daabfa9393affb8f",
+      "start": "1994-03-30"
+    },
+    "ALB": {
+      "end": "2018-12-31",
+      "file": "ALB.parquet",
+      "rows": 3271,
+      "sha256": "f253cfcec57a626b548056bc3e5e2bce65483d5eaaafa1ea68a60b0a4d131958",
+      "start": "2006-01-03"
+    },
+    "ALGN": {
+      "end": "2018-12-31",
+      "file": "ALGN.parquet",
+      "rows": 3271,
+      "sha256": "49edc75d0c69e77eb3a33d1bcb08bee4b76ec1bc461478eb59d712ca81af0340",
+      "start": "2006-01-03"
+    },
+    "ALK": {
+      "end": "2018-12-31",
+      "file": "ALK.parquet",
+      "rows": 3271,
+      "sha256": "3d65b2404f5537aaeb39d812c8123ceb80e79f3716d955b85e2fa1ca9ac8a3d0",
+      "start": "2006-01-03"
+    },
+    "ALL": {
+      "end": "2018-12-31",
+      "file": "ALL.parquet",
+      "rows": 3271,
+      "sha256": "f431e3bafebcfb0ec5ef118a137039fd5c151acac1431e1df1853c2e76b30ca1",
+      "start": "2006-01-03"
+    },
+    "ALLE": {
+      "end": "2018-12-31",
+      "file": "ALLE.parquet",
+      "rows": 1288,
+      "sha256": "e6235b0ecf3059fb6df5d8533891a6efb02a50b0f9f059b22d6789e5d5e7191f",
+      "start": "2013-11-18"
+    },
+    "ALTR": {
+      "end": "2018-03-07",
+      "file": "ALTR.parquet",
+      "rows": 6996,
+      "sha256": "053bf29f51d580f5a7d9dca95fc916265c63360d6c142f1d03e5ff5bedf1b90a",
+      "start": "1988-04-04"
+    },
+    "ALXN": {
+      "end": "2018-03-27",
+      "file": "ALXN.parquet",
+      "rows": 5557,
+      "sha256": "04323daee06d613b899290869e40ccb90f44e41e8c52180e25ae75a570dcae7e",
+      "start": "1996-02-28"
+    },
+    "AMAT": {
+      "end": "2018-12-31",
+      "file": "AMAT.parquet",
+      "rows": 3271,
+      "sha256": "cdaaddab05272e779d4b5d83d5167e8889c6dba9e4d8d9bd41ac3999a76872c6",
+      "start": "2006-01-03"
+    },
+    "AMD": {
+      "end": "2018-12-31",
+      "file": "AMD.parquet",
+      "rows": 3271,
+      "sha256": "dae42e375dd1df0202e491ff54557eb1fdde8ba088debc5909e5d0d66cd6594f",
+      "start": "2006-01-03"
+    },
+    "AME": {
+      "end": "2018-12-31",
+      "file": "AME.parquet",
+      "rows": 3271,
+      "sha256": "8e9b40bac0bba3a5d613e52526f3c0dd4553c105f098aaff24e251c4f4d78265",
+      "start": "2006-01-03"
+    },
+    "AMG": {
+      "end": "2018-12-31",
+      "file": "AMG.parquet",
+      "rows": 3271,
+      "sha256": "7834a3a1e4bebaf136e2087330542fba75a6285bb2a4581eb43c7be5542178d6",
+      "start": "2006-01-03"
+    },
+    "AMGN": {
+      "end": "2018-12-31",
+      "file": "AMGN.parquet",
+      "rows": 3271,
+      "sha256": "facc93f338134a3d2b742e15c2a45873694f3a2e0009c96617eb67907a06bf09",
+      "start": "2006-01-03"
+    },
+    "AMP": {
+      "end": "2018-12-31",
+      "file": "AMP.parquet",
+      "rows": 3271,
+      "sha256": "840fff6788ea2365a29d728644b1860dc81749167fcd9e3aa4f2aecef7e91b67",
+      "start": "2006-01-03"
+    },
+    "AMT": {
+      "end": "2018-12-31",
+      "file": "AMT.parquet",
+      "rows": 3271,
+      "sha256": "9b2b842f86ec902494e5a101aa5ba118747562595d63b63183d887634389898d",
+      "start": "2006-01-03"
+    },
+    "AMZN": {
+      "end": "2018-12-31",
+      "file": "AMZN.parquet",
+      "rows": 3271,
+      "sha256": "f24520400bb6c74639423982c3537e9c5a98ee8ba46bab6f09a68c6ead15c395",
+      "start": "2006-01-03"
+    },
+    "AN": {
+      "end": "2018-12-31",
+      "file": "AN.parquet",
+      "rows": 3271,
+      "sha256": "8ad34d7dcd21c312cf7e41e8f7f848cb690a186e0e37405f5e927a7841e204e8",
+      "start": "2006-01-03"
+    },
+    "ANDV": {
+      "end": "2018-03-27",
+      "file": "ANDV.parquet",
+      "rows": 162,
+      "sha256": "16c705190841b1af229e8d17393337d9bf3e2ea8e0d43dcc21f71c2a1a985ef3",
+      "start": "2017-08-03"
+    },
+    "ANET": {
+      "end": "2018-12-31",
+      "file": "ANET.parquet",
+      "rows": 1151,
+      "sha256": "39ec4ea2ffcc83f155926cadcc3dcca88a15693d816dcb310730b7df287a18e6",
+      "start": "2014-06-06"
+    },
+    "ANF": {
+      "end": "2018-12-31",
+      "file": "ANF.parquet",
+      "rows": 3271,
+      "sha256": "e98540a92bbd309cd9262dbb4931f44a6aa0dc5a6c0e41ea0ee8bf2703f9e0b0",
+      "start": "2006-01-03"
+    },
+    "ANSS": {
+      "end": "2018-03-27",
+      "file": "ANSS.parquet",
+      "rows": 5477,
+      "sha256": "18c27c533a4572b69289fb42897493a99db4772420238301558638134c1d0f9c",
+      "start": "1996-06-21"
+    },
+    "ANTM": {
+      "end": "2018-03-27",
+      "file": "ANTM.parquet",
+      "rows": 4129,
+      "sha256": "86cc2855e81bf965c36fc05fae92c625e302e7db5a81862137dea9a73c326864",
+      "start": "2001-10-30"
+    },
+    "AON": {
+      "end": "2018-12-31",
+      "file": "AON.parquet",
+      "rows": 3271,
+      "sha256": "dd76727d2bd8f40189c7fce3044febaef06656371059aad8b02b74ee3d6b3dab",
+      "start": "2006-01-03"
+    },
+    "AOS": {
+      "end": "2018-12-31",
+      "file": "AOS.parquet",
+      "rows": 3271,
+      "sha256": "d961ce9e11c5ed03e611739a3c7fc3c86f0a8411f17528465e8d3dadf4a43941",
+      "start": "2006-01-03"
+    },
+    "APA": {
+      "end": "2018-12-31",
+      "file": "APA.parquet",
+      "rows": 3271,
+      "sha256": "d1580f228d02254754e270a741c8a6536dad99032d0c40124ffd7d3de1419200",
+      "start": "2006-01-03"
+    },
+    "APC": {
+      "end": "2018-03-27",
+      "file": "APC.parquet",
+      "rows": 7952,
+      "sha256": "ca50c0ed48b2960630847a1449b102a0c9ecf8748b57ee2e8d04a2993ed3259e",
+      "start": "1986-09-09"
+    },
+    "APD": {
+      "end": "2018-12-31",
+      "file": "APD.parquet",
+      "rows": 3271,
+      "sha256": "87817ca20a3dad947eb4596607e306f04f843a0da879cddec42ac4670d24c258",
+      "start": "2006-01-03"
+    },
+    "APH": {
+      "end": "2018-12-31",
+      "file": "APH.parquet",
+      "rows": 3271,
+      "sha256": "b87a85fef586aabd7a3e3084adcdc070d0aee0da0a1fea2a176ff1d040729313",
+      "start": "2006-01-03"
+    },
+    "APOL": {
+      "end": "2017-02-01",
+      "file": "APOL.parquet",
+      "rows": 5560,
+      "sha256": "63a673f2b1d79938101043bfb149b63a2370ae18ef17ec8d799bafc41c3c7cde",
+      "start": "1995-01-04"
+    },
+    "APTV": {
+      "end": "2018-12-31",
+      "file": "APTV.parquet",
+      "rows": 1790,
+      "sha256": "e7730bf22b6ed0b4d4f0549d04faa1dc3689ce3501a6d1923a258f26cadd5bde",
+      "start": "2011-11-17"
+    },
+    "ARE": {
+      "end": "2018-12-31",
+      "file": "ARE.parquet",
+      "rows": 3271,
+      "sha256": "c26d1ddc86b7815dd3e4dbdbd3c879829f547f718002f7c3f281db1dc59dc22d",
+      "start": "2006-01-03"
+    },
+    "ARG": {
+      "end": "2016-05-20",
+      "file": "ARG.parquet",
+      "rows": 7415,
+      "sha256": "cc9df58f48dfe65df016e3c455d26950953fefed9a4d308c149993c4c8d8836f",
+      "start": "1986-12-22"
+    },
+    "ARNC": {
+      "end": "2018-03-27",
+      "file": "ARNC.parquet",
+      "rows": 14155,
+      "sha256": "f2e35a53222f52e11a1c88a92c89c8cf8db8a4570b9415c0fdb38480552fb4c3",
+      "start": "1962-01-02"
+    },
+    "ASH": {
+      "end": "2018-12-31",
+      "file": "ASH.parquet",
+      "rows": 3271,
+      "sha256": "8e9aa32b2c913863294afd87e628d217f28b32144ec96d6a7b0ef6667ccc9613",
+      "start": "2006-01-03"
+    },
+    "AT": {
+      "end": "2018-03-27",
+      "file": "AT.parquet",
+      "rows": 2091,
+      "sha256": "a4eb016e49971acc371015c3ff6cff782eb0afdec95210681da515a5ec99d178",
+      "start": "2009-12-03"
+    },
+    "ATI": {
+      "end": "2018-12-31",
+      "file": "ATI.parquet",
+      "rows": 3271,
+      "sha256": "dfa4a9cb1d843bdd35f02e057ced4aa4bbda87b7b3510a9e4a5a95c3bd2c3c18",
+      "start": "2006-01-03"
+    },
+    "ATVI": {
+      "end": "2018-03-27",
+      "file": "ATVI.parquet",
+      "rows": 6148,
+      "sha256": "43098b78295c3e10a7c871c19881057d21e999e254677e65f71f28322b80b4c4",
+      "start": "1993-10-25"
+    },
+    "AVB": {
+      "end": "2018-03-27",
+      "file": "AVB.parquet",
+      "rows": 6053,
+      "sha256": "3438ef6737d2fdd66805ccf8627acc0a3eb28e1a9ac16e08bdaca01fa25de261",
+      "start": "1994-03-11"
+    },
+    "AVGO": {
+      "end": "2018-12-31",
+      "file": "AVGO.parquet",
+      "rows": 2367,
+      "sha256": "319e98990ebc43f56224cfa591de7772b68f31d53a549d3383922cc8688cd6b6",
+      "start": "2009-08-06"
+    },
+    "AVP": {
+      "end": "2018-03-07",
+      "file": "AVP.parquet",
+      "rows": 11330,
+      "sha256": "bb48b89173b9769a0f488f5163aa6a29a1855afaf42a18bc274c2d5b4a49c9a3",
+      "start": "1972-06-01"
+    },
+    "AVY": {
+      "end": "2018-12-31",
+      "file": "AVY.parquet",
+      "rows": 3271,
+      "sha256": "c472b78f7f9382311d0fbc980a82e4c749370288b6425254e5891e0a933209ee",
+      "start": "2006-01-03"
+    },
+    "AWK": {
+      "end": "2018-12-31",
+      "file": "AWK.parquet",
+      "rows": 2692,
+      "sha256": "fe61785469df3a2927592d9336731aff6a3b2084c6ab070a76fd970530cc7c78",
+      "start": "2008-04-23"
+    },
+    "AXP": {
+      "end": "2018-12-31",
+      "file": "AXP.parquet",
+      "rows": 3271,
+      "sha256": "1c2fbf42eef454f3ca9aac5a5d27f3bd5f15b26b6c8c45ee4f58ccdb6080dd36",
+      "start": "2006-01-03"
+    },
+    "AYI": {
+      "end": "2018-12-31",
+      "file": "AYI.parquet",
+      "rows": 3271,
+      "sha256": "7d2095897c964fd43d08f52b1245114224586866be815ceddc07f777b5898264",
+      "start": "2006-01-03"
+    },
+    "AZO": {
+      "end": "2018-12-31",
+      "file": "AZO.parquet",
+      "rows": 3271,
+      "sha256": "dc941c93a51a6c30009c77001b4b283970051a0f601e6e0584750588ad47b60a",
+      "start": "2006-01-03"
+    },
+    "BA": {
+      "end": "2018-12-31",
+      "file": "BA.parquet",
+      "rows": 3271,
+      "sha256": "74499c8506dcfe59471b78352da5ff282459eeb60d2351f9bab37e864376de03",
+      "start": "2006-01-03"
+    },
+    "BAC": {
+      "end": "2018-12-31",
+      "file": "BAC.parquet",
+      "rows": 3271,
+      "sha256": "5e1294673bcee3a77dd7691a12dcc82346ebc55699282f701e6fd511fbaba172",
+      "start": "2006-01-03"
+    },
+    "BAX": {
+      "end": "2018-12-31",
+      "file": "BAX.parquet",
+      "rows": 3271,
+      "sha256": "c3178be814c570343c1e2a260fa95ea6ad68e9828172cc8891f435828ab4bbd1",
+      "start": "2006-01-03"
+    },
+    "BBBY": {
+      "end": "2018-03-07",
+      "file": "BBBY.parquet",
+      "rows": 6337,
+      "sha256": "e75aab04b983ea750ff7f94f7582cbbd2b743c6b3dec93386b56e7a1c30f9eb3",
+      "start": "1992-06-05"
+    },
+    "BBT": {
+      "end": "2018-12-31",
+      "file": "BBT.parquet",
+      "rows": 3271,
+      "sha256": "57ea7ebb2ee43834db16f97fb0b120d6c04fd940cdf6120604803e21f9f94aa9",
+      "start": "2006-01-03"
+    },
+    "BBY": {
+      "end": "2018-12-31",
+      "file": "BBY.parquet",
+      "rows": 3271,
+      "sha256": "1d8d9f1b7e4974e56e74bf326ceab6d73af733d29e057d92da65d3b504c6cf41",
+      "start": "2006-01-03"
+    },
+    "BC": {
+      "end": "2018-12-31",
+      "file": "BC.parquet",
+      "rows": 3271,
+      "sha256": "efedcf2f74e56890681832197d837e1c4cb5a5836d02dac4325c075f1581db2b",
+      "start": "2006-01-03"
+    },
+    "BCR": {
+      "end": "2017-12-28",
+      "file": "BCR.parquet",
+      "rows": 8758,
+      "sha256": "186a883947496790f8262d3698a22176272d72faa35d973c7952eb93cba55dd9",
+      "start": "1983-04-06"
+    },
+    "BDX": {
+      "end": "2018-12-31",
+      "file": "BDX.parquet",
+      "rows": 3271,
+      "sha256": "899d2b9cebc3a5fa7030099a8a4b826cceff6491698985b66ab2d50bc589ef9d",
+      "start": "2006-01-03"
+    },
+    "BEAM": {
+      "end": "2014-04-30",
+      "file": "BEAM.parquet",
+      "rows": 9416,
+      "sha256": "5c4aa6d6f8310d8435b84fb4c54b4be78f5efd711e792b7b4189934c0df752e5",
+      "start": "1977-01-03"
+    },
+    "BEN": {
+      "end": "2018-12-31",
+      "file": "BEN.parquet",
+      "rows": 3271,
+      "sha256": "38101f80e3d62c1a1f325880d65701ca8ce7e73dfd19b9f5a866b00856b4554c",
+      "start": "2006-01-03"
+    },
+    "BF.B": {
+      "end": "2018-12-31",
+      "file": "BF.B.parquet",
+      "rows": 3271,
+      "sha256": "d63e8a9a921204af4ce7e64fb8ff0915b0e8a39038a4fe2a69d156f68e9cf5d9",
+      "start": "2006-01-03"
+    },
+    "BHF": {
+      "end": "2018-12-31",
+      "file": "BHF.parquet",
+      "rows": 368,
+      "sha256": "6a209ff8adfa9f0083537915444393684d2057589b6646f5b2f29a1787437fe8",
+      "start": "2017-07-17"
+    },
+    "BHGE": {
+      "end": "2018-03-27",
+      "file": "BHGE.parquet",
+      "rows": 181,
+      "sha256": "da628c7089cb1be356efc9be13a44d16955db8e5020425679488bdb32339164b",
+      "start": "2017-07-06"
+    },
+    "BIG": {
+      "end": "2018-03-27",
+      "file": "BIG.parquet",
+      "rows": 8259,
+      "sha256": "68be00c8f769a57b287c201903f91aad1cfa0e959a61f9943ff705493e5855f3",
+      "start": "1985-06-20"
+    },
+    "BIIB": {
+      "end": "2018-12-31",
+      "file": "BIIB.parquet",
+      "rows": 3271,
+      "sha256": "4c2cf2dff5032478317bb986a3bfca7fa34935302ee9d5a9ee3ffc309fdd8ce0",
+      "start": "2006-01-03"
+    },
+    "BK": {
+      "end": "2018-03-27",
+      "file": "BK.parquet",
+      "rows": 11326,
+      "sha256": "ef70fd64e343e17d5b1b1810a29c31631d2c645d2d7c4a9108f0b7a037f5b83e",
+      "start": "1973-05-03"
+    },
+    "BKNG": {
+      "end": "2018-12-31",
+      "file": "BKNG.parquet",
+      "rows": 3271,
+      "sha256": "d88d465fadbba7f4bbd799f3c9d61ee44f98c07e290cff9c9fdc1e39c9ac9a02",
+      "start": "2006-01-03"
+    },
+    "BLK": {
+      "end": "2018-12-31",
+      "file": "BLK.parquet",
+      "rows": 3271,
+      "sha256": "8b059d065c36a3454161b73484c475b4ad59be47a365dd4de4bb57a0d9197915",
+      "start": "2006-01-03"
+    },
+    "BLL": {
+      "end": "2018-03-27",
+      "file": "BLL.parquet",
+      "rows": 8457,
+      "sha256": "da7f1964f737aca09704e38e2ca875ad9468a7610822be874929b3e86119b0e3",
+      "start": "1984-09-07"
+    },
+    "BMS": {
+      "end": "2018-03-27",
+      "file": "BMS.parquet",
+      "rows": 8457,
+      "sha256": "d65523f86d0718e624317763e3f623f04f914cbec8e8ce6d0272335cc18fcf49",
+      "start": "1984-09-07"
+    },
+    "BMY": {
+      "end": "2018-12-31",
+      "file": "BMY.parquet",
+      "rows": 3271,
+      "sha256": "5f2156acc89b6e658e1ee90c6c369c089cae7fa753453b039c4fa4a76ea05a7c",
+      "start": "2006-01-03"
+    },
+    "BR": {
+      "end": "2018-12-31",
+      "file": "BR.parquet",
+      "rows": 2966,
+      "sha256": "568c97e66394df2748ba49c613a18f8325d7146134940fe2c7415eb6fcb6a930",
+      "start": "2007-03-22"
+    },
+    "BRCM": {
+      "end": "2016-01-29",
+      "file": "BRCM.parquet",
+      "rows": 4476,
+      "sha256": "424c77dd288a2463b5eef428e9874acd48ba4acf4f0f073891501dbe0cb91b50",
+      "start": "1998-04-17"
+    },
+    "BRK.B": {
+      "end": "2018-12-31",
+      "file": "BRK.B.parquet",
+      "rows": 3271,
+      "sha256": "cc5488d999a615b479497940afed809f39bd56a56e88cd416156d41c09f2ae69",
+      "start": "2006-01-03"
+    },
+    "BSX": {
+      "end": "2018-12-31",
+      "file": "BSX.parquet",
+      "rows": 3271,
+      "sha256": "8557cff46cba57604f19db3e132dba9362e6fd1931729f0449d69d7b3daef811",
+      "start": "2006-01-03"
+    },
+    "BUD": {
+      "end": "2018-12-31",
+      "file": "BUD.parquet",
+      "rows": 2392,
+      "sha256": "8d5fd5afb1f3f899419be0178746907e58f2df4814b1ee82d6673f1918d21f1e",
+      "start": "2009-07-01"
+    },
+    "BWA": {
+      "end": "2018-12-31",
+      "file": "BWA.parquet",
+      "rows": 3271,
+      "sha256": "044281eefa2026bfb9fef2a63f0a68150e4c94e7949ffdc395f803b4b04e182f",
+      "start": "2006-01-03"
+    },
+    "BXLT": {
+      "end": "2016-06-02",
+      "file": "BXLT.parquet",
+      "rows": 233,
+      "sha256": "1f85a49297a3e0403aca460b84e8f8a1f424cf66312ec8e36f3aac241cfb48a7",
+      "start": "2015-07-01"
+    },
+    "BXP": {
+      "end": "2018-12-31",
+      "file": "BXP.parquet",
+      "rows": 3271,
+      "sha256": "d474ed2ff7aad37256df4b371a89a9a597826812dee30c3ae636def14a2652a6",
+      "start": "2006-01-03"
+    },
+    "C": {
+      "end": "2018-12-31",
+      "file": "C.parquet",
+      "rows": 3271,
+      "sha256": "25ddf82237e570614803845123246e960e200f86bc790435343d405afa7c0d4a",
+      "start": "2006-01-03"
+    },
+    "CA": {
+      "end": "2018-03-27",
+      "file": "CA.parquet",
+      "rows": 8458,
+      "sha256": "07657ccace443433f7164794ed5b9f9e84b5ccb7196b827e56d2bf14f758e712",
+      "start": "1984-09-07"
+    },
+    "CAG": {
+      "end": "2018-12-31",
+      "file": "CAG.parquet",
+      "rows": 3271,
+      "sha256": "627b7b6a61c2c52d08178a3d1694e1a6b204eca9a931444b43e6692aec641fbb",
+      "start": "2006-01-03"
+    },
+    "CAH": {
+      "end": "2018-12-31",
+      "file": "CAH.parquet",
+      "rows": 3271,
+      "sha256": "ce02f49f9b23142e3fff4ca7e0e43f31a6def09f49f796ce0e1b42505c0aa40a",
+      "start": "2006-01-03"
+    },
+    "CAM": {
+      "end": "2016-04-01",
+      "file": "CAM.parquet",
+      "rows": 5223,
+      "sha256": "6d7f75f84dd21f51945b3b14491e1ce61333031f2464265a6d6f1ba6bf008243",
+      "start": "1995-07-05"
+    },
+    "CAT": {
+      "end": "2018-12-31",
+      "file": "CAT.parquet",
+      "rows": 3271,
+      "sha256": "d99f2c6fb39ce2c87268d489f6a5042d1087b533b44985fa9a5f76c21bf9098e",
+      "start": "2006-01-03"
+    },
+    "CB": {
+      "end": "2018-12-31",
+      "file": "CB.parquet",
+      "rows": 3271,
+      "sha256": "6daba04daa8f26742eb9f06fe01f26a2737a68d865ce948166e88e022dc8ef30",
+      "start": "2006-01-03"
+    },
+    "CBOE": {
+      "end": "2018-12-31",
+      "file": "CBOE.parquet",
+      "rows": 2152,
+      "sha256": "08af3325fd367b57f425f59a19d4b9a0e2043dac4185c8e79d391f993d348684",
+      "start": "2010-06-15"
+    },
+    "CBRE": {
+      "end": "2018-12-31",
+      "file": "CBRE.parquet",
+      "rows": 3271,
+      "sha256": "418229b50c7ac591d971bc59898eca9570967322cd91f24490be4a074ed0e249",
+      "start": "2006-01-03"
+    },
+    "CBS": {
+      "end": "2018-03-27",
+      "file": "CBS.parquet",
+      "rows": 3097,
+      "sha256": "41d849d848ec260944521e45618ae27aa2067454f59ba4c7dcb205195627fb93",
+      "start": "2005-12-05"
+    },
+    "CCE": {
+      "end": "2018-03-27",
+      "file": "CCE.parquet",
+      "rows": 7898,
+      "sha256": "dc315cdb688dda4c102063418fd70fd97be3130019952ab8d99a13ea2e130bbb",
+      "start": "1986-11-24"
+    },
+    "CCEP": {
+      "end": "2018-12-31",
+      "file": "CCEP.parquet",
+      "rows": 3271,
+      "sha256": "568d6bd34dbc544bab1e5a4604fb219a1067e33e9a2e96133ae9a3934381bae9",
+      "start": "2006-01-03"
+    },
+    "CCI": {
+      "end": "2018-12-31",
+      "file": "CCI.parquet",
+      "rows": 3271,
+      "sha256": "f23b1b2e057495019f6a6490dcc23a6008e0192865398adf73ada4f2e48359f0",
+      "start": "2006-01-03"
+    },
+    "CCL": {
+      "end": "2018-12-31",
+      "file": "CCL.parquet",
+      "rows": 3271,
+      "sha256": "58961f9449ce772143453a4f94051fc51185f61a81e8dee5dbd064023674ea6a",
+      "start": "2006-01-03"
+    },
+    "CCU": {
+      "end": "2018-12-31",
+      "file": "CCU.parquet",
+      "rows": 3271,
+      "sha256": "2cab16dc7e424aa612c02937f45ff9149ed9b0b72526bc89d49b5ee5f7acd6cc",
+      "start": "2006-01-03"
+    },
+    "CDNS": {
+      "end": "2018-12-31",
+      "file": "CDNS.parquet",
+      "rows": 3271,
+      "sha256": "e6418a77f88477f02ced85ee00cc052f650358ab6a5fdb4b8bf1e6e01d28700d",
+      "start": "2006-01-03"
+    },
+    "CE": {
+      "end": "2018-12-31",
+      "file": "CE.parquet",
+      "rows": 3271,
+      "sha256": "36652e04f47a18eb421fa5ba565529c4a1b053d129c3e77aafe0bcbe691a8188",
+      "start": "2006-01-03"
+    },
+    "CELG": {
+      "end": "2018-03-27",
+      "file": "CELG.parquet",
+      "rows": 7055,
+      "sha256": "5adeb2e19cc17d770a9305374c120443ce286744e61ac0f65e0d167eb1422af0",
+      "start": "1990-03-26"
+    },
+    "CERN": {
+      "end": "2018-03-27",
+      "file": "CERN.parquet",
+      "rows": 7056,
+      "sha256": "b1b89efa7628ac249ac2d115658e1ff238f06bcbd9d085b09e7a00689b305af2",
+      "start": "1990-03-26"
+    },
+    "CF": {
+      "end": "2018-12-31",
+      "file": "CF.parquet",
+      "rows": 3271,
+      "sha256": "37f97e4e33abc822ccad18322228b7dc0f7d2d40c84988e0bb4b7de17db56982",
+      "start": "2006-01-03"
+    },
+    "CFG": {
+      "end": "2018-12-31",
+      "file": "CFG.parquet",
+      "rows": 1075,
+      "sha256": "2d86e902ed97c3e3a95054d73884afd4854e1d685d5399eb3732f2e77ec5a992",
+      "start": "2014-09-24"
+    },
+    "CFN": {
+      "end": "2015-03-16",
+      "file": "CFN.parquet",
+      "rows": 1400,
+      "sha256": "454112a8b70a14293fd05722e289f1d3a8f2ee244d6bba6c42f9113496ec63ec",
+      "start": "2009-08-21"
+    },
+    "CHD": {
+      "end": "2018-12-31",
+      "file": "CHD.parquet",
+      "rows": 3271,
+      "sha256": "9f5e7eb2c5c7592654bea7907a8fd91ae853b46b5b835cbd18607e8574a60862",
+      "start": "2006-01-03"
+    },
+    "CHK": {
+      "end": "2018-03-16",
+      "file": "CHK.parquet",
+      "rows": 6317,
+      "sha256": "3e7b425e420f273f2dfaf16079d6622a0771febab46197a1e5f61c428f2de4d3",
+      "start": "1993-02-16"
+    },
+    "CHRW": {
+      "end": "2018-12-31",
+      "file": "CHRW.parquet",
+      "rows": 3271,
+      "sha256": "88fc9cd89d77ea23ca6a84c86db6290ea57defca7b234975bb02a9797de17d2a",
+      "start": "2006-01-03"
+    },
+    "CHTR": {
+      "end": "2018-12-31",
+      "file": "CHTR.parquet",
+      "rows": 2263,
+      "sha256": "23bbd0723f3c206b9298260d7ef6393f0d7df5d383afd44c6eb8f36b8119ee8e",
+      "start": "2010-01-05"
+    },
+    "CI": {
+      "end": "2018-12-31",
+      "file": "CI.parquet",
+      "rows": 3271,
+      "sha256": "3261411d85e85bc0c548d506ccdb1236a1fec4483571d2778e5b612fd2deea22",
+      "start": "2006-01-03"
+    },
+    "CIEN": {
+      "end": "2018-12-31",
+      "file": "CIEN.parquet",
+      "rows": 3271,
+      "sha256": "9c35f36c08bec70fa0ef9ddc295865822a8e6774857e196652de846626023658",
+      "start": "2006-01-03"
+    },
+    "CINF": {
+      "end": "2018-12-31",
+      "file": "CINF.parquet",
+      "rows": 3271,
+      "sha256": "3e7c43b4790eb4883bda5e9b3a3f97be7895d3e4d31fd7834c6967d065a89bb5",
+      "start": "2006-01-03"
+    },
+    "CL": {
+      "end": "2018-12-31",
+      "file": "CL.parquet",
+      "rows": 3271,
+      "sha256": "d777efaf3c6533a326445ff5a70210ab71215698e8278c79f3a2dab6270a39bc",
+      "start": "2006-01-03"
+    },
+    "CLF": {
+      "end": "2018-12-31",
+      "file": "CLF.parquet",
+      "rows": 3271,
+      "sha256": "dba339df3508a13e2616b9660d1dc74388f90930e3d112f0f9110a2656016edc",
+      "start": "2006-01-03"
+    },
+    "CLX": {
+      "end": "2018-12-31",
+      "file": "CLX.parquet",
+      "rows": 3271,
+      "sha256": "e40a82e642d4cf84476d1fd0f0f7fdf78d9ede79c9479134762c205b1bd9ea40",
+      "start": "2006-01-03"
+    },
+    "CMA": {
+      "end": "2018-03-27",
+      "file": "CMA.parquet",
+      "rows": 7056,
+      "sha256": "4805e3fd5a38888ded1e21141dc2333a578ab8820a8302338c78f9413f7b4fd4",
+      "start": "1990-03-26"
+    },
+    "CMCSA": {
+      "end": "2018-12-31",
+      "file": "CMCSA.parquet",
+      "rows": 3271,
+      "sha256": "f651e0c7e905ef374b7cb9e1654b62793bca29c3fa8442a65f3251383dda19be",
+      "start": "2006-01-03"
+    },
+    "CMCSK": {
+      "end": "2015-12-11",
+      "file": "CMCSK.parquet",
+      "rows": 6482,
+      "sha256": "2bdba5d3de84e86f8642d5fcfc34bf176e6b817c686bd868483efc71fb8a0c45",
+      "start": "1990-03-26"
+    },
+    "CME": {
+      "end": "2018-12-31",
+      "file": "CME.parquet",
+      "rows": 3271,
+      "sha256": "8051459a803606e7594466cb2327472dbb91c2bc9fe82f1bb142141fb1b0cbca",
+      "start": "2006-01-03"
+    },
+    "CMG": {
+      "end": "2018-12-31",
+      "file": "CMG.parquet",
+      "rows": 3255,
+      "sha256": "67383ce9a7405b2b6f1e2e4695a5bdfee4673406ffffe22be0fe10f56002691d",
+      "start": "2006-01-26"
+    },
+    "CMI": {
+      "end": "2018-12-31",
+      "file": "CMI.parquet",
+      "rows": 3271,
+      "sha256": "3e95846f32ff0a741a46bcea1c2009976ba7d4be8f791b855c4116dedeb9bf06",
+      "start": "2006-01-03"
+    },
+    "CMS": {
+      "end": "2018-12-31",
+      "file": "CMS.parquet",
+      "rows": 3271,
+      "sha256": "0e6b622dbbedc720f17aed0d4fe35ec903e129dbf744eba880749c137769160d",
+      "start": "2006-01-03"
+    },
+    "CNC": {
+      "end": "2018-12-31",
+      "file": "CNC.parquet",
+      "rows": 3271,
+      "sha256": "50a6a3513fcc6084f79db946e718555fe1fc9a0ab56bf7c4419edfca2fc15e1e",
+      "start": "2006-01-03"
+    },
+    "CNP": {
+      "end": "2018-12-31",
+      "file": "CNP.parquet",
+      "rows": 3271,
+      "sha256": "52dd4d228b90639ce9401bb34eab3451370428ad71f8fb4d5addb69bb849e71f",
+      "start": "2006-01-03"
+    },
+    "CNX": {
+      "end": "2018-12-31",
+      "file": "CNX.parquet",
+      "rows": 3271,
+      "sha256": "5242f5820e4a7383158bbf5ce7269ea72a40fd0c83f720faa6cde90e6222b11b",
+      "start": "2006-01-03"
+    },
+    "COF": {
+      "end": "2018-12-31",
+      "file": "COF.parquet",
+      "rows": 3271,
+      "sha256": "3999edb015c5200dfc4fc4e1244450fb2b087f0a69161e66248b370a14c102b0",
+      "start": "2006-01-03"
+    },
+    "COG": {
+      "end": "2018-03-27",
+      "file": "COG.parquet",
+      "rows": 7087,
+      "sha256": "e265bd63d9bc1bea480bdb8de26b3fe3b298208a9afc16d60c252eac8302e21c",
+      "start": "1990-02-08"
+    },
+    "COL": {
+      "end": "2018-03-27",
+      "file": "COL.parquet",
+      "rows": 4220,
+      "sha256": "78f875e72775cbaef25625bed0b043776184b18d548002fe1f4c34eb058f0895",
+      "start": "2001-06-15"
+    },
+    "COO": {
+      "end": "2018-12-31",
+      "file": "COO.parquet",
+      "rows": 3271,
+      "sha256": "12c3c92bc0e16d8642a2533f2d7d69dddf7b22591d027561eeee63ba43527569",
+      "start": "2006-01-03"
+    },
+    "COP": {
+      "end": "2018-12-31",
+      "file": "COP.parquet",
+      "rows": 3271,
+      "sha256": "7cda4c001140eb0326ce9e96271df3715241da0bf46ac54fd9127d8077667183",
+      "start": "2006-01-03"
+    },
+    "COST": {
+      "end": "2018-12-31",
+      "file": "COST.parquet",
+      "rows": 3271,
+      "sha256": "8a8f8d493ee5d3ea100b98a0cff77d32c78c2441181e156662bf9e6e573bffca",
+      "start": "2006-01-03"
+    },
+    "COTY": {
+      "end": "2018-12-31",
+      "file": "COTY.parquet",
+      "rows": 1398,
+      "sha256": "b09f1f483f2477715e679f1c9ff0a9c0d19c69123d777a3cbd42738a28968fd5",
+      "start": "2013-06-13"
+    },
+    "COV": {
+      "end": "2015-01-26",
+      "file": "COV.parquet",
+      "rows": 1918,
+      "sha256": "0e46de351371d4959eb0a733dc3fac65dc5d5e2076eb7cbe14463853bfee966c",
+      "start": "2007-06-14"
+    },
+    "CPB": {
+      "end": "2018-12-31",
+      "file": "CPB.parquet",
+      "rows": 3271,
+      "sha256": "56163fb4acc6a268c2b87381cb08b2053180f1af6ea9016204dc9131baa94431",
+      "start": "2006-01-03"
+    },
+    "CPGX": {
+      "end": "2016-06-30",
+      "file": "CPGX.parquet",
+      "rows": 252,
+      "sha256": "6d3dcf4be2eb41c9d2f8dd11c477a60251ad84efff27e9f65a949863b08b6d94",
+      "start": "2015-07-02"
+    },
+    "CPRI": {
+      "end": "2018-12-31",
+      "file": "CPRI.parquet",
+      "rows": 1771,
+      "sha256": "e8f4385c7d0b351f4dd634dd4c4341923e029ce5fd4e84b9f19eb2d295b44303",
+      "start": "2011-12-15"
+    },
+    "CPRT": {
+      "end": "2018-12-31",
+      "file": "CPRT.parquet",
+      "rows": 3271,
+      "sha256": "d7bc39b6298c7d289447d4704ae0da8ea065b07a54b2744057583fa8bbee9a6a",
+      "start": "2006-01-03"
+    },
+    "CPWR": {
+      "end": "2018-12-31",
+      "file": "CPWR.parquet",
+      "rows": 3039,
+      "sha256": "bd34fcdf80adcb559d1dc6c7e69e7f18a8c09a2282ab70a2a955b3f08780f4a3",
+      "start": "2006-12-04"
+    },
+    "CRM": {
+      "end": "2018-12-31",
+      "file": "CRM.parquet",
+      "rows": 3271,
+      "sha256": "d43ec95de008f81b64eab127c0ded37e9816ef932b00a19a312bfd403476240a",
+      "start": "2006-01-03"
+    },
+    "CSCO": {
+      "end": "2018-12-31",
+      "file": "CSCO.parquet",
+      "rows": 3271,
+      "sha256": "6aee8504dc332ec33ce50d557ba7279a622fef6331e5a7a91b6fc17776f9fe4e",
+      "start": "2006-01-03"
+    },
+    "CSRA": {
+      "end": "2018-03-27",
+      "file": "CSRA.parquet",
+      "rows": 584,
+      "sha256": "afca4710c77678f843d0572d71818e782f07c8ebf963fc1cec9dba50535e6093",
+      "start": "2015-11-30"
+    },
+    "CSX": {
+      "end": "2018-12-31",
+      "file": "CSX.parquet",
+      "rows": 3271,
+      "sha256": "d43de810ee7b7b7a32980f449eca127e278f693e5577e4aed19629aa234a367a",
+      "start": "2006-01-03"
+    },
+    "CTAS": {
+      "end": "2018-12-31",
+      "file": "CTAS.parquet",
+      "rows": 3271,
+      "sha256": "c1a7ec722d7c14dcadecd393031e4fdf0c492aea121557c5714d4fec2c2c98cf",
+      "start": "2006-01-03"
+    },
+    "CTL": {
+      "end": "2018-03-27",
+      "file": "CTL.parquet",
+      "rows": 7658,
+      "sha256": "16aa0a1ba2e9e4cf19347a9c22fe6cf178bf9c2abcab3e20d001e3278c967fc1",
+      "start": "1987-11-05"
+    },
+    "CTSH": {
+      "end": "2018-12-31",
+      "file": "CTSH.parquet",
+      "rows": 3271,
+      "sha256": "735fd2f8cff6673ee79afe8080ade3116f7536c32dd17c42942d0d12f9ac809f",
+      "start": "2006-01-03"
+    },
+    "CTXS": {
+      "end": "2018-03-27",
+      "file": "CTXS.parquet",
+      "rows": 5612,
+      "sha256": "91c47912e937c552153422a37723d56f3bdfca97ffb8024541709829bdd735c9",
+      "start": "1995-12-08"
+    },
+    "CVC": {
+      "end": "2016-06-20",
+      "file": "CVC.parquet",
+      "rows": 6112,
+      "sha256": "936f8395740b7f2396b189d6e7c981585de1d039730d4ebab5c2406c9e9511d4",
+      "start": "1992-03-17"
+    },
+    "CVG": {
+      "end": "2018-03-27",
+      "file": "CVG.parquet",
+      "rows": 4936,
+      "sha256": "c637e6b3a09347b313fef14d7df74872191fbcf0ef236117be1dbeab93bee64a",
+      "start": "1998-08-13"
+    },
+    "CVS": {
+      "end": "2018-12-31",
+      "file": "CVS.parquet",
+      "rows": 3271,
+      "sha256": "7545980d300446eda6b6db8ce6d0bf9ee590e9002041ac991fb50c4801a603e5",
+      "start": "2006-01-03"
+    },
+    "CVX": {
+      "end": "2018-12-31",
+      "file": "CVX.parquet",
+      "rows": 3271,
+      "sha256": "40b4b4fd8ce62f6b4e5bf13e7312f4691dafa19ae699bff838560e43f4761516",
+      "start": "2006-01-03"
+    },
+    "CXO": {
+      "end": "2018-03-27",
+      "file": "CXO.parquet",
+      "rows": 2680,
+      "sha256": "97652da6fc2a67c533b1d369a69487e4e9c495270f4b1b4e85613b732c5fd04d",
+      "start": "2007-08-03"
+    },
+    "D": {
+      "end": "2018-12-31",
+      "file": "D.parquet",
+      "rows": 3271,
+      "sha256": "285c19402c8b084bf4e2f92c1bcb026ef114c26cd555b463d0c591e8a0d44bdb",
+      "start": "2006-01-03"
+    },
+    "DAL": {
+      "end": "2018-12-31",
+      "file": "DAL.parquet",
+      "rows": 2937,
+      "sha256": "841c08d701758f8239e95dab7e0474bddac08b1c7f69be9ccb546417003f1659",
+      "start": "2007-05-03"
+    },
+    "DD": {
+      "end": "2018-12-31",
+      "file": "DD.parquet",
+      "rows": 3271,
+      "sha256": "ef2a7026f7d5e3fb2b17925f8f1351edfaa24971243697f1ab85f7267bc62a69",
+      "start": "2006-01-03"
+    },
+    "DDR": {
+      "end": "2018-03-27",
+      "file": "DDR.parquet",
+      "rows": 6333,
+      "sha256": "30fc9c1b1fb7b546c5889d74ce3b47ea43d2acec1be0fba333f9b40e33e39d7c",
+      "start": "1993-02-02"
+    },
+    "DDS": {
+      "end": "2018-12-31",
+      "file": "DDS.parquet",
+      "rows": 3271,
+      "sha256": "0a1435befdd286f38bc8fdfcc1c975aab725458454159a26a69b426a8ce3247a",
+      "start": "2006-01-03"
+    },
+    "DE": {
+      "end": "2018-12-31",
+      "file": "DE.parquet",
+      "rows": 3271,
+      "sha256": "a59a2208c8f37c0cbd974bc62bf23089d51db99d7e4a67ae85a00d816a268f15",
+      "start": "2006-01-03"
+    },
+    "DELL": {
+      "end": "2015-03-04",
+      "file": "DELL.parquet",
+      "rows": 6388,
+      "sha256": "6611f38eb89785259a1c6a0bd3ca13ff921a05680aa740616fcd320c3f896c6f",
+      "start": "1988-08-17"
+    },
+    "DF": {
+      "end": "2018-03-27",
+      "file": "DF.parquet",
+      "rows": 5523,
+      "sha256": "5bb79bf9bb9bf00f4d1bcf26f2e6d7a2f60b7fa7b7ed185fdb45eedc7f6051e3",
+      "start": "1996-04-17"
+    },
+    "DFS": {
+      "end": "2018-03-27",
+      "file": "DFS.parquet",
+      "rows": 2715,
+      "sha256": "592a65f56cc7b1f8571ccf5768454fde1a324b360939046cc2f5a7732a8eb718",
+      "start": "2007-06-14"
+    },
+    "DG": {
+      "end": "2018-03-27",
+      "file": "DG.parquet",
+      "rows": 2104,
+      "sha256": "244b7a0bd2a69f781ab5d23db94b179ee780b8d1aa8a8d9af94d7b8732f0a983",
+      "start": "2009-11-13"
+    },
+    "DGX": {
+      "end": "2018-12-31",
+      "file": "DGX.parquet",
+      "rows": 3271,
+      "sha256": "09a4ada7ab81eece48f7ee3662e6a1e0c28d3ccf8986908c4b5d0c467efad6eb",
+      "start": "2006-01-03"
+    },
+    "DHI": {
+      "end": "2018-12-31",
+      "file": "DHI.parquet",
+      "rows": 3271,
+      "sha256": "fab592443fd709096bf80af811a1e4c6d6b0749ece00eac6bbcd62029f8e77bb",
+      "start": "2006-01-03"
+    },
+    "DHR": {
+      "end": "2018-12-31",
+      "file": "DHR.parquet",
+      "rows": 3271,
+      "sha256": "973ca76ddc74b1ca907922ac2023233b08038a4875532b8c82a85a62f9627d20",
+      "start": "2006-01-03"
+    },
+    "DIS": {
+      "end": "2018-12-31",
+      "file": "DIS.parquet",
+      "rows": 3271,
+      "sha256": "251876e035b3e6b822abe2e05e1d90b285e5293c0a85624cda62e93c445a72e5",
+      "start": "2006-01-03"
+    },
+    "DISCA": {
+      "end": "2018-03-27",
+      "file": "DISCA.parquet",
+      "rows": 3201,
+      "sha256": "e717f91587303c16d20cce427c50f5a6f9545d15291929edd579fe697d91d3c6",
+      "start": "2005-07-08"
+    },
+    "DISCK": {
+      "end": "2018-03-27",
+      "file": "DISCK.parquet",
+      "rows": 2396,
+      "sha256": "5cde4659c9a39a58406d980b8b07e22263419f262670469d8571be0c216c89ff",
+      "start": "2008-09-18"
+    },
+    "DISH": {
+      "end": "2018-03-27",
+      "file": "DISH.parquet",
+      "rows": 5731,
+      "sha256": "0788be1c6d1f460ce6bbe067b64189947d63ead25da0052db0c2fbb4f0f50be0",
+      "start": "1995-06-21"
+    },
+    "DLR": {
+      "end": "2018-12-31",
+      "file": "DLR.parquet",
+      "rows": 3271,
+      "sha256": "f8636456d83cfa42b54bb573b4dda219a48933d909b25203604ce892259d2b87",
+      "start": "2006-01-03"
+    },
+    "DLTR": {
+      "end": "2018-12-31",
+      "file": "DLTR.parquet",
+      "rows": 3271,
+      "sha256": "dbc764f947fea6d9d57d6da850bb9dd09bdc0bfb34b7061177e9ba55771f93fb",
+      "start": "2006-01-03"
+    },
+    "DNB": {
+      "end": "2018-03-07",
+      "file": "DNB.parquet",
+      "rows": 8546,
+      "sha256": "1da52caf2db10bec3ce2948a5e83e55bea37b791d0f6355c9e228a23cac3e736",
+      "start": "1983-06-10"
+    },
+    "DNR": {
+      "end": "2018-03-27",
+      "file": "DNR.parquet",
+      "rows": 5678,
+      "sha256": "16544e2faa238f799de03c79cfb0ea480d100d18e7866cc25383d7ba6159d9fc",
+      "start": "1995-09-06"
+    },
+    "DO": {
+      "end": "2018-03-27",
+      "file": "DO.parquet",
+      "rows": 5653,
+      "sha256": "12093e28c65796b9ae1478dc8f9ee219679272067ad2e90d3f1b2e304af0d2dd",
+      "start": "1995-10-11"
+    },
+    "DOV": {
+      "end": "2018-12-31",
+      "file": "DOV.parquet",
+      "rows": 3271,
+      "sha256": "403665e66324313502993e10d76308cfda03c4ba919027ef404cb13bae2c8db7",
+      "start": "2006-01-03"
+    },
+    "DOW": {
+      "end": "2017-08-31",
+      "file": "DOW.parquet",
+      "rows": 11415,
+      "sha256": "9d8562fa8da771c64ce0a180caea5f2f8e1bae8a946fb19c00405b5589b0a541",
+      "start": "1972-06-01"
+    },
+    "DRE": {
+      "end": "2018-03-27",
+      "file": "DRE.parquet",
+      "rows": 7658,
+      "sha256": "f2339cbdf6d7386f814edbf73fea547da7c9a84b02c7c03df34279e6a22e2eec",
+      "start": "1987-11-05"
+    },
+    "DRI": {
+      "end": "2018-12-31",
+      "file": "DRI.parquet",
+      "rows": 3271,
+      "sha256": "760ad3ed411cee5f5cdda3460cb4850d3e238e63a14e13d0dee8b38d48355d4b",
+      "start": "2006-01-03"
+    },
+    "DTE": {
+      "end": "2018-12-31",
+      "file": "DTE.parquet",
+      "rows": 3271,
+      "sha256": "18e6479e7d71448479f36ffd561ef707c37e22ef926d357160129dcf403398b7",
+      "start": "2006-01-03"
+    },
+    "DTV": {
+      "end": "2018-03-07",
+      "file": "DTV.parquet",
+      "rows": 3084,
+      "sha256": "bc58d5c1ca7ae9e935b085787bd5c162da41132c1448826d4dde8ff41d38ca42",
+      "start": "2003-12-23"
+    },
+    "DUK": {
+      "end": "2018-12-31",
+      "file": "DUK.parquet",
+      "rows": 3271,
+      "sha256": "e12933d6cab6fa4cf8c2369d7050629400b25f0e47a427aa5313fe02bbf91368",
+      "start": "2006-01-03"
+    },
+    "DVA": {
+      "end": "2018-12-31",
+      "file": "DVA.parquet",
+      "rows": 3271,
+      "sha256": "0f3d5a1ea8bb8e31ff5488622fac9759bc81ecf786641efadcdadbc2c2f1ba8d",
+      "start": "2006-01-03"
+    },
+    "DVN": {
+      "end": "2018-12-31",
+      "file": "DVN.parquet",
+      "rows": 3271,
+      "sha256": "507ce5aa464c87b3ac7e479940f53d4ed4c0bc6c4edf2ce7c0399302d13f4277",
+      "start": "2006-01-03"
+    },
+    "DWDP": {
+      "end": "2018-03-27",
+      "file": "DWDP.parquet",
+      "rows": 141,
+      "sha256": "9fe9665040e5c5404e1135646b61f806fc33fa13c44aeed8d9fecae5c4439a62",
+      "start": "2017-09-01"
+    },
+    "DXC": {
+      "end": "2018-12-31",
+      "file": "DXC.parquet",
+      "rows": 3271,
+      "sha256": "951b523ae58b6366451059771a8eb6779fd24375290dc3a37c852927510f5823",
+      "start": "2006-01-03"
+    },
+    "DYN": {
+      "end": "2018-03-27",
+      "file": "DYN.parquet",
+      "rows": 1377,
+      "sha256": "4df3c1757e44917a05128e518c76b9dbe1009649a6f49365134ecf0e4c5dcd03",
+      "start": "2012-10-03"
+    },
+    "EA": {
+      "end": "2018-03-27",
+      "file": "EA.parquet",
+      "rows": 7056,
+      "sha256": "8d7d0b88e1082534781c89bb3a8c531f9d75be7712e2a784103ca5a13477854f",
+      "start": "1990-03-26"
+    },
+    "EBAY": {
+      "end": "2018-12-31",
+      "file": "EBAY.parquet",
+      "rows": 3271,
+      "sha256": "ac327161202ec52af8f97bb2a24836d6ccdedea02bb187a7356941223eb89796",
+      "start": "2006-01-03"
+    },
+    "ECL": {
+      "end": "2018-12-31",
+      "file": "ECL.parquet",
+      "rows": 3271,
+      "sha256": "dc03afba15d448f950123c4a224cd762f8d89635e46e0892aef1f2f564bef383",
+      "start": "2006-01-03"
+    },
+    "ED": {
+      "end": "2018-12-31",
+      "file": "ED.parquet",
+      "rows": 3271,
+      "sha256": "ab277728af5886ff029a61c5f7d29b30b5c1edc45ac88a6f95a55c0339751882",
+      "start": "2006-01-03"
+    },
+    "EFX": {
+      "end": "2018-12-31",
+      "file": "EFX.parquet",
+      "rows": 3271,
+      "sha256": "b15b5efff2548880474433413ba280f127337c67277bf332e33e3c4c4a63b1e2",
+      "start": "2006-01-03"
+    },
+    "EIX": {
+      "end": "2018-12-31",
+      "file": "EIX.parquet",
+      "rows": 3271,
+      "sha256": "d21d48e6ef82b06d52434eee6fb8ef42384796e4e1ff32214b6012d13c3207d4",
+      "start": "2006-01-03"
+    },
+    "EL": {
+      "end": "2018-12-31",
+      "file": "EL.parquet",
+      "rows": 3271,
+      "sha256": "114f8fa7c6b1135e4adb726e2d8c47ad0d97d1a9f53c1fd9006573f5d0bbb2dc",
+      "start": "2006-01-03"
+    },
+    "EMC": {
+      "end": "2016-09-06",
+      "file": "EMC.parquet",
+      "rows": 6986,
+      "sha256": "d1f0d6d95192f9eeccfdeb6b61df07b9dba13269513e7489cbb5df63e665942e",
+      "start": "1988-12-16"
+    },
+    "EMN": {
+      "end": "2018-12-31",
+      "file": "EMN.parquet",
+      "rows": 3271,
+      "sha256": "3be0f8d2bb5163bc4985d605bb13aaa3161f322de3b4f371d2a4ad85070b5fd2",
+      "start": "2006-01-03"
+    },
+    "EMR": {
+      "end": "2018-12-31",
+      "file": "EMR.parquet",
+      "rows": 3271,
+      "sha256": "59232157184412031e7109fdbb249df6b7d7f6d0551b0c7fb402a185be7ec74e",
+      "start": "2006-01-03"
+    },
+    "ENDP": {
+      "end": "2018-03-27",
+      "file": "ENDP.parquet",
+      "rows": 4450,
+      "sha256": "5538b332394ba4f41dbc4287b76181cb894f3159921ea366b7b72ce4b4f9e27c",
+      "start": "2000-07-18"
+    },
+    "EOG": {
+      "end": "2018-12-31",
+      "file": "EOG.parquet",
+      "rows": 3271,
+      "sha256": "875c5ced2bd28cc6b708348d075537ffa45f0c85b8c1fcc89d0db7bf366f513c",
+      "start": "2006-01-03"
+    },
+    "EP": {
+      "end": "2018-12-31",
+      "file": "EP.parquet",
+      "rows": 3271,
+      "sha256": "491c214e887599d0527e779982cdf04e6402bee23fd83b7199eaa7bd5e3daef4",
+      "start": "2006-01-03"
+    },
+    "EQ": {
+      "end": "2018-12-31",
+      "file": "EQ.parquet",
+      "rows": 54,
+      "sha256": "5a4c84bb74c8ec4b77a582921a052418a0937ca8157e05b80469180e173e5455",
+      "start": "2018-10-12"
+    },
+    "EQIX": {
+      "end": "2018-12-31",
+      "file": "EQIX.parquet",
+      "rows": 3271,
+      "sha256": "137a547e8339b1cdbc932d79822c71fc661a7b1913dad1837aa5ca1dc6db06a7",
+      "start": "2006-01-03"
+    },
+    "EQR": {
+      "end": "2018-03-27",
+      "file": "EQR.parquet",
+      "rows": 6200,
+      "sha256": "aa9b05c379312e5d8bf6b873ccb7d515ee0e5cbb7c073a630e9d3f020ebe2094",
+      "start": "1993-08-12"
+    },
+    "EQT": {
+      "end": "2018-12-31",
+      "file": "EQT.parquet",
+      "rows": 3271,
+      "sha256": "364037d17d161c707df6efa995f4889c1bc01e29e7c97a2b3194c6a4b7a6cd71",
+      "start": "2006-01-03"
+    },
+    "ES": {
+      "end": "2018-12-31",
+      "file": "ES.parquet",
+      "rows": 3271,
+      "sha256": "4c0d32a7eae890fe60b0b2bca044f8987f5be4d6e41f476b69c8c721ceced0d7",
+      "start": "2006-01-03"
+    },
+    "ESRX": {
+      "end": "2018-03-27",
+      "file": "ESRX.parquet",
+      "rows": 6498,
+      "sha256": "f46b10e692eb5863d982284905851c0f2dbda7e96220914e51f1fc937ac89bed",
+      "start": "1992-06-09"
+    },
+    "ESS": {
+      "end": "2018-12-31",
+      "file": "ESS.parquet",
+      "rows": 3271,
+      "sha256": "be7803e49d0d9b5e2aaf57b43122423ac93f652d52bc4c4680620bcd65cc9275",
+      "start": "2006-01-03"
+    },
+    "ESV": {
+      "end": "2018-03-07",
+      "file": "ESV.parquet",
+      "rows": 6635,
+      "sha256": "bc985ae489e3d9f65c591193c4c63e848a56f32715473b63782ff927c59cb09a",
+      "start": "1991-01-02"
+    },
+    "ETFC": {
+      "end": "2018-03-27",
+      "file": "ETFC.parquet",
+      "rows": 5438,
+      "sha256": "f9af08022a1ba0347eea2ccaff3b2042604a7e2765b891937a6625f24aa6db8e",
+      "start": "1996-08-16"
+    },
+    "ETN": {
+      "end": "2018-12-31",
+      "file": "ETN.parquet",
+      "rows": 3271,
+      "sha256": "dc759fd5c1e4b9626c2c76884b708fb1ef4eda4d5ac56385c1a99260a0296911",
+      "start": "2006-01-03"
+    },
+    "ETR": {
+      "end": "2018-12-31",
+      "file": "ETR.parquet",
+      "rows": 3271,
+      "sha256": "928f804457ff0fbb586b5d17ddc2fb078c1424cc4dbc182798ec11e4fefa423d",
+      "start": "2006-01-03"
+    },
+    "EVHC": {
+      "end": "2018-03-27",
+      "file": "EVHC.parquet",
+      "rows": 1162,
+      "sha256": "b52c6217774ec2780a43ab9ac2392b690975ce64b842b2521d2731273e729c5c",
+      "start": "2013-08-14"
+    },
+    "EVRG": {
+      "end": "2018-12-31",
+      "file": "EVRG.parquet",
+      "rows": 3271,
+      "sha256": "34be3f8f31337ec9503166ffad07f2b3b1096cb28d12562b8fec1bc965a7fe64",
+      "start": "2006-01-03"
+    },
+    "EW": {
+      "end": "2018-12-31",
+      "file": "EW.parquet",
+      "rows": 3271,
+      "sha256": "f065ebe72a25fa837811867fe1c59e64098c0ea06d81da47c11704722c56708c",
+      "start": "2006-01-03"
+    },
+    "EXC": {
+      "end": "2018-12-31",
+      "file": "EXC.parquet",
+      "rows": 3271,
+      "sha256": "8c0b2c052c1a3358ac3d1d57d9fb7ad9baea08f453015297061030739ccd5621",
+      "start": "2006-01-03"
+    },
+    "EXPD": {
+      "end": "2018-12-31",
+      "file": "EXPD.parquet",
+      "rows": 3271,
+      "sha256": "9b1ffc28b0d708e04cf8676ff9d58852ff3754d3f0537755db8a2f92c086850a",
+      "start": "2006-01-03"
+    },
+    "EXPE": {
+      "end": "2018-12-31",
+      "file": "EXPE.parquet",
+      "rows": 3271,
+      "sha256": "8b8b6d17f12decfb54715815fd59934c0ae6a6cb75a0aeb69c38879d2238f339",
+      "start": "2006-01-03"
+    },
+    "EXR": {
+      "end": "2018-12-31",
+      "file": "EXR.parquet",
+      "rows": 3271,
+      "sha256": "aa0dcefa4dee6deaafab04b4262f9cced3163d81eaa381762fb695a7f944ea92",
+      "start": "2006-01-03"
+    },
+    "F": {
+      "end": "2018-12-31",
+      "file": "F.parquet",
+      "rows": 3271,
+      "sha256": "83b9c8c3665eccc29673361b1a04bd3d355422b37ceda2a0e0fe89b800e6eb06",
+      "start": "2006-01-03"
+    },
+    "FANG": {
+      "end": "2018-12-31",
+      "file": "FANG.parquet",
+      "rows": 1563,
+      "sha256": "f48599c90b08ff4ecef6babd7c8d9dfd2e2280a64135e33a1a7f67c149d0a1c9",
+      "start": "2012-10-12"
+    },
+    "FAST": {
+      "end": "2018-12-31",
+      "file": "FAST.parquet",
+      "rows": 3271,
+      "sha256": "202ec06d5cbc3f7dfad1571f69a336470f2f811de3912ac00fc78d5202241868",
+      "start": "2006-01-03"
+    },
+    "FB": {
+      "end": "2018-03-27",
+      "file": "FB.parquet",
+      "rows": 1472,
+      "sha256": "ffb3f1e196e91938cc9e297da79412b3a1f11d2cc1f54267d2bef51434e281b7",
+      "start": "2012-05-18"
+    },
+    "FBHS": {
+      "end": "2018-03-27",
+      "file": "FBHS.parquet",
+      "rows": 1641,
+      "sha256": "33f1a4876ade2f5911a82da26f9fb4c1a979d20e67ffc9338e22abd4a39b2b05",
+      "start": "2011-09-16"
+    },
+    "FCPT": {
+      "end": "2018-12-31",
+      "file": "FCPT.parquet",
+      "rows": 790,
+      "sha256": "53fe664aa0cad78bcbcca4b5c16f934ed8bdbd54c731dd91447a76c84a8e16f8",
+      "start": "2015-11-10"
+    },
+    "FCX": {
+      "end": "2018-12-31",
+      "file": "FCX.parquet",
+      "rows": 3271,
+      "sha256": "2ff22fa36050473d73870a91ff1424f0c89b3954943848c564f493eb45094105",
+      "start": "2006-01-03"
+    },
+    "FDO": {
+      "end": "2015-07-06",
+      "file": "FDO.parquet",
+      "rows": 7654,
+      "sha256": "9619151ab415ba7ca3704dad5b64ab124b783ecc6fb1e1afb2d1577cab9fe0a6",
+      "start": "1985-02-25"
+    },
+    "FDX": {
+      "end": "2018-12-31",
+      "file": "FDX.parquet",
+      "rows": 3271,
+      "sha256": "df0bd3e8dd255d38de6c8da87a2b71a36c5e2d27798f343f87d5f29d1d427193",
+      "start": "2006-01-03"
+    },
+    "FE": {
+      "end": "2018-12-31",
+      "file": "FE.parquet",
+      "rows": 3271,
+      "sha256": "576573400a2bdf1055236b692a921fbeb199669a68fbcabcc5aaec5b8fb87b03",
+      "start": "2006-01-03"
+    },
+    "FFIV": {
+      "end": "2018-12-31",
+      "file": "FFIV.parquet",
+      "rows": 3271,
+      "sha256": "92c6340a76de3a1019570e1d24bf7066bd1e65cfb250cb23b060789568eee0b3",
+      "start": "2006-01-03"
+    },
+    "FHN": {
+      "end": "2018-12-31",
+      "file": "FHN.parquet",
+      "rows": 3271,
+      "sha256": "0406c507120524c0f3692fa28ac733004e4301ae76bd5d274d23eeac9aaa12a1",
+      "start": "2006-01-03"
+    },
+    "FII": {
+      "end": "2018-03-27",
+      "file": "FII.parquet",
+      "rows": 4999,
+      "sha256": "1a341fb97cc5879fcef234bea7d7c5a4dd42dbb59081f945f6bbee719468cffd",
+      "start": "1998-05-14"
+    },
+    "FIS": {
+      "end": "2018-12-31",
+      "file": "FIS.parquet",
+      "rows": 3271,
+      "sha256": "07056f0da8557e1c7120577dcdf27d9de959d53d7e5ef5b723413f909ac3517d",
+      "start": "2006-01-03"
+    },
+    "FISV": {
+      "end": "2018-12-31",
+      "file": "FISV.parquet",
+      "rows": 3271,
+      "sha256": "b89ec2712b7b8af08717a71255cacdaa01662b08a10003c593732d05749836a7",
+      "start": "2006-01-03"
+    },
+    "FITB": {
+      "end": "2018-12-31",
+      "file": "FITB.parquet",
+      "rows": 3271,
+      "sha256": "7c8b04789acc1c560ccc89ec4a406723c89709cd92a9bcc220c844290f709e75",
+      "start": "2006-01-03"
+    },
+    "FL": {
+      "end": "2018-03-27",
+      "file": "FL.parquet",
+      "rows": 12168,
+      "sha256": "dbb74df61be76780f5dbf788c8e349df1266a8fcf3c7a029c0d1fbb45ce3075a",
+      "start": "1970-01-02"
+    },
+    "FLIR": {
+      "end": "2018-03-27",
+      "file": "FLIR.parquet",
+      "rows": 6236,
+      "sha256": "18db968a25ce0db3cf04fa0defe7c6a09a4b02f7864449fed4baaea1c2de25dd",
+      "start": "1993-06-22"
+    },
+    "FLR": {
+      "end": "2018-12-31",
+      "file": "FLR.parquet",
+      "rows": 3271,
+      "sha256": "df0a245a94d77d5a6ab83edbf5e06d7af3e0951c67bde25b42ca726146f23f83",
+      "start": "2006-01-03"
+    },
+    "FLS": {
+      "end": "2018-12-31",
+      "file": "FLS.parquet",
+      "rows": 3271,
+      "sha256": "9fa495d6aad19bcf24b7d15a66ed5631959e9f248f5b790c8b8897dfd54fb0c3",
+      "start": "2006-01-03"
+    },
+    "FLT": {
+      "end": "2018-03-27",
+      "file": "FLT.parquet",
+      "rows": 1831,
+      "sha256": "2eb956e537a10c32bd08132c8ac4a9bf297ebfba065e6dbf067c111a7b4a0bf4",
+      "start": "2010-12-15"
+    },
+    "FMC": {
+      "end": "2018-12-31",
+      "file": "FMC.parquet",
+      "rows": 3271,
+      "sha256": "163c31e8575635faa58c37d97daea1d6b7a48ec9e029b2b4484646f2ce3d54b8",
+      "start": "2006-01-03"
+    },
+    "FMCC": {
+      "end": "2018-12-31",
+      "file": "FMCC.parquet",
+      "rows": 3271,
+      "sha256": "631f5eae45bf56f7fdfb86a4d4337f8e51701667a834709b4b95c010442e891a",
+      "start": "2006-01-03"
+    },
+    "FNMA": {
+      "end": "2018-12-31",
+      "file": "FNMA.parquet",
+      "rows": 3271,
+      "sha256": "16a2af7833ccd8bc702ec3a9729bbd0b0f458ea0b8aea42879f88bf14cfe0a07",
+      "start": "2006-01-03"
+    },
+    "FOSL": {
+      "end": "2018-12-31",
+      "file": "FOSL.parquet",
+      "rows": 3271,
+      "sha256": "344b2ed661c39a984932666fba1fcfb5ec5d211273a42ba94e3570c9a1f43ecc",
+      "start": "2006-01-03"
+    },
+    "FOX": {
+      "end": "2018-03-27",
+      "file": "FOX.parquet",
+      "rows": 7621,
+      "sha256": "9454c4c7826915ca15bda72ce771515b59efd9a7588c0f3a5893e239b06e0cae",
+      "start": "1987-12-30"
+    },
+    "FOXA": {
+      "end": "2018-03-27",
+      "file": "FOXA.parquet",
+      "rows": 5549,
+      "sha256": "6301d22c91339e84965702a2419570f27e2f32f2d5631c067495e7bb823f6af9",
+      "start": "1996-03-11"
+    },
+    "FRT": {
+      "end": "2018-12-31",
+      "file": "FRT.parquet",
+      "rows": 3271,
+      "sha256": "d0cc97096f718f8f3ac88408d065b482f1e12ebe8372037c2330ce5c889ea7b9",
+      "start": "2006-01-03"
+    },
+    "FRX": {
+      "end": "2014-06-30",
+      "file": "FRX.parquet",
+      "rows": 6604,
+      "sha256": "fce083c4d593c010c2a67c529500dde71d484dae941fbe8b3b0c9a9e5aefd5d4",
+      "start": "1988-04-19"
+    },
+    "FSLR": {
+      "end": "2018-12-31",
+      "file": "FSLR.parquet",
+      "rows": 3049,
+      "sha256": "0d7642c6322f3134590d8e564171fba3e1cd549639c824c43b2d31d5a30ffb41",
+      "start": "2006-11-17"
+    },
+    "FTI": {
+      "end": "2018-12-31",
+      "file": "FTI.parquet",
+      "rows": 3271,
+      "sha256": "8242c16c9eb2b31032be76ccadb41fdb4e79e5b16d1cdaba4e5a6d70fdc07839",
+      "start": "2006-01-03"
+    },
+    "FTNT": {
+      "end": "2018-12-31",
+      "file": "FTNT.parquet",
+      "rows": 2294,
+      "sha256": "9b4addf87b59b0b06a741152bb4eb552fca3f02b0b48fd88ac661223dcf2a50c",
+      "start": "2009-11-18"
+    },
+    "FTR": {
+      "end": "2018-03-07",
+      "file": "FTR.parquet",
+      "rows": 6830,
+      "sha256": "b25c2eeabad716856ef95551d17974cdcc1a19b2e963838b8dc6a7ce8f8d262f",
+      "start": "1990-03-26"
+    },
+    "FTV": {
+      "end": "2018-12-31",
+      "file": "FTV.parquet",
+      "rows": 628,
+      "sha256": "e68dc4c853a2e4b92c8316873e8b88c73b68289de2ecef53c03a40d9da01bb8b",
+      "start": "2016-07-05"
+    },
+    "GAS": {
+      "end": "2016-06-30",
+      "file": "GAS.parquet",
+      "rows": 10891,
+      "sha256": "d5c956a9b50e7eca421317acda2ed26ec13cfed7d17cf2562441f13aa12e294c",
+      "start": "1973-05-03"
+    },
+    "GD": {
+      "end": "2018-12-31",
+      "file": "GD.parquet",
+      "rows": 3271,
+      "sha256": "dfca8d06dfd7550adee7ea2bb2cabc316b5de96264fa2f863efac85aee579e32",
+      "start": "2006-01-03"
+    },
+    "GE": {
+      "end": "2018-12-31",
+      "file": "GE.parquet",
+      "rows": 3271,
+      "sha256": "1620a832d0b5eea1923472670cba7e8b9dca160f3eb7aa1f4eb6156be680e582",
+      "start": "2006-01-03"
+    },
+    "GENZ": {
+      "end": "2018-12-31",
+      "file": "GENZ.parquet",
+      "rows": 2754,
+      "sha256": "e212caa4b49564ff51d3f733dcd52b9d24616c2ad038567106eac7cd700cc516",
+      "start": "2008-01-24"
+    },
+    "GGP": {
+      "end": "2018-03-27",
+      "file": "GGP.parquet",
+      "rows": 6287,
+      "sha256": "2b50886096d7a7580bd9daa9f55b161a30bdd2d473bf978aceebe105037a7f8f",
+      "start": "1993-04-08"
+    },
+    "GHC": {
+      "end": "2018-12-31",
+      "file": "GHC.parquet",
+      "rows": 3271,
+      "sha256": "bed348e462e689f8ac361de91577a35ee8cfa392f906912c0b0d7009fc647a4c",
+      "start": "2006-01-03"
+    },
+    "GILD": {
+      "end": "2018-12-31",
+      "file": "GILD.parquet",
+      "rows": 3271,
+      "sha256": "4cf02a7c891755a4be1bdb8f339052a27c3874ed8c35096b3e85b05dfbbde417",
+      "start": "2006-01-03"
+    },
+    "GIS": {
+      "end": "2018-12-31",
+      "file": "GIS.parquet",
+      "rows": 3271,
+      "sha256": "0f1da58079f378dda4bfaa91b06ef44f3fb8560ea98307c1ffff947b1afa7ab2",
+      "start": "2006-01-03"
+    },
+    "GLW": {
+      "end": "2018-12-31",
+      "file": "GLW.parquet",
+      "rows": 3271,
+      "sha256": "25b4681fa5fe467f919e4fa6e8c8f08ce16e08f5bb5f58ebbbba3dc1350b0326",
+      "start": "2006-01-03"
+    },
+    "GM": {
+      "end": "2018-12-31",
+      "file": "GM.parquet",
+      "rows": 2042,
+      "sha256": "388ae773b81a2f2eabc0dca3a97fbc55f6857a1ba0e6db13404ba9723e9fe7fc",
+      "start": "2010-11-18"
+    },
+    "GMCR": {
+      "end": "2016-03-02",
+      "file": "GMCR.parquet",
+      "rows": 5649,
+      "sha256": "1ae50cde03a1cd47a418ae7f7bce4048df0bae20838eee03e143efbe2ffd2dec",
+      "start": "1993-09-27"
+    },
+    "GME": {
+      "end": "2018-12-31",
+      "file": "GME.parquet",
+      "rows": 3271,
+      "sha256": "f2661efbe9bf11438c676db44487cdfff252656a4e072fe294997d8e4ea58d33",
+      "start": "2006-01-03"
+    },
+    "GNW": {
+      "end": "2018-12-31",
+      "file": "GNW.parquet",
+      "rows": 3271,
+      "sha256": "b7bbc26557bed21d72c587efc2184ffb1bfa44af477080ab207b10d739962967",
+      "start": "2006-01-03"
+    },
+    "GOOG": {
+      "end": "2018-12-31",
+      "file": "GOOG.parquet",
+      "rows": 3271,
+      "sha256": "ff017b01b0cc66fb596e538a28d6614f08b43ceb761aa1b35d052ddb72298590",
+      "start": "2006-01-03"
+    },
+    "GOOGL": {
+      "end": "2018-12-31",
+      "file": "GOOGL.parquet",
+      "rows": 3271,
+      "sha256": "096b29e895bb7cce54461017d7f95e906097d0c90726656d727adfef583f7804",
+      "start": "2006-01-03"
+    },
+    "GPC": {
+      "end": "2018-12-31",
+      "file": "GPC.parquet",
+      "rows": 3271,
+      "sha256": "014a14cefe02b4b13a63467b49fcbc26f8d5f1cf356a30d793fd6f14dd5b40f2",
+      "start": "2006-01-03"
+    },
+    "GPN": {
+      "end": "2018-12-31",
+      "file": "GPN.parquet",
+      "rows": 3271,
+      "sha256": "777ace5de5d73ef9652a91447aa5dcc629b731f8cf43fde00f69e140211ab338",
+      "start": "2006-01-03"
+    },
+    "GPS": {
+      "end": "2018-03-27",
+      "file": "GPS.parquet",
+      "rows": 7732,
+      "sha256": "77a7ec0593a44ab70a3679f2ed16a207608464d1e750694e0388d823a6ccf88a",
+      "start": "1987-07-23"
+    },
+    "GRMN": {
+      "end": "2018-12-31",
+      "file": "GRMN.parquet",
+      "rows": 3271,
+      "sha256": "d3fa21f96cf51f0595fe3d467f13dcc1ed35176e86c7c47df21087c80a795894",
+      "start": "2006-01-03"
+    },
+    "GS": {
+      "end": "2018-12-31",
+      "file": "GS.parquet",
+      "rows": 3271,
+      "sha256": "3944f728fc9022439e2ebba033c09ad70da6e238e12b31f9f30a79ae5d658b5f",
+      "start": "2006-01-03"
+    },
+    "GT": {
+      "end": "2018-12-31",
+      "file": "GT.parquet",
+      "rows": 3271,
+      "sha256": "61a3a5a210e35ae8aa0d69001a3812298f735c67cb0418c6765e7fb7f052077b",
+      "start": "2006-01-03"
+    },
+    "GWW": {
+      "end": "2018-12-31",
+      "file": "GWW.parquet",
+      "rows": 3271,
+      "sha256": "581a57de90209ba84f796272b418dda21bb7c050601c394917ba351e6aff6d40",
+      "start": "2006-01-03"
+    },
+    "H": {
+      "end": "2018-03-27",
+      "file": "H.parquet",
+      "rows": 2110,
+      "sha256": "908f3d2e4d1d37c1530221d509fa7d44a7d4b95a58910ed99e8bb8765d614ed9",
+      "start": "2009-11-05"
+    },
+    "HAL": {
+      "end": "2018-12-31",
+      "file": "HAL.parquet",
+      "rows": 3271,
+      "sha256": "781562daf2440495dcf7f6a08befb7d2088b8ce826121a4943536118f02bc46c",
+      "start": "2006-01-03"
+    },
+    "HAR": {
+      "end": "2017-03-10",
+      "file": "HAR.parquet",
+      "rows": 7642,
+      "sha256": "04ae5df6fb91e679fb9d19101edc50aa270f7759962a5e113f1fe00d0d646867",
+      "start": "1986-11-14"
+    },
+    "HAS": {
+      "end": "2018-12-31",
+      "file": "HAS.parquet",
+      "rows": 3271,
+      "sha256": "8dac3af3c8f0d9de5e00e6c6325da0f92ad65652ded112340966356c4ad52dd9",
+      "start": "2006-01-03"
+    },
+    "HBAN": {
+      "end": "2018-12-31",
+      "file": "HBAN.parquet",
+      "rows": 3271,
+      "sha256": "c490e64ccc1d1729a4ac5a78dfa613b226cec6bdd0a6f61b73f10223cd5aca79",
+      "start": "2006-01-03"
+    },
+    "HBI": {
+      "end": "2018-03-27",
+      "file": "HBI.parquet",
+      "rows": 2908,
+      "sha256": "839975b775527c9ea1204888702501c944eb07c305cbe6b6640e4365d51ff209",
+      "start": "2006-09-06"
+    },
+    "HCA": {
+      "end": "2018-12-31",
+      "file": "HCA.parquet",
+      "rows": 1966,
+      "sha256": "89708f14a987536691e5855f93b91ce6004ee01f4c75ed0c348039247b2be60d",
+      "start": "2011-03-10"
+    },
+    "HCBK": {
+      "end": "2015-10-30",
+      "file": "HCBK.parquet",
+      "rows": 4104,
+      "sha256": "e020c37c7cfc7affae8475638f64f08f037f9f08ee9498c2be9de739f995e0aa",
+      "start": "1999-07-13"
+    },
+    "HCP": {
+      "end": "2018-03-27",
+      "file": "HCP.parquet",
+      "rows": 7658,
+      "sha256": "50cca4d5d60138a1a5ccc7fe0442bac28534117e10b8117d54d140e976853bee",
+      "start": "1987-11-05"
+    },
+    "HD": {
+      "end": "2018-12-31",
+      "file": "HD.parquet",
+      "rows": 3271,
+      "sha256": "4b38cf68eb4c22e9dfd4fd6b445b88eece15b4869689f674ab3ccb37698feb4e",
+      "start": "2006-01-03"
+    },
+    "HES": {
+      "end": "2018-03-27",
+      "file": "HES.parquet",
+      "rows": 8818,
+      "sha256": "d90bea73d3c1be7abbee548b252a6699b20fa699b784ea985f208e569168061b",
+      "start": "1983-04-06"
+    },
+    "HFC": {
+      "end": "2018-03-27",
+      "file": "HFC.parquet",
+      "rows": 6556,
+      "sha256": "d1a2e041f465d8c1baaa1be0f60e62fa58bc73225a8c8b44daa29c5c5ff4cd8e",
+      "start": "1992-03-17"
+    },
+    "HIG": {
+      "end": "2018-12-31",
+      "file": "HIG.parquet",
+      "rows": 3271,
+      "sha256": "f7caac868fe17561bface247ee63c10b8aacf12227100b17c954f4c6e63b4bc1",
+      "start": "2006-01-03"
+    },
+    "HII": {
+      "end": "2018-12-31",
+      "file": "HII.parquet",
+      "rows": 1958,
+      "sha256": "dc5edafb85ee97e165903a1f975231faa0368781e124725765825b135798226f",
+      "start": "2011-03-22"
+    },
+    "HLT": {
+      "end": "2018-03-27",
+      "file": "HLT.parquet",
+      "rows": 194,
+      "sha256": "100f3e1e0fed710c8593aad0fa2d4928ac24f13bc2af9d24733c9983c9e44314",
+      "start": "2017-06-19"
+    },
+    "HOG": {
+      "end": "2018-12-31",
+      "file": "HOG.parquet",
+      "rows": 3271,
+      "sha256": "ead373675fbe360afe00ab108c3e372ef49aaa1c6c960184190d6a5829f276dd",
+      "start": "2006-01-03"
+    },
+    "HOLX": {
+      "end": "2018-03-27",
+      "file": "HOLX.parquet",
+      "rows": 7056,
+      "sha256": "0fdf7482a080fa335bf236c2630f716fd61fc860fda9b28b2861e752b56f75a0",
+      "start": "1990-03-26"
+    },
+    "HON": {
+      "end": "2018-12-31",
+      "file": "HON.parquet",
+      "rows": 3271,
+      "sha256": "58352c6ae610cd4950a00e0406e4b386cb9b8fe7e2b23cd1d7cafb7b5f1f06c3",
+      "start": "2006-01-03"
+    },
+    "HOT": {
+      "end": "2016-09-22",
+      "file": "HOT.parquet",
+      "rows": 7280,
+      "sha256": "0f29fabc70ed0769c5c32fd393cf2453254fdff25fa0f274837d026ecb2408b0",
+      "start": "1987-11-05"
+    },
+    "HP": {
+      "end": "2018-12-31",
+      "file": "HP.parquet",
+      "rows": 3271,
+      "sha256": "e241c88d0e8332500b7fc3db8195f32f086a01754f4fb4878eb2a159f7b69521",
+      "start": "2006-01-03"
+    },
+    "HPE": {
+      "end": "2018-12-31",
+      "file": "HPE.parquet",
+      "rows": 806,
+      "sha256": "d9a68a7f4c7392c92b3e20d492af01f2ba1adf714714a390783cdf943da21f12",
+      "start": "2015-10-19"
+    },
+    "HPQ": {
+      "end": "2018-12-31",
+      "file": "HPQ.parquet",
+      "rows": 3271,
+      "sha256": "f6ce354c42715254f9614f5e09a3b3f572d8d82af91ca451c6e46ffe56562378",
+      "start": "2006-01-03"
+    },
+    "HRB": {
+      "end": "2018-12-31",
+      "file": "HRB.parquet",
+      "rows": 3271,
+      "sha256": "d98cfbd0a6f4e9ae4fb2a75c1c3db622d67430ef87e63e1fd91e8d9d9eeffc85",
+      "start": "2006-01-03"
+    },
+    "HRL": {
+      "end": "2018-12-31",
+      "file": "HRL.parquet",
+      "rows": 3271,
+      "sha256": "bd0e3b4d71531c4156215e0c3e6910bd3f0316ba9d7fd8988990899fe5a5f0e8",
+      "start": "2006-01-03"
+    },
+    "HRS": {
+      "end": "2018-03-27",
+      "file": "HRS.parquet",
+      "rows": 9137,
+      "sha256": "310d99673c2d7da973338ed7fd483b8ed801801fef3f548012fce5f2df6e0e96",
+      "start": "1981-12-31"
+    },
+    "HSH": {
+      "end": "2014-08-29",
+      "file": "HSH.parquet",
+      "rows": 7139,
+      "sha256": "4430514908a36dd54ef32d8277b82ea8ecd4cda855e99876f0b0f41d21bf521d",
+      "start": "1986-05-05"
+    },
+    "HSIC": {
+      "end": "2018-12-31",
+      "file": "HSIC.parquet",
+      "rows": 3271,
+      "sha256": "f2eaa8d7e93ac799ed7944dbfe31ced4319983ffd8c01d9dd6e30d5baf0bc662",
+      "start": "2006-01-03"
+    },
+    "HSP": {
+      "end": "2015-09-02",
+      "file": "HSP.parquet",
+      "rows": 2855,
+      "sha256": "e6294734e6ee114dab2b2644a507b8260410d932537eb88e9b06fdf83b3fa10b",
+      "start": "2004-05-03"
+    },
+    "HST": {
+      "end": "2018-12-31",
+      "file": "HST.parquet",
+      "rows": 3271,
+      "sha256": "fbfc738df07521c99d6daa9a97be4e00d77012cb8495774ec1c1be41fb567904",
+      "start": "2006-01-03"
+    },
+    "HSY": {
+      "end": "2018-12-31",
+      "file": "HSY.parquet",
+      "rows": 3271,
+      "sha256": "61d276c590ee36e21870f237559fb9e5fc45aa14d66f1e81240ecb371cf8a308",
+      "start": "2006-01-03"
+    },
+    "HUM": {
+      "end": "2018-12-31",
+      "file": "HUM.parquet",
+      "rows": 3271,
+      "sha256": "e8581f275e10f02226aa1ae4b6fba4c2385ddf47d71c5b22f62315a24b00fb5f",
+      "start": "2006-01-03"
+    },
+    "IBM": {
+      "end": "2018-12-31",
+      "file": "IBM.parquet",
+      "rows": 3271,
+      "sha256": "c5a5f8257fcc3941a6fc53a8919598542d0f521c7441a8923294700e313628c0",
+      "start": "2006-01-03"
+    },
+    "ICE": {
+      "end": "2018-12-31",
+      "file": "ICE.parquet",
+      "rows": 3271,
+      "sha256": "56c5092f450345a897a31d4032df65f81b0296d9de77d7848a4808d02cb60079",
+      "start": "2006-01-03"
+    },
+    "IDXX": {
+      "end": "2018-12-31",
+      "file": "IDXX.parquet",
+      "rows": 3271,
+      "sha256": "4a24960176232b395e21764c2c800d3380d150231aa3abfb5ff3611a31edee3b",
+      "start": "2006-01-03"
+    },
+    "IFF": {
+      "end": "2018-12-31",
+      "file": "IFF.parquet",
+      "rows": 3271,
+      "sha256": "774048cb5bd9c2c98dd2f775d5c79683bc817a020bf084e8c42327670435072e",
+      "start": "2006-01-03"
+    },
+    "IGT": {
+      "end": "2018-03-27",
+      "file": "IGT.parquet",
+      "rows": 7056,
+      "sha256": "baa93db304ef1a8ea8108f01ebadb1b8b0ec10db629c70381a4ec37ce130a027",
+      "start": "1990-03-26"
+    },
+    "ILMN": {
+      "end": "2018-12-31",
+      "file": "ILMN.parquet",
+      "rows": 3271,
+      "sha256": "c4fe3163dc4c661fb2ab823e8367295c77586d4ea5542bf5abd246769dc88a1f",
+      "start": "2006-01-03"
+    },
+    "INCY": {
+      "end": "2018-12-31",
+      "file": "INCY.parquet",
+      "rows": 3271,
+      "sha256": "3a00557caa955ff06410c96a7e8857c0e49db4637689a6024bfa1c9e6fee3286",
+      "start": "2006-01-03"
+    },
+    "INFO": {
+      "end": "2018-03-27",
+      "file": "INFO.parquet",
+      "rows": 205,
+      "sha256": "414e2e28143d838d72dc1fc885292a6bcdb240e9da002c25a7eefa0afbe9af97",
+      "start": "2017-06-02"
+    },
+    "INTC": {
+      "end": "2018-12-31",
+      "file": "INTC.parquet",
+      "rows": 3271,
+      "sha256": "028cf12789221676120fe0b4418ba439597f5198c00962c47076092b9669cda2",
+      "start": "2006-01-03"
+    },
+    "INTU": {
+      "end": "2018-12-31",
+      "file": "INTU.parquet",
+      "rows": 3271,
+      "sha256": "0f8ed1ecf93845b0520ff54c1fc64afc360a3cdbe31cd311619b8c96b3d75e01",
+      "start": "2006-01-03"
+    },
+    "IP": {
+      "end": "2018-12-31",
+      "file": "IP.parquet",
+      "rows": 3271,
+      "sha256": "e0cf761939403c0312012c6efb96fd2ea7de68caddda5202e481e890856441f1",
+      "start": "2006-01-03"
+    },
+    "IPG": {
+      "end": "2018-03-27",
+      "file": "IPG.parquet",
+      "rows": 7658,
+      "sha256": "61f1faa84eabe1b1773df1bba243e69e6d29762453d0113e907ddc0396f23d91",
+      "start": "1987-11-05"
+    },
+    "IPGP": {
+      "end": "2018-12-31",
+      "file": "IPGP.parquet",
+      "rows": 3032,
+      "sha256": "fde5ea2ff860a8b7a670f4b906637ba30bde52cd6abcbd1b5a0d2a9f8af1bf49",
+      "start": "2006-12-13"
+    },
+    "IQV": {
+      "end": "2018-12-31",
+      "file": "IQV.parquet",
+      "rows": 1422,
+      "sha256": "526322c911fb97f72415dbf2ec5b6d07b73dd48f6972d5e6e291f15a90f3ade2",
+      "start": "2013-05-09"
+    },
+    "IR": {
+      "end": "2018-03-27",
+      "file": "IR.parquet",
+      "rows": 8252,
+      "sha256": "94fd60a9fa7cf7e7eb4efef254bd4072cdd0584e80b9d10a58468904745d3b25",
+      "start": "1985-07-01"
+    },
+    "IRM": {
+      "end": "2018-12-31",
+      "file": "IRM.parquet",
+      "rows": 3271,
+      "sha256": "72f43c38058ebc25a2e83ec896f882e6bb8e07076a5634dc38acb25a80fa758c",
+      "start": "2006-01-03"
+    },
+    "ISRG": {
+      "end": "2018-12-31",
+      "file": "ISRG.parquet",
+      "rows": 3271,
+      "sha256": "c17acb8107abd6bcc8238714272fa8aa6701c6873dda62e9c0900d03713856cd",
+      "start": "2006-01-03"
+    },
+    "IT": {
+      "end": "2018-12-31",
+      "file": "IT.parquet",
+      "rows": 3271,
+      "sha256": "849dc180bacb62a7ef9131e349db15ea3381306468fff800a83ac751e8e2a077",
+      "start": "2006-01-03"
+    },
+    "ITT": {
+      "end": "2018-12-31",
+      "file": "ITT.parquet",
+      "rows": 3271,
+      "sha256": "f41cf943957acbd7e067b94292bcf6a54c274280e6a6d9036c4a53f6b445d995",
+      "start": "2006-01-03"
+    },
+    "ITW": {
+      "end": "2018-12-31",
+      "file": "ITW.parquet",
+      "rows": 3271,
+      "sha256": "4a28ed0f9557b9bf60b2b86543b5ccd9953d5959a5358f59fe9efacaf62b22a2",
+      "start": "2006-01-03"
+    },
+    "IVZ": {
+      "end": "2018-12-31",
+      "file": "IVZ.parquet",
+      "rows": 3271,
+      "sha256": "a9a69fbbf29c9c77c4c5baae2013437b97abb4c7cee14c85f3d312fe17b04cb2",
+      "start": "2006-01-03"
+    },
+    "JBHT": {
+      "end": "2018-12-31",
+      "file": "JBHT.parquet",
+      "rows": 3271,
+      "sha256": "3a8c0747a60ebbde5a59bdb4f9cee8900273a3fecab5c3dba624771a55c515b4",
+      "start": "2006-01-03"
+    },
+    "JBL": {
+      "end": "2018-12-31",
+      "file": "JBL.parquet",
+      "rows": 3271,
+      "sha256": "18484dd49a0b93447b07377446d081c7f0906344218bc4ba813a48ef4524ca52",
+      "start": "2006-01-03"
+    },
+    "JCI": {
+      "end": "2018-12-31",
+      "file": "JCI.parquet",
+      "rows": 3271,
+      "sha256": "324c2d0df3a4273ddd38cdcd5156adfbf82deebacf90367960fa5c7d8dc81d78",
+      "start": "2006-01-03"
+    },
+    "JCP": {
+      "end": "2018-03-27",
+      "file": "JCP.parquet",
+      "rows": 9136,
+      "sha256": "3049e25e25118ad70a674b5125d8f532fa01c1d884daf5098c74309225719244",
+      "start": "1982-01-04"
+    },
+    "JEC": {
+      "end": "2018-03-27",
+      "file": "JEC.parquet",
+      "rows": 7106,
+      "sha256": "d1019b28a3add2b61234548ecd63dfde4c36c34065f617ba5e464ecf71837ade",
+      "start": "1990-01-12"
+    },
+    "JEF": {
+      "end": "2018-12-31",
+      "file": "JEF.parquet",
+      "rows": 3271,
+      "sha256": "e52ce648b02b8c979f8bc19337a6c08194df2c698962b84ce8856bf4ed2b1dcd",
+      "start": "2006-01-03"
+    },
+    "JKHY": {
+      "end": "2018-12-31",
+      "file": "JKHY.parquet",
+      "rows": 3271,
+      "sha256": "eaea2ab1730350116d1d9a3a042d94f7e3c12f3dbfdb6e2636270dcaa1480fa4",
+      "start": "2006-01-03"
+    },
+    "JNJ": {
+      "end": "2018-12-31",
+      "file": "JNJ.parquet",
+      "rows": 3271,
+      "sha256": "0b46ffc60dba4970d3b2b7ec4f6d28c5e0b9a702a17e75d6dedd4c19d4b8b09f",
+      "start": "2006-01-03"
+    },
+    "JNPR": {
+      "end": "2018-03-27",
+      "file": "JNPR.parquet",
+      "rows": 4718,
+      "sha256": "eda2932db405d1cd6234c52f2b357acfbfb4fa42cfbd3e1b1a1823f5fa3913c0",
+      "start": "1999-06-25"
+    },
+    "JNS": {
+      "end": "2017-05-26",
+      "file": "JNS.parquet",
+      "rows": 4257,
+      "sha256": "1c4432dacbc39f8f0ba72b090d01ed9931b9a1e9ded7a7340d50677c5e7a2c75",
+      "start": "2000-06-26"
+    },
+    "JNY": {
+      "end": "2014-04-08",
+      "file": "JNY.parquet",
+      "rows": 5769,
+      "sha256": "d9656ebf495e3a63fe9de6b2ab8c002ec199499d62861b916a335bd88d2e1596",
+      "start": "1991-05-16"
+    },
+    "JOY": {
+      "end": "2017-04-05",
+      "file": "JOY.parquet",
+      "rows": 3990,
+      "sha256": "c750df9b6f32204171fec8b7792fc5ee12feb951d941abc30163addeaf8b82dd",
+      "start": "2001-05-25"
+    },
+    "JPM": {
+      "end": "2018-12-31",
+      "file": "JPM.parquet",
+      "rows": 3271,
+      "sha256": "8eb05dff1a7e42f9d2af4b3a53b330ae6c87f7296ab2057f1aefcf0c46dfa82f",
+      "start": "2006-01-03"
+    },
+    "JWN": {
+      "end": "2018-03-27",
+      "file": "JWN.parquet",
+      "rows": 7995,
+      "sha256": "18a174a03b02c35c73b67c1aedf39b7f2fcf2cd17a7743e746bcb60e3d7f5412",
+      "start": "1986-07-09"
+    },
+    "K": {
+      "end": "2018-03-27",
+      "file": "K.parquet",
+      "rows": 8387,
+      "sha256": "34307149bda1e040bd44cdf2289a83507b933a5e35e9d8327ed8ea0ad01da065",
+      "start": "1984-12-17"
+    },
+    "KBH": {
+      "end": "2018-12-31",
+      "file": "KBH.parquet",
+      "rows": 3271,
+      "sha256": "d15d06f067a258874743b72e82cc915bb087fd3edf9bfe5716da32b1e334a2e8",
+      "start": "2006-01-03"
+    },
+    "KDP": {
+      "end": "2018-12-31",
+      "file": "KDP.parquet",
+      "rows": 2682,
+      "sha256": "9662f8b7debdd1c585aac7b602da6e58caec091937924fb77c4d358c800bc235",
+      "start": "2008-05-07"
+    },
+    "KEY": {
+      "end": "2018-12-31",
+      "file": "KEY.parquet",
+      "rows": 3271,
+      "sha256": "e39763f5be852ee2b213ad1067afef640a9ab9a47f87fb675a8f310c777f3fb1",
+      "start": "2006-01-03"
+    },
+    "KEYS": {
+      "end": "2018-12-31",
+      "file": "KEYS.parquet",
+      "rows": 1057,
+      "sha256": "c905518118ac430a561ef025ab68b643bd905375b81c7609597f1a7fd761686a",
+      "start": "2014-10-20"
+    },
+    "KG": {
+      "end": "2018-12-31",
+      "file": "KG.parquet",
+      "rows": 2683,
+      "sha256": "dfbcce4b3c9bd0b2065e6a6b2c20cd46735028666e3975c2ec0d2d6ea5eadb5a",
+      "start": "2008-05-06"
+    },
+    "KHC": {
+      "end": "2018-12-31",
+      "file": "KHC.parquet",
+      "rows": 880,
+      "sha256": "6cbe31501080a03e0c116948f2423e0addbc1eb6cab6ab07fb2f769f8c08bdc7",
+      "start": "2015-07-06"
+    },
+    "KIM": {
+      "end": "2018-12-31",
+      "file": "KIM.parquet",
+      "rows": 3271,
+      "sha256": "af51d94f1554b85a7ac274e8c8303cf166c3bfe8a39ab0721a7cd402fce7afb3",
+      "start": "2006-01-03"
+    },
+    "KLAC": {
+      "end": "2018-12-31",
+      "file": "KLAC.parquet",
+      "rows": 3271,
+      "sha256": "07d3658b618fc23b38b3088053b8442312cd05d26d95f5fafcc67e4fc2ef41a1",
+      "start": "2006-01-03"
+    },
+    "KMB": {
+      "end": "2018-12-31",
+      "file": "KMB.parquet",
+      "rows": 3271,
+      "sha256": "960313ac912b4ee1c684c7e827f66904b69a56a7596583cf6ff89de879717f31",
+      "start": "2006-01-03"
+    },
+    "KMI": {
+      "end": "2018-03-27",
+      "file": "KMI.parquet",
+      "rows": 1791,
+      "sha256": "335865e9910e6c616cab7edf3fd057d6368d9f35f0d50eda35e4ddacc1449edb",
+      "start": "2011-02-11"
+    },
+    "KMX": {
+      "end": "2018-12-31",
+      "file": "KMX.parquet",
+      "rows": 3271,
+      "sha256": "a5272ddec47613eabd0cad2b3556090a174510b7cb75788daef72ea845ee3c9f",
+      "start": "2006-01-03"
+    },
+    "KO": {
+      "end": "2018-12-31",
+      "file": "KO.parquet",
+      "rows": 3271,
+      "sha256": "8c204002024feefc6c9428ccaa8270f9d682f098f564123f8b632eb65d59440c",
+      "start": "2006-01-03"
+    },
+    "KORS": {
+      "end": "2018-03-27",
+      "file": "KORS.parquet",
+      "rows": 1578,
+      "sha256": "3e3f2ae0ffd3826d9f54e242f80eed7c93e81fc187b258b0292d4cf3c0d14e71",
+      "start": "2011-12-15"
+    },
+    "KR": {
+      "end": "2018-12-31",
+      "file": "KR.parquet",
+      "rows": 3271,
+      "sha256": "2b94c65ee9c46ab317d197f4ae7211c0ee57f11560f54e2f97491abc76955696",
+      "start": "2006-01-03"
+    },
+    "KRFT": {
+      "end": "2015-07-02",
+      "file": "KRFT.parquet",
+      "rows": 702,
+      "sha256": "6174f3f7175574703bf7e2b9ce9deb65d87b4e91f470743afd614eaa9567ec6a",
+      "start": "2012-09-17"
+    },
+    "KSS": {
+      "end": "2018-12-31",
+      "file": "KSS.parquet",
+      "rows": 3271,
+      "sha256": "4edf123bfd564d07613150321c4ffff5bdffac088765fd61733bceb8baabe9f2",
+      "start": "2006-01-03"
+    },
+    "KSU": {
+      "end": "2018-03-27",
+      "file": "KSU.parquet",
+      "rows": 7658,
+      "sha256": "e8ab98029fce3a22408f6a971a2fd4cf82eda16049183f4c5ec4f9581d1c8511",
+      "start": "1987-11-05"
+    },
+    "L": {
+      "end": "2018-12-31",
+      "file": "L.parquet",
+      "rows": 3271,
+      "sha256": "1664d23f00f30d697400b1c52f51eea8e8466a73cba46c591918a5e36a54f929",
+      "start": "2006-01-03"
+    },
+    "LB": {
+      "end": "2018-03-27",
+      "file": "LB.parquet",
+      "rows": 8252,
+      "sha256": "f2d9db3218565d375b178c13ba8e7484442b3c38486823109aa3f0392043e881",
+      "start": "1985-07-01"
+    },
+    "LDOS": {
+      "end": "2018-12-31",
+      "file": "LDOS.parquet",
+      "rows": 3072,
+      "sha256": "0d0b493d7c92bbf630608ff82ed606f73f2e3e2c0907e4e3d963707c3bedb9f0",
+      "start": "2006-10-17"
+    },
+    "LEG": {
+      "end": "2018-03-27",
+      "file": "LEG.parquet",
+      "rows": 7658,
+      "sha256": "0503fe2e95baaea9c8d28d7c4c1e1b141aae6d5b5c856b8c87f90570c1a8a930",
+      "start": "1987-11-05"
+    },
+    "LEN": {
+      "end": "2018-12-31",
+      "file": "LEN.parquet",
+      "rows": 3271,
+      "sha256": "a47dc4c36f9f490a72691f70d8151e9cb890875e1e0b9d35d1fa2b71d48f793e",
+      "start": "2006-01-03"
+    },
+    "LH": {
+      "end": "2018-12-31",
+      "file": "LH.parquet",
+      "rows": 3271,
+      "sha256": "54ad805c0d3ddcc0c51148bd119beb5d41ee1fdec5ca1eb58c5a1f798a285d8a",
+      "start": "2006-01-03"
+    },
+    "LIFE": {
+      "end": "2018-03-07",
+      "file": "LIFE.parquet",
+      "rows": 501,
+      "sha256": "02a0af428bb4861dda5302bd9719c87f209412d8fa9ab346e112eb8d9e8a0ed8",
+      "start": "2015-05-07"
+    },
+    "LIN": {
+      "end": "2018-12-31",
+      "file": "LIN.parquet",
+      "rows": 3271,
+      "sha256": "8e339e6641505ab38b1223937348e0f962bd7207aab9a472aa0f54a5042aa167",
+      "start": "2006-01-03"
+    },
+    "LKQ": {
+      "end": "2018-12-31",
+      "file": "LKQ.parquet",
+      "rows": 3271,
+      "sha256": "0276c5fee05de900bdcb74e27721b597217d38b1438bf75c350ad12141a28150",
+      "start": "2006-01-03"
+    },
+    "LLL": {
+      "end": "2018-03-27",
+      "file": "LLL.parquet",
+      "rows": 4996,
+      "sha256": "4656220657b1019957f073ad89d2be9bccbadba718ede216a1c743a180187990",
+      "start": "1998-05-19"
+    },
+    "LLTC": {
+      "end": "2017-03-10",
+      "file": "LLTC.parquet",
+      "rows": 6794,
+      "sha256": "f525f480157c1ca20101b76f40a3ed6b897c04190ffca0b3c3a295a9edbf101e",
+      "start": "1990-03-26"
+    },
+    "LLY": {
+      "end": "2018-12-31",
+      "file": "LLY.parquet",
+      "rows": 3271,
+      "sha256": "b195a722f52266f1b9b7d8dcbf3abcadc7076a2fa8bd384973389f144175dbd4",
+      "start": "2006-01-03"
+    },
+    "LM": {
+      "end": "2018-03-27",
+      "file": "LM.parquet",
+      "rows": 7658,
+      "sha256": "85d051018ac2321255b2376136b7f739cdc3e42f804af77cf7a4a422ebaa1d32",
+      "start": "1987-11-05"
+    },
+    "LMT": {
+      "end": "2018-12-31",
+      "file": "LMT.parquet",
+      "rows": 3271,
+      "sha256": "2bfcf0fc8657d182aaa324d9f240a0d07ab1d4dcf94a4a490b242145d50bd7e3",
+      "start": "2006-01-03"
+    },
+    "LNC": {
+      "end": "2018-12-31",
+      "file": "LNC.parquet",
+      "rows": 3271,
+      "sha256": "8fbea72d9d32bd4959ccc11be2961b5c13dd663c58429a7de45295a9cbacaf3a",
+      "start": "2006-01-03"
+    },
+    "LNT": {
+      "end": "2018-12-31",
+      "file": "LNT.parquet",
+      "rows": 3271,
+      "sha256": "e1c0c20a9d29d95503c80ff0189dc5c8c036018bc82b44558e6a111b8cd583ac",
+      "start": "2006-01-03"
+    },
+    "LO": {
+      "end": "2015-06-11",
+      "file": "LO.parquet",
+      "rows": 1764,
+      "sha256": "24b6b5599b5f347bc6d7c0f2e6b8745a5e008836c245c6138d34f1fabafd2f0f",
+      "start": "2008-06-10"
+    },
+    "LOW": {
+      "end": "2018-12-31",
+      "file": "LOW.parquet",
+      "rows": 3271,
+      "sha256": "aee50b23efc747d65cc2c87516ac7b23fbbecf6de893deebaa12012b50c82969",
+      "start": "2006-01-03"
+    },
+    "LRCX": {
+      "end": "2018-12-31",
+      "file": "LRCX.parquet",
+      "rows": 3271,
+      "sha256": "bee897558d579da13bcb9cb23e0e85673b9c7468ee1974729b3b0207b6c0f58f",
+      "start": "2006-01-03"
+    },
+    "LSI": {
+      "end": "2018-03-07",
+      "file": "LSI.parquet",
+      "rows": 5505,
+      "sha256": "3c0b97e3338380b650c1e6b988f4f3f0f080c99ee2eb1a1b4f2d8faa87ccf063",
+      "start": "1995-06-21"
+    },
+    "LUV": {
+      "end": "2018-12-31",
+      "file": "LUV.parquet",
+      "rows": 3271,
+      "sha256": "d4450790701817411c13f3ad8a09fa4b0c58be38926c40b14e3b825f96f2273e",
+      "start": "2006-01-03"
+    },
+    "LVLT": {
+      "end": "2017-10-31",
+      "file": "LVLT.parquet",
+      "rows": 4931,
+      "sha256": "9b4a010cf6c6dbef4a5fb003de88cc8b3ecde5108457b9a6137d3d2a05f1c52c",
+      "start": "1998-03-31"
+    },
+    "LW": {
+      "end": "2018-12-31",
+      "file": "LW.parquet",
+      "rows": 537,
+      "sha256": "d588abeff53044184425b3b16351f8aa21763097544e8b416331aff1a5648271",
+      "start": "2016-11-10"
+    },
+    "LXK": {
+      "end": "2016-11-28",
+      "file": "LXK.parquet",
+      "rows": 5296,
+      "sha256": "7b8eba805beebbd8aa78f02bf936fc888329e51d86f79d4a13565b86840d7b0f",
+      "start": "1995-11-15"
+    },
+    "LYB": {
+      "end": "2018-12-31",
+      "file": "LYB.parquet",
+      "rows": 2185,
+      "sha256": "c859d0904062110a6a77e6813b490bbab44de1030399006c13c3cedf22f48f74",
+      "start": "2010-04-28"
+    },
+    "M": {
+      "end": "2018-12-31",
+      "file": "M.parquet",
+      "rows": 3271,
+      "sha256": "9e8c341648ea4b67bf2718f2408d02c6501fdf7bc50b216c128d493cae7b6b9a",
+      "start": "2006-01-03"
+    },
+    "MA": {
+      "end": "2018-12-31",
+      "file": "MA.parquet",
+      "rows": 3172,
+      "sha256": "31e7a5dc9cd5a665113714aedb47066363e993ded70f18d9e51850308f19b1d0",
+      "start": "2006-05-25"
+    },
+    "MAA": {
+      "end": "2018-12-31",
+      "file": "MAA.parquet",
+      "rows": 3271,
+      "sha256": "d4aee6af85774e836b2530e3f36d23a0e9157982c020bafa5f65a9742dfa1de8",
+      "start": "2006-01-03"
+    },
+    "MAC": {
+      "end": "2018-12-31",
+      "file": "MAC.parquet",
+      "rows": 3271,
+      "sha256": "844bd92a6885967cd9d88de88a2059768461552dff5867302b35338fa4eb8498",
+      "start": "2006-01-03"
+    },
+    "MAR": {
+      "end": "2018-12-31",
+      "file": "MAR.parquet",
+      "rows": 3271,
+      "sha256": "69b44d64deb3422e39cd74fd9d2ccc90c844404f36536c5ed84284deab0166ab",
+      "start": "2006-01-03"
+    },
+    "MAS": {
+      "end": "2018-12-31",
+      "file": "MAS.parquet",
+      "rows": 3271,
+      "sha256": "d3df06decaa26b04b1c80addc4f39810fe54369f1e7d6bc92b022e2c8b240fad",
+      "start": "2006-01-03"
+    },
+    "MAT": {
+      "end": "2018-12-31",
+      "file": "MAT.parquet",
+      "rows": 3271,
+      "sha256": "5554e5cc594ec76921cd519fc39a4e64c0ff9f580973f800eef2538f1056c9df",
+      "start": "2006-01-03"
+    },
+    "MBI": {
+      "end": "2018-12-31",
+      "file": "MBI.parquet",
+      "rows": 3271,
+      "sha256": "cde1c76d156ccdb7de81b79b16b24406115f84ec80fd38d4871e325a790875f8",
+      "start": "2006-01-03"
+    },
+    "MCD": {
+      "end": "2018-12-31",
+      "file": "MCD.parquet",
+      "rows": 3271,
+      "sha256": "2f358d7df5772b466bfa731457c4ffa04687836f9567998f352af7828dbd88f0",
+      "start": "2006-01-03"
+    },
+    "MCHP": {
+      "end": "2018-12-31",
+      "file": "MCHP.parquet",
+      "rows": 3271,
+      "sha256": "ad0cb8e15e53f47626a879c5c45b85034ce2a4266b0c6316fa2ecee1c614dea8",
+      "start": "2006-01-03"
+    },
+    "MCK": {
+      "end": "2018-12-31",
+      "file": "MCK.parquet",
+      "rows": 3271,
+      "sha256": "f24e5e7324d1a6f6fed8989124f14e1a898046173820781cc7a49d8bd3491b90",
+      "start": "2006-01-03"
+    },
+    "MCO": {
+      "end": "2018-12-31",
+      "file": "MCO.parquet",
+      "rows": 3271,
+      "sha256": "ee96ede5073e45dd3c7810562665f0b58af7ca9bcce8df9d59e4e583ded17407",
+      "start": "2006-01-03"
+    },
+    "MDLZ": {
+      "end": "2018-12-31",
+      "file": "MDLZ.parquet",
+      "rows": 3271,
+      "sha256": "61584a928146a9f9c30c2753298e55543e2dc367ff5fdacb481c268772ce8dda",
+      "start": "2006-01-03"
+    },
+    "MDP": {
+      "end": "2018-03-27",
+      "file": "MDP.parquet",
+      "rows": 8252,
+      "sha256": "0690eae5a55fff15fa5779ab086c4f3c0fc8e2e7d16f062b06883f590725e03f",
+      "start": "1985-07-01"
+    },
+    "MDT": {
+      "end": "2018-12-31",
+      "file": "MDT.parquet",
+      "rows": 3271,
+      "sha256": "c3e9bb6dc1f14b892bc7ed1fb51efc3d7a68aa025c134e4fc0e1dfe63d8ec728",
+      "start": "2006-01-03"
+    },
+    "MET": {
+      "end": "2018-12-31",
+      "file": "MET.parquet",
+      "rows": 3271,
+      "sha256": "abdad179749f75e137fa5ff9b4e6b57b5cb0728dacb49cd917814935fa4fb791",
+      "start": "2006-01-03"
+    },
+    "MGM": {
+      "end": "2018-12-31",
+      "file": "MGM.parquet",
+      "rows": 3271,
+      "sha256": "4dc27f5c933df87abf5da984e6cbc42164440801ee8403ba60e0ae7a57d9409c",
+      "start": "2006-01-03"
+    },
+    "MHK": {
+      "end": "2018-12-31",
+      "file": "MHK.parquet",
+      "rows": 3271,
+      "sha256": "72a7c1af78b7ac2d77813ebe14eb1a92b46aacf775709584a1a7854ffa52870b",
+      "start": "2006-01-03"
+    },
+    "MI": {
+      "end": "2018-12-31",
+      "file": "MI.parquet",
+      "rows": 779,
+      "sha256": "334751981766d0505aece9653bea56472257c67efb5dbd72a061b1950ee60fab",
+      "start": "2015-11-25"
+    },
+    "MIL": {
+      "end": "2016-02-12",
+      "file": "MIL.parquet",
+      "rows": 4976,
+      "sha256": "5000edccc7fb7018e72f769b89b12fda6c1788f0ff8cacca765060fff3cb2604",
+      "start": "1996-05-08"
+    },
+    "MJN": {
+      "end": "2017-06-14",
+      "file": "MJN.parquet",
+      "rows": 2100,
+      "sha256": "4ffd439cc1908c7524f3711be9e92d236a7568689cb31f516da46926dc46bb2b",
+      "start": "2009-02-11"
+    },
+    "MKC": {
+      "end": "2018-12-31",
+      "file": "MKC.parquet",
+      "rows": 3271,
+      "sha256": "0ec78d972d34e91fc4e5fc90cef7daebda3d87ebcabbcf36b412e66167c2ffb7",
+      "start": "2006-01-03"
+    },
+    "MLM": {
+      "end": "2018-12-31",
+      "file": "MLM.parquet",
+      "rows": 3271,
+      "sha256": "c626b728816f4cf6f9c254b1409349d2f2c88e38fb4ee9740f1fedd7b0b3aba4",
+      "start": "2006-01-03"
+    },
+    "MMC": {
+      "end": "2018-03-27",
+      "file": "MMC.parquet",
+      "rows": 7621,
+      "sha256": "080330e76a43543d4c0a6c3d1c220871e52962fd0062b1c45aa81606088fbf9c",
+      "start": "1987-12-30"
+    },
+    "MMI": {
+      "end": "2018-03-27",
+      "file": "MMI.parquet",
+      "rows": 1107,
+      "sha256": "70231fc99bb4cf6599538314d0950fb06df8f66b1968db00c8a5f9f4881c9211",
+      "start": "2013-10-31"
+    },
+    "MMM": {
+      "end": "2018-12-31",
+      "file": "MMM.parquet",
+      "rows": 3271,
+      "sha256": "d7712306ae5a0cc249cd48790d511bbb86785676e278dd95032b7712f5318dac",
+      "start": "2006-01-03"
+    },
+    "MNK": {
+      "end": "2018-03-27",
+      "file": "MNK.parquet",
+      "rows": 1203,
+      "sha256": "293fd7033c32a60688046392214a6a20179d2e59083569ae1a6bebe3d377bee3",
+      "start": "2013-06-17"
+    },
+    "MNST": {
+      "end": "2018-12-31",
+      "file": "MNST.parquet",
+      "rows": 3271,
+      "sha256": "06bffea98202ca76db7da0f8f6010088d1f4197958c012bad15d319a3761fe6f",
+      "start": "2006-01-03"
+    },
+    "MO": {
+      "end": "2018-12-31",
+      "file": "MO.parquet",
+      "rows": 3271,
+      "sha256": "04a742c1d0f40816c215315e398426a01094bd22136488ba6d2174f338d807c8",
+      "start": "2006-01-03"
+    },
+    "MON": {
+      "end": "2018-03-27",
+      "file": "MON.parquet",
+      "rows": 4385,
+      "sha256": "d79fc2b745fcdcdaf8a4a8c98d4d8dee19b08fdb48f88ddc61a3ab65256ac375",
+      "start": "2000-10-18"
+    },
+    "MOS": {
+      "end": "2018-12-31",
+      "file": "MOS.parquet",
+      "rows": 3271,
+      "sha256": "1bbb4f69a82fceb23a8c49c31ade76b588ffc66136b2794686ae4132734a3a0e",
+      "start": "2006-01-03"
+    },
+    "MPC": {
+      "end": "2018-12-31",
+      "file": "MPC.parquet",
+      "rows": 1892,
+      "sha256": "8b1ed088846e54831c9ef95e7a8e9e0f7fc3a393ee4a590319842059a999a2d3",
+      "start": "2011-06-24"
+    },
+    "MRK": {
+      "end": "2018-12-31",
+      "file": "MRK.parquet",
+      "rows": 3271,
+      "sha256": "b2f3f766dbd30dd0494b20b64b1c0bac1182125e98269af31533dfd106fa1c46",
+      "start": "2006-01-03"
+    },
+    "MRO": {
+      "end": "2018-03-27",
+      "file": "MRO.parquet",
+      "rows": 12168,
+      "sha256": "bc7ac79533ff5a48f7e1e23d0d741a83269578e623369ddc88a9bc7a890adc9f",
+      "start": "1970-01-02"
+    },
+    "MS": {
+      "end": "2018-12-31",
+      "file": "MS.parquet",
+      "rows": 3271,
+      "sha256": "3146e392c8ef7b931a922c565759db51d49c79f38f9aa9648d2833b04443f8b5",
+      "start": "2006-01-03"
+    },
+    "MSCI": {
+      "end": "2018-12-31",
+      "file": "MSCI.parquet",
+      "rows": 2800,
+      "sha256": "f743d411a448f68b94a41f4258c9da7b565a33f36aa67009e7d7449d677174c0",
+      "start": "2007-11-15"
+    },
+    "MSFT": {
+      "end": "2018-12-31",
+      "file": "MSFT.parquet",
+      "rows": 3271,
+      "sha256": "060a0d0700ca443ee17359a37b0e1169589b50380fcf776cc08120d5c3c4c58e",
+      "start": "2006-01-03"
+    },
+    "MSI": {
+      "end": "2018-12-31",
+      "file": "MSI.parquet",
+      "rows": 3271,
+      "sha256": "a845e8589bd5c565c1ec111f0c37e288b899e4c7bb5dc8cca41db18f5111325b",
+      "start": "2006-01-03"
+    },
+    "MTB": {
+      "end": "2018-12-31",
+      "file": "MTB.parquet",
+      "rows": 3271,
+      "sha256": "908e73a83bfa35b724eb7e464ddf12e02f0758aec0f19c43c848c0431e18295a",
+      "start": "2006-01-03"
+    },
+    "MTD": {
+      "end": "2018-12-31",
+      "file": "MTD.parquet",
+      "rows": 3271,
+      "sha256": "7d5058417e4217b38349d39c944143d0fc53815a0298dc48709ffb5d49a72abd",
+      "start": "2006-01-03"
+    },
+    "MTG": {
+      "end": "2018-12-31",
+      "file": "MTG.parquet",
+      "rows": 3271,
+      "sha256": "368c72b9134e6d4372951ae020c2c20953076a940e2f6467ac360ff7fd7310f8",
+      "start": "2006-01-03"
+    },
+    "MTW": {
+      "end": "2018-12-31",
+      "file": "MTW.parquet",
+      "rows": 3271,
+      "sha256": "cc79a8f66f24774d85a7e43994f4359658ea6ecc491bbc2fb3b960fedaee7b0e",
+      "start": "2006-01-03"
+    },
+    "MU": {
+      "end": "2018-12-31",
+      "file": "MU.parquet",
+      "rows": 3271,
+      "sha256": "e3f9dd8c775de8517284e79e13a4fcb65960ff95378f7e81c0ff231eb22919cf",
+      "start": "2006-01-03"
+    },
+    "MUR": {
+      "end": "2018-12-31",
+      "file": "MUR.parquet",
+      "rows": 3271,
+      "sha256": "f6532bad3fde1a071a15772e08768453fc478e25b57da2b15a0f55c50fc3939f",
+      "start": "2006-01-03"
+    },
+    "MWV": {
+      "end": "2015-07-01",
+      "file": "MWV.parquet",
+      "rows": 7564,
+      "sha256": "b120316efba80b30aabe95dcaab341e71f82b6a4946aebe1855d8eee2d4dcf1f",
+      "start": "1985-07-01"
+    },
+    "MWW": {
+      "end": "2016-10-31",
+      "file": "MWW.parquet",
+      "rows": 5004,
+      "sha256": "e93f57c532afd6627c0137af9aa318546c537c5a578a8c4bc81370422aca3ad7",
+      "start": "1996-12-13"
+    },
+    "MXIM": {
+      "end": "2018-03-27",
+      "file": "MXIM.parquet",
+      "rows": 7056,
+      "sha256": "98c7ff6d83c4ce0c63577084d0b4c9183661dfae644fa9d333a720c00fcb988a",
+      "start": "1990-03-26"
+    },
+    "MYL": {
+      "end": "2018-03-27",
+      "file": "MYL.parquet",
+      "rows": 7628,
+      "sha256": "e2573047d4b81e88e57fc4fcc73c3684de3138d87352bd0159586e957197218b",
+      "start": "1987-12-18"
+    },
+    "NAVI": {
+      "end": "2018-12-31",
+      "file": "NAVI.parquet",
+      "rows": 1185,
+      "sha256": "bf086d655de88277fc29f78af47c8af66648da7aa9ba2e3903e0fff7c7e87498",
+      "start": "2014-04-17"
+    },
+    "NBL": {
+      "end": "2018-03-27",
+      "file": "NBL.parquet",
+      "rows": 9136,
+      "sha256": "18aec498e62a5bfc9a12bc44dbdf19823c7e04527c46d8e9f62c17ad612e54b5",
+      "start": "1982-01-04"
+    },
+    "NBR": {
+      "end": "2018-12-31",
+      "file": "NBR.parquet",
+      "rows": 3271,
+      "sha256": "db8c2572a8794538f7b57bc9a245cdff7b06f0a1b1e9d5327bbb2154e8436920",
+      "start": "2006-01-03"
+    },
+    "NCLH": {
+      "end": "2018-12-31",
+      "file": "NCLH.parquet",
+      "rows": 1498,
+      "sha256": "dc029f9cbd04ed110f5640afec2429ac9b8b20424b8c6a262923cdca956bceff",
+      "start": "2013-01-18"
+    },
+    "NCR": {
+      "end": "2018-03-27",
+      "file": "NCR.parquet",
+      "rows": 5357,
+      "sha256": "f8ef77078ad9834936591cb6af44ec932573f86776367fe9ddf48fb8df8483c7",
+      "start": "1996-12-11"
+    },
+    "NDAQ": {
+      "end": "2018-12-31",
+      "file": "NDAQ.parquet",
+      "rows": 3271,
+      "sha256": "6671b8f7b0f3f44ff933109dd62a0ccd67c5199ba90e0e9054b1ef953391f420",
+      "start": "2006-01-03"
+    },
+    "NE": {
+      "end": "2018-03-07",
+      "file": "NE.parquet",
+      "rows": 6830,
+      "sha256": "9e1e0397ad8306d9eee7cf171b794a1aa602e98e2774ad3a49ff0b8548b9a344",
+      "start": "1990-03-26"
+    },
+    "NEE": {
+      "end": "2018-12-31",
+      "file": "NEE.parquet",
+      "rows": 3271,
+      "sha256": "5f204ced0603aec1ffe1ecce901eeb9d81e9ad78b3f1db2190f356e0f857776b",
+      "start": "2006-01-03"
+    },
+    "NEM": {
+      "end": "2018-12-31",
+      "file": "NEM.parquet",
+      "rows": 3271,
+      "sha256": "bb76af43b2e504151e7f0f61af8df98dd52677f8ba40965cf57c20e4f85cd2bc",
+      "start": "2006-01-03"
+    },
+    "NFLX": {
+      "end": "2018-12-31",
+      "file": "NFLX.parquet",
+      "rows": 3271,
+      "sha256": "c06409c53f871d6d06faecf1e78e2dd16f24eaf13a411a5f9c37a943930aef96",
+      "start": "2006-01-03"
+    },
+    "NFX": {
+      "end": "2018-03-27",
+      "file": "NFX.parquet",
+      "rows": 6135,
+      "sha256": "e150babf7055591f5e674c0f7ac853e3f1d53a65adaa462c2dcbd33d57aa984d",
+      "start": "1993-11-12"
+    },
+    "NI": {
+      "end": "2018-12-31",
+      "file": "NI.parquet",
+      "rows": 3271,
+      "sha256": "72ea35a048082aa88d15f65b58ef58b7e66c13ebea21635f1573e53540c5da98",
+      "start": "2006-01-03"
+    },
+    "NKE": {
+      "end": "2018-12-31",
+      "file": "NKE.parquet",
+      "rows": 3271,
+      "sha256": "4351eb5f9dadae1ed2197f0bb979f68b068d1c981a5c71b0a06d71a8be463b8d",
+      "start": "2006-01-03"
+    },
+    "NKTR": {
+      "end": "2018-12-31",
+      "file": "NKTR.parquet",
+      "rows": 3271,
+      "sha256": "c03c85346b36bab6c8cda72eaf92e4b81a27f36ed499c7291437e4ebf2841906",
+      "start": "2006-01-03"
+    },
+    "NLSN": {
+      "end": "2018-03-27",
+      "file": "NLSN.parquet",
+      "rows": 1802,
+      "sha256": "f139db332fe35b7307fa24204af83022d59487278a437699cb85ee644e8ac5e6",
+      "start": "2011-01-27"
+    },
+    "NOC": {
+      "end": "2018-12-31",
+      "file": "NOC.parquet",
+      "rows": 3271,
+      "sha256": "cc5f44f466bacc69b1bd80cb1ee1bd679dd801da16bbdd9b4ec9e88e2ee77e37",
+      "start": "2006-01-03"
+    },
+    "NOV": {
+      "end": "2018-12-31",
+      "file": "NOV.parquet",
+      "rows": 3271,
+      "sha256": "11f112758ab2124717f816730db9924493b1503b12c727ab536a47a32d859ea8",
+      "start": "2006-01-03"
+    },
+    "NRG": {
+      "end": "2018-12-31",
+      "file": "NRG.parquet",
+      "rows": 3271,
+      "sha256": "892c9038eae56d3755dc6ca99d26853079afe82863451f9a892255f8cd19f8b2",
+      "start": "2006-01-03"
+    },
+    "NSC": {
+      "end": "2018-12-31",
+      "file": "NSC.parquet",
+      "rows": 3271,
+      "sha256": "1d90da3ef36f32a1e81aa491ca4c2b0bfe66971db859ebb83f5f7f995dc62781",
+      "start": "2006-01-03"
+    },
+    "NSM": {
+      "end": "2018-03-27",
+      "file": "NSM.parquet",
+      "rows": 1522,
+      "sha256": "5345e93c708c702c803176258fa8829a28a6abdd526bac7625c0e7bf85e39b25",
+      "start": "2012-03-08"
+    },
+    "NTAP": {
+      "end": "2018-12-31",
+      "file": "NTAP.parquet",
+      "rows": 3271,
+      "sha256": "0b38c8001fa3a08c9e70e6d3e53e8d3754a1293da9053bc62cc3a10b66ba3948",
+      "start": "2006-01-03"
+    },
+    "NTRS": {
+      "end": "2018-12-31",
+      "file": "NTRS.parquet",
+      "rows": 3271,
+      "sha256": "d28dcc9bd40e526d6a83b705166b17eaaa2efd58f3c0da96769469173302b91c",
+      "start": "2006-01-03"
+    },
+    "NUE": {
+      "end": "2018-12-31",
+      "file": "NUE.parquet",
+      "rows": 3271,
+      "sha256": "65727bd2283f56a73bf6b3f26734b3393faa88d258e90a13d1667dfdc75f02e0",
+      "start": "2006-01-03"
+    },
+    "NVDA": {
+      "end": "2018-12-31",
+      "file": "NVDA.parquet",
+      "rows": 3271,
+      "sha256": "5fd6990cf5a2f3119430174d8498a4ceecbd5a1fb66f254173d04969b83d4493",
+      "start": "2006-01-03"
+    },
+    "NWL": {
+      "end": "2018-12-31",
+      "file": "NWL.parquet",
+      "rows": 3271,
+      "sha256": "655e5dee58a16495195b8746f79e85224fbbbb1f96e5c8fe58f5d94a0969abfd",
+      "start": "2006-01-03"
+    },
+    "NWS": {
+      "end": "2018-12-31",
+      "file": "NWS.parquet",
+      "rows": 1394,
+      "sha256": "1cdea63c0a8f77be9e7025ab97e5bed0828ce3862af348b1f21931e2bb7923e4",
+      "start": "2013-06-19"
+    },
+    "NWSA": {
+      "end": "2018-12-31",
+      "file": "NWSA.parquet",
+      "rows": 1394,
+      "sha256": "afedbef4bb4504274ab6c2ad814a387e1c0674a5b86b5d3fffedae87f3077d60",
+      "start": "2013-06-19"
+    },
+    "NYT": {
+      "end": "2018-12-31",
+      "file": "NYT.parquet",
+      "rows": 3271,
+      "sha256": "6b611a4da735d4e2f3f241a06bdf7712f8bb92b2496eaf12cae0b66e31ad2c44",
+      "start": "2006-01-03"
+    },
+    "O": {
+      "end": "2018-12-31",
+      "file": "O.parquet",
+      "rows": 3271,
+      "sha256": "06643b15412004e2ab2dbfb7940c30e6cf06f9ba42a19ce03f58325643318303",
+      "start": "2006-01-03"
+    },
+    "ODP": {
+      "end": "2018-03-27",
+      "file": "ODP.parquet",
+      "rows": 7056,
+      "sha256": "80d347f10b9df99b5fb46b8c629d11eb5b0a40905478e07d70e8a7de0059be44",
+      "start": "1990-03-26"
+    },
+    "OI": {
+      "end": "2018-12-31",
+      "file": "OI.parquet",
+      "rows": 3271,
+      "sha256": "78c55f72229a251af56a67c3db56717e13f7ca131abb4ce360ddb9bd164aee13",
+      "start": "2006-01-03"
+    },
+    "OKE": {
+      "end": "2018-12-31",
+      "file": "OKE.parquet",
+      "rows": 3271,
+      "sha256": "28edb829c43ede525a37139e286e7546ecc988109ce3aba5091945ad1e24ff84",
+      "start": "2006-01-03"
+    },
+    "OMC": {
+      "end": "2018-12-31",
+      "file": "OMC.parquet",
+      "rows": 3271,
+      "sha256": "553b7b6f863d6e4683ffae9b27915817fd6814861297c19921239cd99179a38b",
+      "start": "2006-01-03"
+    },
+    "ORCL": {
+      "end": "2018-12-31",
+      "file": "ORCL.parquet",
+      "rows": 3271,
+      "sha256": "3fce7b84c86938231178e0c82296a6bc334217b9864f00ed8b15481f24c64042",
+      "start": "2006-01-03"
+    },
+    "ORLY": {
+      "end": "2018-12-31",
+      "file": "ORLY.parquet",
+      "rows": 3271,
+      "sha256": "024e854c8126b6ef03e7bd83d38c02723dc0054f82f39602d549273d568070d2",
+      "start": "2006-01-03"
+    },
+    "OXY": {
+      "end": "2018-12-31",
+      "file": "OXY.parquet",
+      "rows": 3271,
+      "sha256": "81dda725da9b890e711e53da66f9cd76f3573a6c79a12edf15aef84eab899533",
+      "start": "2006-01-03"
+    },
+    "PAYX": {
+      "end": "2018-12-31",
+      "file": "PAYX.parquet",
+      "rows": 3271,
+      "sha256": "b59b9625fec8e71b44b9d2d8adf5afe420970bf781bbc648d6eee184a797a658",
+      "start": "2006-01-03"
+    },
+    "PBCT": {
+      "end": "2018-03-27",
+      "file": "PBCT.parquet",
+      "rows": 7056,
+      "sha256": "e8c6e789da04a420523d78603565301a8a8551ae506a83533b5589514b1cbc04",
+      "start": "1990-03-26"
+    },
+    "PBI": {
+      "end": "2018-12-31",
+      "file": "PBI.parquet",
+      "rows": 3271,
+      "sha256": "6ce038d12c7308b7bd00e9dc70faebb5633b5efc10d008133600e9564bb8e613",
+      "start": "2006-01-03"
+    },
+    "PCAR": {
+      "end": "2018-12-31",
+      "file": "PCAR.parquet",
+      "rows": 3271,
+      "sha256": "7277047e1ab10f6f8e87d77ada9f595638d624861fe49a76f0116dc9732f90df",
+      "start": "2006-01-03"
+    },
+    "PCG": {
+      "end": "2018-12-31",
+      "file": "PCG.parquet",
+      "rows": 3271,
+      "sha256": "1c90eee8edc4bd66fd788174f9f3de248edaceaaee75dddbb74752d1de96b934",
+      "start": "2006-01-03"
+    },
+    "PCL": {
+      "end": "2016-02-19",
+      "file": "PCL.parquet",
+      "rows": 6733,
+      "sha256": "ebf3e9fd678799c6e4f316b29fc773f08ecf7e080ac3cb87568f64476884ea79",
+      "start": "1989-06-02"
+    },
+    "PCP": {
+      "end": "2016-01-29",
+      "file": "PCP.parquet",
+      "rows": 6564,
+      "sha256": "d7a5a6fd5548f774378eee4f2c48d0e6e1d251606c18fb7c915f32f94dde0f7a",
+      "start": "1990-01-12"
+    },
+    "PDCO": {
+      "end": "2018-03-16",
+      "file": "PDCO.parquet",
+      "rows": 6392,
+      "sha256": "52a1080c828307410c15b4f3f286daba66cb16a0efd46160995b4ac43c6e9b06",
+      "start": "1992-10-28"
+    },
+    "PEG": {
+      "end": "2018-12-31",
+      "file": "PEG.parquet",
+      "rows": 3271,
+      "sha256": "4d8ee5626e29f3f8c5d68f3864fbcdbb84d9f14ea9424e79426808f49737fe88",
+      "start": "2006-01-03"
+    },
+    "PEP": {
+      "end": "2018-12-31",
+      "file": "PEP.parquet",
+      "rows": 3271,
+      "sha256": "b3cef79a675210add1ac2b71eb575dc476e2be18ec144442259db5c043a726cf",
+      "start": "2006-01-03"
+    },
+    "PETM": {
+      "end": "2015-03-11",
+      "file": "PETM.parquet",
+      "rows": 5448,
+      "sha256": "a266c1df2a5cb4de5332097ad3ca6a3fe66f29433e21c470be480ff377495365",
+      "start": "1993-07-23"
+    },
+    "PFE": {
+      "end": "2018-12-31",
+      "file": "PFE.parquet",
+      "rows": 3271,
+      "sha256": "9631232dee3c2bf9b60b4295b94df76c7cb8c615cb6ecb0511f4281d30b34491",
+      "start": "2006-01-03"
+    },
+    "PFG": {
+      "end": "2018-12-31",
+      "file": "PFG.parquet",
+      "rows": 3271,
+      "sha256": "83ac65009da7e7776cfdceacca857415586eecb9be9ae491c19a917cfafd2487",
+      "start": "2006-01-03"
+    },
+    "PG": {
+      "end": "2018-12-31",
+      "file": "PG.parquet",
+      "rows": 3271,
+      "sha256": "9b8f9d9ceba885767323df96272da4cbb386ecea4328165715ab582f808e9cb7",
+      "start": "2006-01-03"
+    },
+    "PGR": {
+      "end": "2018-12-31",
+      "file": "PGR.parquet",
+      "rows": 3271,
+      "sha256": "ca76c08e98b896515a111566fb9cd46e5791bea692c0fd0639018c223b9e0052",
+      "start": "2006-01-03"
+    },
+    "PH": {
+      "end": "2018-12-31",
+      "file": "PH.parquet",
+      "rows": 3271,
+      "sha256": "e2a72c8bba7a81f64b86c0f801843366d98f762ab3045f249ae9d628ab245099",
+      "start": "2006-01-03"
+    },
+    "PHM": {
+      "end": "2018-12-31",
+      "file": "PHM.parquet",
+      "rows": 3271,
+      "sha256": "3936f49cc857a2d4bf567b6b7869d2c1869643dfe2051abaa2422eaf1c78f0e3",
+      "start": "2006-01-03"
+    },
+    "PKG": {
+      "end": "2018-12-31",
+      "file": "PKG.parquet",
+      "rows": 3271,
+      "sha256": "c21b222032276fe4f40c4f268b352d8bf8872665ee16a83b00fa2110221f7667",
+      "start": "2006-01-03"
+    },
+    "PKI": {
+      "end": "2018-03-27",
+      "file": "PKI.parquet",
+      "rows": 8818,
+      "sha256": "2d1e48f2b361622ca63f32f99cfd55962fb3f564aee3716b396f68852ac0fd37",
+      "start": "1983-04-06"
+    },
+    "PLD": {
+      "end": "2018-12-31",
+      "file": "PLD.parquet",
+      "rows": 3271,
+      "sha256": "a4ce2db229cf03b9f805e5fc92038f3335787d0a43af0be5a38a6d58bd79c6f1",
+      "start": "2006-01-03"
+    },
+    "PLL": {
+      "end": "2015-08-28",
+      "file": "PLL.parquet",
+      "rows": 6053,
+      "sha256": "07a57e5595ac7d98555a720e6392a5d9b6c5565385d8bbaaf988fd07a2eea256",
+      "start": "1991-08-21"
+    },
+    "PM": {
+      "end": "2018-12-31",
+      "file": "PM.parquet",
+      "rows": 2718,
+      "sha256": "3b00c6a4b728628aebc25aca307ae411153656622c2465183dd228710acd69dc",
+      "start": "2008-03-17"
+    },
+    "PMCS": {
+      "end": "2016-01-14",
+      "file": "PMCS.parquet",
+      "rows": 6231,
+      "sha256": "10ecec8255d0daaafb7515347818aaa74d2f007df3ce2a3d3f14fb9c305582cc",
+      "start": "1991-04-24"
+    },
+    "PNC": {
+      "end": "2018-12-31",
+      "file": "PNC.parquet",
+      "rows": 3271,
+      "sha256": "496d66d411bfe9283e292069a344fb45ce2e09f65328e1a12fe68d2d4f40b212",
+      "start": "2006-01-03"
+    },
+    "PNR": {
+      "end": "2018-12-31",
+      "file": "PNR.parquet",
+      "rows": 3271,
+      "sha256": "9d92645e584ed55d32ba11ee1e654806b03161afd7744863ff0e0b1081196d1b",
+      "start": "2006-01-03"
+    },
+    "PNW": {
+      "end": "2018-12-31",
+      "file": "PNW.parquet",
+      "rows": 3271,
+      "sha256": "14e9d47fe8cb4d37cae28b2625545c6a5a99de3a23eb9dd21a0670fe84472ec5",
+      "start": "2006-01-03"
+    },
+    "POM": {
+      "end": "2016-03-23",
+      "file": "POM.parquet",
+      "rows": 7367,
+      "sha256": "884d9715072cd7df0c2650df657e778b76f0516fe7a1083cd3b1ee6d8945b47c",
+      "start": "1987-01-02"
+    },
+    "PPG": {
+      "end": "2018-12-31",
+      "file": "PPG.parquet",
+      "rows": 3271,
+      "sha256": "a6561aa2924c1ce5fe30581e9629c52531933d2ce5f0e28ff81fb40fa491c410",
+      "start": "2006-01-03"
+    },
+    "PPL": {
+      "end": "2018-12-31",
+      "file": "PPL.parquet",
+      "rows": 3271,
+      "sha256": "d7c7b1f436c55ca51e0caad6e023792fe43c638f9a37a8dcac0c9768725e3f3e",
+      "start": "2006-01-03"
+    },
+    "PRGO": {
+      "end": "2018-12-31",
+      "file": "PRGO.parquet",
+      "rows": 3271,
+      "sha256": "759ba7998806878dd47a9f7c8489e5c8a1e12945d74ee24902ac1ef390951afc",
+      "start": "2006-01-03"
+    },
+    "PRU": {
+      "end": "2018-12-31",
+      "file": "PRU.parquet",
+      "rows": 3271,
+      "sha256": "ac27ac810a7cd7e18de21c90b975c347bbd21a2b70a8b88dbc1967f7eead9349",
+      "start": "2006-01-03"
+    },
+    "PSA": {
+      "end": "2018-12-31",
+      "file": "PSA.parquet",
+      "rows": 3271,
+      "sha256": "0f6b6dc252d76e4c12df863b163213df1c8eff60ae7453006b1292686cbc15c1",
+      "start": "2006-01-03"
+    },
+    "PSX": {
+      "end": "2018-12-31",
+      "file": "PSX.parquet",
+      "rows": 1691,
+      "sha256": "828d641620e8efbab7e8e087bcd6c8524a2399d195ac8f20e07d8b34f27ff1ec",
+      "start": "2012-04-12"
+    },
+    "PVH": {
+      "end": "2018-12-31",
+      "file": "PVH.parquet",
+      "rows": 3271,
+      "sha256": "d3677f2b9eeeeee2276f96429d5a0325d8d938c82204d6d469a4e099d828b690",
+      "start": "2006-01-03"
+    },
+    "PWR": {
+      "end": "2018-12-31",
+      "file": "PWR.parquet",
+      "rows": 3271,
+      "sha256": "c771642d4d746d3bd8397f75f7d598f2d7061ad9419200a2fa28a2bdfe58acd1",
+      "start": "2006-01-03"
+    },
+    "PX": {
+      "end": "2018-03-27",
+      "file": "PX.parquet",
+      "rows": 6492,
+      "sha256": "4aa0ac55684a960df65cab485be3eda82bbfea7b3ede60db4f8aa1a20077594f",
+      "start": "1992-06-17"
+    },
+    "PXD": {
+      "end": "2018-03-27",
+      "file": "PXD.parquet",
+      "rows": 5191,
+      "sha256": "4135fd8b2b06390488154249b0a95b2f430c5ca11992d3eca2eb744b402f4c2f",
+      "start": "1997-08-08"
+    },
+    "PYPL": {
+      "end": "2018-12-31",
+      "file": "PYPL.parquet",
+      "rows": 880,
+      "sha256": "4d3ae926773d36b0367ebaa04ad37f8fdca67577e4b4987b59f9adb721aa55ca",
+      "start": "2015-07-06"
+    },
+    "Q": {
+      "end": "2017-11-14",
+      "file": "Q.parquet",
+      "rows": 1139,
+      "sha256": "89a7072a1ee681ee4f05a2108f03bd7ff9e74883d4549a5a0805865b5e49d7a6",
+      "start": "2013-05-09"
+    },
+    "QCOM": {
+      "end": "2018-12-31",
+      "file": "QCOM.parquet",
+      "rows": 3271,
+      "sha256": "75fc510602965ed667959457d2872ef0293b322f15882e334ef30a1b202d4d07",
+      "start": "2006-01-03"
+    },
+    "QEP": {
+      "end": "2018-03-07",
+      "file": "QEP.parquet",
+      "rows": 1732,
+      "sha256": "d51ba67132d309034f96bc765ec300455efe6632a33a8d1a6037d26bf7f32301",
+      "start": "2010-06-16"
+    },
+    "QLGC": {
+      "end": "2016-08-16",
+      "file": "QLGC.parquet",
+      "rows": 5658,
+      "sha256": "dc266b09520921ec97836c85526e2608b2253a344f9bab7a8ecb4acddf68eae7",
+      "start": "1994-02-28"
+    },
+    "QRVO": {
+      "end": "2018-03-27",
+      "file": "QRVO.parquet",
+      "rows": 813,
+      "sha256": "dd7aa05ff2f19d08b6ece56f8fe8f39927b962edc335d2187cf9e3cfdf10e435",
+      "start": "2015-01-02"
+    },
+    "R": {
+      "end": "2018-12-31",
+      "file": "R.parquet",
+      "rows": 3271,
+      "sha256": "b4aa07051c22f9bb92da08e2abdeef0a2a022ce910f3cef4c0f42172e705db50",
+      "start": "2006-01-03"
+    },
+    "RAI": {
+      "end": "2017-07-24",
+      "file": "RAI.parquet",
+      "rows": 4567,
+      "sha256": "a9c7f1d82d6840011499e4c2a288c7c7a8ca1102865ae7e73cb89344417d2882",
+      "start": "1999-06-01"
+    },
+    "RCL": {
+      "end": "2018-12-31",
+      "file": "RCL.parquet",
+      "rows": 3271,
+      "sha256": "cc26be94898a239f53fa4eaace3b892a98724b0edf33841baa9f251ca0565df6",
+      "start": "2006-01-03"
+    },
+    "RDC": {
+      "end": "2018-03-07",
+      "file": "RDC.parquet",
+      "rows": 8592,
+      "sha256": "c9b62c3200614273b84d3a489b42899965346f5451f34da910d48ad321424cf6",
+      "start": "1983-04-06"
+    },
+    "RE": {
+      "end": "2018-03-27",
+      "file": "RE.parquet",
+      "rows": 5659,
+      "sha256": "8f8705143bb081e99efc93d2aafdc8127cfdf027bd61e97240e2d46f06144826",
+      "start": "1995-10-03"
+    },
+    "REG": {
+      "end": "2018-12-31",
+      "file": "REG.parquet",
+      "rows": 3271,
+      "sha256": "9c4283ad29c7a414a9c65867fc80395df96a7e3424b3e598642c596d546d5846",
+      "start": "2006-01-03"
+    },
+    "REGN": {
+      "end": "2018-12-31",
+      "file": "REGN.parquet",
+      "rows": 3271,
+      "sha256": "e5c3f1cec301602a854bdac6a53a0d0542ba238bf8fdf2bf509922d28c912732",
+      "start": "2006-01-03"
+    },
+    "RF": {
+      "end": "2018-12-31",
+      "file": "RF.parquet",
+      "rows": 3271,
+      "sha256": "9b298cb14519b8ca7207a505f47c074af445e5413838b4dcf686d443ef4df970",
+      "start": "2006-01-03"
+    },
+    "RHI": {
+      "end": "2018-12-31",
+      "file": "RHI.parquet",
+      "rows": 3271,
+      "sha256": "f6bd727de262f7fc19dd2c87e28436a9a0ef685bdcee6ab20add730dc481cd3e",
+      "start": "2006-01-03"
+    },
+    "RHT": {
+      "end": "2018-03-27",
+      "file": "RHT.parquet",
+      "rows": 4686,
+      "sha256": "673b92f7de969e40adddc6a232de5006c45d3c68329ee3f14782f449c58aba12",
+      "start": "1999-08-11"
+    },
+    "RIG": {
+      "end": "2018-12-31",
+      "file": "RIG.parquet",
+      "rows": 3271,
+      "sha256": "fa926cef6c3a6bfad1eef58cdd216250d398a08b83bd972955e4bdc6480f40c4",
+      "start": "2006-01-03"
+    },
+    "RJF": {
+      "end": "2018-12-31",
+      "file": "RJF.parquet",
+      "rows": 3271,
+      "sha256": "9ea133d71f32a4290b796f14e814642bda79e18adc469b7267ada4ea4049cdcc",
+      "start": "2006-01-03"
+    },
+    "RL": {
+      "end": "2018-12-31",
+      "file": "RL.parquet",
+      "rows": 3271,
+      "sha256": "064b2d60b3d6a42e2c7cb305c8653e6e0a338be64e5b5e7475821c694bf4f438",
+      "start": "2006-01-03"
+    },
+    "RMD": {
+      "end": "2018-12-31",
+      "file": "RMD.parquet",
+      "rows": 3271,
+      "sha256": "c731f3958bb244ec2b869f59ca15737384ecaf858dc6aa65cb058229fa72a132",
+      "start": "2006-01-03"
+    },
+    "ROK": {
+      "end": "2018-12-31",
+      "file": "ROK.parquet",
+      "rows": 3271,
+      "sha256": "ab2f5b5269a75bba7e6a0f726420e5154d1cecbef3fd1d6b1da30935f3b76505",
+      "start": "2006-01-03"
+    },
+    "ROL": {
+      "end": "2018-12-31",
+      "file": "ROL.parquet",
+      "rows": 3271,
+      "sha256": "f9fe3de679eed28d8066e887c0196b17dc1290ed2a9ffee18b23bfa7a1645b23",
+      "start": "2006-01-03"
+    },
+    "ROP": {
+      "end": "2018-12-31",
+      "file": "ROP.parquet",
+      "rows": 3271,
+      "sha256": "7c4fc0a8c7096fae8eda546d89f259aaae7a1c2f76c6ea52dcb1e85da8fd30b8",
+      "start": "2006-01-03"
+    },
+    "ROST": {
+      "end": "2018-12-31",
+      "file": "ROST.parquet",
+      "rows": 3271,
+      "sha256": "82c420bc0ada8db1c1d025864858d8a20996c964cd17d438bb1296300666cd25",
+      "start": "2006-01-03"
+    },
+    "RRC": {
+      "end": "2018-12-31",
+      "file": "RRC.parquet",
+      "rows": 3271,
+      "sha256": "60e64b5a96a0b50ef55f9070f4750bb258d0109ff8b91d15a331f0feff55a96b",
+      "start": "2006-01-03"
+    },
+    "RRD": {
+      "end": "2018-03-27",
+      "file": "RRD.parquet",
+      "rows": 8252,
+      "sha256": "378e2b2a22f0bbd7964f7bc5985135f7f531ddf5430cd16e8b3c8a24174a9a01",
+      "start": "1985-07-01"
+    },
+    "RSG": {
+      "end": "2018-12-31",
+      "file": "RSG.parquet",
+      "rows": 3271,
+      "sha256": "15868c85f412b7b5c6c68c1d1a38a1c37585c4b2e76bc708909129b6eeff1c7f",
+      "start": "2006-01-03"
+    },
+    "RTN": {
+      "end": "2018-03-27",
+      "file": "RTN.parquet",
+      "rows": 9137,
+      "sha256": "057dad5cd9649ac88bf93a0a10fce236a9d246dc2332f7737ce9bbb6db6381d3",
+      "start": "1981-12-31"
+    },
+    "S": {
+      "end": "2018-03-27",
+      "file": "S.parquet",
+      "rows": 8413,
+      "sha256": "4fc72deff813ad210175bbe8a047dae39c635445565a090ddf397516cd5b7098",
+      "start": "1984-11-08"
+    },
+    "SANM": {
+      "end": "2018-12-31",
+      "file": "SANM.parquet",
+      "rows": 3271,
+      "sha256": "0f19fe2df179b54dd84fa24402f5d491ecaf382b866aba7b922c1a52a75f2fca",
+      "start": "2006-01-03"
+    },
+    "SBAC": {
+      "end": "2018-12-31",
+      "file": "SBAC.parquet",
+      "rows": 3271,
+      "sha256": "65a2eb0e8108a9fa475525cdd5fb5be65b8db44ca084f05b6e0d59bb70aadd7b",
+      "start": "2006-01-03"
+    },
+    "SBUX": {
+      "end": "2018-12-31",
+      "file": "SBUX.parquet",
+      "rows": 3271,
+      "sha256": "da70ea742eafcb11e5096d79c8e56b996e953c37199f2227f25366ae08043f12",
+      "start": "2006-01-03"
+    },
+    "SCG": {
+      "end": "2018-03-27",
+      "file": "SCG.parquet",
+      "rows": 7621,
+      "sha256": "89bd6a68f4cf491056aeb078ae333d3a79960545fe4ef17bbf5a3b6caa888687",
+      "start": "1987-12-30"
+    },
+    "SCHW": {
+      "end": "2018-12-31",
+      "file": "SCHW.parquet",
+      "rows": 3271,
+      "sha256": "36c3f38fc9dffe6e73150b502e0952beb87a947c5721cb2cb08eb0428245e507",
+      "start": "2006-01-03"
+    },
+    "SE": {
+      "end": "2018-03-07",
+      "file": "SE.parquet",
+      "rows": 2560,
+      "sha256": "ce32582cd3a1136eb3835380fa0e450b6f2c8d8e2dc13c7b0353180d21dfd2a6",
+      "start": "2007-01-03"
+    },
+    "SEE": {
+      "end": "2018-03-27",
+      "file": "SEE.parquet",
+      "rows": 7621,
+      "sha256": "ca2993059a0f769955feed17dcbd71d93de4663bb5308cad1fc9d9f4955c379b",
+      "start": "1987-12-30"
+    },
+    "SHLD": {
+      "end": "2018-03-27",
+      "file": "SHLD.parquet",
+      "rows": 3752,
+      "sha256": "793578e33723f09d4f3c3845bf4b0bbd05d912cbbe59e6ca00095227cce76251",
+      "start": "2003-05-01"
+    },
+    "SHW": {
+      "end": "2018-12-31",
+      "file": "SHW.parquet",
+      "rows": 3271,
+      "sha256": "42125b41fb7661b3e34beac49b7bc62b995f32b18e032fbabac27f4c7f886ef8",
+      "start": "2006-01-03"
+    },
+    "SIAL": {
+      "end": "2015-11-18",
+      "file": "SIAL.parquet",
+      "rows": 6466,
+      "sha256": "3cd2cf7afb92c03ca55d0b9cf73530aec1032dc54b0531c9059bd1fb6ec36d05",
+      "start": "1990-03-26"
+    },
+    "SIG": {
+      "end": "2018-12-31",
+      "file": "SIG.parquet",
+      "rows": 3271,
+      "sha256": "3554035ea213416328eefecfed65b1a3264d176052786564c4d111556a6e4d08",
+      "start": "2006-01-03"
+    },
+    "SII": {
+      "end": "2018-12-31",
+      "file": "SII.parquet",
+      "rows": 2231,
+      "sha256": "2bed2877d26d80623f8f9d10c0cbb284ad5b1d643437d73bff87af8af3e4637e",
+      "start": "2010-02-22"
+    },
+    "SIVB": {
+      "end": "2018-03-27",
+      "file": "SIVB.parquet",
+      "rows": 7056,
+      "sha256": "79c0310acb5a5055492d63596b828333605621490f15d96bea2cbcbcf4545a0b",
+      "start": "1990-03-26"
+    },
+    "SJM": {
+      "end": "2018-12-31",
+      "file": "SJM.parquet",
+      "rows": 3271,
+      "sha256": "1ed916fd800012965623a10d0e0ce6d1bc5a2fd81af97f3e50b88ea875683ef7",
+      "start": "2006-01-03"
+    },
+    "SLB": {
+      "end": "2018-12-31",
+      "file": "SLB.parquet",
+      "rows": 3271,
+      "sha256": "b03d834da3c22bf58893d3b4a6d2653969aea866804ee3db674393d23c623abd",
+      "start": "2006-01-03"
+    },
+    "SLG": {
+      "end": "2018-12-31",
+      "file": "SLG.parquet",
+      "rows": 3271,
+      "sha256": "2b85115cb9bc868059b420993725bee9d03923f4dbb7b9f2f8084d6eef02e50f",
+      "start": "2006-01-03"
+    },
+    "SLM": {
+      "end": "2018-12-31",
+      "file": "SLM.parquet",
+      "rows": 3271,
+      "sha256": "f0b9e3fab2174dbc2d61c57cc2f7e1026ddd687e3b0678c1c162929026832a5e",
+      "start": "2006-01-03"
+    },
+    "SNA": {
+      "end": "2018-12-31",
+      "file": "SNA.parquet",
+      "rows": 3271,
+      "sha256": "ab5c623f7991854278b11b9544a52616a95ab178c61a082831d633f85700b495",
+      "start": "2006-01-03"
+    },
+    "SNDK": {
+      "end": "2016-05-11",
+      "file": "SNDK.parquet",
+      "rows": 5162,
+      "sha256": "9dcbbd829ba15456b3d281468eebaf16c24d6b3b5570e258cc696d360e208d5f",
+      "start": "1995-11-08"
+    },
+    "SNI": {
+      "end": "2018-03-06",
+      "file": "SNI.parquet",
+      "rows": 2449,
+      "sha256": "d4886746b5fdf3935f753f3a07bc2fcb82ff67b2eccac0265f2fde65fbaa6965",
+      "start": "2008-06-12"
+    },
+    "SNPS": {
+      "end": "2018-12-31",
+      "file": "SNPS.parquet",
+      "rows": 3271,
+      "sha256": "17f2cc4021103cc520097a0b6fce7b9e3f141aeb63416f0ccca5181e27727fd6",
+      "start": "2006-01-03"
+    },
+    "SNV": {
+      "end": "2018-03-27",
+      "file": "SNV.parquet",
+      "rows": 7106,
+      "sha256": "3a1b92737d55e0eed812f02f024eb17f14db361391ade39a5d6679e2545d74d5",
+      "start": "1990-01-12"
+    },
+    "SO": {
+      "end": "2018-12-31",
+      "file": "SO.parquet",
+      "rows": 3271,
+      "sha256": "37792c8a76f53653b90f5999bf1a717947231ec331c4d044dfd24e77f36a5a8b",
+      "start": "2006-01-03"
+    },
+    "SPG": {
+      "end": "2018-12-31",
+      "file": "SPG.parquet",
+      "rows": 3271,
+      "sha256": "bad7c7684c41ecf985d1584ece74031436963f87f3716187daed40d10a252a5d",
+      "start": "2006-01-03"
+    },
+    "SPGI": {
+      "end": "2018-12-31",
+      "file": "SPGI.parquet",
+      "rows": 3271,
+      "sha256": "8163768fa686c890aa8175baf563da899786fb87d218aa95c897cd168efb86d0",
+      "start": "2006-01-03"
+    },
+    "SPLS": {
+      "end": "2017-09-12",
+      "file": "SPLS.parquet",
+      "rows": 6922,
+      "sha256": "d9bf7cfb06f65ff7428a1213da97e828829e1bb5f013aa8375f75e70c23a471b",
+      "start": "1990-03-26"
+    },
+    "SRCL": {
+      "end": "2018-03-27",
+      "file": "SRCL.parquet",
+      "rows": 5433,
+      "sha256": "45c54792439d8f849489c16e6f211792a3f2725a09c5079ed76823d04e40d654",
+      "start": "1996-08-23"
+    },
+    "SRE": {
+      "end": "2018-12-31",
+      "file": "SRE.parquet",
+      "rows": 3271,
+      "sha256": "5c8d94b942f260e7f6df3898a99d3505412da3c1e836c25e2956f71a5a2fdb03",
+      "start": "2006-01-03"
+    },
+    "SSP": {
+      "end": "2018-12-31",
+      "file": "SSP.parquet",
+      "rows": 3271,
+      "sha256": "d55525a657643433c5c9a6dadacb696f432d9b154b09c31d697b564985dff539",
+      "start": "2006-01-03"
+    },
+    "STI": {
+      "end": "2018-03-27",
+      "file": "STI.parquet",
+      "rows": 7621,
+      "sha256": "2593b22e90a52e64dc96d2d65cef416e671deb997530a5c04dcbce86595c1b3e",
+      "start": "1987-12-30"
+    },
+    "STJ": {
+      "end": "2017-01-04",
+      "file": "STJ.parquet",
+      "rows": 6823,
+      "sha256": "605be26a3d94e2d68607310ec482ce39d5c1fb9078fb9d3a93ee0029a47c8a6f",
+      "start": "1989-12-07"
+    },
+    "STR": {
+      "end": "2016-09-16",
+      "file": "STR.parquet",
+      "rows": 7240,
+      "sha256": "afe9df7befe4fa82f6ee2f87fcd7fead777f553880d081c3db1c87117842ef28",
+      "start": "1987-12-29"
+    },
+    "STT": {
+      "end": "2018-12-31",
+      "file": "STT.parquet",
+      "rows": 3271,
+      "sha256": "e28ed1bbcfe03779dfdcd268614b9d8d1701289aa1f900ab5ff4b7ea73200744",
+      "start": "2006-01-03"
+    },
+    "STX": {
+      "end": "2018-12-31",
+      "file": "STX.parquet",
+      "rows": 3271,
+      "sha256": "73e19aac3beb95cf3a81a27166b8ec3dcf077ca0c29e290005ddde1d2248a5ff",
+      "start": "2006-01-03"
+    },
+    "STZ": {
+      "end": "2018-12-31",
+      "file": "STZ.parquet",
+      "rows": 3271,
+      "sha256": "2def6b09c385f23c6893ca385aca9d6f7c3b8276a7e3a5ac62ac9ecb9d732ed0",
+      "start": "2006-01-03"
+    },
+    "SUN": {
+      "end": "2018-03-27",
+      "file": "SUN.parquet",
+      "rows": 1386,
+      "sha256": "3a4592a14174846fb0a7cfe10f87ea98685d94988db91f79b238fae9440a94d3",
+      "start": "2012-09-20"
+    },
+    "SUNEQ": {
+      "end": "2016-04-21",
+      "file": "SUNEQ.parquet",
+      "rows": 5231,
+      "sha256": "5358d717a97836221fcb1663ba02c3dce99aab7fee97669c4ae5e5c6616865e5",
+      "start": "1995-07-13"
+    },
+    "SVU": {
+      "end": "2018-03-27",
+      "file": "SVU.parquet",
+      "rows": 8252,
+      "sha256": "ba7c61c06699895d447ec1a4ed13947b4460e321ff0ee5d8dd25e1b9613e5ab7",
+      "start": "1985-07-01"
+    },
+    "SWK": {
+      "end": "2018-12-31",
+      "file": "SWK.parquet",
+      "rows": 3271,
+      "sha256": "2cb80f022822ec4ed071c78b07e3c54101a1d1049827d588fe50ddf973cc7bcd",
+      "start": "2006-01-03"
+    },
+    "SWKS": {
+      "end": "2018-12-31",
+      "file": "SWKS.parquet",
+      "rows": 3271,
+      "sha256": "22af46403b0909f5d5ab5261fb0e7302a7d1eb819c8fc6a9e473ade118112a40",
+      "start": "2006-01-03"
+    },
+    "SWN": {
+      "end": "2018-03-07",
+      "file": "SWN.parquet",
+      "rows": 7395,
+      "sha256": "e0db64a874703c3f2b2b143c34ba50cee0ece385c1518e0a83d45dbbf4c1b68f",
+      "start": "1987-12-30"
+    },
+    "SWY": {
+      "end": "2015-01-29",
+      "file": "SWY.parquet",
+      "rows": 6240,
+      "sha256": "847e6c4c50f918a8974a13a59a8fcbf1cd87efabf24818268d7145dfe61e41f0",
+      "start": "1990-04-26"
+    },
+    "SYF": {
+      "end": "2018-12-31",
+      "file": "SYF.parquet",
+      "rows": 1113,
+      "sha256": "fa4af7cd966025597c8bea1361577bf57527049f79c7b635d8576deca0bac7d2",
+      "start": "2014-07-31"
+    },
+    "SYK": {
+      "end": "2018-12-31",
+      "file": "SYK.parquet",
+      "rows": 3271,
+      "sha256": "d2644645bab76e5de7d796e498f7d1d57713e5d7511d5016528787515ee0d36d",
+      "start": "2006-01-03"
+    },
+    "SYMC": {
+      "end": "2018-03-27",
+      "file": "SYMC.parquet",
+      "rows": 7056,
+      "sha256": "cc1a8de0cf0c00c4cb9d04c5879d70f471ca15df777f2e702db8bcd031ab7bd6",
+      "start": "1990-03-26"
+    },
+    "SYY": {
+      "end": "2018-12-31",
+      "file": "SYY.parquet",
+      "rows": 3271,
+      "sha256": "5495b39bb84f77f6347e87f1554281d6d97821c6f9a481e8eaa107121370a907",
+      "start": "2006-01-03"
+    },
+    "T": {
+      "end": "2018-12-31",
+      "file": "T.parquet",
+      "rows": 3271,
+      "sha256": "627f014243919cc091a7b45285e3b96252025fc45a9cfc47c46efe9f85eadb98",
+      "start": "2006-01-03"
+    },
+    "TAP": {
+      "end": "2018-12-31",
+      "file": "TAP.parquet",
+      "rows": 3271,
+      "sha256": "e2952efc8eb2e97a611fd648be0cbd7a79d8a15352cae4d0d1c015fb9a56de07",
+      "start": "2006-01-03"
+    },
+    "TDC": {
+      "end": "2018-12-31",
+      "file": "TDC.parquet",
+      "rows": 2833,
+      "sha256": "03bec6ff1f89a56aaa927cffd979ecd9b352a482e091d80d017b8a263e452ea3",
+      "start": "2007-10-01"
+    },
+    "TDG": {
+      "end": "2018-12-31",
+      "file": "TDG.parquet",
+      "rows": 3222,
+      "sha256": "e88a65386e96d0da7b7aad56f7e06ffe8bc766310b62538ee2a401f27e139686",
+      "start": "2006-03-15"
+    },
+    "TE": {
+      "end": "2016-06-30",
+      "file": "TE.parquet",
+      "rows": 7985,
+      "sha256": "f4aff2ed27070c32217d29ea3b7934f7dffd91332d1c33c9bae67c036bbc1809",
+      "start": "1984-10-29"
+    },
+    "TEG": {
+      "end": "2015-06-29",
+      "file": "TEG.parquet",
+      "rows": 6928,
+      "sha256": "4926a5b26c768587aaec4db3c8c903c8899551dac11594e7e22d145f58431383",
+      "start": "1988-01-05"
+    },
+    "TEL": {
+      "end": "2018-12-31",
+      "file": "TEL.parquet",
+      "rows": 2908,
+      "sha256": "6ae81a753c3349d5399418fd829dad9c54fec2f60ab1e2b1ff581a70c0dd3cd3",
+      "start": "2007-06-14"
+    },
+    "TER": {
+      "end": "2018-12-31",
+      "file": "TER.parquet",
+      "rows": 3271,
+      "sha256": "121b744f953fea94ff86d12a846a38410b921ed5adcb2aade01a9cb413ca2c19",
+      "start": "2006-01-03"
+    },
+    "TEX": {
+      "end": "2018-12-31",
+      "file": "TEX.parquet",
+      "rows": 3271,
+      "sha256": "b705efa5992d09d708b3429e3ddbfbec4c466d0ade9f182f65cec55ee8cbd751",
+      "start": "2006-01-03"
+    },
+    "TGNA": {
+      "end": "2018-03-07",
+      "file": "TGNA.parquet",
+      "rows": 8052,
+      "sha256": "30ab3d3c4bebfd3d562088a42b142a098bd1bcbf84ebd4c686bfc409372afe63",
+      "start": "1985-07-01"
+    },
+    "TGT": {
+      "end": "2018-12-31",
+      "file": "TGT.parquet",
+      "rows": 3271,
+      "sha256": "fe387337bc262b77c5e28fe2552572ba1362a751bacae6be460e843accd3a161",
+      "start": "2006-01-03"
+    },
+    "THC": {
+      "end": "2018-12-31",
+      "file": "THC.parquet",
+      "rows": 3271,
+      "sha256": "30423541226a210bc7410569e83c8f1a22de0abc46d16e054e7ce320552adcf3",
+      "start": "2006-01-03"
+    },
+    "TIF": {
+      "end": "2018-03-27",
+      "file": "TIF.parquet",
+      "rows": 7621,
+      "sha256": "8731c098e47fccc675be7f3b14baedcc120903b1d742808e16046aaf44801905",
+      "start": "1987-12-30"
+    },
+    "TJX": {
+      "end": "2018-12-31",
+      "file": "TJX.parquet",
+      "rows": 3271,
+      "sha256": "feae024b8598c8435b7177b11bfed3ceb34fc0f00501fe316d5b2afc04f4da18",
+      "start": "2006-01-03"
+    },
+    "TMK": {
+      "end": "2018-03-27",
+      "file": "TMK.parquet",
+      "rows": 7621,
+      "sha256": "97e1d779a67950d79ccdcafadf0f8f79ae9eac1598e10e66c0099509bb1f95e3",
+      "start": "1987-12-30"
+    },
+    "TMO": {
+      "end": "2018-12-31",
+      "file": "TMO.parquet",
+      "rows": 3271,
+      "sha256": "472cd7dd7a88113d358e5180138417c341cd62307bb42162414db6ad7c7874c3",
+      "start": "2006-01-03"
+    },
+    "TMUS": {
+      "end": "2018-12-31",
+      "file": "TMUS.parquet",
+      "rows": 2947,
+      "sha256": "f99b982c905d85af7359aea0229c1f9b2be03a021e61efe05f7d961c7c050124",
+      "start": "2007-04-19"
+    },
+    "TPR": {
+      "end": "2018-12-31",
+      "file": "TPR.parquet",
+      "rows": 3271,
+      "sha256": "b0069ca1c7338c4357f11381d6ebf91d63769f70916dbb9d33197367c3b78fb5",
+      "start": "2006-01-03"
+    },
+    "TRIP": {
+      "end": "2018-12-31",
+      "file": "TRIP.parquet",
+      "rows": 1777,
+      "sha256": "de4037775236c92c478cbf773160bfcac36cbc2c7336547931965c7a2de09fb4",
+      "start": "2011-12-07"
+    },
+    "TROW": {
+      "end": "2018-12-31",
+      "file": "TROW.parquet",
+      "rows": 3271,
+      "sha256": "f8a12cb256e10339ba90e5f2ad371e2fc6b515c0075ce722a4a0c93ba8c071ac",
+      "start": "2006-01-03"
+    },
+    "TRV": {
+      "end": "2018-12-31",
+      "file": "TRV.parquet",
+      "rows": 3271,
+      "sha256": "031a215d2a72e85bca6587a22fb1f52a5fccd07df2cf7c70019bc4822079f333",
+      "start": "2006-01-03"
+    },
+    "TSCO": {
+      "end": "2018-12-31",
+      "file": "TSCO.parquet",
+      "rows": 3271,
+      "sha256": "7f7eed6a0f7ce3b67cc1580eca3789ebf0fc4413bbe6f1933d1c2a38ed376198",
+      "start": "2006-01-03"
+    },
+    "TSN": {
+      "end": "2018-12-31",
+      "file": "TSN.parquet",
+      "rows": 3271,
+      "sha256": "9047fbfc29352d11d3a3d82c677ad81c365155e0136a4cc67ef644ae4749e6fd",
+      "start": "2006-01-03"
+    },
+    "TSS": {
+      "end": "2018-03-27",
+      "file": "TSS.parquet",
+      "rows": 7241,
+      "sha256": "db68978eebf6a4fb3b899a3f306f55df50b44ad8a6a2a0d3fe734e3f45abd01f",
+      "start": "1989-06-30"
+    },
+    "TT": {
+      "end": "2018-12-31",
+      "file": "TT.parquet",
+      "rows": 3271,
+      "sha256": "f7c8f7f5b2cc25aedbe4a9f40816fd0d7e09d1fab61da1e37b865bd2a84f0fe4",
+      "start": "2006-01-03"
+    },
+    "TTWO": {
+      "end": "2018-12-31",
+      "file": "TTWO.parquet",
+      "rows": 3271,
+      "sha256": "d587247040debbc0568ae403ec42d8cb18a55b0e38fd197725eade108702e376",
+      "start": "2006-01-03"
+    },
+    "TWC": {
+      "end": "2016-05-17",
+      "file": "TWC.parquet",
+      "rows": 2355,
+      "sha256": "32b60fedd0b36215753341fac6fda5e417ea1928c7aae4349b72e383cb4f3675",
+      "start": "2007-01-10"
+    },
+    "TWTR": {
+      "end": "2018-03-27",
+      "file": "TWTR.parquet",
+      "rows": 1102,
+      "sha256": "5a4d6484658c4b80f2a958e0a29c8a110fce0d45242dbf4909ae7c18b2db309d",
+      "start": "2013-11-07"
+    },
+    "TWX": {
+      "end": "2018-03-27",
+      "file": "TWX.parquet",
+      "rows": 6554,
+      "sha256": "2a1ce99885f26f200bd7be374b824035b0c50027f18b4d0bbe80ea5337c21e01",
+      "start": "1992-03-19"
+    },
+    "TXN": {
+      "end": "2018-12-31",
+      "file": "TXN.parquet",
+      "rows": 3271,
+      "sha256": "9ebb64cb099e95699dbd87ce7449116f5febae266a43dfae86cb00fa58d49440",
+      "start": "2006-01-03"
+    },
+    "TXT": {
+      "end": "2018-12-31",
+      "file": "TXT.parquet",
+      "rows": 3271,
+      "sha256": "5585e301616c64f3fccac0db541965c2cfd2792ac860f47cf4e6010aa808421b",
+      "start": "2006-01-03"
+    },
+    "UA": {
+      "end": "2018-12-31",
+      "file": "UA.parquet",
+      "rows": 699,
+      "sha256": "c867b3b3c085d935c54f9107a72ae6d6d6cc0d2b38f20d41a75d36f00f5d1cda",
+      "start": "2016-03-23"
+    },
+    "UAA": {
+      "end": "2018-12-31",
+      "file": "UAA.parquet",
+      "rows": 3271,
+      "sha256": "d1611d8a20f9587edaa614672eb15b462e92c8b06523bdb3f895baee265c5048",
+      "start": "2006-01-03"
+    },
+    "UAL": {
+      "end": "2018-12-31",
+      "file": "UAL.parquet",
+      "rows": 3248,
+      "sha256": "22622091f9a0c1d2b027f1f76fa259915d08becd459f3f16134767957ee8a8f7",
+      "start": "2006-02-06"
+    },
+    "UDR": {
+      "end": "2018-12-31",
+      "file": "UDR.parquet",
+      "rows": 3271,
+      "sha256": "1a91046638ab1729c2bfcbf5815b618f13bc406cf9268643cd9b8ea302dff2b4",
+      "start": "2006-01-03"
+    },
+    "UHS": {
+      "end": "2018-12-31",
+      "file": "UHS.parquet",
+      "rows": 3271,
+      "sha256": "bd9ce976304af1bacb1fd5b2efa6f0365b8915a29b6ec5065fb626f7e6649fb3",
+      "start": "2006-01-03"
+    },
+    "UIS": {
+      "end": "2018-12-31",
+      "file": "UIS.parquet",
+      "rows": 3271,
+      "sha256": "3795fecc721da64af34142488ead80f3572283c03c67e153c1b12bb029a707d0",
+      "start": "2006-01-03"
+    },
+    "ULTA": {
+      "end": "2018-12-31",
+      "file": "ULTA.parquet",
+      "rows": 2815,
+      "sha256": "80f69beeb00c88807b5226b26d034ec5377ac2f60966f1682a983125cb965c1c",
+      "start": "2007-10-25"
+    },
+    "UNH": {
+      "end": "2018-12-31",
+      "file": "UNH.parquet",
+      "rows": 3271,
+      "sha256": "74ef6b09bce09190a8d62ce0b6abe72a7f04ff7665616ada0d03d50c0026b9f5",
+      "start": "2006-01-03"
+    },
+    "UNM": {
+      "end": "2018-12-31",
+      "file": "UNM.parquet",
+      "rows": 3271,
+      "sha256": "92c8cb798951e8ba1d44c89baca6a8def1e0b85c60cb2f593d828a1136bb0cef",
+      "start": "2006-01-03"
+    },
+    "UNP": {
+      "end": "2018-12-31",
+      "file": "UNP.parquet",
+      "rows": 3271,
+      "sha256": "dfa019d9612cac933690de9cf30fb7ecccf514809f023b2b279b52d332ac9081",
+      "start": "2006-01-03"
+    },
+    "UPS": {
+      "end": "2018-12-31",
+      "file": "UPS.parquet",
+      "rows": 3271,
+      "sha256": "33a0cf03716a0661876a2e12a6fd0b4dcfb95a694639be965d21212960460be8",
+      "start": "2006-01-03"
+    },
+    "URBN": {
+      "end": "2018-12-31",
+      "file": "URBN.parquet",
+      "rows": 3271,
+      "sha256": "54e0bc7d86e748c5b4cae651896e13e1da8969659e932e2b44f4aa56f1d95773",
+      "start": "2006-01-03"
+    },
+    "URI": {
+      "end": "2018-12-31",
+      "file": "URI.parquet",
+      "rows": 3271,
+      "sha256": "a5f38955855364904abb3405d66052d3f2ed5baa5b2c975149f67585f3e35262",
+      "start": "2006-01-03"
+    },
+    "USB": {
+      "end": "2018-12-31",
+      "file": "USB.parquet",
+      "rows": 3271,
+      "sha256": "3465177a42294c9a1057819b322f8aecd2840087e2a102eec6b413eaac49b29e",
+      "start": "2006-01-03"
+    },
+    "UST": {
+      "end": "2018-12-31",
+      "file": "UST.parquet",
+      "rows": 2244,
+      "sha256": "4467a55a985af15f55082d97e81dd50f8821017260257dbd9094def415fc813d",
+      "start": "2010-02-02"
+    },
+    "UTX": {
+      "end": "2018-03-27",
+      "file": "UTX.parquet",
+      "rows": 12168,
+      "sha256": "dded06350487e0f0130179016179df0a43352886d65d2b43f88aaf3f83b516dc",
+      "start": "1970-01-02"
+    },
+    "V": {
+      "end": "2018-12-31",
+      "file": "V.parquet",
+      "rows": 2716,
+      "sha256": "d3837989cb0171345096e7c22459fb11e636d34ecf62472b0d70399ec41c44f7",
+      "start": "2008-03-19"
+    },
+    "VAR": {
+      "end": "2018-03-27",
+      "file": "VAR.parquet",
+      "rows": 7618,
+      "sha256": "16ace85ed592d3f9bd2d318cdb35378bec217ae1123ae670aa293b4d2f5eb16e",
+      "start": "1988-01-05"
+    },
+    "VFC": {
+      "end": "2018-12-31",
+      "file": "VFC.parquet",
+      "rows": 3271,
+      "sha256": "02a8c9770b4d70d500e2e105428c85156d88beabcec792ee954894ad3bba2ccd",
+      "start": "2006-01-03"
+    },
+    "VIAB": {
+      "end": "2018-03-27",
+      "file": "VIAB.parquet",
+      "rows": 3097,
+      "sha256": "394f3b9c4f364b56ea2eb8f66fa213a0932eb400f1c555101b1e916d4b7098bc",
+      "start": "2005-12-05"
+    },
+    "VIAV": {
+      "end": "2018-12-31",
+      "file": "VIAV.parquet",
+      "rows": 3271,
+      "sha256": "ca068ef65d274dcbf507b0dfeb3a49d136c8e8f97d0e1e5781b327044e322a40",
+      "start": "2006-01-03"
+    },
+    "VLO": {
+      "end": "2018-12-31",
+      "file": "VLO.parquet",
+      "rows": 3271,
+      "sha256": "d0b829d740bb62065fd539b7ec0c7ce35c8a3e4c29ce27c7ac416b4a99266282",
+      "start": "2006-01-03"
+    },
+    "VMC": {
+      "end": "2018-12-31",
+      "file": "VMC.parquet",
+      "rows": 3271,
+      "sha256": "932387845081d5e51765848cd2b003c6db46ae3f7b11e411f4137930fb9c716c",
+      "start": "2006-01-03"
+    },
+    "VNO": {
+      "end": "2018-12-31",
+      "file": "VNO.parquet",
+      "rows": 3271,
+      "sha256": "60698d57c48fa5fbc8cf0f4aa877c7f86645040467a4eb02bc4725c737b0f60f",
+      "start": "2006-01-03"
+    },
+    "VRSK": {
+      "end": "2018-12-31",
+      "file": "VRSK.parquet",
+      "rows": 2324,
+      "sha256": "28d86b1588a8aa8437fef464f3fff977b240a1e0f46fd70a4592e965d9056136",
+      "start": "2009-10-07"
+    },
+    "VRSN": {
+      "end": "2018-12-31",
+      "file": "VRSN.parquet",
+      "rows": 3271,
+      "sha256": "959edd88fd2be702727f08177e869a4b495d800cd1f692ad2f1ba9a67f5eca58",
+      "start": "2006-01-03"
+    },
+    "VRTX": {
+      "end": "2018-12-31",
+      "file": "VRTX.parquet",
+      "rows": 3271,
+      "sha256": "deacaf142c7350616e8ae8a7188431a68d6d84ab0b52b559774cbeea010fab91",
+      "start": "2006-01-03"
+    },
+    "VTR": {
+      "end": "2018-12-31",
+      "file": "VTR.parquet",
+      "rows": 3271,
+      "sha256": "8e161b7abbeb5df6d79e60520ffdb6b064df4386de4317f0678522ad91b53568",
+      "start": "2006-01-03"
+    },
+    "VZ": {
+      "end": "2018-12-31",
+      "file": "VZ.parquet",
+      "rows": 3271,
+      "sha256": "0948216e6fa6322cfca964061c3a6a1aef35b7be7b31593f01498598cd8ad218",
+      "start": "2006-01-03"
+    },
+    "WAT": {
+      "end": "2018-12-31",
+      "file": "WAT.parquet",
+      "rows": 3271,
+      "sha256": "82c9b486bd727c1577b0b0c8f5c96ceac459dcc5388261f7d14291c095ac01a4",
+      "start": "2006-01-03"
+    },
+    "WB": {
+      "end": "2018-12-31",
+      "file": "WB.parquet",
+      "rows": 1185,
+      "sha256": "c0aec5d05dd00cc200ff88f3166ee736aaabe2566ece6299e91ff600797ab349",
+      "start": "2014-04-17"
+    },
+    "WBA": {
+      "end": "2018-03-27",
+      "file": "WBA.parquet",
+      "rows": 8252,
+      "sha256": "46f7f8d333d7dca79f6ddfba6c26fe09562785cc82286998212e00d821c2d8c7",
+      "start": "1985-07-01"
+    },
+    "WCG": {
+      "end": "2018-03-27",
+      "file": "WCG.parquet",
+      "rows": 3458,
+      "sha256": "d61e688d673c8ec91bd3e9967c28267014f2160489b4576465aa58a13f2e8bed",
+      "start": "2004-07-01"
+    },
+    "WDC": {
+      "end": "2018-12-31",
+      "file": "WDC.parquet",
+      "rows": 3271,
+      "sha256": "6efec1ad21db2802146fd7ea12f85722ac09ec00e21f3dd593abb4b286f94c88",
+      "start": "2006-01-03"
+    },
+    "WEC": {
+      "end": "2018-12-31",
+      "file": "WEC.parquet",
+      "rows": 3271,
+      "sha256": "66602b3b364e8a39a4af42a5fe3b24f4496b68de519120ef694128e19305eae4",
+      "start": "2006-01-03"
+    },
+    "WELL": {
+      "end": "2018-12-31",
+      "file": "WELL.parquet",
+      "rows": 3271,
+      "sha256": "1d64b416fe0b6dba131c344f865bba214f201b1f09850500242dc7d68acef057",
+      "start": "2006-01-03"
+    },
+    "WEN": {
+      "end": "2018-12-31",
+      "file": "WEN.parquet",
+      "rows": 3271,
+      "sha256": "06f335c7968169deff5344e39aa92e494fbef915b98e4b77aa57f31119483c5f",
+      "start": "2006-01-03"
+    },
+    "WFC": {
+      "end": "2018-12-31",
+      "file": "WFC.parquet",
+      "rows": 3271,
+      "sha256": "e61e4151220fcfa1a7c4b765fa8b657619e686ec78e753741c5283dbcb6619d8",
+      "start": "2006-01-03"
+    },
+    "WFM": {
+      "end": "2017-08-28",
+      "file": "WFM.parquet",
+      "rows": 6449,
+      "sha256": "96bbf571fb1d989c2b9ef260d933e060e63bd9abd071921290235ba8262fc423",
+      "start": "1992-01-23"
+    },
+    "WHR": {
+      "end": "2018-12-31",
+      "file": "WHR.parquet",
+      "rows": 3271,
+      "sha256": "bc7f2f0456780e384bf1d832ef4ed5e2e57d8a46a4af5f9f79c739114a983063",
+      "start": "2006-01-03"
+    },
+    "WIN": {
+      "end": "2018-03-07",
+      "file": "WIN.parquet",
+      "rows": 3078,
+      "sha256": "520ddc13d1eb57bfcf340b2cbbff1e6a16a91114eb610c8cb10ee3e7f7734db8",
+      "start": "2005-02-09"
+    },
+    "WLTW": {
+      "end": "2018-03-27",
+      "file": "WLTW.parquet",
+      "rows": 560,
+      "sha256": "4993bb1789f7964049ae228ba54f70f57e0293544e18bb92f0cf8f7a19a10e3d",
+      "start": "2016-01-05"
+    },
+    "WM": {
+      "end": "2018-12-31",
+      "file": "WM.parquet",
+      "rows": 3271,
+      "sha256": "ae9d744e78e179bce1f6a47303a17a258eb49597920de44a6aa92d3cbee4e8af",
+      "start": "2006-01-03"
+    },
+    "WMB": {
+      "end": "2018-12-31",
+      "file": "WMB.parquet",
+      "rows": 3271,
+      "sha256": "45b1da615dc4c24a8d723b5dbd678f2450521f7efc27a837f4123f0bb51e89d0",
+      "start": "2006-01-03"
+    },
+    "WMT": {
+      "end": "2018-12-31",
+      "file": "WMT.parquet",
+      "rows": 3271,
+      "sha256": "cd6b62412393fb143e662806b92be5c2b5cccca5ad8409ac04d13f418e05a916",
+      "start": "2006-01-03"
+    },
+    "WPX": {
+      "end": "2018-03-27",
+      "file": "WPX.parquet",
+      "rows": 1581,
+      "sha256": "799e80ba5577d679f9d6cfc5034bf4868d3e72465830d692cfe7dc72dad2f6b3",
+      "start": "2011-12-12"
+    },
+    "WRK": {
+      "end": "2018-03-27",
+      "file": "WRK.parquet",
+      "rows": 694,
+      "sha256": "3a981c564c2d4643d4e2a1a8fe0dc14fbfcbf9435c768701b72792b60022f1d9",
+      "start": "2015-06-24"
+    },
+    "WU": {
+      "end": "2018-12-31",
+      "file": "WU.parquet",
+      "rows": 3083,
+      "sha256": "327cbba75fb55bd340b633bd855f7c80489a72f7f6cf4969b2a91c958c5e5a3a",
+      "start": "2006-10-02"
+    },
+    "WY": {
+      "end": "2018-12-31",
+      "file": "WY.parquet",
+      "rows": 3271,
+      "sha256": "4d94932b2a4e300dc28a07b0a7dee5fb5df64f824009e5af079c9437326b3350",
+      "start": "2006-01-03"
+    },
+    "WYNN": {
+      "end": "2018-12-31",
+      "file": "WYNN.parquet",
+      "rows": 3271,
+      "sha256": "a64c29de4ce81a40ac0dec35701ee084562a51ba789a04e39201b48f821fafb7",
+      "start": "2006-01-03"
+    },
+    "X": {
+      "end": "2018-03-27",
+      "file": "X.parquet",
+      "rows": 6791,
+      "sha256": "2f795fd64f073e628671967e205c6b73ba8124aa2597aa15dafb1c2aeb69ab63",
+      "start": "1991-04-12"
+    },
+    "XEC": {
+      "end": "2018-03-27",
+      "file": "XEC.parquet",
+      "rows": 3902,
+      "sha256": "d6e3554115a3645d089b23bbe2b8ff2076079b78704f82f9d91a90a2533dee54",
+      "start": "2002-09-25"
+    },
+    "XEL": {
+      "end": "2018-12-31",
+      "file": "XEL.parquet",
+      "rows": 3271,
+      "sha256": "d27314f574963d6c739d4670ed0a9d63df86594750dd465831beddb01cf9e91e",
+      "start": "2006-01-03"
+    },
+    "XL": {
+      "end": "2018-03-27",
+      "file": "XL.parquet",
+      "rows": 6723,
+      "sha256": "3569bd5d98f77e81bb4b8dd8d6791866f42a814bb431cb5d8865ad3b8a409d04",
+      "start": "1991-07-19"
+    },
+    "XLNX": {
+      "end": "2018-03-27",
+      "file": "XLNX.parquet",
+      "rows": 6998,
+      "sha256": "1af1bc94d10ba7eb0f34cab2fc8117a57b79eec56e1b89b7e160c4f571b7cbd1",
+      "start": "1990-06-18"
+    },
+    "XOM": {
+      "end": "2018-12-31",
+      "file": "XOM.parquet",
+      "rows": 3271,
+      "sha256": "1892d55f146cad3023072d6374bcae56175b1f96053939a4e2e94db123aff503",
+      "start": "2006-01-03"
+    },
+    "XRAY": {
+      "end": "2018-12-31",
+      "file": "XRAY.parquet",
+      "rows": 3271,
+      "sha256": "510a5aa3f7538e91e9697385985479274aaca37157d31a5cf77697312f35a7f7",
+      "start": "2006-01-03"
+    },
+    "XRX": {
+      "end": "2018-12-31",
+      "file": "XRX.parquet",
+      "rows": 3271,
+      "sha256": "c638f2fc631b078e10e464262c07f821186210d0b7daa0c170d8df802ba24dae",
+      "start": "2006-01-03"
+    },
+    "XYL": {
+      "end": "2018-12-31",
+      "file": "XYL.parquet",
+      "rows": 1815,
+      "sha256": "8b8bb22fa31ff54ebfb6a826160d23c5bc2375b781e862d99123606dcd84b2fb",
+      "start": "2011-10-13"
+    },
+    "YUM": {
+      "end": "2018-12-31",
+      "file": "YUM.parquet",
+      "rows": 3271,
+      "sha256": "edfac330a9edde02f7fb33cd2dc62598ef382af1474d9a6d0d526fc41010fab7",
+      "start": "2006-01-03"
+    },
+    "ZBH": {
+      "end": "2018-12-31",
+      "file": "ZBH.parquet",
+      "rows": 3271,
+      "sha256": "e84eb179b9c74ec9a8e5bd91b71767f793f550b131e47540e57308076fe30b51",
+      "start": "2006-01-03"
+    },
+    "ZION": {
+      "end": "2018-12-31",
+      "file": "ZION.parquet",
+      "rows": 3271,
+      "sha256": "bc31bd5880da8294c9c02e6284d1312723613b3dc56f4eeec3a04b23464f054c",
+      "start": "2006-01-03"
+    },
+    "ZTS": {
+      "end": "2018-12-31",
+      "file": "ZTS.parquet",
+      "rows": 1489,
+      "sha256": "7f06c1b2d75c344035ae821db212f894711d3a71ac18a5276c94969a904124f5",
+      "start": "2013-02-01"
+    }
+  },
+  "timeframe": "1d",
+  "yfinance_version": "1.7.0"
+}
