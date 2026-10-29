@@ -304,8 +304,10 @@ termina cuando cierra su punto de control.
 3. El PM revisa cada entrega (protocolo abajo), comenta la línea `PM:` y, si decide merge, mergea el PR en la
    rama del lote. La Action `lote-automerge` puede hacer ese merge cuando la línea `PM:` dice `decido: merge`, el CI está verde y la base es `lote/*`; el pase lote → main sigue manual con la `R:` de Fede. Después lanza la siguiente corrida. Tope: 10 entregas por día. La tanda la arranca el aviso del
    cron (§3.5) o un pedido de Fede; el PM frena si la cuota del agente baja del 20% de la ventana de 5 horas.
-4. Cuando no quedan filas elegibles, el PM corre el punto de control sobre la rama del lote, completa el cuerpo
-   del PR del lote y lo marca listo para revisión. Desde ahí el gate espera.
+4. Cuando no quedan filas elegibles, el PM corre el punto de control sobre la rama del lote, **revisa el manual
+   (`docs/manual/`) contra lo que cambió el lote** (qué páginas hay que corregir o agregar; ver
+   [Manual review at lote close](AGENTS.md#manual-review-at-lote-close)), completa el cuerpo del PR del lote y
+   lo marca listo para revisión. Desde ahí el gate espera.
 5. Fede prueba el punto de control, comenta `R: lote-<nombre> vi: <...> decido: merge` y mergea a `main`.
 6. El PM abre el lote siguiente.
 
@@ -361,6 +363,7 @@ Decidir: <preguntas abiertas con recomendación, o "nada">
 
 Entregas: <ticket> · #<pr> · <una línea: qué cambió y qué comprobó el PM>
 Encontrado en revisión: <lo que el PM rechazó, pidió cambiar o descubrió>
+Manual: <páginas de docs/manual/ revisadas, cuáles se cambiaron o agregaron, o por qué no hacía falta>
 Qué NO se hizo: <lista corta>
 ```
 
