@@ -77,8 +77,11 @@ PRIORS_M5 = yaml.safe_load((Path(__file__).parents[2] / "catalogo" / "m5-priors.
 def _sector_score(peso_macro):
     def metrica(cierres):
         cierres = cierres[[a for a in PRIORS_M5["universo"] if a in cierres.columns]]
-        z_tema = z_temas(z_series_macro(PRIORS_M5, cierres.index), PRIORS_M5)
-        macro = macro_theme_score(z_tema, PRIORS_M5).reindex(columns=cierres.columns)
+        if peso_macro == 0:
+            macro = pd.DataFrame(0.0, index=cierres.index, columns=cierres.columns)
+        else:
+            z_tema = z_temas(z_series_macro(PRIORS_M5, cierres.index), PRIORS_M5)
+            macro = macro_theme_score(z_tema, PRIORS_M5).reindex(columns=cierres.columns)
         return sector_score(macro, price_momentum_score(cierres), peso_macro)
 
     return metrica
