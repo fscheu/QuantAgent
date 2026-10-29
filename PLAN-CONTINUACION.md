@@ -829,7 +829,13 @@ Los primeros 5 son los más fáciles de revisar.
 | I02b | `QuantAgent-1gw0.2.2` | `invalidar --aplicar` con backup; depende de I02a | Backup idéntico, mismo número/orden de filas; solo cambia estado seleccionado, incluso con encabezado viejo | probar | L31 |
 | I02c | `QuantAgent-1gw0.2.3` | Marca `epoca-limpia`; depende de I02b | JSON con desde_utc/motivo/creada_utc; CSV intacto | probar | L31 |
 | I02d | `QuantAgent-1gw0.2.4` | Época y conteos en informe; depende de I02c | Fixture muestra época y válidos/invalidados; sin marca/estado sigue funcionando | probar | L31 |
-| MAN-01 | `QuantAgent-dpr3.1` | Borrar Streamlit y el manual viejo: `apps/streamlit/`, `docs/user-manual/`, sus tests, contenedor QA, chequeo del puerto 8501 en `main-ci-deploy.yml`, dependencia en `pyproject.toml` | `grep -ri streamlit` sin resultados fuera de docs históricos; CI verde | probar | L32 |
+| MAN-01a | `QuantAgent-dpr3.1.1` | Borrar vista Streamlit del manual y su prueba específica | Ambos archivos no existen | probar | L32 |
+| MAN-01b | `QuantAgent-dpr3.1.2` | Borrar vistas Streamlit restantes | No existe `apps/streamlit/views/` | probar | L32 |
+| MAN-01c | `QuantAgent-dpr3.1.3` | Borrar entrada, servicios, utilidades y pruebas específicas restantes | No existe `apps/streamlit/` ni quedan imports/tests específicos | probar | L32 |
+| MAN-01d | `QuantAgent-dpr3.1.4` | Quitar Dockerfile QA, compose, healthcheck/puerto CI, dependencia y lockfile | No quedan configuración ni dependencia activas para Streamlit | probar | L32 |
+| MAN-01e | `QuantAgent-dpr3.1.5` | Quitar refs vigentes de README, docs/README e inventario de ramas | Esos tres docs no mencionan Streamlit ni sus rutas/puerto | leer | L32 |
+| MAN-01f | `QuantAgent-dpr3.1.6` | Borrar las nueve páginas de `docs/user-manual/` | No existe `docs/user-manual/` | leer | L32 |
+| MAN-01g | `QuantAgent-dpr3.1.7` | Verificar aceptación final, suite e inventario de excepciones históricas | Escaneo limpio fuera de históricos, suite sin tests Streamlit borrados pasa y CI verde | probar | L32 |
 | MAN-02 | `QuantAgent-dpr3.2` | Ayuda de la CLI en inglés: todos los `help=` y `epilog` de `quantagent/cli/` | Test: cada comando, grupo y opción tiene `help` no vacío; ningún `help` contiene á é í ó ú ñ ¿ | probar | L32 |
 | MAN-03 | `QuantAgent-dpr3.3` | Generador de la referencia de comandos desde `click` a `docs/manual/reference/cli/*.md` (depende de MAN-02) | Test: regenerar no produce diferencias con lo comiteado | probar | L32 |
 | MAN-04 | `QuantAgent-dpr3.4` | Reglas de `AGENTS.md` sobre comandos y decisiones; el contrato de lote las cita | Las dos reglas están en `AGENTS.md` y el contrato de lote las cita | leer | L32 |
