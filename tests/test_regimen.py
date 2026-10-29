@@ -1,11 +1,17 @@
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
+import yaml
+
 from quantagent.fabrica.regimen import (
     clasificar_regimen,
     filtro_caida,
+    macro_theme_score,
     permutar_regimenes_bloques,
     price_momentum_score,
     sharpe_por_regimen,
+    z_temas,
 )
 
 
@@ -125,3 +131,30 @@ def test_falta_historia_retorna_nan_o_false():
     assert filtro["A"].dtype == bool
 
 
+
+
+def test_macro_theme_score_calculado_a_mano():
+    priors = {
+        "universo": ["X", "Y", "Z"],
+        "temas": {
+            "a": {"series": [{"serie": "s1"}, {"serie": "s2", "invertir": True}],
+                  "signos": {"positivo": {"activos": ["X"]}, "negativo": {"activos": ["Y"]}}},
+            "b": {"series": [{"serie": "s3"}], "signos": {"positivo": {"activos": ["X"]}}},
+        },
+    }
+    z_series = pd.DataFrame({"s1": [1.0, 1.0], "s2": [0.5, 0.5], "s3": [2.0, np.nan]},
+                            index=pd.to_datetime(["2020-01-03", "2020-01-10"]))
+    score = macro_theme_score(z_temas(z_series, priors), priors)
+    # fila 1: z_a = (1 - 0,5) / 2 = 0,25; z_b = 2 -> X = (0,25 + 2) / 2, Y = -0,25, Z sin signos = 0
+    assert score.iloc[0].tolist() == [1.125, -0.25, 0.0]
+    # fila 2: b sin dato no cuenta en el denominador de X
+    assert score.iloc[1].tolist() == [0.25, -0.25, 0.0]
+
+
+def test_priors_m5_versionados_completos():
+    priors = yaml.safe_load((Path(__file__).parents[1] / "catalogo" / "m5-priors.yaml").read_text(encoding="utf-8"))
+    assert "ARGT" not in priors["universo"]
+    for tema, d in priors["temas"].items():
+        for celda in d["signos"].values():
+            assert set(celda["activos"]) <= set(priors["universo"]), tema
+            assert celda["fuentes"] and all(f["cita"] and f["link"] for f in celda["fuentes"]), tema
