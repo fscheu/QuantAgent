@@ -119,3 +119,28 @@ def evaluate_position_exit(
 
     should_exit, reason = should_exit_at_close(position, float(close), trailing_stop)
     return (reason, float(close)) if should_exit else None
+
+
+def check_stop_entry(
+    entry_price: Optional[float],
+    candle: Any,
+) -> Optional[float]:
+    """Evaluate whether a buy stop order is filled intrabar.
+
+    Pure function: returns fill_price if filled (high >= entry_price), else None.
+    Execution price is max(open, entry_price).
+    """
+    if entry_price is None:
+        return None
+    open_val = _get_field(candle, "open")
+    high_val = _get_field(candle, "high")
+    if open_val is None or high_val is None:
+        return None
+
+    open_price = float(open_val)
+    high_price = float(high_val)
+    stop_price = float(entry_price)
+
+    if high_price >= stop_price:
+        return max(open_price, stop_price)
+    return None
