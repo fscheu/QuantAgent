@@ -106,6 +106,24 @@ class Order(Base):
     )
 
 
+class TradeIntentRecord(Base):
+    """Persisted per-trade strategy intent and its execution decision."""
+
+    __tablename__ = "trade_intents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    bucket_id = Column(String(100), nullable=False, index=True)
+    strategy_id = Column(String(100), nullable=False, index=True)
+    symbol = Column(String(20), nullable=False, index=True)
+    intent = Column(JSON, nullable=False)
+    status = Column(String(50), nullable=False, index=True)
+    reject_reason = Column(String(100), nullable=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=True)
+    reasoning_metadata = Column(JSON, nullable=False, default=dict)
+
+
 class Fill(Base):
     """Fill model for partial/full order executions."""
 
