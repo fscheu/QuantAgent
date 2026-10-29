@@ -324,6 +324,9 @@ es señal de que los tickets están mal definidos, no de que falte velocidad.
 5. Decidir y comentar la línea `PM:`. En `vi:` va el dato de la comprobación propia del paso 4.
 6. Al cerrar la revisión, agregar la línea a `docs/loop/REVIEW-LOG.md` en la rama del lote (§5.4).
 
+Para cambios de CLI, aplicar también la regla [CLI commands and the user manual](AGENTS.md#cli-commands-and-the-user-manual): help y epilog generan la referencia; regenerarla y pasar el test de cobertura.
+Para decisiones de Fede, aplicar también [Decisions and criteria](AGENTS.md#decisions-and-criteria): sumar la decisión al índice del manual y actualizar criterios cuando cambie un número.
+
 **Revisor mecánico (Codex), desde el 2026-10-11.** Para no gastar el cupo del PM en correr comandos, los pasos 3
 y 4 los puede hacer Codex con `scripts/loop/codex_review.sh` (instalación en `docs/loop/SETUP-HERMES.md`). Codex
 deja un comentario `CODEX:` con las salidas reales y una sugerencia; no decide ni escribe la línea `PM:`. El PM
