@@ -6,7 +6,7 @@ from decimal import Decimal
 import pytest
 
 from quantagent.backtesting.backtest import _is_candle_after_entry
-from quantagent.backtesting.intrabar_stops import check_intrabar_stops
+from quantagent.backtesting.intrabar_stops import check_intrabar_stops, check_stop_entry
 from quantagent.models import OrderSide
 
 
@@ -108,3 +108,28 @@ def test_cli_intrabar_stops_options():
     res = runner.invoke(backtest_group, ["run", "--help"])
     assert res.exit_code == 0
     assert "--intrabar-stops / --no-intrabar-stops" in res.output
+
+
+@pytest.mark.parametrize(
+    "entry_price,candle,expected",
+    [
+        (100.0, {"open": 105.0, "high": 110.0, "low": 104.0, "close": 108.0}, 105.0),
+        (100.0, {"open": 95.0, "high": 102.0, "low": 94.0, "close": 98.0}, 100.0),
+        (100.0, {"open": 95.0, "high": 99.0, "low": 94.0, "close": 98.0}, None),
+        (100.0, {"open": 100.0, "high": 102.0, "low": 99.0, "close": 101.0}, 100.0),
+        (None, {"open": 100.0, "high": 102.0, "low": 99.0, "close": 101.0}, None),
+    ],
+    ids=["gap_over_stop", "hit_within_range", "no_hit", "open_equal_stop", "none_entry"],
+)
+def test_check_stop_entry_scenarios(entry_price, candle, expected):
+    assert check_stop_entry(entry_price, candle) == expected
+
+
+def test_check_stop_entry_with_object_and_decimals():
+    class CandleStub:
+        open = Decimal("95.0")
+        high = Decimal("102.5")
+        low = Decimal("94.0")
+        close = Decimal("99.0")
+
+    assert check_stop_entry(100.0, CandleStub()) == 100.0

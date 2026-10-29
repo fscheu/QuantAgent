@@ -193,16 +193,17 @@ def _engine_config(commission_pct: Optional[float], costos: Optional[str] = None
 def _tamano_options(f):
     f = click.option(
         "--orden-minima", "orden_minima", type=click.FloatRange(min=0.0, min_open=True), default=None,
-        help="Monto mínimo en USD por orden de entrada.",
+        help="Minimum USD amount per entry order.",
     )(f)
     f = click.option(
         "--regla-tamano", "regla_tamano", type=click.Choice(PositionSizer.REGLAS), default=None,
-        help="Regla de tamaño: confianza (capital × fracción × confianza de la señal) o fijo. Default: confianza.",
+        help="Position sizing rule: confidence (capital × fraction × signal confidence) or fixed. Default: confidence.",
     )(f)
-    f = click.option("--riesgo-por-trade", type=click.FloatRange(min=0.0, min_open=True), default=None)(f)
+    f = click.option("--riesgo-por-trade", type=click.FloatRange(min=0.0, min_open=True), default=None,
+                     help="Capital fraction at risk per trade.")(f)
     return click.option(
         "--tamano-posicion", "tamano_posicion", type=click.FloatRange(min=0.0, max=1.0, min_open=True), default=None,
-        help="Fracción del capital por posición, en (0, 1] (1.0 = 100%). Fija base y máximo de la corrida.",
+        help="Capital fraction per position, in (0, 1] (1.0 = 100%). Sets the run's base and maximum size.",
     )(f)
 
 
@@ -231,7 +232,7 @@ def cargar_params(path: Optional[str]) -> dict:
 
 _params_option = click.option(
     "--params", "params", type=click.Path(exists=True, dir_okay=False), default=None, callback=lambda ctx, p, v: cargar_params(v),
-    help='JSON {"<estrategia>": {"<parámetro>": valor}} con parámetros de estrategia (default: los del registro).',
+    help='JSON {"<strategy>": {"<parameter>": value}} with strategy parameters (default: registry values).',
 )
 
 
@@ -423,23 +424,23 @@ def backtest_group() -> None:
 @click.option(
     "--fixture",
     "fixture_name",
-    help="Fixture name under tests/fixtures/ (without the .csv extension). Excluyente con --snapshot.",
+    help="Fixture name under tests/fixtures/ (without the .csv extension). Mutually exclusive with --snapshot.",
 )
-@click.option("--snapshot", "snapshot_name", help="Snapshot en $QUANTAGENT_SNAPSHOT_DIR (velas ajustadas). Requiere --symbol.")
-@click.option("--symbol", "symbol", help="Símbolo del snapshot (uno por corrida).")
-@click.option("--from", "from_date", type=click.DateTime(formats=["%Y-%m-%d"]), help="Primera sesión, YYYY-MM-DD (default: la primera del snapshot).")
-@click.option("--to", "to_date", type=click.DateTime(formats=["%Y-%m-%d"]), help="Última sesión, YYYY-MM-DD (default: la última del snapshot).")
+@click.option("--snapshot", "snapshot_name", help="Snapshot in $QUANTAGENT_SNAPSHOT_DIR (adjusted bars). Requires --symbol.")
+@click.option("--symbol", "symbol", help="Snapshot symbol (one per run).")
+@click.option("--from", "from_date", type=click.DateTime(formats=["%Y-%m-%d"]), help="First session, YYYY-MM-DD (default: first in the snapshot).")
+@click.option("--to", "to_date", type=click.DateTime(formats=["%Y-%m-%d"]), help="Last session, YYYY-MM-DD (default: last in the snapshot).")
 @click.option(
     "--abrir-reserva",
     "abrir_reserva",
     is_flag=True,
-    help="Permite que --to llegue a la reserva (desde $QUANTAGENT_RESERVA_DESDE, default 2023-01-01). Queda registrado.",
+    help="Allow --to to reach the reserve period (from $QUANTAGENT_RESERVA_DESDE, default 2023-01-01). Logged.",
 )
 @click.option(
     "--abrir-prueba",
     "abrir_prueba",
     is_flag=True,
-    help="Permite que --to llegue al tramo de prueba (desde $QUANTAGENT_PRUEBA_DESDE, default 2019-01-01). Queda registrado.",
+    help="Allow --to to reach the test period (from $QUANTAGENT_PRUEBA_DESDE, default 2019-01-01). Logged.",
 )
 @click.option(
     "--out",
@@ -463,15 +464,16 @@ def backtest_group() -> None:
     "commission_pct",
     type=click.FloatRange(min=0.0),
     default=None,
-    help="Comisión por lado sobre el nocional (0.001 = 0.10%). Default: TRADING_COMMISSION_PCT.",
+    help="Commission per side on notional (0.001 = 0.10%). Default: TRADING_COMMISSION_PCT.",
 )
 @click.option(
     "--costos",
     type=click.Choice(sorted(COSTOS_PERFILES)),
     default=None,
-    help="Perfil de costos (slippage y comisión por lado). Excluyente con --commission-pct.",
+    help="Cost profile (slippage and commission per side). Mutually exclusive with --commission-pct.",
 )
-@click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="apertura", show_default=True)
+@click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="apertura", show_default=True,
+              help="Fill price: opening or closing price of the candle.")
 @_tamano_options
 @_params_option
 @click.option(
@@ -671,23 +673,23 @@ def _run_verify_pass(
 @click.option(
     "--fixture",
     "fixture_name",
-    help="Fixture name under tests/fixtures/ (without the .csv extension). Excluyente con --snapshot.",
+    help="Fixture name under tests/fixtures/ (without the .csv extension). Mutually exclusive with --snapshot.",
 )
-@click.option("--snapshot", "snapshot_name", help="Snapshot en $QUANTAGENT_SNAPSHOT_DIR (velas ajustadas). Requiere --symbol.")
-@click.option("--symbol", "symbol", help="Símbolo del snapshot (uno por corrida).")
-@click.option("--from", "from_date", type=click.DateTime(formats=["%Y-%m-%d"]), help="Primera sesión, YYYY-MM-DD (default: la primera del snapshot).")
-@click.option("--to", "to_date", type=click.DateTime(formats=["%Y-%m-%d"]), help="Última sesión, YYYY-MM-DD (default: la última del snapshot).")
+@click.option("--snapshot", "snapshot_name", help="Snapshot in $QUANTAGENT_SNAPSHOT_DIR (adjusted bars). Requires --symbol.")
+@click.option("--symbol", "symbol", help="Snapshot symbol (one per run).")
+@click.option("--from", "from_date", type=click.DateTime(formats=["%Y-%m-%d"]), help="First session, YYYY-MM-DD (default: first in the snapshot).")
+@click.option("--to", "to_date", type=click.DateTime(formats=["%Y-%m-%d"]), help="Last session, YYYY-MM-DD (default: last in the snapshot).")
 @click.option(
     "--abrir-reserva",
     "abrir_reserva",
     is_flag=True,
-    help="Permite que --to llegue a la reserva (desde $QUANTAGENT_RESERVA_DESDE, default 2023-01-01). Queda registrado.",
+    help="Allow --to to reach the reserve period (from $QUANTAGENT_RESERVA_DESDE, default 2023-01-01). Logged.",
 )
 @click.option(
     "--abrir-prueba",
     "abrir_prueba",
     is_flag=True,
-    help="Permite que --to llegue al tramo de prueba (desde $QUANTAGENT_PRUEBA_DESDE, default 2019-01-01). Queda registrado.",
+    help="Allow --to to reach the test period (from $QUANTAGENT_PRUEBA_DESDE, default 2019-01-01). Logged.",
 )
 @click.option(
     "--verbose",
@@ -699,13 +701,13 @@ def _run_verify_pass(
     "commission_pct",
     type=click.FloatRange(min=0.0),
     default=None,
-    help="Comisión por lado sobre el nocional (0.001 = 0.10%). Default: TRADING_COMMISSION_PCT.",
+    help="Commission per side on notional (0.001 = 0.10%). Default: TRADING_COMMISSION_PCT.",
 )
 @click.option(
     "--costos",
     type=click.Choice(sorted(COSTOS_PERFILES)),
     default=None,
-    help="Perfil de costos (slippage y comisión por lado). Excluyente con --commission-pct.",
+    help="Cost profile (slippage and commission per side). Mutually exclusive with --commission-pct.",
 )
 @_tamano_options
 def verify_backtest(
@@ -911,23 +913,27 @@ def generar_markdown_compare(
 
 
 @backtest_group.command("compare", help="Compare multiple strategies across symbols against a snapshot.")
-@click.option("--strategies", required=True, help="Estrategias separadas por coma (ej: rsi,sma-cross).")
-@click.option("--symbols", required=True, help="Símbolos separados por coma (ej: SPY,IWM).")
-@click.option("--snapshot", "snapshot_name", required=True, help="Snapshot en $QUANTAGENT_SNAPSHOT_DIR (velas ajustadas).")
-@click.option("--from", "from_date", type=click.DateTime(formats=["%Y-%m-%d"]), default=None, help="Primera sesión.")
-@click.option("--to", "to_date", type=click.DateTime(formats=["%Y-%m-%d"]), default=None, help="Última sesión.")
-@click.option("--costos", type=click.Choice(sorted(COSTOS_PERFILES)), default=None, help="Perfil de costos.")
-@click.option("--tamano-posicion", "tamano_posicion", type=click.FloatRange(min=0.0, max=1.0, min_open=True), default=1.0)
-@click.option("--regla-tamano", "regla_tamano", type=click.Choice(PositionSizer.REGLAS), default=None)
-@click.option("--orden-minima", "orden_minima", type=click.FloatRange(min=0.0, min_open=True), default=None, help="Monto mínimo en USD por orden de entrada.")
-@click.option("--abrir-reserva", "abrir_reserva", is_flag=True, help="Permite abrir la reserva.")
-@click.option("--abrir-prueba", "abrir_prueba", is_flag=True, help="Permite abrir el tramo de prueba.")
-@click.option("--out", "out_path", required=True, type=click.Path(dir_okay=False, writable=True), help="CSV de salida.")
-@click.option("--trades-dir", "trades_dir", type=click.Path(file_okay=False, writable=True), default=None)
-@click.option("--equity-dir", type=click.Path(file_okay=False, writable=True), default=None, help="CSV date,equity del motor por celda (equity con 2 decimales).")
-@click.option("--md", "md_path", type=click.Path(dir_okay=False, writable=True), default=None, help="Documento Markdown de salida.")
-@click.option("--crisis", is_flag=True, help="Suma crisis_2008/2020/2022: retorno del año menos comprar y mantener (informativo).")
-@click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="apertura", show_default=True)
+@click.option("--strategies", required=True, help="Comma-separated strategies (e.g. rsi,sma-cross).")
+@click.option("--symbols", required=True, help="Comma-separated symbols (e.g. SPY,IWM).")
+@click.option("--snapshot", "snapshot_name", required=True, help="Snapshot in $QUANTAGENT_SNAPSHOT_DIR (adjusted bars).")
+@click.option("--from", "from_date", type=click.DateTime(formats=["%Y-%m-%d"]), default=None, help="First session.")
+@click.option("--to", "to_date", type=click.DateTime(formats=["%Y-%m-%d"]), default=None, help="Last session.")
+@click.option("--costos", type=click.Choice(sorted(COSTOS_PERFILES)), default=None, help="Cost profile.")
+@click.option("--tamano-posicion", "tamano_posicion", type=click.FloatRange(min=0.0, max=1.0, min_open=True), default=1.0,
+              help="Capital fraction per position, in (0, 1]. Sets the run's base and maximum size.")
+@click.option("--regla-tamano", "regla_tamano", type=click.Choice(PositionSizer.REGLAS), default=None,
+              help="Position sizing rule: confidence or fixed.")
+@click.option("--orden-minima", "orden_minima", type=click.FloatRange(min=0.0, min_open=True), default=None, help="Minimum USD amount per entry order.")
+@click.option("--abrir-reserva", "abrir_reserva", is_flag=True, help="Allow access to the reserve period.")
+@click.option("--abrir-prueba", "abrir_prueba", is_flag=True, help="Allow access to the test period.")
+@click.option("--out", "out_path", required=True, type=click.Path(dir_okay=False, writable=True), help="Output CSV file.")
+@click.option("--trades-dir", "trades_dir", type=click.Path(file_okay=False, writable=True), default=None,
+              help="Directory for per-strategy trade CSV files.")
+@click.option("--equity-dir", type=click.Path(file_okay=False, writable=True), default=None, help="Engine date,equity CSV per bar (equity rounded to 2 decimals).")
+@click.option("--md", "md_path", type=click.Path(dir_okay=False, writable=True), default=None, help="Output Markdown document.")
+@click.option("--crisis", is_flag=True, help="Add crisis_2008/2020/2022: annual return minus buy and hold (informational).")
+@click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="apertura", show_default=True,
+              help="Fill price: opening or closing price of the candle.")
 @_params_option
 def compare_backtests(
     strategies: str, symbols: str, snapshot_name: str, from_date: Optional[datetime],

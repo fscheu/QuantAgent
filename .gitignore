@@ -5,6 +5,7 @@ record.csv
 .vscode/settings.json
 .env
 .env.local
+.coverage
 *.db
 venv_wsl/
 quantagent.egg-info/

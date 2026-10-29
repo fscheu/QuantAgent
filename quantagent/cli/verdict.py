@@ -15,13 +15,13 @@ COLUMNAS = ["estrategia", "activo", "desde", "hasta", "veredicto", "motivos", "c
 COLUMNAS += [campo + sufijo for _, sufijo in LLENADOS for campo in METRICAS]
 
 
-@click.command("verdict")
-@click.option("--tabla", required=True, type=click.Path(exists=True, dir_okay=False))
-@click.option("--out", required=True, type=click.Path(dir_okay=False, writable=True))
+@click.command("verdict", help="Evaluate strategies against a comparison table.")
+@click.option("--tabla", required=True, type=click.Path(exists=True, dir_okay=False), help="Input comparison CSV file.")
+@click.option("--out", required=True, type=click.Path(dir_okay=False, writable=True), help="Output CSV file.")
 @click.option("--trades-dir", type=click.Path(exists=True, file_okay=False),
-              help="Agrega concentración del PnL y PnL por año desde los CSV de trades.")
+              help="Add PnL concentration and yearly PnL from trade CSV files.")
 @click.option("--equity-dir", type=click.Path(exists=True, file_okay=False),
-              help="Agrega p-valor, percentil final Monte Carlo y drawdown p95 informativos.")
+              help="Add the p-value, Monte Carlo final percentile, and informational p95 drawdown.")
 def verdict_command(tabla, out, trades_dir, equity_dir):
     columnas = COLUMNAS + (["concentracion_pnl", "pnl_por_anio"] if trades_dir else [])
     columnas += ["p_valor", "mc_percentil_final", "mc_dd_p95"] if equity_dir else []
