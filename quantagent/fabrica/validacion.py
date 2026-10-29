@@ -13,7 +13,15 @@ from quantagent.backtesting.verdict import dsr_contra_intentos, evaluar, filas_v
 from quantagent.cli.sweep import registrar_intento
 from quantagent.data.snapshot import snapshot_root
 from quantagent.fabrica.criterio import anios_positivos, evaluar_etapa3_cartera, recargo_paper, sharpe_benchmark
-from quantagent.fabrica.transversal import MASCARAS, METRICAS, es_transversal, leer_seleccion, señales_transversales
+from quantagent.fabrica.transversal import (
+    MASCARAS,
+    METRICAS,
+    REGLAS,
+    es_transversal,
+    leer_seleccion,
+    semanales,
+    señales_transversales,
+)
 from quantagent.strategy.registry import STRATEGY_REGISTRY, cli_aliases
 
 SHARPE_MINIMO_FILTRO = 0.10
@@ -84,7 +92,7 @@ def correr_motor(h, snapshot, params_por_activo, desde, hasta, carpeta, etapa, a
         if es_transversal(p.clase) and p.clase not in paneles_trans:
             activos = list(p.activos) or [a for c, a in params_por_activo.keys() if c == p.clase] or list(params_por_activo.keys())
             cierres = pd.DataFrame({a: snap_mod.read_snapshot(snapshot, a)["close"].loc[:hasta] for a in activos})
-            paneles_trans[p.clase] = señales_transversales(cierres, METRICAS[p.clase], mascara=MASCARAS.get(p.elegibilidad))
+            paneles_trans[p.clase] = señales_transversales(cierres, METRICAS[p.clase], mascara=MASCARAS.get(p.elegibilidad), **REGLAS.get(p.clase, {}))
             for a in activos:
                 pd.DataFrame({"timestamp": cierres.index, "posicion": paneles_trans[p.clase][a].values}).to_csv(
                     carpeta / f"senal-{p.clase}-{a}.csv", index=False)
@@ -192,7 +200,7 @@ def curva_cartera_guardada(h, carpeta, cierres):
         retornos = pd.DataFrame(retornos_dict).fillna(0.0)
         return 100_000.0 * (1 + retornos.T.groupby(level=1).sum().T.sum(axis=1)).cumprod()
     return curva_cartera(cierres, {i: list(p.activos) for i, p in enumerate(h.piernas)},
-                         retornos_dict, seleccion=seleccion)
+                         retornos_dict, seleccion=seleccion, semanales=semanales(h.piernas))
 
 
 def evaluar_c0_cartera(eq_cartera, c3, c2, sharpe_etapa2, trades, filas_intentos, intentos_csv):
@@ -308,7 +316,7 @@ def validar_etapa3(h, snapshot, params_por_activo, carpeta, desde="2019-01-01", 
         piernas = {i: p.activos for i, p in enumerate(h.piernas)}
         seleccion = leer_seleccion(carpeta, h.piernas, c3.index if c3 is not None else None)
         w = (pd.DataFrame(1 / len(activos), index=c3.index, columns=activos) if es_pesos_objetivo and c3 is not None and not c3.empty
-             else pesos_cartera(c3, piernas, seleccion=seleccion).T.groupby(level=1).sum().T
+             else pesos_cartera(c3, piernas, seleccion=seleccion, semanales=semanales(h.piernas)).T.groupby(level=1).sum().T
              if c3 is not None and not c3.empty else None)
         sb3_mismo_peso = sharpe_benchmark(c3, pesos=w) if w is not None else None
 
