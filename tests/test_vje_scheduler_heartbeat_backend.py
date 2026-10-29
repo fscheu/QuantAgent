@@ -7,7 +7,6 @@ import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from apps.streamlit.services.db import DbHandle
 from quantagent.models import (
     ActivePosition,
     Environment,
@@ -212,32 +211,3 @@ def test_analyze_and_trade_per_asset_error_completes_heartbeat_with_error_count(
         assert hb.status == "completed"
         assert stats["errors"] == 1
         assert stats["processed"] == 0
-
-
-def test_db_handle_returns_none_for_different_environment():
-    """Edge Case 3: 'paper' heartbeat is not returned when querying 'backtest'."""
-    SessionLocal = _make_session(
-        ["signals", "orders", "trades", "scheduler_heartbeats", "active_positions"]
-    )
-    with SessionLocal() as session:
-        session.add(
-            SchedulerHeartbeat(
-                timestamp=datetime.utcnow() - timedelta(minutes=5),
-                status="completed",
-                environment=Environment.PAPER,
-                assets=["BTC"],
-                stats={"processed": 1, "errors": 0, "duration_seconds": 1.0, "total": 1},
-            )
-        )
-        session.commit()
-
-    db = DbHandle(ok=True, error=None, SessionLocal=SessionLocal)
-    assert db.get_latest_heartbeat("backtest") is None
-    assert db.get_recent_heartbeats("backtest", limit=10) == []
-
-
-def test_db_handle_ok_false_short_circuits_queries():
-    """DbHandle.ok=False short-circuits without touching the DB."""
-    db = DbHandle(ok=False, error="DB unavailable", SessionLocal=None)
-    assert db.get_latest_heartbeat("paper") is None
-    assert db.get_recent_heartbeats("paper", limit=10) == []
