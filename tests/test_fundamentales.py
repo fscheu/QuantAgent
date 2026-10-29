@@ -105,6 +105,31 @@ def test_metricas_caso_a_mano():
     assert m["crecimiento_eps"].iloc[0] == pytest.approx(0.50)
 
 
+def _filas_roe(equity=400, filed_ultimo="2020-02-15"):
+    ni = [(10, "2019-01-01", "2019-03-31", "2019-04-15"), (12, "2019-04-01", "2019-06-30", "2019-07-15"),
+          (14, "2019-07-01", "2019-09-30", "2019-10-15"), (16, "2019-10-01", "2019-12-31", filed_ultimo)]
+    return [f for f in _filas_trimestres() if f["concepto"] != "StockholdersEquity"] + [
+        _fila("NetIncomeLoss", s, e, v, fld) for v, s, e, fld in ni] + [_fila("StockholdersEquity", "", "2019-12-31", equity, filed_ultimo)]
+
+
+def test_roe_4t_y_margen_pretax_a_mano():
+    """(i) ROE = (10+12+14+16) / 400; margen pretax = 100/495 - 80/400."""
+    m = _metricas(_filas_roe(), ["2020-02-16"])
+    assert m["roe_4t"].iloc[0] == pytest.approx(52 / 400)
+    assert m["margen_pretax_yoy"].iloc[0] == pytest.approx(100 / 495 - 80 / 400)
+
+
+def test_roe_dato_posterior_a_t_no_se_ve():
+    """(j) Un trimestre presentado el 2020-03-01 no entra al ROE hasta 2020-03-02."""
+    roe = _metricas(_filas_roe(filed_ultimo="2020-03-01"), ["2020-02-16", "2020-03-01", "2020-03-02"])["roe_4t"]
+    assert roe.iloc[:2].isna().all() and roe.iloc[2] == pytest.approx(52 / 400)
+
+
+def test_roe_equity_no_positivo_es_nan():
+    """(k) Con equity <= 0 el ROE es NaN."""
+    assert all(pd.isna(_metricas(_filas_roe(equity=eq), ["2020-02-16"])["roe_4t"].iloc[0]) for eq in (0, -50))
+
+
 def test_snapshot_e2e(tmp_path):
     """(h) Integración: crear_snapshot_fundamentales (con un ticker que falla) y metricas_fundamentales."""
     facts = {
