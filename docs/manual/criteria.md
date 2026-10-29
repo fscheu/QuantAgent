@@ -1,5 +1,7 @@
 # Current criteria
 
+> Terms are defined in the [glossary](glossary.md).
+
 | Criterion | Current value | Decision |
 |---|---:|---|
 | Risk per trade | 0.25% of capital | [R01 sizing](../04_decisions/QuantAgent-R01-DC-decisiones-investigacion-edge.md#sizing-por-riesgo-quantagent-0gh7) |

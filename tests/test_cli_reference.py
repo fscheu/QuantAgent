@@ -32,7 +32,7 @@ def test_cli_reference_is_stable_complete_and_matches_approved_pages():
     assert {f"{name}.md" for name in cli.commands} <= pages.keys()
     readme = (approved / "README.md").read_text()
     links = set(re.findall(r"\]\(([^)]+)\)", readme))
-    assert set(pages) == links
+    assert set(pages) == links - {"../../glossary.md"}
     assert all((approved / link).is_file() for link in links)
     for filename, rendered in pages.items():
         reference = approved / filename

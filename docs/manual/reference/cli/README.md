@@ -1,5 +1,7 @@
 # CLI reference pages
 
+> Terms are defined in the [glossary](../../glossary.md).
+
 - [Command overview](index.md)
 - [Backtest commands](backtest.md)
 - [Backtest data commands](backtest/data.md)
