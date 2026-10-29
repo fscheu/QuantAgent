@@ -845,7 +845,16 @@ Los primeros 5 son los más fáciles de revisar.
 | MAN-02d | `QuantAgent-dpr3.2.4` | Ayuda inglesa de `sweep.py` y `profile.py` (30 declaraciones) | Todos los help/epilog cubiertos están en inglés y no tienen caracteres españoles; tests dirigidos pasan | probar | L32 |
 | MAN-03a | `QuantAgent-dpr3.3.1` | Renderizador determinista de referencia CLI en memoria | Renderiza todos los grupos y opciones sin dependencias nuevas | leer | L32 |
 | MAN-03b | `QuantAgent-dpr3.3.2` | Prueba del renderizador: diferencias, orden estable y help | El test detecta cambios sin regenerar, orden inestable y help faltante | probar | L32 |
-| MAN-03c | `QuantAgent-dpr3.3.3` | Referencia CLI de backtest e hipótesis | Páginas coinciden con el generador y reflejan help/defaults actuales | probar | L32 |
+| MAN-03c | `QuantAgent-dpr3.3.3` | Partición de la referencia CLI de backtest e hipótesis | Nueve hijos entregan subpáginas de hasta 100 líneas que coinciden con el generador | probar | L32 |
+| MAN-03c.1 | `QuantAgent-dpr3.3.3.1` | Separar páginas del render CLI de backtest | Generador separa grupos y deriva páginas de Click (estimación: 40 líneas) | probar | L32 |
+| MAN-03c.2 | `QuantAgent-dpr3.3.3.2` | Referencia CLI backtest run | Página coincide con Click (80 líneas renderizadas) | probar | L32 |
+| MAN-03c.3 | `QuantAgent-dpr3.3.3.3` | Referencia CLI backtest compare | Página coincide con Click (61 líneas renderizadas) | probar | L32 |
+| MAN-03c.4 | `QuantAgent-dpr3.3.3.4` | Referencia CLI backtest attempts | Página coincide con Click (17 líneas renderizadas) | probar | L32 |
+| MAN-03c.5 | `QuantAgent-dpr3.3.3.5` | Referencia CLI backtest data snapshot | Página coincide con Click (72 líneas renderizadas) | probar | L32 |
+| MAN-03c.6 | `QuantAgent-dpr3.3.3.6` | Referencia CLI backtest data macro | Página coincide con Click (50 líneas renderizadas) | probar | L32 |
+| MAN-03c.7 | `QuantAgent-dpr3.3.3.7` | Referencia CLI de hipótesis básicas | Páginas coinciden con Click (69 líneas renderizadas) | probar | L32 |
+| MAN-03c.8 | `QuantAgent-dpr3.3.3.8` | Referencia CLI de propuestas de hipótesis | Páginas coinciden con Click (73 líneas renderizadas) | probar | L32 |
+| MAN-03c.9 | `QuantAgent-dpr3.3.3.9` | Referencia CLI de flujo de hipótesis | Páginas coinciden con Click (90 líneas renderizadas) | probar | L32 |
 | MAN-03d | `QuantAgent-dpr3.3.4` | Referencia CLI de trading, data e intentos | Páginas coinciden con el generador y reflejan help/defaults actuales | probar | L32 |
 | MAN-03e | `QuantAgent-dpr3.3.5` | Referencia CLI de walkforward, sweep, verdict y profile | Páginas coinciden con el generador y reflejan help/defaults actuales | probar | L32 |
 | MAN-03f | `QuantAgent-dpr3.3.6` | Índice de referencia CLI con enlaces relativos | README enlaza cada página existente con rutas relativas válidas | leer | L32 |
