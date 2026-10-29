@@ -13,8 +13,8 @@ flowchart LR
 ## Stage 0 — Admission
 
 - **Input:** a hypothesis definition and its selected snapshot.
-- **Measure:** structural and data eligibility checks; warnings do not block.
-- **Pass criterion:** admission succeeds; the CLI records `PASA` or stops with `CORTA`.
+- **Measure:** the admission checks in `quantagent/fabrica/admision.py`: a written justification of at least 40 characters, at most 6 free parameters (provisional, set by Fede on 2026-10-15), a registered strategy class, assets inside the broad universe, and a truncation test that fails any rule that looks at the future.
+- **Pass criterion:** no check fails; the CLI records `PASA` or stops with `CORTA` and lists the reasons.
 - **Command:** `python -m quantagent.cli backtest hipotesis correr <hypothesis.yaml> --snapshot <snapshot> --carpeta <output-dir> --hasta-etapa 0`.
 - **Source:** [Factory engine decision](../04_decisions/QuantAgent-d4cq-DC-motor-de-la-fabrica.md), 2026-10-14.
 
@@ -28,8 +28,8 @@ flowchart LR
 ## Stage 2 — Engine validation
 
 - **Input:** a stage 1 pass.
-- **Measure:** the engine result against the filter and control, including the V30 checks.
-- **Pass criterion:** engine validation passes; V30 is at least 2 trades, positive PnL, Sharpe at rate zero at least 0.10, and maximum drawdown no greater than 35%.
+- **Measure:** the hypothesis is rerun candle by candle in the own engine (2007–2018), checked against the independent `backtesting.py` control (`coinciden N de N`) and against the V30 thresholds.
+- **Pass criterion:** the control matches on every cell and V30 passes: at least the minimum trades, positive PnL, Sharpe at rate zero at least 0.10, and maximum drawdown no greater than 0.35. Strategies driven by target weights have no control and are marked "no aplica".
 - **Command:** `python -m quantagent.cli backtest hipotesis correr <hypothesis.yaml> --snapshot <snapshot> --carpeta <output-dir> --hasta-etapa 2`.
 - **Source:** [V30 thresholds](../04_decisions/QuantAgent-yo4s-DC-umbrales-y-llenado.md) (decision record); current portfolio thresholds are summarized in [criteria](criteria.md).
 
