@@ -30,4 +30,8 @@
 | Verdict thresholds, fills, sizing, and shorts | Date not recorded | [Decision](../04_decisions/QuantAgent-yo4s-DC-umbrales-y-llenado.md) |
 | Streamlit to FastAPI and Angular framework proposal | Date not recorded | [Decision](../04_decisions/ui_framework_decision.md) |
 | M5 decisions D1–D7 | 2026-10-25 and pending | [Planning table](../02_planning/QuantAgent-M5-PL-motor-top-down.md#2-decisiones-que-necesita-fede) |
-| Post-M5 roadmap decisions, §5 | Source file absent from this checkout | Unsourced: `docs/02_planning/2026-10-28_roadmap_post_m5.md` is referenced by the backlog but absent |
+| Post-M5 milestones: M5 is the top-down engine; real money is the output of M-ciclos + M-cuenta (G1, G2) | 2026-10-28 | [Roadmap §0 and §7](../02_planning/2026-10-28_roadmap_post_m5.md#7-decisiones-que-necesita-fede-resumen) |
+| Small real account: USD 2,500 start, cash account, tax cost reviewed with an accountant (K1–K3) | 2026-10-28 | [Roadmap §2](../02_planning/2026-10-28_roadmap_post_m5.md#2-m-cuenta-que-la-candidata-funcione-en-una-cuenta-de-usd-20003000) |
+| Web app: FastAPI + React, Streamlit removed, visual design in sessions with Fede (W1–W3) | 2026-10-28 | [Roadmap §3](../02_planning/2026-10-28_roadmap_post_m5.md#3-m-web-aplicacin-web-que-reemplaza-streamlit) |
+| Data storage: Parquet for history, DuckDB to query, funnel records in Postgres, monthly freeze (D1–D3) | 2026-10-28 | [Roadmap §4](../02_planning/2026-10-28_roadmap_post_m5.md#4-m-datos-dnde-guardar-los-datos-de-mercado-y-fundamentales) |
+| User manual: English Markdown, old manual deleted, CLI help in English (U1–U4) | 2026-10-28 | [Roadmap §5](../02_planning/2026-10-28_roadmap_post_m5.md#5-m-manual-manual-de-usuario-como-pginas-de-la-aplicacin) |
