@@ -1,38 +1,39 @@
 {
- "actualizado": "2026-10-21T10:30Z",
+ "actualizado": "2026-10-27T00:50Z",
  "activas": [
   {
-   "sesion": "Lote L18",
+   "sesion": "Lote L20",
    "maquina": "VM",
-   "ticket": "QuantAgent-oc0h",
-   "rol": "L18 (lote/m4-prep-curva-puv2): último diagnóstico de paper; después ro3w.3 y el punto de control."
+   "ticket": "QuantAgent-e4jc",
+   "rol": "L20 (lote/investigacion-edge): cola X06–X20. Hechos e4jc.15 (digest P-1d) y xtns (dividendos en el digest); sigue la cola."
   },
   {
-   "sesion": "Lote L19",
+   "sesion": "Lote L24 (M5)",
    "maquina": "Notebook",
-   "ticket": "QuantAgent-lwji.2.1",
-   "rol": "L19 (lote/medicion-y-generador) con Codex: S01–S03 y S05–S08. Offline si la notebook se duerme."
+   "ticket": "QuantAgent-fnpr.3.7",
+   "rol": "L24 (lote/m5-arquetipos): PM Copilot CLI con implementador agy. Faltan los arquetipos A y B agrupados sobre 11 ETFs hasta la etapa 2 (M5-24, decidir)."
   }
  ],
  "inactivas": [],
  "planificadas": [
   {
-   "ticket": "QuantAgent-ro3w.3",
+   "ticket": "QuantAgent-fnpr.1.5",
    "maquina": "VM",
-   "cuando": "L18, veredicto núcleo + curva"
+   "cuando": "M5-05 (foto diaria de EPS): conviene adelantarlo porque junta historia; el plan permite abrirlo antes de cerrar L20"
   },
   {
-   "ticket": "QuantAgent-v2ll",
+   "ticket": "QuantAgent-fnpr.5.1",
    "maquina": "VM",
-   "cuando": "L19 S04, después de que cierre L18"
+   "cuando": "L26 puede ir en paralelo con L22–L23; espera la decisión D3"
   },
   {
-   "ticket": "QuantAgent-cq4u",
+   "ticket": "QuantAgent-fnpr.1.1",
    "maquina": "VM",
-   "cuando": "L19 S09, punto de control"
+   "cuando": "L22, después de la decisión D4 (sustituto de ISM)"
   }
  ],
  "propuestos": [
-  "0gh7 (sizing por riesgo): antes de la primera corrida paper; espera decisiones de Fede."
+  "av1p.5 (operación paper en la VM): runbook y puesta en marcha de dos meses, ciclo a las 08:00 UTC; abierto fuera de lote.",
+  "Decisiones de M5 (D2–D7) pendientes de Fede; D1 decidida: capa gratuita de Sharadar."
  ]
 }

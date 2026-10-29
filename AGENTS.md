@@ -72,13 +72,6 @@ Main Python package containing all trading, backtesting, and agent logic.
 
 End-user applications built on top of the core engine.
 
-#### Streamlit App
-- `apps/streamlit/`
-  - `app.py` — Main entry point
-  - `views/` — UI pages (dashboard, backtesting, configuration, replay, etc.)
-  - `services/` — DB and backend services
-  - `utils/` — UI helpers
-
 #### Flask App (legacy / demo)
 - `apps/flask/`
   - `web_interface.py` — Flask demo app
@@ -155,7 +148,36 @@ No parallel documentation systems are used.
 
 ---
 
+## Development Loop (PM + implementers)
+
+Day-to-day work runs through a loop: a PM session (`.claude/agents/pm-revisor.md`) writes Beads tickets,
+launches one implementer session per ticket (agy, codex or claude, usually cheaper models), reviews each
+delivery and merges it into a `lote/*` branch. Fede reviews and merges each lot into `main`.
+
+- Loop contract (gate, delivery size, PR summary, review protocol): `PLAN-CONTINUACION.md` §3.
+- Implementer prompt: `loop/PROMPT.md`. Ticket format: `docs/loop/FORMATO-TICKET.md`.
+- Operations, blockers and partitions: `docs/loop/`. Scripts: `scripts/loop/`.
+
+Inside the loop, the loop contract overrides the generic rules of this file: branches are `loop/<ID>` with
+PRs against `lote/*` (not `feature/`), deliveries do not stop to ask (they deliver a blocker or a partition),
+and per-change docs are only written when the ticket asks for them. `main` is protected: every change
+enters through a PR.
+
+---
+
 ## Documentation as a Single System (`docs/`)
+
+### CLI commands and the user manual
+
+Every click command and group must have a help= text: one sentence saying what it does, written for a user. Every option must have a help= text naming its unit and its default when it has one. Add an epilog with at least one example invocation for commands a user runs by hand. Do not document a command only in a docstring or comment: the manual is generated from help, epilog and option metadata. A PR that adds or changes a command must regenerate the command reference and pass the manual coverage test.
+
+### Decisions and criteria
+
+A PR that records a new decision of Fede (a -DC- document or a decision table in a plan) must add one line to the manual's decision index and update the current-criteria table if a number changes.
+
+### Manual review at lote close
+
+Before a `lote/*` PR is marked ready for Fede's review, the PM reviews `docs/manual/` against what the lote changed (new or changed commands, criteria, stages, operating procedures, glossary terms) and fixes or adds the pages that are out of date. The lote PR body has a `Manual:` line that lists the pages reviewed and changed, or says why none was needed. A lote that changes behavior and leaves that line empty is not ready.
 
 The documentation lives in `docs/` folder.
 

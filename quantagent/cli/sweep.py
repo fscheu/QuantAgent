@@ -11,6 +11,7 @@ from typing import Any, Optional
 import click
 from tabulate import tabulate
 
+from quantagent.backtesting.verdict import filas_validas
 from quantagent.settings import COSTOS_PERFILES
 from quantagent.strategy.registry import STRATEGY_REGISTRY, cli_aliases
 from quantagent.trading.position_sizer import PositionSizer
@@ -102,19 +103,19 @@ def grilla_vecinos(strategy: str) -> tuple[list[dict[str, Any]], list[str]]:
 
 CAMPOS_INTENTOS = [
     "fecha_utc", "estrategia", "activo", "snapshot", "desde", "hasta", "costos",
-    "tamano", "params", "trades", "pnl", "sharpe", "hipotesis", "etapa", "sharpe_base",
+    "tamano", "params", "trades", "pnl", "sharpe", "hipotesis", "etapa", "sharpe_base", "estado",
 ]
 
 
 def contar_intentos(hipotesis: Optional[str] = None) -> int:
-    """Cuenta filas de intentos.csv; con `hipotesis`, solo las de esa hipótesis."""
+    """Cuenta filas válidas de intentos.csv; con `hipotesis`, solo las de esa hipótesis."""
     from quantagent.data.snapshot import snapshot_root
 
     path = snapshot_root() / "intentos.csv"
     if not path.exists():
         return 0
     with path.open(newline="", encoding="utf-8") as f:
-        return sum(1 for r in csv.DictReader(f) if hipotesis is None or r.get("hipotesis") == hipotesis)
+        return sum(1 for r in filas_validas(csv.DictReader(f)) if hipotesis is None or r.get("hipotesis") == hipotesis)
 
 
 def registrar_intento(
@@ -152,6 +153,7 @@ def registrar_intento(
         "hipotesis": hipotesis or "",
         "etapa": etapa or "",
         "sharpe_base": sharpe_base or "",
+        "estado": "",
     }
     previas = []
     if intentos_path.exists():
@@ -170,9 +172,9 @@ def registrar_intento(
         writer.writerow(intento)
 
 
-@click.command("attempts", help="Contar corridas y combinaciones registradas por sweep.")
-@click.option("--strategy", "strategy_name", required=True)
-@click.option("--symbol", default=None)
+@click.command("attempts", help="Count runs and parameter combinations recorded by sweep.")
+@click.option("--strategy", "strategy_name", required=True, help="Strategy whose attempts to count.")
+@click.option("--symbol", default=None, help="Limit the count to this symbol.")
 def attempts_command(strategy_name: str, symbol: Optional[str]) -> None:
     from quantagent.data.snapshot import snapshot_root
 
@@ -203,21 +205,21 @@ def attempts_command(strategy_name: str, symbol: Optional[str]) -> None:
     click.echo(f"Combinaciones distintas: {len(combinaciones)}")
 
 
-@click.command("sweep", help="Correr una grilla de parámetros de una estrategia sobre un activo.")
-@click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="apertura", show_default=True)
-@click.option("--strategy", "strategy_name", required=True, help="Estrategia a optimizar.")
-@click.option("--symbol", "symbol", required=True, help="Símbolo del activo (ej: SPY).")
-@click.option("--snapshot", "snapshot_name", required=True, help="Snapshot en $QUANTAGENT_SNAPSHOT_DIR (velas ajustadas).")
-@click.option("--grid", "grid_path", type=click.Path(dir_okay=False), help="Archivo JSON con la grilla de parámetros.")
-@click.option("--vecinos-20", is_flag=True, help="Default y ±20% por parámetro, uno por vez; excluye --grid.")
-@click.option("--out", "out_path", required=True, type=click.Path(dir_okay=False, writable=True), help="CSV de salida.")
-@click.option("--from", "from_date", type=click.DateTime(formats=["%Y-%m-%d"]), default=None, help="Primera sesión.")
-@click.option("--to", "to_date", type=click.DateTime(formats=["%Y-%m-%d"]), default=None, help="Última sesión.")
-@click.option("--costos", type=click.Choice(sorted(COSTOS_PERFILES)), default=None, help="Perfil de costos.")
-@click.option("--tamano-posicion", "tamano_posicion", type=click.FloatRange(min=0.0, max=1.0, min_open=True), default=1.0)
-@click.option("--regla-tamano", "regla_tamano", type=click.Choice(PositionSizer.REGLAS), default=None)
-@click.option("--riesgo-por-trade", type=click.FloatRange(min=0.0, min_open=True), default=None)
-@click.option("--orden-minima", "orden_minima", type=click.FloatRange(min=0.0, min_open=True), default=None, help="Monto mínimo en USD por orden de entrada.")
+@click.command("sweep", help="Run a strategy parameter grid against an asset.")
+@click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="apertura", show_default=True, help="Fill orders at the open or close.")
+@click.option("--strategy", "strategy_name", required=True, help="Strategy to optimize.")
+@click.option("--symbol", "symbol", required=True, help="Asset symbol (e.g. SPY).")
+@click.option("--snapshot", "snapshot_name", required=True, help="Snapshot in $QUANTAGENT_SNAPSHOT_DIR (adjusted candles).")
+@click.option("--grid", "grid_path", type=click.Path(dir_okay=False), help="JSON file containing the parameter grid.")
+@click.option("--vecinos-20", is_flag=True, help="Default and ±20% per parameter, one at a time; excludes --grid.")
+@click.option("--out", "out_path", required=True, type=click.Path(dir_okay=False, writable=True), help="Output CSV file.")
+@click.option("--from", "from_date", type=click.DateTime(formats=["%Y-%m-%d"]), default=None, help="First session.")
+@click.option("--to", "to_date", type=click.DateTime(formats=["%Y-%m-%d"]), default=None, help="Last session.")
+@click.option("--costos", type=click.Choice(sorted(COSTOS_PERFILES)), default=None, help="Cost profile.")
+@click.option("--tamano-posicion", "tamano_posicion", type=click.FloatRange(min=0.0, max=1.0, min_open=True), default=1.0, help="Position size as a fraction of equity.")
+@click.option("--regla-tamano", "regla_tamano", type=click.Choice(PositionSizer.REGLAS), default=None, help="Position sizing rule.")
+@click.option("--riesgo-por-trade", type=click.FloatRange(min=0.0, min_open=True), default=None, help="Risk per trade as a fraction of equity.")
+@click.option("--orden-minima", "orden_minima", type=click.FloatRange(min=0.0, min_open=True), default=None, help="Minimum USD amount per entry order.")
 def sweep_command(
     strategy_name: str,
     symbol: str,

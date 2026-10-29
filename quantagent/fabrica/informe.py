@@ -1,5 +1,6 @@
 """Informe HTML por hipótesis (plan M3): veredicto, motivos por etapa y tabla por activo."""
 import csv
+import json
 from html import escape
 from pathlib import Path
 
@@ -18,6 +19,7 @@ def diagnostico_exceso(hipotesis, carpeta_equity, snapshot, base_dir=None):
     from quantagent.fabrica.cartera import pesos as pesos_cartera
     from quantagent.fabrica.criterio import curva_benchmark, sharpes_en_exceso
     from quantagent.fabrica.transversal import leer_seleccion
+    from quantagent.strategy.registry import STRATEGY_REGISTRY, cli_aliases
 
     retornos = {}
     fechas = None
@@ -47,10 +49,18 @@ def diagnostico_exceso(hipotesis, carpeta_equity, snapshot, base_dir=None):
         seleccion = leer_seleccion(Path(carpeta_equity).parent, hipotesis.piernas, indice=cierres.index)
     except FileNotFoundError as exc:
         return {"disponible": False, "motivo": f"selección faltante: {exc.filename}"}
-    cartera = curva_cartera(cierres, mapa, retornos, seleccion=seleccion)
+    posiciones_objetivo = any(STRATEGY_REGISTRY.get(cli_aliases().get(p.clase, p.clase))
+                              and hasattr(STRATEGY_REGISTRY[cli_aliases().get(p.clase, p.clase)]["cls"], "posiciones_objetivo")
+                              for p in hipotesis.piernas)
+    if posiciones_objetivo:
+        retornos_df = pd.DataFrame(retornos).fillna(0.0)
+        cartera = 100_000.0 * (1 + retornos_df.T.groupby(level=1).sum().T.sum(axis=1)).cumprod()
+    else:
+        cartera = curva_cartera(cierres, mapa, retornos, seleccion=seleccion)
     if cartera is None or len(cartera) < 3:
         return {"disponible": False, "motivo": "curvas sin puntos suficientes"}
-    w = pesos_cartera(cierres, mapa, seleccion=seleccion).T.groupby(level=1).sum().T
+    w = (pd.DataFrame(1 / len(cierres.columns), index=cierres.index, columns=cierres.columns)
+         if posiciones_objetivo else pesos_cartera(cierres, mapa, seleccion=seleccion).T.groupby(level=1).sum().T)
     benchmark = curva_benchmark(cierres, pesos=w).reindex(cartera.index)
     try:
         sharpe_cartera, sharpe_benchmark = sharpes_en_exceso(cartera, benchmark, base_dir=base_dir)
@@ -88,8 +98,10 @@ def datos_informe(hipotesis_id):
 
     path_int = snapshot_root() / "intentos.csv"
     todas = list(csv.DictReader(path_int.open(newline="", encoding="utf-8"))) if path_int.exists() else []
-    from quantagent.backtesting.verdict import n_efectivo
+    from quantagent.backtesting.verdict import filas_validas, n_efectivo
     n_crudo, n_eff = len(todas), n_efectivo(todas) if todas else 0
+    path_epoca = snapshot_root() / "epoca_limpia.json"
+    epoca = json.loads(path_epoca.read_text(encoding="utf-8")) if path_epoca.exists() else None
 
     fila3 = por_etapa.get("3")
     dsr_eff, dsr_crudo, anios_pos, bench, bench_mismo_peso, n_eff_criterio, recargo, pares = None, None, None, None, None, None, None, {}
@@ -115,6 +127,9 @@ def datos_informe(hipotesis_id):
         "id": hipotesis_id, "etapas": [por_etapa[e] for e in sorted(por_etapa)], "final": por_etapa[ultima],
         "activos": {i["activo"]: i for i in intentos if i["etapa"] == ultima},
         "intentos": len(intentos), "n_total": n_crudo,
+        "intentos_validos": len(filas_validas(todas)),
+        "intentos_invalidados": sum(f.get("estado") == "invalida_bug" for f in todas),
+        "epoca_limpia": epoca,
         "n_crudo": n_crudo if fila3 and pares else None,
         "n_efectivo": n_eff_criterio if n_eff_criterio is not None else (n_eff if fila3 and pares else None),
         "dsr": dsr_eff if dsr_eff is not None else (dsr or "no evaluado"),
@@ -126,6 +141,9 @@ def datos_informe(hipotesis_id):
 
 def render_informe(d, hipotesis=None, diagnostico=None, advertencias=()):
     f = d["final"]
+    epoca = d["epoca_limpia"]
+    texto_epoca = (f"desde {escape(epoca['desde_utc'])}. Motivo: {escape(epoca['motivo'])}"
+                   if epoca else "no definida")
     li = "".join(f"<li>Etapa {escape(e['etapa'])}: <b>{escape(e['veredicto'])}</b> — {escape(e['motivo'])}</li>"
                  for e in d["etapas"])
     activos = sorted(d["activos"].items(), key=lambda x: (x[0].lower() != "cartera", x[0]))
@@ -175,6 +193,8 @@ def render_informe(d, hipotesis=None, diagnostico=None, advertencias=()):
         f"<table><tr><th>Activo</th><th>Sharpe registrado</th><th>Trades</th></tr>{tr}</table>"
         f"{tabla_e3}"
         f"{exceso}"
+        f"<p>Época limpia: {texto_epoca}.</p>"
+        f"<p>Registro global de intentos: {d['intentos_validos']} válidos; {d['intentos_invalidados']} invalidados por bug.</p>"
         f"<p>Intentos registrados: {d['intentos']}. Total de intentos (N): {d.get('n_total', d['intentos'])}. DSR: {escape(str(d.get('dsr', 'no evaluado')))}. Prueba abierta: {'sí' if d['prueba_abierta'] else 'no'}.</p>"
         f"<h2>Glosario</h2><dl>{gl}</dl></html>"
     )

@@ -57,6 +57,7 @@ from quantagent.data.snapshot import load_manifest  # noqa: E402
 from quantagent.models import ActivePosition, OrderSide  # noqa: E402
 from quantagent.stop_loss import resolve_stop_loss  # noqa: E402
 from quantagent.strategy.registry import build_strategy, cli_aliases  # noqa: E402
+from quantagent.strategy.sma_cross_strategy import UNREACHABLE_TAKE_PROFIT  # noqa: E402
 from quantagent.trading.position_sizer import PositionSizer  # noqa: E402
 
 SCALE = port.SCALE
@@ -308,7 +309,10 @@ class StrategyAdapter(Strategy):
         long = signal.decision == "LONG"
         # si se cerro en esta misma vela, la libreria todavia no desconto el slippage de esa salida
         equity = self.equity - sum(abs(t.size) for t in self.trades) / SCALE * price * self.slippage
-        stop = round(signal.stop_loss or price * (0.98 if long else 1.02), 8)
+        if long:
+            stop = round(signal.stop_loss or price * 0.98, 8)
+        else:
+            stop = round(resolve_stop_loss(signal.stop_loss, "SHORT", price)[0], 8)
         if self.regla_tamano == "riesgo":
             stop, _ = resolve_stop_loss(signal.stop_loss, signal.decision, price)
             qty = PositionSizer(regla="riesgo").calculate_size(
@@ -331,7 +335,12 @@ class StrategyAdapter(Strategy):
         if units < 1:
             return
         sin_tp = bool(getattr(signal, "sin_take_profit", False))
-        take = None if sin_tp else round(signal.take_profit or price * (1.03 if long else 0.97), 8)
+        if sin_tp:
+            take = None
+        elif long:
+            take = round(signal.take_profit or price * 1.03, 8)
+        else:
+            take = round(price * 0.97 if signal.take_profit in (None, 0, UNREACHABLE_TAKE_PROFIT) else signal.take_profit, 8)
         tp_arg = None if sin_tp else take / SCALE
         if getattr(signal, "entry_order", "market") == "stop" and long:
             stop_entry = signal.entry_price or price

@@ -170,7 +170,7 @@ WAIT no invoca al modelo. No hay excepciones, no hay acumulación: nunca existen
 por el PM. Las escaladas a Fede sí pueden quedar abiertas mientras el lote sigue con otros tickets.
 
 Pausa manual: si existe `loop/PAUSE` en `origin/main`, el wrapper imprime `⏸ pausado` y termina.
-Se crea o borra desde GitHub mobile.
+Se crea o borra desde GitHub mobile con un PR a `main` (main tiene ruleset: no acepta push directo).
 
 ### 3.2 Regla 2 — Tamaño de entrega
 
@@ -304,8 +304,10 @@ termina cuando cierra su punto de control.
 3. El PM revisa cada entrega (protocolo abajo), comenta la línea `PM:` y, si decide merge, mergea el PR en la
    rama del lote. La Action `lote-automerge` puede hacer ese merge cuando la línea `PM:` dice `decido: merge`, el CI está verde y la base es `lote/*`; el pase lote → main sigue manual con la `R:` de Fede. Después lanza la siguiente corrida. Tope: 10 entregas por día. La tanda la arranca el aviso del
    cron (§3.5) o un pedido de Fede; el PM frena si la cuota del agente baja del 20% de la ventana de 5 horas.
-4. Cuando no quedan filas elegibles, el PM corre el punto de control sobre la rama del lote, completa el cuerpo
-   del PR del lote y lo marca listo para revisión. Desde ahí el gate espera.
+4. Cuando no quedan filas elegibles, el PM corre el punto de control sobre la rama del lote, **revisa el manual
+   (`docs/manual/`) contra lo que cambió el lote** (qué páginas hay que corregir o agregar; ver
+   [Manual review at lote close](AGENTS.md#manual-review-at-lote-close)), completa el cuerpo del PR del lote y
+   lo marca listo para revisión. Desde ahí el gate espera.
 5. Fede prueba el punto de control, comenta `R: lote-<nombre> vi: <...> decido: merge` y mergea a `main`.
 6. El PM abre el lote siguiente.
 
@@ -323,6 +325,9 @@ es señal de que los tickets están mal definidos, no de que falte velocidad.
    borde, un valor recalculado por otro camino, un test que debería fallar si se rompe la lógica y no falla.
 5. Decidir y comentar la línea `PM:`. En `vi:` va el dato de la comprobación propia del paso 4.
 6. Al cerrar la revisión, agregar la línea a `docs/loop/REVIEW-LOG.md` en la rama del lote (§5.4).
+
+Para cambios de CLI, aplicar también la regla [CLI commands and the user manual](AGENTS.md#cli-commands-and-the-user-manual): help y epilog generan la referencia; regenerarla y pasar el test de cobertura.
+Para decisiones de Fede, aplicar también [Decisions and criteria](AGENTS.md#decisions-and-criteria): sumar la decisión al índice del manual y actualizar criterios cuando cambie un número.
 
 **Revisor mecánico (Codex), desde el 2026-10-11.** Para no gastar el cupo del PM en correr comandos, los pasos 3
 y 4 los puede hacer Codex con `scripts/loop/codex_review.sh` (instalación en `docs/loop/SETUP-HERMES.md`). Codex
@@ -358,6 +363,7 @@ Decidir: <preguntas abiertas con recomendación, o "nada">
 
 Entregas: <ticket> · #<pr> · <una línea: qué cambió y qué comprobó el PM>
 Encontrado en revisión: <lo que el PM rechazó, pidió cambiar o descubrió>
+Manual: <páginas de docs/manual/ revisadas, cuáles se cambiaron o agregaron, o por qué no hacía falta>
 Qué NO se hizo: <lista corta>
 ```
 
@@ -407,8 +413,13 @@ Lotes (definidos por el PM el 2026-10-06; cada uno se abre cuando Fede mergea el
 | L17 | `lote/loop-investigador` | I01–I08 | Un ciclo completo sin correr nada en el embudo: fichas de postmortem de las tres carteras de L16, el pedido al investigador, hasta 3 propuestas en `catalogo/propuestas/` con chequeo de hipótesis y de originalidad, y un comando que las lista para que Fede las revise; nada pasa a `hipotesis/` sin su OK | plan `QuantAgent-vbnh-PL-l16-l17-criterio-etapa3-y-loop.md` §4; reglas decididas por Fede el 2026-10-19 (sin Sharpe del holdout, ideas de literatura, máx. 2 variantes por idea, todo intento suma a N); sale de origin/main |
 | L18 | `lote/m4-prep-curva-puv2` | Q01–Q13 | Veredicto de la cartera núcleo + curva contra el criterio de paper (recalculado de las curvas guardadas, sin abrir 2019–2022); `cambio-de-mes` con su señal corrida hasta la etapa 2; los datos de Alpaca por fuente y los tres diagnósticos de paper (`say`, `oc0h`, `beo`) listos para decidir | plan `QuantAgent-ro3w-PL-l18-curva-puv2-prep-m4.md`; Fede aprobó los tres frentes el 2026-10-20; decisiones previstas: Q01 (si pasa, entra a M4), Q04 (OK para la etapa 3), Q09, Q10–Q12 |
 | L19 | `lote/medicion-y-generador` | S01–S09 | `quantagent backtest hipotesis informe <id>` de las cuatro carteras muestra Sharpe en exceso de la tasa corta, benchmark con los mismos pesos y error estándar del ΔSharpe; hay una tabla que separa la brecha contra 1/N en pesos, señal y tasa; el pedido al investigador sale con criterio, inventario y lista negra de efectos decaídos, y las propuestas pasan por chequeo de DOI contra Crossref | decidido por Fede el 2026-10-21 (revisión del PR #352; plan por S01–S09 sin cambios); no corre nada en el embudo ni abre ventanas; sin sesiones cloud por el cupo semanal: S01–S03 y S05–S08 en la notebook con Codex, S04 y S09 en la VM después de que cierre L18; sale de origin/main |
-| L20 | `lote/investigacion-edge` | X06–X18, X20; X01–X05 y X19 movidos a L21 | Riesgo y sizing por trade; F1/F2 hasta etapa 2; datos AQR/French, ETFs ampliados y pysystemtrade; generador con lección/refutador; protocolo de reserva. X14 se desglosa en X14a–c. | R01 (`docs/04_decisions/QuantAgent-R01-DC-decisiones-investigacion-edge.md`); PR #416 desde `origin/main`; ninguna apertura de reserva sin OK de Fede |
+| L20 | `lote/investigacion-edge` | X06–X09, X10a–X10c, X11–X18, X20; X01–X05 y X19 movidos a L21 | Riesgo y sizing por trade; F1/F2 hasta etapa 2; datos AQR/French, ETFs ampliados y pysystemtrade; generador con lección/refutador; protocolo de reserva. X10 y X14 se desglosan. | R01 (`docs/04_decisions/QuantAgent-R01-DC-decisiones-investigacion-edge.md`); PR #416 desde `origin/main`; ninguna apertura de reserva sin OK de Fede |
 | L21 | `lote/paper-alpaca` | X01–X05, X19a–c y W02–W10, W15–W16 | Dos carteras operan en Alpaca paper desde el scheduler; rebalanceo, sombra, reconciliación y chequeos; digest operativo antes del piloto. | `QuantAgent-av1p` y `docs/02_planning/QuantAgent-L21-PL-paper-alpaca-m4.md`; aprobado por Fede el 2026-10-22; PR #412. La puesta en marcha por dos semanas requiere autorización operativa explícita. |
+| L25 | `lote/paper-fix-tz` | P01 | `DataProvider.get_ohlc` funciona con una fuente Alpaca que devuelve fechas con zona horaria, para que el ensayo de paper llegue a `entradas_cartera`. | `QuantAgent-av1p.5.1` (hijo de `QuantAgent-av1p.5`); bug hallado en el ensayo del 2026-10-26; sale de origin/main tras L21. |
+| L29 | `lote/paper-broker-explicito` | P02 | El ciclo de cartera en paper falla con error claro si `TRADING_BROKER` no está definido, y avisa si se usa el broker simulado de forma explícita. | `QuantAgent-av1p.5.2` (hijo de `QuantAgent-av1p.5`); hallado en el ensayo del 2026-10-27 08:00 UTC; sale de origin/main. |
+| L30 | `lote/paper-rebalanceo-reserva` | P03 | El rebalanceo de la cartera paper deja al menos 5 % del equity en caja; la sombra sigue con los pesos de la estrategia (suman 100 %) y el chequeo e4jc.13 compara sobre lo invertido. | `QuantAgent-av1p.5.3` (hijo de `QuantAgent-av1p.5`); hallado en el ensayo del 2026-10-27 (caja 0,9 %); sale de origin/main; debe estar en main antes del 2026-11-02. |
+| L31 | `lote/intentos-epoca` | I01, I02 | `intentos.csv` admite `estado=invalida_bug` sin borrar filas, el N del DSR cuenta configuraciones distintas entre las válidas y existe la marca de época limpia con comandos para invalidar corridas. | `QuantAgent-1gw0` (hijos .1 y .2); decidido por Fede 2026-10-27; implementa Codex; no pisa L20 ni paper; qué corridas se invalidan y la fecha de la época las confirma Fede. |
+| L32 | `lote/manual` | MAN-01–MAN-08 | `docs/manual/` (inglés) tiene índice, criterios, decisiones, glosario, embudo, operación y referencia de comandos generada desde `click`; el test de cobertura de la CLI pasa; Streamlit y `docs/user-manual/` ya no están en el repo. | `QuantAgent-dpr3` (padre); plan en `docs/02_planning/2026-10-28_roadmap_post_m5.md` §5 (PR #612); decisiones de Fede 2026-10-28 (U1–U4); sale de origin/main; sin tocar paper-ops. |
 
 T13 se adelantó dentro de L1: es un documento de decisión que no depende del resto, así la respuesta de Fede
 llega mientras el lote avanza. T20 pasó a L1 porque congela los números que ese lote audita.
@@ -717,15 +728,33 @@ Los primeros 5 son los más fáciles de revisar.
 | X05 | `QuantAgent-0gh7.4` | `ResolvedConfig`, `--riesgo-por-trade` en backtest, sweep y walkforward, informe con 'stop por defecto'; depende de X04 | `--regla-tamano riesgo` corre en los tres comandos; sin el flag, igual que hoy | leer | L21 |
 | X06 | `QuantAgent-0gh7.5` | `bt_adapter.py` con la regla de riesgo para la validación cruzada; prioridad baja; depende de X04 | Crossval con regla riesgo coincide con el motor en una corrida sintética | leer | L20 |
 | X07 | `QuantAgent-e4jc.1` | F1-a: verificar en el texto del paper la definición de la 'cuarta semana' | Definición escrita con cita de sección o página; propuesta F1 consistente | leer | L20 |
-| X08 | `QuantAgent-e4jc.2` | F1-b (R09): pesos objetivo por fecha, clase `rebalanceo-fin-de-mes` y llenado al cierre en el motor; depende de X07 | Señal sintética da los pesos esperados; orden de t se llena al cierre de t; backtests sin cambio | leer | L20 |
-| X09 | `QuantAgent-e4jc.3` | F1-c (R10): F1 por las etapas 0 a 2 con `--hasta-etapa 2` (VM); depende de X08 y S01 | IM con veredicto; ninguna entrada nueva en el candado; pide a Fede el OK para la reserva | decidir | L20 |
-| X10 | `QuantAgent-e4jc.4` | F2-a (R11): celdas cortas en la cartera y en el control contra `backtesting.py` | Celda corta sintética gana cuando el precio baja; costos simétricos; control coincide | probar | L20 |
-| X11 | `QuantAgent-e4jc.5` | F2-b: cortos y cuenta margin solo en paper (scheduler, OrderManager, AlpacaBroker); depende de X10 | Un corto sintético abre, se monitorea y cierra en paper; en endpoint live queda bloqueado | decidir | L20 |
-| X12 | `QuantAgent-e4jc.6` | F2-c (R12): F2 por las etapas 0 a 2 (VM); depende de X10, S01 y X14 | IM con veredicto y correlación con 1/N; ninguna entrada nueva en el candado | decidir | L20 |
+| X08a | `QuantAgent-e4jc.2.1` | F1-b1: pesos objetivo de F1 por fecha sin lookahead; padre e4jc.2; ~40 líneas | Señal SPY/IEF sintética confirma reglas 60/40 y objetivo 50/50 fuera de los últimos cinco retornos, sin datos futuros | leer | L20 |
+| X08b | `QuantAgent-e4jc.2.2` | F1-b2: estrategia `rebalanceo-fin-de-mes` registrada; depende de X08a; ~35 líneas | Alias instancia la estrategia; posiciones esperadas y curva diaria 50/50 fuera de ventana coinciden | leer | L20 |
+| X08c | `QuantAgent-e4jc.2.3` | F1-b3: modo opcional de llenado al cierre; depende de X08b; ~45 líneas | Orden de t llena al close de t; default en open de t+1, backtests, goldens y oráculos sin cambio | probar | L20 |
+| X09 | `QuantAgent-e4jc.3` | F1-c (R10): F1 por las etapas 0 a 2 con `--hasta-etapa 2` (VM); depende de X08c y S01 | IM con veredicto; ninguna entrada nueva en el candado; pide a Fede el OK para la reserva | decidir | L20 |
+| X09b | `QuantAgent-jpwz` | F1: diagnóstico del corte de etapa 1 por menos de 30 trades (hallazgo de #526); sin repetir la corrida ni sumar a N | Operaciones esperadas vs contadas con la causa; test sintético que reproduce el conteo | probar | L20 |
+| X09c | `QuantAgent-g7kg` | F1: `filtrar_activo` cuenta los rebalanceos de estrategias de pesos objetivo (hallazgo de jpwz, #528); sin repetir la corrida de F1 | El test de jpwz afirma 288 cambios / 576 órdenes; estrategias de señal con los mismos trades; oráculos sin cambio | leer | L20 |
+| X09c1 | `QuantAgent-g7kg.1` | Filtro de pesos objetivo con el panel completo; partición de g7kg | Cambios de peso contados por activo; métricas de estrategias de señal sin cambios | leer | L20 |
+| X09c2 | `QuantAgent-g7kg.2` | Integración del filtro objetivo y carga de cierres sincronizados en etapa 1; depende de g7kg.1 | La etapa 1 corre la estrategia de pesos objetivo y suma órdenes por activo | leer | L20 |
+| X09c3 | `QuantAgent-g7kg.3` | Prueba sintética de conteo F1; depende de g7kg.1 y g7kg.2 | 288 fechas y 576 órdenes afirmadas; pruebas de señal y oráculos sin cambio | probar | L20 |
+| X09d | `QuantAgent-tm5d` | F1: la etapa 2 (control de celdas) cuenta los rebalanceos de estrategias de pesos objetivo o declara 'no aplica' (hallazgo de #534); sin repetir la corrida de F1 | Test sintético: etapa 2 cuenta 288/576 órdenes; estrategias de señal sin cambio; oráculos sin cambio | leer | L20 |
+| X09e | `QuantAgent-tso5` | F1: el motor de la etapa 2 ejecuta pesos objetivo (hallazgo de #538: 0 trades aun con #537); sin repetir F1 con datos reales | Test sin mockear `correr_motor`: etapa 2 con trades > 0 por activo; estrategias de señal y oráculos sin cambio | leer | L20 |
+| X10a | `QuantAgent-e4jc.4a` | F2-a1: PnL de celda corta sintética en la cartera; padre e4jc.4 | Celda corta gana con baja y pierde con suba, con valores comprobados | leer | L20 |
+| X10b | `QuantAgent-e4jc.4b` | F2-a2: costos simétricos y número long-only intacto; depende de X10a; padre e4jc.4 | Costo/PnL neto simétricos en largos y cortos de igual nocional/variación; referencia long-only sin cambio | leer | L20 |
+| X10c | `QuantAgent-e4jc.4c` | F2-a3: control de celda corta contra `backtesting.py`; depende de X10a y X10b; padre e4jc.4 | Motor y control coinciden con costos en corto sintético y referencia long-only | probar | L20 |
+| X11a | `QuantAgent-zpsc` | F2-b1 desglosado: hijos zpsc.1 (OrderManager/RiskManager) y zpsc.2 (scheduler, depende de zpsc.1); depende de X10c | Hijos: corto abre/cierra con RiskManager y cartera plana; scheduler integra el ciclo PaperBroker; long-only intacto | decidir | L20 |
+| X11a1 | `QuantAgent-zpsc.1` | F2-b1a: apertura/cierre de cortos en OrderManager y validación RiskManager; hijo de zpsc | SELL abre corto, BUY deja cartera plana; tamaño/concentración validados y long-only intacto | leer | L20 |
+| X11a2 | `QuantAgent-zpsc.2` | F2-b1b: ciclo de corto monitoreado por scheduler con PaperBroker; depende de zpsc.1; hijo de zpsc | Camino sintético scheduler abre, monitorea y cierra a cartera plana; long-only intacto | probar | L20 |
+| X11b | `QuantAgent-lj6l` | F2-b2: cortos en AlpacaBroker y bloqueo en endpoint live qr6 (parte de e4jc.5); bloqueado hasta que #412 llegue a main y edge se rebase | Corto abre y cierra en cuenta paper de Alpaca; en endpoint live queda bloqueado | decidir | L20 |
+| X12a1 | `QuantAgent-t2qp.1` | F2-c0a: estrategia `tsmom-largo-corto` y señal mensual frente a DGS3MO; partición de t2qp | Prueba sintética de señal SHORT/LONG y comparación de retorno a 252 sesiones | leer | L20 |
+| X12a2 | `QuantAgent-t2qp.2` | F2-c0b: integrar señal corta al filtro y cartera; depende de t2qp.1 | Filtro y cartera respetan signo de señal y 1/sigma; long-only intacto | leer | L20 |
+| X12a3 | `QuantAgent-t2qp.3` | F2-c0c: habilitar YAML oficial en CLI hasta etapa 1; depende de t2qp.2 | `hipotesis correr` hasta etapa 1 no falla por estrategia desconocida; YAML no se mueve a `hipotesis/` | probar | L20 |
+| X12 | `QuantAgent-e4jc.6` | F2-c (R12): F2 por las etapas 0 a 2 (VM); depende de X10c, S01 y X14c | IM con veredicto y correlación con 1/N; ninguna entrada nueva en el candado | decidir | L20 |
+| X12b | `QuantAgent-46pk` | F2: diagnóstico de errores del adaptador al validar órdenes cortas en la etapa 2 (hallazgo del IM de e4jc.6, #521); VM con datos reales, sin abrir 2019–2022 | Lista de celdas con error y mensaje exacto; test que lo reproduce; veredicto de F2 con y sin esas celdas | probar | L20 |
 | X13 | `QuantAgent-e4jc.7` | D-1: factores AQR y French cortados en 2018-12; AQR no se versiona | Ninguna fecha posterior a 2018-12; archivos de AQR ignorados por git | leer | L20 |
-| X14a | `QuantAgent-e4jc.8.1` | D-2a: regla de elegibilidad fechada en 2007 | Regla integrada antes de selección | leer | L20 |
-| X14b | `QuantAgent-e4jc.8.2` | D-2b: proxies gratuitos con corte temporal | Fuentes, fórmulas y límites documentados | leer | L20 |
-| X14c | `QuantAgent-e4jc.8.3` | D-2c: seleccionar ETFs y congelar snapshot | Manifiesto y `snapshot verify` pasan | probar | L20 |
+| X14a | `QuantAgent-e4jc.8.1` | D-2a: regla con corte en 2007 antes de seleccionar ETFs; sin PTP | Regla integrada en commit propio, condiciones verificables y ninguna lista de candidatos | leer | L20 |
+| X14b | `QuantAgent-e4jc.8.2` | D-2b: documentar empalme con proxies gratuitos; depende de X14a | Fuentes, unidades, fórmula, fecha del enlace, validación y límites por clase | leer | L20 |
+| X14c | `QuantAgent-e4jc.8.3` | D-2c: aplicar regla integrada y congelar snapshot nuevo; depende de X14b | Evidencia de elegibilidad posterior al commit de la regla; manifiesto versionado; `snapshot verify` pasa | probar | L20 |
 | X15 | `QuantAgent-e4jc.9` | D-3: CSV de pysystemtrade (futuros, hasta 2024-03) como datos de investigación | Manifiesto con fuente y hash; carga de una serie de prueba | leer | L20 |
 | X16 | `QuantAgent-e4jc.10` | G-1: lección escrita por personas en el catálogo e incluida en el pedido, sin cifras de la prueba; depende de S05 y S08 | El pedido contiene la lección; el test confirma que no hay Sharpe, DSR ni ganancias | leer | L20 |
 | X17 | `QuantAgent-e4jc.11` | G-2: refutador de otra familia (Codex), modelo más capaz con esfuerzo alto y búsqueda web; depende de S06 y S08. No correr `hipotesis proponer` antes | Comandos de mentira escriben propuesta y refutación; si el refutador falla no se escribe nada | leer | L20 |
@@ -734,6 +763,23 @@ Los primeros 5 son los más fáciles de revisar.
 | X19b | `QuantAgent-e4jc.13.2` | P-1b: rechazos y dividendos | Sin rechazo inexplicado; cada dividendo tiene tratamiento | probar | L21 |
 | X19c | `QuantAgent-e4jc.13.3` | P-1c: CLI de chequeos; parte de e4jc.13 | CLI muestra las tres secciones y falla ante incumplimiento | probar | L21 |
 | X20 | `QuantAgent-e4jc.14` | P-2 (R13): protocolo de la reserva 2023+ (lista cerrada cartera-transversal, F1, F2; C0 + M1; una apertura); depende de S04 | Documento con lista, criterio y regla de una apertura; sin escalera de incubación | decidir | L20 |
+| X20b.1 | `QuantAgent-3bby.1` | Elegibilidad y simulacro del comando de reserva; parte de X20b | Snapshot sintético: rango calculado sin abrir/leer reserva; rechazos de lista, etapa 2 y candado | probar | L20 |
+| X20b.2 | `QuantAgent-3bby.2` | Pre-registro y apertura única bajo `--abrir`; depende de X20b.1 | Pre-registro precede apertura, accesos registrados y segundo intento rechazado en fixture sintético | probar | L20 |
+| X20b.3a | `QuantAgent-3bby.3.1` | Motor/CLI existente sobre reserva abierta; curva, C0 intacto y benchmark 1/N; parte de X20b.3 | Snapshot sintético produce curva y métricas C0 más benchmark 1/N coherentes, sin leer datos reales | probar | L20 |
+| X20b.3b | `QuantAgent-3bby.3.2` | M1 con DGS3MO, veredicto C0 intacto e intento en CLI; depende de X20b.3a | Fixture sintético produce Sharpe en exceso, veredicto y fila de intento coherentes, sin leer datos reales | probar | L20 |
+| X20b.4 | `QuantAgent-3bby.4` | Camino de pesos objetivo con panel completo; depende de X20b.3 | Estrategia sintética de pesos objetivo cuenta trades > 0 y reproduce pesos/curva | probar | L20 |
+| X19f | `QuantAgent-bduo` | Paper: el chequeo diario tolera hasta 1 acción de diferencia entre Alpaca y la sombra (peso de 1 acción = precio / valor invertido); bloquea el paper del 2026-11-02 | Peso a menos de 1 acción: sin hallazgo; a más de 1: hallazgo y código 1; sin precio: 1e-4; sin `tolerancias` igual que hoy | probar | L20 |
+| X19g | `QuantAgent-8kxc` | Paper: dividendos de Alpaca activos por defecto en el digest y validados; refina X19e (`QuantAgent-xtns`); bloquea el paper del 2026-11-02 | Cliente falso de clase real con DIV: lista y código 0; error de API o actividad malformada: aviso y código 1; `--sin-dividendos` vuelve al aviso | probar | L20 |
+| X19h1 | `QuantAgent-av1p.5.5.1` | Consulta de cartera desde Position, fills diarios PAPER y pendientes; partición de av1p.5.5, ~90 líneas | SQLite sin ActivePosition/Trade devuelve posiciones, fills del día y pendientes previos; excluye LIVE y otras fechas; estrategias intactas | probar | L20 |
+| X19h2 | `QuantAgent-av1p.5.5.2` | Lectura de equity, caja y valuación actual de Alpaca para digest; ~90 líneas | Equity 1000, caja 50 y posición 950 con P&L actualizado; error API o símbolo sin valuación falla explícitamente | probar | L20 |
+| X19h3a | `QuantAgent-fwjm` | Digest de carteras: formato de equity, caja %, posiciones con valor de mercado, ejecuciones y pendientes (X19h3 partido por profundidad de Beads); ~90 líneas | Equity 1000, caja 50 (5 %), posición 950 y P&L -30 se muestran; ejecuciones sin ganancias inventadas; formato anterior intacto; menos de 4000 caracteres | probar | L20 |
+| X19h3b | `QuantAgent-qh2q` | Digest de carteras: conectar consulta y valuación al CLI con `--portfolio`; depende de X19h3a; ~95 líneas | SQLite sin ActivePosition/Trade lista posición, fill del día y pendiente previo; API fallida da aviso y código 1; sin `--portfolio` igual que hoy | probar | L20 |
+| X20c1 | `QuantAgent-ku33.1` | C0 cartera, DSR y benchmark 1/N desde curvas `{activo}.csv`; parte de ku33 | Test sintético comprueba C0, DSR y benchmark con lectura real de archivos; sin reserva real | probar | L20 |
+| X20c2 | `QuantAgent-ku33.2` | Recuperar veredicto de reserva y M1 idempotente; depende de ku33.1 | M1 coincide con valor esperado; dos ejecuciones dejan un intento/estado y no llaman `abrir()` ni `correr_motor` | probar | L20 |
+| X19d.1 | `QuantAgent-e4jc.15.1` | P-1d1: consultar posiciones, órdenes y dividendos paper para digest; parte de e4jc.15 | DB SQLite sintética devuelve datos de sesión aislados a PAPER; posiciones cantidad × precio | probar | L20 |
+| X19d.2 | `QuantAgent-e4jc.15.2` | P-1d2: integrar pesos DB-sombra y aviso de sesión faltante; parte de e4jc.15 | Coincidencia da 0, divergencia da 1 y sombra sin última sesión muestra aviso; depende de e4jc.15.1 | probar | L20 |
+| X19d.3 | `QuantAgent-e4jc.15.3` | P-1d3: ejecutar chequeos de órdenes y dividendos desde digest DB; parte de e4jc.15 | Rechazo sin comentario y dividendo sin tratamiento dan 1 con hallazgo; atendidos dan 0; depende de e4jc.15.1 | probar | L20 |
+| X19e | `QuantAgent-xtns` | P-1e: dividendos paper desde actividades DIV de Alpaca en el digest (`--dividendos-alpaca`); decisión de Fede 2026-10-27 | DIV listado con tratamiento y código 0; error de API: aviso y código 1; sin opción sin cambios | probar | L20 |
 
 
 | W02 | `QuantAgent-13a` | Contrato Broker para fills parciales, rechazos y nocional | ABC y PaperBroker cubren el contrato documentado | leer | L21 |
@@ -779,6 +825,50 @@ Los primeros 5 son los más fáciles de revisar.
 | W15b.3 | `QuantAgent-b41.2.2` | Agregar CLI digest con selección de DB/cartera y prueba SQLite | CLI pasa fecha y datos; salida no vacía y menor a 4000 caracteres | probar | L21 |
 | W15b.4 | `QuantAgent-b41.2.3` | Documentar comando y ejemplo reproducible | Manual cubre opciones, salida y alerta sin actividad | leer | L21 |
 | W16 | `QuantAgent-55x` | Reloj por velas en corridas online; opcional si W10 lo necesita | No reevalúa última vela en sábado/feriado | leer | L21 |
+| P01 | `QuantAgent-av1p.5.1` | Bug paper: `DataProvider.get_ohlc` compara fecha naive con `earliest()` aware de la fuente Alpaca (`provider.py:139`, TypeError) | Test con fuente falsa aware y rango naive trae el gap sin lanzar; yahoo y snapshot siguen verdes | probar | L25 |
+| P02 | `QuantAgent-av1p.5.2` | Bug paper: sin `TRADING_BROKER` el ciclo de cartera cae en silencio al broker simulado (`settings.py:27`, `assembler.py` DEFAULTS) | Test: entorno paper sin `TRADING_BROKER` lanza error que nombra la variable; `paper_local` explícito avisa; `alpaca_paper` sin cambios | probar | L29 |
+| P03 | `QuantAgent-av1p.5.3` | Bug paper: `rebalancear` calcula objetivos sobre el 100 % del equity (`rebalanceador.py`) y el tope de reserva de `OrderManager._cap_entry_qty` no actúa cuando la orden supera la caja; la cartera quedó con 0,9 % de caja | Test: cartera con pesos que suman 100 % termina con caja >= `cash_reserve_pct` x equity (con y sin posiciones previas); ventas no se limitan; la sombra guarda los pesos sin escalar; tests del rebalanceador siguen verdes | probar | L30 |
+| I01a | `QuantAgent-1gw0.1.1` | Columna `estado` y compatibilidad del CSV; parte de I01 | Registro nuevo con estado vacío; encabezados previos admiten append sin alterar valores anteriores | probar | L31 |
+| I01b | `QuantAgent-1gw0.1.2` | Filtro único de filas válidas y consumidores; depende de I01a | Invalidada/sintética no cambia DSR ni conteos; archivo sin estado sigue válido | probar | L31 |
+| I01c | `QuantAgent-1gw0.1.3` | N distinto del DSR y `dsr_crudo` por filas; depende de I01b | Dos repeticiones cuentan N=1 en DSR normal y N=2 en dsr_crudo de etapa 3 | probar | L31 |
+| I02a | `QuantAgent-1gw0.2.1` | Grupo raíz `intentos` e invalidación en dry-run; parte de I02 | Filtra hipótesis/fecha UTC, error si no existe; conserva bytes y no crea backup | probar | L31 |
+| I02b | `QuantAgent-1gw0.2.2` | `invalidar --aplicar` con backup; depende de I02a | Backup idéntico, mismo número/orden de filas; solo cambia estado seleccionado, incluso con encabezado viejo | probar | L31 |
+| I02c | `QuantAgent-1gw0.2.3` | Marca `epoca-limpia`; depende de I02b | JSON con desde_utc/motivo/creada_utc; CSV intacto | probar | L31 |
+| I02d | `QuantAgent-1gw0.2.4` | Época y conteos en informe; depende de I02c | Fixture muestra época y válidos/invalidados; sin marca/estado sigue funcionando | probar | L31 |
+| MAN-01a | `QuantAgent-dpr3.1.1` | Borrar vista Streamlit del manual y su prueba específica | Ambos archivos no existen | probar | L32 |
+| MAN-01b | `QuantAgent-dpr3.1.2` | Borrar vistas Streamlit restantes | No existe `apps/streamlit/views/` | probar | L32 |
+| MAN-01c.1 | `QuantAgent-dpr3.1.3.1` | Borrar entrada y utilidades Streamlit; dejar el servicio hasta retirar sus tests | No existen app.py/utilidades y el test de heartbeats pasa | probar | L32 |
+| MAN-01c.2 | `QuantAgent-dpr3.1.3.2` | Quitar primeras tres pruebas de DbHandle del test mixto | Esos tests no existen y el archivo pasa | probar | L32 |
+| MAN-01c.3 | `QuantAgent-dpr3.1.3.3` | Quitar pruebas DbHandle restantes e import; borrar servicio | No existe apps/streamlit ni quedan imports/tests de esa app; test de heartbeats pasa | probar | L32 |
+| MAN-01d.1 | `QuantAgent-dpr3.1.4.1` | Quitar artefactos Docker QA y dependencia Streamlit | Dockerfile.qa y docker-compose.qa.yml no existen; pyproject.toml no declara Streamlit | probar | L32 |
+| MAN-01d.2 | `QuantAgent-dpr3.1.4.2` | Quitar despliegue QA y healthcheck Streamlit del CI | No hay deploy-qa activo ni referencias activas Streamlit/8501 en el workflow | probar | L32 |
+| MAN-01e | `QuantAgent-dpr3.1.5` | Quitar refs vigentes de README, docs/README e inventario de ramas | Esos tres docs no mencionan Streamlit ni sus rutas/puerto | leer | L32 |
+| MAN-01f | `QuantAgent-dpr3.1.6` | Borrar las nueve páginas de `docs/user-manual/` | No existe `docs/user-manual/` | leer | L32 |
+| MAN-01g | `QuantAgent-dpr3.1.7` | Verificar aceptación final, suite e inventario de excepciones históricas | Escaneo limpio fuera de históricos, suite sin tests Streamlit borrados pasa y CI verde | probar | L32 |
+| MAN-02a | `QuantAgent-dpr3.2.1` | Ayuda inglesa de `backtest.py` (46 declaraciones) | Todos los help/epilog cubiertos están en inglés y no tienen caracteres españoles; tests dirigidos pasan | probar | L32 |
+| MAN-02b | `QuantAgent-dpr3.2.2` | Ayuda inglesa de `hipotesis.py`, `data.py` e `intentos.py` (40 declaraciones) | Todos los help/epilog cubiertos están en inglés y no tienen caracteres españoles; tests dirigidos pasan | probar | L32 |
+| MAN-02c | `QuantAgent-dpr3.2.3` | Resto de ayuda CLI (12 declaraciones) y test global | Todos los comandos/grupos/opciones tienen help no vacío sin caracteres españoles; tests dirigidos pasan | probar | L32 |
+| MAN-02d | `QuantAgent-dpr3.2.4` | Ayuda inglesa de `sweep.py` y `profile.py` (30 declaraciones) | Todos los help/epilog cubiertos están en inglés y no tienen caracteres españoles; tests dirigidos pasan | probar | L32 |
+| MAN-03a | `QuantAgent-dpr3.3.1` | Renderizador determinista de referencia CLI en memoria | Renderiza todos los grupos y opciones sin dependencias nuevas | leer | L32 |
+| MAN-03b | `QuantAgent-dpr3.3.2` | Prueba del renderizador: diferencias, orden estable y help | El test detecta cambios sin regenerar, orden inestable y help faltante | probar | L32 |
+| MAN-03c | `QuantAgent-dpr3.3.3` | Referencia CLI de backtest e hipótesis | Páginas coinciden con el generador y reflejan help/defaults actuales | probar | L32 |
+| MAN-03d | `QuantAgent-dpr3.3.4` | Referencia CLI de trading, data e intentos | Páginas coinciden con el generador y reflejan help/defaults actuales | probar | L32 |
+| MAN-03e | `QuantAgent-dpr3.3.5` | Referencia CLI de walkforward, sweep, verdict y profile | Páginas coinciden con el generador y reflejan help/defaults actuales | probar | L32 |
+| MAN-03f | `QuantAgent-dpr3.3.6` | Índice de referencia CLI con enlaces relativos | README enlaza cada página existente con rutas relativas válidas | leer | L32 |
+| MAN-04 | `QuantAgent-dpr3.4` | Reglas de `AGENTS.md` sobre comandos y decisiones; el contrato de lote las cita | Las dos reglas están en `AGENTS.md` y el contrato de lote las cita | leer | L32 |
+| MAN-05 | `QuantAgent-dpr3.5` | Índice de decisiones y tabla de criterios vigentes en `docs/manual/` | Una línea por documento de `docs/04_decisions/` y por tabla de decisiones de los planes; cada número de criterios enlaza a su decisión | leer | L32 |
+| MAN-06 | `QuantAgent-dpr3.6` | Glosario en `docs/manual/glossary.md` | Cada término de la lista y de los glosarios de los planes tiene definición y ejemplo; los demás documentos enlazan al glosario | leer | L32 |
+| MAN-06a | `QuantAgent-dpr3.6.1` | Glosario y test (roadmap §0/§5, M2 §14, tablero §2/§13; máximo 2 archivos y 100 líneas) | Cada término extraído tiene encabezado, definición y ejemplo; el test detecta omisiones | probar | L32 |
+| MAN-06b | `QuantAgent-dpr3.6.2` | Enlaces al inicio de `criteria.md` y `decisions.md` | Ambas páginas enlazan antes del contenido y las rutas relativas resuelven | leer | L32 |
+| MAN-06c | `QuantAgent-dpr3.6.3` | Enlaces desde páginas CLI de primer nivel, con generador sincronizado | Cada página de primer nivel enlaza al glosario y coincide con el generador | probar | L32 |
+| MAN-06d | `QuantAgent-dpr3.6.4` | Enlaces desde páginas CLI anidadas, con generador sincronizado | Cada página anidada enlaza al glosario y coincide con el generador | probar | L32 |
+| MAN-07 | `QuantAgent-dpr3.7` | El embudo etapa por etapa (depende de MAN-05) | Una sección por etapa con entrada, medida, criterio, comando y decisión de origen | leer | L32 |
+| MAN-08 | `QuantAgent-dpr3.8` | Visión general, operación y cómo trabajamos; `docs/manual/README.md` (depende de MAN-03) | Cada procedimiento de operación tiene el comando exacto y qué salida esperar | leer | L32 |
+| MAN-01h | `QuantAgent-dpr3.9` | Restaurar tests de `get_environment_metrics` (clase `TestGetEnvironmentMetrics`, borrada de más con `test_s62_operational_observability.py`) en `tests/test_llm_telemetry_environment_metrics.py`, copiada de origin/main sin cambios de lógica | Los tests de `get_environment_metrics` pasan y no hay imports de `apps.streamlit` en tests | probar | L32 |
+| MAN-03c.1 | `QuantAgent-dpr3.3.3.10` | Generador: una página por subgrupo de comandos y opción para escribir a disco | El generador separa cada subgrupo en una página y escribe a disco; conserva help y defaults | probar | L32 |
+| MAN-03c.2 | `QuantAgent-dpr3.3.3.11` | Páginas generadas de backtest (tanda 1, ~251 líneas) y de hipótesis básicas (69); tope 350 líneas generadas | Las páginas coinciden con Click | probar | L32 |
+| MAN-03c.3 | `QuantAgent-dpr3.3.3.12` | Páginas generadas de backtest (tanda 2, ~251 líneas) y de propuestas de hipótesis (73); tope 350 | Las páginas coinciden con Click | probar | L32 |
+| MAN-03c.4 | `QuantAgent-dpr3.3.3.13` | Páginas generadas de backtest (tanda 3, ~252 líneas) y de flujo de hipótesis (90); tope 350 | Las páginas coinciden con Click | probar | L32 |
 
 X01–X20 se agregaron el 2026-10-22; X01–X05 y X19a–c pertenecen a L21, X06–X18 y X20 a L20. D-2 se partió en X14a–c, según las decisiones de Fede registradas en `docs/04_decisions/QuantAgent-R01-DC-decisiones-investigacion-edge.md` (PR #400). Paper es prueba de sistema: ningún resultado de paper promueve una estrategia a dinero real ni cuenta como evidencia de edge. Lo que ya cubría L19 (S01–S08: M1–M3, atribución, catálogo, DOI, advertencias y pedido) no se duplica; el rol `diversificador` (C1) queda fuera del pedido y de los campos, y `nb94.1`, `syml` y `55nh` llevan un comentario para que el PM lo revise. Sin ticket por ahora, y registrado en el DC: `cambio-de-mes` y `volatilidad-gestionada` fuera, F3 `carry-futuros` en espera, subastas del Tesoro rechazadas, DBC/USO y retención del 30 % sobre dividendos (se resuelven antes de dinero real; paper sin cambios). Dato para estrategias futuras, no restricción: capital live estimado de USD 1.000–3.000.
 

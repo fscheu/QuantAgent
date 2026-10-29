@@ -51,6 +51,30 @@ def test_submit_maps_market_and_limit(kind, expected):
     assert str(getattr(client.request.type, "value", client.request.type)).lower() == expected
     assert float(client.request.qty) == 2
     assert order.alpaca_order_id == "alpaca-123"
+
+def test_paper_short_opens_with_sell_and_closes_with_buy():
+    class PaperAccount(Client):
+        position = 0
+
+        def submit_order(self, order_data):
+            result = super().submit_order(order_data)
+            self.position += (-1 if order_data.side == "sell" else 1) * int(order_data.qty)
+            return result
+
+    client = PaperAccount(SimpleNamespace(id="alpaca-short", status="filled", filled_qty="2", filled_avg_price="100"))
+    broker = AlpacaBroker(client)
+    short = make_order()
+    short.side = OrderSide.SELL
+    assert broker.submit_order(short).status == OrderStatus.FILLED
+    assert client.request.side == "sell"
+    assert client.position == -2
+
+    cover = make_order()
+    assert broker.submit_order(cover).status == OrderStatus.FILLED
+    assert client.request.side == "buy"
+    assert client.position == 0
+    assert client.submitted == 2
+
 @pytest.mark.parametrize("qty,status", [("2", OrderStatus.FILLED), ("1", OrderStatus.PARTIALLY_FILLED)])
 def test_submit_preserves_cumulative_fills(qty, status):
     client = Client(SimpleNamespace(status=status.value, filled_qty=qty, filled_avg_price="101"))

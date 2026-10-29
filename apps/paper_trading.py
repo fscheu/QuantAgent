@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import signal
 import sys
 import time
@@ -69,6 +70,11 @@ def _build_portfolio_scheduler(config, path: str):
     hypothesis = Path(path)
     if not hypothesis.is_file():
         raise ValueError(f"cartera inexistente: {path}")
+    broker_type = os.getenv("TRADING_BROKER", "").strip() or getattr(config, "broker_type", None)
+    if not broker_type:
+        raise ValueError("TRADING_BROKER is required for paper portfolios; valid values: alpaca_paper, paper_local")
+    if broker_type == "paper_local":
+        logger.warning("broker simulado: no se envían órdenes a Alpaca")
     from quantagent.fabrica.hipotesis import cargar_hipotesis
 
     cartera = cargar_hipotesis(hypothesis)
@@ -79,7 +85,7 @@ def _build_portfolio_scheduler(config, path: str):
     session = sessionmaker(bind=engine)()
     try:
         resolved = StrategyAssembler.from_profiles(
-            overrides={"universe": config.assets}, environment=Environment(config.environment)
+            overrides={"universe": config.assets, "broker_type": broker_type}, environment=Environment(config.environment)
         )
         components = StrategyAssembler.build_components(resolved, db_session=session, build_graph=False)
         provider = DataProvider(session, source=build_source("alpaca"))

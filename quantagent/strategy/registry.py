@@ -10,14 +10,25 @@ from .fifty_two_week_high_strategy import FiftyTwoWeekHighStrategy
 from .halloween_strategy import HalloweenStrategy
 from .llm_agent_strategy import LLMAgentStrategy
 from .momentum_12m_strategy import Momentum12mStrategy
+from .rebalanceo_fin_de_mes_strategy import RebalanceoFinDeMesStrategy
 from .rsi_regimen_strategy import RsiRegimenStrategy
 from .rsi_strategy import RSIMeanReversionStrategy
 from .senal_externa_strategy import SenalExterna
 from .sma_cross_strategy import SmaCrossStrategy
 from .triple_screen_strategy import TripleScreenStrategy
+from .tsmom_largo_corto_strategy import TsmomLargoCortoStrategy
 from .turn_of_the_month_strategy import TurnOfTheMonthStrategy
 
 STRATEGY_REGISTRY: dict[str, dict[str, Any]] = {
+    "TsmomLargoCortoStrategy": {
+        "cls": TsmomLargoCortoStrategy,
+        "type": "deterministic",
+        "cli_alias": "tsmom-largo-corto",
+        "display_name": TsmomLargoCortoStrategy.describe()["display_name"],
+        "description": TsmomLargoCortoStrategy.describe()["description"],
+        "min_bars": 253,
+        "params": {"snapshot": {"type": str, "default": None, "description": "Macro snapshot name."}},
+    },
     "RSIMeanReversionStrategy": {
         "cls": RSIMeanReversionStrategy,
         "type": "deterministic",
@@ -250,6 +261,7 @@ STRATEGY_REGISTRY: dict[str, dict[str, Any]] = {
     "HalloweenStrategy": {"cls": HalloweenStrategy, "type": "deterministic", "cli_alias": "halloween", "display_name": HalloweenStrategy.describe()["display_name"], "description": HalloweenStrategy.describe()["description"], "min_bars": 1, "params": {}},
     "TurnOfTheMonthStrategy": {"cls": TurnOfTheMonthStrategy, "type": "deterministic", "cli_alias": "turn-of-the-month", "display_name": TurnOfTheMonthStrategy.describe()["display_name"], "description": TurnOfTheMonthStrategy.describe()["description"], "min_bars": 1, "params": {}},
     "SenalExterna": {"cls": SenalExterna, "type": "deterministic", "cli_alias": "senal-externa", "display_name": SenalExterna.describe()["display_name"], "description": SenalExterna.describe()["description"], "min_bars": 1, "params": {"ruta": {"type": str, "default": "", "description": "Ruta al CSV con timestamp, posicion."}}},
+    "RebalanceoFinDeMesStrategy": {"cls": RebalanceoFinDeMesStrategy, "type": "deterministic", "cli_alias": "rebalanceo-fin-de-mes", "display_name": RebalanceoFinDeMesStrategy.describe()["display_name"], "description": RebalanceoFinDeMesStrategy.describe()["description"], "min_bars": 1, "params": {}},
     "LLMAgentStrategy": {
         "cls": LLMAgentStrategy,
         "type": "llm",
@@ -273,6 +285,7 @@ def get_strategy_names() -> list[str]:
 
 def build_strategy(name: str, **kwargs: Any) -> TradingStrategy:
     """Instantiate a registered strategy with optional constructor params."""
+    name = cli_aliases().get(name, name)
     return STRATEGY_REGISTRY[name]["cls"](**kwargs)
 
 

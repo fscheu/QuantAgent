@@ -2,6 +2,7 @@
 
 import csv
 import json
+import os
 import traceback
 from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime, timezone
@@ -13,7 +14,7 @@ import pandas as pd
 import yaml
 from tabulate import tabulate
 
-from quantagent.data.snapshot import SnapshotError, read_snapshot, snapshot_root
+from quantagent.data.snapshot import SnapshotError, load_manifest, read_snapshot, snapshot_root
 from quantagent.fabrica.admision import admitir
 from quantagent.fabrica.candado import CandadoError, abrir, fecha_apertura
 from quantagent.fabrica.cartera import evaluar_cartera
@@ -33,24 +34,26 @@ from quantagent.fabrica.transversal import es_transversal
 from quantagent.fabrica.validacion import (
     alarma_cartera,
     alarma_filtro_motor,
+    curva_cartera_guardada,
+    evaluar_c0_cartera,
     validar_etapa2,
     validar_etapa3,
 )
 from quantagent.settings import COSTOS_PERFILES
-from quantagent.strategy.registry import STRATEGY_REGISTRY, cli_aliases
+from quantagent.strategy.registry import STRATEGY_REGISTRY, build_strategy, cli_aliases
 
 from .sweep import registrar_intento
 
 
-@click.group("hipotesis", help="Evaluar hipótesis de la fábrica de estrategias.")
+@click.group("hipotesis", help="Evaluate strategy factory hypotheses.")
 def hipotesis_group():
     pass
 
 
-@hipotesis_group.command("tanda", help="Procesar los YAML en orden y guardar informes, logs y resumen.")
+@hipotesis_group.command("tanda", help="Process YAML files in order and save reports, logs, and a summary.")
 @click.argument("carpeta_yaml", type=click.Path(exists=True, file_okay=False))
-@click.option("--snapshot", "snapshot_name", required=True)
-@click.option("--carpeta", type=click.Path(file_okay=False), required=True)
+@click.option("--snapshot", "snapshot_name", required=True, help="Snapshot to evaluate against.")
+@click.option("--carpeta", type=click.Path(file_okay=False), required=True, help="Directory for reports and run logs.")
 @click.pass_context
 def tanda_command(ctx, carpeta_yaml, snapshot_name, carpeta):
     desde = datetime.now(timezone.utc)
@@ -86,10 +89,10 @@ def tanda_command(ctx, carpeta_yaml, snapshot_name, carpeta):
     click.echo(f"Tanda terminada: {destino / 'resumen.md'}")
 
 
-@hipotesis_group.command("resumen", help="Resumir los últimos estados y los intentos de la tanda.")
+@hipotesis_group.command("resumen", help="Summarize recent statuses and batch attempts.")
 @click.option("--desde", type=click.DateTime(["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S%z"]),
-              help="Inicio UTC inclusivo (fecha o fecha y hora con zona).")
-@click.option("--out", type=click.Path(dir_okay=False))
+              help="Inclusive UTC start date or timezone-aware datetime.")
+@click.option("--out", type=click.Path(dir_okay=False), help="Write the summary to this file.")
 def resumen_command(desde, out):
     if desde is not None:
         desde = desde.replace(tzinfo=timezone.utc) if desde.tzinfo is None else desde
@@ -97,6 +100,109 @@ def resumen_command(desde, out):
     if out:
         Path(out).write_text(texto)
     click.echo(texto, nl=False)
+
+
+@hipotesis_group.command("reserva", help="Check eligibility and date range for the 2023+ reserve period.")
+@click.argument("archivo", type=click.Path(exists=True, dir_okay=False))
+@click.option("--snapshot", "snapshot_name", required=True, help="Snapshot used to determine the available date range.")
+@click.option("--abrir", "abrir_reserva", is_flag=True, help="Register and open the reserve period once.")
+def reserva_command(archivo, snapshot_name, abrir_reserva):
+    h = cargar_hipotesis(archivo)
+    if h.id not in {"cartera-transversal", "rebalanceo-fin-de-mes", "tendencia-larga-corta"}:
+        raise click.ClickException(f"hipótesis fuera de la lista de reserva: {h.id}")
+    estado = ultimo_estado(h.id)
+    if not estado or estado["etapa"] != "2" or estado["veredicto"] != "PASA":
+        raise click.ClickException(f"{h.id} no tiene etapa 2 PASA")
+    if fecha_apertura(h.id, "reserva") is not None:
+        raise click.ClickException(f"{h.id}/reserva ya fue abierta")
+    desde = os.environ.get("QUANTAGENT_RESERVA_DESDE", "2023-01-01")
+    manifiesto = load_manifest(snapshot_name)
+    activos = [a for p in h.piernas for a in p.activos]
+    hasta = min(manifiesto["symbols"][a]["end"] for a in activos)
+    if desde > hasta:
+        raise click.ClickException(f"sin rango de reserva: {desde} a {hasta}")
+    if abrir_reserva:
+        ahora = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        raiz = snapshot_root()
+        raiz.mkdir(parents=True, exist_ok=True)
+        with (raiz / "reserva-preregistro.log").open("a", encoding="utf-8") as f:
+            f.write(f"{ahora}\t{h.id}\telegible\treserva {desde} a {hasta}\n")
+        try:
+            abrir(h.id, "reserva")
+        except CandadoError as exc:
+            raise click.ClickException(str(exc)) from exc
+        with (raiz / "reserva-accesos.log").open("a", encoding="utf-8") as f:
+            f.write(f"{ahora}\thipotesis reserva {archivo} --snapshot {snapshot_name} --abrir\n")
+        parametros = {(p.clase, activo) if h.es_cartera else activo:
+                      (p.combinaciones()[0] if p.parametros else {})
+                      for p in h.piernas for activo in p.activos}
+        carpeta = raiz / "reserva" / h.id
+        try:
+            veredicto, filas = validar_etapa3(h, snapshot_name, parametros, carpeta, desde, hasta,
+                                               abrir_reserva=True)
+            from quantagent.fabrica.informe import diagnostico_exceso
+            m1 = diagnostico_exceso(h, carpeta / "equity", snapshot_name, base_dir=raiz)
+            if not m1["disponible"]:
+                raise click.ClickException(m1["motivo"])
+            registrar_intento("+".join(p.clase for p in h.piernas), "cartera", snapshot_name,
+                              "etf", 1.0, {p.clase: p.parametros for p in h.piernas},
+                              {"desde": desde, "hasta": hasta,
+                               "trades": sum(int(f.get("trades") or 0) for f in filas),
+                               "pnl": "", "sharpe": m1["sharpe_cartera"]},
+                              hipotesis=h.id, etapa="3", sharpe_base="DGS3MO")
+        except Exception as exc:
+            raise click.ClickException(str(exc)) from exc
+        registrar_estado(h.id, "3", veredicto, "reserva; C0 intacto")
+        click.echo(f"Reserva: {h.id}; {desde} a {hasta}; C0: {veredicto}")
+        click.echo(f"Sharpe en exceso de DGS3MO: cartera {m1['sharpe_cartera']:.2f}; benchmark {m1['sharpe_benchmark']:.2f}")
+    else:
+        click.echo(f"Simulacro elegible: {h.id}; reserva {desde} a {hasta}; no se abrió ni leyó.")
+
+
+@hipotesis_group.command("reserva-veredicto", help="Recover the verdict from saved equity curves.")
+@click.argument("archivo", type=click.Path(exists=True, dir_okay=False))
+@click.option("--snapshot", "snapshot_name", required=True, help="Snapshot used for the evaluation.")
+def reserva_veredicto_command(archivo, snapshot_name):
+    h = cargar_hipotesis(archivo)
+    if fecha_apertura(h.id, "reserva") is None:
+        raise click.ClickException(f"{h.id}/reserva todavía no fue abierta")
+    raiz = snapshot_root()
+    intentos_path = raiz / "intentos.csv"
+    if ultimo_estado(h.id) and ultimo_estado(h.id)["etapa"] == "3" and intentos_path.exists():
+        with intentos_path.open(newline="", encoding="utf-8") as f:
+            if any(r.get("hipotesis") == h.id and r.get("etapa") == "3" and r.get("activo") == "cartera"
+                   and r.get("sharpe_base") == "DGS3MO" for r in csv.DictReader(f)):
+                click.echo(f"Reserva ya recuperada: {h.id}")
+                return
+    from quantagent.data import snapshot as snap_mod
+    from quantagent.fabrica.informe import diagnostico_exceso
+    carpeta = raiz / "reserva" / h.id
+    eq = curva_cartera_guardada(h, carpeta, None)
+    if eq is None or eq.empty:
+        raise click.ClickException("curva de cartera vacía")
+    desde, hasta = eq.index.min(), eq.index.max()
+    activos = list(dict.fromkeys(a for p in h.piernas for a in p.activos))
+    c3 = pd.DataFrame({a: snap_mod.read_snapshot(snapshot_name, a, raiz)["close"].loc[desde:hasta]
+                       for a in activos})
+    c2 = pd.DataFrame({a: snap_mod.read_snapshot(snapshot_name, a, raiz)["close"].loc["2007-01-01":"2018-12-31"]
+                       for a in activos})
+    filas_intentos = list(csv.DictReader(intentos_path.open(newline="", encoding="utf-8"))) if intentos_path.exists() else []
+    s2 = next((float(r["sharpe"]) for r in filas_intentos
+               if r.get("hipotesis") == h.id and r.get("etapa") == "2" and r.get("activo") == "cartera"), None)
+    trades = sum(len(list(csv.DictReader(p.open(newline="", encoding="utf-8"))))
+                 for p in (carpeta / "trades").glob("*.csv"))
+    c0_pasa, _, c0 = evaluar_c0_cartera(eq, c3, c2, s2, trades, filas_intentos, intentos_path)
+    diagnostico = diagnostico_exceso(h, carpeta / "equity", snapshot_name, base_dir=raiz)
+    if not diagnostico["disponible"]:
+        raise click.ClickException(diagnostico["motivo"])
+    veredicto = "PASA" if c0_pasa else "CORTA"
+    registrar_intento("+".join(p.clase for p in h.piernas), "cartera", snapshot_name,
+                      "etf", 1.0, {p.clase: p.parametros for p in h.piernas},
+                      {"desde": str(desde.date()), "hasta": str(hasta.date()), "trades": trades, "pnl": "",
+                       "sharpe": diagnostico["sharpe_cartera"]}, hipotesis=h.id,
+                      etapa="3", sharpe_base="DGS3MO")
+    registrar_estado(h.id, "3", veredicto, "reserva; M1 DGS3MO")
+    click.echo(f"Reserva: {h.id}; M1 cartera {diagnostico['sharpe_cartera']:.2f}; M1 benchmark {diagnostico['sharpe_benchmark']:.2f}; C0: {veredicto}; benchmark {c0['benchmark']:.2f}; trades {trades}")
 
 
 def admitir_hipotesis(archivo, snapshot_name, prueba_unica=False):
@@ -158,6 +264,32 @@ def filtrar_hipotesis(h, snapshot_name):
                 resultados.append([activo, r["sharpe_tasa_0"], r["trades"]])
                 filas_tabla.append([p.clase, activo, r["sharpe_tasa_0"], r["trades"]] if h.es_cartera else [activo, r["sharpe_tasa_0"], r["trades"]])
         else:
+            nombre = cli_aliases().get(p.clase) or p.clase
+            estrategia = build_strategy(nombre, **next(iter(p.combinaciones()), {}))
+            if hasattr(estrategia, "posiciones_objetivo"):
+                panel_cierres = {}
+                panel_velas = {}
+                for activo in p.activos:
+                    try:
+                        v = read_snapshot(snapshot_name, activo).loc["2007-01-01":"2018-12-31"]
+                        if v.empty:
+                            raise ValueError("Sin velas entre 2007 y 2018")
+                        cierres_dict[activo] = v["close"]
+                        panel_cierres[activo] = v["close"]
+                        panel_velas[activo] = v.rename_axis("timestamp").reset_index()
+                    except (ValueError, SnapshotError) as exc:
+                        raise click.ClickException(str(exc)) from exc
+                r = filtrar_activo(p, panel_velas[p.activos[0]], costos=COSTOS_PERFILES["etf"],
+                                   capital=100_000.0, panel_cierres=pd.DataFrame(panel_cierres))
+                for activo, por_activo in r["por_activo"].items():
+                    clave = (p.clase, activo) if h.es_cartera else activo
+                    resultados.append([activo, por_activo["sharpe_tasa_0"], por_activo["trades"]])
+                    filas_tabla.append([p.clase, activo, por_activo["sharpe_tasa_0"], por_activo["trades"]]
+                                       if h.es_cartera else [activo, por_activo["sharpe_tasa_0"], por_activo["trades"]])
+                    retornos_dict[(i, activo)] = por_activo["retornos"]
+                    parametros[clave] = parametros_elegidos(por_activo["ganadores"])
+                    total_trades += por_activo["trades"]
+                continue
             for activo in p.activos:
                 try:
                     v = read_snapshot(snapshot_name, activo).loc["2007-01-01":"2018-12-31"]
@@ -188,10 +320,10 @@ def filtrar_hipotesis(h, snapshot_name):
     return resultados, parametros, veredicto, motivo, sharpe_car, total_trades, filas_tabla
 
 
-@hipotesis_group.command("filtrar", help="Cargar y admitir una hipótesis sobre 2007–2018.")
+@hipotesis_group.command("filtrar", help="Load and admit a hypothesis over 2007–2018.")
 @click.argument("archivo", type=click.Path(exists=True, dir_okay=False))
-@click.option("--snapshot", "snapshot_name", required=True)
-@click.option("--out", type=click.Path(dir_okay=False), help="CSV de resultados y parámetros por activo.")
+@click.option("--snapshot", "snapshot_name", required=True, help="Snapshot used for evaluation.")
+@click.option("--out", type=click.Path(dir_okay=False), help="Write results and per-symbol parameters to this CSV.")
 def filtrar_command(archivo, snapshot_name, out):
     h, ok, motivos = admitir_hipotesis(archivo, snapshot_name)
     if not ok:
@@ -235,12 +367,13 @@ def motivo_etapa3_cartera(base, fila):
     return f"{base}; {sufijo}" if base else sufijo
 
 
-@hipotesis_group.command("correr", help="Ejecutar las etapas 0 a 3, con corte temprano y estado.")
+@hipotesis_group.command("correr", help="Run stages 0 through 3 with early stopping and status tracking.")
 @click.argument("archivo", type=click.Path(exists=True, dir_okay=False))
-@click.option("--snapshot", "snapshot_name", required=True)
-@click.option("--carpeta", type=click.Path(file_okay=False), required=True)
+@click.option("--snapshot", "snapshot_name", required=True, help="Snapshot used for evaluation.")
+@click.option("--carpeta", type=click.Path(file_okay=False), required=True, help="Directory for stage outputs.")
 @click.option("--hasta-etapa", type=click.IntRange(0, 3), default=3, show_default=True, expose_value=False,
-              callback=lambda ctx, _p, v: setattr(ctx, "hasta_etapa", v))
+              callback=lambda ctx, _p, v: setattr(ctx, "hasta_etapa", v),
+              help="Stop after this stage (0 through 3).")
 def correr_command(archivo, snapshot_name, carpeta, hasta_etapa=None):
     hasta_etapa = getattr(click.get_current_context(silent=True), "hasta_etapa", 3) if hasta_etapa is None else hasta_etapa
     h, ok, motivos = admitir_hipotesis(archivo, snapshot_name, True)
@@ -310,12 +443,12 @@ def correr_command(archivo, snapshot_name, carpeta, hasta_etapa=None):
     raise click.exceptions.Exit(int(veredicto != "PASA"))
 
 
-@hipotesis_group.command("informe", help="Página HTML con el veredicto y los motivos de una hipótesis.")
+@hipotesis_group.command("informe", help="Generate an HTML page with a hypothesis verdict and its reasons.")
 @click.argument("hipotesis_id")
-@click.option("--out", type=click.Path(dir_okay=False), required=True)
-@click.option("--archivo", type=click.Path(exists=True, dir_okay=False), help="YAML de la hipótesis.")
-@click.option("--carpeta-equity", type=click.Path(file_okay=False), help="Carpeta con curvas equity guardadas.")
-@click.option("--snapshot", "snapshot_name", help="Snapshot usado para reconstruir el benchmark.")
+@click.option("--out", type=click.Path(dir_okay=False), required=True, help="Output HTML file.")
+@click.option("--archivo", type=click.Path(exists=True, dir_okay=False), help="Hypothesis YAML file.")
+@click.option("--carpeta-equity", type=click.Path(file_okay=False), help="Directory containing saved equity curves.")
+@click.option("--snapshot", "snapshot_name", help="Snapshot used to rebuild the benchmark.")
 def informe_command(hipotesis_id, out, archivo, carpeta_equity, snapshot_name):
     try:
         h = cargar_hipotesis(archivo) if archivo else None
@@ -336,8 +469,8 @@ def informe_command(hipotesis_id, out, archivo, carpeta_equity, snapshot_name):
     click.echo(f"Informe en {out}")
 
 
-@hipotesis_group.command("proponer", help="Pedir propuestas al LLM vía QUANTAGENT_LLM_CMD y validarlas.")
-@click.option("--carpeta", type=click.Path(file_okay=False), help="Carpeta donde guardar las propuestas aceptadas.")
+@hipotesis_group.command("proponer", help="Request proposals from the LLM via QUANTAGENT_LLM_CMD and validate them.")
+@click.option("--carpeta", type=click.Path(file_okay=False), help="Directory for accepted proposals.")
 def proponer_command(carpeta):
     try:
         rutas, rechazadas = proponer_con_llm(carpeta=carpeta)
@@ -360,16 +493,16 @@ def _registrar_propuesta(carpeta, prop_id, decision, quien, motivo=""):
     return fecha
 
 
-@hipotesis_group.group("propuestas", help="Revisar propuestas del catálogo (aprobar o rechazar).")
+@hipotesis_group.group("propuestas", help="Review catalog proposals by approving or rejecting them.")
 def propuestas_group():
     pass
 
 
-@propuestas_group.command("aprobar", help="Mover una propuesta de catalogo/propuestas/ a hipotesis/ y registrar el OK.")
+@propuestas_group.command("aprobar", help="Move a proposal from catalog/proposals to hypotheses and record approval.")
 @click.argument("propuesta_id")
-@click.option("--quien", "--autor", "quien", required=True)
-@click.option("--propuestas-dir", type=click.Path(file_okay=False), default=None)
-@click.option("--hipotesis-dir", type=click.Path(file_okay=False), default=None)
+@click.option("--quien", "--autor", "quien", required=True, help="Name of the approver.")
+@click.option("--propuestas-dir", type=click.Path(file_okay=False), default=None, help="Proposal directory (defaults to the catalog directory).")
+@click.option("--hipotesis-dir", type=click.Path(file_okay=False), default=None, help="Hypothesis directory (defaults to the configured directory).")
 def aprobar_command(propuesta_id, quien, propuestas_dir, hipotesis_dir):
     pid, quien = Path(propuesta_id).stem, (quien or "").strip()
     p_dir, h_dir = Path(propuestas_dir or PROPUESTAS_DIR), Path(hipotesis_dir or HIPOTESIS_DIR)
@@ -394,11 +527,11 @@ def aprobar_command(propuesta_id, quien, propuestas_dir, hipotesis_dir):
     click.echo(f"APROBADA {pid}: {destino} (OK de {quien} el {_registrar_propuesta(p_dir, pid, 'APROBADA', quien)})")
 
 
-@propuestas_group.command("rechazar", help="Archivar una propuesta con su motivo.")
+@propuestas_group.command("rechazar", help="Archive a proposal with a reason.")
 @click.argument("propuesta_id")
-@click.option("--motivo", required=True)
-@click.option("--quien", "--autor", "quien", required=True)
-@click.option("--propuestas-dir", type=click.Path(file_okay=False), default=None)
+@click.option("--motivo", required=True, help="Reason for rejection.")
+@click.option("--quien", "--autor", "quien", required=True, help="Name of the reviewer.")
+@click.option("--propuestas-dir", type=click.Path(file_okay=False), default=None, help="Proposal directory (defaults to the catalog directory).")
 def rechazar_command(propuesta_id, motivo, quien, propuestas_dir):
     pid, motivo, quien, p_dir = Path(propuesta_id).stem, (motivo or "").strip(), (quien or "").strip(), Path(propuestas_dir or PROPUESTAS_DIR)
     origen, destino = p_dir / f"{pid}.yaml", p_dir / "rechazadas" / f"{pid}.yaml"
@@ -428,16 +561,16 @@ def correr_cartera(archivo, snapshot_name, desde, hasta, carpeta, abrir_prueba=F
     return h.id, eq
 
 
-@hipotesis_group.command("comparar", help="Comparar una cartera núcleo con la misma más una capa (ΔSharpe, ΔDSR).")
+@hipotesis_group.command("comparar", help="Compare a core portfolio with the same portfolio plus one overlay (ΔSharpe, ΔDSR).")
 @click.argument("nucleo", type=click.Path(exists=True, dir_okay=False))
 @click.argument("con_capa", type=click.Path(exists=True, dir_okay=False))
-@click.option("--snapshot", "snapshot_name", required=True)
-@click.option("--carpeta", type=click.Path(file_okay=False), required=True)
-@click.option("--margen", type=float, required=True, help="ΔDSR mínimo para aceptar la capa; lo fija Fede antes de correr.")
-@click.option("--desde", default="2007-01-01", show_default=True)
-@click.option("--hasta", default="2018-12-31", show_default=True)
-@click.option("--out", type=click.Path(dir_okay=False), help="Informe HTML de la comparación.")
-@click.option("--abrir-prueba", is_flag=True, help="Corre sobre la prueba (desde 2019-01-01) y abre su candado para la cartera con capa; se abre una sola vez.")
+@click.option("--snapshot", "snapshot_name", required=True, help="Snapshot used for evaluation.")
+@click.option("--carpeta", type=click.Path(file_okay=False), required=True, help="Directory for comparison outputs.")
+@click.option("--margen", type=float, required=True, help="Minimum ΔDSR for accepting the overlay; set before running.")
+@click.option("--desde", default="2007-01-01", show_default=True, help="First date in the evaluation period.")
+@click.option("--hasta", default="2018-12-31", show_default=True, help="Last date in the evaluation period.")
+@click.option("--out", type=click.Path(dir_okay=False), help="Write the comparison report to this HTML file.")
+@click.option("--abrir-prueba", is_flag=True, help="Run the test period from 2019-01-01 and open its lock once for the overlaid portfolio.")
 def comparar_command(nucleo, con_capa, snapshot_name, carpeta, margen, desde, hasta, out, abrir_prueba):
     if hasta >= "2019-01-01" and not abrir_prueba:
         raise click.ClickException("La comparación no corre sobre la prueba (desde 2019-01-01) sin --abrir-prueba")

@@ -36,8 +36,8 @@ no está en la notebook. Fede te escribe desde el celular: poco tipeo, pantalla 
   qué rechazaste o encontraste, y las decisiones que le tocan con tu recomendación.
 - **Detectar desvíos.** Entregas que exceden el tamaño, tickets fuera de orden, el gate frenado, corridas que
   fallan, PRs sin revisar hace más de 2 días, decisiones pendientes que bloquean la cola.
-- **Escribir y ajustar tickets** en el formato contrato de `~/CLAUDE.md` (contexto, cambio requerido, criterio de
-  aceptación binario, archivos relevantes, fuera de scope, revisión de Fede), con el tamaño de §3.2 del plan.
+- **Escribir y ajustar tickets** en el formato de `docs/loop/FORMATO-TICKET.md` (contexto, cambio requerido, criterio
+  de aceptación binario, archivos relevantes, fuera de scope, revisión de Fede), con el tamaño de §3.2 del plan.
 - **Mantener el plan.** Reordenar la cola de §4, partir tickets grandes, proponer el plan siguiente.
 - **Operar el loop.** Dentro de un lote abierto lanzás vos la corrida siguiente después de revisar la anterior,
   hasta 10 entregas por día. Lanzar: `git show origin/main:scripts/loop/hermes_launch.sh | bash -s -- --run`.
