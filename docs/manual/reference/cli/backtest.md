@@ -111,6 +111,8 @@ Options:
   --help  Show this message and exit.
 
 Commands:
+  acciones  Manage S&P 500 stock snapshots for 2007-2018 using Yahoo or...
+  consenso  Manage daily earnings and revenue estimates.
   macro     Manage ALFRED macro snapshots (all vintages) in Parquet.
   snapshot  Manage Parquet snapshots outside the repository...
 ```
@@ -146,7 +148,7 @@ Usage: quantagent backtest run [OPTIONS]
   Run a backtest against a versioned fixture.
 
 Options:
-  --strategy [curva-pendiente|fifty-two-week-high|halloween|momentum-12m|rebalanceo-fin-de-mes|rsi|rsi-regimen|senal-externa|sma-cross|triple-screen|tsmom-largo-corto|turn-of-the-month]
+  --strategy [arquetipo-a|arquetipo-b|curva-pendiente|fifty-two-week-high|halloween|momentum-12m|rebalanceo-fin-de-mes|rsi|rsi-regimen|senal-externa|sma-cross|triple-screen|tsmom-largo-corto|turn-of-the-month]
                                   Strategy to run.  [required]
   --fixture TEXT                  Fixture name under tests/fixtures/ (without
                                   the .csv extension). Mutually exclusive with
@@ -300,7 +302,7 @@ Usage: quantagent backtest verify [OPTIONS]
   Verify backtest reproducibility across two runs.
 
 Options:
-  --strategy [curva-pendiente|fifty-two-week-high|halloween|momentum-12m|rebalanceo-fin-de-mes|rsi|rsi-regimen|senal-externa|sma-cross|triple-screen|tsmom-largo-corto|turn-of-the-month]
+  --strategy [arquetipo-a|arquetipo-b|curva-pendiente|fifty-two-week-high|halloween|momentum-12m|rebalanceo-fin-de-mes|rsi|rsi-regimen|senal-externa|sma-cross|triple-screen|tsmom-largo-corto|turn-of-the-month]
                                   Strategy to run.  [required]
   --fixture TEXT                  Fixture name under tests/fixtures/ (without
                                   the .csv extension). Mutually exclusive with
