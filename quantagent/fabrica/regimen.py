@@ -91,3 +91,25 @@ def filtro_caida(
     caida_spy = caida_spy.reindex(score.index, fill_value=False).fillna(False).astype(bool)
     return (score < 0).fillna(False).mul(caida_spy, axis=0).astype(bool)
 
+
+
+def z_temas(z_series: pd.DataFrame, priors: dict) -> pd.DataFrame:
+    """z de cada tema: promedio de los z de sus series, con el signo invertido donde el YAML lo pide."""
+    temas = {}
+    for tema, d in priors["temas"].items():
+        cols = [-z_series[s["serie"]] if s.get("invertir") else z_series[s["serie"]] for s in d["series"]]
+        temas[tema] = pd.concat(cols, axis=1).mean(axis=1, skipna=False)
+    return pd.DataFrame(temas, index=z_series.index)
+
+
+def macro_theme_score(z_tema: pd.DataFrame, priors: dict) -> pd.DataFrame:
+    """MacroThemeScore por activo: Σ signo × z_tema / cantidad de temas con signo ≠ 0 y z disponible (0 si no hay)."""
+    signos = pd.DataFrame(0.0, index=list(priors["temas"]), columns=priors["universo"])
+    for tema, d in priors["temas"].items():
+        for direccion, valor in (("positivo", 1.0), ("negativo", -1.0)):
+            if direccion in d["signos"]:
+                signos.loc[tema, d["signos"][direccion]["activos"]] = valor
+    z = z_tema[signos.index]
+    suma = z.fillna(0.0) @ signos
+    cuenta = z.notna().astype(float) @ (signos != 0).astype(float)
+    return (suma / cuenta.where(cuenta > 0)).fillna(0.0)
