@@ -82,9 +82,9 @@ runs a deterministic strategy against a checked-in fixture instead — see
 │                                                                  │
 │   Backtesting             Persistence             UI             │
 │   ───────────             ───────────             ──             │
-│   • Historical runs       • PostgreSQL            • Streamlit    │
-│   • Metrics calc          • LangGraph checkpoints • 7 tabs       │
-│   • Config snapshots      • Full provenance       • Real-time    │
+│   • Historical runs       • PostgreSQL            • Flask        │
+│   • Metrics calc          • LangGraph checkpoints • Web interface│
+│   • Config snapshots      • Full provenance       •              │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -101,7 +101,7 @@ runs a deterministic strategy against a checked-in fixture instead — see
 | **Risk Management** | ✅ | Position limits, daily loss caps, circuit breaker |
 | **Data Caching** | ✅ | Local DB cache makes backtests 18x faster |
 | **Checkpointing** | ✅ | Resume long runs, full execution history |
-| **Streamlit UI** | ✅ | Dashboard, analyses, backtesting, logs |
+| **Flask UI** | ✅ | Web interface |
 | **Auto Scheduler** | ✅ | APScheduler-driven paper trading cycles |
 | **Real Broker** | 📋 | Phase 2 — after strategy validation |
 
@@ -109,7 +109,7 @@ runs a deterministic strategy against a checked-in fixture instead — see
 
 ## Project Status
 
-> **Phase 1: ~75% complete** — Core trading components done, UI functional, scheduler live for paper trading.
+> **Phase 1: ~75% complete** — Core trading components done, Flask UI available, scheduler live for paper trading.
 
 See the [full audit report](docs/2026-02-19_repository_audit.md) for details.
 
@@ -237,14 +237,6 @@ print(result["final_trade_decision"])
 # → "LONG with 78% confidence. RSI oversold, bullish engulfing pattern..."
 ```
 
-### Launch the Dashboard
-
-```bash
-streamlit run apps/streamlit/app.py
-```
-
-Open http://localhost:8501 → Dashboard, Analyses, Backtesting, Logs.
-
 ### Start the TradingScheduler
 
 1. Configure the scheduler in your `.env` (or export variables):
@@ -301,7 +293,7 @@ The original implementation focused on analysis. This fork adds execution, backt
 
 - **LangGraph** — Multi-agent orchestration with checkpointing
 - **PostgreSQL** — Persistence, caching, state management
-- **Streamlit** — Dashboard UI
+- **Flask** — Web interface
 - **yfinance** — Market data
 - **SQLAlchemy + Alembic** — ORM and migrations
 
