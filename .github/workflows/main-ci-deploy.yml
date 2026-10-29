@@ -1,4 +1,4 @@
-name: Main CI + Deploy QA
+name: Main CI
 
 on:
   push:
@@ -232,64 +232,6 @@ jobs:
 #               print(response.status)
 #               print(response.read().decode())
 #           PY
-
-  deploy-qa:
-    name: Deploy to QA
-    needs: ci
-    runs-on: [self-hosted, Linux, X64, quantagent-vm]
-    if: success() && github.event_name != 'pull_request'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # DISABLED 2026-09-29: el validador funcional de QA (skill autodev-qa-validator) fue archivado en
-#       - name: Reset QA validator run artifacts
-#         run: |
-#           rm -rf /home/azureuser/.hermes/runs/autodev-qa-validator/poc-qa-validator-local-streamlit-8501
-
-      - name: Deploy to QA locally
-        id: deploy
-        run: |
-          cd ~/repos/projects/QuantAgent
-          git fetch origin
-          git reset --hard origin/main
-          sudo docker image prune -af || true
-          sudo docker container prune -f || true
-          sudo docker builder prune -af || true
-          sudo docker compose -f docker-compose.qa.yml down --remove-orphans || true
-          sudo docker compose -f docker-compose.qa.yml build --no-cache
-          sudo docker compose -f docker-compose.qa.yml up -d
-          echo "Waiting for services to be healthy..."
-          sleep 20
-
-      - name: Apply QA database migrations
-        id: migrate
-        run: |
-          cd ~/repos/projects/QuantAgent
-          sudo docker exec quantagent_qa python -m alembic upgrade head
-          sudo docker exec quantagent_qa_db psql -U qa_user -d quantagent_qa -c '\dt'
-
-      - name: Bootstrap minimal QA dataset
-        id: bootstrap
-        run: |
-          cd ~/repos/projects/QuantAgent
-          sudo docker exec quantagent_qa python scripts/bootstrap_qa_minimal.py --reset
-          sudo docker exec quantagent_qa_db psql -U qa_user -d quantagent_qa -c "select 'orders' as table, count(*) from orders union all select 'trades', count(*) from trades union all select 'logs', count(*) from logs union all select 'scheduler_heartbeats', count(*) from scheduler_heartbeats union all select 'active_positions', count(*) from active_positions;"
-
-      - name: Health check
-        id: health
-        run: |
-          for i in {1..18}; do
-            if curl -fsS http://127.0.0.1:8501/_stcore/health; then
-              echo "QA Streamlit is healthy"
-              exit 0
-            fi
-            echo "Attempt $i/18 failed, waiting..."
-            sleep 10
-          done
-          echo "Health check failed after 18 attempts"
-          exit 1
 
       # DISABLED 2026-09-29: el validador funcional de QA (skill autodev-qa-validator) fue archivado en
       # ~/.hermes/skills/.archive/ el 2026-05-31 y este paso hacía fallar cada deploy. Se comentan el validador,
