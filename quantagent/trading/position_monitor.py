@@ -7,7 +7,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from ..models import ActivePosition, Environment, OrderSide
+from ..models import ActivePosition, Environment, Order, OrderSide, OrderStatus, Trade
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ class PositionMonitor:
         return query.order_by(ActivePosition.decision_timestamp.desc()).first()
 
     def reconcile_alpaca_positions(self, broker) -> list[str]:
-        """Report differences between open PAPER positions and Alpaca, without mutation."""
+        """Close broker-stopped positions, then report remaining PAPER divergences."""
         local = {
             position.symbol: position
             for position in self.db.query(ActivePosition).filter(
@@ -57,6 +57,28 @@ class PositionMonitor:
         }
         remote = broker.get_positions()
         differences = []
+        for position in list(local.values()):
+            if not position.broker_stop_order_id:
+                continue
+            stop_order = self.db.query(Order).filter(
+                Order.alpaca_order_id == position.broker_stop_order_id
+            ).first()
+            if stop_order is None:
+                continue
+            broker.refresh_order(stop_order)
+            if stop_order.status != OrderStatus.FILLED:
+                self.db.commit()
+                continue
+            exit_price = float(stop_order.average_fill_price)
+            self.close_position(position, reason="stop_broker", exit_price=exit_price)
+            if position.trade_id:
+                trade = self.db.query(Trade).filter(Trade.id == position.trade_id).first()
+                if trade:
+                    trade.exit_signal = "stop_broker"
+                    trade.closed_at = position.closed_at
+                    self.db.commit()
+            local.pop(position.symbol)
+            remote.pop(position.symbol, None)
         for symbol in sorted(local.keys() | remote.keys()):
             position = local.get(symbol)
             alpaca_position = remote.get(symbol)

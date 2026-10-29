@@ -394,6 +394,7 @@ class ActivePosition(Base):
     stop_loss = Column(Numeric(precision=18, scale=8), nullable=False)
     take_profit = Column(Numeric(precision=18, scale=8), nullable=False)
     quantity = Column(Numeric(precision=18, scale=8), nullable=False)
+    broker_stop_order_id = Column(String(100), nullable=True)
 
     decision_timestamp = Column(DateTime, nullable=False, index=True)
     candles_since_entry = Column(Integer, nullable=False, default=0)
