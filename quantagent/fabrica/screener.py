@@ -34,7 +34,9 @@ def _retorno(s, fecha, n: int) -> float:
     if s is None or len(s) == 0:
         return np.nan
     sub = s.loc[:fecha].dropna()
-    return float(sub.iloc[-1] / sub.iloc[-n - 1] - 1.0) if len(sub) >= n + 1 else np.nan
+    if len(sub) < n + 1 or (pd.Timestamp(fecha) - sub.index[-1]).days > 5:
+        return np.nan
+    return float(sub.iloc[-1] / sub.iloc[-n - 1] - 1.0)
 
 
 def _metrica_fund(paneles, metrica: str, fecha, ticker: str) -> float:

@@ -75,6 +75,16 @@ def test_financials_usa_roe_y_pretax(monkeypatch):
     assert res.iloc[0]["simbolo"] == "BANK_A" and res.iloc[0]["score"] > res.iloc[1]["score"]
 
 
+def test_serie_desactualizada_da_fr_nan(monkeypatch):
+    fecha, etf, tickers = "2020-06-01", "XLK", ["T1", "T2", "T3"]
+    monkeypatch.setattr("quantagent.data.sp500.miembros", lambda c, f: tickers)
+    monkeypatch.setattr("quantagent.data.sp500.sector", lambda c, t, f: ETF_SECTOR[etf])
+    precios, paneles = _datos_sinteticos(tickers, etf, fecha=fecha)
+    precios["T1"] = precios["T1"].iloc[:-30]
+    res = candidatos_semanales(fecha, [etf], precios=precios, paneles_fundamentales=paneles)
+    assert "T1" not in set(res["simbolo"])
+
+
 def test_top3_y_desempate(monkeypatch):
     fecha, etf, tickers = "2020-06-01", "XLK", ["SYM_Z", "SYM_A", "SYM_M", "SYM_LOW"]
     monkeypatch.setattr("quantagent.data.sp500.miembros", lambda c, f: tickers)
@@ -100,9 +110,9 @@ def test_candidatos_semanales_panel(monkeypatch):
 
 
 def test_planilla_aceptacion_coincide_top3():
-    ruta_csv = Path("docs/06_implementation/QuantAgent-fnpr.4.3-IM-screener-2019-06-28.csv")
+    ruta_csv = Path("docs/06_implementation/QuantAgent-fnpr.4.3-IM-screener-2018-06-29.csv")
     assert ruta_csv.exists()
     df = pd.read_csv(ruta_csv)
-    assert len(df) == 136
-    assert df[(df["etf"] == "XLK") & (df["rank"] <= 3)].sort_values("rank")["simbolo"].tolist() == ["ORCL", "GPN", "MSFT"]
-    assert df[(df["etf"] == "XLF") & (df["rank"] <= 3)].sort_values("rank")["simbolo"].tolist() == ["CINF", "BBT", "SPGI"]
+    assert len(df) == 142
+    assert df[(df["etf"] == "XLK") & (df["rank"] <= 3)].sort_values("rank")["simbolo"].tolist() == ["NVDA", "ADBE", "FISV"]
+    assert df[(df["etf"] == "XLF") & (df["rank"] <= 3)].sort_values("rank")["simbolo"].tolist() == ["NDAQ", "MCO", "MSCI"]
