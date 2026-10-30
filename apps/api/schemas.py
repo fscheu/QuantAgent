@@ -48,3 +48,21 @@ class PositionResponse(BaseModel):
     stop_price: float | None
     stop_distance: float | None
     opened_at: str
+
+
+class OrderResponse(BaseModel):
+    id: int
+    symbol: str
+    side: Literal["buy", "sell"]
+    type: str
+    status: Literal["pending", "partially_filled", "filled", "rejected", "cancelled", "expired"]
+    qty: float
+    filled_qty: float
+    price: float | None
+    stop_price: float | None
+    avg_fill_price: float | None
+    created_at: str
+    filled_at: str | None
+    reject_reason: str | None
+    reject_detail: None = None
+    reject_reason_raw: None = None

@@ -1,17 +1,17 @@
 """FastAPI application and read-only database dependency."""
 
 import os
-from datetime import datetime, timedelta
+from datetime import date as Date, datetime, timedelta
 from typing import Literal
 from zoneinfo import ZoneInfo
 
 from fastapi import Depends, FastAPI, Query
 from fastapi import HTTPException
 from pydantic import BaseModel
-from sqlalchemy import create_engine, event, func, select
+from sqlalchemy import create_engine, event, func, inspect, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from .schemas import AccountRef, AccountSummaryActive, AccountSummaryNoData, PositionResponse
+from .schemas import AccountRef, AccountSummaryActive, AccountSummaryNoData, OrderResponse, PositionResponse
 
 app = FastAPI(title="QuantAgent API")
 NEW_YORK = ZoneInfo("America/New_York")
@@ -149,3 +149,33 @@ def account_positions(account_id: str, db: Session = Depends(get_db)):
                 stop_distance=(price - stop if side == "long" else stop - price) if stop is not None else None,
                 opened_at=utc_z(position.opened_at)))
         return result
+
+
+@app.get("/api/accounts/{account_id}/orders", response_model=list[OrderResponse])
+def account_orders(account_id: str, date: str | None = Query(None), db: Session = Depends(get_db)):
+    from quantagent.models import Order, TradeIntentRecord
+    from .accounts import account_session_factory
+    from .reject_reasons import rejection_text
+
+    account = configured_account(account_id, db)
+    try:
+        day = Date.fromisoformat(date) if date is not None else datetime.now(NEW_YORK).date()
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Invalid date") from exc
+    start = datetime.combine(day, datetime.min.time(), NEW_YORK).astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
+    end = datetime.combine(day + timedelta(days=1), datetime.min.time(), NEW_YORK).astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
+    with account_session_factory(account)() as source:
+        rows = source.scalars(select(Order).where(Order.created_at >= start, Order.created_at < end)
+                              .order_by(Order.created_at, Order.id)).all()
+        reasons = {}
+        if rows and inspect(source.get_bind()).has_table("trade_intents"):
+            reasons = dict(source.execute(select(TradeIntentRecord.order_id, TradeIntentRecord.reject_reason)
+                .where(TradeIntentRecord.order_id.in_([row.id for row in rows]))).all())
+        return [OrderResponse(id=row.id, symbol=row.symbol, side=row.side.value, type=row.order_type.value,
+            status=row.status.value, qty=float(row.quantity), filled_qty=float(row.filled_quantity),
+            price=float(row.price) if row.price is not None else None,
+            stop_price=float(row.stop_price) if row.stop_price is not None else None,
+            avg_fill_price=float(row.average_fill_price) if row.average_fill_price is not None else None,
+            created_at=utc_z(row.created_at), filled_at=utc_z(row.filled_at) if row.filled_at else None,
+            reject_reason=(rejection_text(reasons[row.id]) if reasons.get(row.id) else None)
+                if row.status.value == "rejected" else None) for row in rows]
