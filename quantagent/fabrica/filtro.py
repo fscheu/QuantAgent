@@ -9,7 +9,7 @@ from quantagent.backtesting.signals import bar_signals
 from quantagent.backtesting.vbt_filter import equity_metrics, run_filter
 from quantagent.cli.walkforward import construir_ventanas, seleccionar_ganador
 from quantagent.fabrica.cartera import combinar, pesos
-from quantagent.fabrica.transversal import MASCARAS, METRICAS, señales_transversales
+from quantagent.fabrica.transversal import MASCARAS, METRICAS, REGLAS, semanales, señales_transversales
 from quantagent.strategy.registry import build_strategy, cli_aliases
 
 
@@ -102,16 +102,19 @@ def filtrar_pierna(h, pierna, paneles, *, costos: dict, capital: float, train_ye
     combinaciones = pierna.combinaciones() if pierna.parametros else [{}]
     candidatas = []
     for comb in combinaciones:
-        panel = señales_transversales(cierres, partial(METRICAS[pierna.clase], **comb), mascara=MASCARAS.get(pierna.elegibilidad))
+        panel = señales_transversales(cierres, partial(METRICAS[pierna.clase], **comb), mascara=MASCARAS.get(pierna.elegibilidad), **REGLAS.get(pierna.clase, {}))
         previo = panel.shift(1, fill_value=0)
         señales = {a: pd.DataFrame({"entry": ((panel[a] == 1) & (previo[a] == 0)).astype(int),
                                     "exit": (panel[a] == 0) & (previo[a] == 1)}) for a in activos}
         candidatas.append((comb, panel, señales))
 
     def correr(señales, panel, a, b):
-        res = {act: run_filter(señales[act].loc[a:b], velas[act].loc[a:b], capital=capital, **costos) for act in activos}
-        ret = pd.DataFrame({(indice, act): r["equity"].pct_change().fillna(0.0) for act, r in res.items()})
-        w = pesos(cierres.loc[a:b], {indice: activos}, seleccion={indice: panel.loc[a:b]}).fillna(0.0)
+        # activos que nacieron después de la ventana no tienen velas: no operan y pesan 0
+        res = {act: run_filter(señales[act].reindex(velas[act].index).loc[a:b], velas[act].loc[a:b], capital=capital, **costos)
+               for act in activos if len(velas[act].loc[a:b])}
+        ret = pd.DataFrame({(indice, act): r["equity"].pct_change().fillna(0.0) for act, r in res.items()}).reindex(
+            index=cierres.loc[a:b].index, columns=pd.MultiIndex.from_product([[indice], activos])).fillna(0.0)
+        w = pesos(cierres.loc[a:b], {indice: activos}, seleccion={indice: panel.loc[a:b]}, semanales={indice} if semanales([pierna]) else ()).fillna(0.0)
         pierna_ret = combinar(ret, w)
         return res, ret, pierna_ret, capital * (1 + pierna_ret).cumprod()
 

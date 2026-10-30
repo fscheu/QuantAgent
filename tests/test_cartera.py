@@ -195,3 +195,18 @@ def test_curva_y_evaluacion_transversal_usan_seleccion():
     sharpe_t4 = evaluar_cartera(cierres, piernas, retornos, seleccion=seleccion)
     assert sharpe_t4 == pytest.approx(equity_metrics(curva, 0.0)["sharpe"])
     assert sharpe_t4 != pytest.approx(evaluar_cartera(cierres, piernas, retornos))
+
+
+def test_pesos_rebalancea_cada_semana_solo_la_pierna_semanal():
+    c = _cierres()
+    sel = {"p1": pd.DataFrame(1, index=c.index, columns=["A", "B"])}
+    w = pesos(c, PIERNAS, seleccion=sel, semanales={"p1"})
+    cambia = w.diff().abs() > 1e-12
+    semana = c.index.to_series().apply(lambda d: d.isocalendar()[:2])
+    mes = c.index.to_series().dt.to_period("M")
+    primera_semana = semana.ne(semana.shift())
+    primero_mes = mes.ne(mes.shift())
+    assert (cambia[("p1", "A")] & ~primera_semana & ~primero_mes).sum() == 0
+    assert (cambia[("p1", "A")] & primera_semana & ~primero_mes).any()
+    assert not (cambia[("p2", "C")] & ~primero_mes).any()
+    assert pesos(c, PIERNAS, seleccion=sel).equals(pesos(c, PIERNAS, seleccion=sel, semanales=()))

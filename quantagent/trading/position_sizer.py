@@ -21,6 +21,7 @@ Example:
 
 
 from typing import Optional
+from math import floor
 
 
 class PositionSizer:
@@ -64,6 +65,7 @@ class PositionSizer:
         current_price: float,
         portfolio_value: float,
         stop_price: Optional[float] = None,
+        fraccionable: bool = True,
     ) -> float:
         """
         Calculate position size for a trade.
@@ -97,7 +99,7 @@ class PositionSizer:
             qty = min(qty, portfolio_value * self.max_position_pct / current_price)
             if self.orden_minima is not None and qty * current_price < self.orden_minima:
                 return 0.0
-            return qty
+            return float(floor(qty)) if not fraccionable else qty
 
         # Calculate position value: portfolio × base % (× confidence unless regla is "fijo")
         position_value = portfolio_value * self.base_position_pct
@@ -109,5 +111,4 @@ class PositionSizer:
 
         # Calculate quantity: position_value / current_price
         qty = position_value / current_price
-
-        return qty
+        return float(floor(qty)) if not fraccionable else qty

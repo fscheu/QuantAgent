@@ -170,6 +170,7 @@ class OrderManager:
                 environment=environment,
                 trigger_signal_id=trigger_signal_id,
                 timestamp=timestamp,
+                stop_price=stop_price,
             )
 
         if self.orden_minima is not None and (qty <= 0 or (qty * current_price) < self.orden_minima - 1e-9):
@@ -180,11 +181,19 @@ class OrderManager:
             )
             return None
 
+        if qty <= 0:
+            logger.info(
+                f"{symbol}: Entry discarded - tamano_cero",
+                extra={"event_type": "order_rejected", "symbol": symbol,
+                       "extra_data": {"reason": "tamano_cero"}},
+            )
+            return None
+
         qty = self._cap_entry_qty(side, qty, current_price)
 
         # Step 3: Validate trade (now includes position management check)
         is_valid, reason = self.risk_manager.validate_trade(
-            symbol, side, qty, current_price
+            symbol, side, qty, current_price, stop_price=stop_price
         )
 
         if not is_valid:
@@ -383,6 +392,7 @@ class OrderManager:
         environment=None,
         trigger_signal_id: Optional[int] = None,
         timestamp: Optional[datetime] = None,
+        stop_price: Optional[float] = None,
     ) -> Optional[Order]:
         """
         Execute position reversal as two orders: close existing position, then open new.
@@ -512,7 +522,7 @@ class OrderManager:
 
         new_qty = self._cap_entry_qty(new_side, new_qty, current_price)
         is_valid, reason = self.risk_manager.validate_trade(
-            symbol, new_side, new_qty, current_price
+            symbol, new_side, new_qty, current_price, stop_price=stop_price
         )
         if not is_valid:
             logger.error(

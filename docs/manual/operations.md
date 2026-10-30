@@ -1,14 +1,28 @@
 # Operations
 
-Commands below inspect the configured paper account or local data. They do not start a trading cycle or create orders.
+Commands below inspect the configured paper account or local data. They do not start a trading cycle. `trading snapshot` queries Alpaca without changing the broker, then writes a snapshot to the local database. `trading pre-apertura` can submit stop orders and cancel stale entry orders at the broker.
 
 ## Reconcile paper positions
 
 Run `python -m quantagent.cli trading reconciliar` with the paper database and Alpaca paper credentials configured. Matching positions print `Sin divergencias: posiciones locales y Alpaca coinciden.` Differences print one line per discrepancy. Investigate differences before relying on the digest.
 
+## Before market open
+
+Run `python -m quantagent.cli trading pre-apertura` against the paper account before the session opens. It does three things. First, for each long position with a fractional quantity and no open stop at the broker, it submits a day stop at the position's stored stop price, because Alpaca only accepts whole-share stops as good-till-cancelled. Second, it cancels buy stop entry orders older than three NYSE sessions. Third, it checks that every position is covered by an open sell stop for at least its full quantity. The result lists `reenviados` (stops resubmitted), `entradas_vencidas` (cancelled entries), `sin_stop` (positions still unprotected) and `avisos`. An `Alerta PDT` warning appears when the account's day-trade count reaches 2; see PDT in the [glossary](glossary.md). Treat any symbol in `sin_stop` as unprotected and investigate before the open.
+
 ## Daily digest
 
 Run `python -m quantagent.cli trading digest --date YYYY-MM-DD` for the configured paper portfolio; output starts with `Resumen de paper trading — YYYY-MM-DD`, then `## Alertas y avisos`, `## Señal del scheduler`, and `## Actividad y P&L`. Position and reconciliation sections appear when data is available. For a dedicated portfolio, use `python -m quantagent.cli trading digest --date YYYY-MM-DD --portfolio <portfolio>`; it also reports account valuation, executions, and pending orders. Exit status is 1 when a dividend query fails, a reconciliation differs, or an unexplained rejected order exists.
+
+## Equity snapshots
+
+Run `python -m quantagent.cli trading snapshot --db <file> --portfolio <portfolio>` to query the Alpaca paper account and upsert one row for the current New York date in `equity_snapshots`. Each row stores `equity`, `cash`, and `invested` (`equity - cash`). This is read-only at the broker; rerunning it on the same day overwrites that day's row. The command requires a deployed tag that includes it.
+
+Schedule it after each digest; a snapshot failure should not fail the digest.
+
+Before the API reads each paper database, run `python -m quantagent.cli api migrate-paper-db --database-url <url>` and review the dry run, then run it again with `--apply`. Back up each database first.
+
+The read-only web app replaces the Streamlit QA interface.
 
 ## Local data and snapshots
 
@@ -16,4 +30,4 @@ Run `python -m quantagent.cli trading digest --date YYYY-MM-DD` for the configur
 
 To create a snapshot, run `python -m quantagent.cli data snapshot create --name <name> --symbols SPY --start YYYY-MM-DD --end YYYY-MM-DD`. It downloads from Yahoo and prints `Snapshot <name> creado: <symbols> símbolos, <rows> filas`. Use a completed session as the end date; snapshots are immutable.
 
-Paper deployment setup and its approval gates are described in the [paper operations runbook](../06_implementation/QuantAgent-av1p.5-IM-runbook-paper-ops.md). This manual does not activate services or run operational procedures.
+Paper trading setup is described in the [paper operations runbook](../06_implementation/QuantAgent-av1p.5-IM-runbook-paper-ops.md). This runbook does not activate services or run operational procedures.
