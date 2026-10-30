@@ -27,17 +27,17 @@ Options:
   --name TEXT                Display name for the account.  [required]
   --env [paper|live]         Trading environment: paper or live.  [required]
   --kind [alpaca|simulated]  Account source: Alpaca or simulated.  [required]
-  --alpaca-account-ref TEXT  Alpaca account reference; required for alpaca
-                             accounts.
-  --bucket-id TEXT           Unique trade-intent bucket identifier.
+  --alpaca-account-ref TEXT  Informational Alpaca account reference.
+  --database-url TEXT        Readable SQLite database URL for this account.
                              [required]
+  --bucket-id TEXT           Informational trade-intent bucket identifier.
   --strategy TEXT            Single strategy assigned to this account.
                              [required]
   --help                     Show this message and exit.
 
   Example: quantagent api accounts add --id paper-nucleo-curva --name 'Paper
-  Nucleo Curva' --env paper --kind alpaca --alpaca-account-ref acct-1
-  --bucket-id nucleo-curva --strategy nucleo-curva
+  Nucleo Curva' --env paper --kind alpaca --database-url
+  sqlite:////srv/quantagent/paper.db --strategy nucleo-curva
 ```
 
 Options and defaults:
@@ -47,6 +47,7 @@ Options and defaults:
 - `--env` — default: `None`
 - `--kind` — default: `None`
 - `--alpaca-account-ref` — default: `None`
+- `--database-url` — default: `None`
 - `--bucket-id` — default: `None`
 - `--strategy` — default: `None`
 
