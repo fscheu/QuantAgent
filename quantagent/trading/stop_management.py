@@ -49,3 +49,34 @@ def propuesta_chandelier(maximo_desde_entrada: Precio, atr: Precio,
 def propuesta_invalidacion(ultimas_2: Sequence[Precio], lado: OrderSide) -> Precio:
     """Propone el mínimo (largo) o máximo (corto) de las dos últimas velas."""
     return min(ultimas_2) if lado == OrderSide.BUY else max(ultimas_2)
+
+
+def resolver_stop_posicion(symbol, ordenes, intents):
+    """Prioriza stops de venta abiertos en broker y luego el último intent."""
+    for order in ordenes:
+        campo = lambda name: getattr(getattr(order, name, None), "value", getattr(order, name, None))
+        if (getattr(order, "symbol", None) == symbol and campo("type") == "stop"
+                and campo("side") == "sell"):
+            return getattr(order, "stop_price", None)
+    for record in intents:
+        intent = getattr(record, "intent", {}) or {}
+        stop = intent.get("stop_loss")
+        if stop is not None:
+            return stop
+    return None
+
+
+def posiciones_con_stops(posiciones, ordenes, intents):
+    """Copia las posiciones del broker y agrega stop_price solo si existe."""
+    result = {}
+    for symbol, position in posiciones.items():
+        stop = resolver_stop_posicion(
+            symbol, ordenes, [record for record in intents if record.symbol == symbol]
+        )
+        result[symbol] = {
+            "qty": float(position.qty), "avg_cost": float(position.avg_entry_price),
+            "current_price": float(position.current_price), "pnl": float(position.unrealized_pl),
+        }
+        if stop is not None:
+            result[symbol]["stop_price"] = float(stop)
+    return result

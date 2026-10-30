@@ -218,18 +218,26 @@ class StrategyAssembler:
             environment=resolved.environment,
             db=db_session,
         )
-        ps = PositionSizer(
-            base_position_pct=resolved.base_position_pct,
-            regla=resolved.regla_tamano,
-            riesgo_por_trade_pct=resolved.riesgo_por_trade_pct,
-            orden_minima=resolved.orden_minima,
-        )
-        rm = RiskManager(
-            portfolio_manager=pm,
-            max_daily_loss_pct=resolved.max_daily_loss_pct,
-            max_position_pct=resolved.max_position_pct,
-            db=db_session,
-        )
+        m5 = bool((resolved.extras or {}).get("bucket_m5"))
+        if m5:
+            from quantagent.trading.bucket_m5 import crear_position_sizer, crear_risk_manager
+            ps = crear_position_sizer()
+        else:
+            ps = PositionSizer(
+                base_position_pct=resolved.base_position_pct,
+                regla=resolved.regla_tamano,
+                riesgo_por_trade_pct=resolved.riesgo_por_trade_pct,
+                orden_minima=resolved.orden_minima,
+            )
+        if m5:
+            rm = crear_risk_manager(pm, max_daily_loss_pct=resolved.max_daily_loss_pct, db=db_session)
+        else:
+            rm = RiskManager(
+                portfolio_manager=pm,
+                max_daily_loss_pct=resolved.max_daily_loss_pct,
+                max_position_pct=resolved.max_position_pct,
+                db=db_session,
+            )
         if resolved.broker_type == "alpaca_paper" and resolved.alpaca_base_url != "https://paper-api.alpaca.markets":
             raise ValueError("alpaca_paper requires https://paper-api.alpaca.markets; live trading is not supported")
         constructor = StrategyAssembler.BROKER_CONSTRUCTORS.get(resolved.broker_type)
