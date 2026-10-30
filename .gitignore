@@ -15,3 +15,5 @@ quantagent.egg-info/
 tmp/
 local-data/*
 !local-data/README.md
+web/node_modules/
+web/dist/
