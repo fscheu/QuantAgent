@@ -34,6 +34,12 @@ python -m quantagent.cli api schema --check
 
 Use `--output PATH` to write or check a different JSON file.
 
+## Paper database migration
+
+`api migrate-paper-db --database-url URL` reports missing tables and columns without changing the database. Add `--apply` to create missing tables and safe columns, preserve existing rows, and stamp Alembic at head. Columns that are required without a default stop the migration.
+
+Set `QUANTAGENT_WEB_DIST` to serve a built web app from the API root; the default build directory is `web/dist`. Deep links fall back to the app's `index.html`, while `/api/*` remains routed to the API.
+
 ## Endpoints
 
 All endpoints use `GET`. Response bodies are JSON; `422` responses use FastAPI's validation error schema.
