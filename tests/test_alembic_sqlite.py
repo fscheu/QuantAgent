@@ -10,7 +10,7 @@ def test_alembic_upgrade_head_on_empty_sqlite(tmp_path):
     database = tmp_path / "empty.db"
     url = f"sqlite:///{database}"
     env = os.environ | {"DATABASE_URL": url, "NUMBA_CACHE_DIR": "/tmp/numba-c"}
-    python = str(Path.home() / "repos/projects/QuantAgent/.venv/bin/python")
+    python = sys.executable
     subprocess.run([python, "-m", "alembic", "upgrade", "head"], check=True, env=env)
     current = subprocess.run([python, "-m", "alembic", "current"], check=True, env=env, capture_output=True, text=True)
     assert "(head)" in current.stdout

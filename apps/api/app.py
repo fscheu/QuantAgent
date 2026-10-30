@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import Depends, FastAPI, Query
 from fastapi import HTTPException
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy import create_engine, event, func, inspect, select
@@ -23,7 +24,7 @@ class SPAStaticFiles(StaticFiles):
     async def get_response(self, path, scope):
         try:
             return await super().get_response(path, scope)
-        except HTTPException as exc:
+        except StarletteHTTPException as exc:
             if exc.status_code != 404 or path == "api" or path.startswith("api/"):
                 raise
             return await super().get_response("index.html", scope)

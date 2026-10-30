@@ -64,6 +64,8 @@ export const dataConfig = {
   pollSecondsMarketClosed: 900,
 } as const;
 
+export const screenConfig = { showComingSoon: true } as const;
+
 export const funnelConfig = {
   /** Orden canónico de etapas. Nombres de 0–3 PROVISORIOS. */
   stages: [
