@@ -66,7 +66,7 @@ def correr_pre_apertura(session, broker, ahora=None, max_sesiones_entrada=3, avi
             sin_stop.append(symbol)
 
     avisos = []
-    day_trades = int(broker.client.get_account().daytrade_count)
+    day_trades = int(broker.client.get_account().daytrade_count or 0)
     if day_trades >= aviso_day_trades:
         avisos.append(f"Alerta PDT: day_trade_count={day_trades}; umbral={aviso_day_trades}.")
     return {"reenviados": reenviados, "entradas_vencidas": vencidas,
