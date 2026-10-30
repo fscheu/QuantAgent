@@ -36,7 +36,7 @@ Options:
   --help                     Show this message and exit.
 
   Example: quantagent api accounts add --id paper-nucleo-curva --name 'Paper
-  Núcleo Curva' --env paper --kind alpaca --alpaca-account-ref acct-1
+  Nucleo Curva' --env paper --kind alpaca --alpaca-account-ref acct-1
   --bucket-id nucleo-curva --strategy nucleo-curva
 ```
 

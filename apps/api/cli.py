@@ -30,7 +30,7 @@ def accounts_group():
 
 
 @accounts_group.command("add", help="Register an account and its strategy.",
-                        epilog="Example: quantagent api accounts add --id paper-nucleo-curva --name 'Paper Núcleo Curva' --env paper --kind alpaca --alpaca-account-ref acct-1 --bucket-id nucleo-curva --strategy nucleo-curva")
+                        epilog="Example: quantagent api accounts add --id paper-nucleo-curva --name 'Paper Nucleo Curva' --env paper --kind alpaca --alpaca-account-ref acct-1 --bucket-id nucleo-curva --strategy nucleo-curva")
 @click.option("--id", "account_id", required=True, help="Unique account slug.")
 @click.option("--name", required=True, help="Display name for the account.")
 @click.option("--env", "environment", required=True, type=click.Choice(["paper", "live"]), help="Trading environment: paper or live.")
