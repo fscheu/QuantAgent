@@ -10,6 +10,7 @@ Options:
 
 Commands:
   accounts       Manage configured trading accounts.
+  schema         Export or check the live OpenAPI contract.
   serve          Serve the read-only QuantAgent API.
   sync-calendar  Synchronize Alpaca market holidays and early closes.
 ```
@@ -30,6 +31,27 @@ Commands:
   list     List active accounts.
   show     Show one account by slug.
 ```
+
+## `quantagent api schema`
+
+```text
+Usage: quantagent api schema [OPTIONS]
+
+  Export or check the live OpenAPI contract.
+
+Options:
+  --output PATH  JSON contract output path.  [default: docs/api/openapi.json]
+  --check        Compare with the output file without writing; default:
+                 export.
+  --help         Show this message and exit.
+
+  Example: quantagent api schema --check
+```
+
+Options and defaults:
+
+- `--output` — default: `PosixPath('docs/api/openapi.json')`
+- `--check` — default: `False`
 
 ## `quantagent api serve`
 

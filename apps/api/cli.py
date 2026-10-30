@@ -1,5 +1,8 @@
 """CLI commands for serving the HTTP API."""
 
+import json
+from pathlib import Path
+
 import click
 import uvicorn
 from sqlalchemy import select
@@ -17,7 +20,27 @@ def serve(host, port):
     uvicorn.run("apps.api.app:app", host=host, port=port)
 
 
-@api_group.command(help="Synchronize Alpaca market holidays and early closes.", epilog="Example: quantagent api sync-calendar")
+@api_group.command(help="Export or check the live OpenAPI contract.",
+                  epilog="Example: quantagent api schema --check")
+@click.option("--output", type=click.Path(path_type=Path), default=Path("docs/api/openapi.json"),
+              show_default=True, help="JSON contract output path.")
+@click.option("--check", "check_only", is_flag=True,
+              help="Compare with the output file without writing; default: export.")
+def schema(output, check_only):
+    from .app import app
+
+    serialized = json.dumps(app.openapi(), indent=2, sort_keys=True) + "\n"
+    if check_only:
+        if not output.is_file() or output.read_text() != serialized:
+            raise click.exceptions.Exit(1)
+        click.echo(f"OpenAPI contract matches {output}.")
+        return
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(serialized)
+    click.echo(f"Wrote OpenAPI contract to {output}.")
+
+
+@api_group.command("sync-calendar", help="Synchronize Alpaca market holidays and early closes.", epilog="Example: quantagent api sync-calendar")
 def sync_calendar_command():
     from .calendar_sync import sync_from_alpaca
 
