@@ -17,3 +17,4 @@ local-data/*
 !local-data/README.md
 web/node_modules/
 web/dist/
+web/build/
