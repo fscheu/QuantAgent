@@ -168,6 +168,22 @@ class TradingScheduler:
         """Run a single analyze+trade cycle synchronously."""
         return self.analyze_and_trade()
 
+    def correr_m5_semanal(self, as_of, *, regimen_path="local-data/m5-regimen-semanal.csv"):
+        """Punto de enganche explícito para el job semanal de M5; no registra timers."""
+        from quantagent.trading.pipeline_m5 import correr_semanal
+
+        return correr_semanal(as_of, data_provider=self.data_provider, db=self.db,
+                              regimen_path=regimen_path)
+
+    def correr_m5_diario(self, as_of, *, regimen_path="local-data/m5-regimen-semanal.csv"):
+        """Punto de enganche explícito para el job diario de M5; no registra timers."""
+        from quantagent.trading.pipeline_m5 import correr_diario
+
+        return correr_diario(as_of, data_provider=self.data_provider, db=self.db,
+                             broker=self.order_manager.broker,
+                             portfolio_manager=self.order_manager.portfolio,
+                             regimen_path=regimen_path)
+
     def reconcile_alpaca_positions(self) -> list[str]:
         """Compare local PAPER positions with the configured Alpaca broker."""
         return self.position_monitor.reconcile_alpaca_positions(self.order_manager.broker)
