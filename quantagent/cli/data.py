@@ -258,15 +258,15 @@ def cobertura_acciones(name: str) -> None:
         click.echo(f"Yahoo sin WIKI ({len(reporte['yahoo_sin_wiki'])}): {list(reporte['yahoo_sin_wiki'].keys())}")
 
 
-@data_group.group("fundamentales", help="Snapshot de fundamentales de SEC EDGAR (XBRL).")
+@data_group.group("fundamentales", help="Manage SEC EDGAR (XBRL) fundamentals snapshots.")
 def fundamentales_group() -> None:
     """Fundamentales snapshot subcommands."""
 
 
-@fundamentales_group.command("create", help="Descarga companyfacts desde SEC EDGAR y crea el snapshot.")
-@click.option("--name", required=True, help="Nombre del snapshot, por ejemplo fundamentales-sp500-2026-10.")
-@click.option("--tickers-de", default="sp500-2026-10", help="Snapshot de composición del que extraer miembros 2007..hoy.")
-@click.option("--tickers", default=None, help="Lista explícita de tickers separados por coma.")
+@fundamentales_group.command("create", help="Download companyfacts from SEC EDGAR and create the snapshot.")
+@click.option("--name", required=True, help="Snapshot name, for example fundamentales-sp500-2026-10.")
+@click.option("--tickers-de", default="sp500-2026-10", help="Composition snapshot providing the 2007-to-date index members.")
+@click.option("--tickers", default=None, help="Comma-separated ticker symbols to use instead of the composition snapshot.")
 def create_fundamentales(name: str, tickers_de: str, tickers: Optional[str]) -> None:
     if tickers:
         lista_tickers = [t.strip().upper() for t in tickers.split(",") if t.strip()]
@@ -280,9 +280,9 @@ def create_fundamentales(name: str, tickers_de: str, tickers: Optional[str]) -> 
     click.echo(f"Snapshot {name} creado: {len(manifest['symbols'])} tickers con datos")
 
 
-@fundamentales_group.command("verify", help="Recalcula los hashes contra el manifiesto.")
+@fundamentales_group.command("verify", help="Recompute the file hashes against the manifest.")
 @click.argument("name_arg", required=False, default=None)
-@click.option("--name", default=None)
+@click.option("--name", default=None, help="Snapshot name to verify (alternative to the argument).")
 def verify_fundamentales(name_arg: Optional[str], name: Optional[str]) -> None:
     snapshot_name = name or name_arg
     if not snapshot_name:
@@ -295,9 +295,9 @@ def verify_fundamentales(name_arg: Optional[str], name: Optional[str]) -> None:
     click.echo(f"OK {len(symbols)} tickers, {sum(i['rows'] for i in symbols.values())} filas")
 
 
-@fundamentales_group.command("cobertura", help="Reporte de cobertura por métrica desde 2010 y tickers sin CIK.")
-@click.option("--name", required=True)
-@click.option("--composicion", default="sp500-2026-10")
+@fundamentales_group.command("cobertura", help="Report per-metric coverage since 2010 and tickers without a CIK.")
+@click.option("--name", required=True, help="Snapshot name to report.")
+@click.option("--composicion", default="sp500-2026-10", help="Composition snapshot used to define index member-days.")
 def cobertura_fundamentales_cmd(name: str, composicion: str) -> None:
     try:
         rep = reporte_cobertura_fundamentales(name, composicion=composicion)
