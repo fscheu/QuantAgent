@@ -32,7 +32,14 @@ class AccountSummaryActive(AccountRef):
     orders_today: int
     orders_rejected_today: int
     alarms: list = []
-    spark_30d: None = None
+    spark_30d: list[float] | None = None
+
+
+class EquityPoint(BaseModel):
+    date: str
+    account: float
+    benchmark: None = None
+    shadow: None = None
 
 
 class PositionResponse(BaseModel):

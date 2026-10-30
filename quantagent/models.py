@@ -519,3 +519,16 @@ class Event(Base):
         Index("ix_events_occurred_at", "occurred_at"),
         Index("ix_events_account_occurred_at", "account_id", "occurred_at"),
     )
+
+
+class EquitySnapshot(Base):
+    """Daily account equity and cash snapshot."""
+
+    __tablename__ = "equity_snapshots"
+
+    id = Column(Integer, primary_key=True)
+    snapshot_date = Column(Date, nullable=False, unique=True)
+    taken_at = Column(DateTime(timezone=True), nullable=False)
+    equity = Column(Float, nullable=False)
+    cash = Column(Float, nullable=False)
+    invested = Column(Float, nullable=False)
