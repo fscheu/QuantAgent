@@ -10,6 +10,9 @@ authors = [{name = "QuantAgent Team"}]
 requires-python = ">=3.9"
 dependencies = [
     "flask",
+    "fastapi",
+    "uvicorn",
+    "httpx",
     "alpaca-py",
     "click>=8.1",
     "yfinance",
@@ -61,7 +64,7 @@ dev = [
 quantagent = "quantagent.cli.__main__:cli"
 
 [tool.setuptools]
-packages = ["quantagent", "apps"]
+packages = ["quantagent", "apps", "apps.api"]
 
 # Configuración de pytest centralizada en pytest.ini (fuente única de verdad)
 

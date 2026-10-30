@@ -9,6 +9,7 @@ Options:
   --help  Show this message and exit.
 
 Commands:
+  api      Run the QuantAgent HTTP API.
   backtest  Run deterministic backtests against versioned fixtures.
   data      Manage frozen market data.
   intentos  Manage the run attempts log.
