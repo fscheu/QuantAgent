@@ -250,6 +250,10 @@ Bloque de fecha (día de semana + número), título, `Badge` de tipo (Rebalanceo
 
 ## 4. Gráficos
 
+### `AccountSelect` y `DateStepper`
+
+Controles nativos accesibles de Cuenta: `AccountSelect` permite navegar entre cuentas; `DateStepper` cambia el día consultado y ofrece entrada de fecha.
+
 Biblioteca sugerida para todo salvo velas: **Recharts** (simple, SVG, buen soporte de React). Alternativa si hace falta más control: visx. Velas: **lightweight-charts** con `candleTheme()` de `tokens.ts`.
 
 | Componente | Notas |
