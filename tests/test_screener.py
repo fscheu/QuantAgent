@@ -97,7 +97,7 @@ def test_top3_y_desempate(monkeypatch):
 
 
 def test_candidatos_semanales_panel(monkeypatch):
-    tickers, fechas = ["T1", "T2"], ["2020-06-05", "2020-06-12"]
+    tickers, fechas = ["T1", "T2"], ["2020-05-28", "2020-05-29"]
     monkeypatch.setattr("quantagent.data.sp500.miembros", lambda c, f: tickers)
     monkeypatch.setattr("quantagent.data.sp500.sector", lambda c, t, f: "Information Technology")
     precios, _ = _datos_sinteticos(tickers, "XLK")
