@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy import create_engine, event, func, inspect, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from .schemas import AccountRef, AccountSummaryActive, AccountSummaryNoData, OrderResponse, PositionResponse
+from .schemas import AccountRef, AccountSummaryActive, AccountSummaryNoData, EquityPoint, OrderResponse, PositionResponse
 
 app = FastAPI(title="QuantAgent API")
 NEW_YORK = ZoneInfo("America/New_York")
@@ -98,7 +98,7 @@ def utc_z(value):
 
 @app.get("/api/accounts/{account_id}/summary", response_model=AccountSummaryActive | AccountSummaryNoData)
 def account_summary(account_id: str, db: Session = Depends(get_db)):
-    from quantagent.models import Order, Position
+    from quantagent.models import EquitySnapshot, Order, Position
     from .accounts import account_session_factory
 
     account = configured_account(account_id, db)
@@ -116,10 +116,46 @@ def account_summary(account_id: str, db: Session = Depends(get_db)):
         long_value = sum(abs(float(p.quantity)) * float(p.current_price) for p in positions if p.side.value == "buy")
         short_value = sum(abs(float(p.quantity)) * float(p.current_price) for p in positions if p.side.value == "sell")
         as_of = utc_z(max(p.updated_at for p in positions))
+        snapshots = []
+        if inspect(source.get_bind()).has_table("equity_snapshots"):
+            snapshots = source.scalars(select(EquitySnapshot).order_by(EquitySnapshot.snapshot_date.desc()).limit(30)).all()
+        latest = snapshots[0] if snapshots else None
+        previous = snapshots[1] if len(snapshots) > 1 else None
+        week_base = next((point for point in snapshots if point.snapshot_date <= latest.snapshot_date - timedelta(days=7)), None) if latest else None
+        day_change = float(latest.equity - previous.equity) if latest and previous else None
+        week_change = float(latest.equity - week_base.equity) if latest and week_base else None
+        spark_start = datetime.now(NEW_YORK).date() - timedelta(days=29)
+        spark = [float(point.equity) for point in reversed(snapshots)
+                 if point.snapshot_date >= spark_start] if latest else []
         return AccountSummaryActive(id=account.id, name=account.name, env=account.env, status="active",
-            as_of=as_of, stale=False, equity=None, long_value=long_value, short_value=short_value,
-            cash=None, day_change=None, day_change_pct=None, week_change=None, week_change_pct=None,
-            positions_count=len(positions), orders_today=orders_today, orders_rejected_today=rejected, alarms=[])
+            as_of=as_of, stale=False, equity=float(latest.equity) if latest else None, long_value=long_value, short_value=short_value,
+            cash=float(latest.cash) if latest else None, day_change=day_change,
+            day_change_pct=day_change / float(previous.equity) if previous and previous.equity else None,
+            week_change=week_change,
+            week_change_pct=week_change / float(week_base.equity) if week_base and week_base.equity else None,
+            positions_count=len(positions), orders_today=orders_today, orders_rejected_today=rejected, alarms=[],
+            spark_30d=spark if len(spark) >= 2 else None)
+
+
+@app.get("/api/accounts/{account_id}/equity", response_model=list[EquityPoint])
+def account_equity(account_id: str, range: Literal["1W", "1M", "3M", "YTD", "ALL"] = Query("1M"),
+                   db: Session = Depends(get_db)):
+    from quantagent.models import EquitySnapshot
+    from .accounts import account_session_factory
+
+    account = configured_account(account_id, db)
+    with account_session_factory(account)() as source:
+        if not inspect(source.get_bind()).has_table("equity_snapshots"):
+            return []
+        rows = source.scalars(select(EquitySnapshot).order_by(EquitySnapshot.snapshot_date)).all()
+        if not rows:
+            return []
+        today = datetime.now(NEW_YORK).date()
+        starts = {"1W": today - timedelta(days=7), "1M": today - timedelta(days=30),
+                  "3M": today - timedelta(days=90), "YTD": today.replace(month=1, day=1), "ALL": None}
+        start = starts[range]
+        return [EquityPoint(date=row.snapshot_date.isoformat(), account=float(row.equity))
+                for row in rows if start is None or row.snapshot_date >= start]
 
 
 @app.get("/api/accounts/{account_id}/positions", response_model=list[PositionResponse])
