@@ -18,11 +18,11 @@ Run `python -m quantagent.cli trading digest --date YYYY-MM-DD` for the configur
 
 Run `python -m quantagent.cli trading snapshot --db <file> --portfolio <portfolio>` to query the Alpaca paper account and upsert one row for the current New York date in `equity_snapshots`. Each row stores `equity`, `cash`, and `invested` (`equity - cash`). This is read-only at the broker; rerunning it on the same day overwrites that day's row. The command requires a deployed tag that includes it.
 
-On the VM, a systemd drop-in runs this command after each digest. Its `ExecStartPost` has a leading `-`, so a snapshot failure does not fail the digest.
+Schedule it after each digest; a snapshot failure should not fail the digest.
 
-Before the API reads each paper database, run `python -m quantagent.cli api migrate-paper-db --database-url <url>` and review the dry run, then run it again with `--apply`. See the [web deployment runbook](../06_implementation/QuantAgent-wsxd-IM-runbook-web.md) for backup and rollback steps.
+Before the API reads each paper database, run `python -m quantagent.cli api migrate-paper-db --database-url <url>` and review the dry run, then run it again with `--apply`. Back up each database first.
 
-The Streamlit QA containers are stopped and the old Streamlit URL no longer serves; the read-only web app replaces them.
+The read-only web app replaces the Streamlit QA interface.
 
 ## Local data and snapshots
 
@@ -30,4 +30,4 @@ The Streamlit QA containers are stopped and the old Streamlit URL no longer serv
 
 To create a snapshot, run `python -m quantagent.cli data snapshot create --name <name> --symbols SPY --start YYYY-MM-DD --end YYYY-MM-DD`. It downloads from Yahoo and prints `Snapshot <name> creado: <symbols> símbolos, <rows> filas`. Use a completed session as the end date; snapshots are immutable.
 
-Paper trading setup is described in the [paper operations runbook](../06_implementation/QuantAgent-av1p.5-IM-runbook-paper-ops.md). Web API deployment, Cloudflare Access, and rollback steps are described in the [web deployment runbook](../06_implementation/QuantAgent-wsxd-IM-runbook-web.md). These runbooks do not activate services or run operational procedures.
+Paper trading setup is described in the [paper operations runbook](../06_implementation/QuantAgent-av1p.5-IM-runbook-paper-ops.md). This runbook does not activate services or run operational procedures.
