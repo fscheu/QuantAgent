@@ -1,5 +1,6 @@
 """Repair a paper database created before Alembic migrations were adopted."""
 
+import os
 from pathlib import Path
 
 import click
@@ -69,7 +70,16 @@ def migrate_paper_db(database_url, apply=False):
         with engine.connect() as connection:
             needs_stamp = connection.scalar(text("SELECT version_num FROM alembic_version")) != head
     if needs_stamp:
-        command.stamp(config, "head")
+        # alembic/env.py prefers DATABASE_URL over sqlalchemy.url; point it at this database.
+        previous = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = database_url
+        try:
+            command.stamp(config, "head")
+        finally:
+            if previous is None:
+                os.environ.pop("DATABASE_URL", None)
+            else:
+                os.environ["DATABASE_URL"] = previous
         click.echo("paper database repaired and stamped at head")
     elif missing_tables or missing_columns:
         click.echo("paper database repaired")
