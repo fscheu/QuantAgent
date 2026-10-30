@@ -1,6 +1,6 @@
 # Operations
 
-Commands below inspect the configured paper account or local data. They do not start a trading cycle. All of them are read-only except `trading pre-apertura`, which can submit stop orders and cancel stale entry orders at the broker.
+Commands below inspect the configured paper account or local data. They do not start a trading cycle. `trading snapshot` queries Alpaca without changing the broker, then writes a snapshot to the local database. `trading pre-apertura` can submit stop orders and cancel stale entry orders at the broker.
 
 ## Reconcile paper positions
 
@@ -13,6 +13,16 @@ Run `python -m quantagent.cli trading pre-apertura` against the paper account be
 ## Daily digest
 
 Run `python -m quantagent.cli trading digest --date YYYY-MM-DD` for the configured paper portfolio; output starts with `Resumen de paper trading — YYYY-MM-DD`, then `## Alertas y avisos`, `## Señal del scheduler`, and `## Actividad y P&L`. Position and reconciliation sections appear when data is available. For a dedicated portfolio, use `python -m quantagent.cli trading digest --date YYYY-MM-DD --portfolio <portfolio>`; it also reports account valuation, executions, and pending orders. Exit status is 1 when a dividend query fails, a reconciliation differs, or an unexplained rejected order exists.
+
+## Equity snapshots
+
+Run `python -m quantagent.cli trading snapshot --db <file> --portfolio <portfolio>` to query the Alpaca paper account and upsert one row for the current New York date in `equity_snapshots`. Each row stores `equity`, `cash`, and `invested` (`equity - cash`). This is read-only at the broker; rerunning it on the same day overwrites that day's row. The command requires a deployed tag that includes it.
+
+On the VM, a systemd drop-in runs this command after each digest. Its `ExecStartPost` has a leading `-`, so a snapshot failure does not fail the digest.
+
+Before the API reads each paper database, run `python -m quantagent.cli api migrate-paper-db --database-url <url>` and review the dry run, then run it again with `--apply`. See the [web deployment runbook](../06_implementation/QuantAgent-wsxd-IM-runbook-web.md) for backup and rollback steps.
+
+The Streamlit QA containers are stopped and the old Streamlit URL no longer serves; the read-only web app replaces them.
 
 ## Local data and snapshots
 

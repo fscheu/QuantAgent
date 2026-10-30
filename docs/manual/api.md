@@ -1,12 +1,16 @@
 # API operations
 
-The FastAPI service is read-only and listens on `127.0.0.1:8000` by default. On the VM, start it with:
+The FastAPI service is read-only and listens on `127.0.0.1:8000` by default:
 
 ```sh
 python -m quantagent.cli api serve
 ```
 
-The API reads the account registry from the database selected by `QUANTAGENT_DATABASE_URL`. Set this environment variable to the master accounts database before running account-management commands or serving the API. The API itself has no application authentication. Access is private through the VM's existing Tailscale Serve setup; this guide does not enable or change that setup.
+On the VM, the `quantagent-api.service` systemd user unit runs it with `--host 127.0.0.1 --port 8002`.
+
+The API reads the account registry from the database selected by `QUANTAGENT_DATABASE_URL`. On the VM this points to `/home/azureuser/web-ops/maestro.db`, the master accounts database. Each paper portfolio keeps its own SQLite database and Alpaca account; the master database only registers portfolios with `api accounts add --database-url`. The web app reads portfolio data and does not process it.
+
+The API has no application authentication of its own. Cloudflare Access protects `https://quantagent.fedes.dev`, which serves the React web app and API from one process. Never expose the API without Access.
 
 ## Register accounts
 
@@ -36,9 +40,11 @@ Use `--output PATH` to write or check a different JSON file.
 
 ## Paper database migration
 
-`api migrate-paper-db --database-url URL` reports missing tables and columns without changing the database. Add `--apply` to create missing tables and safe columns, preserve existing rows, and stamp Alembic at head. Columns that are required without a default stop the migration.
+`api migrate-paper-db --database-url URL` reports missing tables and columns without changing the database. Add `--apply` to create missing tables and safe columns, preserve existing rows, and stamp Alembic at head. Columns that are required without a default stop the migration. Before the API reads a paper database, run this command for that database: inspect the dry run first, then use `--apply`.
 
-Set `QUANTAGENT_WEB_DIST` to serve a built web app from the API root; the default build directory is `web/dist`. Deep links fall back to the app's `index.html`, while `/api/*` remains routed to the API.
+## Web app
+
+Build the React app with `cd web && npm ci && npm run build`. Set `QUANTAGENT_WEB_DIST` to serve it from the API root; the default build directory is `web/dist`. Deep links fall back to the app's `index.html`, while `/api/*` remains routed to the API.
 
 ## Endpoints
 
@@ -53,3 +59,5 @@ All endpoints use `GET`. Response bodies are JSON; `422` responses use FastAPI's
 | GET | `/api/accounts/{account_id}/equity` | `200` `EquityPoint[]`; `422` validation error | `account_id` path, string, required; `range` query, `1W`, `1M`, `3M`, `YTD`, or `ALL`, default `1M` |
 | GET | `/api/accounts/{account_id}/positions` | `200` `PositionResponse[]`; `422` validation error | `account_id` path, string, required |
 | GET | `/api/accounts/{account_id}/orders` | `200` `OrderResponse[]`; `422` validation error | `account_id` path, string, required; `date` query, `YYYY-MM-DD`, optional (defaults to today in New York) |
+
+`GET /api/accounts/{account_id}/equity` reads history from daily equity snapshots (`equity`, `cash`, and `invested`) in that portfolio's database.
