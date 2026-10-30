@@ -23,7 +23,7 @@ Each entry gives a plain definition, a quick example, and its source.
 ### PDT — Pattern day trader rule for certain small margin accounts; for example, four same-day round trips in five business days trigger it. [Roadmap §0](../02_planning/2026-10-28_roadmap_post_m5.md#glosario-corto)
 ### Snapshot — A frozen data download; for example, two runs use the same ETF snapshot. [Roadmap §4](../02_planning/2026-10-28_roadmap_post_m5.md#4-m-datos-dnde-guardar-los-datos-de-mercado-y-fundamentales)
 ### Equity snapshot — A daily record of a paper account's equity, cash, and invested value; for example, the API uses it to show portfolio equity history. [API operations](api.md)
-### Master accounts database — The database that registers paper portfolios and points to their own databases; for example, the API reads its account registry from `maestro.db`. [API operations](api.md)
+### Master accounts database — The database that registers paper portfolios and points to their own databases; for example, the API reads its account registry. [API operations](api.md)
 ### Manifest — A file listing data hashes; for example, matching hashes show both runs used the same files. [Roadmap §4](../02_planning/2026-10-28_roadmap_post_m5.md#4-m-datos-dnde-guardar-los-datos-de-mercado-y-fundamentales)
 ### Train, test, and reserve — Data periods for fitting, judging, and a final untouched check; for example, train on 2007–2018 and test on 2019–2022. [Roadmap §0](../02_planning/2026-10-28_roadmap_post_m5.md#glosario-corto)
 ### Buy and hold — Buy at the start and sell at the end; for example, compare a strategy with SPY over the same dates. [Roadmap §2](../02_planning/2026-10-28_roadmap_post_m5.md#2-m-cuenta-que-la-candidata-funcione-en-una-cuenta-de-usd-20003000)
