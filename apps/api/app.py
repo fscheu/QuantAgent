@@ -2,14 +2,16 @@
 
 import os
 from datetime import datetime, timedelta
+from typing import Literal
 from zoneinfo import ZoneInfo
 
 from fastapi import Depends, FastAPI, Query
-from typing import Literal
-
+from fastapi import HTTPException
 from pydantic import BaseModel
-from sqlalchemy import create_engine, event, select
+from sqlalchemy import create_engine, event, func, select
 from sqlalchemy.orm import Session, sessionmaker
+
+from .schemas import AccountRef, AccountSummaryActive, AccountSummaryNoData, PositionResponse
 
 app = FastAPI(title="QuantAgent API")
 NEW_YORK = ZoneInfo("America/New_York")
@@ -24,12 +26,6 @@ class CalendarEventResponse(BaseModel):
     subtitle: str | None = None
     source: Literal["alpaca"]
     account_id: str | None = None
-
-
-class AccountRef(BaseModel):
-    id: str
-    name: str
-    env: Literal["paper", "live"]
 
 
 def session_factory(url=None):
@@ -83,3 +79,73 @@ def accounts(db: Session = Depends(get_db)):
 
     rows = db.scalars(select(Account).where(Account.status == "active").order_by(Account.id)).all()
     return [AccountRef(id=row.id, name=row.name, env=row.env) for row in rows]
+
+
+def configured_account(account_id, db):
+    from quantagent.models import Account
+
+    account = db.get(Account, account_id)
+    if account is None or account.status != "active":
+        raise HTTPException(status_code=404, detail="Account not found")
+    return account
+
+
+def utc_z(value):
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=ZoneInfo("UTC"))
+    return value.astimezone(ZoneInfo("UTC")).isoformat().replace("+00:00", "Z")
+
+
+@app.get("/api/accounts/{account_id}/summary", response_model=AccountSummaryActive | AccountSummaryNoData)
+def account_summary(account_id: str, db: Session = Depends(get_db)):
+    from quantagent.models import Order, Position
+    from .accounts import account_session_factory
+
+    account = configured_account(account_id, db)
+    with account_session_factory(account)() as source:
+        positions = source.scalars(select(Position).order_by(Position.symbol)).all()
+        checked_at = utc_z(datetime.now(ZoneInfo("UTC")))
+        if not positions:
+            return AccountSummaryNoData(id=account.id, name=account.name, env=account.env,
+                                        status="no_data", checked_at=checked_at)
+        now_ny = datetime.now(NEW_YORK)
+        day_start = now_ny.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
+        orders_today = source.scalar(select(func.count()).select_from(Order).where(Order.created_at >= day_start)) or 0
+        rejected = source.scalar(select(func.count()).select_from(Order).where(
+            Order.created_at >= day_start, Order.status == "rejected")) or 0
+        long_value = sum(abs(float(p.quantity)) * float(p.current_price) for p in positions if p.side.value == "buy")
+        short_value = sum(abs(float(p.quantity)) * float(p.current_price) for p in positions if p.side.value == "sell")
+        as_of = utc_z(max(p.updated_at for p in positions))
+        return AccountSummaryActive(id=account.id, name=account.name, env=account.env, status="active",
+            as_of=as_of, stale=False, equity=None, long_value=long_value, short_value=short_value,
+            cash=None, day_change=None, day_change_pct=None, week_change=None, week_change_pct=None,
+            positions_count=len(positions), orders_today=orders_today, orders_rejected_today=rejected, alarms=[])
+
+
+@app.get("/api/accounts/{account_id}/positions", response_model=list[PositionResponse])
+def account_positions(account_id: str, db: Session = Depends(get_db)):
+    from quantagent.models import ActivePosition, Position
+    from .accounts import account_session_factory
+
+    account = configured_account(account_id, db)
+    with account_session_factory(account)() as source:
+        active_columns = (ActivePosition.symbol, ActivePosition.side, ActivePosition.stop_loss,
+                          ActivePosition.environment, ActivePosition.is_active)
+        rows = source.execute(select(Position, *active_columns).outerjoin(ActivePosition,
+            (ActivePosition.symbol == Position.symbol) & (ActivePosition.side == Position.side) &
+            (ActivePosition.environment == ("prod" if account.env == "live" else "paper")) &
+            ActivePosition.is_active.is_(True)).order_by(Position.symbol)).all()
+        result = []
+        for row in rows:
+            position = row[0]
+            side = "long" if position.side.value == "buy" else "short"
+            qty, price = abs(float(position.quantity)), float(position.current_price)
+            stop_loss = row[3]
+            stop = float(stop_loss) if stop_loss is not None else None
+            result.append(PositionResponse(symbol=position.symbol, side=side, qty=qty,
+                avg_entry_price=float(position.average_entry_price), current_price=price,
+                market_value=qty * price, unrealized_pl=float(position.unrealized_pnl),
+                unrealized_pl_pct=float(position.unrealized_pnl_pct), stop_price=stop,
+                stop_distance=(price - stop if side == "long" else stop - price) if stop is not None else None,
+                opened_at=utc_z(position.opened_at)))
+        return result
