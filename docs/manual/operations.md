@@ -1,10 +1,14 @@
 # Operations
 
-Commands below inspect the configured paper account or local data. They do not start a trading cycle or create orders.
+Commands below inspect the configured paper account or local data. They do not start a trading cycle. All of them are read-only except `trading pre-apertura`, which can submit stop orders and cancel stale entry orders at the broker.
 
 ## Reconcile paper positions
 
 Run `python -m quantagent.cli trading reconciliar` with the paper database and Alpaca paper credentials configured. Matching positions print `Sin divergencias: posiciones locales y Alpaca coinciden.` Differences print one line per discrepancy. Investigate differences before relying on the digest.
+
+## Before market open
+
+Run `python -m quantagent.cli trading pre-apertura` against the paper account before the session opens. It does three things. First, for each long position with a fractional quantity and no open stop at the broker, it submits a day stop at the position's stored stop price, because Alpaca only accepts whole-share stops as good-till-cancelled. Second, it cancels buy stop entry orders older than three NYSE sessions. Third, it checks that every position is covered by an open sell stop for at least its full quantity. The result lists `reenviados` (stops resubmitted), `entradas_vencidas` (cancelled entries), `sin_stop` (positions still unprotected) and `avisos`. An `Alerta PDT` warning appears when the account's day-trade count reaches 2; see PDT in the [glossary](glossary.md). Treat any symbol in `sin_stop` as unprotected and investigate before the open.
 
 ## Daily digest
 
