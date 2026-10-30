@@ -1,0 +1,107 @@
+# Matriz de signos de M5 (QuantAgent-fnpr.2.2, M5-11). Diseño: docs/03_design/QuantAgent-M5-DS-motor-top-down.md §6.1.
+# Se versiona antes de cualquier corrida de H2. Un cambio de signo es una hipótesis nueva (suma 1 a N).
+# Signo +: el activo tiende a andar mejor cuando el tema sube; -: peor. Activos sin signo tienen MacroThemeScore 0.
+# Cada celda tema × dirección lleva su fuente; los DOI se verificaron contra api.crossref.org (2026-10-29).
+# Decisiones de Fede (2026-10-29): ARGT fuera del universo (el objetivo es invertir en EE.UU.); sin signo
+# pendiente -XLU (sin cita); el dólar entra cuando su z-score tiene historia (DTWEXBGS empieza en 2006).
+# Advertencia general: Stangl, Jacobsen y Visaltanachoti (2009, "Sector rotation over business-cycles") muestran
+# que la ganancia neta de rotar sectores por ciclo es chica y no significativa con costos realistas.
+version: 1
+snapshot_macro: macro-m5-2026-10
+ventana_z_meses: 36
+universo: [XLB, XLC, XLE, XLF, XLI, XLK, XLP, XLRE, XLU, XLV, XLY, SPY, EEM, EWZ]
+
+_fidelity: &fidelity
+  cita: 'Emsbo-Mattingly et al., Fidelity Investments, "The Business Cycle Approach to Equity Sector Investing" (2021)'
+  link: https://www.fidelity.com/bin-public/060_www_fidelity_com/documents/fixed-income/Business_Cycle_Sector_Approach.pdf
+_neville: &neville
+  cita: 'Neville, Draaisma, Funnell, Harvey y Van Hemert (2021), "The Best Strategies for Inflationary Times", JPM 47(8)'
+  link: https://doi.org/10.3905/jpm.2021.1.274
+_alessandri: &alessandri
+  cita: 'Alessandri y Nelson (2015), "Simple Banking: Profitability and the Yield Curve", JMCB 47(1)'
+  link: https://doi.org/10.1111/jmcb.12172
+_baele: &baele
+  cita: 'Baele, Bekaert, Inghelbrecht y Wei (2020), "Flights to Safety", RFS 33(2)'
+  link: https://doi.org/10.1093/rfs/hhz055
+_avdjiev: &avdjiev
+  cita: 'Avdjiev, Bruno, Koch y Shin (2019), "The Dollar Exchange Rate as a Global Risk Factor", IMF Economic Review 67'
+  link: https://doi.org/10.1057/s41308-019-00074-4
+
+temas:
+  crecimiento:
+    series:
+      - {serie: INDPRO, transformada: yoy}
+      - {serie: NEWORDER, transformada: yoy}
+      - {serie: ICSA, transformada: yoy, invertir: true}
+    signos:
+      positivo:
+        activos: [XLY, XLI, XLB, XLK, XLF]
+        fuentes: [*fidelity]
+        hallazgo: En la fase temprana del ciclo lideran discrecional, financiero, industrial y tecnología; materiales en temprana, rezagado en media.
+      negativo:
+        activos: [XLU, XLP, XLV]
+        fuentes: [*fidelity]
+        hallazgo: Salud y utilities rezagan en la fase temprana; consumo básico, utilities y salud superan al mercado en recesión.
+  inflacion:
+    series:
+      - {serie: CPIAUCSL, transformada: yoy}
+      - {serie: T10YIE, transformada: dif12}
+    signos:
+      positivo:
+        activos: [XLE, XLB]
+        fuentes: [*neville]
+        hallazgo: En regímenes de inflación alta energía es el único sector con retorno real positivo; materiales rinde relativamente mejor.
+      negativo:
+        activos: [XLK, XLU, XLY]
+        fuentes: [*neville, *fidelity]
+        hallazgo: Tecnología y utilities andan peor con inflación alta (Neville); tecnología y discrecional rezagan en el ciclo tardío por márgenes (Fidelity).
+  tasa_real:
+    series:
+      - {serie: DFII10, transformada: dif12}
+    signos:
+      positivo:
+        activos: [XLF]
+        fuentes: [*alessandri]
+        hallazgo: En el largo plazo el nivel y la pendiente de la curva suben la rentabilidad bancaria.
+      negativo:
+        activos: [XLK, XLRE, XLU]
+        fuentes:
+          - cita: 'Gormsen y Lazarus (2023), "Duration-Driven Returns", Journal of Finance 78(3)'
+            link: https://doi.org/10.1111/jofi.13216
+          - cita: 'He, Webb y Myer (2003), "Interest Rate Sensitivities of REIT Returns", International Real Estate Review 6(1)'
+            link: https://ideas.repec.org/a/ire/issued/v06n012003p1-21.html
+        hallazgo: Las acciones de larga duración son más sensibles a la tasa de descuento; los REIT caen con suba de tasas largas. XLU como acción de larga duración es inferencia.
+  pendiente:
+    series:
+      - {serie: T10Y2Y, transformada: dif12}
+    signos:
+      positivo:
+        activos: [XLF]
+        fuentes: [*alessandri]
+        hallazgo: Relación de largo plazo positiva entre pendiente y rentabilidad bancaria. English, Van den Heuvel y Zakrajšek (2018, doi 10.1016/j.jmoneco.2018.04.010) muestran el signo opuesto ante sorpresas de corto plazo; el z usa variaciones de 12 meses.
+  estres:
+    series:
+      - {serie: BAA10Y, transformada: dif12}
+      - {serie: VIXCLS, transformada: dif12}
+    signos:
+      positivo:
+        activos: [XLP, XLU, XLV]
+        fuentes: [*fidelity]
+        hallazgo: Consumo básico, utilities y salud superan al mercado en recesión; Baele et al. no los nombran como ganadores del estrés.
+      negativo:
+        activos: [XLF, XLY, EEM, EWZ]
+        fuentes: [*baele, *avdjiev]
+        hallazgo: Financiero y cíclicos caen en episodios de huida a la seguridad; el dólar fuerte del risk-off restringe a emergentes (EWZ por extensión del agregado).
+  dolar:
+    series:
+      - {serie: DTWEXBGS, transformada: yoy}
+    signos:
+      negativo:
+        activos: [EEM, EWZ, XLB, XLE]
+        fuentes:
+          - *avdjiev
+          - cita: 'Akram (2009), "Commodity prices, interest rates and the dollar", Energy Economics 31(6)'
+            link: https://doi.org/10.1016/j.eneco.2009.05.016
+          - cita: 'Narayan y Sharma (2011), "New evidence on oil price and firm returns", JBF 35(12)'
+            link: https://doi.org/10.1016/j.jbankfin.2011.05.010
+        hallazgo: Dólar fuerte endurece condiciones en emergentes (EWZ por extensión) y baja commodities; energía sigue al petróleo.

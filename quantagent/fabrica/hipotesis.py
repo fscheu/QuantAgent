@@ -20,6 +20,7 @@ class Pierna:
     parametros: dict[str, list[Any]]
     activos: tuple[str, ...]
     universo: str
+    elegibilidad: str | None = None
 
     def combinaciones(self) -> list[dict[str, Any]]:
         from quantagent.fabrica.transversal import es_transversal
@@ -106,7 +107,10 @@ def _validar_pierna(d: Any) -> Pierna:
     activos = d["activos"]
     if not isinstance(activos, list) or not activos or not all(isinstance(a, str) for a in activos):
         raise ValueError("Campo 'activos' debe ser una lista no vacía de símbolos")
-    p = Pierna(clase=d["clase"], parametros=d["parametros"], activos=tuple(activos), universo=d["universo"])
+    if d.get("elegibilidad") is not None and not isinstance(d["elegibilidad"], str):
+        raise ValueError("Campo 'elegibilidad' debe ser un texto")
+    p = Pierna(clase=d["clase"], parametros=d["parametros"], activos=tuple(activos), universo=d["universo"],
+               elegibilidad=d.get("elegibilidad"))
     p.combinaciones()
     return p
 

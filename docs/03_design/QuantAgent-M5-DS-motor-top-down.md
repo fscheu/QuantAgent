@@ -27,10 +27,10 @@ Las demás desviaciones de la propuesta (§2) son recomendaciones de diseño; ca
 | ADR-03: buckets dentro de una sola cuenta | En paper, **un bucket = una cuenta paper + una base de datos + un proceso** (F4). No hace falta la tabla `portfolio_buckets` para paper. | Alpaca suma las posiciones por símbolo: con dos motores en la misma cuenta, la reconciliación (`y62`) no sabe de quién es cada acción. Es el mismo patrón que L21 ya usa (una base y un proceso por cartera). | Ya decidido (F4) |
 | ADR-06 + ticket 2.2: `OverfittingGate` y DSR nuevos | **No se construyen.** Se usa el embudo existente: etapas 0–3, `intentos.csv`, DSR contra intentos, criterio C0 + M1 (DC R01). | Ya existe y está auditado (L10, L16, L19). Un segundo registro de intentos partiría N en dos. | No |
 | Exigir `DSR ≥ 0,95` para pasar a paper | Paper sigue siendo prueba del sistema (R01 #4); el DSR se informa y no bloquea paper. | El DC del 2026-10-19 mostró que DSR ≥ 0,95 sobre 4 años pide un Sharpe de ~1,4. | No (aplica R01) |
-| Filtro R/R ≥ 2 con objetivo obligatorio | El objetivo es **opcional**. El filtro R/R solo se aplica cuando el objetivo sale de la estructura del gráfico (máximo previo, ancho del rango). | Si stop y objetivo son múltiplos de ATR, el cociente es constante (por ejemplo 4 ATR / 2 ATR = 2) y el filtro no filtra nada. En seguimiento de tendencia con stop móvil no hay objetivo fijo. | Sí (D3 del plan) |
+| Filtro R/R ≥ 2 con objetivo obligatorio | El objetivo es **opcional**. El filtro R/R solo se aplica cuando el objetivo sale de la estructura del gráfico (máximo previo, ancho del rango). | Si stop y objetivo son múltiplos de ATR, el cociente es constante (por ejemplo 4 ATR / 2 ATR = 2) y el filtro no filtra nada. En seguimiento de tendencia con stop móvil no hay objetivo fijo. | Sí (D3 del plan). Decidido: **v1 sin filtro R/R**, porque los arquetipos no tienen objetivo. |
 | Validación del pipeline completo de una vez | **Escalera de cuatro hipótesis** (§7): cada capa se mide contra la anterior. | Con hipótesis encadenadas, el error de cada eslabón se multiplica (ljoj §2). Hay que saber qué capa suma. | No (implementa F2) |
 | Arquetipo A como estrategia nueva | Es una variante de `triple_screen_strategy.py` y cuenta en el cupo de 2 variantes por idea (R01 #8). | Misma idea (Elder), distintos parámetros. | No |
-| Países (`EWZ`, `EEM`, `ARGT`) en la Etapa 2 | Los ETFs de país **saltean la Etapa 2**: pasan a la Etapa 3 como activo. | No hay fundamentales punto en el tiempo accesibles de empresas brasileñas o argentinas. Abrir acciones por país es una extensión aparte. | Sí (D5 del plan) |
+| Países (`EWZ`, `EEM`) y `SPY` en la Etapa 2 | `EEM`, `EWZ` y `SPY` **saltean la Etapa 2**: pasan a la Etapa 3 como activo. `ARGT` queda fuera del universo (Fede: invertir en EE. UU.). | No hay fundamentales punto en el tiempo accesibles de empresas de esos países, y `SPY` no tiene un sector propio. Abrir acciones por país es una extensión aparte. | Sí (D5 del plan, decidido) |
 | LLM ausente | El LLM escribe la lectura semanal y explica cada trade; **no decide ni dimensiona nada** (§6.6). | El objetivo del proyecto es un sistema con LLM; los números tienen que seguir siendo reproducibles. | No |
 
 ## 3. Mapa de la propuesta contra el código actual
@@ -125,7 +125,7 @@ Necesidades, en orden de importancia para que el backtest no mienta:
 | Opción | Cubre | Costo | Contras |
 |---|---|---|---|
 | **Sharadar Core US Equities Bundle** (Nasdaq Data Link): precios `SEP`, fundamentales `SF1`, tabla de altas y bajas del S&P 500, `TICKERS` con sector | 1, 2 (vía S&P 500), 3; también precios de ETFs (`funds`) | Bundle con historia completa: USD 69/mes o 499/año (10 años: 49/399, no llega a 2007). Capa gratuita: solo una muestra de ~30 empresas (tipo Dow Jones), útil para desarrollo y tests | Sector actual por empresa; los cambios de SIC están en `actions`, no los de GICS (ver §5.3). Licencia solo personal; al cancelar hay que borrar los datos en 30 días (vale para backtests propios, no para guardarlos y dejar de pagar) |
-| **SEC EDGAR (XBRL, API `companyfacts`)** | 3 | Gratis, sin clave; límite de pedidos por IP | Hay que armar ROIC, márgenes y aceleraciones a mano. Las restataciones exigen quedarse con el **primer valor publicado** a cada fecha. Mucho trabajo y casos raros. No cubre 1 ni 2. |
+| **SEC EDGAR (XBRL, API `companyfacts`)** | 3 | Gratis, sin clave; límite de pedidos por IP | Hay que armar ROIC, márgenes y aceleraciones a mano. Ante una restatación se usa el **último valor presentado hasta la fecha** (M5-31): con el primer valor, el EPS mezclaba datos antes y después de un split. Mucho trabajo y casos raros. No cubre 1 ni 2. |
 | **Norgate Data** (Platinum) | 1, 2 (incluye composición histórica de índices) | ~USD 630 por año según un blog de 2024 (a verificar) | No trae fundamentales. Hasta donde sé, su cliente corre en Windows: choca con la VM y WSL. |
 | **EODHD** | 1, 3, composición del S&P 500 desde 2012 | Plan pago de fundamentales | Composición solo desde 2012: corta el período 2007–2011. |
 | Lista pública de cambios del S&P 500 (por ejemplo, armada desde Wikipedia) | 2 | Gratis | Calidad variable; no resuelve 1. |
@@ -141,6 +141,8 @@ Detalle verificado en `sharadar.com/llms.txt`, FAQ y términos (2026-10-25): API
 
 Esto choca con R01 #14 ("nada pago hasta que una familia pase la etapa 2 con datos gratis"). Por F1, Fede decide si Sharadar se paga antes (D1 del plan). Sin pago, la alternativa es EDGAR + lista pública del S&P 500 + **precios sin las acciones que dejaron de cotizar**, con el sesgo de supervivencia declarado en el informe; en ese caso el resultado de la Etapa 2 no vale como evidencia y solo sirve como prueba del sistema.
 
+**Decisión (D1, Fede 2026-10-25):** fuentes gratuitas, sin Sharadar. Precios de acciones: Yahoo para los símbolos vivos y Quandl WIKI (espejo de Kaggle, con las que dejaron de cotizar hasta 2018-03-27) para las que salieron. Composición: `fja05680/sp500` más la tabla manual de GICS (§5.3). Fundamentales: EDGAR (M5-31). Revisiones de EPS: foto diaria de Yahoo desde 2026-10 (M5-05b). Una hipótesis de L28 que pase la etapa 2 se confirma con Sharadar pago antes de paper.
+
 ### 5.3 Composición de los sectores
 
 Los Select Sector SPDR (`XLK`, `XLF`, etc.) contienen las empresas del S&P 500 agrupadas por sector GICS. Por eso, "empresas del sector X en la fecha t" = miembros del S&P 500 en t (tabla de Sharadar o lista pública) con el sector GICS de cada empresa en t.
@@ -153,14 +155,14 @@ Además, `XLRE` empieza en 2015 y `XLC` en 2018. Entran al universo de la Etapa 
 
 - Precios diarios: Alpaca (`AlpacaSource`, ya existe), con la salvedad conocida del provider diario que puede no liberar la última vela hasta la medianoche UTC.
 - Macro: ALFRED en vivo para la lectura semanal (pendiente `av1p.4.7` de M4 resuelve lo mismo; reusar).
-- Fundamentales: actualización diaria de Sharadar (o EDGAR), leída por el job semanal.
+- Fundamentales: actualización de EDGAR, leída por el job semanal.
 - Activos fraccionables: Alpaca expone el atributo `fractionable` por activo; el sizing lo consulta (§6.5).
 
 ## 6. Diseño por componente
 
 ### 6.1 Etapa 1 — régimen y `SectorScore` (semanal)
 
-- **Universo:** los 11 Select Sector SPDR más `SPY`, `EEM`, `EWZ` y `ARGT` (desde que tienen historia suficiente).
+- **Universo:** los 11 Select Sector SPDR más `SPY`, `EEM` y `EWZ` (desde que tienen historia suficiente). `ARGT` queda fuera (D5).
 - **Transformaciones:** cada serie macro se pasa a variación interanual (niveles: INDPRO, CPI, ICSA) o diferencia de 12 meses (tasas, spreads, VIX), y luego a z-score con **ventana fija de 36 meses**, elegida antes de correr. La propuesta deja la ventana entre 12 y 36: elegirla después de mirar el resultado sería un parámetro libre más.
 - **Tema:** promedio de los z-scores de sus series (con el signo invertido donde corresponde, por ejemplo ICSA).
 - **Matriz de signos (`catalogo/m5-priors.yaml`, versionada antes de correr):** −1, 0 o +1 por tema y ETF. `MacroThemeScore_i = Σ_tema signo(i, tema) × z_tema / cantidad de temas con signo ≠ 0`. Borrador para discutir (con citas obligatorias en el YAML antes de usarlo):
@@ -171,8 +173,8 @@ Además, `XLRE` empieza en 2015 y `XLC` en 2018. Entran al universo de la Etapa 
   | Inflación | XLE, XLB | XLK, XLU, XLY |
   | Tasa real | XLF | XLK, XLRE, XLU |
   | Pendiente de la curva | XLF | XLU |
-  | Estrés financiero (spread, VIX) | XLP, XLU, XLV | XLF, XLY, EEM, EWZ, ARGT |
-  | Dólar | — | EEM, EWZ, ARGT, XLB, XLE |
+  | Estrés financiero (spread, VIX) | XLP, XLU, XLV | XLF, XLY, EEM, EWZ |
+  | Dólar | — | EEM, EWZ, XLB, XLE |
 
 - **`PriceMomentumScore`:** retorno de 1, 3 y 6 meses dividido por la volatilidad de 60 sesiones, promediado.
 - **`SectorScore = 0,5 × MacroThemeScore + 0,5 × PriceMomentumScore`**, ambos llevados a z-score entre los activos de la fecha. Se implementa como métrica transversal en `fabrica/transversal.py` (panel fecha × activo, mayor es mejor).
@@ -182,9 +184,9 @@ Además, `XLRE` empieza en 2015 y `XLC` en 2018. Entran al universo de la Etapa 
 
 ### 6.2 Etapa 2 — screener por sector (semanal)
 
-- **Universo:** miembros del S&P 500 en la fecha, del sector de cada ETF habilitado (§5.3). Los ETFs de país pasan directo a la Etapa 3.
+- **Universo:** miembros del S&P 500 en la fecha, del sector de cada ETF habilitado (§5.3). `EEM`, `EWZ` y `SPY` pasan directo a la Etapa 3 (D5).
 - **Métricas** (cada una con la fecha de publicación del dato; solo datos publicados hasta la fecha):
-  - Calidad (35 %): ROIC de los últimos 4 trimestres y cambio interanual del margen operativo.
+  - Calidad (35 %): ROIC de los últimos 4 trimestres y cambio interanual del margen operativo. En el sector Financials, ROE de 4 trimestres y cambio interanual del margen antes de impuestos (D8): los bancos no reportan resultado operativo y el ROIC no aplica con depósitos como deuda. En los demás sectores, si falta el resultado operativo se usa el resultado antes de impuestos.
   - Impulso (35 %): aceleración del crecimiento de ingresos (crecimiento interanual del último trimestre menos el del anterior) y crecimiento interanual del EPS publicado.
   - Fuerza relativa (30 %): retorno de 3 y 6 meses menos el retorno del ETF del sector en la misma ventana. Uso la **diferencia** de retornos, no el cociente de la propuesta, porque el cociente se rompe cuando el retorno del ETF es cercano a cero o negativo.
 - **Normalización:** z-score dentro del sector y la fecha, recortado a ±3 para que un dato raro no domine.
@@ -234,10 +236,10 @@ class TradeIntent(TradingSignal):
 ### 6.5 Riesgo, ejecución y seguimiento
 
 **`RiskManager`, chequeos nuevos** (antes de los actuales, solo para entradas nuevas):
-1. R/R: si `target_is_structural`, exigir `|objetivo − entrada| / |entrada − stop| ≥ rr_min` (configurable; valor a decidir, D3).
+1. R/R: **no entra en v1** (D3): los arquetipos A y B no tienen objetivo de precio, así que el filtro nunca actuaría. Se agrega si aparece una estrategia con objetivo estructural.
 2. Heat del bucket: `Σ max(0, (entrada − stop) × cantidad)` de las posiciones abiertas (largos; espejo para cortos) + riesgo del trade nuevo ≤ `heat_max_pct × equity del bucket`. Una posición con el stop en breakeven o más arriba aporta 0. Rechazo con motivo `max_heat`.
 
-**Sizing:** `PositionSizer` regla `riesgo` sin cambios de fórmula. Se agrega: si el activo no es fraccionable, redondear hacia abajo a acciones enteras; si da 0, rechazo con motivo `tamano_cero`. Los valores (`riesgo_por_trade_pct`, `max_position_pct`, `heat_max_pct`) salen del perfil del bucket M5 y se deciden antes de paper (D2).
+**Sizing:** `PositionSizer` regla `riesgo` sin cambios de fórmula. Se agrega: si el activo no es fraccionable, redondear hacia abajo a acciones enteras; si da 0, rechazo con motivo `tamano_cero`. Los valores (`riesgo_por_trade_pct`, `max_position_pct`, `heat_max_pct`) salen del perfil del bucket M5: 0,25 %, 10 % y 2 % (D2), con capital inicial de USD 3.000 (D6).
 
 **`AlpacaBroker`:**
 - Órdenes `stop` (`StopOrderRequest`) de salida y de entrada, cancelación y **reemplazo** del precio stop (`replace_order_by_id`).
@@ -278,19 +280,19 @@ Cada escalón es una hipótesis del embudo actual (YAML en `hipotesis/`, etapas 
 |---|---|---|---|
 | H1 | Rotación semanal: los 3 ETFs con mejor `PriceMomentumScore`, con filtro de caída, pesos por igual riesgo | 1/N de los ETFs del universo | ¿El momentum sectorial con filtro suma? |
 | H2 | H1 con `SectorScore` 50/50 macro + momentum | H1 | ¿La macro suma sobre el momentum? (F2) |
-| H3 | Top 3 acciones por sector habilitado (por H2 o H1, la que gane), mantenidas una semana, sin timing técnico | Los ETFs de esos mismos sectores | ¿El screener elige mejores acciones que el ETF? |
+| H3 | Top 3 acciones por sector habilitado por H1 (D9: H2 no mejoró a H1), mantenidas una semana, sin timing técnico | Los ETFs de esos mismos sectores | ¿El screener elige mejores acciones que el ETF? |
 | H4 | H3 + arquetipos A y B con stops y seguimiento | H3 | ¿El timing técnico suma o solo agrega costos? |
 
 - **H5, posterior a la implementación de M5 (Fede, 2026-10-25):** pierna corta. Vender en corto los activos que el filtro de caída bloquea y que tienen `PriceMomentumScore < 0`, con versiones espejo de los arquetipos (por ejemplo, ruptura a la baja), y compararla contra H4. No entra en v1 porque el filtro es una regla de defensa (no comprar), no una señal de venta. Además, el filtro se activa con el mercado bajista, donde los rebotes castigan al momentum (Daniel y Moskowitz, "Momentum crashes"), y pasar a efectivo tiene mejor evidencia que darse vuelta (ljoj §2). Por eso v1 en risk-off queda en efectivo. Antecedente: F2 `tendencia-larga-corta` (R01 #8, cortos solo en paper). Para dinero real hace falta cuenta margin, y Alpaca no permite cortos fraccionarios. Cada arquetipo espejo suma un intento.
 - Los arquetipos A y B se miden también **solos, agrupados**, sobre los 11 ETFs sectoriales sin las Etapas 1–2: es la forma más barata de saber si tienen algo antes de montarlos sobre el resto.
 - Intentos: cada escalón y cada arquetipo suman 1 a N. Matriz de signos, ventanas y pesos se fijan antes del primer corte (máx. 6 parámetros libres por hipótesis, regla de L9).
-- Reserva 2023+: R01 la limita a 3 hipótesis con lista escrita. Si alguna de M5 debe entrar, Fede la agrega a la lista antes.
+- Reserva 2023+: R01 la limita a 3 hipótesis con lista escrita. Si alguna de M5 debe entrar, Fede la agrega a la lista antes. Decidido (D7): la reserva se guarda para H4.
 - Que un escalón no pase **no frena paper** (R01 #4, paper como prueba del sistema). Solo queda registrado.
 
 ### 7.1 Período
 
 - Etapa 1 con ETFs: 2007–2018 para las etapas 1–2 del embudo; 2019–2022 para la etapa 3. `T10YIE` y `DFII10` empiezan en 2003; la ventana de 36 meses deja el primer score en 2006: alcanza.
-- Etapa 2 con acciones: mismo período si la fuente cubre desde 2007 (Sharadar, sí; EODHD, solo desde 2012).
+- Etapa 2 con acciones: mismo período si la fuente cubre desde 2007 (con las fuentes de D1: precios y composición desde 2007; fundamentales de EDGAR desde 2009-2010).
 
 ### 7.2 Universo que cambia con la fecha
 
@@ -298,7 +300,7 @@ El embudo hoy corre una hipótesis sobre un universo fijo. H3 y H4 necesitan "en
 
 ## 8. Riesgos y temas abiertos
 
-1. **Sesgo de supervivencia** si no se paga una fuente con acciones que dejaron de cotizar (§5.2). Mitigación: declararlo en el informe; el resultado de H3/H4 no vale como evidencia.
+1. **Sesgo de supervivencia** si no se paga una fuente con acciones que dejaron de cotizar (§5.2). Con D1, WIKI cubre las que salieron hasta 2018-03-27; después quedan huecos que informa M5-03. Mitigación: declararlo en el informe y confirmar con Sharadar pago una hipótesis que pase la etapa 2.
 2. **Pocos episodios macro.** En 2007–2022 hay 3 o 4 cambios de régimen. Aunque la matriz se fije de antemano, H2 se valida con muy pocos casos; el error estándar de ΔSharpe (M3 de R01) lo va a mostrar.
 3. **Hueco en la apertura.** Un stop en el broker no protege de una apertura por debajo del stop: la pérdida real puede superar el riesgo calculado. El informe muestra la pérdida realizada en R por trade.
 4. **Stops "day" de fracciones.** Entre la apertura y el reenvío no hay stop. Mitigación: job previo a la apertura con alarma.

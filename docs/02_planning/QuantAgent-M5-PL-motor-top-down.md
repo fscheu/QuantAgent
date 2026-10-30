@@ -13,15 +13,17 @@ Una segunda rama de operación en QuantAgent, en una cuenta paper de Alpaca apar
 
 ## 2. Decisiones que necesita Fede
 
-| # | Decisión | Antes de | Recomendación del PM |
+| # | Decisión | Antes de | Decisión o recomendación del PM |
 |---|---|---|---|
-| D1 | ¿Se paga Sharadar (o equivalente) para acciones, composición del S&P 500 y fundamentales? Excepción a R01 #14 | `M5-03` (lote L22) | **Decidido por Fede (2026-10-25):** se avanza con la **capa gratuita** de Sharadar (cuenta ya creada; muestra de ~30 empresas) para desarrollar y testear M5-03, M5-04, M5-31 y M5-32. El pago (Bundle con historia completa, USD 69/mes o 499/año) se decide al abrir L28, antes de correr H3/H4. |
-| D2 | Sizing del bucket M5: riesgo por trade, tope por posición, heat máximo | `M5-50` (antes de paper) | Partir de R01 (0,25 % y 10 %) y decidir el heat con la tabla de §6. |
-| D3 | Filtro R/R: valor de `rr_min` y objetivo solo estructural | `M5-44` | Objetivo opcional; filtro R/R solo con objetivo estructural; `rr_min` = 2 como en la propuesta. |
+| D1 | ¿Se paga Sharadar (o equivalente) para acciones, composición del S&P 500 y fundamentales? Excepción a R01 #14 | `M5-03` (lote L22) | **Decidido por Fede (2026-10-25):** fuentes gratuitas. La capa gratuita de Sharadar no sirve (empresas tipo Dow Jones, historia desde 2021-10) y su licencia obliga a borrar los datos al cancelar. Precios: Yahoo para los símbolos vivos y Quandl WIKI (espejo de Kaggle, incluye las que dejaron de cotizar, congelado al 2018-03-27) para las que salieron, sin empalmar fuentes dentro de un símbolo. Composición: `fja05680/sp500` + tabla manual de GICS. Fundamentales: SEC EDGAR. M5-03 informa la cobertura; una hipótesis de L28 que pase la etapa 2 se confirma con Sharadar pago antes de paper. |
+| D2 | Sizing del bucket M5: riesgo por trade, tope por posición, heat máximo | `M5-50` (antes de paper) | **Decidido (Fede, 2026-10-29):** 0,25 % de riesgo por trade, tope de 10 % por posición, heat máximo 2 % (8 posiciones con riesgo completo, §6). |
+| D3 | Filtro R/R: valor de `rr_min` y objetivo solo estructural | `M5-44` | **Decidido (Fede, 2026-10-29):** sin filtro R/R en v1. Los arquetipos A y B no tienen objetivo de precio (salen por stop o Chandelier), así que el filtro nunca actuaría. M5-44 queda en heat y redondeo a enteras. |
 | D4 | Sustituto de ISM New Orders | `M5-01` | **Decidido:** NEWORDER (yoy). Única serie de pedidos con vintages en ALFRED desde 1997 que cubre el in-sample 2007-2018 punto en el tiempo. |
-| D5 | ETFs de país sin Etapa 2 | `M5-32` | Sí: pasan directo a la Etapa 3. |
-| D6 | Capital inicial de la cuenta paper M5 | `M5-50` | Un monto cercano al de dinero real futuro (por ejemplo USD 3.000) en vez de los USD 100.000 por defecto: así paper ejercita fracciones, redondeos y tamaños mínimos. |
-| D7 | ¿Alguna hipótesis de M5 entra a la reserva 2023+? | `M5-13` | Decidir con el resultado de la etapa 2 de H1/H2; hoy la lista de R01 está llena (3 de 3). |
+| D5 | ETFs de país sin Etapa 2 | `M5-32` | **Decidido (Fede, 2026-10-29):** `EEM`, `EWZ` y `SPY` saltean la Etapa 2 y pasan directo a la Etapa 3. `ARGT` queda fuera del universo de M5 (Fede: invertir en EE. UU.). |
+| D6 | Capital inicial de la cuenta paper M5 | `M5-50` | **Decidido (Fede, 2026-10-29):** USD 3.000, para que paper ejercite fracciones, redondeos y tamaños mínimos. Con menos de USD 25.000 Alpaca aplica la regla de day trading (PDT) también en paper: M5-45 avisa cuando la cuenta se acerca a 3 day trades en 5 días hábiles. |
+| D7 | ¿Alguna hipótesis de M5 entra a la reserva 2023+? | `M5-13` | **Decidido (Fede, 2026-10-29):** ni H1 ni H2 entran; la reserva se guarda para H4, el último escalón (§7 del diseño). |
+| D8 | Métricas de calidad para Financials (bancos y aseguradoras no reportan `OperatingIncomeLoss` y el ROIC no tiene sentido con depósitos como deuda) | `M5-32a` | **Decidido (Fede, 2026-10-29):** para todo el sector GICS Financials, ROE de 4 trimestres (`NetIncomeLoss` / `StockholdersEquity`) en lugar de ROIC, y cambio interanual del margen antes de impuestos en lugar del margen operativo. Resto de los sectores: `OperatingIncomeLoss`, con el resultado antes de impuestos como aproximación solo donde falte. |
+| D9 | Base de H3: ¿sectores habilitados por H1 o por H2? | `M5-33` | **Decidido (Fede, 2026-10-29):** H1. H2 no mejoró a H1 en la etapa 2 (ΔSharpe −0,09 ± 0,10); la macro vuelve a la escalera solo si suma en la etapa 2. |
 
 ## 3. Lotes
 
@@ -90,9 +92,10 @@ Formato de la cola de `PLAN-CONTINUACION.md` §4. Revisión: **leer**, **decidir
 | # | Objetivo | Aceptación binaria | Revisión |
 |---|---|---|---|
 | M5-30 | Máscara de elegibilidad fecha × activo declarada por la hipótesis en el embudo | Test: un activo fuera de la máscara en t no recibe peso ni señal en t | leer |
-| M5-31 | Métricas fundamentales punto en el tiempo: ROIC 4 trimestres, cambio interanual del margen operativo, aceleración de ingresos, crecimiento del EPS | Test: un balance presentado el día d no se ve en d − 1; ante una restatación se usa el primer valor publicado hasta t | leer |
-| M5-32 | Screener por sector (z-score intra sector, recorte ±3, exclusión del cuartil inferior de fuerza relativa, top 3) y tabla `candidatos_semanales`; ETFs de país directo a Etapa 3 (D5) | Para una fecha fija, el top 3 coincide con un cálculo a mano en una planilla adjunta al PR | probar |
-| M5-33 | H3 por el embudo hasta la etapa 2 | Veredicto en `hipotesis.csv`; el informe declara el sesgo de supervivencia si D1 fue "no" | decidir |
+| M5-31 | Métricas fundamentales punto en el tiempo: ROIC 4 trimestres, cambio interanual del margen operativo, aceleración de ingresos, crecimiento del EPS | Test: un balance presentado el día d no se ve en d − 1; ante una restatación se usa el último valor presentado hasta t (rige desde el día siguiente a la presentación); un dato cuyo último trimestre terminó hace más de 200 días queda vacío | leer |
+| M5-32a | ROE de 4 trimestres y cambio interanual del margen antes de impuestos, punto en el tiempo, para Financials (D8) | Tests con datos sintéticos calculados a mano; cobertura desde 2010 en Financials informada en el PR | leer |
+| M5-32 | Screener por sector (z-score intra sector, recorte ±3, exclusión del cuartil inferior de fuerza relativa, top 3) y tabla `candidatos_semanales`; Financials con las métricas de D8; `EEM`, `EWZ` y `SPY` directo a Etapa 3 (D5) | Para una fecha fija, el top 3 coincide con un cálculo a mano en una planilla adjunta al PR | probar |
+| M5-33 | H3 (sectores de H1, D9) por el embudo hasta la etapa 2 | Veredicto en `hipotesis.csv`; el informe declara el sesgo de supervivencia si D1 fue "no" | decidir |
 | M5-34 | H4 (H3 + arquetipos) por el embudo hasta la etapa 2 | Veredicto; informe H4 contra H3 | decidir |
 
 ### L26 — ejecución por trade
@@ -103,8 +106,8 @@ Formato de la cola de `PLAN-CONTINUACION.md` §4. Revisión: **leer**, **decidir
 | M5-41 | `AlpacaBroker`: órdenes stop de entrada y de salida, reemplazo del precio stop, vigencia GTC para cantidades enteras y day para fracciones | Test con cliente falso: un stop con fracción sale con vigencia day; uno entero con GTC; el reemplazo llama a la API con el id correcto | leer |
 | M5-42 | Stop en el broker al llenarse la entrada; se apaga el chequeo local para esas posiciones; reconciliación cierra la posición si el stop se llenó en Alpaca | Test: posición con stop en el broker y vela que perfora el stop no genera una segunda venta local; stop llenado en Alpaca → `close_reason = stop_broker` | probar |
 | M5-43 | `nuevo_stop()` como único camino para mover el stop; acciones breakeven, Chandelier e invalidación de tesis | Test de propiedad (Hypothesis o equivalente): para cualquier secuencia de propuestas, el stop de un largo nunca baja | leer |
-| M5-44 | `RiskManager`: heat del bucket y R/R opcional (D3); `PositionSizer`: redondeo a enteras si el activo no es fraccionable | Tests parametrizados: rechazo `max_heat`, rechazo `rr_insuficiente` solo con objetivo estructural, `tamano_cero` con activo no fraccionable | leer |
-| M5-45 | Job previo a la apertura: reenviar stops day, vencer entradas, verificar que toda posición tenga stop | Corrida en paper: con una posición fraccionaria abierta, el stop del día existe en Alpaca antes de las 9:30 ET; sin stop, el job falla con alarma | probar |
+| M5-44 | `RiskManager`: heat del bucket (D2; sin filtro R/R, D3); `PositionSizer`: redondeo a enteras si el activo no es fraccionable | Tests parametrizados: rechazo `max_heat`, `tamano_cero` con activo no fraccionable | leer |
+| M5-45 | Job previo a la apertura: reenviar stops day, vencer entradas, verificar que toda posición tenga stop; aviso PDT cuando la cuenta se acerca a 3 day trades en 5 días hábiles (D6) | Corrida en paper: con una posición fraccionaria abierta, el stop del día existe en Alpaca antes de las 9:30 ET; sin stop, el job falla con alarma | probar |
 
 ### L27 — paper M5
 
