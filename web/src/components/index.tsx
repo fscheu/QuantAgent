@@ -1,6 +1,8 @@
+import { useEffect, useRef, useState } from 'react';
 import type { ElementType, HTMLAttributes, ReactNode } from 'react';
 import { money, num, pct } from '../lib/format';
 import './primitives.css';
+import helpTexts from '../content/help-texts.es.json';
 
 type CardProps = HTMLAttributes<HTMLElement> & { as?: 'div' | 'section' | 'article' | 'a'; href?: string; variant?: 'default' | 'dashed'; children: ReactNode };
 export function Card({ as = 'div', href, variant = 'default', className = '', children, ...props }: CardProps) {
@@ -45,4 +47,39 @@ export function EmptyState({ title, message, action }: { title: string; message:
 }
 export function ErrorState({ title = 'No pudimos conectar con la API', message, action }: { title?: string; message: string; action?: { label: string; onClick?: () => void; href?: string } }) {
   return <StateMessage icon="⯃" title={title} message={message} action={action} role="alert" />;
+}
+
+type HelpKey = Exclude<keyof typeof helpTexts, '_nota'>;
+export function HelpTip({ term, vars = {} }: { term: HelpKey; vars?: Record<string, string> }) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLSpanElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const entry = helpTexts[term] as { title: string; body: string; example?: string };
+  const fill = (value: string) => value.replace(/\{([^}]+)\}/g, (_, key: string) => vars[key] ?? `{${key}}`);
+  useEffect(() => {
+    if (!open) return;
+    const keydown = (event: KeyboardEvent) => { if (event.key === 'Escape') { setOpen(false); button.current?.focus(); } };
+    const outside = (event: MouseEvent) => { if (event.target instanceof Node && !root.current?.contains(event.target)) setOpen(false); };
+    document.addEventListener('keydown', keydown); document.addEventListener('mousedown', outside);
+    return () => { document.removeEventListener('keydown', keydown); document.removeEventListener('mousedown', outside); };
+  }, [open]);
+  return <span className="qa-help" ref={root}><button ref={button} type="button" className="qa-help-trigger" aria-label={`Qué es ${entry.title}`} aria-expanded={open} aria-controls={`qa-help-${term}`} onClick={() => setOpen(!open)}>?</button>{open && <span className="qa-help-panel" id={`qa-help-${term}`} role="dialog" aria-label={entry.title}><strong>{entry.title}</strong><span>{entry.body}</span>{entry.example && <span>{fill(entry.example)}</span>}<button type="button" className="qa-help-close" aria-label="Cerrar" onClick={() => { setOpen(false); button.current?.focus(); }}>Cerrar</button></span>}</span>;
+}
+
+export function ComingSoon({ title, children, example = false }: { title: string; children?: ReactNode; example?: boolean }) {
+  return <section className={`qa-coming-soon${example ? ' qa-coming-soon-example' : ''}`} aria-label={`${title}, próximamente`}><header><h2>{title}</h2><Badge status="soon" /></header>{children ?? (example ? <div className="qa-coming-example" aria-label="Datos de ejemplo"><Skeleton width="70%" /><Skeleton width="42%" /></div> : <div className="qa-coming-ghost" aria-hidden="true" />)}</section>;
+}
+
+export function SegmentedControl({ label, options, value, onChange, disabled = false }: { label: string; options: { value: string; label: string; disabled?: boolean }[]; value: string; onChange: (value: string) => void; disabled?: boolean }) {
+  return <div className="qa-segmented" role="radiogroup" aria-label={label}>{options.map(option => <button key={option.value} type="button" role="radio" aria-checked={value === option.value} disabled={disabled || option.disabled} className="qa-segment" onClick={() => onChange(option.value)}>{option.label}</button>)}</div>;
+}
+
+export type ChipOption = { value: string; label: string; count?: number };
+export function Chip({ label, count, selected = false, disabled = false, onClick }: { label: string; count?: number; selected?: boolean; disabled?: boolean; onClick?: () => void }) {
+  const unavailable = disabled || count === 0;
+  return <button type="button" className="qa-chip" aria-pressed={selected} disabled={unavailable} onClick={onClick}><span aria-hidden="true">{selected ? '✓' : ''}</span>{label}{count !== undefined && <span className="qa-chip-count">{count}</span>}</button>;
+}
+export function ChipGroup({ label, options, selected, onChange }: { label: string; options: ChipOption[]; selected: string[]; onChange: (selected: string[]) => void }) {
+  const toggle = (value: string) => onChange(selected.includes(value) ? selected.filter(item => item !== value) : [...selected, value]);
+  return <div className="qa-chip-group" role="group" aria-label={label}>{options.map(option => <Chip key={option.value} {...option} selected={selected.includes(option.value)} onClick={() => toggle(option.value)} />)}</div>;
 }
