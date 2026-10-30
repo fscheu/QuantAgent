@@ -8,6 +8,7 @@ from quantagent.fabrica.cartera import (
     evaluar_cartera,
     pesos,
     pesos_f1,
+    pesos_h3,
     pesos_objetivo,
 )
 
@@ -210,3 +211,19 @@ def test_pesos_rebalancea_cada_semana_solo_la_pierna_semanal():
     assert (cambia[("p1", "A")] & primera_semana & ~primero_mes).any()
     assert not (cambia[("p2", "C")] & ~primero_mes).any()
     assert pesos(c, PIERNAS, seleccion=sel).equals(pesos(c, PIERNAS, seleccion=sel, semanales=()))
+
+
+def test_pesos_h3_reemplaza_cada_etf_sectorial_por_sus_top3():
+    fecha, decision = pd.Timestamp("2015-01-05"), pd.Timestamp("2015-01-02")
+    h1 = pd.DataFrame({"XLK": [0.4], "XLE": [0.2], "XLF": [0.1], "SPY": [0.3], "XLU": [0.0]}, index=[fecha])
+    cand = pd.DataFrame({
+        "fecha": [decision] * 6, "etf": ["XLK"] * 3 + ["XLF"] * 2 + ["SPY"], "simbolo": ["A", "B", "C", "D", "E", "SPY"],
+        "rank": [1, 2, 3, 1, 2, float("nan")],
+    })
+    w = pesos_h3(h1, cand, {fecha: decision}).loc[fecha]
+    assert w[["A", "B", "C"]].tolist() == pytest.approx([0.4 / 3] * 3)
+    assert w[["D", "E"]].tolist() == pytest.approx([0.05, 0.05])
+    assert w["XLE"] == 0.2 and w["SPY"] == 0.3  # sin candidatos cae al ETF; SPY sigue como ETF
+    assert "XLK" not in w.index and w.get("XLU", 0.0) == 0.0 and w.sum() == pytest.approx(1.0)
+    cero = h1.mul(0.0)
+    assert pesos_h3(cero, cand, {fecha: decision}).loc[fecha].sum() == 0 and len(pesos_h3(cero, cand, {fecha: decision})) == 1
