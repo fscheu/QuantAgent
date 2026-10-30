@@ -23,34 +23,18 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "backtest_runs",
-        sa.Column("replay_source_run_id", sa.Integer(), nullable=True),
-    )
-    op.create_foreign_key(
-        "fk_backtest_runs_replay_source_run_id",
-        "backtest_runs",
-        "backtest_runs",
-        ["replay_source_run_id"],
-        ["id"],
-    )
+    with op.batch_alter_table("backtest_runs") as batch_op:
+        batch_op.add_column(sa.Column("replay_source_run_id", sa.Integer(), nullable=True))
+        batch_op.create_foreign_key("fk_backtest_runs_replay_source_run_id", "backtest_runs", ["replay_source_run_id"], ["id"])
     op.create_index(
         "idx_backtest_runs_replay_source_run_id",
         "backtest_runs",
         ["replay_source_run_id"],
     )
 
-    op.add_column(
-        "signals",
-        sa.Column("backtest_run_id", sa.Integer(), nullable=True),
-    )
-    op.create_foreign_key(
-        "fk_signals_backtest_run_id",
-        "signals",
-        "backtest_runs",
-        ["backtest_run_id"],
-        ["id"],
-    )
+    with op.batch_alter_table("signals") as batch_op:
+        batch_op.add_column(sa.Column("backtest_run_id", sa.Integer(), nullable=True))
+        batch_op.create_foreign_key("fk_signals_backtest_run_id", "backtest_runs", ["backtest_run_id"], ["id"])
     op.create_index(
         "idx_signals_backtest_run_id",
         "signals",
@@ -60,13 +44,13 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index("idx_signals_backtest_run_id", table_name="signals")
-    op.drop_constraint("fk_signals_backtest_run_id", "signals", type_="foreignkey")
-    op.drop_column("signals", "backtest_run_id")
+    with op.batch_alter_table("signals") as batch_op:
+        batch_op.drop_constraint("fk_signals_backtest_run_id", type_="foreignkey")
+        batch_op.drop_column("backtest_run_id")
 
     op.drop_index(
         "idx_backtest_runs_replay_source_run_id", table_name="backtest_runs"
     )
-    op.drop_constraint(
-        "fk_backtest_runs_replay_source_run_id", "backtest_runs", type_="foreignkey"
-    )
-    op.drop_column("backtest_runs", "replay_source_run_id")
+    with op.batch_alter_table("backtest_runs") as batch_op:
+        batch_op.drop_constraint("fk_backtest_runs_replay_source_run_id", type_="foreignkey")
+        batch_op.drop_column("replay_source_run_id")

@@ -9,10 +9,11 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  accounts       Manage configured trading accounts.
-  schema         Export or check the live OpenAPI contract.
-  serve          Serve the read-only QuantAgent API.
-  sync-calendar  Synchronize Alpaca market holidays and early closes.
+  accounts          Manage configured trading accounts.
+  migrate-paper-db  Repair a legacy paper database and stamp it at the...
+  schema            Export or check the live OpenAPI contract.
+  serve             Serve the read-only QuantAgent API.
+  sync-calendar     Synchronize Alpaca market holidays and early closes.
 ```
 
 ## `quantagent api accounts`
@@ -31,6 +32,28 @@ Commands:
   list     List active accounts.
   show     Show one account by slug.
 ```
+
+## `quantagent api migrate-paper-db`
+
+```text
+Usage: quantagent api migrate-paper-db [OPTIONS]
+
+  Repair a legacy paper database and stamp it at the current Alembic head.
+
+Options:
+  --database-url TEXT  SQLAlchemy database URL to inspect and repair.
+                       [required]
+  --apply              Apply the schema repair; default: dry-run only.
+  --help               Show this message and exit.
+
+  Example: quantagent api migrate-paper-db --database-url
+  sqlite:////srv/quantagent/paper.db --apply
+```
+
+Options and defaults:
+
+- `--database-url` — default: `None`
+- `--apply` — default: `False`
 
 ## `quantagent api schema`
 

@@ -47,6 +47,16 @@ def sync_calendar_command():
     click.echo(f"Synchronized {sync_from_alpaca()} calendar events.")
 
 
+@api_group.command("migrate-paper-db", help="Repair a legacy paper database and stamp it at the current Alembic head.",
+                   epilog="Example: quantagent api migrate-paper-db --database-url sqlite:////srv/quantagent/paper.db --apply")
+@click.option("--database-url", required=True, help="SQLAlchemy database URL to inspect and repair.")
+@click.option("--apply", is_flag=True, help="Apply the schema repair; default: dry-run only.")
+def migrate_paper_db_command(database_url, apply):
+    from .paper_db import migrate_paper_db
+
+    migrate_paper_db(database_url, apply=apply)
+
+
 @api_group.group("accounts", help="Manage configured trading accounts.")
 def accounts_group():
     pass

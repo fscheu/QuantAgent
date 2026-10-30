@@ -2,11 +2,14 @@
 
 import os
 from datetime import date as Date, datetime, timedelta
+from pathlib import Path
 from typing import Literal
 from zoneinfo import ZoneInfo
 
 from fastapi import Depends, FastAPI, Query
 from fastapi import HTTPException
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy import create_engine, event, func, inspect, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -15,6 +18,16 @@ from .schemas import AccountRef, AccountSummaryActive, AccountSummaryNoData, Equ
 
 app = FastAPI(title="QuantAgent API")
 NEW_YORK = ZoneInfo("America/New_York")
+
+
+class SPAStaticFiles(StaticFiles):
+    async def get_response(self, path, scope):
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            if exc.status_code != 404 or path == "api" or path.startswith("api/"):
+                raise
+            return await super().get_response("index.html", scope)
 
 
 class CalendarEventResponse(BaseModel):
@@ -215,3 +228,8 @@ def account_orders(account_id: str, date: str | None = Query(None), db: Session 
             created_at=utc_z(row.created_at), filled_at=utc_z(row.filled_at) if row.filled_at else None,
             reject_reason=(rejection_text(reasons[row.id]) if reasons.get(row.id) else None)
                 if row.status.value == "rejected" else None) for row in rows]
+
+
+_web_dist = Path(os.environ.get("QUANTAGENT_WEB_DIST", Path(__file__).resolve().parents[2] / "web" / "dist"))
+if _web_dist.is_dir():
+    app.mount("/", SPAStaticFiles(directory=_web_dist, html=True), name="web")
