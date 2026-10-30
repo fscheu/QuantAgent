@@ -30,7 +30,7 @@ from quantagent.fabrica.hipotesis import cargar_hipotesis
 from quantagent.fabrica.informe import datos_informe, render_comparacion, render_informe
 from quantagent.fabrica.investigador import HIPOTESIS_DIR, PROPUESTAS_DIR, proponer_con_llm
 from quantagent.fabrica.propuestas import advertencias_estructurales
-from quantagent.fabrica.transversal import es_transversal
+from quantagent.fabrica.transversal import es_transversal, semanales
 from quantagent.fabrica.validacion import (
     alarma_cartera,
     alarma_filtro_motor,
@@ -307,7 +307,7 @@ def filtrar_hipotesis(h, snapshot_name):
                 parametros[clave] = parametros_elegidos(r["ganadores"])
     cierres = pd.DataFrame(cierres_dict)
     seleccion = {i: panel.reindex(cierres.index, fill_value=0) for i, panel in seleccion.items()}
-    sharpe_car = evaluar_cartera(cierres, piernas_map, retornos_dict, seleccion=seleccion)
+    sharpe_car = evaluar_cartera(cierres, piernas_map, retornos_dict, seleccion=seleccion, semanales=semanales(h.piernas))
     veredicto, motivo = veredicto_etapa1(sharpe_car, total_trades)
     combo = h.parametros if len(h.piernas) == 1 else {p.clase: p.parametros for p in h.piernas}
     estrategia = h.clase if len(h.piernas) == 1 else "+".join(p.clase for p in h.piernas)

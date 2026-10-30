@@ -7,6 +7,7 @@ import yaml
 from quantagent.backtesting.signals import check_no_lookahead
 from quantagent.fabrica.admision import UNIVERSO_AMPLIO
 from quantagent.fabrica.transversal import (
+    MASCARAS,
     METRICAS,
     MIN_ACTIVOS_PIERNA,
     UNIVERSO_ACCIONES,
@@ -248,3 +249,44 @@ def test_k_se_cuenta_sobre_los_elegibles():
     # 4 elegibles (C-F) -> k = 1; antes de invertirse el ranking gana F, después C
     assert list(s.columns[s.loc["2023-01-31"] == 1]) == ["F"]
     assert list(s.columns[s.loc["2023-03-30"] == 1]) == ["C"]
+
+
+def _valores_fijos(valores):
+    return lambda x: pd.DataFrame([valores] * len(x), index=x.index, columns=list("ABCDE"))
+
+
+def _cierres_semanales():
+    return pd.DataFrame(100.0, index=pd.bdate_range("2023-03-01", "2023-03-31"), columns=list("ABCDE"))
+
+
+def test_regla_semanal_k3_solo_positivos_con_dos_positivos():
+    c = _cierres_semanales()
+    regla = {"frecuencia": "semanal", "k": 3, "minimo": 0.0}
+    # 5 positivos: k fijo = 3, no un tercio
+    s = señales_transversales(c, _valores_fijos([5, 4, 3, 2, 1]), **regla)
+    assert list(s.columns[s.loc["2023-03-06"] == 1]) == ["A", "B", "C"]
+    # solo 2 positivos: se eligen esos dos
+    s = señales_transversales(c, _valores_fijos([2, 1, -1, -2, 0]), **regla)
+    assert list(s.columns[s.loc["2023-03-06"] == 1]) == ["A", "B"]
+    # ninguno positivo: efectivo
+    s = señales_transversales(c, _valores_fijos([0, -1, -2, -3, -4]), **regla)
+    assert s.sum().sum() == 0
+
+
+def test_regla_semanal_decide_en_la_ultima_sesion_de_cada_semana():
+    c = _cierres_semanales()
+    cambia = lambda x: pd.DataFrame([[3, 2, 1, 0, -1] if d < pd.Timestamp("2023-03-08") else [-1, 0, 1, 2, 3] for d in x.index],  # noqa: E731
+                                    index=x.index, columns=list("ABCDE"))
+    s = señales_transversales(c, cambia, frecuencia="semanal", k=3, minimo=0.0)
+    assert list(s.columns[s.loc["2023-03-06"] == 1]) == ["A", "B", "C"]
+    assert list(s.columns[s.loc["2023-03-09"] == 1]) == ["A", "B", "C"]
+    assert list(s.columns[s.loc["2023-03-10"] == 1]) == ["C", "D", "E"]  # decide el viernes; el motor la opera desde el lunes
+
+
+def test_sin_caida_m5_en_risk_off_nadie_es_elegible():
+    idx = pd.bdate_range("2022-01-03", periods=400)
+    spy = pd.Series(np.concatenate([np.linspace(100, 200, 200), np.linspace(200, 120, 200)]), index=idx)
+    c = pd.DataFrame({"SPY": spy, "XLK": spy * 1.1, "XLE": spy * 0.9})
+    m = MASCARAS["sin-caida-m5"](c)
+    assert m.iloc[150].all()
+    assert not m.iloc[-1].any()
