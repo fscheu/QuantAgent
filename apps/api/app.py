@@ -1,12 +1,29 @@
 """FastAPI application and read-only database dependency."""
 
 import os
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
-from fastapi import FastAPI
-from sqlalchemy import create_engine, event
+from fastapi import Depends, FastAPI, Query
+from typing import Literal
+
+from pydantic import BaseModel
+from sqlalchemy import create_engine, event, select
 from sqlalchemy.orm import Session, sessionmaker
 
 app = FastAPI(title="QuantAgent API")
+NEW_YORK = ZoneInfo("America/New_York")
+
+
+class CalendarEventResponse(BaseModel):
+    id: str
+    kind: Literal["holiday", "early_close"]
+    starts_at: str | None = None
+    date: str
+    title: str
+    subtitle: str | None = None
+    source: Literal["alpaca"]
+    account_id: str | None = None
 
 
 def session_factory(url=None):
@@ -34,3 +51,21 @@ def get_db():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/api/calendar", response_model=list[CalendarEventResponse])
+def calendar(days: int = Query(30, ge=1, le=120), db: Session = Depends(get_db)):
+    from quantagent.models import CalendarEvent
+
+    today = datetime.now(NEW_YORK).date()
+    events = db.scalars(
+        select(CalendarEvent).where(
+            CalendarEvent.date >= today,
+            CalendarEvent.date < today + timedelta(days=days),
+        ).order_by(CalendarEvent.date, CalendarEvent.kind)
+    ).all()
+    return [
+        CalendarEventResponse(id=str(event.id), kind=event.kind, date=event.date.isoformat(),
+                              title=event.title, source=event.source)
+        for event in events
+    ]
