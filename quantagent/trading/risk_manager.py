@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 from quantagent.models import OrderSide, Trade
 
 logger = logging.getLogger(__name__)
+_DEFAULT_HEAT = object()
 
 
 class RiskManager:
@@ -35,6 +36,7 @@ class RiskManager:
         db: Optional[Session] = None,
         clock: Optional[Callable[[], date]] = None,
         timeframe: Optional[str] = None,
+        max_heat_pct: Optional[float] = _DEFAULT_HEAT,
     ):
         """
         Initialize Risk Manager.
@@ -50,6 +52,8 @@ class RiskManager:
         self.portfolio = portfolio_manager
         self.max_daily_loss_pct = max_daily_loss_pct
         self.max_position_pct = max_position_pct
+        from quantagent import settings
+        self.max_heat_pct = settings.TRADING_MAX_HEAT_PCT if max_heat_pct is _DEFAULT_HEAT else max_heat_pct
         self.db = db
         self.clock = clock or date.today
         self.timeframe = timeframe
@@ -86,6 +90,7 @@ class RiskManager:
         side: OrderSide,
         qty: float,
         price: float,
+        stop_price: Optional[float] = None,
     ) -> Tuple[bool, Optional[str]]:
         """
         Validate trade BEFORE execution.
@@ -178,6 +183,26 @@ class RiskManager:
                 },
             )
             return (False, reason)
+
+        if not reduces and self.max_heat_pct:
+            open_risk = sum(
+                pos["qty"] * (pos["avg_cost"] - pos["stop_price"])
+                for pos in self.portfolio.positions.values()
+                if pos.get("qty", 0) > 0
+                and pos.get("stop_price") is not None
+                and pos["stop_price"] < pos.get("avg_cost", 0)
+            )
+            new_risk = qty * (price - stop_price) if side == OrderSide.BUY and stop_price is not None and stop_price < price else 0.0
+            equity = self.portfolio.get_total_value()
+            if (open_risk + new_risk) / equity > self.max_heat_pct:
+                reason = f"max_heat: {(open_risk + new_risk) / equity:.2%} > {self.max_heat_pct:.2%}"
+                logger.warning(
+                    f"Order rejected - {reason}",
+                    extra={"event_type": "order_rejected", "symbol": symbol,
+                           "extra_data": {"reason": "max_heat", "heat": (open_risk + new_risk) / equity,
+                                          "max_heat": self.max_heat_pct}},
+                )
+                return (False, reason)
 
         # Check 5: Position management - prevent adding to existing positions
         # (only allow closing or reversing)

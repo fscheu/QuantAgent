@@ -1,0 +1,21 @@
+import type { Story } from '@ladle/react';
+import type { Position } from '../api/types';
+import { PositionCard, positionColumns } from './Position';
+import { DataTable } from './DataTable';
+import { StopDistanceBar } from './StopDistanceBar';
+import '../styles/tokens.css';
+
+const base: Position = { symbol: 'AAPL', description: 'Apple Inc.', side: 'long', qty: 10, avg_entry_price: 90, current_price: 100, market_value: 1000, unrealized_pl: 100, unrealized_pl_pct: 11.11, stop_price: 90, opened_at: '2026-10-20' };
+const cases: Position[] = [base, { ...base, symbol: 'NEAR', stop_price: 98.5 }, { ...base, symbol: 'RISK', stop_price: 96 }, { ...base, symbol: 'SHORT', side: 'short', qty: 5, avg_entry_price: 110, current_price: 100, market_value: 500, unrealized_pl: 50, unrealized_pl_pct: 10, stop_price: 110 }, { ...base, symbol: 'BREACH', side: 'short', qty: 5, stop_price: 98 }, { ...base, symbol: 'NONE', stop_price: null }];
+export const Stops: Story = () => <div style={{ display: 'grid', gap: 'var(--qa-space-4)' }}>{cases.map(p => <StopDistanceBar key={p.symbol} side={p.side} price={p.current_price} stop={p.stop_price} qty={p.qty} variant="anatomy" />)}</div>;
+Stops.meta = { title: 'Componentes / Posiciones / Stops / Claro' };
+export const StopsDark: Story = () => <div data-theme="dark"><Stops /></div>;
+StopsDark.meta = { title: 'Componentes / Posiciones / Stops / Oscuro' };
+export const Cards: Story = () => <div style={{ display: 'grid', gap: 'var(--qa-space-4)' }}>{cases.map(position => <PositionCard key={position.symbol} position={position} />)}</div>;
+Cards.meta = { title: 'Componentes / Posiciones / Tarjetas / Claro' };
+export const CardsDark: Story = () => <div data-theme="dark"><Cards /></div>;
+CardsDark.meta = { title: 'Componentes / Posiciones / Tarjetas / Oscuro' };
+export const Rows: Story = () => <DataTable columns={positionColumns} rows={cases} rowKey={p => p.symbol} caption="Posiciones" state="ready" sort={{ key: 'stop_distance', dir: 'asc' }} />;
+Rows.meta = { title: 'Componentes / Posiciones / Filas / Claro' };
+export const RowsDark: Story = () => <div data-theme="dark"><Rows /></div>;
+RowsDark.meta = { title: 'Componentes / Posiciones / Filas / Oscuro' };

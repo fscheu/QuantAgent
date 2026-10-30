@@ -3,6 +3,7 @@
 import click
 
 from .backtest import backtest_group
+from apps.api.cli import api_group
 from .data import data_group
 from .intentos import intentos_group
 from .profile import profile_group
@@ -20,6 +21,7 @@ cli.add_command(backtest_group, name="backtest")
 cli.add_command(data_group, name="data")
 cli.add_command(trading_group, name="trading")
 cli.add_command(intentos_group, name="intentos")
+cli.add_command(api_group, name="api")
 
 
 if __name__ == "__main__":

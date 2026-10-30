@@ -2,9 +2,9 @@
 
 import enum
 import math
-from datetime import datetime
+from datetime import date, datetime, timezone
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, Numeric, String, Text
+from sqlalchemy import JSON, Boolean, CheckConstraint, Column, Date, DateTime, Enum, Float, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship, validates
 
 from .database import Base
@@ -103,6 +103,48 @@ class Order(Base):
         Index("idx_symbol_created_at", "symbol", "created_at"),
         Index("idx_status_symbol", "status", "symbol"),
         Index("idx_orders_environment", "environment"),
+    )
+
+
+class TradeIntentRecord(Base):
+    """Persisted per-trade strategy intent and its execution decision."""
+
+    __tablename__ = "trade_intents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    bucket_id = Column(String(100), nullable=False, index=True)
+    strategy_id = Column(String(100), nullable=False, index=True)
+    symbol = Column(String(20), nullable=False, index=True)
+    intent = Column(JSON, nullable=False)
+    status = Column(String(50), nullable=False, index=True)
+    reject_reason = Column(String(100), nullable=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=True)
+    reasoning_metadata = Column(JSON, nullable=False, default=dict)
+
+
+class Account(Base):
+    """Configured trading account and its single assigned strategy."""
+
+    __tablename__ = "accounts"
+
+    id = Column(String(100), primary_key=True)
+    name = Column(String(200), nullable=False)
+    env = Column(String(10), nullable=False)
+    kind = Column(String(20), nullable=False)
+    alpaca_account_ref = Column(String(100), nullable=True)
+    database_url = Column(String(500), nullable=False)
+    bucket_id = Column(String(100), nullable=True)
+    strategy = Column(String(100), nullable=False)
+    status = Column(String(20), nullable=False, default="active")
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (
+        CheckConstraint("env IN ('paper', 'live')"),
+        CheckConstraint("kind IN ('alpaca', 'simulated')"),
+        CheckConstraint("status IN ('active', 'archived')"),
+        CheckConstraint("NOT (env = 'live' AND kind = 'simulated')"),
     )
 
 
@@ -376,6 +418,7 @@ class ActivePosition(Base):
     stop_loss = Column(Numeric(precision=18, scale=8), nullable=False)
     take_profit = Column(Numeric(precision=18, scale=8), nullable=False)
     quantity = Column(Numeric(precision=18, scale=8), nullable=False)
+    broker_stop_order_id = Column(String(100), nullable=True)
 
     decision_timestamp = Column(DateTime, nullable=False, index=True)
     candles_since_entry = Column(Integer, nullable=False, default=0)
@@ -443,3 +486,49 @@ class SchedulerHeartbeat(Base):
     error_message = Column(Text, nullable=True)
 
     __table_args__ = (Index("idx_heartbeat_env_ts", "environment", "timestamp"),)
+
+
+class CalendarEvent(Base):
+    """Exchange holidays and early closes sourced from Alpaca."""
+
+    __tablename__ = "calendar_events"
+
+    id = Column(Integer, primary_key=True)
+    date = Column(Date, nullable=False)
+    kind = Column(String(20), nullable=False)
+    title = Column(String(200), nullable=False)
+    source = Column(String(20), nullable=False, default="alpaca")
+
+    __table_args__ = (UniqueConstraint("date", "kind", "source", name="uq_calendar_date_kind_source"),)
+
+
+class Event(Base):
+    """Append-only record of an event shown in the activity feed."""
+
+    __tablename__ = "events"
+
+    id = Column(Integer, primary_key=True)
+    type = Column(String(40), nullable=False)
+    severity = Column(String(20), nullable=False)
+    occurred_at = Column(DateTime(timezone=True), nullable=False)
+    account_id = Column(String(100), nullable=True)
+    entity_id = Column(String(100), nullable=True)
+    payload = Column(JSON, nullable=False)
+
+    __table_args__ = (
+        Index("ix_events_occurred_at", "occurred_at"),
+        Index("ix_events_account_occurred_at", "account_id", "occurred_at"),
+    )
+
+
+class EquitySnapshot(Base):
+    """Daily account equity and cash snapshot."""
+
+    __tablename__ = "equity_snapshots"
+
+    id = Column(Integer, primary_key=True)
+    snapshot_date = Column(Date, nullable=False, unique=True)
+    taken_at = Column(DateTime(timezone=True), nullable=False)
+    equity = Column(Float, nullable=False)
+    cash = Column(Float, nullable=False)
+    invested = Column(Float, nullable=False)

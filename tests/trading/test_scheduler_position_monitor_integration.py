@@ -2,16 +2,18 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
+from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock
 
 import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from quantagent.models import ActivePosition, Environment, OrderSide, SchedulerHeartbeat, Signal, Trade, TradeSignal
+from quantagent.models import ActivePosition, Environment, Order, OrderSide, OrderStatus, OrderType, SchedulerHeartbeat, Signal, Trade, TradeSignal
 from quantagent.settings import SchedulerSettings
 from quantagent.strategy.base import TradingSignal as StrategyTradingSignal
 from quantagent.trading.position_monitor import PositionMonitor
+from quantagent.trading.alpaca_broker import AlpacaBroker
 from quantagent.trading.scheduler import TradingScheduler
 
 
@@ -22,6 +24,7 @@ def _make_session():
         ActivePosition.__table__,
         SchedulerHeartbeat.__table__,
         Signal.__table__,
+        Order.__table__,
     ):
         table.create(bind=engine)
     return sessionmaker(bind=engine, autoflush=False, autocommit=False)
@@ -211,6 +214,83 @@ def test_scheduler_intrabar_stop_matches_backtest_stop_price():
         scheduler.order_manager.close_trade.assert_called_once_with(
             trade.id, 90.0, environment=scheduler.environment
         )
+
+
+def test_broker_stop_disables_local_intrabar_sale():
+    SessionLocal = _make_session()
+    with SessionLocal() as session:
+        trade = _create_trade(session)
+        position = _create_active_position(session, trade_id=trade.id, stop_loss=90.0)
+        position.broker_stop_order_id = "stop-1"
+        session.commit()
+        scheduler = _make_scheduler(session, closes=[100.0, 95.0])
+        scheduler.data_provider.get_ohlc.return_value.loc[1, "low"] = 89.0
+
+        scheduler.run_once()
+
+        session.refresh(position)
+        assert position.is_active
+        scheduler.order_manager.close_trade.assert_not_called()
+        scheduler.order_manager.close_symbol.assert_not_called()
+
+
+def test_reconcile_filled_broker_stop_closes_position_at_fill_price():
+    SessionLocal = _make_session()
+    with SessionLocal() as session:
+        trade = _create_trade(session)
+        position = _create_active_position(session, trade_id=trade.id)
+        position.broker_stop_order_id = "stop-1"
+        stop = Order(symbol="BTC", side=OrderSide.SELL, order_type=OrderType.STOP,
+                     quantity=Decimal("1"), stop_price=Decimal("98"), alpaca_order_id="stop-1",
+                     environment=Environment.PAPER)
+        session.add(stop)
+        session.commit()
+        broker = Mock()
+        broker.get_positions.return_value = {"BTC": Mock()}
+        def fill_order(order):
+            order.status = OrderStatus.FILLED
+            order.average_fill_price = Decimal("97.25")
+            return order
+        broker.refresh_order.side_effect = fill_order
+
+        assert PositionMonitor(session, environment=Environment.PAPER).reconcile_alpaca_positions(broker) == []
+
+        session.refresh(position)
+        session.refresh(trade)
+        assert not position.is_active
+        assert position.close_reason == "stop_broker"
+        assert trade.exit_signal == "stop_broker"
+        assert trade.closed_at == position.closed_at
+
+
+def test_filled_alpaca_entry_submits_and_links_broker_stop():
+    SessionLocal = _make_session()
+    with SessionLocal() as session:
+        scheduler = _make_scheduler(session, closes=[100.0, 101.0], decision="LONG")
+        scheduler.order_manager.execute_decision.return_value = Mock(
+            id=12, side=OrderSide.BUY, quantity=Decimal("2"), filled_quantity=Decimal("2"),
+            status=OrderStatus.FILLED, symbol="BTC",
+        )
+        client = Mock()
+        client.submit_order.return_value = SimpleNamespace(
+            id="alpaca-stop", status="new", filled_qty="0"
+        )
+        scheduler.order_manager.broker = AlpacaBroker(client)
+
+        scheduler.run_once()
+
+        position = session.query(ActivePosition).one()
+        stop = session.query(Order).one()
+        assert position.broker_stop_order_id == "alpaca-stop"
+        assert stop.order_type == OrderType.STOP
+        assert stop.side == OrderSide.SELL
+        assert stop.quantity == Decimal("2")
+        assert stop.stop_price == Decimal("97.5")
+        assert client.submit_order.call_count == 1
+        request = client.submit_order.call_args.kwargs["order_data"]
+        assert request.side == "sell"
+        assert Decimal(request.qty) == Decimal("2")
+        assert Decimal(request.stop_price) == Decimal("97.5")
 
 
 def test_scheduler_take_profit_exit_skips_llm_and_persists_trade_exit_reason():

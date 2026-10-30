@@ -25,7 +25,7 @@ Orden: M-manual ya y en paralelo; M-datos (decisión) antes de L22; M-web (solo 
 - **Objetivo:** aplicación web propia (cuentas paper y live, embudo, datos de mercado, después asistente con IA) que reemplaza Streamlit.
 - **Punto de control:** primero pantallas diseñadas con Fede y documento de arquitectura; después API de solo lectura, Cuenta y Embudo.
 - **Decidido:** Streamlit no convive y se borra (en MAN-01); FastAPI + React; diseño visual en sesiones con Fede (W1–W2). Falta acordar cuándo arrancan (W3).
-- **Cola:** sin tickets. Construcción cuando existan M-datos y el registro único del embudo.
+- **Cola:** lote L34 `lote/web-cuenta` (epic `QuantAgent-e452`, aprobado por Fede 2026-10-29): WEB-01 arquitectura y ADR, WEB-02 esqueleto FastAPI, WEB-03 resumen y posiciones, WEB-04 órdenes con rechazadas, WEB-05 contrato OpenAPI y guía. Solo lectura, sin frontend; Cuenta no necesita M-datos. El resto de la construcción (Embudo, Ficha, Mercado) espera M-datos y el registro único del embudo.
 
 ## M-ciclos
 
@@ -39,4 +39,4 @@ Orden: M-manual ya y en paralelo; M-datos (decisión) antes de L22; M-web (solo 
 - **Objetivo:** probar que una candidata funciona con la cuenta real de USD 2.500 antes de poner dinero.
 - **Punto de control:** modo cuenta chica del backtest, prueba de sensibilidad a USD 1.000, 2.500 y 5.000, puerta escrita y cuenta paper al capital real.
 - **Decidido:** capital USD 2.500; cuenta cash, sin cortos en la primera cuenta; el costo fiscal lo revisa Fede con una contadora y entra al modo cuenta chica (K1–K3).
-- **Cola:** sin tickets. Se adelanta: sobre M4 apenas exista el modo, y sobre M5 antes de decidir el pago de Sharadar (L25).
+- **Cola:** lote L33 `lote/cuenta-chica` (epic `QuantAgent-yvo0`, aprobado por Fede 2026-10-29): CC-01 capital real y acciones enteras, CC-02 retención de dividendos, CC-03 spread y costo de entrada, CC-04 comando de sensibilidad contra SPY, CC-05 informe sobre las carteras de M4, CC-06 puerta escrita (decide Fede). Se adelanta: sobre M4 apenas exista el modo, y sobre M5 antes de decidir el pago de Sharadar (L25).

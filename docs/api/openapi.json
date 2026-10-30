@@ -1,0 +1,908 @@
+{
+  "components": {
+    "schemas": {
+      "AccountRef": {
+        "properties": {
+          "env": {
+            "enum": [
+              "paper",
+              "live"
+            ],
+            "title": "Env",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "env"
+        ],
+        "title": "AccountRef",
+        "type": "object"
+      },
+      "AccountSummaryActive": {
+        "properties": {
+          "alarms": {
+            "default": [],
+            "items": {},
+            "title": "Alarms",
+            "type": "array"
+          },
+          "as_of": {
+            "title": "As Of",
+            "type": "string"
+          },
+          "cash": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cash"
+          },
+          "day_change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day Change"
+          },
+          "day_change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day Change Pct"
+          },
+          "env": {
+            "enum": [
+              "paper",
+              "live"
+            ],
+            "title": "Env",
+            "type": "string"
+          },
+          "equity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Equity"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "long_value": {
+            "title": "Long Value",
+            "type": "number"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "orders_rejected_today": {
+            "title": "Orders Rejected Today",
+            "type": "integer"
+          },
+          "orders_today": {
+            "title": "Orders Today",
+            "type": "integer"
+          },
+          "positions_count": {
+            "title": "Positions Count",
+            "type": "integer"
+          },
+          "short_value": {
+            "title": "Short Value",
+            "type": "number"
+          },
+          "spark_30d": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spark 30D"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "status": {
+            "const": "active",
+            "title": "Status",
+            "type": "string"
+          },
+          "week_change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Week Change"
+          },
+          "week_change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Week Change Pct"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "env",
+          "status",
+          "as_of",
+          "stale",
+          "equity",
+          "long_value",
+          "short_value",
+          "cash",
+          "day_change",
+          "day_change_pct",
+          "week_change",
+          "week_change_pct",
+          "positions_count",
+          "orders_today",
+          "orders_rejected_today"
+        ],
+        "title": "AccountSummaryActive",
+        "type": "object"
+      },
+      "AccountSummaryNoData": {
+        "properties": {
+          "checked_at": {
+            "title": "Checked At",
+            "type": "string"
+          },
+          "env": {
+            "enum": [
+              "paper",
+              "live"
+            ],
+            "title": "Env",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "next_check_at": {
+            "title": "Next Check At",
+            "type": "null"
+          },
+          "no_data_reason": {
+            "default": "unknown",
+            "enum": [
+              "not_opened",
+              "not_funded",
+              "unknown"
+            ],
+            "title": "No Data Reason",
+            "type": "string"
+          },
+          "status": {
+            "const": "no_data",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "env",
+          "status",
+          "checked_at"
+        ],
+        "title": "AccountSummaryNoData",
+        "type": "object"
+      },
+      "CalendarEventResponse": {
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "holiday",
+              "early_close"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "source": {
+            "const": "alpaca",
+            "title": "Source",
+            "type": "string"
+          },
+          "starts_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
+          },
+          "subtitle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subtitle"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "date",
+          "title",
+          "source"
+        ],
+        "title": "CalendarEventResponse",
+        "type": "object"
+      },
+      "EquityPoint": {
+        "properties": {
+          "account": {
+            "title": "Account",
+            "type": "number"
+          },
+          "benchmark": {
+            "title": "Benchmark",
+            "type": "null"
+          },
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "shadow": {
+            "title": "Shadow",
+            "type": "null"
+          }
+        },
+        "required": [
+          "date",
+          "account"
+        ],
+        "title": "EquityPoint",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "OrderResponse": {
+        "properties": {
+          "avg_fill_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Fill Price"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "filled_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filled At"
+          },
+          "filled_qty": {
+            "title": "Filled Qty",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price"
+          },
+          "qty": {
+            "title": "Qty",
+            "type": "number"
+          },
+          "reject_detail": {
+            "title": "Reject Detail",
+            "type": "null"
+          },
+          "reject_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reject Reason"
+          },
+          "reject_reason_raw": {
+            "title": "Reject Reason Raw",
+            "type": "null"
+          },
+          "side": {
+            "enum": [
+              "buy",
+              "sell"
+            ],
+            "title": "Side",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "partially_filled",
+              "filled",
+              "rejected",
+              "cancelled",
+              "expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "stop_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Price"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "symbol",
+          "side",
+          "type",
+          "status",
+          "qty",
+          "filled_qty",
+          "price",
+          "stop_price",
+          "avg_fill_price",
+          "created_at",
+          "filled_at",
+          "reject_reason"
+        ],
+        "title": "OrderResponse",
+        "type": "object"
+      },
+      "PositionResponse": {
+        "properties": {
+          "avg_entry_price": {
+            "title": "Avg Entry Price",
+            "type": "number"
+          },
+          "current_price": {
+            "title": "Current Price",
+            "type": "number"
+          },
+          "description": {
+            "title": "Description",
+            "type": "null"
+          },
+          "market_value": {
+            "title": "Market Value",
+            "type": "number"
+          },
+          "opened_at": {
+            "title": "Opened At",
+            "type": "string"
+          },
+          "qty": {
+            "title": "Qty",
+            "type": "number"
+          },
+          "side": {
+            "enum": [
+              "long",
+              "short"
+            ],
+            "title": "Side",
+            "type": "string"
+          },
+          "stop_distance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Distance"
+          },
+          "stop_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Price"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "unrealized_pl": {
+            "title": "Unrealized Pl",
+            "type": "number"
+          },
+          "unrealized_pl_pct": {
+            "title": "Unrealized Pl Pct",
+            "type": "number"
+          }
+        },
+        "required": [
+          "symbol",
+          "side",
+          "qty",
+          "avg_entry_price",
+          "current_price",
+          "market_value",
+          "unrealized_pl",
+          "unrealized_pl_pct",
+          "stop_price",
+          "stop_distance",
+          "opened_at"
+        ],
+        "title": "PositionResponse",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "QuantAgent API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/accounts": {
+      "get": {
+        "operationId": "accounts_api_accounts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AccountRef"
+                  },
+                  "title": "Response Accounts Api Accounts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Accounts"
+      }
+    },
+    "/api/accounts/{account_id}/equity": {
+      "get": {
+        "operationId": "account_equity_api_accounts__account_id__equity_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "range",
+            "required": false,
+            "schema": {
+              "default": "1M",
+              "enum": [
+                "1W",
+                "1M",
+                "3M",
+                "YTD",
+                "ALL"
+              ],
+              "title": "Range",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EquityPoint"
+                  },
+                  "title": "Response Account Equity Api Accounts  Account Id  Equity Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Account Equity"
+      }
+    },
+    "/api/accounts/{account_id}/orders": {
+      "get": {
+        "operationId": "account_orders_api_accounts__account_id__orders_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OrderResponse"
+                  },
+                  "title": "Response Account Orders Api Accounts  Account Id  Orders Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Account Orders"
+      }
+    },
+    "/api/accounts/{account_id}/positions": {
+      "get": {
+        "operationId": "account_positions_api_accounts__account_id__positions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PositionResponse"
+                  },
+                  "title": "Response Account Positions Api Accounts  Account Id  Positions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Account Positions"
+      }
+    },
+    "/api/accounts/{account_id}/summary": {
+      "get": {
+        "operationId": "account_summary_api_accounts__account_id__summary_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/AccountSummaryActive"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AccountSummaryNoData"
+                    }
+                  ],
+                  "title": "Response Account Summary Api Accounts  Account Id  Summary Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Account Summary"
+      }
+    },
+    "/api/calendar": {
+      "get": {
+        "operationId": "calendar_api_calendar_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 120,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CalendarEventResponse"
+                  },
+                  "title": "Response Calendar Api Calendar Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Calendar"
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    }
+  }
+}

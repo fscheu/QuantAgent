@@ -24,17 +24,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    op.add_column(
-        "trades",
-        sa.Column("backtest_run_id", sa.Integer(), nullable=True),
-    )
-    op.create_foreign_key(
-        "fk_trades_backtest_run_id",
-        "trades",
-        "backtest_runs",
-        ["backtest_run_id"],
-        ["id"],
-    )
+    with op.batch_alter_table("trades") as batch_op:
+        batch_op.add_column(sa.Column("backtest_run_id", sa.Integer(), nullable=True))
+        batch_op.create_foreign_key("fk_trades_backtest_run_id", "backtest_runs", ["backtest_run_id"], ["id"])
     op.create_index(
         "idx_trades_backtest_run_id",
         "trades",
@@ -45,5 +37,6 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     op.drop_index("idx_trades_backtest_run_id", table_name="trades")
-    op.drop_constraint("fk_trades_backtest_run_id", "trades", type_="foreignkey")
-    op.drop_column("trades", "backtest_run_id")
+    with op.batch_alter_table("trades") as batch_op:
+        batch_op.drop_constraint("fk_trades_backtest_run_id", type_="foreignkey")
+        batch_op.drop_column("backtest_run_id")
