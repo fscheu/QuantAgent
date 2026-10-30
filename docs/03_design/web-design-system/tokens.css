@@ -1,0 +1,296 @@
+/* ==========================================================================
+   QuantAgent Web — tokens de diseño v0.1
+   Fuente: canvas "QuantAgent Web — Sistema de diseño" (hojas 01 y 02).
+   A partir de este archivo, el código es la fuente de verdad de los tokens.
+
+   Uso:
+     <html data-theme="light|dark">   (sin atributo = sigue al sistema)
+     <html data-density="comfortable|compact">  (sin atributo = cómoda)
+   ========================================================================== */
+
+/* ---------- Tokens que no dependen del tema ---------- */
+:root {
+  /* Tipografía */
+  --qa-font-sans: 'Geist', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --qa-font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Escala: tamaño / interlínea (rem sobre base 16) */
+  --qa-text-display: 600 2rem/2.5rem var(--qa-font-sans);       /* 32/40 · tel 28/36 */
+  --qa-text-h1: 600 1.5rem/2rem var(--qa-font-sans);            /* 24/32 · tel 22/30 */
+  --qa-text-h2: 600 1.125rem/1.625rem var(--qa-font-sans);      /* 18/26 */
+  --qa-text-h3: 600 0.9375rem/1.375rem var(--qa-font-sans);     /* 15/22 */
+  --qa-text-body: 400 0.9375rem/1.375rem var(--qa-font-sans);   /* 15/22 */
+  --qa-text-small: 400 0.8125rem/1.125rem var(--qa-font-sans);  /* 13/18 */
+  --qa-text-caption: 500 0.75rem/1rem var(--qa-font-sans);      /* 12/16 — mínimo de la UI */
+  --qa-num-xl: 500 2.25rem/2.75rem var(--qa-font-mono);         /* 36/44 · tel 30/38 */
+  --qa-num-l: 500 1.375rem/1.75rem var(--qa-font-mono);         /* 22/28 */
+  --qa-num-m: 500 0.9375rem/1.375rem var(--qa-font-mono);       /* 15/22 */
+  --qa-num-s: 400 0.8125rem/1.125rem var(--qa-font-mono);       /* 13/18 */
+
+  /* Espaciado (base 4 px) */
+  --qa-space-1: 0.25rem;  /* 4  */
+  --qa-space-2: 0.5rem;   /* 8  */
+  --qa-space-3: 0.75rem;  /* 12 */
+  --qa-space-4: 1rem;     /* 16 */
+  --qa-space-5: 1.25rem;  /* 20 */
+  --qa-space-6: 1.5rem;   /* 24 */
+  --qa-space-8: 2rem;     /* 32 */
+  --qa-space-10: 2.5rem;  /* 40 */
+  --qa-space-12: 3rem;    /* 48 */
+  --qa-space-16: 4rem;    /* 64 */
+
+  /* Radios */
+  --qa-radius-sm: 6px;    /* barras, celdas, insignias de etapa */
+  --qa-radius-md: 10px;   /* selectores, segmentos, avisos internos */
+  --qa-radius-lg: 14px;   /* tarjetas */
+  --qa-radius-xl: 20px;   /* hoja inferior */
+  --qa-radius-pill: 999px;
+
+  /* Movimiento */
+  --qa-dur-fast: 120ms;   /* hover, foco, chip */
+  --qa-dur-base: 180ms;   /* abrir ayuda, expandir */
+  --qa-dur-slow: 240ms;   /* hoja inferior, cambio de rango */
+  --qa-ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Layout */
+  --qa-sidenav-w: 240px;
+  --qa-sidenav-w-collapsed: 72px;
+  --qa-bottomnav-h: 64px;
+  --qa-content-max: 1200px;
+  --qa-gutter-phone: 16px;
+  --qa-gutter-desktop: 32px;
+
+  /* Foco */
+  --qa-focus-width: 2px;
+  --qa-focus-offset: 2px;
+
+  /* Densidad cómoda (por defecto) */
+  --qa-row-h: 56px;
+  --qa-card-pad: 16px;
+  --qa-table-font: 0.9375rem;
+  --qa-control-h: 44px;
+  --qa-hit-min: 44px;
+}
+
+/* Densidad compacta: solo escritorio con mouse */
+[data-density='compact'] {
+  --qa-row-h: 36px;
+  --qa-card-pad: 12px;
+  --qa-table-font: 0.8125rem;
+  --qa-control-h: 32px;
+  --qa-hit-min: 32px;
+}
+
+/* ---------- Tema claro ---------- */
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+
+  /* Neutros */
+  --qa-bg: #F4F5F7;
+  --qa-surface: #FFFFFF;
+  --qa-surface-raised: #FFFFFF;
+  --qa-surface-sunken: #EEF0F3;
+  --qa-border: #DDE1E6;            /* decorativo */
+  --qa-border-strong: #C3C9D1;
+  --qa-border-control: #848D9A;    /* ≥ 3:1, contorno de controles */
+  --qa-text: #14181F;
+  --qa-text-2: #4A5361;
+  --qa-text-3: #646D7A;            /* mínimo 12 px */
+
+  /* Marca */
+  --qa-accent: #0E6E68;
+  --qa-on-accent: #FFFFFF;
+  --qa-accent-soft: #E1F1EF;
+  --qa-focus: #0E6E68;
+
+  /* Semánticos: siempre acompañados de signo, flecha o ícono */
+  --qa-pos: #1D5FC4;
+  --qa-pos-soft: #E6EEFB;
+  --qa-neg: #B5420E;
+  --qa-neg-soft: #FBEBE2;
+  --qa-warn: #8A5A00;
+  --qa-warn-soft: #FFF3D6;
+  --qa-info: #6342C9;
+  --qa-info-soft: #EFEAFB;
+  --qa-neutral: #5B6472;
+  --qa-neutral-soft: #EDEFF2;
+
+  /* Series de gráficos (orden de asignación) */
+  --qa-chart-1: #2563C9;
+  --qa-chart-2: #D9731A;
+  --qa-chart-3: #0E8F86;
+  --qa-chart-4: #9A4FD0;
+  --qa-chart-5: #C93C72;
+  --qa-chart-6: #6F7F1F;
+  --qa-chart-7: #B08700;
+  --qa-chart-8: #5E6C7C;
+
+  /* Gráficos: soporte */
+  --qa-grid: #E8EBEF;
+  --qa-axis: #646D7A;
+  --qa-recession: rgba(100, 109, 122, 0.12);
+  --qa-candle-up: #2FA36B;         /* solo velas: cuerpo hueco */
+  --qa-candle-down: #B3261E;       /* solo velas: cuerpo lleno */
+  --qa-volume: #C3C9D1;            /* volumen sin dirección */
+
+  /* Mapa de calor divergente + tinta legible por celda */
+  --qa-heat-n3: #B5420E; --qa-heat-ink-n3: #FFFFFF;
+  --qa-heat-n2: #E58A5C; --qa-heat-ink-n2: #14181F;
+  --qa-heat-n1: #F6CDB6; --qa-heat-ink-n1: #14181F;
+  --qa-heat-0:  #EDEFF2; --qa-heat-ink-0:  #14181F;
+  --qa-heat-p1: #C5D7F4; --qa-heat-ink-p1: #14181F;
+  --qa-heat-p2: #6E99DE; --qa-heat-ink-p2: #14181F;
+  --qa-heat-p3: #1D5FC4; --qa-heat-ink-p3: #FFFFFF;
+
+  /* Elevación */
+  --qa-shadow-1: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --qa-shadow-2: 0 8px 24px rgba(16, 24, 40, 0.14);
+}
+
+/* ---------- Tema oscuro ---------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --qa-bg: #0E1116;
+    --qa-surface: #151A21;
+    --qa-surface-raised: #1C222B;
+    --qa-surface-sunken: #0B0E12;
+    --qa-border: #29313C;
+    --qa-border-strong: #3A4452;
+    --qa-border-control: #6B7685;
+    --qa-text: #E8ECF1;
+    --qa-text-2: #A9B2BE;
+    --qa-text-3: #8A94A1;
+    --qa-accent: #3CC2B4;
+    --qa-on-accent: #06201E;
+    --qa-accent-soft: #12302E;
+    --qa-focus: #3CC2B4;
+    --qa-pos: #6EA4FF;
+    --qa-pos-soft: #15233A;
+    --qa-neg: #FF8F5E;
+    --qa-neg-soft: #3A1E12;
+    --qa-warn: #F2BE4E;
+    --qa-warn-soft: #33270C;
+    --qa-info: #B39CFF;
+    --qa-info-soft: #241C3D;
+    --qa-neutral: #9AA4B1;
+    --qa-neutral-soft: #222933;
+    --qa-chart-1: #6EA4FF;
+    --qa-chart-2: #FF9F4A;
+    --qa-chart-3: #3CC2B4;
+    --qa-chart-4: #C49BFF;
+    --qa-chart-5: #FF7AAE;
+    --qa-chart-6: #B5C55A;
+    --qa-chart-7: #F2C94C;
+    --qa-chart-8: #9AA8B8;
+    --qa-grid: #222933;
+    --qa-axis: #8A94A1;
+    --qa-recession: rgba(154, 164, 177, 0.12);
+    --qa-candle-up: #3DCB8A;
+    --qa-candle-down: #E5484D;
+    --qa-volume: #3A4452;
+    --qa-heat-n3: #E0703F; --qa-heat-ink-n3: #0E1116;
+    --qa-heat-n2: #9C4A26; --qa-heat-ink-n2: #E8ECF1;
+    --qa-heat-n1: #4A2A1C; --qa-heat-ink-n1: #E8ECF1;
+    --qa-heat-0:  #222933; --qa-heat-ink-0:  #E8ECF1;
+    --qa-heat-p1: #1E3354; --qa-heat-ink-p1: #E8ECF1;
+    --qa-heat-p2: #2F5FA8; --qa-heat-ink-p2: #E8ECF1;
+    --qa-heat-p3: #6EA4FF; --qa-heat-ink-p3: #0E1116;
+    --qa-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --qa-shadow-2: 0 12px 32px rgba(0, 0, 0, 0.55);
+  }
+}
+
+/* Forzado manual: mismo bloque que arriba (mantener sincronizados) */
+[data-theme='dark'] {
+  color-scheme: dark;
+  --qa-bg: #0E1116;
+  --qa-surface: #151A21;
+  --qa-surface-raised: #1C222B;
+  --qa-surface-sunken: #0B0E12;
+  --qa-border: #29313C;
+  --qa-border-strong: #3A4452;
+  --qa-border-control: #6B7685;
+  --qa-text: #E8ECF1;
+  --qa-text-2: #A9B2BE;
+  --qa-text-3: #8A94A1;
+  --qa-accent: #3CC2B4;
+  --qa-on-accent: #06201E;
+  --qa-accent-soft: #12302E;
+  --qa-focus: #3CC2B4;
+  --qa-pos: #6EA4FF;
+  --qa-pos-soft: #15233A;
+  --qa-neg: #FF8F5E;
+  --qa-neg-soft: #3A1E12;
+  --qa-warn: #F2BE4E;
+  --qa-warn-soft: #33270C;
+  --qa-info: #B39CFF;
+  --qa-info-soft: #241C3D;
+  --qa-neutral: #9AA4B1;
+  --qa-neutral-soft: #222933;
+  --qa-chart-1: #6EA4FF;
+  --qa-chart-2: #FF9F4A;
+  --qa-chart-3: #3CC2B4;
+  --qa-chart-4: #C49BFF;
+  --qa-chart-5: #FF7AAE;
+  --qa-chart-6: #B5C55A;
+  --qa-chart-7: #F2C94C;
+  --qa-chart-8: #9AA8B8;
+  --qa-grid: #222933;
+  --qa-axis: #8A94A1;
+  --qa-recession: rgba(154, 164, 177, 0.12);
+  --qa-candle-up: #3DCB8A;
+  --qa-candle-down: #E5484D;
+  --qa-volume: #3A4452;
+  --qa-heat-n3: #E0703F; --qa-heat-ink-n3: #0E1116;
+  --qa-heat-n2: #9C4A26; --qa-heat-ink-n2: #E8ECF1;
+  --qa-heat-n1: #4A2A1C; --qa-heat-ink-n1: #E8ECF1;
+  --qa-heat-0:  #222933; --qa-heat-ink-0:  #E8ECF1;
+  --qa-heat-p1: #1E3354; --qa-heat-ink-p1: #E8ECF1;
+  --qa-heat-p2: #2F5FA8; --qa-heat-ink-p2: #E8ECF1;
+  --qa-heat-p3: #6EA4FF; --qa-heat-ink-p3: #0E1116;
+  --qa-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --qa-shadow-2: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+/* ---------- Base ---------- */
+html {
+  font: var(--qa-text-body);
+  color: var(--qa-text);
+  background: var(--qa-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Toda cifra: mono tabular */
+.qa-num {
+  font-family: var(--qa-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Foco visible solo con teclado */
+:focus-visible {
+  outline: var(--qa-focus-width) solid var(--qa-focus);
+  outline-offset: var(--qa-focus-offset);
+}
+
+/* Reducir movimiento */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --qa-dur-fast: 0ms;
+    --qa-dur-base: 0ms;
+    --qa-dur-slow: 0ms;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Patrón "cayeron" del embudo */
+.qa-hatch {
+  background: repeating-linear-gradient(135deg, var(--qa-text-3) 0 1.5px, transparent 1.5px 5px);
+  box-shadow: inset 0 0 0 1px var(--qa-text-3);
+}

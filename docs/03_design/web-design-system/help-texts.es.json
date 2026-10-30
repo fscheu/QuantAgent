@@ -1,0 +1,69 @@
+{
+  "_nota": "Textos del panel “¿qué es esto?”. Regla: una oración de definición + ejemplo con los datos que se están mirando ({placeholders}). Los marcados pending=true esperan definición.",
+  "stop": {
+    "title": "Stop",
+    "body": "Precio al que el sistema vende automáticamente para limitar la pérdida.",
+    "example": "En {symbol}: si baja a {stop} (hoy está en {price}), se vende."
+  },
+  "stop_distance": {
+    "title": "Distancia al stop",
+    "body": "Cuánto tendría que caer el precio, en % y en dólares, para que salte el stop. Menos distancia = más riesgo de venta inmediata.",
+    "example": "{symbol} está a {pct} del stop: {amount} de margen."
+  },
+  "unrealized_pl": {
+    "title": "P&L no realizado",
+    "body": "Ganancia o pérdida (Profit & Loss) de una posición abierta. “No realizado” = todavía no vendiste: es lo que ganarías o perderías si vendieras ahora.",
+    "example": "{symbol}: {pl} desde que se compró a {entry}."
+  },
+  "benchmark": {
+    "title": "Benchmark",
+    "body": "La vara con la que se compara la cuenta. Acá es SPY: si la cuenta rinde menos que SPY, convenía comprar el índice y no hacer nada.",
+    "example": "En {range}: cuenta {account_pct}, SPY {benchmark_pct}."
+  },
+  "drawdown": {
+    "title": "Drawdown",
+    "body": "Cuánto cayó la cuenta desde su punto más alto. Mide el peor bache, no la ganancia.",
+    "example": "{account} llegó a {peak} y hoy vale {equity}: drawdown {dd}."
+  },
+  "shadow": {
+    "title": "Sombra",
+    "body": "Simulación local que replica lo que debería pasar en el broker. Si la cuenta real y la sombra se separan, algo no está funcionando igual.",
+    "example": "Hoy difieren {gap}."
+  },
+  "reject_reason_missing": {
+    "title": "Motivo no disponible",
+    "body": "El broker rechazó la orden, pero el sistema todavía no guarda el motivo que devolvió. Va a aparecer cuando la API lo incluya."
+  },
+  "cycle": {
+    "title": "Ciclo",
+    "body": "Una tanda de hipótesis de estrategia que se propone y se evalúa junta."
+  },
+  "stages": {
+    "title": "Etapas del embudo",
+    "body": "Cada hipótesis pasa por etapas cada vez más exigentes: 0, 1, 2, 3, reserva, sombra, paper, candidata y producción. Si falla una, queda descartada con su motivo.",
+    "pending": true
+  },
+  "stage_e3": {
+    "title": "Etapa 3",
+    "body": "[A CONFIRMAR] Prueba si la estrategia aguanta cambios: otros parámetros, otros períodos y costos más altos.",
+    "pending": true
+  },
+  "reserve": {
+    "title": "Reserva",
+    "body": "Datos que se guardan sin usar durante el diseño de la estrategia (por ejemplo, de 2023 en adelante) para probarla al final, como un examen que no vio antes.",
+    "pending": true
+  },
+  "deflated_sharpe": {
+    "title": "Sharpe deflactado",
+    "body": "Retorno por unidad de riesgo, corregido porque se probaron muchas estrategias: castiga encontrar algo “bueno” por pura suerte.",
+    "example": "{name}: {value} (umbral {threshold})."
+  },
+  "paper_live": {
+    "title": "Paper / Live",
+    "body": "Paper: cuenta simulada del broker, dinero de mentira con precios reales. Live: dinero real."
+  },
+  "rebalance": {
+    "title": "Rebalanceo",
+    "body": "Momento programado en que una estrategia ajusta sus posiciones para volver a los pesos que define."
+  }
+}
