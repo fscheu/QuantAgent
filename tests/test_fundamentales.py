@@ -8,6 +8,7 @@ import pytest
 from quantagent.data.fundamentales import (
     calcular_metricas_ticker,
     crear_snapshot_fundamentales,
+    extraer_hechos,
     metricas_fundamentales,
     preparar_ticker,
     vista_punto_en_el_tiempo,
@@ -157,3 +158,32 @@ def test_snapshot_e2e(tmp_path):
     assert "FAKE" in manifest["symbols"] and "SIN_CIK" in manifest["sin_cik"] and manifest["fallidos"] == ["BAD: OSError"]
     paneles = metricas_fundamentales("test-snap", ["FAKE", "SIN_CIK"], pd.to_datetime(["2020-04-16"]), base_dir=tmp_path)
     assert paneles["roic_4t"]["SIN_CIK"].isna().all()
+
+
+def _hecho(val, filed, form="10-Q", start="2017-04-01", end="2017-06-30"):
+    return {"form": form, "start": start, "end": end, "val": val, "filed": filed, "fp": "Q2", "fy": 2017, "accn": f"a-{filed}"}
+
+
+def _facts(**tags):
+    return {"facts": {"us-gaap": {t: {"units": {"USD": h}} for t, h in tags.items()}}}
+
+
+def test_extraer_hechos_tag_menor_prioridad_presentado_antes_se_conserva():
+    """El 10-Q 2017 (SalesRevenueNet) no lo tapa el 10-K 2018 (Revenues) del mismo período."""
+    df = preparar_ticker(extraer_hechos("T", _facts(SalesRevenueNet=[_hecho(90, "2017-08-05")], Revenues=[_hecho(95, "2018-11-05", "10-K")])))
+    ingresos = {f: vista_punto_en_el_tiempo(df, pd.Timestamp(f))[0]["ingresos"].iloc[0] for f in ("2017-12-31", "2019-01-31")}
+    assert ingresos == {"2017-12-31": 90, "2019-01-31": 95}
+
+
+def test_extraer_hechos_misma_presentacion_queda_el_prioritario():
+    df = extraer_hechos("T", _facts(SalesRevenueNet=[_hecho(90, "2017-08-05")], Revenues=[_hecho(95, "2017-08-05")]))
+    assert df["val"].tolist() == [95.0]
+
+
+def test_roe_con_equity_incluyendo_participacion_no_controlante():
+    nuevo = "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"
+    ni = [_hecho(v, f, start=s, end=e) for v, s, e, f in [(10, "2019-01-01", "2019-03-31", "2019-04-15"), (12, "2019-04-01", "2019-06-30", "2019-07-15"),
+          (14, "2019-07-01", "2019-09-30", "2019-10-15"), (16, "2019-10-01", "2019-12-31", "2020-02-15")]]
+    df = extraer_hechos("T", _facts(NetIncomeLoss=ni, **{nuevo: [{"form": "10-K", "end": "2019-12-31", "val": 400, "filed": "2020-02-15"}]}))
+    roe = calcular_metricas_ticker(preparar_ticker(df), pd.to_datetime(["2020-02-16"]))["roe_4t"].iloc[0]
+    assert roe == pytest.approx(52 / 400)
