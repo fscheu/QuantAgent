@@ -1,5 +1,5 @@
 {
-  "downloaded_at": "2026-10-29T23:18:51+00:00",
+  "downloaded_at": "2026-10-30T13:38:13+00:00",
   "fallidos": [],
   "name": "fundamentales-sp500-2026-10",
   "sin_cik": [
@@ -36,7 +36,6 @@
     "BBBY",
     "BCR",
     "BDK",
-    "BF.B",
     "BHGE",
     "BIG",
     "BJS",
@@ -48,7 +47,6 @@
     "BNI",
     "BOL",
     "BRCM",
-    "BRK.B",
     "BRL",
     "BSC",
     "BTUUQ",
@@ -569,10 +567,10 @@
       "start": "2022-09-30"
     },
     "AMZN": {
-      "end": "2026-06-30",
+      "end": "2026-09-30",
       "file": "AMZN.parquet",
-      "rows": 2321,
-      "sha256": "9e8ea20123a63f4733922d5f94cd5c39250bae163bc336bef8a9aae5d33067d6",
+      "rows": 2355,
+      "sha256": "a4fd5a2460b5adc9bae5697fac7e5d2395d824792d2b7cb0664fe565ae2512d2",
       "start": "2006-12-31"
     },
     "AN": {
@@ -820,6 +818,13 @@
       "sha256": "45de3547d7e57bb7dfe32cc1d7fc196829b8df23698a19202aa80c847d82b98c",
       "start": "2006-09-30"
     },
+    "BF.B": {
+      "end": "2026-07-31",
+      "file": "BF.B.parquet",
+      "rows": 1601,
+      "sha256": "0a5ef70db9fda2aa6e095770d842dc11cf6dabc1526cec3ce0cabeabcdd44a01",
+      "start": "2009-04-30"
+    },
     "BG": {
       "end": "2026-09-30",
       "file": "BG.parquet",
@@ -884,10 +889,10 @@
       "start": "2007-12-31"
     },
     "BNY": {
-      "end": "2026-06-30",
+      "end": "2026-09-30",
       "file": "BNY.parquet",
-      "rows": 1317,
-      "sha256": "8e2ab5bfd73d0b19527372b1348e09d81fd39f5b4db813a9b8f5e19b1a4afede",
+      "rows": 1333,
+      "sha256": "dfd0c47a8dd3592992e84a47113367440f557d26f1247261db23c3127748ed62",
       "start": "2007-12-31"
     },
     "BR": {
@@ -896,6 +901,13 @@
       "rows": 1718,
       "sha256": "0fbc5fa9718d5dffdd3fc7d6d8f3bd13b818dbdf9c8b08cb32138eae1f7183d2",
       "start": "2008-06-30"
+    },
+    "BRK.B": {
+      "end": "2026-06-30",
+      "file": "BRK.B.parquet",
+      "rows": 1388,
+      "sha256": "ee025728e6f5806d9deb483c62761005ee29ad41e623b36187b8f2d71e83e146",
+      "start": "2007-12-31"
     },
     "BRO": {
       "end": "2026-09-30",
@@ -982,10 +994,10 @@
       "start": "2007-12-31"
     },
     "CBOE": {
-      "end": "2026-06-30",
+      "end": "2026-09-30",
       "file": "CBOE.parquet",
-      "rows": 1763,
-      "sha256": "bd5429255d8ff70c6bd6f5710d67ec15597eedce663812f0b8a153afdd4eb84d",
+      "rows": 1797,
+      "sha256": "6f35bbe55628b98d847bb2791107877ad5aa8ac65fbafe3b4ca4b41802f599ef",
       "start": "2009-12-31"
     },
     "CBRE": {
@@ -1094,10 +1106,10 @@
       "start": "2007-12-31"
     },
     "CL": {
-      "end": "2026-06-30",
+      "end": "2026-09-30",
       "file": "CL.parquet",
-      "rows": 1831,
-      "sha256": "e4db110277d7e57adc4fba197ca92ed72cb96b2da2607bfae177bfdf748ac053",
+      "rows": 1859,
+      "sha256": "c0bb8cb78e66fc8360a5310e6055234f3c1bbd5786c72cc41889a6c12cf625c5",
       "start": "2007-12-31"
     },
     "CLF": {
@@ -1542,10 +1554,10 @@
       "start": "2007-12-31"
     },
     "DXC": {
-      "end": "2026-06-30",
+      "end": "2026-09-30",
       "file": "DXC.parquet",
-      "rows": 854,
-      "sha256": "3e215f3dc43097921128c505d28ee69c7dae96642efa8c03675c937a2b15dd4e",
+      "rows": 880,
+      "sha256": "aee3760059d874b13afe81df6358efb0b7adef1c5b15f22cd87f02f0567c4867",
       "start": "2016-01-31"
     },
     "DXCM": {
@@ -1990,10 +2002,10 @@
       "start": "2015-12-31"
     },
     "FTNT": {
-      "end": "2026-06-30",
+      "end": "2026-09-30",
       "file": "FTNT.parquet",
-      "rows": 1426,
-      "sha256": "850d00b9bac177c3fdbdeed9069e3527b57df9bfdf81d911a48abd98f4a1e9c0",
+      "rows": 1454,
+      "sha256": "666f72033eb2e7ba448b2948a49cb276787f8966eecf188e6a1cf8871e092d17",
       "start": "2008-12-28"
     },
     "FTV": {
@@ -2011,10 +2023,10 @@
       "start": "2006-12-31"
     },
     "GDDY": {
-      "end": "2026-06-30",
+      "end": "2026-09-30",
       "file": "GDDY.parquet",
-      "rows": 1022,
-      "sha256": "670be6d5ef160e7b6662a361ca130bc307be08351165f481fabf02cfb5fd9b1e",
+      "rows": 1060,
+      "sha256": "8faf881232d8a18d69c35fcb01e1e9bc4ecaf310da87daf0bb0aac0e8e25abff",
       "start": "2013-12-31"
     },
     "GE": {
@@ -2053,10 +2065,10 @@
       "start": "2008-12-28"
     },
     "GILD": {
-      "end": "2026-06-30",
+      "end": "2026-09-30",
       "file": "GILD.parquet",
-      "rows": 1823,
-      "sha256": "c4743564ff1e60da05395f97e667ba62a4ade7df8d8a523613890adb222d0efa",
+      "rows": 1851,
+      "sha256": "f9e9d4995218d052216d498df0d9aa5339d4bbaf88921615885020499875363a",
       "start": "2007-12-31"
     },
     "GIS": {
@@ -2389,10 +2401,10 @@
       "start": "2008-12-31"
     },
     "INTC": {
-      "end": "2026-06-27",
+      "end": "2026-09-26",
       "file": "INTC.parquet",
-      "rows": 1600,
-      "sha256": "51bf01514912d40d7c0952c19c87436a36d5db48bfb12e1f76c70698bcec8f80",
+      "rows": 1628,
+      "sha256": "cd016d9091b148f8a2a4e4c090e4c4703d7f0e66affddec299454d450f8f07b4",
       "start": "2006-12-30"
     },
     "INTU": {
@@ -2641,10 +2653,10 @@
       "start": "2007-02-03"
     },
     "KVUE": {
-      "end": "2026-06-28",
+      "end": "2026-09-27",
       "file": "KVUE.parquet",
-      "rows": 388,
-      "sha256": "bc4b3f79c1c1c8dd470f41bb5e853ed05b4bbb40b9a0f72b6ac1636c3fdcd66c",
+      "rows": 418,
+      "sha256": "2d839530a47b2b844e36d1f06ce7efce70632e2e66a0e406a396913a0eadc82b",
       "start": "2021-01-03"
     },
     "L": {
@@ -3327,10 +3339,10 @@
       "start": "2007-12-31"
     },
     "OGN": {
-      "end": "2026-06-30",
+      "end": "2026-09-30",
       "file": "OGN.parquet",
-      "rows": 602,
-      "sha256": "6cdda88814fad0cb9f1cbb8deabc58add24cd2fa67b9c4fe875c55aebbe0cf52",
+      "rows": 634,
+      "sha256": "1c08cd69a92d126233bd6ec5ea94cd1d9df76d6d4e9c44bfb9534ca48247347d",
       "start": "2018-12-31"
     },
     "OI": {
@@ -3670,10 +3682,10 @@
       "start": "2007-12-31"
     },
     "RDDT": {
-      "end": "2026-06-30",
+      "end": "2026-09-30",
       "file": "RDDT.parquet",
-      "rows": 242,
-      "sha256": "9061a0c4b1c959504cf02768cb169a2ba58c92179f964c6be80d6f4ad3fb7ea9",
+      "rows": 272,
+      "sha256": "2dd2ad6f30ad1764748f4741be52fb057dd68a8ad0cb2c76e0313f78dd1bf389",
       "start": "2021-12-31"
     },
     "REG": {
@@ -3684,10 +3696,10 @@
       "start": "2010-03-31"
     },
     "REGN": {
-      "end": "2026-06-30",
+      "end": "2026-09-30",
       "file": "REGN.parquet",
-      "rows": 1862,
-      "sha256": "9569dc0236ea5ef39b23bf2f5d831b18ad711ef870192c2899be76637d3df55c",
+      "rows": 1900,
+      "sha256": "440f8c645c69ef47d84f0e3cc6e051cde8b22a5ac69d231b882f3855f263b680",
       "start": "2007-12-31"
     },
     "RF": {
@@ -3726,10 +3738,10 @@
       "start": "2009-03-28"
     },
     "RMD": {
-      "end": "2026-06-30",
+      "end": "2026-09-30",
       "file": "RMD.parquet",
-      "rows": 1589,
-      "sha256": "b1fb4ab0f8c831eb7dbb1be337371a8df06f10fa63609c1dfd6fde11bb256d21",
+      "rows": 1607,
+      "sha256": "cab9941fe17f4c1408f23b0562c71cefa4dc26566bad7ba97583e5fec68ba2d6",
       "start": "2009-06-30"
     },
     "ROK": {
@@ -3768,10 +3780,10 @@
       "start": "2007-12-31"
     },
     "RSG": {
-      "end": "2026-06-30",
+      "end": "2026-09-30",
       "file": "RSG.parquet",
-      "rows": 1825,
-      "sha256": "58d3c49c792194c66d66b86fe72b8d1e9b2b392791615d071d084d14c0af72b3",
+      "rows": 1851,
+      "sha256": "dd10cd9b6cbc0f735841885ca18ef5790dcab10eb52c34cbb8d884dfac93de20",
       "start": "2007-12-31"
     },
     "RTX": {
@@ -4440,10 +4452,10 @@
       "start": "2007-12-31"
     },
     "VLTO": {
-      "end": "2026-04-03",
+      "end": "2026-10-02",
       "file": "VLTO.parquet",
-      "rows": 254,
-      "sha256": "8ede282d661ee7aa8a10ab7ca6f8055441b3aa7a53ec60e5802b0811372afe58",
+      "rows": 310,
+      "sha256": "1110874e4e0512106406902f6871a4c92202389c024606c5a5a6f791ab68d23d",
       "start": "2021-12-31"
     },
     "VMC": {
@@ -4559,10 +4571,10 @@
       "start": "2007-06-29"
     },
     "WEC": {
-      "end": "2026-06-30",
+      "end": "2026-09-30",
       "file": "WEC.parquet",
-      "rows": 1382,
-      "sha256": "a21fa49d63f4a7cfb131db8ef34ad37837d30880fed315472c4606d446962480",
+      "rows": 1404,
+      "sha256": "01676cb2af2fafe76b79c960a8174b68aabc47f4ad42ee10db792ad919ff3de6",
       "start": "2007-12-31"
     },
     "WELL": {
