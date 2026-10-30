@@ -29,7 +29,7 @@ CONCEPTOS_FALLBACK = {
     ],
     # sin OperatingIncomeLoss (XOM, bancos) se usa el resultado antes de impuestos como aproximación
     "OperatingIncomeLoss": ["OperatingIncomeLoss", *_TAX_BT], "EarningsPerShareDiluted": ["EarningsPerShareDiluted"],
-    "NetIncomeLoss": ["NetIncomeLoss", "ProfitLoss"], "StockholdersEquity": ["StockholdersEquity"], "deuda": ["LongTermDebtNoncurrent", "LongTermDebt"],
+    "NetIncomeLoss": ["NetIncomeLoss", "ProfitLoss"], "StockholdersEquity": ["StockholdersEquity", "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"], "deuda": ["LongTermDebtNoncurrent", "LongTermDebt"],
     "IncomeTaxExpenseBenefit": ["IncomeTaxExpenseBenefit"], "IncomeLossFromContinuingOperationsBeforeIncomeTaxes": _TAX_BT,
 }
 # tickers cuyo CIK actual (company_tickers.json) es una holding nueva sin el historial anterior
@@ -58,7 +58,7 @@ def extraer_hechos(ticker: str, json_data: dict) -> pd.DataFrame:
     us_gaap = json_data.get("facts", {}).get("us-gaap", {})
     filas = []
     for concepto, tags in CONCEPTOS_FALLBACK.items():
-        cubiertos: Set[Tuple[str, str]] = set()
+        cubiertos: Set[Tuple[str, str, str]] = set()
         for prioridad, tag in enumerate(tags):
             if tag not in us_gaap:
                 continue
@@ -68,7 +68,8 @@ def extraer_hechos(ticker: str, json_data: dict) -> pd.DataFrame:
                     if form not in FORMULARIOS_VALIDOS or not end:
                         continue
                     start = str(f.get("start", "") or "").strip()
-                    if (start, end) in cubiertos:
+                    filed = str(f.get("filed", "")).strip()
+                    if (start, end, filed) in cubiertos:
                         continue
                     try:
                         val = float(f.get("val"))
@@ -79,12 +80,12 @@ def extraer_hechos(ticker: str, json_data: dict) -> pd.DataFrame:
                         "ticker": ticker, "concepto": concepto, "start": start, "end": end, "val": val,
                         "fy": int(fy) if fy is not None and not pd.isna(fy) else None,
                         "fp": str(f.get("fp", "")).strip(), "form": form,
-                        "filed": str(f.get("filed", "")).strip(), "accn": str(f.get("accn", "")).strip(),
+                        "filed": filed, "accn": str(f.get("accn", "")).strip(),
                         "prioridad": prioridad,
                     })
             for r in filas:
                 if r["concepto"] == concepto and r["prioridad"] == prioridad:
-                    cubiertos.add((r["start"], r["end"]))
+                    cubiertos.add((r["start"], r["end"], r["filed"]))
     cols = ["ticker", "concepto", "start", "end", "val", "fy", "fp", "form", "filed", "accn"]
     return pd.DataFrame(filas).drop(columns=["prioridad"]) if filas else pd.DataFrame(columns=cols)
 
