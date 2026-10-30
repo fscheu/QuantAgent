@@ -30,21 +30,22 @@ def accounts_group():
 
 
 @accounts_group.command("add", help="Register an account and its strategy.",
-                        epilog="Example: quantagent api accounts add --id paper-nucleo-curva --name 'Paper Nucleo Curva' --env paper --kind alpaca --alpaca-account-ref acct-1 --bucket-id nucleo-curva --strategy nucleo-curva")
+                        epilog="Example: quantagent api accounts add --id paper-nucleo-curva --name 'Paper Nucleo Curva' --env paper --kind alpaca --database-url sqlite:////srv/quantagent/paper.db --strategy nucleo-curva")
 @click.option("--id", "account_id", required=True, help="Unique account slug.")
 @click.option("--name", required=True, help="Display name for the account.")
 @click.option("--env", "environment", required=True, type=click.Choice(["paper", "live"]), help="Trading environment: paper or live.")
 @click.option("--kind", required=True, type=click.Choice(["alpaca", "simulated"]), help="Account source: Alpaca or simulated.")
-@click.option("--alpaca-account-ref", help="Alpaca account reference; required for alpaca accounts.")
-@click.option("--bucket-id", required=True, help="Unique trade-intent bucket identifier.")
+@click.option("--alpaca-account-ref", help="Informational Alpaca account reference.")
+@click.option("--database-url", required=True, help="Readable SQLite database URL for this account.")
+@click.option("--bucket-id", help="Informational trade-intent bucket identifier.")
 @click.option("--strategy", required=True, help="Single strategy assigned to this account.")
-def account_add(account_id, name, environment, kind, alpaca_account_ref, bucket_id, strategy):
+def account_add(account_id, name, environment, kind, alpaca_account_ref, database_url, bucket_id, strategy):
     from .accounts import add_account, write_session
 
     with write_session() as db:
         try:
             account = add_account(db, id=account_id, name=name, env=environment, kind=kind,
-                                  alpaca_account_ref=alpaca_account_ref, bucket_id=bucket_id,
+                                  alpaca_account_ref=alpaca_account_ref, database_url=database_url, bucket_id=bucket_id,
                                   strategy=strategy)
         except ValueError as exc:
             raise click.ClickException(str(exc)) from exc

@@ -134,7 +134,8 @@ class Account(Base):
     env = Column(String(10), nullable=False)
     kind = Column(String(20), nullable=False)
     alpaca_account_ref = Column(String(100), nullable=True)
-    bucket_id = Column(String(100), nullable=False, unique=True)
+    database_url = Column(String(500), nullable=False)
+    bucket_id = Column(String(100), nullable=True)
     strategy = Column(String(100), nullable=False)
     status = Column(String(20), nullable=False, default="active")
     created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
@@ -143,8 +144,6 @@ class Account(Base):
         CheckConstraint("env IN ('paper', 'live')"),
         CheckConstraint("kind IN ('alpaca', 'simulated')"),
         CheckConstraint("status IN ('active', 'archived')"),
-        CheckConstraint("(kind = 'alpaca' AND alpaca_account_ref IS NOT NULL) OR "
-                        "(kind = 'simulated' AND alpaca_account_ref IS NULL)"),
         CheckConstraint("NOT (env = 'live' AND kind = 'simulated')"),
     )
 
