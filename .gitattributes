@@ -26,3 +26,7 @@ tests/fixtures/golden/rsi-spy-90d-trades.csv text eol=crlf
 *.jpeg binary
 *.gif binary
 *.pdf binary
+
+# Lockfiles
+package-lock.json -diff
+
