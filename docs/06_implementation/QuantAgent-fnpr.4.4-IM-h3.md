@@ -31,11 +31,10 @@ Miembros-fecha de los sectores que H1 eligió (n = 54.056): elegible 69.3%, falt
 
 ## Decisiones
 
-1. `lote/m5-screener` no tenía H1/H2 ni la máscara M5-30: se mergeó `origin/lote/m5-regimen` en la rama.
-2. El embudo corre backtests por activo sobre un solo snapshot y no soporta acciones de otro snapshot con universo variable por fecha. La etapa 2 se resuelve con `scripts/m5/h3.py`, que arma la curva de H1 y H3 con el mismo código. No hay control del motor independiente ("sin control del motor").
-3. Veredicto de etapa 2 = V30 sobre H3 (igual criterio que H2). H3 vs H1 se responde con ΔSharpe ± error.
-4. Clase `sector-score-h3` sintética para pasar admisión (si no, "duplicada de m5-h1").
-5. El costo se aplica a toda la rotación, en H1 y H3. Por eso el Sharpe de H1 acá (2011-2018) no es el del embudo (2007-2018).
+1. El embudo corre backtests por activo sobre un solo snapshot y no soporta acciones de otro snapshot con universo variable por fecha. La etapa 2 se resuelve con `scripts/m5/h3.py`, que arma la curva de H1 y H3 con el mismo código. No hay control del motor independiente ("sin control del motor").
+2. Veredicto de etapa 2 = V30 sobre H3 (igual criterio que H2). H3 vs H1 se responde con ΔSharpe ± error.
+3. Clase `sector-score-h3` sintética para pasar admisión (si no, "duplicada de m5-h1").
+4. El costo se aplica a toda la rotación, en H1 y H3. Por eso el Sharpe de H1 acá (2011-2018) no es el del embudo (2007-2018).
 
 ## Reproducir
 
