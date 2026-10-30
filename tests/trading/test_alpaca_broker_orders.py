@@ -20,6 +20,7 @@ class Client:
         self.account, self.positions = account, positions
         self.submitted = 0
         self.queried = []
+        self.replacements = []
     def submit_order(self, order_data):
         self.submitted += 1
         self.request = order_data
@@ -28,6 +29,9 @@ class Client:
         return self.result
     def get_order_by_id(self, order_id):
         self.queried.append(order_id)
+        return self.result
+    def replace_order_by_id(self, order_id, order_data):
+        self.replacements.append((order_id, order_data))
         return self.result
     def cancel_order_by_id(self, order_id):
         self.cancelled = order_id
@@ -51,6 +55,33 @@ def test_submit_maps_market_and_limit(kind, expected):
     assert str(getattr(client.request.type, "value", client.request.type)).lower() == expected
     assert float(client.request.qty) == 2
     assert order.alpaca_order_id == "alpaca-123"
+
+@pytest.mark.parametrize("quantity,tif", [(Decimal("1.25"), "day"), (Decimal("2"), "gtc")])
+def test_stop_orders_use_fraction_aware_tif_and_both_sides(quantity, tif):
+    for side in (OrderSide.BUY, OrderSide.SELL):
+        client = Client(SimpleNamespace(id="stop-1", status="new", filled_qty="0"))
+        order = make_order(OrderType.STOP)
+        order.quantity, order.stop_price, order.side = quantity, Decimal("95"), side
+        assert AlpacaBroker(client).submit_order(order).status == OrderStatus.PENDING
+        request = client.request
+        assert request.side == side.value
+        assert request.type == "stop"
+        assert Decimal(str(request.stop_price)) == Decimal("95")
+        assert request.time_in_force == tif
+
+def test_replace_stop_uses_order_id_and_new_price():
+    result = SimpleNamespace(id="updated")
+    client = Client(result)
+    assert AlpacaBroker(client).replace_stop("alpaca-stop-id", Decimal("97.5")) is result
+    order_id, request = client.replacements[0]
+    assert order_id == "alpaca-stop-id"
+    assert Decimal(str(request.stop_price)) == Decimal("97.5")
+
+def test_stop_without_stop_price_is_rejected():
+    order = make_order(OrderType.STOP)
+    order.stop_price = None
+    with pytest.raises(ValueError, match="stop_price"):
+        AlpacaBroker(Client()).submit_order(order)
 
 def test_paper_short_opens_with_sell_and_closes_with_buy():
     class PaperAccount(Client):

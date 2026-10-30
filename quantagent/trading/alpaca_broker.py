@@ -13,18 +13,26 @@ class AlpacaBroker(Broker):
         self.client = client
 
     def submit_order(self, order: Order) -> Order:
-        types = {OrderType.MARKET: "market", OrderType.LIMIT: "limit"}
+        types = {OrderType.MARKET: "market", OrderType.LIMIT: "limit", OrderType.STOP: "stop"}
         if order.order_type not in types:
             raise ValueError(f"Unsupported Alpaca order type: {order.order_type}")
         if order.order_type == OrderType.LIMIT and order.price is None:
             raise ValueError("Limit order requires price")
+        if order.order_type == OrderType.STOP and order.stop_price is None:
+            raise ValueError("Stop order requires stop_price")
+        tif = ("gtc" if order.quantity == order.quantity.to_integral_value() else "day") \
+            if order.order_type == OrderType.STOP else "day"
         fields = dict(symbol=order.symbol, qty=str(order.quantity), side=order.side.value,
-                      time_in_force="day")
+                      time_in_force=tif)
         if order.order_type == OrderType.LIMIT:
             fields["limit_price"] = str(order.price)
+        elif order.order_type == OrderType.STOP:
+            fields["stop_price"] = str(order.stop_price)
         try:
-            from alpaca.trading.requests import LimitOrderRequest, MarketOrderRequest
-            request = (LimitOrderRequest if order.order_type == OrderType.LIMIT else MarketOrderRequest)(**fields)
+            from alpaca.trading.requests import LimitOrderRequest, MarketOrderRequest, StopOrderRequest
+            request_type = {OrderType.LIMIT: LimitOrderRequest, OrderType.MARKET: MarketOrderRequest,
+                            OrderType.STOP: StopOrderRequest}[order.order_type]
+            request = request_type(**fields)
         except ImportError:
             request = SimpleNamespace(**fields, type=types[order.order_type])
         try:
@@ -36,6 +44,15 @@ class AlpacaBroker(Broker):
             raise
         order.alpaca_order_id = str(result.id) if getattr(result, "id", None) else None
         return self._update_order(order, result)
+
+    def replace_stop(self, alpaca_order_id: str, new_stop_price) -> Order:
+        fields = dict(stop_price=new_stop_price)
+        try:
+            from alpaca.trading.requests import ReplaceOrderRequest
+            request = ReplaceOrderRequest(**fields)
+        except ImportError:
+            request = SimpleNamespace(**fields)
+        return self.client.replace_order_by_id(alpaca_order_id, request)
 
     def refresh_order(self, order: Order) -> Order:
         return self._update_order(order, self.client.get_order_by_id(order.alpaca_order_id))

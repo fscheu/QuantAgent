@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from quantagent import settings
 from quantagent.stop_loss import resolve_stop_loss
 from quantagent.data.provider import DataProvider
-from quantagent.models import Environment, SchedulerHeartbeat, Signal, Trade, TradeSignal
+from quantagent.models import Environment, Order, OrderSide, OrderStatus, OrderType, SchedulerHeartbeat, Signal, Trade, TradeSignal
 from quantagent.static_util import format_ohlcv_for_agents
 from quantagent.strategy.base import TradingSignal as StrategyTradingSignal
 from quantagent.strategy.base import TradingStrategy
@@ -321,7 +321,7 @@ class TradingScheduler:
                 entry_time = entry_time.tz_localize(None)
             intrabar_exit = (
                 check_intrabar_stops(position, candle)
-                if candle_time > entry_time else None
+                if candle_time > entry_time and not position.broker_stop_order_id else None
             )
             if intrabar_exit:
                 exit_reason, exit_price = intrabar_exit
@@ -344,6 +344,12 @@ class TradingScheduler:
             )
 
             if should_exit:
+                if position.broker_stop_order_id and exit_reason == "STOP_LOSS":
+                    should_exit = False
+            if should_exit:
+                if position.broker_stop_order_id:
+                    if not self.order_manager.broker.cancel_order(position.broker_stop_order_id):
+                        return
                 self._execute_position_exit(
                     position, exit_reason, current_price, symbol
                 )
@@ -443,7 +449,7 @@ class TradingScheduler:
                 else current_price * 0.97
             )
 
-            self.position_monitor.open_position(
+            position = self.position_monitor.open_position(
                 symbol=symbol,
                 side=order.side,
                 entry_price=current_price,
@@ -458,6 +464,28 @@ class TradingScheduler:
                 backtest_run_id=None,
                 environment=self.environment,
             )
+            if (isinstance(self.order_manager.broker, AlpacaBroker)
+                    and order.status == OrderStatus.FILLED):
+                stop_order = Order(
+                    symbol=symbol,
+                    side=OrderSide.SELL if order.side == OrderSide.BUY else OrderSide.BUY,
+                    quantity=order.filled_quantity or order.quantity,
+                    order_type=OrderType.STOP,
+                    stop_price=stop_loss,
+                    environment=self.environment,
+                )
+                try:
+                    self.db.add(stop_order)
+                    self.db.flush()
+                    self.order_manager.broker.submit_order(stop_order)
+                    if stop_order.status == OrderStatus.REJECTED:
+                        logger.error("Alpaca rejected broker stop for %s: %s", symbol, stop_order.comment)
+                    elif stop_order.alpaca_order_id:
+                        position.broker_stop_order_id = stop_order.alpaca_order_id
+                    self.db.commit()
+                except Exception:
+                    self.db.rollback()
+                    logger.exception("Failed to submit broker stop for %s", symbol)
 
             logger.info(
                 "Order executed: %s %s [%s] [entry=%.2f, sl=%.2f, tp=%.2f]",
