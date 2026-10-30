@@ -56,7 +56,7 @@ def test_exclusion_faltantes_y_cuartil_inferior_fr(monkeypatch):
     monkeypatch.setattr("quantagent.data.sp500.sector", lambda c, t, f: ETF_SECTOR[etf])
     rets = {"T_OK1": (0.2, 0.3), "T_OK2": (0.15, 0.25), "T_OK3": (0.1, 0.2), "T_1FALTA": (0.05, 0.1), "T_BAJO_FR": (-0.8, -0.9)}
     precios, paneles = _datos_sinteticos(tickers, etf, rets=rets, fund_vals={"T_1FALTA": {"crecimiento_eps": np.nan}}, fecha=fecha)
-    del precios["T_2FALTAS"]
+    precios["T_2FALTAS"] = None
     res = candidatos_semanales(fecha, [etf], precios=precios, paneles_fundamentales=paneles, top=5)
     simbolos = set(res["simbolo"])
     assert "T_2FALTAS" not in simbolos and "T_BAJO_FR" not in simbolos and "T_1FALTA" in simbolos
@@ -109,10 +109,31 @@ def test_candidatos_semanales_panel(monkeypatch):
     assert len(res) == 4 and set(res["fecha"]) == {pd.Timestamp(f) for f in fechas}
 
 
-def test_planilla_aceptacion_coincide_top3():
-    ruta_csv = Path("docs/06_implementation/QuantAgent-fnpr.4.3-IM-screener-2018-06-29.csv")
-    assert ruta_csv.exists()
-    df = pd.read_csv(ruta_csv)
+def test_planilla_aceptacion_coincide_top3(monkeypatch):
+    df = pd.read_csv(Path("docs/06_implementation/QuantAgent-fnpr.4.3-IM-screener-2018-06-29.csv"))
     assert len(df) == 142
-    assert df[(df["etf"] == "XLK") & (df["rank"] <= 3)].sort_values("rank")["simbolo"].tolist() == ["NVDA", "ADBE", "FISV"]
-    assert df[(df["etf"] == "XLF") & (df["rank"] <= 3)].sort_values("rank")["simbolo"].tolist() == ["NDAQ", "MCO", "MSCI"]
+    fecha = "2018-06-29"
+    idx = pd.bdate_range(end=fecha, periods=150)
+    precios = {etf: pd.Series(100.0, index=idx) for etf in ("XLK", "XLF")}
+    paneles = {m: pd.DataFrame(np.nan, index=pd.DatetimeIndex([fecha]), columns=df["simbolo"])
+               for m in ["roic_4t", "margen_op_yoy", "roe_4t", "margen_pretax_yoy", "aceleracion_ingresos", "crecimiento_eps"]}
+    for _, r in df.iterrows():
+        for m, v in [(r["metrica_q1_nombre"], r["q1_crudo"]), (r["metrica_q2_nombre"], r["q2_crudo"]),
+                     ("aceleracion_ingresos", r["aceleracion_ingresos_cruda"]), ("crecimiento_eps", r["crecimiento_eps_crudo"])]:
+            paneles[m].loc[fecha, r["simbolo"]] = v
+        if np.isnan(r["rs3_crudo"]):
+            assert np.isnan(r["rs6_crudo"])
+            precios[r["simbolo"]] = None
+            continue
+        s = pd.Series(100.0, index=idx if not np.isnan(r["rs6_crudo"]) else idx[-100:])
+        s.iloc[-1] = 100.0 * (1.0 + r["rs3_crudo"])
+        if not np.isnan(r["rs6_crudo"]):
+            s.iloc[-127] = s.iloc[-1] / (1.0 + r["rs6_crudo"])
+        precios[r["simbolo"]] = s
+    sector_de = dict(zip(df["simbolo"], df["sector"]))
+    monkeypatch.setattr("quantagent.data.sp500.miembros", lambda c, f: list(df["simbolo"]))
+    monkeypatch.setattr("quantagent.data.sp500.sector", lambda c, t, f: sector_de[t])
+    res = candidatos_semanales(fecha, ["XLK", "XLF"], precios=precios, paneles_fundamentales=paneles)
+    for etf in ("XLK", "XLF"):
+        esperado = df[(df["etf"] == etf) & (df["rank"] <= 3)].sort_values("rank")["simbolo"].tolist()
+        assert res[res["etf"] == etf].sort_values("rank")["simbolo"].tolist() == esperado

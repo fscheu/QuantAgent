@@ -9,7 +9,7 @@ import pandas as pd
 
 import quantagent.data.sp500 as sp500
 from quantagent.data.fundamentales import metricas_fundamentales
-from quantagent.data.snapshot import read_snapshot
+from quantagent.data.snapshot import load_manifest, read_snapshot
 
 ETF_SECTOR = {
     "XLB": "Materials", "XLC": "Communication Services", "XLE": "Energy", "XLF": "Financials",
@@ -24,10 +24,8 @@ def _obtener_precios(precios, sym: str, es_etf: bool = False):
     if precios is not None and sym in precios:
         val = precios[sym]
         return val["close"] if isinstance(val, pd.DataFrame) and "close" in val.columns else val
-    try:
-        return read_snapshot("etf-m5-1d-2026-10" if es_etf else "acciones-sp500-2026-10b", sym)["close"]
-    except Exception:
-        return None
+    nombre = "etf-m5-1d-2026-10" if es_etf else "acciones-sp500-2026-10b"
+    return read_snapshot(nombre, sym)["close"] if sym in load_manifest(nombre)["symbols"] else None
 
 
 def _retorno(s, fecha, n: int) -> float:
