@@ -6,11 +6,11 @@ The FastAPI service is read-only and listens on `127.0.0.1:8000` by default:
 python -m quantagent.cli api serve
 ```
 
-On the VM, the `quantagent-api.service` systemd user unit runs it with `--host 127.0.0.1 --port 8002`.
+Use `--host` and `--port` to change the bind address.
 
-The API reads the account registry from the database selected by `QUANTAGENT_DATABASE_URL`. On the VM this points to `/home/azureuser/web-ops/maestro.db`, the master accounts database. Each paper portfolio keeps its own SQLite database and Alpaca account; the master database only registers portfolios with `api accounts add --database-url`. The web app reads portfolio data and does not process it.
+The API reads the account registry from the database selected by `QUANTAGENT_DATABASE_URL`. This is the master accounts database. Each paper portfolio keeps its own SQLite database and Alpaca account; the master database only registers portfolios with `api accounts add --database-url`. The web app reads portfolio data and does not process it.
 
-The API has no application authentication of its own. Cloudflare Access protects `https://quantagent.fedes.dev`, which serves the React web app and API from one process. Never expose the API without Access.
+The API has no application authentication of its own. Keep it bound to localhost and put an authenticating proxy in front of it before exposing it beyond the host. The same process can serve the React web app and the API.
 
 ## Register accounts
 
