@@ -1,6 +1,6 @@
 # QuantAgent-e452 · Borrador de tickets del lote M-web
 
-- **Fecha:** 2026-10-30. **Estado:** borrador para aprobación de Fede. Todavía NO están en Beads (la sesión en la nube no tiene `bd`).
+- **Fecha:** 2026-10-30. **Estado:** lista aprobada por Fede el 2026-10-30. Pendiente de cargar en Beads (la sesión en la nube no tiene `bd`). Decisión de Fede: la web muestra posiciones cortas; `lote/M-web` va antes que L33.
 - **Rama del lote:** `lote/M-web` (creada desde `main`). Absorbe L34 (`lote/web-cuenta`, epic `QuantAgent-e452`) y suma el frontend y las piezas de backend que pide el design system.
 - **Fuentes:** `docs/03_design/web-design-system/` (en particular `EVENTOS.md`, `PANTALLAS.md`, `api-types.ts`), `docs/03_design/QuantAgent-e452-DS-analisis-design-system-web.md`, `PLAN-POST-M5.md` §M-web.
 - **Restricción:** ningún ticket toca `quantagent/fabrica` ni `quantagent/data`. Lo que dependa de esas áreas (escritores de eventos del embudo, API de Embudo) queda marcado como diferido.
@@ -52,7 +52,6 @@
 
 ## E. Pendiente antes de cargar en Beads
 
-- Confirmación de Fede de la lista y de sacar L34 como lote aparte (los 5 WEB-0x pasan a `lote/M-web`).
-- Regla "un solo lote abierto a la vez": L26 ya cerró (PR #676 mergeado a main). Falta definir el orden entre L33 (cuenta chica) y `lote/M-web`.
-- Decisiones del análisis: cortos en la web, definición de cuenta (entra en WEB-01).
+- Los cortos se muestran: WEB-01 y WEB-03 exponen `side`, y el diseño de `StopDistanceBar` para cortos se pide al designer.
+- Definición de cuenta (entra en WEB-01).
 - API key de FRED (WEB-11).
