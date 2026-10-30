@@ -7,6 +7,16 @@ from sqlalchemy.orm import Session
 from quantagent.models import ActivePosition, Environment, Fill, Order, OrderStatus, Position, SchedulerHeartbeat, Trade
 
 
+def crear_broker_alpaca_paper():
+    """Build the paper broker used by operational trading commands."""
+    from quantagent.strategy.assembler import StrategyAssembler
+
+    resolved = StrategyAssembler.from_profiles(
+        overrides={"broker_type": "alpaca_paper"}, environment=Environment.PAPER
+    )
+    return StrategyAssembler.BROKER_CONSTRUCTORS["alpaca_paper"](resolved)
+
+
 def consultar_valuacion_actual(broker, portfolios: list[dict]) -> dict:
     """Read AlpacaBroker's current snapshot, independently of the digest's --date.
 

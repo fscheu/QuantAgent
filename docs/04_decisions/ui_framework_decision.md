@@ -1,3 +1,5 @@
+# SUPERADO: reemplazado por [QuantAgent-e452.1-DC-web.md](./QuantAgent-e452.1-DC-web.md) (2026-10-30).
+
 # UI Framework Decision: Streamlit MVP → FastAPI+Angular Phase 2
 
 ## Decision Summary

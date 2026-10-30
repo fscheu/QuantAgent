@@ -1,0 +1,16 @@
+.qa-account-card,.qa-account-summary { display: grid; gap: var(--qa-space-3); min-width: 0; }
+.qa-account-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--qa-space-2); }
+.qa-account-heading h3 { margin: 0; font: var(--qa-heading-sm); }
+.qa-account-deltas { display: flex; flex-wrap: wrap; gap: var(--qa-space-3); }
+.qa-account-card footer { color: var(--qa-text-2); font: var(--qa-text-small); }
+.qa-account-no-data-card { align-content: start; }
+.qa-account-no-data-card > strong { font: var(--qa-text-small); }
+.qa-account-no-data-card > p { margin: calc(-1 * var(--qa-space-2)) 0 0; color: var(--qa-text-2); font: var(--qa-text-caption); }
+.qa-account-breakdown { display: flex; flex-wrap: wrap; gap: var(--qa-space-3); color: var(--qa-text-2); font: var(--qa-text-small); }
+.qa-account-breakdown span { display: grid; gap: var(--qa-space-1); }
+.qa-account-breakdown strong { color: var(--qa-text); }
+.qa-account-empty { display: grid; justify-items: start; gap: var(--qa-space-3); max-width: 680px; }
+.qa-account-empty h2,.qa-account-empty p { margin: 0; }
+.qa-account-empty-icon { color: var(--qa-text-2); font-size: var(--qa-type-xl); }
+.qa-account-check { padding: var(--qa-space-3); border-radius: var(--qa-radius-md); background: var(--qa-surface-sunken); color: var(--qa-text-2); font: var(--qa-text-small); }
+.qa-account-empty nav { display: flex; flex-wrap: wrap; gap: var(--qa-space-3); margin-top: var(--qa-space-2); }

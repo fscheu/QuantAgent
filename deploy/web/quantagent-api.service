@@ -1,0 +1,15 @@
+[Unit]
+Description=QuantAgent web API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/azureuser/paper-ops/QuantAgent
+Environment=PYTHONPATH=/home/azureuser/paper-ops/QuantAgent
+Environment=QUANTAGENT_DATABASE_URL=sqlite:////home/azureuser/web-ops/maestro.db
+Environment=NUMBA_CACHE_DIR=/tmp/numba-cache
+ExecStart=/home/azureuser/paper-ops/venv/bin/quantagent api serve --host 127.0.0.1 --port 8002
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

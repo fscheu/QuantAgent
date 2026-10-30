@@ -204,8 +204,8 @@ Reemplaza **todo** el contenido de Cuenta cuando `status: 'no_data'`.
 - **El eje horizontal es el precio** (izquierda = menor, derecha = mayor). Larga: stop a la izquierda, relleno crece desde la izquierda (`anchor: 'left'`). Corta: stop a la derecha, relleno crece desde la derecha (`anchor: 'right'`). En los dos casos el relleno va del stop al precio y mide el margen.
 - Distancia: larga `(precio − stop) / precio`; corta `(stop − precio) / precio`. Zonas iguales en los dos lados.
 - Zona `ok`: relleno text-2. `attention`: warn + triángulo + "Atención". `near`: neg + octógono + "Cerca". `breached` (precio ya pasó el stop: salto de apertura o recompra pendiente): pista con borde neg + octógono + "Stop superado". `none`: pista punteada + "Sin stop vigente".
-- Texto siempre presente: "Cerca · 1,5 % · USD 125". En tarjeta, la etiqueta del stop dice "Stop abajo · 520,00" o "Stop arriba · 81,50".
-- `role="meter"` con `aria-valuenow` y `aria-valuetext` ("a 6 por ciento del stop, stop por encima del precio").
+- Texto siempre presente cuando hay stop: zona + distancia + monto (por ejemplo, "Cerca · 1,5 % · USD 125", "Margen · 10,00 % · USD 100,00" o "Atención · 4,00 % · USD 40,00"). Si el precio superó el stop: "Stop superado · USD {amount}" ({amount} es cuánto lo pasó). Sin stop: "Sin stop vigente". En tarjeta, la etiqueta del stop dice "Stop abajo · 520,00" o "Stop arriba · 81,50".
+- `role="meter"` con `aria-valuenow` y `aria-valuetext`: en `ok`/`attention`/`near`, "a {pct} por ciento del stop, stop por debajo|encima del precio"; en `breached`, "precio por debajo|encima del stop"; en `none`, "Sin stop vigente".
 - Implementación: contenedor `display:flex; justify-content: flex-start | flex-end` según `anchor`, relleno con `width = fill`.
 
 ### `PositionCard` (teléfono) / `PositionRow` (≥ 1024 px)
@@ -249,6 +249,10 @@ Bloque de fecha (día de semana + número), título, `Badge` de tipo (Rebalanceo
 ---
 
 ## 4. Gráficos
+
+### `AccountSelect` y `DateStepper`
+
+Controles nativos accesibles de Cuenta: `AccountSelect` permite navegar entre cuentas; `DateStepper` cambia el día consultado y ofrece entrada de fecha.
 
 Biblioteca sugerida para todo salvo velas: **Recharts** (simple, SVG, buen soporte de React). Alternativa si hace falta más control: visx. Velas: **lightweight-charts** con `candleTheme()` de `tokens.ts`.
 
