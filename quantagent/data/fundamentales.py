@@ -184,7 +184,7 @@ def crear_snapshot_fundamentales(
     ciks, frames, sin_cik, con_cik, fallidos = mapa_tickers_cik(), {}, [], {}, []
     downloader_fn = downloader or descargar_facts_cik
     for t in sorted(set(tickers)):
-        cik = ciks.get(t.upper())
+        cik = ciks.get(t.upper()) or ciks.get(t.upper().replace(".", "-"))
         if cik is None:
             sin_cik.append(t)
         else:

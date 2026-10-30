@@ -130,6 +130,14 @@ def test_roe_equity_no_positivo_es_nan():
     assert all(pd.isna(_metricas(_filas_roe(equity=eq), ["2020-02-16"])["roe_4t"].iloc[0]) for eq in (0, -50))
 
 
+def test_snapshot_ticker_con_punto_usa_cik_con_guion(tmp_path):
+    """BRK.B se resuelve vía BRK-B (formato SEC) y se guarda con el ticker original."""
+    facts = {"facts": {"us-gaap": {"Revenues": {"units": {"USD": [{"form": "10-Q", "start": "2020-01-01", "end": "2020-03-31", "val": 100, "filed": "2020-04-15"}]}}}}}
+    with patch("quantagent.data.fundamentales.mapa_tickers_cik", return_value={"BRK-B": 1067983}):
+        manifest = crear_snapshot_fundamentales("test-snap", ["BRK.B"], base_dir=tmp_path, downloader=lambda cik: facts)
+    assert "BRK.B" in manifest["symbols"] and "BRK.B" not in manifest["sin_cik"]
+
+
 def test_snapshot_e2e(tmp_path):
     """(h) Integración: crear_snapshot_fundamentales (con un ticker que falla) y metricas_fundamentales."""
     facts = {
