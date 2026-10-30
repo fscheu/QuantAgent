@@ -1,7 +1,7 @@
 # QuantAgent-e452.1 · Arquitectura de la web
 
 - **Ticket:** WEB-01, `QuantAgent-e452.1`.
-- **Estado:** propuesta; las decisiones del ADR asociado quedan a confirmar por Fede, salvo cortos, ya decidido por Fede el 2026-10-30.
+- **Estado:** aprobado por Fede el 2026-10-30 (ver ADR).
 - **Alcance:** arquitectura de consulta para Inicio y Cuenta. Embudo queda diferido hasta que exista su registro de datos; no se habilitan operaciones desde la web.
 - **Referencias:** [ADR de la web](../04_decisions/QuantAgent-e452.1-DC-web.md), [design system](./web-design-system/README.md), [roadmap M-web](../02_planning/2026-10-28_roadmap_post_m5.md#3-m-web-aplicación-web-que-reemplaza-streamlit).
 
