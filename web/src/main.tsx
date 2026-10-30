@@ -9,15 +9,15 @@ import { App } from './App'
 import { ThemeProvider } from './ThemeContext'
 import './styles/tokens.css'
 
-if (import.meta.env.DEV) {
-  const { startMocks } = await import('./mocks/worker')
-  startMocks(window.location.search)
-}
+const mockMode = import.meta.env.DEV || new URLSearchParams(window.location.search).get('mock') === '1'
+const ready = mockMode
+  ? import('./mocks/worker').then(({ startMocks }) => { startMocks(window.location.search) })
+  : Promise.resolve()
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+void ready.then(() => ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ThemeProvider>
       <App />
     </ThemeProvider>
   </React.StrictMode>,
-)
+))
