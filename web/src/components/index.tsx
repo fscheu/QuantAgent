@@ -5,6 +5,9 @@ import './primitives.css';
 import helpTexts from '../content/help-texts.es.json';
 export { DataTable } from './DataTable';
 export type { Column, DataTableProps, Align, CardRole } from './DataTable';
+export { StopDistanceBar } from './StopDistanceBar';
+export type { StopDistanceBarProps } from './StopDistanceBar';
+export { PositionCard, PositionRow, positionColumns } from './Position';
 
 type CardProps = HTMLAttributes<HTMLElement> & { as?: 'div' | 'section' | 'article' | 'a'; href?: string; variant?: 'default' | 'dashed'; children: ReactNode };
 export function Card({ as = 'div', href, variant = 'default', className = '', children, ...props }: CardProps) {
