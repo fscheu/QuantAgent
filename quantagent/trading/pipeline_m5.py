@@ -5,6 +5,7 @@ sesión de decisión), separado de la DB ``local-data/m5.db`` de intents y órde
 Todas las fechas de decisión salen de ``as_of`` y la sesión NYSE cerrada.
 """
 
+import logging
 from decimal import Decimal
 from pathlib import Path
 
@@ -22,9 +23,11 @@ from quantagent.strategy.trade_intent import TradeIntent
 from quantagent.trading.bucket_m5 import CAPITAL_INICIAL, crear_position_sizer, crear_risk_manager
 from quantagent.trading.cartera_paper import sesiones_cerradas_nyse, ultima_sesion_cerrada_nyse
 from quantagent.trading.intent_persistence import save_trade_intent
+from quantagent.trading.narrativa_m5 import explicar_intent, guardar_narrativa, llm_por_defecto, nota_semanal
 from quantagent.trading.position_monitor import PositionMonitor
 from quantagent.trading.stop_management import propuesta_breakeven, propuesta_chandelier
 
+logger = logging.getLogger(__name__)
 UNIVERSO_M5 = tuple(PRIORS_M5["universo"])
 
 
@@ -42,8 +45,27 @@ def _panel_cierres(proveedor, sesiones):
     return pd.DataFrame(columnas).reindex(index=sesiones, columns=UNIVERSO_M5)
 
 
+def _resolver_narrador(narrador):
+    return llm_por_defecto() if narrador == "auto" else narrador
+
+
+def _narrativa_path(narrativa_path, regimen_path):
+    return narrativa_path or Path(regimen_path).parent / "m5-narrativa.csv"
+
+
+def _narrar_intent(intent, narrador, narrativa_path, regimen_path, fecha, simbolo, strategy_id):
+    """Texto del LLM sobre un intent ya guardado; nunca altera ni propaga errores al pipeline."""
+    try:
+        texto = explicar_intent(intent, _resolver_narrador(narrador))
+        guardar_narrativa(_narrativa_path(narrativa_path, regimen_path), "intent",
+                          f"{fecha.date()}:{simbolo}:{strategy_id}", texto)
+    except Exception:
+        logger.warning("Narrativa de intent M5 no guardada", exc_info=True)
+
+
 def correr_semanal(as_of, *, data_provider, db: Session | None = None,
-                   regimen_path="local-data/m5-regimen-semanal.csv"):
+                   regimen_path="local-data/m5-regimen-semanal.csv", narrador="auto",
+                   narrativa_path=None):
     """Calcula H1 al cierre semanal y hace upsert CSV por fecha, sin depender del reloj del sistema."""
     ultima = ultima_sesion_cerrada_nyse(as_of)
     sesiones = sesiones_cerradas_nyse(as_of, n_sesiones=504)
@@ -54,12 +76,23 @@ def correr_semanal(as_of, *, data_provider, db: Session | None = None,
         return None
     path = Path(regimen_path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    anterior = None
     if path.exists():
         previo = pd.read_csv(path, parse_dates=["fecha"])
+        previas = previo[previo["fecha"].dt.normalize() < ultima.normalize()]
+        if not previas.empty:
+            anterior = previas.sort_values("fecha").iloc[-1]
         tabla = pd.concat([previo[previo["fecha"].dt.normalize() != ultima.normalize()], fila])
     else:
         tabla = fila
     tabla.sort_values("fecha").to_csv(path, index=False)
+    try:
+        llm = _resolver_narrador(narrador)
+        texto = nota_semanal(fila.iloc[0], anterior, llm)
+        guardar_narrativa(_narrativa_path(narrativa_path, path), "nota_semanal",
+                          pd.Timestamp(fila.iloc[0]["fecha"]).date().isoformat(), texto)
+    except Exception:
+        logger.warning("Narrativa semanal M5 no guardada", exc_info=True)
     return fila.iloc[0].to_dict()
 
 
@@ -108,7 +141,7 @@ def _seguir_stops(db, broker, data_provider, panel, fecha):
 
 def correr_diario(as_of, *, data_provider, db: Session, broker,
                   portfolio_manager=None, regimen_path="local-data/m5-regimen-semanal.csv",
-                  estrategias=None):
+                  estrategias=None, narrador="auto", narrativa_path=None):
     """Evalúa arquetipos sobre ETFs habilitados; crea intents idempotentes y órdenes stop protegidas."""
     fecha = ultima_sesion_cerrada_nyse(as_of)
     timestamp = pd.Timestamp(as_of)
@@ -172,6 +205,7 @@ def correr_diario(as_of, *, data_provider, db: Session, broker,
                 record.created_at = record.updated_at = timestamp.to_pydatetime()
                 db.commit()
                 creados.append(record)
+                _narrar_intent(intent, narrador, narrativa_path, regimen_path, fecha, simbolo, strategy_id)
                 continue
             entrada = Order(symbol=simbolo, side=OrderSide.BUY, quantity=Decimal(str(qty)),
                             order_type=OrderType.STOP if intent.order_type == "stop" else OrderType.MARKET,
@@ -194,4 +228,5 @@ def correr_diario(as_of, *, data_provider, db: Session, broker,
             record.created_at = record.updated_at = timestamp.to_pydatetime()
             db.commit()
             creados.append(record)
+            _narrar_intent(intent, narrador, narrativa_path, regimen_path, fecha, simbolo, strategy_id)
     return creados
