@@ -53,10 +53,12 @@ def propuesta_invalidacion(ultimas_2: Sequence[Precio], lado: OrderSide) -> Prec
 
 def resolver_stop_posicion(symbol, ordenes, intents):
     """Prioriza stops de venta abiertos en broker y luego el último intent."""
+    def campo(order, name):
+        return getattr(getattr(order, name, None), "value", getattr(order, name, None))
+
     for order in ordenes:
-        campo = lambda name: getattr(getattr(order, name, None), "value", getattr(order, name, None))
-        if (getattr(order, "symbol", None) == symbol and campo("type") == "stop"
-                and campo("side") == "sell"):
+        if (getattr(order, "symbol", None) == symbol and campo(order, "type") == "stop"
+                and campo(order, "side") == "sell"):
             return getattr(order, "stop_price", None)
     for record in intents:
         intent = getattr(record, "intent", {}) or {}
