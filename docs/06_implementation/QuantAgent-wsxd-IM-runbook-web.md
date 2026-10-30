@@ -98,15 +98,15 @@ systemctl --user list-timers 'paper-cartera@*' 'paper-digest@*'
 
 ## 6. Cloudflare Access e ingress
 
-Propuesta de hostname: `quantagent.fedes.dev`. El hostname definitivo es `<HOSTNAME>`. Cambiar la ruta actual corta Streamlit en esa URL. **[OK Fede]**
+Propuesta de hostname: `quantagent.fedes.dev`. El hostname definitivo es `quantagent.fedes.dev`. Cambiar la ruta actual corta Streamlit en esa URL. **[OK Fede]**
 
 En Cloudflare Zero Trust, Fede debe:
 
 1. Ir a **Access > Applications > Add an application > Self-hosted**. **[OK Fede]**
-2. Crear la aplicación con el hostname `<HOSTNAME>`. **[OK Fede]**
+2. Crear la aplicación con el hostname `quantagent.fedes.dev`. **[OK Fede]**
 3. Crear una policy **Allow** cuyo selector incluya el email de Fede. **[OK Fede]**
 4. Elegir método de login **One-time PIN** o **Google** y guardar la aplicación/policy. **[OK Fede]**
-5. En `/etc/cloudflared/config.yml`, reemplazar la regla `quantagent.fedes.dev -> http://localhost:8501` por el bloque de [cloudflared-ingress.yml.example](../../deploy/web/cloudflared-ingress.yml.example), sustituyendo `<HOSTNAME>` por el hostname confirmado. Preservar el resto de la configuración y el `ingress` final de captura. **[OK Fede]**
+5. En `/etc/cloudflared/config.yml`, reemplazar la regla `quantagent.fedes.dev -> http://localhost:8501` por el bloque de [cloudflared-ingress.yml.example](../../deploy/web/cloudflared-ingress.yml.example), sustituyendo `quantagent.fedes.dev` por el hostname confirmado. Preservar el resto de la configuración y el `ingress` final de captura. **[OK Fede]**
 6. Mover o retirar la ruta vieja de Streamlit asociada a ese hostname; al reiniciar el tunnel, esa URL deja de servir Streamlit. **[OK Fede]**
 7. Reiniciar el servicio del tunnel: `sudo systemctl restart cloudflared`. **[OK Fede]**
 
@@ -118,7 +118,7 @@ Desde la VM, comprobar que la API responde localmente:
 curl --fail http://127.0.0.1:8002/api/accounts
 ```
 
-Desde fuera de una sesión Access, `https://<HOSTNAME>/api/accounts` debe quedar bloqueado o redirigir al login de Access. Tras completar el login autorizado de Fede, la misma URL debe responder JSON con las cuentas configuradas. Abrir `https://<HOSTNAME>/` en el navegador y comprobar que carga la web y sus datos.
+Desde fuera de una sesión Access, `https://quantagent.fedes.dev/api/accounts` debe quedar bloqueado o redirigir al login de Access. Tras completar el login autorizado de Fede, la misma URL debe responder JSON con las cuentas configuradas. Abrir `https://quantagent.fedes.dev/` en el navegador y comprobar que carga la web y sus datos.
 
 ## 8. Rollback
 

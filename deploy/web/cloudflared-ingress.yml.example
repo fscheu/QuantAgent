@@ -1,2 +1,2 @@
-    - hostname: <HOSTNAME>
+    - hostname: quantagent.fedes.dev
       service: http://127.0.0.1:8002
