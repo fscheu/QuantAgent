@@ -3,6 +3,7 @@
 > Terms are defined in the [glossary](../../glossary.md).
 
 - [Command overview](index.md)
+- [API commands](api.md)
 - [Backtest commands](backtest.md)
 - [Backtest data commands](backtest/data.md)
 - [Backtest stock data commands](backtest/data/acciones.md)
