@@ -20,4 +20,4 @@ Run `python -m quantagent.cli trading digest --date YYYY-MM-DD` for the configur
 
 To create a snapshot, run `python -m quantagent.cli data snapshot create --name <name> --symbols SPY --start YYYY-MM-DD --end YYYY-MM-DD`. It downloads from Yahoo and prints `Snapshot <name> creado: <symbols> símbolos, <rows> filas`. Use a completed session as the end date; snapshots are immutable.
 
-Paper deployment setup and its approval gates are described in the [paper operations runbook](../06_implementation/QuantAgent-av1p.5-IM-runbook-paper-ops.md). This manual does not activate services or run operational procedures.
+Paper trading setup is described in the [paper operations runbook](../06_implementation/QuantAgent-av1p.5-IM-runbook-paper-ops.md). Web API deployment, Cloudflare Access, and rollback steps are described in the [web deployment runbook](../06_implementation/QuantAgent-wsxd-IM-runbook-web.md). These runbooks do not activate services or run operational procedures.
