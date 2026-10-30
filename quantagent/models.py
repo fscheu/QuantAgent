@@ -476,3 +476,22 @@ class CalendarEvent(Base):
     source = Column(String(20), nullable=False, default="alpaca")
 
     __table_args__ = (UniqueConstraint("date", "kind", "source", name="uq_calendar_date_kind_source"),)
+
+
+class Event(Base):
+    """Append-only record of an event shown in the activity feed."""
+
+    __tablename__ = "events"
+
+    id = Column(Integer, primary_key=True)
+    type = Column(String(40), nullable=False)
+    severity = Column(String(20), nullable=False)
+    occurred_at = Column(DateTime(timezone=True), nullable=False)
+    account_id = Column(String(100), nullable=True)
+    entity_id = Column(String(100), nullable=True)
+    payload = Column(JSON, nullable=False)
+
+    __table_args__ = (
+        Index("ix_events_occurred_at", "occurred_at"),
+        Index("ix_events_account_occurred_at", "account_id", "occurred_at"),
+    )
