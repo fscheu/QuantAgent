@@ -20,9 +20,14 @@ Usage: quantagent api serve [OPTIONS]
   Serve the read-only QuantAgent API.
 
 Options:
-  --host TEXT  Interface address to bind.  [default: 127.0.0.1]
+  --host TEXT     Interface address to bind.  [default: 127.0.0.1]
   --port INTEGER  TCP port to bind.  [default: 8000]
-  --help  Show this message and exit.
+  --help          Show this message and exit.
 
   Example: quantagent api serve --port 8000
 ```
+
+Options and defaults:
+
+- `--host` — default: `'127.0.0.1'`
+- `--port` — default: `8000`
