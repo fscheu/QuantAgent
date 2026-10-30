@@ -1,7 +1,16 @@
-# QuantAgent Web — traspaso de diseño a código (v0.1)
+# QuantAgent Web — traspaso de diseño a código (v0.2)
 
 Paquete para empezar a programar el frontend (React + TypeScript) a partir del canvas de diseño.
-Canvas: https://claude.ai/artifact/G3CGyvdzFTek2bSSRTr1uc (páginas: Sistema de diseño, Cuenta, Embudo, Inicio).
+Canvas: https://claude.ai/artifact/G3CGyvdzFTek2bSSRTr1uc (páginas: Sistema de diseño, Cuenta, Embudo, Inicio, v0.2 · Ajustes).
+
+## Cambios en v0.2 (30/10/2026, revisión contra el backend real)
+
+1. **Posiciones cortas**: `Position.side`; `stopDistance(side, …)` con zona `breached`; barra de stop con eje de precio (la corta crece desde la derecha); badge Larga/Corta; P&L de cortas con línea explicativa. Decisión #6 cerrada.
+2. **Estados de orden**: `cancelled` (dos L) y `expired`; badge y chip "Vencidas", con explicación según `time_in_force`.
+3. **Cuenta sin datos**: `AccountSummary` pasa a ser `active | no_data`; nuevo `AccountNoData` en Cuenta, variante en `AccountCard` y en `AccountSelect`. Nunca ceros.
+4. **`DataTable` genérica**: orden por columna con `aria-sort`, numéricos a la derecha, casillas con máximo, estados, densidades y versión en tarjetas. `PositionRow` y `OrderRow` pasan a construirse sobre ella.
+
+Archivos tocados: `api-types.ts`, `config.ts`, `help-texts.es.json`, `COMPONENTES.md`, `PANTALLAS.md`, `EVENTOS.md`, `DECISIONES.md`, `README.md`. Sin cambios: `tokens.css`, `tokens.ts`, `format.ts`.
 
 ## Contenido
 
@@ -29,7 +38,7 @@ Canvas: https://claude.ai/artifact/G3CGyvdzFTek2bSSRTr1uc (páginas: Sistema de 
 
 1. **Base**: Vite + React + TS, `tokens.css`, fuentes Geist y Geist Mono servidas localmente desde npm (por ejemplo, los paquetes de Fontsource; la app corre en Tailscale, conviene no depender de Google Fonts). Tema por `data-theme`, densidad por `data-density`.
 2. **Catálogo de componentes** (Storybook o Ladle) que reproduzca las hojas 03 y 04 en claro y oscuro: `Num`, `Delta`, `Badge`, `HelpTip`, `Notice`, `Skeleton`, estados vacío/error, `SegmentedControl`, `Chip`, navegación.
-3. **Componentes de dominio**: `StopDistanceBar`, `PositionCard/Row`, `OrderCard/Row` + `RejectReason`, `AccountCard`, `FunnelChart`, `HypothesisCard`.
+3. **`DataTable`** y después los componentes de dominio: `StopDistanceBar` (larga y corta), `PositionCard/Row`, `OrderCard/Row` + `RejectReason`, `AccountCard` (con variante sin datos), `AccountNoData`, `FunnelChart`, `HypothesisCard`.
 4. **Mocks** (MSW) con los datos del canvas, que cuadran entre pantallas.
 5. **Pantallas**: Cuenta → Embudo → Inicio, primero con mocks y después con la API real.
 6. **Backend**: tabla `events` + `/api/feed`, jobs de calendario (Alpaca primero, FRED después).

@@ -12,17 +12,47 @@ export const stopConfig = {
   attentionPct: 5,
 } as const;
 
-export type StopZone = 'near' | 'attention' | 'ok' | 'none';
+export type PositionSide = 'long' | 'short';
+export type StopZone = 'breached' | 'near' | 'attention' | 'ok' | 'none';
 
-/** Posiciones largas: distancia = (precio − stop) / precio. */
-export function stopDistance(price: number, stop: number | null, qty: number) {
-  if (stop == null) return { zone: 'none' as StopZone, pct: null, amount: null, fill: 0 };
-  const pct = ((price - stop) / price) * 100;
-  const amount = (price - stop) * qty;
-  const zone: StopZone = pct < stopConfig.nearPct ? 'near' : pct < stopConfig.attentionPct ? 'attention' : 'ok';
-  const fill = Math.max(0, Math.min(1, pct / stopConfig.scalePct));
-  return { zone, pct, amount, fill };
+export interface StopDistance {
+  zone: StopZone;
+  /** % de distancia al stop. Negativo solo si el precio ya pasó el stop ('breached'). */
+  pct: number | null;
+  /** Margen en USD (|precio − stop| × cantidad). En 'breached' es cuánto lo pasó. */
+  amount: number | null;
+  /** 0–1: largo del relleno de la barra (escala fija 0–scalePct). */
+  fill: number;
+  /** La barra crece desde la izquierda (larga: stop abajo) o desde la derecha (corta: stop arriba). */
+  anchor: 'left' | 'right';
 }
+
+/**
+ * Larga: stop debajo del precio → distancia = (precio − stop) / precio.
+ * Corta: stop encima del precio → distancia = (stop − precio) / precio.
+ * Las zonas se leen igual en los dos lados. `qty` siempre positiva.
+ */
+export function stopDistance(side: PositionSide, price: number, stop: number | null, qty: number): StopDistance {
+  const anchor = side === 'short' ? 'right' : 'left';
+  if (stop == null) return { zone: 'none', pct: null, amount: null, fill: 0, anchor };
+  const pct = ((side === 'short' ? stop - price : price - stop) / price) * 100;
+  const amount = Math.abs(price - stop) * Math.abs(qty);
+  if (pct <= 0) return { zone: 'breached', pct, amount, fill: 0, anchor };
+  const zone: StopZone = pct < stopConfig.nearPct ? 'near' : pct < stopConfig.attentionPct ? 'attention' : 'ok';
+  const fill = Math.min(1, pct / stopConfig.scalePct);
+  return { zone, pct, amount, fill, anchor };
+}
+
+/** P&L no realizado según el lado (por si el backend no lo manda calculado). */
+export function unrealizedPl(side: PositionSide, entry: number, price: number, qty: number) {
+  const perShare = side === 'short' ? entry - price : price - entry;
+  return { amount: perShare * Math.abs(qty), pct: (perShare / entry) * 100 };
+}
+
+export const accountConfig = {
+  /** Cada cuánto el backend vuelve a consultar una cuenta sin datos (minutos). PROVISORIO */
+  noDataRecheckMinutes: 15,
+} as const;
 
 export const dataConfig = {
   /** Un dato se marca "desactualizado" si supera esto (minutos), en horario de mercado. PROVISORIO */
@@ -51,6 +81,15 @@ export const funnelConfig = {
   defaultCycle: 'all' as 'all' | 'latest',
   /** Período por defecto (días). */
   defaultPeriodDays: 90,
+} as const;
+
+export const tableConfig = {
+  /** Debajo de este ancho, DataTable se muestra como tarjetas. */
+  cardBreakpoint: 1024,
+  /** Filas esqueleto mientras carga. */
+  skeletonRows: 5,
+  /** Máximo de filas tildadas cuando la selección alimenta un gráfico (series simultáneas). */
+  maxSelectedForChart: 5,
 } as const;
 
 export const homeConfig = {

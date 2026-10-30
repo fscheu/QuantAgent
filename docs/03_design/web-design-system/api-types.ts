@@ -25,9 +25,30 @@ export interface AccountRef {
   env: Env;
 }
 
-export interface AccountSummary extends AccountRef, Freshness {
+/**
+ * Una cuenta puede existir en la configuración sin datos todavía
+ * (por ejemplo, Live antes de abrirse). En ese caso NO se mandan ceros:
+ * se manda `status: 'no_data'` y el cliente muestra el estado "Sin datos todavía".
+ */
+export type AccountSummary = AccountSummaryActive | AccountSummaryNoData;
+
+export interface AccountSummaryNoData extends AccountRef {
+  status: 'no_data';
+  /** Por qué no hay datos. 'unknown' si el backend no lo puede distinguir. */
+  no_data_reason: 'not_opened' | 'not_funded' | 'unknown';
+  /** Última vez que el backend consultó al broker por esta cuenta. */
+  checked_at: string;
+  /** Próxima consulta programada (opcional). */
+  next_check_at: string | null;
+}
+
+export interface AccountSummaryActive extends AccountRef, Freshness {
+  status: 'active';
   equity: number;
-  invested: number;
+  /** Valor de mercado de las posiciones largas (positivo). */
+  long_value: number;
+  /** Valor de mercado de las posiciones cortas, en absoluto (positivo). */
+  short_value: number;
   cash: number;
   day_change: number;
   day_change_pct: number;
@@ -40,22 +61,31 @@ export interface AccountSummary extends AccountRef, Freshness {
   spark_30d: number[] | null;         // mini gráfico de Inicio
 }
 
+export type PositionSide = 'long' | 'short';
+
 export interface Position {
   symbol: string;
   description: string | null;         // 'ETF S&P 500'
+  side: PositionSide;
+  /** Siempre positiva. El broker informa negativa en cortas: el backend la normaliza. */
   qty: number;
   avg_entry_price: number;
   current_price: number;
+  /** En absoluto (positivo) también en cortas. */
   market_value: number;
+  /** Ya con el signo correcto según el lado: en una corta, gana si el precio baja. */
   unrealized_pl: number;
   unrealized_pl_pct: number;
-  stop_price: number | null;          // null → "Sin stop vigente"
+  /** Larga: por debajo del precio. Corta: por encima. null → "Sin stop vigente". */
+  stop_price: number | null;
   opened_at: string;
 }
 
 export type OrderSide = 'buy' | 'sell';
 export type OrderType = 'market' | 'limit' | 'stop' | 'stop_limit';
-export type OrderStatus = 'filled' | 'partially_filled' | 'pending' | 'rejected' | 'canceled';
+/** Ortografía del backend: 'cancelled' con dos L. */
+export type OrderStatus = 'filled' | 'partially_filled' | 'pending' | 'rejected' | 'cancelled' | 'expired';
+export type TimeInForce = 'day' | 'gtc' | 'ioc' | 'fok' | 'opg' | 'cls';
 
 export interface Order {
   id: string;
@@ -68,7 +98,11 @@ export interface Order {
   status: OrderStatus;
   filled_qty: number;
   filled_avg_price: number | null;
+  /** Para explicar una vencida ("orden del día: venció al cierre"). */
+  time_in_force: TimeInForce | null;
   submitted_at: string;
+  cancelled_at: string | null;
+  expired_at: string | null;
   /** Motivo en lenguaje claro (traducido por el backend). null → "Motivo no disponible". */
   reject_reason: string | null;
   /** Explicación con datos ("necesitaba USD 2.742,00; había USD 1.910,43"). */

@@ -19,9 +19,10 @@ Criterio para que un hecho entre: **cambia algo que deberías saber o revisar**.
 | Tipo | Severidad | Se dispara cuando… | Agrupa por | Título (plantilla) | Subtítulo | Lleva a |
 |---|---|---|---|---|---|---|
 | `drawdown_limit` | crítica | El drawdown de una cuenta supera su límite | cuenta | "Drawdown sobre el límite en {cuenta}" | "−8,4 % desde el máximo; límite 8 %" | Cuenta |
-| `stop_triggered` | advertencia | Se ejecuta una venta por stop | cuenta + día | "Saltó el stop de {símbolo}" / "Saltaron {n} stops en {cuenta}" | "Vendidas 18 a 468,00 · P&L −255,24" | Cuenta › órdenes |
+| `stop_triggered` | advertencia | Se ejecuta una venta por stop | cuenta + día | "Saltó el stop de {símbolo}" / "Saltaron {n} stops en {cuenta}" | Larga: "Vendidas 18 a 468,00 · P&L −255,24" · Corta: "Recompradas 40 a 81,50 · P&L −184,00" | Cuenta › órdenes |
 | `order_rejected` | advertencia | El broker rechaza una orden | cuenta + día | "{n} órdenes rechazadas en {cuenta}" | Motivos resumidos ("Poder de compra, fracciones y 1 sin motivo") | Cuenta › órdenes, filtro Rechazadas |
-| `stop_near` | advertencia | Una posición **entra** en zona "cerca" (< 2 %) | posición | "{símbolo} quedó a {pct} del stop" | "{cuenta} · stop {stop} · hoy {precio}" | Cuenta › posiciones |
+| `stop_near` | advertencia | Una posición (larga o corta) **entra** en zona "cerca" (< 2 %) | posición | "{símbolo} ({lado}) quedó a {pct} del stop" | "{cuenta} · stop {arriba\|abajo} {stop} · hoy {precio}" | Cuenta › posiciones |
+| `stop_breached` | advertencia | El precio pasó el stop y la posición sigue abierta | posición | "{símbolo}: el precio pasó el stop" | "Stop {stop} · hoy {precio} · cierre pendiente" | Cuenta › posiciones |
 | `shadow_divergence` | advertencia | Broker y sombra difieren más que el umbral | cuenta | "Sombra desalineada en {cuenta}" | "Difieren {gap} desde {fecha}" | Cuenta |
 | `data_stale` | advertencia | Una cuenta supera el umbral sin datos | cuenta | "Sin datos de {cuenta} desde hace {t}" | "Último dato {hora} ART" | Cuenta |
 | `alarm_resolved` | neutro | Se cierra una alarma | alarma | "Se resolvió: {título}" | "Duró {duración}" | Cuenta |
@@ -32,7 +33,7 @@ Criterio para que un hecho entre: **cambia algo que deberías saber o revisar**.
 | `position_closed` | neutro | Se cierra una posición entera | posición | "Se cerró {símbolo}" | "P&L realizado {monto} · {pct}" | Cuenta |
 | `dividend_received` | neutro | Entra un dividendo | cuenta + día | "Cobraste dividendos de {símbolos}" | "Neto {monto} · retenido {monto}" | Cuenta › dividendos |
 
-Fuera del feed a propósito: aperturas de posición (ya se ven como órdenes ejecutadas), hipótesis descartadas en etapas 0–2 (van al resumen de ciclo), variaciones de precio.
+Fuera del feed a propósito: aperturas de posición (ya se ven como órdenes ejecutadas), hipótesis descartadas en etapas 0–2 (van al resumen de ciclo), variaciones de precio, órdenes canceladas o vencidas (no requieren acción; se ven en Cuenta) y cuentas sin datos (no es un problema).
 
 ### Reglas de presentación
 

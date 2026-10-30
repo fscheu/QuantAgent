@@ -14,12 +14,13 @@ Rutas sugeridas: `/` (Inicio), `/cuenta/:accountId`, `/embudo`, `/hipotesis/:id`
 | 0 | Encabezado: "Inicio" + estado del mercado ("abierto, cierra 16:00 ET (17:00 ART)") + ajustes (teléfono) | — | `GET /api/market/clock` → `MarketClock` |
 | 1 | Estado general | `HomeStatusBanner` | `GET /api/home/status` → `HomeStatus` (derivado de alarmas activas) |
 | 2 | Desde tu última visita | `FeedList` | `GET /api/feed?since=` → `FeedEvent[]` (ver EVENTOS.md) |
-| 3 | Cuentas | `AccountCard` × n | `GET /api/accounts` → `AccountSummary[]` |
+| 3 | Cuentas | `AccountCard` × n (variante `no_data` si corresponde) | `GET /api/accounts` → `AccountSummary[]` |
 | 4 | Embudo | `CycleSummaryCard` compacta | `GET /api/funnel/cycles/latest` → `CycleSummary` |
 | 5 | Próximos eventos | `EventList` | `GET /api/calendar?days=14` → `CalendarEvent[]` |
 
 Escritorio: banner a todo el ancho → 3 cuentas en grilla → fila de 3 (feed, embudo, eventos).
 **Sin total general** de cuentas (no mezclar paper con live).
+Una cuenta `no_data` aparece como tarjeta punteada "Sin datos todavía" y **no** cuenta como problema en el estado general ni genera eventos en el feed.
 
 ---
 
@@ -30,17 +31,21 @@ Escritorio: banner a todo el ancho → 3 cuentas en grilla → fila de 3 (feed, 
 | 0 | `AccountSelect` + "Actualizado 15:32 ART · hace 4 min" | | `GET /api/accounts` |
 | 1 | Resumen | `AccountSummaryCard` | `GET /api/accounts/:id` → `AccountSummary` |
 | 2 | Alarmas activas | `Notice` × n (hoy: hueco "Próximamente") | `AccountSummary.alarms` |
-| 3 | Posiciones | línea de términos con `HelpTip` + `PositionCard` × n | `GET /api/accounts/:id/positions` → `Position[]` |
-| 4 | Órdenes | `DateStepper` + `ChipGroup` + `OrderCard` agrupadas | `GET /api/accounts/:id/orders?date=YYYY-MM-DD` → `Order[]` |
+| 3 | Posiciones (largas y cortas mezcladas) | línea de términos con `HelpTip` + `PositionCard` × n con `Badge long\|short` | `GET /api/accounts/:id/positions` → `Position[]` |
+| 4 | Órdenes | `DateStepper` + `ChipGroup` (Todas, Rechazadas, Pendientes, Ejecutadas, Canceladas, Vencidas) + `OrderCard` agrupadas | `GET /api/accounts/:id/orders?date=YYYY-MM-DD` → `Order[]` |
 | 5 | Curva de valor · próximamente | `EquityChart` + `SegmentedControl` rango | `GET /api/accounts/:id/equity?range=1W\|1M\|3M\|YTD\|ALL` → `EquityPoint[]` |
 | 6 | Exposición por sector · próximamente | `DivergingBar` | `GET /api/accounts/:id/exposure` → `SectorExposure[]` |
 | 7 | Dividendos · próximamente | `MetricCard` × 3 + lista | `GET /api/accounts/:id/dividends?month=YYYY-MM` → `Dividend[]` |
 
-Escritorio: resumen (360 px) + curva lado a lado → tabla de posiciones → órdenes (tabla) + columna derecha (exposición, dividendos).
+Escritorio: resumen (360 px) + curva lado a lado → tabla de posiciones (con columna Lado) → órdenes (tabla) + columna derecha (exposición, dividendos).
 
-Estados diseñados (tablero "Cuenta · Estados"): cargando, error API, cuenta vacía, desactualizado + alarma (Live, con orden rechazada por "Mercado cerrado").
+Resumen: valor, hoy, semana; pie con Largo · Corto (si hay cortas) · Efectivo · Órdenes de hoy.
 
-Filtro de órdenes: chips Todas / Rechazadas / Pendientes / Ejecutadas / Canceladas, con contador. Las rechazadas van arriba incluso con "Todas".
+Estados diseñados: cargando, error API, cuenta vacía (tiene datos, sin actividad), desactualizado + alarma (tablero "Cuenta · Estados") y **cuenta sin datos** (v0.2, tableros 3: `AccountNoData` reemplaza toda la pantalla; nada de ceros).
+
+Filtro de órdenes: chips Todas / Rechazadas / Pendientes / Ejecutadas / Canceladas / Vencidas, con contador. Las rechazadas van arriba incluso con "Todas". Las vencidas explican el motivo (orden del día al cierre) en la misma tarjeta.
+
+Posiciones cortas: badge "Corta", barra de stop que crece desde la derecha (stop arriba) y, en teléfono, una línea "Gana si el precio baja…" / "Pierde si el precio sube…".
 
 ---
 
@@ -54,8 +59,14 @@ Filtro de órdenes: chips Todas / Rechazadas / Pendientes / Ejecutadas / Cancela
 | 3 | Por qué cayeron | `DropReasons` | `Funnel.drop_reasons` |
 | 4 | Hipótesis | `ChipGroup` (Activas / Descartadas / Todas / Etapa) + `HypothesisCard` × n | `GET /api/hypotheses?status=&stage=&cycle=` → `Hypothesis[]` |
 
-Escritorio: embudo + último ciclo lado a lado → motivos en grilla de 3 → hipótesis en grilla de 3.
+Escritorio: embudo + último ciclo lado a lado → motivos en grilla de 3 → hipótesis en grilla de 3 (cuando haya muchas, la lista pasa a `DataTable` con columnas Nombre · Etapa · Métrica · Fecha; ver DECISIONES.md #10).
 Orden de hipótesis: etapa más avanzada primero, luego fecha descendente.
+
+---
+
+## Mercado (fase posterior) — lo que ya está definido
+
+El patrón "comparar activos" usa `DataTable` con casillas (máximo 5 tildadas), muestra de serie junto al símbolo y orden por columna; las filas tildadas alimentan `CumulativeChart` con el mismo color y trazo. En teléfono, tarjetas con casilla y selector "Ordenar por".
 
 ---
 

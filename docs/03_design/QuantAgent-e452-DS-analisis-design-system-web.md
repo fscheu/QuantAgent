@@ -1,7 +1,7 @@
 # QuantAgent-e452 · Análisis del design system de la web contra L34
 
 - **Fecha:** 2026-10-30. **Epic:** `QuantAgent-e452` (L34 web-cuenta, WEB-01 a WEB-05).
-- **Paquete analizado:** `docs/03_design/web-design-system/` (v0.1, generado en Claude Design a partir del prompt `docs/02_planning/2026-10-30_prompt_claude_design_m_web.md`). Canvas: https://claude.ai/artifact/G3CGyvdzFTek2bSSRTr1uc
+- **Paquete analizado:** `docs/03_design/web-design-system/` (v0.1; el 2026-10-30 se reemplazó por v0.2 con los ajustes de §5: cortos, `expired`/`cancelled`, cuenta sin datos y `DataTable`; el análisis de abajo describe v0.1, generado en Claude Design a partir del prompt `docs/02_planning/2026-10-30_prompt_claude_design_m_web.md`). Canvas: https://claude.ai/artifact/G3CGyvdzFTek2bSSRTr1uc
 - **Alcance de este documento:** solo análisis. No cambia código ni tickets. Los archivos del paquete se copiaron tal cual, sin edición.
 
 ## 1. Qué cubre el paquete

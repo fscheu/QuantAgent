@@ -62,6 +62,27 @@
     "title": "Paper / Live",
     "body": "Paper: cuenta simulada del broker, dinero de mentira con precios reales. Live: dinero real."
   },
+  "short_position": {
+    "title": "Posición corta",
+    "body": "Se vendió algo prestado esperando que baje. Gana si el precio baja y pierde si sube. Por eso el stop queda por encima del precio: si sube hasta ahí, se recompra para cortar la pérdida.",
+    "example": "{symbol}: vendida a {entry}, hoy {price}. {pl}."
+  },
+  "stop_breached": {
+    "title": "Stop superado",
+    "body": "El precio ya pasó el stop pero la posición sigue abierta: puede ser un salto de apertura o que la orden de cierre todavía no se ejecutó."
+  },
+  "order_expired": {
+    "title": "Orden vencida",
+    "body": "La orden terminó su plazo sin ejecutarse. Por ejemplo, una orden “del día” que no llegó a su precio antes del cierre (16:00 ET). No es un error."
+  },
+  "order_cancelled": {
+    "title": "Orden cancelada",
+    "body": "La orden se anuló antes de ejecutarse, por decisión del sistema (por ejemplo, al reemplazarla por otra)."
+  },
+  "account_no_data": {
+    "title": "Cuenta sin datos",
+    "body": "La cuenta está en la configuración, pero el broker todavía no informó nada: no se abrió o no tiene fondos. Se vuelve a consultar sola."
+  },
   "rebalance": {
     "title": "Rebalanceo",
     "body": "Momento programado en que una estrategia ajusta sus posiciones para volver a los pesos que define."
