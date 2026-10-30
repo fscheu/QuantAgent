@@ -13,6 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from quantagent import settings
 from quantagent.digest import build_digest
 from quantagent.digest_datos import consultar_datos_cartera, consultar_datos_paper, consultar_valuacion_actual
+from quantagent.digest_m5 import build_digest_m5, consultar_datos_m5
 from quantagent.fabrica.cartera import leer_sombra
 from quantagent.fabrica.chequeos_paper import comparar_pesos, reportar_dividendos, reportar_rechazos
 from quantagent.models import Environment, Position
@@ -71,16 +72,37 @@ def pre_apertura() -> None:
     click.echo("Preapertura verificada: todas las posiciones tienen stop de venta abierto.")
 
 
-@trading_group.command("digest", help="Show the daily paper trading digest.")
+@trading_group.command("digest", help="Show the daily paper trading digest.",
+                       epilog="Example: quantagent trading digest --bucket m5 --date 2026-10-29")
 @click.argument("archivo", required=False, type=click.File("r", encoding="utf-8"))
 @click.option("--date", "digest_date", type=click.DateTime(formats=["%Y-%m-%d"]), help="Digest date in YYYY-MM-DD format.")
-@click.option("--db", type=click.Path(dir_okay=False), help="SQLite file; defaults to DATABASE_URL.")
+@click.option("--bucket", type=click.Choice(["m5"]), help="Trading bucket for the digest.")
+@click.option("--db", type=click.Path(dir_okay=False), help="SQLite file; M5 defaults to local-data/m5.db, otherwise DATABASE_URL.")
 @click.option("--shadow", type=click.Path(dir_okay=False), help="JSON file with shadow weights.")
 @click.option("--portfolio", help="Dedicated portfolio for positions, executions, and current Alpaca valuation.")
 @click.option("--dividendos-alpaca", is_flag=True, help="Read Alpaca dividends for the selected date.")
 @click.option("--sin-dividendos", is_flag=True, help="Disable the Alpaca dividend query.")
-def trading_digest(archivo, digest_date, db: str | None, shadow: str | None, portfolio: str,
+def trading_digest(archivo, digest_date, bucket: str | None, db: str | None, shadow: str | None, portfolio: str,
                    dividendos_alpaca: bool, sin_dividendos: bool) -> None:
+    if bucket:
+        if digest_date is None:
+            raise click.UsageError("Provide --date YYYY-MM-DD.")
+        previous_url = os.environ.get("DATABASE_URL")
+        previous_settings_url = settings.DATABASE_URL
+        try:
+            db_path = db or "local-data/m5.db"
+            os.environ["DATABASE_URL"] = f"sqlite:///{os.path.abspath(db_path)}"
+            datos = {}
+            with utils.session_scope() as session:
+                datos = consultar_datos_m5(session, digest_date.date())
+            click.echo(build_digest_m5(digest_date.date(), datos))
+        finally:
+            settings.DATABASE_URL = previous_settings_url
+            if previous_url is None:
+                os.environ.pop("DATABASE_URL", None)
+            else:
+                os.environ["DATABASE_URL"] = previous_url
+        return
     if archivo:
         data = json.load(archivo)
         differences = comparar_pesos(data["paper_weights"], data["shadow_weights"])
