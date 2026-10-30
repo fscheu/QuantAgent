@@ -3,7 +3,7 @@
 > Terms are defined in the [glossary](../../glossary.md).
 
 - [Command overview](index.md)
-- [API commands](api.md) (serve the API, synchronize the Alpaca market calendar, and manage accounts)
+- [API commands](api.md) (serve the API, export its OpenAPI contract, synchronize the Alpaca market calendar, and manage accounts)
 - [Account commands](api/accounts.md)
 - [Backtest commands](backtest.md)
 - [Backtest data commands](backtest/data.md)
