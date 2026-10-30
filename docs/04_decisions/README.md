@@ -7,6 +7,7 @@ This folder contains architectural decision records (ADR-like entries) documenti
 Agents working in this repository should review decision documents chronologically to understand the evolution of technical choices:
 
 ### Current Decisions
+- [QuantAgent-e452.1-DC-web.md](./QuantAgent-e452.1-DC-web.md) - Arquitectura de la web: FastAPI + React, cuentas, fechas, contrato y solo lectura (propuesta; escalo para Fede)
 - [ui_framework_decision.md](./ui_framework_decision.md) - UI framework selection (Streamlit vs alternatives)
 - [QuantAgent-iuf-DC-datos-m2.md](./QuantAgent-iuf-DC-datos-m2.md) - Datos reales de M2: ETFs diarios, 2 activos en 4h, fuentes y dónde vive el snapshot (propuesta)
 - [2026-10-ADR-backtest-engine-propio-vs-terceros.md](./2026-10-ADR-backtest-engine-propio-vs-terceros.md) - ADR: Engine de backtesting propio vs. alternativas de terceros (QuantAgent-lcv)

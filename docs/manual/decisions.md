@@ -4,6 +4,7 @@
 
 | Decision | Date | Record |
 |---|---|---|
+| Web architecture: FastAPI, React, API account model, and read-only access | 2026-10-30 (proposal) | [Decision](../04_decisions/QuantAgent-e452.1-DC-web.md) |
 | Decision log index | Date not applicable | [Source index](../04_decisions/README.md) |
 | SHORT zero-quantity residue in backtests | 2026-07-01 | [Decision](../04_decisions/2026-07-01-short-zero-qty-backtest-residue.md) |
 | QuantConnect and LEAN evaluation | 2026-10-13 | [Decision](../04_decisions/2026-10-12-DC-quantconnect-y-pivot-lean.md) |
