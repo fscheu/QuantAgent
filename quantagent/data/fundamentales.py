@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple
@@ -15,6 +17,7 @@ from quantagent.data.snapshot import load_manifest, read_snapshot, write_snapsho
 
 SEC_USER_AGENT = "QuantAgent Research admin@quantagent.dev"
 SEC_TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
+CIK_HISTORICOS_CSV = Path(__file__).resolve().parent / "cik_historicos.csv"
 SEC_FACTS_URL_TEMPLATE = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json"
 
 _TAX_BT = [
@@ -49,8 +52,20 @@ def mapa_tickers_cik() -> Dict[str, int]:
 def descargar_facts_cik(cik: int) -> dict:
     """Descarga el JSON companyfacts de un CIK desde la API de la SEC."""
     req = urllib.request.Request(SEC_FACTS_URL_TEMPLATE.format(cik=cik), headers={"User-Agent": SEC_USER_AGENT})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    for intento in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except (urllib.error.URLError, TimeoutError) as exc:
+            if isinstance(exc, urllib.error.HTTPError) or intento == 2:
+                raise
+            time.sleep(2 * (intento + 1))
+
+
+def mapa_cik_historicos() -> Dict[str, int]:
+    """CIK de tickers renombrados o deslistados que company_tickers.json ya no trae."""
+    with open(CIK_HISTORICOS_CSV, newline="", encoding="utf-8") as f:
+        return {r["ticker"].upper(): int(r["cik"]) for r in csv.DictReader(f)}
 
 
 def extraer_hechos(ticker: str, json_data: dict) -> pd.DataFrame:
@@ -182,10 +197,10 @@ def crear_snapshot_fundamentales(
     nombre: str, tickers: List[str], base_dir: Optional[Path] = None, delay: float = 0.2, downloader: Optional[Callable[[int], dict]] = None,
 ) -> dict:
     """Descarga facts de sec.gov para cada ticker con CIK y congela un snapshot versionado."""
-    ciks, frames, sin_cik, con_cik, fallidos = mapa_tickers_cik(), {}, [], {}, []
+    ciks, historicos, frames, sin_cik, con_cik, fallidos = mapa_tickers_cik(), mapa_cik_historicos(), {}, [], {}, []
     downloader_fn = downloader or descargar_facts_cik
     for t in sorted(set(tickers)):
-        cik = ciks.get(t.upper()) or ciks.get(t.upper().replace(".", "-"))
+        cik = ciks.get(t.upper()) or ciks.get(t.upper().replace(".", "-")) or historicos.get(t.upper())
         if cik is None:
             sin_cik.append(t)
         else:

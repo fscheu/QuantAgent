@@ -139,6 +139,15 @@ def test_snapshot_ticker_con_punto_usa_cik_con_guion(tmp_path):
     assert "BRK.B" in manifest["symbols"] and "BRK.B" not in manifest["sin_cik"]
 
 
+def test_snapshot_ticker_fuera_de_sec_usa_cik_historico(tmp_path):
+    """ANTM no está en company_tickers.json: se resuelve con el CSV de CIK históricos; uno desconocido sigue en sin_cik."""
+    facts = {"facts": {"us-gaap": {"Revenues": {"units": {"USD": [{"form": "10-Q", "start": "2020-01-01", "end": "2020-03-31", "val": 100, "filed": "2020-04-15"}]}}}}}
+    pedidos = []
+    with patch("quantagent.data.fundamentales.mapa_tickers_cik", return_value={}):
+        manifest = crear_snapshot_fundamentales("test-snap", ["ANTM", "XXXX"], base_dir=tmp_path, downloader=lambda cik: pedidos.append(cik) or facts)
+    assert pedidos == [1156039] and list(manifest["symbols"]) == ["ANTM"] and manifest["sin_cik"] == ["XXXX"]
+
+
 def test_snapshot_e2e(tmp_path):
     """(h) Integración: crear_snapshot_fundamentales (con un ticker que falla) y metricas_fundamentales."""
     facts = {
