@@ -53,6 +53,6 @@
 ## E. Pendiente antes de cargar en Beads
 
 - Confirmación de Fede de la lista y de sacar L34 como lote aparte (los 5 WEB-0x pasan a `lote/M-web`).
-- Regla "un solo lote abierto a la vez": L26 sigue abierto; confirmar si `lote/M-web` puede abrirse en paralelo.
+- Regla "un solo lote abierto a la vez": L26 ya cerró (PR #676 mergeado a main). Falta definir el orden entre L33 (cuenta chica) y `lote/M-web`.
 - Decisiones del análisis: cortos en la web, definición de cuenta (entra en WEB-01).
 - API key de FRED (WEB-11).
