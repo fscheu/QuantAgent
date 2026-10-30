@@ -2,9 +2,9 @@
 
 import enum
 import math
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
-from sqlalchemy import JSON, Boolean, Column, Date, DateTime, Enum, Float, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, CheckConstraint, Column, Date, DateTime, Enum, Float, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship, validates
 
 from .database import Base
@@ -122,6 +122,31 @@ class TradeIntentRecord(Base):
     reject_reason = Column(String(100), nullable=True)
     order_id = Column(Integer, ForeignKey("orders.id"), nullable=True)
     reasoning_metadata = Column(JSON, nullable=False, default=dict)
+
+
+class Account(Base):
+    """Configured trading account and its single assigned strategy."""
+
+    __tablename__ = "accounts"
+
+    id = Column(String(100), primary_key=True)
+    name = Column(String(200), nullable=False)
+    env = Column(String(10), nullable=False)
+    kind = Column(String(20), nullable=False)
+    alpaca_account_ref = Column(String(100), nullable=True)
+    bucket_id = Column(String(100), nullable=False, unique=True)
+    strategy = Column(String(100), nullable=False)
+    status = Column(String(20), nullable=False, default="active")
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (
+        CheckConstraint("env IN ('paper', 'live')"),
+        CheckConstraint("kind IN ('alpaca', 'simulated')"),
+        CheckConstraint("status IN ('active', 'archived')"),
+        CheckConstraint("(kind = 'alpaca' AND alpaca_account_ref IS NOT NULL) OR "
+                        "(kind = 'simulated' AND alpaca_account_ref IS NULL)"),
+        CheckConstraint("NOT (env = 'live' AND kind = 'simulated')"),
+    )
 
 
 class Fill(Base):

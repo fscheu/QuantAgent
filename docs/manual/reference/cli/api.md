@@ -9,8 +9,26 @@ Options:
   --help  Show this message and exit.
 
 Commands:
+  accounts       Manage configured trading accounts.
   serve          Serve the read-only QuantAgent API.
   sync-calendar  Synchronize Alpaca market holidays and early closes.
+```
+
+## `quantagent api accounts`
+
+```text
+Usage: quantagent api accounts [OPTIONS] COMMAND [ARGS]...
+
+  Manage configured trading accounts.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  add      Register an account and its strategy.
+  archive  Archive an account so it is hidden from the API.
+  list     List active accounts.
+  show     Show one account by slug.
 ```
 
 ## `quantagent api serve`

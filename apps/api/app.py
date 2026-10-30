@@ -26,6 +26,12 @@ class CalendarEventResponse(BaseModel):
     account_id: str | None = None
 
 
+class AccountRef(BaseModel):
+    id: str
+    name: str
+    env: Literal["paper", "live"]
+
+
 def session_factory(url=None):
     url = url or os.environ["QUANTAGENT_DATABASE_URL"]
     engine = create_engine(url, connect_args={"check_same_thread": False} if url.startswith("sqlite") else {})
@@ -69,3 +75,11 @@ def calendar(days: int = Query(30, ge=1, le=120), db: Session = Depends(get_db))
                               title=event.title, source=event.source)
         for event in events
     ]
+
+
+@app.get("/api/accounts", response_model=list[AccountRef])
+def accounts(db: Session = Depends(get_db)):
+    from quantagent.models import Account
+
+    rows = db.scalars(select(Account).where(Account.status == "active").order_by(Account.id)).all()
+    return [AccountRef(id=row.id, name=row.name, env=row.env) for row in rows]

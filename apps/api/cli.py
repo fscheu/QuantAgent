@@ -2,6 +2,7 @@
 
 import click
 import uvicorn
+from sqlalchemy import select
 
 
 @click.group(help="Run the QuantAgent HTTP API.")
@@ -21,3 +22,67 @@ def sync_calendar_command():
     from .calendar_sync import sync_from_alpaca
 
     click.echo(f"Synchronized {sync_from_alpaca()} calendar events.")
+
+
+@api_group.group("accounts", help="Manage configured trading accounts.")
+def accounts_group():
+    pass
+
+
+@accounts_group.command("add", help="Register an account and its strategy.",
+                        epilog="Example: quantagent api accounts add --id paper-nucleo-curva --name 'Paper Nucleo Curva' --env paper --kind alpaca --alpaca-account-ref acct-1 --bucket-id nucleo-curva --strategy nucleo-curva")
+@click.option("--id", "account_id", required=True, help="Unique account slug.")
+@click.option("--name", required=True, help="Display name for the account.")
+@click.option("--env", "environment", required=True, type=click.Choice(["paper", "live"]), help="Trading environment: paper or live.")
+@click.option("--kind", required=True, type=click.Choice(["alpaca", "simulated"]), help="Account source: Alpaca or simulated.")
+@click.option("--alpaca-account-ref", help="Alpaca account reference; required for alpaca accounts.")
+@click.option("--bucket-id", required=True, help="Unique trade-intent bucket identifier.")
+@click.option("--strategy", required=True, help="Single strategy assigned to this account.")
+def account_add(account_id, name, environment, kind, alpaca_account_ref, bucket_id, strategy):
+    from .accounts import add_account, write_session
+
+    with write_session() as db:
+        try:
+            account = add_account(db, id=account_id, name=name, env=environment, kind=kind,
+                                  alpaca_account_ref=alpaca_account_ref, bucket_id=bucket_id,
+                                  strategy=strategy)
+        except ValueError as exc:
+            raise click.ClickException(str(exc)) from exc
+    click.echo(account.id)
+
+
+@accounts_group.command("list", help="List active accounts.", epilog="Example: quantagent api accounts list")
+def account_list():
+    from .accounts import list_accounts, write_session
+
+    with write_session() as db:
+        rows = list_accounts(db)
+    for row in rows:
+        click.echo(f"{row.id}\t{row.name}\t{row.env}\t{row.strategy}")
+
+
+@accounts_group.command("show", help="Show one account by slug.", epilog="Example: quantagent api accounts show paper-nucleo-curva")
+@click.argument("account_id")
+def account_show(account_id):
+    from .accounts import write_session
+    from quantagent.models import Account
+
+    with write_session() as db:
+        row = db.get(Account, account_id)
+    if row is None:
+        raise click.ClickException(f"account not found: {account_id}")
+    for field in ("id", "name", "env", "kind", "alpaca_account_ref", "bucket_id", "strategy", "status", "created_at"):
+        click.echo(f"{field}: {getattr(row, field)}")
+
+
+@accounts_group.command("archive", help="Archive an account so it is hidden from the API.", epilog="Example: quantagent api accounts archive paper-nucleo-curva")
+@click.argument("account_id")
+def account_archive(account_id):
+    from .accounts import archive_account, write_session
+
+    with write_session() as db:
+        try:
+            archive_account(db, account_id)
+        except ValueError as exc:
+            raise click.ClickException(str(exc)) from exc
+    click.echo(f"Archived {account_id}.")
