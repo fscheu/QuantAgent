@@ -29,13 +29,13 @@ CONCEPTOS_FALLBACK = {
     ],
     # sin OperatingIncomeLoss (XOM, bancos) se usa el resultado antes de impuestos como aproximación
     "OperatingIncomeLoss": ["OperatingIncomeLoss", *_TAX_BT], "EarningsPerShareDiluted": ["EarningsPerShareDiluted"],
-    "StockholdersEquity": ["StockholdersEquity"], "deuda": ["LongTermDebtNoncurrent", "LongTermDebt"],
+    "NetIncomeLoss": ["NetIncomeLoss", "ProfitLoss"], "StockholdersEquity": ["StockholdersEquity"], "deuda": ["LongTermDebtNoncurrent", "LongTermDebt"],
     "IncomeTaxExpenseBenefit": ["IncomeTaxExpenseBenefit"], "IncomeLossFromContinuingOperationsBeforeIncomeTaxes": _TAX_BT,
 }
 # tickers cuyo CIK actual (company_tickers.json) es una holding nueva sin el historial anterior
 CIK_PREVIOS = {"XOM": [34088], "BLK": [1364742], "BG": [1144519], "APO": [1411494]}
 FORMULARIOS_VALIDOS = frozenset({"10-Q", "10-Q/A", "10-K", "10-K/A"})
-CONCEPTOS_FLUJO = frozenset({"ingresos", "OperatingIncomeLoss", "EarningsPerShareDiluted", "IncomeTaxExpenseBenefit", "IncomeLossFromContinuingOperationsBeforeIncomeTaxes"})
+CONCEPTOS_FLUJO = frozenset({"ingresos", "NetIncomeLoss", "OperatingIncomeLoss", "EarningsPerShareDiluted", "IncomeTaxExpenseBenefit", "IncomeLossFromContinuingOperationsBeforeIncomeTaxes"})
 
 
 def mapa_tickers_cik() -> Dict[str, int]:
@@ -89,7 +89,7 @@ def extraer_hechos(ticker: str, json_data: dict) -> pd.DataFrame:
     return pd.DataFrame(filas).drop(columns=["prioridad"]) if filas else pd.DataFrame(columns=cols)
 
 
-METRICAS = ["roic_4t", "margen_op_yoy", "aceleracion_ingresos", "crecimiento_eps"]
+METRICAS = ["roic_4t", "margen_op_yoy", "aceleracion_ingresos", "crecimiento_eps", "roe_4t", "margen_pretax_yoy"]
 MAX_ANTIGUEDAD_DIAS = 200
 
 
@@ -131,7 +131,7 @@ def _balance(piv_b: pd.DataFrame, concepto: str, end: pd.Timestamp) -> float:
 
 
 def metricas_en_vista(piv_f: pd.DataFrame, piv_b: pd.DataFrame) -> Dict[str, Tuple[float, pd.Timestamp]]:
-    """Las 4 métricas con la vista dada: {métrica: (valor, end del último trimestre usado)}."""
+    """Las métricas con la vista dada: {métrica: (valor, end del último trimestre usado)}."""
     res = {}
     if (w := _ventana(piv_f, ["OperatingIncomeLoss"], 4)) is not None:
         fin = w.index[-1]
@@ -143,10 +143,15 @@ def metricas_en_vista(piv_f: pd.DataFrame, piv_b: pd.DataFrame) -> Dict[str, Tup
         deuda = 0.0 if np.isnan(deuda) else deuda
         if not np.isnan(eq) and eq + deuda > 0:
             res["roic_4t"] = (float(w["OperatingIncomeLoss"].sum() * (1.0 - tasa) / (eq + deuda)), fin)
-    if (w := _ventana(piv_f, ["ingresos", "OperatingIncomeLoss"], 8)) is not None:
-        rh, oh, rp, op = w["ingresos"].iloc[4:].sum(), w["OperatingIncomeLoss"].iloc[4:].sum(), w["ingresos"].iloc[:4].sum(), w["OperatingIncomeLoss"].iloc[:4].sum()
-        if rh > 0 and rp > 0:
-            res["margen_op_yoy"] = (float(oh / rh - op / rp), w.index[-1])
+    for met, col in [("margen_op_yoy", "OperatingIncomeLoss"), ("margen_pretax_yoy", "IncomeLossFromContinuingOperationsBeforeIncomeTaxes")]:
+        if (w := _ventana(piv_f, ["ingresos", col], 8)) is not None:
+            rh, oh, rp, op = w["ingresos"].iloc[4:].sum(), w[col].iloc[4:].sum(), w["ingresos"].iloc[:4].sum(), w[col].iloc[:4].sum()
+            if rh > 0 and rp > 0:
+                res[met] = (float(oh / rh - op / rp), w.index[-1])
+    if (w := _ventana(piv_f, ["NetIncomeLoss"], 4)) is not None:
+        eq = _balance(piv_b, "StockholdersEquity", w.index[-1])
+        if eq > 0:
+            res["roe_4t"] = (float(w["NetIncomeLoss"].sum() / eq), w.index[-1])
     if (w := _ventana(piv_f, ["ingresos"], 6)) is not None:
         r = w["ingresos"].to_numpy()
         if r[1] > 0 and r[0] > 0:
@@ -203,10 +208,10 @@ def leer_fundamentales(nombre: str, ticker: str, base_dir: Optional[Path] = None
 
 
 def metricas_fundamentales(nombre: str, tickers: List[str], sesiones: pd.DatetimeIndex, base_dir: Optional[Path] = None) -> Dict[str, pd.DataFrame]:
-    """Genera paneles (fecha × ticker) para roic_4t, margen_op_yoy, aceleracion_ingresos y crecimiento_eps."""
+    """Genera paneles (fecha × ticker) para cada métrica de METRICAS."""
     manifest = load_manifest(nombre, base_dir)
     simbolos = set(manifest["symbols"])
-    res = {m: pd.DataFrame(np.nan, index=sesiones, columns=tickers, dtype=float) for m in ["roic_4t", "margen_op_yoy", "aceleracion_ingresos", "crecimiento_eps"]}
+    res = {m: pd.DataFrame(np.nan, index=sesiones, columns=tickers, dtype=float) for m in METRICAS}
     for t in tickers:
         if t in simbolos:
             m_t = calcular_metricas_ticker(preparar_ticker(leer_fundamentales(nombre, t, base_dir=base_dir)), sesiones)
