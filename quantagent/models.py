@@ -2,9 +2,9 @@
 
 import enum
 import math
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, Numeric, String, Text
+from sqlalchemy import JSON, Boolean, Column, Date, DateTime, Enum, Float, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship, validates
 
 from .database import Base
@@ -462,3 +462,17 @@ class SchedulerHeartbeat(Base):
     error_message = Column(Text, nullable=True)
 
     __table_args__ = (Index("idx_heartbeat_env_ts", "environment", "timestamp"),)
+
+
+class CalendarEvent(Base):
+    """Exchange holidays and early closes sourced from Alpaca."""
+
+    __tablename__ = "calendar_events"
+
+    id = Column(Integer, primary_key=True)
+    date = Column(Date, nullable=False)
+    kind = Column(String(20), nullable=False)
+    title = Column(String(200), nullable=False)
+    source = Column(String(20), nullable=False, default="alpaca")
+
+    __table_args__ = (UniqueConstraint("date", "kind", "source", name="uq_calendar_date_kind_source"),)

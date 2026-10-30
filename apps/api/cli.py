@@ -14,3 +14,10 @@ def api_group():
 @click.option("--port", default=8000, show_default=True, type=int, help="TCP port to bind.")
 def serve(host, port):
     uvicorn.run("apps.api.app:app", host=host, port=port)
+
+
+@api_group.command(help="Synchronize Alpaca market holidays and early closes.", epilog="Example: quantagent api sync-calendar")
+def sync_calendar_command():
+    from .calendar_sync import sync_from_alpaca
+
+    click.echo(f"Synchronized {sync_from_alpaca()} calendar events.")

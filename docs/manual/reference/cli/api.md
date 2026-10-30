@@ -9,7 +9,8 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  serve  Serve the read-only QuantAgent API.
+  serve          Serve the read-only QuantAgent API.
+  sync-calendar  Synchronize Alpaca market holidays and early closes.
 ```
 
 ## `quantagent api serve`
@@ -31,3 +32,16 @@ Options and defaults:
 
 - `--host` — default: `'127.0.0.1'`
 - `--port` — default: `8000`
+
+## `quantagent api sync-calendar`
+
+```text
+Usage: quantagent api sync-calendar [OPTIONS]
+
+  Synchronize Alpaca market holidays and early closes.
+
+Options:
+  --help  Show this message and exit.
+
+  Example: quantagent api sync-calendar
+```
