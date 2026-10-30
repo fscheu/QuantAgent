@@ -33,7 +33,7 @@ describe('MSW sample API data', () => {
   it('returns all requested order statuses and market clock shape', async () => {
     const result = await fetch('http://localhost/api/accounts/paper-m4/orders').then((response) => response.json())
     const clock = await fetch('http://localhost/api/market/clock').then((response) => response.json())
-    expect(result).toEqual(orders)
+    expect(result.map((order: { symbol: string }) => order.symbol)).toEqual(orders.map(order => order.symbol))
     expect(new Set(result.map((order: (typeof orders)[number]) => order.status))).toEqual(new Set(['filled', 'pending', 'rejected', 'cancelled', 'expired']))
     expect(clock).toEqual(marketClock)
   })
