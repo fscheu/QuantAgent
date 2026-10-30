@@ -3,9 +3,9 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
 
+from click.testing import CliRunner
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from click.testing import CliRunner
 
 from quantagent.database import Base
 from quantagent.models import ActivePosition, Environment, ExitPolicy, OrderSide
@@ -81,6 +81,13 @@ def test_integer_position_without_stop_is_reported(tmp_path):
     client = Client([SimpleNamespace(symbol="SPY", qty="2", side="long")])
     report = correr_pre_apertura(session, AlpacaBroker(client), datetime(2026, 10, 28, 12))
     assert report["sin_stop"] == ["SPY"]
+    session.close(); engine.dispose()
+
+
+def test_cuenta_nueva_sin_daytrade_count_no_rompe(tmp_path):
+    session, engine = make_session(tmp_path)
+    report = correr_pre_apertura(session, AlpacaBroker(Client(daytrade_count=None)), datetime(2026, 10, 28, 12))
+    assert report["avisos"] == [] and report["sin_stop"] == []
     session.close(); engine.dispose()
 
 
