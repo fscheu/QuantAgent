@@ -43,3 +43,43 @@ def test_senales_calentamiento_truncamiento_y_stops():
     assert ultima["entry"] == 1 and ultima["entry_order"] == "stop" and ultima["entry_expiry_bars"] == 3
     assert ultima["entry_price"] > velas.iloc[-1]["high"] and ultima["stop_loss_pct"] > 0
     assert senales["chandelier_dist"].notna().all() and senales.index.min() >= pd.Timestamp("2011-01-01")
+
+
+def test_orden_elegibilidad_cancelacion_vencimiento_y_gap():
+    senal = dict(entry=1, entry_price=100, entry_expiry_bars=3, stop_loss_pct=0.1)
+    baja = dict(open=90, high=95, low=85, close=91)
+    gap = dict(open=105, high=110, low=100, close=108)
+    assert h4.orden_a(None, gap, senal, False) == (None, None)
+    pendiente, entrada = h4.orden_a(None, gap, senal, True)
+    assert entrada is None  # señal al cierre: no llena en su propia vela
+    assert h4.orden_a(pendiente.copy(), gap, senal, False) == (None, None)
+    for restantes in (2, 1, 0):
+        pendiente, entrada = h4.orden_a(pendiente, baja, senal, True)
+        assert entrada is None
+        assert (pendiente["restantes"] if pendiente else 0) == restantes
+    assert h4.orden_a(pendiente, gap, dict(senal, entry=0), True) == (None, None)
+    pendiente, _ = h4.orden_a(None, baja, senal, True)
+    pendiente, _ = h4.orden_a(pendiente, baja, senal, True)
+    pendiente, _ = h4.orden_a(pendiente, baja, senal, True)
+    pendiente, entrada = h4.orden_a(pendiente, gap, senal, True)  # tercera vela todavía llena
+    assert pendiente is None and entrada["entry_price"] == 105 and entrada["stop_loss"] == 94.5
+
+
+def test_posicion_fuera_del_conjunto_stop_y_chandelier_temporal():
+    senal = dict(entry=1, entry_price=100, entry_expiry_bars=3, stop_loss_pct=0.1, chandelier_dist=10)
+    vela = dict(open=100, high=105, low=99, close=104)
+    pendiente, _ = h4.orden_a(None, vela, senal, True)
+    _, posicion = h4.orden_a(pendiente, vela, senal, True)
+    for habilitado, distancia in ((True, 10), (False, 20), (False, 10)):
+        assert h4.orden_a(None, vela, senal, habilitado)[1] is None
+        assert h4.posicion_a(posicion, vela, dict(senal, chandelier_dist=distancia)) is None
+        assert posicion["stop_loss"] == 95 and not posicion["salir"]
+    assert h4.posicion_a(posicion.copy(), dict(vela, low=94), senal) == ("STOP_LOSS", 95)
+    assert h4.posicion_a(posicion.copy(), dict(vela, open=90, low=88), senal) == ("STOP_LOSS", 90)
+    assert h4.posicion_a(posicion, dict(open=100, high=115, low=96, close=110), senal) is None
+    assert posicion["stop_loss"] == 105  # low 96 no puede tocar el stop calculado recién al cierre
+    assert h4.posicion_a(posicion, dict(open=110, high=125, low=106, close=112), senal) is None
+    assert posicion["salir"] and posicion["stop_loss"] == 105
+    assert h4.posicion_a(posicion, dict(open=108, high=120, low=100, close=118), senal) == ("TRAILING_STOP", 108)
+    _, recien_abierta = h4.orden_a(pendiente, vela, senal, True)
+    assert h4.posicion_a(recien_abierta, dict(vela, low=85), senal) == ("STOP_LOSS", 90)
