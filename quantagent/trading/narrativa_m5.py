@@ -76,6 +76,9 @@ def guardar_narrativa(path, tipo, clave, texto):
     fila = pd.DataFrame([[tipo, clave, texto]], columns=["tipo", "clave", "texto"])
     if path.exists():
         actual = pd.read_csv(path, dtype=str)
-        actual = actual[~((actual.tipo == tipo) & (actual.clave == clave))]
+        coincide = (actual.tipo == tipo) & (actual.clave == clave)
+        if coincide.sum() == 1 and actual.loc[coincide, "texto"].iloc[0] == texto:
+            return
+        actual = actual[~coincide]
         fila = pd.concat([actual, fila], ignore_index=True)
     fila.to_csv(path, index=False)
