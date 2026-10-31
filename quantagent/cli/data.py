@@ -267,7 +267,10 @@ def fundamentales_group() -> None:
 @fundamentales_group.command("refrescar", help="Refresh current index fundamentals and retain the previous valid snapshot on failure.", epilog="Example: quantagent data fundamentales refrescar --composicion sp500-2026-10")
 @click.option("--composicion", default="sp500-2026-10", show_default=True, help="Composition snapshot providing the latest index members.")
 def refrescar_fundamentales_cmd(composicion: str) -> None:
-    resultado = refrescar_fundamentales(date.today(), composicion)
+    resultado = refrescar_fundamentales(
+        date.today(), composicion,
+        progreso=lambda n, total: click.echo(f"Fundamentales: {n}/{total} tickers procesados", err=True),
+    )
     click.echo(f"Snapshot vigente: {resultado['snapshot_vigente'] or 'ninguno'}; {resultado['motivo']}")
     if resultado["snapshot_vigente"] is None:
         raise SystemExit(1)
