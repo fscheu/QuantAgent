@@ -33,6 +33,7 @@ Implementation documents should include:
 
 ## Active Per-Change Implementation
 
+- [QuantAgent-fnpr.6.6.2-IM-candidatos-vivo.md](./QuantAgent-fnpr.6.6.2-IM-candidatos-vivo.md) - Adaptador de candidatos semanales con precios vivos y reloj inyectado.
 - [QuantAgent-fnpr.6.6.1-IM-datos-vivos-h3.md](./QuantAgent-fnpr.6.6.1-IM-datos-vivos-h3.md) - Refresco diario de fundamentales para paper M5 con validación y fallback.
 - [QuantAgent-fnpr.4.12-IM-etapa3.md](./QuantAgent-fnpr.4.12-IM-etapa3.md) - H1/H3 2019–2022 y límites del conteo de sesgo por precios faltantes.
 - [QuantAgent-fnpr.4.5-IM-h4.md](./QuantAgent-fnpr.4.5-IM-h4.md) - H4 contra H3 en 2011–2018: veredicto V30 de etapa 2 y un único intento.
