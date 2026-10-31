@@ -15,6 +15,7 @@ from sqlalchemy import create_engine, event, func, inspect, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from .schemas import AccountRef, AccountSummaryActive, AccountSummaryNoData, EquityPoint, OrderResponse, PositionResponse
+from .feed import build_feed
 
 app = FastAPI(title="QuantAgent API")
 NEW_YORK = ZoneInfo("America/New_York")
@@ -39,6 +40,18 @@ class CalendarEventResponse(BaseModel):
     subtitle: str | None = None
     source: Literal["alpaca"]
     account_id: str | None = None
+
+
+class FeedEventResponse(BaseModel):
+    id: str
+    type: str
+    severity: str
+    occurred_at: str
+    account_id: str | None = None
+    title: str
+    subtitle: str | None = None
+    link: str
+    group_count: int
 
 
 def session_factory(url=None):
@@ -84,6 +97,12 @@ def calendar(days: int = Query(30, ge=1, le=120), db: Session = Depends(get_db))
                               title=event.title, source=event.source)
         for event in events
     ]
+
+
+@app.get("/api/feed", response_model=list[FeedEventResponse])
+def feed(since: datetime | None = Query(None), limit: int = Query(50, ge=1, le=200),
+         db: Session = Depends(get_db)):
+    return [FeedEventResponse(**row) for row in build_feed(db, since=since, limit=limit, utc_z=utc_z)]
 
 
 @app.get("/api/accounts", response_model=list[AccountRef])
