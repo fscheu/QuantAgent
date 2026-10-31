@@ -58,6 +58,7 @@ Options:
 Commands:
   cobertura  Report per-metric coverage since 2010 and tickers without a...
   create     Download companyfacts from SEC EDGAR and create the snapshot.
+  refrescar  Refresh current index fundamentals and retain the previous...
   verify     Recompute the file hashes against the manifest.
 ```
 
