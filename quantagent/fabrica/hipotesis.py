@@ -9,8 +9,6 @@ from typing import Any
 
 import yaml
 
-from quantagent.cli.sweep import validar_grilla
-
 _TEXTOS = ("id", "autor", "justificacion", "timeframe")
 
 
@@ -23,6 +21,8 @@ class Pierna:
     elegibilidad: str | None = None
 
     def combinaciones(self) -> list[dict[str, Any]]:
+        from quantagent.cli.sweep import validar_grilla
+
         from quantagent.fabrica.transversal import es_transversal
 
         if not self.parametros and es_transversal(self.clase):

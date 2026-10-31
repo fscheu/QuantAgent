@@ -32,12 +32,12 @@ class SPAStaticFiles(StaticFiles):
 
 class CalendarEventResponse(BaseModel):
     id: str
-    kind: Literal["holiday", "early_close"]
+    kind: Literal["holiday", "early_close", "rebalance"]
     starts_at: str | None = None
     date: str
     title: str
     subtitle: str | None = None
-    source: Literal["alpaca"]
+    source: Literal["alpaca", "strategy"]
     account_id: str | None = None
 
 
@@ -70,7 +70,8 @@ def health():
 
 @app.get("/api/calendar", response_model=list[CalendarEventResponse])
 def calendar(days: int = Query(30, ge=1, le=120), db: Session = Depends(get_db)):
-    from quantagent.models import CalendarEvent
+    from quantagent.models import Account, CalendarEvent
+    from .rebalances import proximos_rebalanceos
 
     today = datetime.now(NEW_YORK).date()
     events = db.scalars(
@@ -79,11 +80,26 @@ def calendar(days: int = Query(30, ge=1, le=120), db: Session = Depends(get_db))
             CalendarEvent.date < today + timedelta(days=days),
         ).order_by(CalendarEvent.date, CalendarEvent.kind)
     ).all()
-    return [
+    result = [
         CalendarEventResponse(id=str(event.id), kind=event.kind, date=event.date.isoformat(),
-                              title=event.title, source=event.source)
+                              title=event.title, source=event.source,
+                              subtitle=None, account_id=None)
         for event in events
     ]
+    cuentas = db.scalars(select(Account).where(Account.status == "active").order_by(Account.id)).all()
+    feriados = db.scalars(select(CalendarEvent.date).where(CalendarEvent.kind == "holiday")).all()
+    from quantagent.fabrica.hipotesis import cargar_hipotesis
+    carpeta = Path(__file__).resolve().parents[2] / "hipotesis"
+    rebalanceos = proximos_rebalanceos(
+        cuentas, today, days, feriados,
+        lambda strategy: cargar_hipotesis(carpeta / f"{strategy}.yaml"),
+    )
+    result.extend(CalendarEventResponse(
+        id=f"rebalance:{cuenta.id}:{fecha.isoformat()}", kind="rebalance",
+        date=fecha.isoformat(), title="Rebalanceo", subtitle=cuenta.name,
+        source="strategy", account_id=cuenta.id,
+    ) for cuenta, fecha in rebalanceos)
+    return sorted(result, key=lambda event: (event.date, event.kind))
 
 
 @app.get("/api/accounts", response_model=list[AccountRef])
