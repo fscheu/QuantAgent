@@ -388,7 +388,14 @@
         "QuantAgent-fnpr.6.2",
         "QuantAgent-fnpr.6.3",
         "QuantAgent-fnpr.6.4",
-        "QuantAgent-fnpr.6.5"
+        "QuantAgent-fnpr.6.5",
+        "QuantAgent-fnpr.6.6.1",
+        "QuantAgent-fnpr.6.6.2",
+        "QuantAgent-fnpr.6.6.3",
+        "QuantAgent-fnpr.6.6.4",
+        "QuantAgent-fnpr.6.6.5",
+        "QuantAgent-fnpr.6.6.6",
+        "QuantAgent-fnpr.6.6.7"
       ],
       "punto": "Cuenta paper M5 aparte, pipeline semanal y diario, nota macro del LLM, digest diario y dos semanas sin intervención (punto de control de M5). Requiere autorización operativa explícita de Fede. Depende de L23–L26 y de D2 y D6."
     },
