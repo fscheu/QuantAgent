@@ -181,10 +181,9 @@ Options:
                                   pct.
   --llenado [apertura|cierre]     Fill price: opening or closing price of the
                                   candle.  [default: apertura]
-  --cuenta-chica FLOAT RANGE     Initial backtest capital in USD; enables
+  --cuenta-chica FLOAT RANGE      Initial backtest capital in USD; enables
                                   whole-share entries. Default: disabled
-                                  ($100,000 capital).
-                                  [x>0.0]
+                                  ($100,000 capital).  [x>0.0]
   --tamano-posicion FLOAT RANGE   Capital fraction per position, in (0, 1]
                                   (1.0 = 100%). Sets the run's base and
                                   maximum size.  [0.0<x<=1.0]
