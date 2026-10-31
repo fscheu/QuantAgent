@@ -32,6 +32,15 @@ def test_riesgo_por_trade_se_agrega_a_config_solo_si_se_pide():
     assert _engine_config(None, regla_tamano="riesgo", riesgo_por_trade=0.0025)["riesgo_por_trade_pct"] == 0.0025
 
 
+def test_retencion_dividendos_default_solo_para_cuenta_chica():
+    assert "retencion_dividendos" not in _engine_config(None)
+    assert _engine_config(None, cuenta_chica=2500)["retencion_dividendos"] == 0.30
+    assert _engine_config(None, cuenta_chica=2500, retencion_dividendos=0)["retencion_dividendos"] == 0
+    config = _engine_config(None, costo_fiscal_pct=0.02)
+    assert config["retencion_dividendos"] == 0
+    assert config["costo_fiscal_pct"] == 0.02
+
+
 def test_cuenta_chica_limita_posiciones_y_registra_entradas_descartadas(cli_runner, monkeypatch, tmp_path):
     from quantagent.backtesting.backtest import Backtest
 

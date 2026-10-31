@@ -27,7 +27,7 @@ from quantagent.backtesting.fixtures import (
     load_snapshot,
     snapshot_metadata,
 )
-from quantagent.data.snapshot import SnapshotError, load_manifest, snapshot_root
+from quantagent.data.snapshot import SnapshotError, load_manifest, read_snapshot, snapshot_root
 from quantagent.models import ActivePosition, MarketData, Trade
 from quantagent.settings import COSTOS_PERFILES
 from quantagent.strategy.registry import STRATEGY_REGISTRY, build_strategy, cli_aliases, effective_params
@@ -172,10 +172,14 @@ def _resolve_source_and_meta(
 def _engine_config(commission_pct: Optional[float], costos: Optional[str] = None,
                    tamano_posicion: Optional[float] = None, regla_tamano: Optional[str] = None,
                    orden_minima: Optional[float] = None, riesgo_por_trade: Optional[float] = None,
-                   cuenta_chica: Optional[float] = None) -> dict:
+                   cuenta_chica: Optional[float] = None, retencion_dividendos: Optional[float] = None,
+                   costo_fiscal_pct: float = 0.0) -> dict:
     config = {"market_hours_filter": False, "offline_data": True}
     if cuenta_chica is not None:
         config.update(initial_capital=cuenta_chica, round_shares=True)
+    if cuenta_chica is not None or retencion_dividendos is not None or costo_fiscal_pct:
+        config["retencion_dividendos"] = (0.30 if cuenta_chica is not None else 0.0) if retencion_dividendos is None else retencion_dividendos
+        config["costo_fiscal_pct"] = costo_fiscal_pct
     if tamano_posicion is not None:
         config["base_position_pct"] = config["max_position_pct"] = tamano_posicion
     if regla_tamano is not None:
@@ -325,6 +329,17 @@ def correr_par(
                 "usá una base limpia."
             )
 
+        if snapshot_name and config.get("retencion_dividendos", 0.0) + config.get("costo_fiscal_pct", 0.0):
+            frame = read_snapshot(snapshot_name, symbol)
+            rates = frame["close"].pct_change() - frame["close_sin_dividendos"].pct_change()
+            config = {
+                **config,
+                "dividend_rates": {
+                    ts.date().isoformat(): float(rate)
+                    for ts, rate in rates.loc[meta.start_date:meta.end_date].fillna(0).items()
+                    if abs(rate) >= 1e-9
+                },
+            }
         bt = Backtest(
             start_date=meta.start_date,
             end_date=meta.end_date,
@@ -485,6 +500,10 @@ def backtest_group() -> None:
               help="Fill price: opening or closing price of the candle.")
 @click.option("--cuenta-chica", type=click.FloatRange(min=0.0, min_open=True), default=None,
               help="Initial backtest capital in USD; enables whole-share entries. Default: disabled ($100,000 capital).")
+@click.option("--retencion-dividendos", type=click.FloatRange(min=0.0, max=1.0), default=None,
+              help="Dividend withholding fraction (0–1); defaults to 0.30 with --cuenta-chica, otherwise 0.")
+@click.option("--costo-fiscal-pct", type=click.FloatRange(min=0.0, max=1.0), default=0.0, show_default=True,
+              help="Additional fraction on implicit dividends; placeholder for future capital gains/personal assets taxes.")
 @_tamano_options
 @_params_option
 @click.option(
@@ -512,10 +531,12 @@ def run_backtest(
     orden_minima: Optional[float],
     riesgo_por_trade: Optional[float],
     cuenta_chica: Optional[float],
+    retencion_dividendos: Optional[float],
+    costo_fiscal_pct: float,
     params: dict,
     llenado: str,
 ) -> None:
-    config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano, orden_minima, riesgo_por_trade, cuenta_chica)
+    config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano, orden_minima, riesgo_por_trade, cuenta_chica, retencion_dividendos, costo_fiscal_pct)
     meta, symbol, to_date = _resolve_source_and_meta(
         "run",
         strategy_name,

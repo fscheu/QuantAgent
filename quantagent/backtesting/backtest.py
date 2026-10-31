@@ -238,6 +238,7 @@ class Backtest:
         # Backtest state
         self.current_date = start_date
         self.backtest_run_id: Optional[int] = None
+        self._dividend_rates = self.config.get("dividend_rates", {})
         self._replay_trade_order_ids: Optional[set[int]] = None
         self.trades: List[Trade] = []
         self.equity_curve: List[Dict] = []
@@ -329,6 +330,13 @@ class Backtest:
                 candle_date = current_date.date()
                 self.order_manager.risk_manager.set_date(candle_date)
                 self.portfolio.set_date(candle_date)
+
+                rate = self._dividend_rates.get(current_date.date().isoformat(), 0.0)
+                withholding = self.config.get("retencion_dividendos", 0.0) + self.config.get("costo_fiscal_pct", 0.0)
+                if rate and withholding:
+                    position = self.portfolio.positions.get(asset)
+                    if position:
+                        self.portfolio.cash -= abs(position["qty"] * position["current_price"]) * rate * withholding
 
                 # Reset daily P&L tracking at start of each day
                 if i == 0 or candle_date != asset_dates[i - 1].date():
