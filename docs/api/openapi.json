@@ -264,13 +264,17 @@
           "kind": {
             "enum": [
               "holiday",
-              "early_close"
+              "early_close",
+              "rebalance"
             ],
             "title": "Kind",
             "type": "string"
           },
           "source": {
-            "const": "alpaca",
+            "enum": [
+              "alpaca",
+              "strategy"
+            ],
             "title": "Source",
             "type": "string"
           },
