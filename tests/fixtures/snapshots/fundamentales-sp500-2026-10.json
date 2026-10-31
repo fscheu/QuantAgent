@@ -1,0 +1,6200 @@
+{
+  "downloaded_at": "2026-10-30T19:48:43+00:00",
+  "fallidos": [
+    "ACS: HTTPError",
+    "AKS: HTTPError",
+    "APCC: HTTPError",
+    "ASN: HTTPError",
+    "AT: HTTPError",
+    "AW: HTTPError",
+    "BDK: HTTPError",
+    "BRL: HTTPError",
+    "CBSS: HTTPError",
+    "CCTYQ: HTTPError",
+    "CFC: HTTPError",
+    "CMX: HTTPError",
+    "DJ: HTTPError",
+    "EOP: HTTPError",
+    "HPC: HTTPError",
+    "JAVA: HTTPError",
+    "KSE: HTTPError",
+    "LO: HTTPError",
+    "MIL: HTTPError",
+    "NCC: HTTPError",
+    "ROH: HTTPError",
+    "SAF: HTTPError",
+    "SBL: HTTPError",
+    "SBNY: HTTPError",
+    "SLR: HTTPError",
+    "TEK: HTTPError"
+  ],
+  "name": "fundamentales-sp500-2026-10",
+  "sin_cik": [
+    "ABI",
+    "ACAS",
+    "AGN",
+    "BOL",
+    "BSC",
+    "CBH",
+    "CTX",
+    "EDS",
+    "FRC",
+    "HCR",
+    "HOT",
+    "KATE",
+    "LEHMQ",
+    "MEDI",
+    "MEL",
+    "PGL",
+    "TRB",
+    "UST",
+    "UVN",
+    "WCG",
+    "WWY"
+  ],
+  "source": "sec-edgar",
+  "symbols": {
+    "A": {
+      "end": "2026-07-31",
+      "file": "A.parquet",
+      "rows": 1683,
+      "sha256": "b8c04e7c683cbddd542a12c966ef87a14bf0b67328cbee71a06cf33caf27f2c3",
+      "start": "2006-10-31"
+    },
+    "AABA": {
+      "end": "2017-03-31",
+      "file": "AABA.parquet",
+      "rows": 943,
+      "sha256": "0814389371570f8a2ea3dc26719efb476e00a6897d5b071b9b80f52b0057d021",
+      "start": "2007-12-31"
+    },
+    "AAL": {
+      "end": "2026-06-30",
+      "file": "AAL.parquet",
+      "rows": 1923,
+      "sha256": "ca6d5a8b21d50621768d8753f08290e655f808a8418728b3d5bfe68608c09cfe",
+      "start": "2007-12-31"
+    },
+    "AAP": {
+      "end": "2026-07-18",
+      "file": "AAP.parquet",
+      "rows": 2027,
+      "sha256": "449b10a7567d5423215715a12d1f2c21cea38b88c7af85c4f9d2c05b7dead300",
+      "start": "2007-12-29"
+    },
+    "AAPL": {
+      "end": "2026-06-27",
+      "file": "AAPL.parquet",
+      "rows": 1994,
+      "sha256": "be5e2fc1d12f4bc3584aca044e146b377940568e5b36efb522056747a359c8d5",
+      "start": "2006-09-30"
+    },
+    "ABBV": {
+      "end": "2026-06-30",
+      "file": "ABBV.parquet",
+      "rows": 1379,
+      "sha256": "327744fcce5cf4146ad1024806893a689b713acf2e3d5df306ccff07202df35e",
+      "start": "2011-12-31"
+    },
+    "ABC": {
+      "end": "2026-06-30",
+      "file": "ABC.parquet",
+      "rows": 2153,
+      "sha256": "30cb0c5fa9944fd74516cb0612dea9fce5f7dd64058ce9e08096e36c2a76488b",
+      "start": "2006-09-30"
+    },
+    "ABKFQ": {
+      "end": "2026-06-30",
+      "file": "ABKFQ.parquet",
+      "rows": 1137,
+      "sha256": "e9468fc55cb779ea984d5eb80b0146c46b91000c8c482599a8c0d3b0688a6d5f",
+      "start": "2009-12-31"
+    },
+    "ABMD": {
+      "end": "2022-09-30",
+      "file": "ABMD.parquet",
+      "rows": 1505,
+      "sha256": "1c73d2100dad21e1b92771e3603fcb2a60896414f1e00c84a75d2d3e5c51021a",
+      "start": "2009-03-31"
+    },
+    "ABNB": {
+      "end": "2026-06-30",
+      "file": "ABNB.parquet",
+      "rows": 535,
+      "sha256": "2f0bce28ff5ba06362d1314206a9e5ad4c318a5fa5fa5ecf1f4738b51ee12c31",
+      "start": "2018-12-31"
+    },
+    "ABT": {
+      "end": "2026-03-31",
+      "file": "ABT.parquet",
+      "rows": 1825,
+      "sha256": "8087a29bf7cd45f7b7c7a95bb3a26b66ac4aa3ad37a32a9cbc835ae557173372",
+      "start": "2006-12-31"
+    },
+    "ACGL": {
+      "end": "2026-06-30",
+      "file": "ACGL.parquet",
+      "rows": 1533,
+      "sha256": "b65dfefacb3ea37db95743527bd18314a76034d419615c57e1338b38098ae7f1",
+      "start": "2008-12-31"
+    },
+    "ACN": {
+      "end": "2026-08-31",
+      "file": "ACN.parquet",
+      "rows": 2118,
+      "sha256": "82dd01a034ba8ad4531ada8783088f450f226ac9f9a1789d2ebf4e6977b2e50e",
+      "start": "2007-08-31"
+    },
+    "ADBE": {
+      "end": "2026-08-28",
+      "file": "ADBE.parquet",
+      "rows": 2162,
+      "sha256": "852bf32e0dbf6b0592d7601ffcc68b781b29c9d59dde5351e1a4e340747a259e",
+      "start": "2006-12-01"
+    },
+    "ADCT": {
+      "end": "2026-06-30",
+      "file": "ADCT.parquet",
+      "rows": 243,
+      "sha256": "94666ec2829cd8a74c7e9a9ffb2729141afb38294543c11cb0dc030dc23e4ebd",
+      "start": "2021-12-31"
+    },
+    "ADI": {
+      "end": "2026-08-01",
+      "file": "ADI.parquet",
+      "rows": 1979,
+      "sha256": "773a425c738f1e4beef4d58b830fff671d2f398981a6e5c9cda2ae920b2eb3f0",
+      "start": "2007-11-03"
+    },
+    "ADM": {
+      "end": "2026-06-30",
+      "file": "ADM.parquet",
+      "rows": 2062,
+      "sha256": "0aaa7e0287f640d4b5b9fdd2e4b38cb7fe582d98a7b240feedba9eabc773ede4",
+      "start": "2007-06-30"
+    },
+    "ADP": {
+      "end": "2026-06-30",
+      "file": "ADP.parquet",
+      "rows": 1855,
+      "sha256": "98e3520029c83e5770cbabd3163f6f87ac645493b8bca275634423875bc56e80",
+      "start": "2008-06-30"
+    },
+    "ADS": {
+      "end": "2026-09-30",
+      "file": "ADS.parquet",
+      "rows": 1994,
+      "sha256": "6096e53a45c62e9aa32a3883566250f720782b3bdf9b93235237b3f8a12fb3d8",
+      "start": "2007-12-31"
+    },
+    "ADSK": {
+      "end": "2026-07-31",
+      "file": "ADSK.parquet",
+      "rows": 2233,
+      "sha256": "857eec45cdaa34aee8056f2a3857569aca98d6f432daa94cfbcae1bee7c30192",
+      "start": "2007-01-31"
+    },
+    "ADT": {
+      "end": "2026-06-30",
+      "file": "ADT.parquet",
+      "rows": 979,
+      "sha256": "fdd5a2a1ee0dfb725bce1cfcfd4fb5052b9abf84b88d7828ab96b26f4ce59143",
+      "start": "2015-12-31"
+    },
+    "AEE": {
+      "end": "2026-06-30",
+      "file": "AEE.parquet",
+      "rows": 1876,
+      "sha256": "5ad86d11ad39a2c45a94184c5e76d0003274829d1d33d32e142c54ef656fd1ca",
+      "start": "2007-12-31"
+    },
+    "AEP": {
+      "end": "2026-03-31",
+      "file": "AEP.parquet",
+      "rows": 2119,
+      "sha256": "f05f2fffc04435f2071e4f9baab18a675001355503cfc578319ecbee47c2e8ae",
+      "start": "2006-12-31"
+    },
+    "AES": {
+      "end": "2026-06-30",
+      "file": "AES.parquet",
+      "rows": 1752,
+      "sha256": "783e4d1a6f6e55e339fdf7f5018ada5581e3143830fca2d44dc19adedb67eef7",
+      "start": "2007-12-31"
+    },
+    "AET": {
+      "end": "2018-09-30",
+      "file": "AET.parquet",
+      "rows": 1184,
+      "sha256": "957ba5377dbf16da4c6e960cc1f6ddf4b1ebdd46acdd40cecd27835794c9578a",
+      "start": "2006-12-31"
+    },
+    "AFL": {
+      "end": "2026-06-30",
+      "file": "AFL.parquet",
+      "rows": 2137,
+      "sha256": "3a5b77d0891e9b4835cf05267dfa85ad5b9c25c8af6e407be1e2e2543e12b677",
+      "start": "2007-12-31"
+    },
+    "AIG": {
+      "end": "2026-06-30",
+      "file": "AIG.parquet",
+      "rows": 1893,
+      "sha256": "9b88b9701fe3c764154d88be63379f2c7297ac0e304ea23ea42ec08af73e10c3",
+      "start": "2006-12-31"
+    },
+    "AIV": {
+      "end": "2026-01-31",
+      "file": "AIV.parquet",
+      "rows": 1724,
+      "sha256": "cf1e8155fa70547c27c257f2047c0a5d3dc07f3c9bdf39e36fd1b3415179e6f0",
+      "start": "2007-12-31"
+    },
+    "AIZ": {
+      "end": "2026-06-30",
+      "file": "AIZ.parquet",
+      "rows": 2088,
+      "sha256": "2af1247f164bfe76b0ebd7245c02493f68a2354b919b1f5cf463d8e5d7b3e208",
+      "start": "2006-12-31"
+    },
+    "AJG": {
+      "end": "2026-06-30",
+      "file": "AJG.parquet",
+      "rows": 2038,
+      "sha256": "fb9c9d534d4736295448dd5db17fcc65acf24efb941a4e430a951b1cf77bb72f",
+      "start": "2007-12-31"
+    },
+    "AKAM": {
+      "end": "2026-06-30",
+      "file": "AKAM.parquet",
+      "rows": 1860,
+      "sha256": "5753de21b577de3dd99307caca208920e926ac98fa5a8faf03876aa11ac7c2ed",
+      "start": "2006-12-31"
+    },
+    "ALB": {
+      "end": "2026-06-30",
+      "file": "ALB.parquet",
+      "rows": 1884,
+      "sha256": "f73a3a2179df20b88a58c8bcf505d8e4d70c2bce4f62d4e2ae71af8621a1ab91",
+      "start": "2007-12-31"
+    },
+    "ALGN": {
+      "end": "2026-06-30",
+      "file": "ALGN.parquet",
+      "rows": 1514,
+      "sha256": "fc71c3a94b186330b59ea62ee3fae87bf059c86be8f6e53db3bee4a903fe2770",
+      "start": "2007-12-31"
+    },
+    "ALK": {
+      "end": "2026-06-30",
+      "file": "ALK.parquet",
+      "rows": 1700,
+      "sha256": "e1fc194dfac9011eaaffe325e1d9d8e92d4f79e1669875e6d5e5ec85e142a06e",
+      "start": "2007-12-31"
+    },
+    "ALL": {
+      "end": "2026-06-30",
+      "file": "ALL.parquet",
+      "rows": 1518,
+      "sha256": "6c787c65e7bef1724ec56648f273045f28d45ddaa69ac46afe908de5ff443a23",
+      "start": "2007-12-31"
+    },
+    "ALLE": {
+      "end": "2026-09-30",
+      "file": "ALLE.parquet",
+      "rows": 1398,
+      "sha256": "0f7977a29cad6c74e8115db5c5856ec2a83d0a45cc5679e19f0f2440d2fa96a5",
+      "start": "2011-12-31"
+    },
+    "ALTR": {
+      "end": "2015-09-25",
+      "file": "ALTR.parquet",
+      "rows": 608,
+      "sha256": "f3bf86585d84e4374a2066b41c8057c4a5aff7e9c475ddcaa8563a7d36145fbc",
+      "start": "2006-12-29"
+    },
+    "ALXN": {
+      "end": "2021-03-31",
+      "file": "ALXN.parquet",
+      "rows": 1342,
+      "sha256": "8328c54866fe0f34c3c8e98b520074999f2f07dd337f90a1e09d4edd4c839f5e",
+      "start": "2007-12-31"
+    },
+    "AMAT": {
+      "end": "2026-07-26",
+      "file": "AMAT.parquet",
+      "rows": 2026,
+      "sha256": "ca986ff126fccc073ba96a6137a80bd4b3f60dc59a285efdd412130573b4d3fe",
+      "start": "2006-10-29"
+    },
+    "AMCR": {
+      "end": "2026-06-30",
+      "file": "AMCR.parquet",
+      "rows": 778,
+      "sha256": "49fab031abfe26489c65f804ad164a86ed829a006ce7f46d8ff6e84a2b295aa0",
+      "start": "2016-06-30"
+    },
+    "AMD": {
+      "end": "2026-06-27",
+      "file": "AMD.parquet",
+      "rows": 1941,
+      "sha256": "c71c1717fbe1e62be99fc2ce9282f31ee2a6b2a8f7c4d3e09107afebba6109f5",
+      "start": "2007-12-29"
+    },
+    "AME": {
+      "end": "2026-06-30",
+      "file": "AME.parquet",
+      "rows": 1992,
+      "sha256": "0fedb66cba00377c14373822e37966f29598e9ca2cb662baff111787f1c478f1",
+      "start": "2007-12-31"
+    },
+    "AMG": {
+      "end": "2026-06-30",
+      "file": "AMG.parquet",
+      "rows": 1824,
+      "sha256": "d6ad40064092dc5e80cfe364e6857fea2feeded610af15db4b36fcb6e11ce779",
+      "start": "2007-12-31"
+    },
+    "AMGN": {
+      "end": "2026-06-30",
+      "file": "AMGN.parquet",
+      "rows": 1952,
+      "sha256": "deba7d2cf19eacd6b0e5e7672466f40600c09772364e15ad13d441b4f3850a9d",
+      "start": "2006-12-31"
+    },
+    "AMP": {
+      "end": "2026-09-30",
+      "file": "AMP.parquet",
+      "rows": 1854,
+      "sha256": "579d50e37a888715f932965345c20795a9efef265bd5afbc977af162ce221f8c",
+      "start": "2006-12-31"
+    },
+    "AMT": {
+      "end": "2026-09-30",
+      "file": "AMT.parquet",
+      "rows": 2067,
+      "sha256": "3e5d911b51d8d8e8a797aaeb18b5dad5bcf32233f0c8f0c844b9cac0fb3e69a6",
+      "start": "2006-12-31"
+    },
+    "AMTM": {
+      "end": "2026-07-03",
+      "file": "AMTM.parquet",
+      "rows": 212,
+      "sha256": "160279a11965dcc742394ab4f1f63ecc09758327b2d04bba86cf302c90cc14ee",
+      "start": "2021-10-01"
+    },
+    "AMZN": {
+      "end": "2026-09-30",
+      "file": "AMZN.parquet",
+      "rows": 2390,
+      "sha256": "c6169d3d4d83eb7daa5910004ca66bea2e6151b3466db48a90160e6ce41bc6f3",
+      "start": "2006-12-31"
+    },
+    "AN": {
+      "end": "2026-06-30",
+      "file": "AN.parquet",
+      "rows": 1560,
+      "sha256": "ca0e6cc555387bf28226515bb274b43e56b497e9b475054adf330d53fc3762f8",
+      "start": "2008-12-31"
+    },
+    "ANDV": {
+      "end": "2018-06-30",
+      "file": "ANDV.parquet",
+      "rows": 809,
+      "sha256": "b771cec940dedd91715129494a18496ed8adb3bc4d7be4abffdb24dcaaf609e4",
+      "start": "2008-12-31"
+    },
+    "ANET": {
+      "end": "2026-06-30",
+      "file": "ANET.parquet",
+      "rows": 1473,
+      "sha256": "5cdf958a1fbb10180292163656f60194d75f48e1f0d6e0b0a9731cbe1c813fc6",
+      "start": "2011-12-31"
+    },
+    "ANF": {
+      "end": "2026-08-01",
+      "file": "ANF.parquet",
+      "rows": 1829,
+      "sha256": "a8f34ded063c3d57d907c32ea976d13c83f2ebdf392d39e6dd2ab4b43392286f",
+      "start": "2008-02-02"
+    },
+    "ANRZQ": {
+      "end": "2015-06-30",
+      "file": "ANRZQ.parquet",
+      "rows": 567,
+      "sha256": "72b9e06605ad247b4e8fb7bd16419840e579c7cb2166f7d17beb64a103c30af4",
+      "start": "2006-12-31"
+    },
+    "ANSS": {
+      "end": "2025-03-31",
+      "file": "ANSS.parquet",
+      "rows": 1490,
+      "sha256": "3bc72b145798a5788db25f0094633f9ffc8285bf2a1df6fdd4fca4f0c1b3b24c",
+      "start": "2007-12-31"
+    },
+    "ANTM": {
+      "end": "2026-09-30",
+      "file": "ANTM.parquet",
+      "rows": 2382,
+      "sha256": "6d3f8d195082755a710e8207e49aef7b3e787cb23928c927054d483b95d693e9",
+      "start": "2006-12-31"
+    },
+    "AON": {
+      "end": "2026-09-30",
+      "file": "AON.parquet",
+      "rows": 2000,
+      "sha256": "82f0ccda589012c077d48fa3406ed4fc2bb5e5fc4c0cd7da42bcbeb5f229d7e9",
+      "start": "2006-12-31"
+    },
+    "AOS": {
+      "end": "2026-09-30",
+      "file": "AOS.parquet",
+      "rows": 1666,
+      "sha256": "c4c1c17c8f817fce7cfd00e0e42403e2530e6f8b8e7ea9e77e6d181a578216e6",
+      "start": "2008-12-31"
+    },
+    "APA": {
+      "end": "2026-06-30",
+      "file": "APA.parquet",
+      "rows": 415,
+      "sha256": "cc74821e0a103e60d4e996ad8c6c3cb160e60dfe17d0cde600b33a272b52aa23",
+      "start": "2018-12-31"
+    },
+    "APC": {
+      "end": "2026-06-30",
+      "file": "APC.parquet",
+      "rows": 45,
+      "sha256": "731fe53f50e4bd43e903ac6356a5fa40dd4a6104c2565caf2b3501519e97e552",
+      "start": "2025-03-31"
+    },
+    "APD": {
+      "end": "2026-06-30",
+      "file": "APD.parquet",
+      "rows": 2121,
+      "sha256": "848a51a4d7d66ddfc939929811568397737d687b3115ab6b9a03a06f873b9bb3",
+      "start": "2006-09-30"
+    },
+    "APH": {
+      "end": "2026-06-30",
+      "file": "APH.parquet",
+      "rows": 1845,
+      "sha256": "fdc0588e6f9a14b2b0e9fdc6cd20157c540cafed39605c1b09047c443ef093fe",
+      "start": "2006-12-31"
+    },
+    "APO": {
+      "end": "2026-06-30",
+      "file": "APO.parquet",
+      "rows": 2086,
+      "sha256": "aafe8d3048c15e7ece3d4c2423b38831f2059ab7e8574708c325d656fcdd145f",
+      "start": "2008-12-31"
+    },
+    "APOL": {
+      "end": "2016-11-30",
+      "file": "APOL.parquet",
+      "rows": 965,
+      "sha256": "edd2256573124133784a00e78b3bcc1796545fcc07575f5cd49cccb2c05feb2b",
+      "start": "2007-08-31"
+    },
+    "APP": {
+      "end": "2026-06-30",
+      "file": "APP.parquet",
+      "rows": 622,
+      "sha256": "d78ffb76358a85e3e39da9c9858d3b4432c8ff77f31551a968e301135f48a5e7",
+      "start": "2018-12-31"
+    },
+    "APTV": {
+      "end": "2026-06-30",
+      "file": "APTV.parquet",
+      "rows": 1664,
+      "sha256": "a15ec74b386fdc5bdbaa61ec1d577598c5e14301ae0841d744d46e1e4c2ae8a0",
+      "start": "2009-12-31"
+    },
+    "ARE": {
+      "end": "2026-09-30",
+      "file": "ARE.parquet",
+      "rows": 847,
+      "sha256": "526aba8120ac0148666fa6db8e5257d97b6e76d1c0060d2c29da3a9074960751",
+      "start": "2007-12-31"
+    },
+    "ARES": {
+      "end": "2026-06-30",
+      "file": "ARES.parquet",
+      "rows": 1216,
+      "sha256": "191969d64268b6eda9d115f89f92851ca6eccd4d71abfd7b10edc6f4d9d5f00f",
+      "start": "2012-12-31"
+    },
+    "ARG": {
+      "end": "2016-03-31",
+      "file": "ARG.parquet",
+      "rows": 751,
+      "sha256": "ac99f90af7bcc80ec6ac870e75e5de811afbfdb5e6a32936cb884a2a183e8b35",
+      "start": "2008-03-31"
+    },
+    "ARNC": {
+      "end": "2026-09-30",
+      "file": "ARNC.parquet",
+      "rows": 1826,
+      "sha256": "d4cf57e9d79416943cbbd93001fae74a8c0bdeb8b331fb3c7947e34c9751406b",
+      "start": "2006-12-31"
+    },
+    "ASH": {
+      "end": "2026-06-30",
+      "file": "ASH.parquet",
+      "rows": 966,
+      "sha256": "59ab1c58edb35caf1140dd98eab544d61c138af3109e3a27d50053d3773a9ff6",
+      "start": "2013-09-30"
+    },
+    "ATGE": {
+      "end": "2026-09-30",
+      "file": "ATGE.parquet",
+      "rows": 1798,
+      "sha256": "1954d9ecee3d2bf0611f37f386e63c27305d731a101e2b1cd5e025c3502b022f",
+      "start": "2008-06-30"
+    },
+    "ATI": {
+      "end": "2026-09-27",
+      "file": "ATI.parquet",
+      "rows": 1862,
+      "sha256": "a9ca2b0fef6d7df9901d82c6f4ba7d088e279f7000d91c566a0481fbae504812",
+      "start": "2006-12-31"
+    },
+    "ATO": {
+      "end": "2026-06-30",
+      "file": "ATO.parquet",
+      "rows": 1736,
+      "sha256": "64fe2cbdd6609e4af0c3f7200b4b19146c5a616da0a6df79f7595c303746c5db",
+      "start": "2007-09-30"
+    },
+    "ATVI": {
+      "end": "2023-06-30",
+      "file": "ATVI.parquet",
+      "rows": 1795,
+      "sha256": "51674ce30d568d50b723e385669cef885580928d8e8f72a9cffabf763cd06df4",
+      "start": "2006-12-31"
+    },
+    "AV": {
+      "end": "2016-06-30",
+      "file": "AV.parquet",
+      "rows": 572,
+      "sha256": "f04049403810ddceb49cf77934a2a2c436a0645e63e8f84573df481534f99a20",
+      "start": "2008-09-30"
+    },
+    "AVB": {
+      "end": "2026-06-30",
+      "file": "AVB.parquet",
+      "rows": 1731,
+      "sha256": "0a57cf5f14e124013802d5f24613b297597c02f50e5de6a5b22078c4f0bdff12",
+      "start": "2006-12-31"
+    },
+    "AVGO": {
+      "end": "2026-08-02",
+      "file": "AVGO.parquet",
+      "rows": 1040,
+      "sha256": "8cff3b3e5c41676574abfe7272d5023de522756bc27ff67a23f4cf64d89a8145",
+      "start": "2015-11-01"
+    },
+    "AVP": {
+      "end": "2023-03-31",
+      "file": "AVP.parquet",
+      "rows": 1756,
+      "sha256": "4f74ef49dee8b300e9caafa16a8fedeb1827d9b72d2da02724e105e7c343bf75",
+      "start": "2006-12-31"
+    },
+    "AVY": {
+      "end": "2026-06-30",
+      "file": "AVY.parquet",
+      "rows": 1548,
+      "sha256": "dad1c1b9050f604e9aba14a69f544d298a2b94f28cf74f1aebf3b3c999784ef6",
+      "start": "2007-12-29"
+    },
+    "AWK": {
+      "end": "2026-09-30",
+      "file": "AWK.parquet",
+      "rows": 2021,
+      "sha256": "4a205ceac71eb58629cae4f378e5eb7a3c4b76b4ece013d18f67fd5a57c60323",
+      "start": "2007-12-31"
+    },
+    "AXON": {
+      "end": "2026-06-30",
+      "file": "AXON.parquet",
+      "rows": 1770,
+      "sha256": "e2231fb4ad80d50c70b5b49c6e1266cf15e20d0e2b3de22bee5d119004efe288",
+      "start": "2008-12-31"
+    },
+    "AXP": {
+      "end": "2026-09-30",
+      "file": "AXP.parquet",
+      "rows": 1966,
+      "sha256": "c8429b110a15d5ae06b540841925cb71adcf07d97687fb3ab8cc541610fb3e2a",
+      "start": "2006-12-31"
+    },
+    "AYE": {
+      "end": "2010-12-31",
+      "file": "AYE.parquet",
+      "rows": 190,
+      "sha256": "f85543578d8aa31fc32c26c0ae8fee38f9add0f0651d9a71fc0791187767932f",
+      "start": "2006-12-31"
+    },
+    "AYI": {
+      "end": "2026-08-31",
+      "file": "AYI.parquet",
+      "rows": 1649,
+      "sha256": "37b681304ec9d54cadf658b16ef2460a73fd0995de40fcbc3809a692d1bf721f",
+      "start": "2008-08-31"
+    },
+    "AZO": {
+      "end": "2026-08-29",
+      "file": "AZO.parquet",
+      "rows": 2152,
+      "sha256": "a57e4bcecd821c65f4cb875e561ddd4ed486064c37a5b1192de0a8df1fbc17f4",
+      "start": "2007-08-25"
+    },
+    "BA": {
+      "end": "2026-09-30",
+      "file": "BA.parquet",
+      "rows": 2097,
+      "sha256": "182269641a8163d11f43ccd03458996c410a4d822d872e1c7d9ce65514f85504",
+      "start": "2006-12-31"
+    },
+    "BAC": {
+      "end": "2026-06-30",
+      "file": "BAC.parquet",
+      "rows": 1796,
+      "sha256": "4eaef2c4897e43c7b7df2db2b69493c97e7ccb4bd9d3441332729aacd4208f37",
+      "start": "2006-12-31"
+    },
+    "BALL": {
+      "end": "2026-06-30",
+      "file": "BALL.parquet",
+      "rows": 1922,
+      "sha256": "deecb38c9e9d30b593ad9fd53c18396a93f6d8b86e027b9e49ddf96efda44e19",
+      "start": "2007-12-31"
+    },
+    "BAX": {
+      "end": "2026-09-30",
+      "file": "BAX.parquet",
+      "rows": 1959,
+      "sha256": "1c03570a2eeaf14679a326884778f948248d6997ed2c406250ac9d8def98e048",
+      "start": "2007-12-31"
+    },
+    "BBBY": {
+      "end": "2023-02-25",
+      "file": "BBBY.parquet",
+      "rows": 1472,
+      "sha256": "e832c5807e86764942bfd8506f88e75d1057737c9cd53ea9ed56de24c0799310",
+      "start": "2007-03-03"
+    },
+    "BBT": {
+      "end": "2026-06-30",
+      "file": "BBT.parquet",
+      "rows": 2085,
+      "sha256": "f5eabd48ae83fd349ac01b8f25a6f1594e767258352faa9ad03b95ed712a6b9e",
+      "start": "2008-12-31"
+    },
+    "BBWI": {
+      "end": "2026-08-01",
+      "file": "BBWI.parquet",
+      "rows": 2249,
+      "sha256": "cdfb0111418e29517775eea39fa54bb1279af3df27fd09e02986d82d4914f032",
+      "start": "2007-02-03"
+    },
+    "BBY": {
+      "end": "2026-08-01",
+      "file": "BBY.parquet",
+      "rows": 2088,
+      "sha256": "3b832c8925257b6fdca0e32c959ae92789390a77bf88883c6218509bad3608de",
+      "start": "2007-03-03"
+    },
+    "BC": {
+      "end": "2026-07-04",
+      "file": "BC.parquet",
+      "rows": 1904,
+      "sha256": "6f8e5907a945706b7e68c5f397abcd7e0deee85230131f3d148120cd25030cae",
+      "start": "2008-12-31"
+    },
+    "BCR": {
+      "end": "2017-09-30",
+      "file": "BCR.parquet",
+      "rows": 1116,
+      "sha256": "c9ceafd19f7db5bb532ddb02af8758bde9cb2d7e916c269480420bbfeeedbdf9",
+      "start": "2006-12-31"
+    },
+    "BDX": {
+      "end": "2026-06-30",
+      "file": "BDX.parquet",
+      "rows": 1756,
+      "sha256": "8c97613025cdcb437ff99ed4d98f12a45fe8f291ecf3d70fdbd050a3295869cd",
+      "start": "2007-09-30"
+    },
+    "BEAM": {
+      "end": "2026-06-30",
+      "file": "BEAM.parquet",
+      "rows": 583,
+      "sha256": "295dd6c8501a6d30fbb9a62dced265561c9061cdb3a0324111403fb2513a5c08",
+      "start": "2018-12-31"
+    },
+    "BEN": {
+      "end": "2026-06-30",
+      "file": "BEN.parquet",
+      "rows": 1741,
+      "sha256": "f29cfdb64446ba21c3ec164841e648e960e825336987f3415cb0fcda5e6c602d",
+      "start": "2006-09-30"
+    },
+    "BF.B": {
+      "end": "2026-07-31",
+      "file": "BF.B.parquet",
+      "rows": 1610,
+      "sha256": "b927d0939c0c718adebb4c785682b5ab1e3fc373b04c6f8847359b0804db167e",
+      "start": "2009-04-30"
+    },
+    "BG": {
+      "end": "2026-09-30",
+      "file": "BG.parquet",
+      "rows": 2288,
+      "sha256": "5df84937ae7126466d2223ed782328b57582bce0c5611eeaa2068f47a4eb7ac2",
+      "start": "2006-12-31"
+    },
+    "BHF": {
+      "end": "2026-06-30",
+      "file": "BHF.parquet",
+      "rows": 1089,
+      "sha256": "ed0e125854be0e001547e9e022b1fff0d1d8f844a6717d81885306ce5017ac9d",
+      "start": "2014-12-31"
+    },
+    "BHGE": {
+      "end": "2026-09-30",
+      "file": "BHGE.parquet",
+      "rows": 919,
+      "sha256": "f8509a1076f16b0dea718373cd393388291c05b7b72143757f0f1ee3b450daef",
+      "start": "2014-12-31"
+    },
+    "BIG": {
+      "end": "2024-08-03",
+      "file": "BIG.parquet",
+      "rows": 1487,
+      "sha256": "270fda19d0dc62c85f4dd3277905a76cd9ba98eb2b19760081c7ea73aad17674",
+      "start": "2008-02-02"
+    },
+    "BIIB": {
+      "end": "2026-09-30",
+      "file": "BIIB.parquet",
+      "rows": 1996,
+      "sha256": "279cc2951ceb5b7c6e8cd12615a1943b51f6eb652d32307bc6f268ab0913489b",
+      "start": "2006-12-31"
+    },
+    "BIO": {
+      "end": "2026-06-30",
+      "file": "BIO.parquet",
+      "rows": 1974,
+      "sha256": "fee3e2bd6080ec00b55c674c2409f251617d2a5e7dacad6f80befcee6f28af6a",
+      "start": "2007-12-31"
+    },
+    "BJS": {
+      "end": "2009-12-31",
+      "file": "BJS.parquet",
+      "rows": 59,
+      "sha256": "9998d1d2a3fcadf178607be683367b6e919a6d3b4dd1f7a0884bdf64c1348153",
+      "start": "2006-09-30"
+    },
+    "BK": {
+      "end": "2026-09-30",
+      "file": "BK.parquet",
+      "rows": 1466,
+      "sha256": "c0be1e6c93c93a3b6771ddb28ace3b85fcb8431136168cc5e32a4e062f25c6fa",
+      "start": "2006-12-31"
+    },
+    "BKNG": {
+      "end": "2026-06-30",
+      "file": "BKNG.parquet",
+      "rows": 1698,
+      "sha256": "4cfbcfe2fa8e9e93deb11bda653627e103a9c12c619026621b9db9fe8d6a45f3",
+      "start": "2007-12-31"
+    },
+    "BKR": {
+      "end": "2026-09-30",
+      "file": "BKR.parquet",
+      "rows": 919,
+      "sha256": "a320913f835b97a730f602aa8b16d816b4a9379ddcade4564ca57080875531ad",
+      "start": "2014-12-31"
+    },
+    "BLDR": {
+      "end": "2026-09-30",
+      "file": "BLDR.parquet",
+      "rows": 1723,
+      "sha256": "69f53272420f833ab69776d37c3a43cba9e2a0027751c0d54f2b11daa9607466",
+      "start": "2008-12-31"
+    },
+    "BLK": {
+      "end": "2026-06-30",
+      "file": "BLK.parquet",
+      "rows": 1870,
+      "sha256": "d324fa94c1dc90e2e033f15a9299cca911fb296fe9f2914d550344fc66a1e745",
+      "start": "2006-12-31"
+    },
+    "BLL": {
+      "end": "2026-06-30",
+      "file": "BLL.parquet",
+      "rows": 1922,
+      "sha256": "73249e69ada33d5c0aec72c269846d10e21ce9ca5260d4da0d9e7bd762919daa",
+      "start": "2007-12-31"
+    },
+    "BMC": {
+      "end": "2013-06-30",
+      "file": "BMC.parquet",
+      "rows": 470,
+      "sha256": "6bb96ced225f9a2d2f59cdc4df1394a69c4325bf5640ff07c1eaef676f8f40d0",
+      "start": "2007-03-31"
+    },
+    "BMET": {
+      "end": "2012-11-30",
+      "file": "BMET.parquet",
+      "rows": 121,
+      "sha256": "80fc0d08c2cba0d03a76e638524357f5a9c778fecec30e22cf281fb717c762cf",
+      "start": "2009-05-31"
+    },
+    "BMS": {
+      "end": "2019-03-31",
+      "file": "BMS.parquet",
+      "rows": 959,
+      "sha256": "d64bcb07f10d45495692d6f8e62e75c60f599192859f4f21e19eaf17d8ca9d9b",
+      "start": "2007-12-31"
+    },
+    "BMY": {
+      "end": "2026-09-30",
+      "file": "BMY.parquet",
+      "rows": 2007,
+      "sha256": "9c0781b181d7dd19f9f39e1833148a2ace29bac0ecf0d40e2d1b91e9a7f6d390",
+      "start": "2007-12-31"
+    },
+    "BNI": {
+      "end": "2026-06-30",
+      "file": "BNI.parquet",
+      "rows": 1478,
+      "sha256": "9b5f3284169f328b499e2564274d045ea276dadb1da970d081bf6bc52df49613",
+      "start": "2006-12-31"
+    },
+    "BNY": {
+      "end": "2026-09-30",
+      "file": "BNY.parquet",
+      "rows": 1466,
+      "sha256": "8fa5b7e7f80d34ea4a233873b86fc059e29e98e9ad7447132a68b21570eb446c",
+      "start": "2006-12-31"
+    },
+    "BR": {
+      "end": "2026-06-30",
+      "file": "BR.parquet",
+      "rows": 1841,
+      "sha256": "a96620f04fa16c31b6e193a385ec784c2a47e9dcf491a6ac2b3b2575ab82c06e",
+      "start": "2008-06-30"
+    },
+    "BRCM": {
+      "end": "2015-09-30",
+      "file": "BRCM.parquet",
+      "rows": 740,
+      "sha256": "e419ac93e15b305a294244fa17ee270f64652d1580474b4b2aa7944923326b12",
+      "start": "2006-12-31"
+    },
+    "BRK.B": {
+      "end": "2026-06-30",
+      "file": "BRK.B.parquet",
+      "rows": 1616,
+      "sha256": "5fbe4c17ac8ad50a9e5bb77f72565a1c68148d58ad162044868e639110b57f8d",
+      "start": "2007-12-31"
+    },
+    "BRO": {
+      "end": "2026-09-30",
+      "file": "BRO.parquet",
+      "rows": 2293,
+      "sha256": "32663d9cca6425ff4a163c3c0d130ad731318a8b596fde31a919c052f84f96f2",
+      "start": "2007-12-31"
+    },
+    "BSX": {
+      "end": "2026-06-30",
+      "file": "BSX.parquet",
+      "rows": 1592,
+      "sha256": "f636d53395983b237e288e07273f8fe08a24e140eac54082668b281e5bee3bc6",
+      "start": "2007-12-31"
+    },
+    "BTUUQ": {
+      "end": "2026-06-30",
+      "file": "BTUUQ.parquet",
+      "rows": 1684,
+      "sha256": "65dc30881d8a446e4503bcc5aeb621bf63c9ab069b06462a1a17ab2c07ba36df",
+      "start": "2006-12-31"
+    },
+    "BWA": {
+      "end": "2026-09-30",
+      "file": "BWA.parquet",
+      "rows": 2087,
+      "sha256": "0a08730c0675c3abdea1133db8217177cbf1dc0989b207f592fa7d3e51a18ff5",
+      "start": "2007-12-31"
+    },
+    "BX": {
+      "end": "2026-06-30",
+      "file": "BX.parquet",
+      "rows": 1722,
+      "sha256": "762cb9a74bdf5f50cc8cda4573e3158f721219a6191b2a8827d37011cafcf81f",
+      "start": "2008-12-31"
+    },
+    "BXLT": {
+      "end": "2016-03-31",
+      "file": "BXLT.parquet",
+      "rows": 118,
+      "sha256": "7c64fa734ce5c89b1bfd14b4247589b2a2aa16cb67a0891a2c59ab2381d6f07d",
+      "start": "2012-12-31"
+    },
+    "BXP": {
+      "end": "2026-06-30",
+      "file": "BXP.parquet",
+      "rows": 1335,
+      "sha256": "079947fa50310279afb6ea79f64b3cfdf9f3aae4d8b94c644a51070541507c1a",
+      "start": "2006-12-31"
+    },
+    "C": {
+      "end": "2025-12-31",
+      "file": "C.parquet",
+      "rows": 2202,
+      "sha256": "13532006cb91c7bd9640c041647d1df129a2331237a4708488a04c850319271d",
+      "start": "2006-12-31"
+    },
+    "CA": {
+      "end": "2018-09-30",
+      "file": "CA.parquet",
+      "rows": 878,
+      "sha256": "57777594bb597ce17677edb3fadc7825ab87794eda65c90d402e1484be1a5fdc",
+      "start": "2007-03-31"
+    },
+    "CAG": {
+      "end": "2026-08-30",
+      "file": "CAG.parquet",
+      "rows": 1855,
+      "sha256": "5534455c5de26b9db7e617c83fb6886bb6002102aff9cdac0317151e78d7dc48",
+      "start": "2007-05-27"
+    },
+    "CAH": {
+      "end": "2026-06-30",
+      "file": "CAH.parquet",
+      "rows": 1694,
+      "sha256": "eee2dec905da3da94430d93a04db3d15899d4691adca6f25c48535136dc4a3c7",
+      "start": "2007-06-30"
+    },
+    "CAM": {
+      "end": "2015-12-31",
+      "file": "CAM.parquet",
+      "rows": 806,
+      "sha256": "6312232d1dd1cb64b7ca9893806746ec0e27e099b19868c75a9fb3195d28eb86",
+      "start": "2006-12-31"
+    },
+    "CARR": {
+      "end": "2026-09-30",
+      "file": "CARR.parquet",
+      "rows": 806,
+      "sha256": "d3af42590f3a462a38076fa5b92dd62f8fa6076222bd79a14683934d90fc8a6b",
+      "start": "2017-12-31"
+    },
+    "CASY": {
+      "end": "2026-07-31",
+      "file": "CASY.parquet",
+      "rows": 1923,
+      "sha256": "612c1374e56336c37f606062e2d30efdde1250079e1913ac4a94dfdbc9c039d8",
+      "start": "2008-04-30"
+    },
+    "CAT": {
+      "end": "2026-06-30",
+      "file": "CAT.parquet",
+      "rows": 1902,
+      "sha256": "a1993f782484fa44e380aa4575e075d8c7a457cc98528b3a8acd1d9151e8b638",
+      "start": "2006-12-31"
+    },
+    "CB": {
+      "end": "2026-09-30",
+      "file": "CB.parquet",
+      "rows": 1784,
+      "sha256": "0ad974f94446c4d65b8e4c50de58d581147634851e1e06559712fc18686ce1a0",
+      "start": "2007-12-31"
+    },
+    "CBE": {
+      "end": "2012-09-30",
+      "file": "CBE.parquet",
+      "rows": 440,
+      "sha256": "7bbc06a9a2b1b3d892309ec174934a5d260f885f172600120d9856c1e1d99227",
+      "start": "2006-12-31"
+    },
+    "CBOE": {
+      "end": "2026-09-30",
+      "file": "CBOE.parquet",
+      "rows": 1961,
+      "sha256": "76cd20bb63183608592ece06b15976030199bc889ff0f3d52ad1725bb353fef4",
+      "start": "2008-12-31"
+    },
+    "CBRE": {
+      "end": "2026-09-30",
+      "file": "CBRE.parquet",
+      "rows": 1842,
+      "sha256": "71073ac8ae77afec936399051a5993176f6f7214a0bbdb2d917ea8256a313dfb",
+      "start": "2007-12-31"
+    },
+    "CBS": {
+      "end": "2025-06-30",
+      "file": "CBS.parquet",
+      "rows": 1857,
+      "sha256": "087cfb5433124c78ebe448bcb65df9f899f77e40eef079086b4081b5bc6f1906",
+      "start": "2007-12-31"
+    },
+    "CCE": {
+      "end": "2016-04-01",
+      "file": "CCE.parquet",
+      "rows": 705,
+      "sha256": "40c57f8a6ce885a70b864d38147246676d71a6c0b01c51d4fe7227244d3c9081",
+      "start": "2008-12-31"
+    },
+    "CCI": {
+      "end": "2026-06-30",
+      "file": "CCI.parquet",
+      "rows": 2033,
+      "sha256": "aa0b3865e622543ebfc432f510a1f498456ebada44feddf6827ebd691a735dd9",
+      "start": "2006-12-31"
+    },
+    "CCL": {
+      "end": "2026-08-31",
+      "file": "CCL.parquet",
+      "rows": 1655,
+      "sha256": "1312e95cdb0e13a92997ea262b12619f4c43cdabf4da181b6645487eb3092c72",
+      "start": "2006-11-30"
+    },
+    "CDAY": {
+      "end": "2025-09-30",
+      "file": "CDAY.parquet",
+      "rows": 810,
+      "sha256": "50527989809e234b551d10314f94af632ead7f8a044d05e3b4e6a18e5f1aa826",
+      "start": "2015-12-31"
+    },
+    "CDNS": {
+      "end": "2026-09-30",
+      "file": "CDNS.parquet",
+      "rows": 1554,
+      "sha256": "0ee58ae577dc645fbaf98a37889624dd50bbfacde37398060f157ee971491c06",
+      "start": "2007-12-29"
+    },
+    "CDW": {
+      "end": "2026-06-30",
+      "file": "CDW.parquet",
+      "rows": 1839,
+      "sha256": "1a7d8972e78bbcfbacd537c15549c2090ab7be25316e03be28dac0b6a969705d",
+      "start": "2008-12-31"
+    },
+    "CE": {
+      "end": "2026-06-30",
+      "file": "CE.parquet",
+      "rows": 1641,
+      "sha256": "797e1f034d9914c613b890104a0d2772a819b0730f40d3dd3a107da89dc147f5",
+      "start": "2007-12-31"
+    },
+    "CEG": {
+      "end": "2026-06-30",
+      "file": "CEG.parquet",
+      "rows": 519,
+      "sha256": "162a96172f18ff57975ba27aab3ae134953e9648969ea1e5c1778d57ef088a04",
+      "start": "2019-12-31"
+    },
+    "CELG": {
+      "end": "2019-09-30",
+      "file": "CELG.parquet",
+      "rows": 1276,
+      "sha256": "e44e6752e9ae979546cc77234b725b8a07430b42fb5bb14fc081041ba6670f7f",
+      "start": "2006-12-31"
+    },
+    "CEPH": {
+      "end": "2011-06-30",
+      "file": "CEPH.parquet",
+      "rows": 122,
+      "sha256": "cb85de0c62d55fcb5a31cefaf588af626bf4eadf4ccf57d0ac454a5d86372793",
+      "start": "2007-12-31"
+    },
+    "CERN": {
+      "end": "2022-03-31",
+      "file": "CERN.parquet",
+      "rows": 1514,
+      "sha256": "91c66ef50d2d058235a0d9015a0a3d54071eb2dba67f7772c10722940b1213ed",
+      "start": "2009-01-03"
+    },
+    "CF": {
+      "end": "2026-06-30",
+      "file": "CF.parquet",
+      "rows": 1998,
+      "sha256": "d1dc6e8b0acbcdf1274897580aa7e32289a511dbe0de583526710af0ad1aef3f",
+      "start": "2006-12-31"
+    },
+    "CFG": {
+      "end": "2026-09-30",
+      "file": "CFG.parquet",
+      "rows": 1316,
+      "sha256": "3568f71426a4e46086408a43e00d53b626b40f18192b785826e88ad3802254ee",
+      "start": "2011-12-31"
+    },
+    "CFN": {
+      "end": "2014-12-31",
+      "file": "CFN.parquet",
+      "rows": 465,
+      "sha256": "8035916489506bf883a3945e8f133b9e86fde068957947b130476fa8b037894b",
+      "start": "2008-06-30"
+    },
+    "CHD": {
+      "end": "2026-09-30",
+      "file": "CHD.parquet",
+      "rows": 1964,
+      "sha256": "f1f9037edb0fb7a7f3a0ffd55a613a95d479412e78e3d219674b8d36039b5e08",
+      "start": "2007-12-31"
+    },
+    "CHK": {
+      "end": "2026-09-30",
+      "file": "CHK.parquet",
+      "rows": 1985,
+      "sha256": "90a4b81114f88bc4f26c5ad6467b69514e5e333a0da0450c41a15132abc65f7f",
+      "start": "2007-12-31"
+    },
+    "CHRW": {
+      "end": "2026-09-30",
+      "file": "CHRW.parquet",
+      "rows": 2118,
+      "sha256": "8fdb3917c4a86b50dece2500c6ad21b72814d997cccea37ba7b3838c2abf47a5",
+      "start": "2006-12-31"
+    },
+    "CHTR": {
+      "end": "2026-06-30",
+      "file": "CHTR.parquet",
+      "rows": 1820,
+      "sha256": "4c086c59822fc2d7e4cd459f0eaa3840e6310ff419e2c6377e16cb9870e46b14",
+      "start": "2009-12-31"
+    },
+    "CI": {
+      "end": "2026-06-30",
+      "file": "CI.parquet",
+      "rows": 819,
+      "sha256": "162e4f5f063e48f594792312852616ee0f1207770319ff3e1ee3b1d851726ff6",
+      "start": "2015-12-31"
+    },
+    "CIEN": {
+      "end": "2026-08-01",
+      "file": "CIEN.parquet",
+      "rows": 1540,
+      "sha256": "4408640532dcd5e08fe8f49f4e3a4415dec3e74d396e4e3bed3897d5d7a77348",
+      "start": "2007-10-31"
+    },
+    "CINF": {
+      "end": "2026-09-30",
+      "file": "CINF.parquet",
+      "rows": 2007,
+      "sha256": "6fa1fff89edbf171bc7c036ad25c41417e3ee891fbe60663323718cc7a5a86b1",
+      "start": "2007-12-31"
+    },
+    "CITGQ": {
+      "end": "2021-09-30",
+      "file": "CITGQ.parquet",
+      "rows": 1417,
+      "sha256": "5d7ba5ec732c5a4e379dc7cea403e104bf46072ee7848566b0bb981d6ad48bdd",
+      "start": "2008-12-31"
+    },
+    "CL": {
+      "end": "2026-09-30",
+      "file": "CL.parquet",
+      "rows": 1920,
+      "sha256": "f3ee5a23bf4a1ed7e2ff432f59ae16620477105db7490afb16b72f640fe160c3",
+      "start": "2007-12-31"
+    },
+    "CLF": {
+      "end": "2026-09-30",
+      "file": "CLF.parquet",
+      "rows": 2054,
+      "sha256": "fa0c6b3ecff650a825310a215495b21bf30fe38765e8cbf76d38cdd270e40b45",
+      "start": "2006-12-31"
+    },
+    "CLX": {
+      "end": "2026-03-31",
+      "file": "CLX.parquet",
+      "rows": 1733,
+      "sha256": "66eb67a5f1582282277b3de33115df79271a7f448daebd5646dd897e6e924089",
+      "start": "2007-06-30"
+    },
+    "CMA": {
+      "end": "2025-09-30",
+      "file": "CMA.parquet",
+      "rows": 1401,
+      "sha256": "5263a0f4978d1ec881ad0f82cfb1f0f65dca4040e52270aec8d87c565a76e364",
+      "start": "2007-12-31"
+    },
+    "CMCSA": {
+      "end": "2026-09-30",
+      "file": "CMCSA.parquet",
+      "rows": 1948,
+      "sha256": "9152f7fcebe7ba31b900603829af0a0b1986392d65536bde853fa32570942259",
+      "start": "2006-12-31"
+    },
+    "CMCSK": {
+      "end": "2026-09-30",
+      "file": "CMCSK.parquet",
+      "rows": 1948,
+      "sha256": "bfbd1f8b3ed5cc223caeba3f5e6c1c5fe2d6ab9383a692a5480513854b2c353a",
+      "start": "2006-12-31"
+    },
+    "CME": {
+      "end": "2026-09-30",
+      "file": "CME.parquet",
+      "rows": 2069,
+      "sha256": "53aeb6b384721b10a4d42268ebfa8da25f7eac55342a1fc2ead95d6ad3cf077c",
+      "start": "2006-12-31"
+    },
+    "CMG": {
+      "end": "2026-09-30",
+      "file": "CMG.parquet",
+      "rows": 1767,
+      "sha256": "70adc642465a85d28b7f64fdc572cc05ffb4b3d746b9709e03e16ac9f32885e9",
+      "start": "2007-12-31"
+    },
+    "CMI": {
+      "end": "2026-06-30",
+      "file": "CMI.parquet",
+      "rows": 1736,
+      "sha256": "8b84c55435af0576b16cdb9bedf3fe08714a7d2de8f528299625f1c845ce5165",
+      "start": "2006-12-31"
+    },
+    "CMS": {
+      "end": "2026-06-30",
+      "file": "CMS.parquet",
+      "rows": 2023,
+      "sha256": "e49a6e5552dc7b09ac5e28f3eb9cda8ad8fb9ba55a29466ae779391c9ce5fc37",
+      "start": "2008-03-31"
+    },
+    "CMVT": {
+      "end": "2012-10-31",
+      "file": "CMVT.parquet",
+      "rows": 320,
+      "sha256": "a6806eb7b8d25b18d289e942f960ae597734b8e54c2ec41b1e3ada17a2b403c9",
+      "start": "2008-01-31"
+    },
+    "CNC": {
+      "end": "2026-09-30",
+      "file": "CNC.parquet",
+      "rows": 1896,
+      "sha256": "46a57aaab7fdc0b1bdf22450a870f35d75705ed3f3791f7d4b179945589d28a1",
+      "start": "2007-12-31"
+    },
+    "CNP": {
+      "end": "2026-03-31",
+      "file": "CNP.parquet",
+      "rows": 1970,
+      "sha256": "27ead5fc5f09b9664248cdf4ae623ce4617382ca12eb5ed54aebccb599c2d126",
+      "start": "2007-12-31"
+    },
+    "CNX": {
+      "end": "2026-09-30",
+      "file": "CNX.parquet",
+      "rows": 1570,
+      "sha256": "5b0a4c9ed59111728c6e4ae43758ac2b14486f9557baffa7d035a4f7824d1ebd",
+      "start": "2006-12-31"
+    },
+    "COF": {
+      "end": "2026-06-30",
+      "file": "COF.parquet",
+      "rows": 1745,
+      "sha256": "aa34d1894f39651c5a0c5466001f710e49e476fb8b46102151abda4554a0ea5d",
+      "start": "2006-12-31"
+    },
+    "COG": {
+      "end": "2026-03-31",
+      "file": "COG.parquet",
+      "rows": 1735,
+      "sha256": "cc3b292d7718a6a9e51e5d28960ebc5365d8a3c06484e71bccdd208784682e20",
+      "start": "2006-12-31"
+    },
+    "COHR": {
+      "end": "2026-06-30",
+      "file": "COHR.parquet",
+      "rows": 2178,
+      "sha256": "3fa8289b979ab9e8cd80fd8bbd106e3d701f2b4241470580c556116bce974251",
+      "start": "2008-06-30"
+    },
+    "COIN": {
+      "end": "2026-09-30",
+      "file": "COIN.parquet",
+      "rows": 608,
+      "sha256": "997fc357f08a79c53b799eb9a5fdb1395921086c34da2e4ddd9a10f18c15913b",
+      "start": "2018-12-31"
+    },
+    "COL": {
+      "end": "2018-09-30",
+      "file": "COL.parquet",
+      "rows": 1064,
+      "sha256": "8abf5983a2398f6ed1f029038a6191211a1530a095a1bffb02fd921d9ca20dad",
+      "start": "2006-09-30"
+    },
+    "COO": {
+      "end": "2026-07-31",
+      "file": "COO.parquet",
+      "rows": 2116,
+      "sha256": "179dfe8b8f13c333f490d4da0183833ca0380ceb2e44970a0216368ed900a398",
+      "start": "2007-10-31"
+    },
+    "COP": {
+      "end": "2026-06-30",
+      "file": "COP.parquet",
+      "rows": 1516,
+      "sha256": "f6818cf4b317125d945de32191460d29e1e3dc9a6415418b9ff5770270884af2",
+      "start": "2006-12-31"
+    },
+    "COR": {
+      "end": "2026-06-30",
+      "file": "COR.parquet",
+      "rows": 2153,
+      "sha256": "04297abef738c27415135efdc1fbaeca4fdeffec6d022bab54c8afd6194f1335",
+      "start": "2006-09-30"
+    },
+    "COST": {
+      "end": "2026-08-30",
+      "file": "COST.parquet",
+      "rows": 2327,
+      "sha256": "e6ea0840c79f31150edb86f677c07d8da2845d65f3f7795fb0e239792723fd50",
+      "start": "2007-09-02"
+    },
+    "COTY": {
+      "end": "2026-06-30",
+      "file": "COTY.parquet",
+      "rows": 1290,
+      "sha256": "91e2f70f578d8c8c5251504984fbe296ebafc451d6c4c689e2a7b6e0c9cbfcbe",
+      "start": "2012-06-30"
+    },
+    "COV": {
+      "end": "2014-12-26",
+      "file": "COV.parquet",
+      "rows": 593,
+      "sha256": "4f0ef1ae4f756afba5a7a218fa280cf16234ab5b107e441d2a37ffc13b6152ec",
+      "start": "2006-09-29"
+    },
+    "CPAY": {
+      "end": "2026-06-30",
+      "file": "CPAY.parquet",
+      "rows": 1955,
+      "sha256": "8616e716d253b990139cd5107c81e05416e505ab959bb5ab6ae04b636366fa84",
+      "start": "2008-12-31"
+    },
+    "CPB": {
+      "end": "2026-08-02",
+      "file": "CPB.parquet",
+      "rows": 1767,
+      "sha256": "5fc231424ff1bacd7d0a79a5cd19eb9ef7eb8c1a2204dd9ad54f87db51dc2f6a",
+      "start": "2007-07-29"
+    },
+    "CPGX": {
+      "end": "2016-12-31",
+      "file": "CPGX.parquet",
+      "rows": 202,
+      "sha256": "9af2e35cc1b0e7ae34b1e36bb31cfae6c72b68c033b926598b5363eecac10413",
+      "start": "2014-03-31"
+    },
+    "CPRI": {
+      "end": "2026-09-26",
+      "file": "CPRI.parquet",
+      "rows": 1560,
+      "sha256": "ea99b5b8ab510968a08acca3bce4d0b5b0131f0fc61c895cb8f9836130fe4e2e",
+      "start": "2010-04-03"
+    },
+    "CPRT": {
+      "end": "2026-07-31",
+      "file": "CPRT.parquet",
+      "rows": 1933,
+      "sha256": "1d6542b5961ec140dd4bf66856a9367fff1411d1786b7ed7704fa1f921a21c2e",
+      "start": "2008-07-31"
+    },
+    "CPT": {
+      "end": "2026-06-30",
+      "file": "CPT.parquet",
+      "rows": 1033,
+      "sha256": "9b8bea5989d4418e13bc286411612770dff2c44a5cde754db1b4f338a1c52fe9",
+      "start": "2007-12-31"
+    },
+    "CPWR": {
+      "end": "2026-06-30",
+      "file": "CPWR.parquet",
+      "rows": 1089,
+      "sha256": "255e1dfa5c37253b02102f59dac2b8c4bc7b1f7ad2f933304ecb29cde786acb3",
+      "start": "2009-12-31"
+    },
+    "CRH": {
+      "end": "2026-09-30",
+      "file": "CRH.parquet",
+      "rows": 327,
+      "sha256": "7bea224a4d4a3438eb05bd22d697946640bfb67b9666fbd363cfdbe29500e5df",
+      "start": "2020-12-31"
+    },
+    "CRL": {
+      "end": "2026-06-27",
+      "file": "CRL.parquet",
+      "rows": 1741,
+      "sha256": "59cf5de67d5c43394b0be875dce26d5b815a286c2d978732afa63b8548f36e84",
+      "start": "2007-12-29"
+    },
+    "CRM": {
+      "end": "2026-07-31",
+      "file": "CRM.parquet",
+      "rows": 2041,
+      "sha256": "0ac7212e3080590c22def74e47175ee83ee34a278275faf6298c69fcc9b577f4",
+      "start": "2007-01-31"
+    },
+    "CRWD": {
+      "end": "2026-07-31",
+      "file": "CRWD.parquet",
+      "rows": 752,
+      "sha256": "c71366f9c4636b8e62b36c1c41204b76c50dcaa270c20295d6932bda0b4367ba",
+      "start": "2017-01-31"
+    },
+    "CSCO": {
+      "end": "2026-07-25",
+      "file": "CSCO.parquet",
+      "rows": 1883,
+      "sha256": "777aa6e0a67132d4679276f80b04913bac2f01f4b1c9ca3fb8b77ad83761e632",
+      "start": "2007-07-28"
+    },
+    "CSGP": {
+      "end": "2026-09-30",
+      "file": "CSGP.parquet",
+      "rows": 1807,
+      "sha256": "9d21223eb0202cfd7a88ed55d8e3c1137491742c511ee5e82f45b8d6d30f5a8c",
+      "start": "2008-12-31"
+    },
+    "CSRA": {
+      "end": "2017-12-29",
+      "file": "CSRA.parquet",
+      "rows": 320,
+      "sha256": "202d04e9e0506da0dd0320a37f6664feddd24580858f4c919becbac9dbcd2558",
+      "start": "2013-03-29"
+    },
+    "CSX": {
+      "end": "2026-09-30",
+      "file": "CSX.parquet",
+      "rows": 2165,
+      "sha256": "a79dee69c8adb1a79ef2c6a50012229f02558f3c0787c7520a910d2d075098b7",
+      "start": "2006-12-29"
+    },
+    "CTAS": {
+      "end": "2026-08-31",
+      "file": "CTAS.parquet",
+      "rows": 1814,
+      "sha256": "7fec0ebe6e4f14ea14615b75fd34f5479585b1e184b5c65fd51377c914061abd",
+      "start": "2008-05-31"
+    },
+    "CTL": {
+      "end": "2026-06-30",
+      "file": "CTL.parquet",
+      "rows": 1770,
+      "sha256": "aa000e87b308d2611a18d64aa7ea35af7e9d3900250af7702eb55afcbf0071ac",
+      "start": "2007-12-31"
+    },
+    "CTLT": {
+      "end": "2025-06-30",
+      "file": "CTLT.parquet",
+      "rows": 1201,
+      "sha256": "7202c89993cd1c815f93e44e0c82c0ad3a91a9b6b17bbd1a44b4e10b8f3cdf51",
+      "start": "2011-06-30"
+    },
+    "CTRA": {
+      "end": "2026-03-31",
+      "file": "CTRA.parquet",
+      "rows": 1735,
+      "sha256": "5285b83f1f7beefbd8b918ed11a38d05171be7d02a66cd3c574702cf4677d476",
+      "start": "2006-12-31"
+    },
+    "CTSH": {
+      "end": "2026-09-30",
+      "file": "CTSH.parquet",
+      "rows": 2114,
+      "sha256": "779ba7fa188b1b57bd4525734fbe13942b7d541bc017b88a75a7fc83bde04f1f",
+      "start": "2006-12-31"
+    },
+    "CTVA": {
+      "end": "2026-06-30",
+      "file": "CTVA.parquet",
+      "rows": 833,
+      "sha256": "434d7aaf5f1912515367b4b381f5853967f2e48123146267617e1dd2103fbdd5",
+      "start": "2016-12-31"
+    },
+    "CTXS": {
+      "end": "2022-06-30",
+      "file": "CTXS.parquet",
+      "rows": 1574,
+      "sha256": "185f434e9ca10f46b3923b0a95a338af61a69fd88f51cda042ecab2b2a1a23d1",
+      "start": "2006-12-31"
+    },
+    "CVC": {
+      "end": "2016-03-31",
+      "file": "CVC.parquet",
+      "rows": 604,
+      "sha256": "69b6124b8ce0672af9abf380916a125b0236fafcc35b96bcaa4a141c60f99bbf",
+      "start": "2006-12-31"
+    },
+    "CVG": {
+      "end": "2018-06-30",
+      "file": "CVG.parquet",
+      "rows": 1001,
+      "sha256": "57e9ccaaaeeddf49cf051c40c3afbcd2bd60d5c724c01213f3f0d7b2dbf57017",
+      "start": "2007-12-31"
+    },
+    "CVH": {
+      "end": "2013-03-31",
+      "file": "CVH.parquet",
+      "rows": 339,
+      "sha256": "ee981908b9715efa14f13584f985527cbb404b886309f4f2fdf035d1d48e655b",
+      "start": "2007-12-31"
+    },
+    "CVNA": {
+      "end": "2026-09-30",
+      "file": "CVNA.parquet",
+      "rows": 807,
+      "sha256": "904bde90478a65a80295ad109ecc6bcfc2de5255615e94fc194d803f66e23986",
+      "start": "2015-12-31"
+    },
+    "CVS": {
+      "end": "2026-06-30",
+      "file": "CVS.parquet",
+      "rows": 2025,
+      "sha256": "d4ae14b663be214a66dbd1d6787a0b2e070451c9c68545c13d54c2118fe5a4e1",
+      "start": "2007-12-29"
+    },
+    "CVX": {
+      "end": "2026-06-30",
+      "file": "CVX.parquet",
+      "rows": 1754,
+      "sha256": "4bd66dbe6a58ead2336dcb2bef91417f3ce057ef1392ec01300b10203e69baf1",
+      "start": "2007-12-31"
+    },
+    "CXO": {
+      "end": "2020-09-30",
+      "file": "CXO.parquet",
+      "rows": 943,
+      "sha256": "c4a8f9c86d452c46b9d5083238b043e8e310c71584cb45984bd0f2ad3537a338",
+      "start": "2007-12-31"
+    },
+    "CZR": {
+      "end": "2026-09-30",
+      "file": "CZR.parquet",
+      "rows": 1528,
+      "sha256": "722f8afacd90aeb2ebb2b35a6bb0e69b5a5e998fd4dbe63829461eed76e6776b",
+      "start": "2011-12-31"
+    },
+    "D": {
+      "end": "2026-03-31",
+      "file": "D.parquet",
+      "rows": 2042,
+      "sha256": "4c3349878480efcf596c26d6a18a4506b9e75ba2073b7b2f251131c29dc0cac1",
+      "start": "2006-12-31"
+    },
+    "DAL": {
+      "end": "2026-09-30",
+      "file": "DAL.parquet",
+      "rows": 1987,
+      "sha256": "c690b5e0b26206ba75d6363dbb857d04583e39f9fa34a0b56e150c8c31552d0b",
+      "start": "2007-12-31"
+    },
+    "DASH": {
+      "end": "2026-06-30",
+      "file": "DASH.parquet",
+      "rows": 617,
+      "sha256": "e96f46605f589c1fb16cbd8b5fe87a9279956b16b85c64e143e1b322be07aa72",
+      "start": "2017-12-31"
+    },
+    "DAY": {
+      "end": "2025-09-30",
+      "file": "DAY.parquet",
+      "rows": 810,
+      "sha256": "5c691aff83ffc178017265eb7a208f8acbe6afe7e297f009924ddc4c90b175f0",
+      "start": "2015-12-31"
+    },
+    "DD": {
+      "end": "2026-06-30",
+      "file": "DD.parquet",
+      "rows": 1030,
+      "sha256": "59270be0bb24328f007829edc0f2acf3f9b86bbe753248a867a48c5f72e2e99f",
+      "start": "2014-12-31"
+    },
+    "DDOG": {
+      "end": "2026-06-30",
+      "file": "DDOG.parquet",
+      "rows": 678,
+      "sha256": "dc06164415117d21c05cbe358554c5933fde17ebed8ce5d444b732eec4370797",
+      "start": "2016-12-31"
+    },
+    "DDR": {
+      "end": "2026-06-30",
+      "file": "DDR.parquet",
+      "rows": 1528,
+      "sha256": "01e6d5df80254889e9eb8e3eb7322aa69c778bc9e07fb4680bb42c2678978b1a",
+      "start": "2007-12-31"
+    },
+    "DDS": {
+      "end": "2026-08-01",
+      "file": "DDS.parquet",
+      "rows": 1740,
+      "sha256": "c1a58181e75507b206140425473e8dbf941fcd06c65e7cdba08ccee3a86c1ab5",
+      "start": "2008-02-02"
+    },
+    "DE": {
+      "end": "2026-08-02",
+      "file": "DE.parquet",
+      "rows": 2304,
+      "sha256": "bf47f917eed063d370c6081bf6b104f54f3dd14c2f3e3dabef8ce363985730b7",
+      "start": "2006-10-31"
+    },
+    "DECK": {
+      "end": "2026-09-30",
+      "file": "DECK.parquet",
+      "rows": 1652,
+      "sha256": "fb383c3ea8ed9af729417988fafab610a9a37364e8286fca2ccffbf7653d7b6c",
+      "start": "2007-12-31"
+    },
+    "DELL": {
+      "end": "2026-07-31",
+      "file": "DELL.parquet",
+      "rows": 1130,
+      "sha256": "bbb2fb014cb944e2ca2ef4a9e65ced2913beaa62b8af87839a0fc8dce4ce41cb",
+      "start": "2014-01-31"
+    },
+    "DF": {
+      "end": "2019-12-31",
+      "file": "DF.parquet",
+      "rows": 1212,
+      "sha256": "f62cb9d16485f11e8d9a7d7ee765c9f317d63b576c07033cf9a2b67d695accf3",
+      "start": "2007-12-31"
+    },
+    "DFS": {
+      "end": "2025-03-31",
+      "file": "DFS.parquet",
+      "rows": 1923,
+      "sha256": "ce5d509524e8a4403f41135c24baf5f308c669ae919d3a3c4319430234388d73",
+      "start": "2006-11-30"
+    },
+    "DG": {
+      "end": "2026-07-31",
+      "file": "DG.parquet",
+      "rows": 1477,
+      "sha256": "6328150ff70aa1477e240b53c1d09843bf1e5d56ebaf8300616f34d0717e937e",
+      "start": "2009-01-30"
+    },
+    "DGX": {
+      "end": "2026-09-30",
+      "file": "DGX.parquet",
+      "rows": 1960,
+      "sha256": "cca12ee9597f7bf52397e21e543f8c194e29eb0f59c7c7025241ba0e5ddc2557",
+      "start": "2006-12-31"
+    },
+    "DHI": {
+      "end": "2026-06-30",
+      "file": "DHI.parquet",
+      "rows": 1987,
+      "sha256": "dc69a0c4ac8b85302156984a0d857dcb6dcc098dfc33dff2b8abbc695ae78ff7",
+      "start": "2007-09-30"
+    },
+    "DHR": {
+      "end": "2026-09-25",
+      "file": "DHR.parquet",
+      "rows": 2022,
+      "sha256": "2a019b2cb502396e849bdf058093881ffae726f1dd9c1d330adf70468e2d1f75",
+      "start": "2007-12-31"
+    },
+    "DIS": {
+      "end": "2026-06-27",
+      "file": "DIS.parquet",
+      "rows": 796,
+      "sha256": "6456579ef3b6868fd7e4a758e194927fa325942d32022c2eb1f885470f78e9f9",
+      "start": "2017-09-30"
+    },
+    "DISCA": {
+      "end": "2026-06-30",
+      "file": "DISCA.parquet",
+      "rows": 2012,
+      "sha256": "acefc61469ad62c9c5085d15c0117fc9d84d463b90ed37054815d49419e7d128",
+      "start": "2006-12-31"
+    },
+    "DISCK": {
+      "end": "2026-06-30",
+      "file": "DISCK.parquet",
+      "rows": 2012,
+      "sha256": "eff67b3e972b3ba418d6091b470c93a9a671f798c365e509240820e04d4dee94",
+      "start": "2006-12-31"
+    },
+    "DISH": {
+      "end": "2025-09-30",
+      "file": "DISH.parquet",
+      "rows": 1891,
+      "sha256": "989f96c1fbe174022247a906017ba8ddf236e327e313ea36f0342184ba962c69",
+      "start": "2006-12-31"
+    },
+    "DLR": {
+      "end": "2026-03-31",
+      "file": "DLR.parquet",
+      "rows": 1501,
+      "sha256": "139713c26598faa678c7d9073910692fed02bb31c9121e2c9bb4301c3cfb05eb",
+      "start": "2008-12-31"
+    },
+    "DLTR": {
+      "end": "2026-08-01",
+      "file": "DLTR.parquet",
+      "rows": 1943,
+      "sha256": "e67cd6e41b12e85d8beb04851345ff6669a2cbe50c6478d156b5fbd3bbd08faf",
+      "start": "2008-02-02"
+    },
+    "DNB": {
+      "end": "2018-09-30",
+      "file": "DNB.parquet",
+      "rows": 1050,
+      "sha256": "30e10a78b271dcf5842babbfcf7d4bb779095f7416dbbf15d0ca9a8fdf11995b",
+      "start": "2007-12-31"
+    },
+    "DNR": {
+      "end": "2023-09-30",
+      "file": "DNR.parquet",
+      "rows": 1398,
+      "sha256": "185f29ed6c0b105d9d9f4906be40f5bbab3c717c424f83c18bdfde711cb912da",
+      "start": "2006-12-31"
+    },
+    "DO": {
+      "end": "2024-06-30",
+      "file": "DO.parquet",
+      "rows": 1932,
+      "sha256": "e1413d378a21bf250026eb0307e5e0d09a90f1f101aa0f9b55abd4b418bfe802",
+      "start": "2006-12-31"
+    },
+    "DOC": {
+      "end": "2026-06-30",
+      "file": "DOC.parquet",
+      "rows": 2190,
+      "sha256": "a200a99d4a2d0c16ef7f32c2da635273648b2a720bd23c11c93443e52daf5128",
+      "start": "2006-12-31"
+    },
+    "DOV": {
+      "end": "2026-09-30",
+      "file": "DOV.parquet",
+      "rows": 2010,
+      "sha256": "f969304b24ca31cecd39623cdece86ab071a025ef76031852243c8b12c1a9254",
+      "start": "2006-12-31"
+    },
+    "DOW": {
+      "end": "2026-09-30",
+      "file": "DOW.parquet",
+      "rows": 737,
+      "sha256": "208cfc64cc2adc4b6d2f6c9fddc887ade51955441cfd2916f655f3a1ff54b72b",
+      "start": "2017-12-31"
+    },
+    "DPZ": {
+      "end": "2026-09-06",
+      "file": "DPZ.parquet",
+      "rows": 1728,
+      "sha256": "34695efeb3e69005198ac22f397708f651912c7fde5ae01b61b1943c6a06808a",
+      "start": "2010-01-03"
+    },
+    "DRE": {
+      "end": "2022-06-30",
+      "file": "DRE.parquet",
+      "rows": 1185,
+      "sha256": "273d5a916c28fa970f461e99574b76e8185b703223d9f25e1dbeec9cc3052999",
+      "start": "2007-12-31"
+    },
+    "DRI": {
+      "end": "2026-08-30",
+      "file": "DRI.parquet",
+      "rows": 2136,
+      "sha256": "7fdcd595090a9c18e8e2a95fed5a673efe57c40a0b197d7682ecc483ef8ac405",
+      "start": "2007-05-27"
+    },
+    "DTE": {
+      "end": "2026-03-31",
+      "file": "DTE.parquet",
+      "rows": 1893,
+      "sha256": "f6db532899319043663588759421dd57cffbe0039d50dc31c3f1a253139d11d0",
+      "start": "2006-12-31"
+    },
+    "DTV": {
+      "end": "2015-06-30",
+      "file": "DTV.parquet",
+      "rows": 767,
+      "sha256": "0195171e99b6b9ecfc86f98aa5c633eec14ada30e92e165d71afcb1b304c6e09",
+      "start": "2006-12-31"
+    },
+    "DUK": {
+      "end": "2026-03-31",
+      "file": "DUK.parquet",
+      "rows": 2061,
+      "sha256": "a118e1858ca714c11ce8497f18371fef142079e69a6a8f98c69ea404c5ab88c6",
+      "start": "2006-12-31"
+    },
+    "DVA": {
+      "end": "2026-09-30",
+      "file": "DVA.parquet",
+      "rows": 1795,
+      "sha256": "830bf28d70a8eb6684869bb4e96fd850703c6d80c56647f69e426c6f365cb10a",
+      "start": "2007-12-31"
+    },
+    "DVN": {
+      "end": "2026-06-30",
+      "file": "DVN.parquet",
+      "rows": 2150,
+      "sha256": "b5980916120e76029df47b63eced300849555334f73e27054fbf6f7e69cd2905",
+      "start": "2006-12-31"
+    },
+    "DWDP": {
+      "end": "2026-06-30",
+      "file": "DWDP.parquet",
+      "rows": 1030,
+      "sha256": "fcc502074608d3b64064b3b2c8d7c849f5865f9a493e09882c31292c033826fd",
+      "start": "2014-12-31"
+    },
+    "DXC": {
+      "end": "2026-09-30",
+      "file": "DXC.parquet",
+      "rows": 992,
+      "sha256": "d9950c151d990b1efdc6dd747be816106d91055ac171e38b93f8e405b611246e",
+      "start": "2015-04-03"
+    },
+    "DXCM": {
+      "end": "2026-09-30",
+      "file": "DXCM.parquet",
+      "rows": 1466,
+      "sha256": "c7ad16115a9affbe25c03ba754c0cbb679dbcfff7ac61af1087d93e0e48aa980",
+      "start": "2008-12-31"
+    },
+    "DYN": {
+      "end": "2026-06-30",
+      "file": "DYN.parquet",
+      "rows": 381,
+      "sha256": "ecacca30c67f993c938949f1de8a5816e76c6b594463593f2da27cdb65df073e",
+      "start": "2018-12-31"
+    },
+    "EA": {
+      "end": "2026-06-30",
+      "file": "EA.parquet",
+      "rows": 1863,
+      "sha256": "bf2d1eec132b99ccf1d439cdb60b9bb71d3816aa46a0705ac285faef717e87dd",
+      "start": "2007-04-02"
+    },
+    "EBAY": {
+      "end": "2026-09-30",
+      "file": "EBAY.parquet",
+      "rows": 1900,
+      "sha256": "0ad4b182d2190c1dba459c3cd119aeb77f902fee6a3a849e4ec3607853629e78",
+      "start": "2007-12-31"
+    },
+    "ECHO": {
+      "end": "2026-06-30",
+      "file": "ECHO.parquet",
+      "rows": 1863,
+      "sha256": "dcc0375cf001bd402fc2201d8d5ce55667101e5d76c25203cbe20ed87f87b8fb",
+      "start": "2007-12-31"
+    },
+    "ECL": {
+      "end": "2026-09-30",
+      "file": "ECL.parquet",
+      "rows": 2378,
+      "sha256": "50ea4a4a5a1d5464e797af383f7f0cd22c886137ad91c101c517830376d57fb6",
+      "start": "2006-12-31"
+    },
+    "ED": {
+      "end": "2026-03-31",
+      "file": "ED.parquet",
+      "rows": 1654,
+      "sha256": "c55ba079b76d5e577deb0abae16f14d514949da216df3bcf7896850cdca2c89e",
+      "start": "2009-06-30"
+    },
+    "EFX": {
+      "end": "2026-09-30",
+      "file": "EFX.parquet",
+      "rows": 1842,
+      "sha256": "dadcae2f706ad725f7aa1aa37a74be660f9e6d6854a789431de5935e6082d370",
+      "start": "2007-12-31"
+    },
+    "EG": {
+      "end": "2026-06-30",
+      "file": "EG.parquet",
+      "rows": 1723,
+      "sha256": "c691b9fd16fc230da5d2e2b0100c33fe5921356c7d12f3c22e9fcc07167014c7",
+      "start": "2008-12-31"
+    },
+    "EIX": {
+      "end": "2026-09-30",
+      "file": "EIX.parquet",
+      "rows": 2035,
+      "sha256": "561367ef024ad0193f781005eec22aba18e3f4ad713777d04b3477c2f4ca8d1e",
+      "start": "2006-12-31"
+    },
+    "EKDKQ": {
+      "end": "2026-06-30",
+      "file": "EKDKQ.parquet",
+      "rows": 1536,
+      "sha256": "e9af7cee6162911130cf6d4bcef3e8f070677c7be9bc81ff7a9f1ef5266e049e",
+      "start": "2007-12-31"
+    },
+    "EL": {
+      "end": "2026-06-30",
+      "file": "EL.parquet",
+      "rows": 1755,
+      "sha256": "57f2028778d66988d75eec14ba9d49244c429ac292543a9387b1d2f217a268fa",
+      "start": "2009-06-30"
+    },
+    "ELV": {
+      "end": "2026-09-30",
+      "file": "ELV.parquet",
+      "rows": 2382,
+      "sha256": "63ff52303f043d0ef34b93c0efb54001078e31d56d92bf530bc78caab7cffae5",
+      "start": "2006-12-31"
+    },
+    "EMC": {
+      "end": "2016-06-30",
+      "file": "EMC.parquet",
+      "rows": 854,
+      "sha256": "04f14ef943f8e8c4c0b3d5eb6f0205c3ca9c9352b1eb83be09f435e652b80c3e",
+      "start": "2006-12-31"
+    },
+    "EME": {
+      "end": "2026-09-30",
+      "file": "EME.parquet",
+      "rows": 1801,
+      "sha256": "2cc65ba2ac0c9530e73500efc0ed351f2733d45e6a60a0e30aac7327b8e51d54",
+      "start": "2007-12-31"
+    },
+    "EMN": {
+      "end": "2026-09-30",
+      "file": "EMN.parquet",
+      "rows": 1939,
+      "sha256": "f466f629f4d5b3f3c85131e237adadbc02abda5a78fdfc970d5cacc40936b6af",
+      "start": "2006-12-31"
+    },
+    "EMR": {
+      "end": "2026-06-30",
+      "file": "EMR.parquet",
+      "rows": 2034,
+      "sha256": "df1223d37fca118863d913b18c18bf302a3d92c8e7ad88eb5bc5fe206e048e31",
+      "start": "2007-09-30"
+    },
+    "ENDP": {
+      "end": "2023-12-31",
+      "file": "ENDP.parquet",
+      "rows": 1255,
+      "sha256": "f99c79b77727fd91b3b1fc35cca0f4c1ee14879c8c0fdecf9f47ce43a1b420f3",
+      "start": "2011-12-31"
+    },
+    "ENPH": {
+      "end": "2026-09-30",
+      "file": "ENPH.parquet",
+      "rows": 1581,
+      "sha256": "0ec12f6c505b6cfc78f5e15e642430fc6973099d7036f5d8b52bd639d2db88bd",
+      "start": "2009-12-31"
+    },
+    "EOG": {
+      "end": "2026-06-30",
+      "file": "EOG.parquet",
+      "rows": 1991,
+      "sha256": "8de21ca443d76e5ae26c8c39008937b1116a3af2995a9e5a6cbf8549b7673a66",
+      "start": "2006-12-31"
+    },
+    "EP": {
+      "end": "2026-06-30",
+      "file": "EP.parquet",
+      "rows": 831,
+      "sha256": "5ab214d88081fa0b658f0f8519affc22f14323f5ab1799eddf5f01dd2ce94fe5",
+      "start": "2010-09-30"
+    },
+    "EPAM": {
+      "end": "2026-06-30",
+      "file": "EPAM.parquet",
+      "rows": 1868,
+      "sha256": "9cd9829df132efb7cd6a050a5c23ceeae1ed575965dbd6c8467e44d36580198f",
+      "start": "2009-12-31"
+    },
+    "EQ": {
+      "end": "2026-06-30",
+      "file": "EQ.parquet",
+      "rows": 581,
+      "sha256": "081cf6773188ad1823e46d8757d8b6ac7e03d16e48930802e9239a3d59c11452",
+      "start": "2017-03-15"
+    },
+    "EQIX": {
+      "end": "2026-09-30",
+      "file": "EQIX.parquet",
+      "rows": 1905,
+      "sha256": "0367f2c2193e566e533867aeb708ef538a14f3fb47edfd25ea22b511f3f6f809",
+      "start": "2007-12-31"
+    },
+    "EQR": {
+      "end": "2026-06-30",
+      "file": "EQR.parquet",
+      "rows": 1527,
+      "sha256": "80b0998367dfd4b88a46508438f51cf3b13c47359969c59fb26d8cd2bf0a58c8",
+      "start": "2007-12-31"
+    },
+    "EQT": {
+      "end": "2026-09-30",
+      "file": "EQT.parquet",
+      "rows": 1840,
+      "sha256": "106b0c32104f1a6a46260c93852374f2fd2350b0c8248a5ea8b8ca0cb0096dac",
+      "start": "2006-12-31"
+    },
+    "ERIE": {
+      "end": "2026-09-30",
+      "file": "ERIE.parquet",
+      "rows": 1723,
+      "sha256": "5bb7771fc00e59d19d18fc15dc5e60254ff46af31f6834ac56c46b7f7c9fbb05",
+      "start": "2008-12-31"
+    },
+    "ES": {
+      "end": "2026-06-30",
+      "file": "ES.parquet",
+      "rows": 1579,
+      "sha256": "77d332733507d685b74a807c8ff5901775bee869482a2708cea8bfd9be564dd8",
+      "start": "2009-12-31"
+    },
+    "ESRX": {
+      "end": "2011-12-31",
+      "file": "ESRX.parquet",
+      "rows": 346,
+      "sha256": "41882a83970d94d3c19b12b2ca24fc636c1cc705b6d632fb9152c2e2d746b57a",
+      "start": "2006-12-31"
+    },
+    "ESS": {
+      "end": "2026-06-30",
+      "file": "ESS.parquet",
+      "rows": 1307,
+      "sha256": "71491c80e398bc40e4fd2a129dd049e40142f6390936feb010ae3bfdd9cd5101",
+      "start": "2007-12-31"
+    },
+    "ESV": {
+      "end": "2026-06-30",
+      "file": "ESV.parquet",
+      "rows": 1805,
+      "sha256": "5a95aa784a5829e4021948e962bdc465e41f791dc35e126fd266159146dead58",
+      "start": "2008-06-30"
+    },
+    "ETFC": {
+      "end": "2020-06-30",
+      "file": "ETFC.parquet",
+      "rows": 1154,
+      "sha256": "5bf66bbeb6eddcefd510c8ec58c04d73a4119b58f1fd1c949f9ac04ed85d34eb",
+      "start": "2007-12-31"
+    },
+    "ETN": {
+      "end": "2026-06-30",
+      "file": "ETN.parquet",
+      "rows": 1472,
+      "sha256": "0de469d8612a36d4b200b9fd252674790de6a3c5c0f79b7c3a2da6fe361b551d",
+      "start": "2009-12-31"
+    },
+    "ETR": {
+      "end": "2026-03-31",
+      "file": "ETR.parquet",
+      "rows": 2065,
+      "sha256": "e1f88484c0fc24026bc128e8559bbc4c76dcd8ba08d0f32f3f746e41414bea7e",
+      "start": "2007-12-31"
+    },
+    "ETSY": {
+      "end": "2026-09-30",
+      "file": "ETSY.parquet",
+      "rows": 1168,
+      "sha256": "cdf98e72390a92dadacf34514d0e3f4e23431f62076e3cfac8f21d0732a777d6",
+      "start": "2012-12-31"
+    },
+    "EVHC": {
+      "end": "2018-06-30",
+      "file": "EVHC.parquet",
+      "rows": 226,
+      "sha256": "a5ca7f46e4920e8ceb8d00db26151fd73b12e0c1f5f9d50d3ac22ad9fc699670",
+      "start": "2014-12-31"
+    },
+    "EVRG": {
+      "end": "2026-03-31",
+      "file": "EVRG.parquet",
+      "rows": 954,
+      "sha256": "ee34436c45239b33b29bdade07c096d6d08d07b06bd2be012a868923341823ba",
+      "start": "2015-12-31"
+    },
+    "EW": {
+      "end": "2026-06-30",
+      "file": "EW.parquet",
+      "rows": 1704,
+      "sha256": "3b063462738e99c01faf5115a2192c6e4d0cb984df7307d9b3547040f292d8d3",
+      "start": "2007-12-31"
+    },
+    "EXC": {
+      "end": "2026-03-31",
+      "file": "EXC.parquet",
+      "rows": 1861,
+      "sha256": "ed1c5e688454f437a5c0a800893c00cfe860be933a7b15ae9f30b064d555f948",
+      "start": "2007-12-31"
+    },
+    "EXE": {
+      "end": "2026-09-30",
+      "file": "EXE.parquet",
+      "rows": 1985,
+      "sha256": "9e4f3410767960d568b3fd9c33aac2e739d9edfa96c34afa978d1036e348f7ea",
+      "start": "2007-12-31"
+    },
+    "EXPD": {
+      "end": "2026-06-30",
+      "file": "EXPD.parquet",
+      "rows": 1912,
+      "sha256": "d304341a029c3f92ad651742efefeb809e345b99b9c167a6cb6040e96d5461ee",
+      "start": "2006-12-31"
+    },
+    "EXPE": {
+      "end": "2026-06-30",
+      "file": "EXPE.parquet",
+      "rows": 1932,
+      "sha256": "b06b2eb3ecac847c24ca52466933cdd024a6db5fa11b2aaae27606cef51cbb8e",
+      "start": "2007-12-31"
+    },
+    "EXR": {
+      "end": "2026-06-30",
+      "file": "EXR.parquet",
+      "rows": 1664,
+      "sha256": "f2cbdb25d3d765587c2caaef456f817c0abd88e9aeaf544c863559b3500a4d27",
+      "start": "2007-12-31"
+    },
+    "F": {
+      "end": "2026-09-30",
+      "file": "F.parquet",
+      "rows": 1978,
+      "sha256": "7e493cbd431917f002ed1508d6275da1553d0e657b00ecc57520d2553ed18fa2",
+      "start": "2006-12-31"
+    },
+    "FANG": {
+      "end": "2026-06-30",
+      "file": "FANG.parquet",
+      "rows": 1644,
+      "sha256": "8c3b60a645034242c7cb05f0167752d8538764c8d5ca18d5a71dc423c9de9ef7",
+      "start": "2009-12-31"
+    },
+    "FAST": {
+      "end": "2026-09-30",
+      "file": "FAST.parquet",
+      "rows": 2037,
+      "sha256": "57ac8a43e8e6ebcace90e740c02d11661fa69afb7c5a5903e7ff52593926764f",
+      "start": "2006-12-31"
+    },
+    "FB": {
+      "end": "2026-09-30",
+      "file": "FB.parquet",
+      "rows": 1413,
+      "sha256": "f1d00c405f7d0c16435c8415b45a3a2e283ff96db5291f7b59d14ba435094b8c",
+      "start": "2010-12-31"
+    },
+    "FBHS": {
+      "end": "2026-06-27",
+      "file": "FBHS.parquet",
+      "rows": 1860,
+      "sha256": "7cda12f1bd6dcefcd3d53c6ee721ebe9ca76546fd40b084a1adf2c56f5eb6874",
+      "start": "2008-12-31"
+    },
+    "FCPT": {
+      "end": "2026-09-30",
+      "file": "FCPT.parquet",
+      "rows": 1105,
+      "sha256": "0297e4212f42facbcca1de09753cd4407d480762716f7f239231fd3e5954de8f",
+      "start": "2013-12-31"
+    },
+    "FCX": {
+      "end": "2026-06-30",
+      "file": "FCX.parquet",
+      "rows": 1937,
+      "sha256": "4c54d5436ed4f22cdede6796951b504da10a1c1beb65038964ba6ad2c5b9de59",
+      "start": "2006-12-31"
+    },
+    "FDC": {
+      "end": "2019-06-30",
+      "file": "FDC.parquet",
+      "rows": 966,
+      "sha256": "cbf72411a921c0feee12743e53c642f723d3c8bf3cad02e66c171ddda5e6665b",
+      "start": "2008-12-31"
+    },
+    "FDO": {
+      "end": "2015-05-30",
+      "file": "FDO.parquet",
+      "rows": 438,
+      "sha256": "27aa0d1a10a8620e5b473850c35036ff9cf8c85695430bbf51ab494ff2609c37",
+      "start": "2008-08-30"
+    },
+    "FDS": {
+      "end": "2026-08-31",
+      "file": "FDS.parquet",
+      "rows": 1870,
+      "sha256": "27b411fc206e7645676d3c9ef1b290fb62ff457f8af7289a0d7d75332cd5e51e",
+      "start": "2008-08-31"
+    },
+    "FDX": {
+      "end": "2026-09-30",
+      "file": "FDX.parquet",
+      "rows": 1933,
+      "sha256": "a3833977ffdb720cdd1d00f447e64c502f1458540e2efa221dd75e3ca1b54728",
+      "start": "2007-05-31"
+    },
+    "FDXF": {
+      "end": "2026-09-30",
+      "file": "FDXF.parquet",
+      "rows": 64,
+      "sha256": "aeab274e26e9176c927639f33a1d141c133b377bd88ac0915ef4ee22cc383594",
+      "start": "2023-05-31"
+    },
+    "FE": {
+      "end": "2026-03-31",
+      "file": "FE.parquet",
+      "rows": 2067,
+      "sha256": "ac2951c9d63b919fdc4c3cad234a11f6482152faf9f830c230a213849a18d5a0",
+      "start": "2007-12-31"
+    },
+    "FERG": {
+      "end": "2026-06-30",
+      "file": "FERG.parquet",
+      "rows": 185,
+      "sha256": "3e4ae49ad431117ea18f18795864c9bd5f3a7a2dae41acf1bad6326cb6df550b",
+      "start": "2021-07-31"
+    },
+    "FFIV": {
+      "end": "2026-06-30",
+      "file": "FFIV.parquet",
+      "rows": 2012,
+      "sha256": "8720a30c6d81a8c13ab8de8c283aab958c5960b62fcb623c3e9870799de716e1",
+      "start": "2007-09-30"
+    },
+    "FHN": {
+      "end": "2026-06-30",
+      "file": "FHN.parquet",
+      "rows": 1594,
+      "sha256": "fd2cffce2fd9a7ddef26867ced2fc5557568f9f5bf8b377d8c2e8f6484a546f6",
+      "start": "2007-12-31"
+    },
+    "FI": {
+      "end": "2026-06-30",
+      "file": "FI.parquet",
+      "rows": 1879,
+      "sha256": "fed3d22f7bb716d2ee9069b157ea4864c7c28f767063973d38d9c80c0f3aca95",
+      "start": "2007-12-31"
+    },
+    "FICO": {
+      "end": "2026-06-30",
+      "file": "FICO.parquet",
+      "rows": 1847,
+      "sha256": "00e552da9cbc4489d80167de46b69415a9dd1d73e43d5f8c7c2507a3e08a2e8d",
+      "start": "2007-09-30"
+    },
+    "FII": {
+      "end": "2026-06-30",
+      "file": "FII.parquet",
+      "rows": 1715,
+      "sha256": "9f1409ef3a3fcb77e8f919f6c90eff1af1fa243014219486dc3621ac8fd0d95d",
+      "start": "2007-12-31"
+    },
+    "FIS": {
+      "end": "2026-06-30",
+      "file": "FIS.parquet",
+      "rows": 1728,
+      "sha256": "6ee30bd3fb7a0a6d055ea5305756f320ffc865016fb18eba45d602fb1eb0c526",
+      "start": "2006-12-31"
+    },
+    "FISV": {
+      "end": "2026-06-30",
+      "file": "FISV.parquet",
+      "rows": 1879,
+      "sha256": "ace3489143d08a6d96bd051a4f80c9a22100bf69b3dc9e7769b3b759fb42cb66",
+      "start": "2007-12-31"
+    },
+    "FITB": {
+      "end": "2026-06-30",
+      "file": "FITB.parquet",
+      "rows": 1688,
+      "sha256": "fd332bcae14e8187124a3592d04b9e2cb8d03a478d429f9a2a927e3020e0a000",
+      "start": "2006-12-31"
+    },
+    "FIX": {
+      "end": "2026-09-30",
+      "file": "FIX.parquet",
+      "rows": 1908,
+      "sha256": "8a7bdd9f9e3a5df62689851a2372c8400e5efe9fa2bcac3f2f879228e6524bd0",
+      "start": "2008-12-31"
+    },
+    "FL": {
+      "end": "2025-08-02",
+      "file": "FL.parquet",
+      "rows": 1936,
+      "sha256": "7454343b3202c0169d32d7c2f10295a6a70410c38873dc4bd180b3ee6a890ecb",
+      "start": "2009-01-31"
+    },
+    "FLEX": {
+      "end": "2026-06-26",
+      "file": "FLEX.parquet",
+      "rows": 2036,
+      "sha256": "40b0abf35caacec6d2bbdea039285425223f1e0a242a2fabc7e4b6be3e1df7fd",
+      "start": "2007-03-31"
+    },
+    "FLIR": {
+      "end": "2021-03-31",
+      "file": "FLIR.parquet",
+      "rows": 1399,
+      "sha256": "3b29ff1a0419f8ecd8ce1f6453cfd1b468d84fd91e7b53bb5204bed4c638635b",
+      "start": "2006-12-31"
+    },
+    "FLR": {
+      "end": "2026-06-30",
+      "file": "FLR.parquet",
+      "rows": 2194,
+      "sha256": "5de7f5f3d4ee2fd15fd17492a7846d7d7cf74beafc21f1cd7153e4103559f897",
+      "start": "2006-12-31"
+    },
+    "FLS": {
+      "end": "2026-09-30",
+      "file": "FLS.parquet",
+      "rows": 1935,
+      "sha256": "b0d7adc0b87832f3d15043e0bcc8208579c131f812f9bfd0bb4309f7eccf1684",
+      "start": "2006-12-31"
+    },
+    "FLT": {
+      "end": "2026-06-30",
+      "file": "FLT.parquet",
+      "rows": 1955,
+      "sha256": "a7c5dde15b93654741e152d6f270d21145387df8a7351228a9028c603301e742",
+      "start": "2008-12-31"
+    },
+    "FMC": {
+      "end": "2026-09-30",
+      "file": "FMC.parquet",
+      "rows": 2209,
+      "sha256": "521078da90e26fd1d1016bebd96944e049eed676cff4e6aa965f6af9a7eb2ff4",
+      "start": "2006-12-31"
+    },
+    "FMCC": {
+      "end": "2026-09-30",
+      "file": "FMCC.parquet",
+      "rows": 1241,
+      "sha256": "48cba914f0cfe76eac8877f83b75bdcf18134bacb114731ed344340fee30f8ec",
+      "start": "2008-12-31"
+    },
+    "FNMA": {
+      "end": "2026-09-30",
+      "file": "FNMA.parquet",
+      "rows": 1900,
+      "sha256": "1d4cd08ea29f56961472226d968557819bcead3588a34de0e5e257eec0a6273a",
+      "start": "2006-12-31"
+    },
+    "FOSL": {
+      "end": "2026-07-04",
+      "file": "FOSL.parquet",
+      "rows": 1746,
+      "sha256": "23144e05fc01b634e0b746f253a3a32a2863600d933be57b918af106876fc695",
+      "start": "2008-01-05"
+    },
+    "FOX": {
+      "end": "2026-06-30",
+      "file": "FOX.parquet",
+      "rows": 849,
+      "sha256": "14bc6a96f972ddb22c078bfa442639ddae732f800c69fd8371e2f65ec7c59c51",
+      "start": "2016-06-30"
+    },
+    "FOXA": {
+      "end": "2026-06-30",
+      "file": "FOXA.parquet",
+      "rows": 849,
+      "sha256": "f9a2934020fc7458904f404813245a5505d481f8c57a6a7b7c7e3253dae7b6b9",
+      "start": "2016-06-30"
+    },
+    "FRT": {
+      "end": "2026-03-31",
+      "file": "FRT.parquet",
+      "rows": 1357,
+      "sha256": "78e9111be51516cf19a4b79af74a019504109aea24b065488e32de866aac30b0",
+      "start": "2007-12-31"
+    },
+    "FRX": {
+      "end": "2014-03-31",
+      "file": "FRX.parquet",
+      "rows": 516,
+      "sha256": "9ddd9cdc261f34c844127b178952015a7a8c0fec813e3f2ecde6aa3585a1afd3",
+      "start": "2006-03-31"
+    },
+    "FSLR": {
+      "end": "2026-09-30",
+      "file": "FSLR.parquet",
+      "rows": 1715,
+      "sha256": "a94f50cb88a47fc5ec1c07b06e7b4d4a5406d74bf3da4d9e1a1d6228a565571e",
+      "start": "2006-12-30"
+    },
+    "FTI": {
+      "end": "2026-09-30",
+      "file": "FTI.parquet",
+      "rows": 1132,
+      "sha256": "a96af2b076556df601dbca18272de5145afab898978361a83d9680ba5a3222a1",
+      "start": "2014-12-31"
+    },
+    "FTNT": {
+      "end": "2026-09-30",
+      "file": "FTNT.parquet",
+      "rows": 1524,
+      "sha256": "4596315f62059c2d73b51e98b5748d9577e7cd02bbb002fef74e03b4c32b5a9b",
+      "start": "2008-12-28"
+    },
+    "FTR": {
+      "end": "2025-09-30",
+      "file": "FTR.parquet",
+      "rows": 1666,
+      "sha256": "867f96400a22fcbed89321eaf992d4b671b46105fe2a5100cfc5223424c61421",
+      "start": "2007-12-31"
+    },
+    "FTV": {
+      "end": "2026-10-02",
+      "file": "FTV.parquet",
+      "rows": 1218,
+      "sha256": "f9c8f41b39e32ddd38e847682e723c03966a1310a0bb595cd24adf69199c37e7",
+      "start": "2014-12-31"
+    },
+    "GAS": {
+      "end": "2026-06-30",
+      "file": "GAS.parquet",
+      "rows": 1084,
+      "sha256": "491f617584b213e4ab5ec4b0a4cfff090cdc4bbddca6a07d18610794cfbc6315",
+      "start": "2006-12-31"
+    },
+    "GD": {
+      "end": "2026-10-04",
+      "file": "GD.parquet",
+      "rows": 1714,
+      "sha256": "3881834e003355e1ab404f8e514e9396e2ad8d641b0c9c9abe90e582fb6eacf5",
+      "start": "2006-12-31"
+    },
+    "GDDY": {
+      "end": "2026-09-30",
+      "file": "GDDY.parquet",
+      "rows": 1194,
+      "sha256": "e6dcebc1ba2fed66e009528c4dcf4f21b6fabd6ca65a5271a413375938a9608d",
+      "start": "2013-12-31"
+    },
+    "GE": {
+      "end": "2026-09-30",
+      "file": "GE.parquet",
+      "rows": 1972,
+      "sha256": "d3307cbd262ef8d5cb91f3652f37ec3f6da0a88fb11e8528b8bbba32e1cffcb2",
+      "start": "2006-12-31"
+    },
+    "GEHC": {
+      "end": "2026-09-30",
+      "file": "GEHC.parquet",
+      "rows": 400,
+      "sha256": "e7fac2cf0d4bd2ce649e99e6a3dd42ad1969c8505e5884138e23f168bcb48f6f",
+      "start": "2020-12-31"
+    },
+    "GEN": {
+      "end": "2026-10-02",
+      "file": "GEN.parquet",
+      "rows": 1657,
+      "sha256": "dbebb90fa8af6cf886506f8eeec5123e95659734b8132c50714637f2bba50c26",
+      "start": "2007-03-30"
+    },
+    "GENZ": {
+      "end": "2010-12-31",
+      "file": "GENZ.parquet",
+      "rows": 200,
+      "sha256": "214c93fcc017ac2abcbd9b1b7c2049b2cfc9fd0a8c40caffd6e77d81dc6530b3",
+      "start": "2006-12-31"
+    },
+    "GEV": {
+      "end": "2026-09-30",
+      "file": "GEV.parquet",
+      "rows": 270,
+      "sha256": "81815672a8bb3e1d607e13aa7eb7f56c6f008dd062dece495b3389843deb0281",
+      "start": "2021-12-31"
+    },
+    "GGP": {
+      "end": "2021-06-30",
+      "file": "GGP.parquet",
+      "rows": 906,
+      "sha256": "d40e6bb671eb4f027dc2cacd09750a547e846e64bc31e02610261ac789057edc",
+      "start": "2009-12-31"
+    },
+    "GHC": {
+      "end": "2026-09-30",
+      "file": "GHC.parquet",
+      "rows": 2526,
+      "sha256": "3ae5d626038f292631d6839b5cc31fa42847d6e243dcb7bb42d464220ba52d23",
+      "start": "2008-12-28"
+    },
+    "GILD": {
+      "end": "2026-09-30",
+      "file": "GILD.parquet",
+      "rows": 2011,
+      "sha256": "94e7ea65fac5594e906a80ee101c8c5039aa1e7b763676d455ab7874bf3d4d52",
+      "start": "2006-12-31"
+    },
+    "GIS": {
+      "end": "2026-08-30",
+      "file": "GIS.parquet",
+      "rows": 1902,
+      "sha256": "1cd57ed7b7d209dc73e282ae8f9a2820bfbc1bd0b761128409aa2ddce2ed66db",
+      "start": "2007-05-27"
+    },
+    "GL": {
+      "end": "2026-06-30",
+      "file": "GL.parquet",
+      "rows": 2197,
+      "sha256": "d44da7f4799554d75d26f83f43eec9baf176f8dc71dfdbbaefa28d3b5b91502c",
+      "start": "2006-12-31"
+    },
+    "GLW": {
+      "end": "2026-09-30",
+      "file": "GLW.parquet",
+      "rows": 1625,
+      "sha256": "4bcb9f6ebf31cc5deee5ce9948ca1dd41790ccf5105eacae33a27f11a1ed477c",
+      "start": "2006-12-31"
+    },
+    "GM": {
+      "end": "2026-09-30",
+      "file": "GM.parquet",
+      "rows": 1757,
+      "sha256": "c522471a455fe5750ef8824912f63091afab74416ec1f034874ee0acc865c2d0",
+      "start": "2009-07-09"
+    },
+    "GMCR": {
+      "end": "2015-12-26",
+      "file": "GMCR.parquet",
+      "rows": 797,
+      "sha256": "e78a6ab36e6378daa0491561edfcb77f1fea87a563c44350566d1e0b33971567",
+      "start": "2007-09-29"
+    },
+    "GME": {
+      "end": "2026-08-01",
+      "file": "GME.parquet",
+      "rows": 2024,
+      "sha256": "54dac657c9e4395a93d509363af37b64411b67e2cbe30a91737481457cce4392",
+      "start": "2007-02-03"
+    },
+    "GNRC": {
+      "end": "2026-06-30",
+      "file": "GNRC.parquet",
+      "rows": 1789,
+      "sha256": "d26a6b0c6edc100638831f9834e54c034a3d78226f25406154b99cefc94a960a",
+      "start": "2008-12-31"
+    },
+    "GNW": {
+      "end": "2026-06-30",
+      "file": "GNW.parquet",
+      "rows": 2150,
+      "sha256": "3d1120224022ba4de52861739eae9722ef2b63415de130192008aba156f1924f",
+      "start": "2006-12-31"
+    },
+    "GOOG": {
+      "end": "2026-09-30",
+      "file": "GOOG.parquet",
+      "rows": 1118,
+      "sha256": "f945d794ba8d17c7479de1159126c05feddb6e80c7ec5920a6e0815fc27d8b8c",
+      "start": "2012-12-31"
+    },
+    "GOOGL": {
+      "end": "2026-09-30",
+      "file": "GOOGL.parquet",
+      "rows": 1118,
+      "sha256": "82e588b645d6ffab173a5ae32a89c55ecf1847ff6d458ce6cb5ff5118fa5583c",
+      "start": "2012-12-31"
+    },
+    "GPC": {
+      "end": "2026-09-30",
+      "file": "GPC.parquet",
+      "rows": 1660,
+      "sha256": "a830cf844270ac561ad922cfeeb52216f6f3c626aef365cf84a475988f519444",
+      "start": "2006-12-31"
+    },
+    "GPN": {
+      "end": "2026-06-30",
+      "file": "GPN.parquet",
+      "rows": 1935,
+      "sha256": "0d0dc70c63668ca2773596094ab50a2c974f698d2ff5e5cd0e1b3e273c7b7ba9",
+      "start": "2008-05-31"
+    },
+    "GPS": {
+      "end": "2026-08-01",
+      "file": "GPS.parquet",
+      "rows": 2061,
+      "sha256": "b88973744ed2778bc639fb4b7b9cfeec5a884a0f0cb12f3e1246f28edc823194",
+      "start": "2007-02-03"
+    },
+    "GR": {
+      "end": "2012-03-31",
+      "file": "GR.parquet",
+      "rows": 257,
+      "sha256": "b7a2acbee84090a3ea9e704fcd000f076011de399e48caa725015bc6b3c2aa08",
+      "start": "2006-12-31"
+    },
+    "GRMN": {
+      "end": "2026-09-26",
+      "file": "GRMN.parquet",
+      "rows": 1843,
+      "sha256": "8de22e6f698c2c24dada2d8b39770b519f5f0bafb3d6792fbd1daecef0c91fb5",
+      "start": "2006-12-30"
+    },
+    "GS": {
+      "end": "2026-06-30",
+      "file": "GS.parquet",
+      "rows": 1531,
+      "sha256": "342973c00e906432dada5d48878a9d69aeb5ba63f41e11124a27e5a1d858d42a",
+      "start": "2007-11-30"
+    },
+    "GT": {
+      "end": "2026-06-30",
+      "file": "GT.parquet",
+      "rows": 1593,
+      "sha256": "8fcc9ec870c332c3570f60ff2354d97a560f4974f4ba4e074188af94b1abe72f",
+      "start": "2007-12-31"
+    },
+    "GWW": {
+      "end": "2026-06-30",
+      "file": "GWW.parquet",
+      "rows": 2078,
+      "sha256": "75ab836d9fdf10251547de782ff7c53d205ca780bb4698c19141ec0400732c94",
+      "start": "2007-12-31"
+    },
+    "H": {
+      "end": "2026-09-30",
+      "file": "H.parquet",
+      "rows": 1783,
+      "sha256": "41e641019825be9f1c6435bdb96bf0c4d276178043faaf5407d0067c8809917b",
+      "start": "2008-12-31"
+    },
+    "HAL": {
+      "end": "2026-09-30",
+      "file": "HAL.parquet",
+      "rows": 1725,
+      "sha256": "8841f110802cc8499a0509d5f49a1e76f947173967e81a8850ff2a29e92cb713",
+      "start": "2006-12-31"
+    },
+    "HAR": {
+      "end": "2016-12-31",
+      "file": "HAR.parquet",
+      "rows": 848,
+      "sha256": "068105739c496a8d44cc1e8d795ef1e3aa177614797f0d42dbf13b9685b255e4",
+      "start": "2007-06-30"
+    },
+    "HAS": {
+      "end": "2026-09-27",
+      "file": "HAS.parquet",
+      "rows": 2015,
+      "sha256": "4591ccb7a865fdc816fc526a41c3b935982e92b3926c8dff279a37faf528e810",
+      "start": "2007-12-30"
+    },
+    "HBAN": {
+      "end": "2026-09-30",
+      "file": "HBAN.parquet",
+      "rows": 1962,
+      "sha256": "4c19c29da08cd6d44793f27f487c515a6b3ed22b3076fbf7d9896139b70d5d73",
+      "start": "2007-12-31"
+    },
+    "HBI": {
+      "end": "2025-09-27",
+      "file": "HBI.parquet",
+      "rows": 1941,
+      "sha256": "5adae4614d78077d3bd5ce32543c1dcae1667cb2baa63a36bad93bc73c004bca",
+      "start": "2007-12-29"
+    },
+    "HCA": {
+      "end": "2026-09-30",
+      "file": "HCA.parquet",
+      "rows": 1589,
+      "sha256": "817279e9c4dbd6272281ba59d7cd204a7c12bfcfeca9059965f630edf181e4bb",
+      "start": "2008-12-31"
+    },
+    "HCBK": {
+      "end": "2015-06-30",
+      "file": "HCBK.parquet",
+      "rows": 692,
+      "sha256": "17f4bcd4a520139a753f80c0fbab0056b78fecd900f7dce78dd04febefb46f0d",
+      "start": "2006-12-31"
+    },
+    "HCP": {
+      "end": "2026-06-30",
+      "file": "HCP.parquet",
+      "rows": 2190,
+      "sha256": "bd00b14f6fab5d2bd0b6dac9bc54051cdd0e59e6619924df485807490a53889e",
+      "start": "2006-12-31"
+    },
+    "HD": {
+      "end": "2026-08-02",
+      "file": "HD.parquet",
+      "rows": 1753,
+      "sha256": "1324b294c76d333e159296e7ef30d94e924e62cb65f269f67710e9dafa9e79bb",
+      "start": "2007-01-28"
+    },
+    "HES": {
+      "end": "2025-03-31",
+      "file": "HES.parquet",
+      "rows": 1575,
+      "sha256": "60eaa18f1afddc061979915a4a03d013bfcf57bb37deb908baa00d43e21d74c0",
+      "start": "2006-12-31"
+    },
+    "HET": {
+      "end": "2020-03-31",
+      "file": "HET.parquet",
+      "rows": 1083,
+      "sha256": "76d3bdecb548714e2bbfd1a1df401b7c14f40322bdff6dad50454fd781556ff4",
+      "start": "2008-12-31"
+    },
+    "HFC": {
+      "end": "2021-12-31",
+      "file": "HFC.parquet",
+      "rows": 1392,
+      "sha256": "5cdaf2cb8c538bca2935bda6a4af06e2483c7fdd9c29e469451cff75697d35d1",
+      "start": "2007-12-31"
+    },
+    "HIG": {
+      "end": "2026-09-30",
+      "file": "HIG.parquet",
+      "rows": 2034,
+      "sha256": "da78cdb3cae35964bb9771674beb478d34e7e24792608d58afac2d3bb5464f09",
+      "start": "2007-12-31"
+    },
+    "HII": {
+      "end": "2026-09-30",
+      "file": "HII.parquet",
+      "rows": 1976,
+      "sha256": "0a777c183a0857be29c1ebbf1675e162e43c7298a25c10c40c20015c7d417f4f",
+      "start": "2008-12-31"
+    },
+    "HLT": {
+      "end": "2026-09-30",
+      "file": "HLT.parquet",
+      "rows": 1440,
+      "sha256": "45a1599a5f192dd05581cebbae22912deac288726a28701705fee89d172b6c44",
+      "start": "2011-12-31"
+    },
+    "HMA": {
+      "end": "2013-09-30",
+      "file": "HMA.parquet",
+      "rows": 413,
+      "sha256": "3c14846f4a7d55d1e192c6da5cad0584f4f81e5c13e48078c0e699adb9e6fb91",
+      "start": "2007-12-31"
+    },
+    "HNZ": {
+      "end": "2013-10-27",
+      "file": "HNZ.parquet",
+      "rows": 348,
+      "sha256": "112a3fd8394f31176cddb5de6fb9e033909e7d63ab772d3a6d3001c4027dda93",
+      "start": "2008-04-30"
+    },
+    "HOG": {
+      "end": "2026-06-30",
+      "file": "HOG.parquet",
+      "rows": 2027,
+      "sha256": "b9eb891f4fa72fbaf3172d93966556a608a7118a6a755bf906501707ccd111c4",
+      "start": "2006-12-31"
+    },
+    "HOLX": {
+      "end": "2025-12-27",
+      "file": "HOLX.parquet",
+      "rows": 2033,
+      "sha256": "d65ce8c6f1903d8232941f3c4b64797c072d6dcd333ebc6102614cd5e1f8dc75",
+      "start": "2006-09-30"
+    },
+    "HON": {
+      "end": "2026-09-30",
+      "file": "HON.parquet",
+      "rows": 1919,
+      "sha256": "5214fa8458e40ba882441ac82c5f123aa8328f6c0619de3ba91dbbca3b5a9904",
+      "start": "2007-12-31"
+    },
+    "HONA": {
+      "end": "2026-09-26",
+      "file": "HONA.parquet",
+      "rows": 60,
+      "sha256": "8e02917c0a11d0c4ae84ec612b3171947de3fb131f62e478476b08aace6a5ce9",
+      "start": "2024-12-31"
+    },
+    "HOOD": {
+      "end": "2026-09-30",
+      "file": "HOOD.parquet",
+      "rows": 574,
+      "sha256": "a9ba428b6fbcf7b74829e871edd6fbdeed4ff0a1aa207372cc21ad164cba598e",
+      "start": "2018-12-31"
+    },
+    "HP": {
+      "end": "2026-06-30",
+      "file": "HP.parquet",
+      "rows": 2106,
+      "sha256": "f7d4add7eb976a41b9093f1851d66d1df29c50d9649f69d520d56aa92b883adf",
+      "start": "2006-09-30"
+    },
+    "HPE": {
+      "end": "2026-07-31",
+      "file": "HPE.parquet",
+      "rows": 1095,
+      "sha256": "f2c4680a1d68bd8717afc07a1a2b433f0b25646fbd9c2dee5b8545ac6a154314",
+      "start": "2012-10-31"
+    },
+    "HPQ": {
+      "end": "2026-07-31",
+      "file": "HPQ.parquet",
+      "rows": 1654,
+      "sha256": "aaed939534ecba12adee6d44b68d52dca1433a894c324dcc4f994b13cdd47129",
+      "start": "2006-10-31"
+    },
+    "HRB": {
+      "end": "2026-06-30",
+      "file": "HRB.parquet",
+      "rows": 2067,
+      "sha256": "215797eceaeeecdcae32a29862b6c95ea434d891379dce0231aa64579546151a",
+      "start": "2007-04-30"
+    },
+    "HRL": {
+      "end": "2026-07-26",
+      "file": "HRL.parquet",
+      "rows": 1905,
+      "sha256": "9a57185ffb82ab7471793a786eda99e21856877a059f36afd780d1f5390d50ab",
+      "start": "2007-10-28"
+    },
+    "HRS": {
+      "end": "2026-10-02",
+      "file": "HRS.parquet",
+      "rows": 1704,
+      "sha256": "18213bba0923d3653d1b13ce17f07a6fa84dccaa7a165be7e3d400d934a2e104",
+      "start": "2007-06-29"
+    },
+    "HSH": {
+      "end": "2014-06-28",
+      "file": "HSH.parquet",
+      "rows": 626,
+      "sha256": "78286bf6468d77246aa2160e4730eca846385976807445678e19f33ffbc1e864",
+      "start": "2007-06-30"
+    },
+    "HSIC": {
+      "end": "2026-06-27",
+      "file": "HSIC.parquet",
+      "rows": 1804,
+      "sha256": "3a88acfea3f14b525c7b057fbdb2864ae7655769ae537dfc34897ccef7410355",
+      "start": "2007-12-29"
+    },
+    "HSP": {
+      "end": "2015-06-30",
+      "file": "HSP.parquet",
+      "rows": 530,
+      "sha256": "17ff5acadd48e2d19facb4b1d304d30d13fe68dba1bb3b90c04bfc4a20681852",
+      "start": "2006-12-31"
+    },
+    "HST": {
+      "end": "2026-06-30",
+      "file": "HST.parquet",
+      "rows": 1375,
+      "sha256": "9b4bff73ba09bd2fdb6d69da652ed8ae6833f732abf8de51629487d41ef24c12",
+      "start": "2007-12-31"
+    },
+    "HSY": {
+      "end": "2026-09-27",
+      "file": "HSY.parquet",
+      "rows": 1671,
+      "sha256": "7213ab1d5fd3a7d9688c33a3f386f945fed96373e4beeef554ecd3e10fdbf6b7",
+      "start": "2006-12-31"
+    },
+    "HUBB": {
+      "end": "2026-09-30",
+      "file": "HUBB.parquet",
+      "rows": 1886,
+      "sha256": "d4641928f10dddbebe64232b9a1b1f52db3f09bc45284ce68ce258573945daac",
+      "start": "2008-12-31"
+    },
+    "HUM": {
+      "end": "2026-03-31",
+      "file": "HUM.parquet",
+      "rows": 2108,
+      "sha256": "29c5e2f6c3527d184061122932857884b7b3f712b20d31084fe358d27fedcb51",
+      "start": "2006-12-31"
+    },
+    "HWM": {
+      "end": "2026-09-30",
+      "file": "HWM.parquet",
+      "rows": 1826,
+      "sha256": "f7d6deb6e7d2b83bf821b08094f02015754d6d7e021f53e7e065f523758bd63a",
+      "start": "2006-12-31"
+    },
+    "IAC": {
+      "end": "2026-06-30",
+      "file": "IAC.parquet",
+      "rows": 2072,
+      "sha256": "74dd290ad45df27a651756241e59f621d3a3c8cb465da722f07fcee50f6a660c",
+      "start": "2007-12-31"
+    },
+    "IBKR": {
+      "end": "2026-06-30",
+      "file": "IBKR.parquet",
+      "rows": 1434,
+      "sha256": "7a800a09f7c77cf5ae777db334f3b9e467d031c71659c29126ed1ad378bdd97f",
+      "start": "2007-12-31"
+    },
+    "IBM": {
+      "end": "2026-09-30",
+      "file": "IBM.parquet",
+      "rows": 1808,
+      "sha256": "dc03c51aa6c156f4a03be8bbcb392c2f0a20a029187bf263862096cc03f4272e",
+      "start": "2006-12-31"
+    },
+    "ICE": {
+      "end": "2026-09-30",
+      "file": "ICE.parquet",
+      "rows": 1562,
+      "sha256": "25fd91994de658339a36e4f8ff7ce66f093faa2e5532542dfa1ab786031819d6",
+      "start": "2010-12-31"
+    },
+    "IDXX": {
+      "end": "2026-06-30",
+      "file": "IDXX.parquet",
+      "rows": 1918,
+      "sha256": "f5417e10fd93a3071a2e0777dd25033e7c9f6bf6f3cd18767a01fac321929cfc",
+      "start": "2007-12-31"
+    },
+    "IEX": {
+      "end": "2026-09-30",
+      "file": "IEX.parquet",
+      "rows": 2026,
+      "sha256": "b628982c27d20fb10a8bddc2e12f8270a9119ccc6d07a3907f4ba320919cc6ba",
+      "start": "2007-12-31"
+    },
+    "IFF": {
+      "end": "2026-06-30",
+      "file": "IFF.parquet",
+      "rows": 1528,
+      "sha256": "f5aa91d6fbdc319518be839764a25bf4095ecc844bbcc2703c4341c4fb2a3f8c",
+      "start": "2008-12-31"
+    },
+    "IGT": {
+      "end": "2014-12-31",
+      "file": "IGT.parquet",
+      "rows": 528,
+      "sha256": "33cd281b0c374b1653d6d9a3108bb369947843cfeb41c3d3fb0d7fd8c1a1a955",
+      "start": "2007-09-30"
+    },
+    "ILMN": {
+      "end": "2026-06-28",
+      "file": "ILMN.parquet",
+      "rows": 1878,
+      "sha256": "c2a589235cef37c3ba619c79d6949b86bc0c79f194589f4f2d819c9eff85eef1",
+      "start": "2007-12-30"
+    },
+    "INCY": {
+      "end": "2026-09-30",
+      "file": "INCY.parquet",
+      "rows": 1560,
+      "sha256": "3d564ff1a7bce7c83cc8dc80c96cdc367134b7a0e707be53d4e3facc91957cfc",
+      "start": "2008-12-31"
+    },
+    "INFO": {
+      "end": "2021-11-30",
+      "file": "INFO.parquet",
+      "rows": 606,
+      "sha256": "bbe2e3aea49cf6299f80aea682e55e6a34f3b372d7dfdae0e820764d3330448e",
+      "start": "2013-11-30"
+    },
+    "INTC": {
+      "end": "2026-09-26",
+      "file": "INTC.parquet",
+      "rows": 1682,
+      "sha256": "8289ead41df221e7ec1f5b0fcfc931a0842e159a16b5ef990aa88003b9dbff39",
+      "start": "2006-12-30"
+    },
+    "INTU": {
+      "end": "2026-07-31",
+      "file": "INTU.parquet",
+      "rows": 2090,
+      "sha256": "cd88047cfd4c53341dde7e12787986429c24792b60798e390c5bf80802c48fb7",
+      "start": "2007-07-31"
+    },
+    "INVH": {
+      "end": "2026-09-30",
+      "file": "INVH.parquet",
+      "rows": 700,
+      "sha256": "7fad5f4ba505fe7bc5b174a6d874285279f666ff8305abb6ebd8a3107f10f43f",
+      "start": "2014-12-31"
+    },
+    "IP": {
+      "end": "2026-06-30",
+      "file": "IP.parquet",
+      "rows": 2319,
+      "sha256": "7ca334e07dde31b73a9b01defb8f79e75a798a0e0066712b1ccee25c77cfd35f",
+      "start": "2006-12-31"
+    },
+    "IPG": {
+      "end": "2025-09-30",
+      "file": "IPG.parquet",
+      "rows": 2008,
+      "sha256": "c0ecc3f9582c4f8bd2905f6895978d004c71e3c6ae701861cd13bca5790ea462",
+      "start": "2007-12-31"
+    },
+    "IPGP": {
+      "end": "2026-06-30",
+      "file": "IPGP.parquet",
+      "rows": 1774,
+      "sha256": "687560cbefdbfea8975ef7a3abd0a3e0e3f15134d07ee04531df860832d89829",
+      "start": "2009-12-31"
+    },
+    "IQV": {
+      "end": "2026-09-30",
+      "file": "IQV.parquet",
+      "rows": 1665,
+      "sha256": "53628a534949b3bc749af7c07d78255197eb9c47bfc707a19fdde352047b4476",
+      "start": "2010-12-31"
+    },
+    "IR": {
+      "end": "2026-06-30",
+      "file": "IR.parquet",
+      "rows": 880,
+      "sha256": "081f17136ad2c8ead9d50b6a242f184e96c297a88acfd4cbb259d19d8df93432",
+      "start": "2015-12-31"
+    },
+    "IRM": {
+      "end": "2026-06-30",
+      "file": "IRM.parquet",
+      "rows": 1713,
+      "sha256": "b3175cb0935736a973422376efd79ec41b60afd31fb5f7cda413624247208ffc",
+      "start": "2007-12-31"
+    },
+    "ISRG": {
+      "end": "2026-09-30",
+      "file": "ISRG.parquet",
+      "rows": 1925,
+      "sha256": "2ce7441c90fe122647ed6e53cd82fc9761a36b31869c0bc345106d9d23cd247e",
+      "start": "2006-12-31"
+    },
+    "IT": {
+      "end": "2026-06-30",
+      "file": "IT.parquet",
+      "rows": 1699,
+      "sha256": "604933e37ad736b454dc8860cefe678f7a3c03e65ad5a442f33af632cf75f13b",
+      "start": "2007-12-31"
+    },
+    "ITT": {
+      "end": "2026-07-04",
+      "file": "ITT.parquet",
+      "rows": 1671,
+      "sha256": "8615e5793b791275ec6f592951b6057c9f377278cdc85d8c6d8cff87aeff5e06",
+      "start": "2006-12-31"
+    },
+    "ITW": {
+      "end": "2026-09-30",
+      "file": "ITW.parquet",
+      "rows": 1926,
+      "sha256": "a6b169c3a4ffd93178e210d78770ef5c764abeb464c72512c7c8df5c13d382ef",
+      "start": "2007-12-31"
+    },
+    "IVZ": {
+      "end": "2026-06-30",
+      "file": "IVZ.parquet",
+      "rows": 1818,
+      "sha256": "9a825af5264854bb8fd537e512c53cc6ecedfff44ac74a82552533d8886be5cf",
+      "start": "2006-12-31"
+    },
+    "J": {
+      "end": "2026-06-26",
+      "file": "J.parquet",
+      "rows": 2368,
+      "sha256": "a24adcfa9a11b869c55446289723a8ef566faa90949050c9defde4f5eab470a8",
+      "start": "2006-09-30"
+    },
+    "JBHT": {
+      "end": "2026-09-30",
+      "file": "JBHT.parquet",
+      "rows": 1958,
+      "sha256": "e253363ce0003637e6d340bcf269c622efb53bdda787e391121ce92dd7d110f4",
+      "start": "2007-12-31"
+    },
+    "JBL": {
+      "end": "2026-08-31",
+      "file": "JBL.parquet",
+      "rows": 1552,
+      "sha256": "3a6b6fed5bd08f8f0f6489940ebb6c4b00642f0524b0e599d4e9cc2d036a9326",
+      "start": "2008-08-31"
+    },
+    "JCI": {
+      "end": "2026-03-31",
+      "file": "JCI.parquet",
+      "rows": 1686,
+      "sha256": "426db74b89a886e03599279e7f755a125bccc74c656a956f6d15707f2ba6d96a",
+      "start": "2006-09-29"
+    },
+    "JCP": {
+      "end": "2020-10-31",
+      "file": "JCP.parquet",
+      "rows": 1356,
+      "sha256": "d4e6b3a9f192dee5c382834eb31c50c92fd72f799debf091cb8aef852f5c0602",
+      "start": "2007-02-03"
+    },
+    "JEC": {
+      "end": "2026-06-26",
+      "file": "JEC.parquet",
+      "rows": 2368,
+      "sha256": "e59b25dd0a87a0a6c6e83ef5c03190b5d28625203e5ee72526ab03d4c6bc6a59",
+      "start": "2006-09-30"
+    },
+    "JEF": {
+      "end": "2026-08-31",
+      "file": "JEF.parquet",
+      "rows": 1927,
+      "sha256": "88484b7746ab7cd568b2535f6040865ff54e21016b2c93f7e1a257b2bf8abbc4",
+      "start": "2006-12-31"
+    },
+    "JKHY": {
+      "end": "2026-06-30",
+      "file": "JKHY.parquet",
+      "rows": 2039,
+      "sha256": "3554b3b59e497f8175ef9831a0bff15b11bc7312acb4f0fbf7309153f1e79173",
+      "start": "2008-06-30"
+    },
+    "JNJ": {
+      "end": "2026-09-27",
+      "file": "JNJ.parquet",
+      "rows": 2041,
+      "sha256": "2f35b5af517b298f5182a6d72a94dfb56a300dfcf7c69e28af20efc49f74ac8e",
+      "start": "2006-12-31"
+    },
+    "JNPR": {
+      "end": "2025-03-31",
+      "file": "JNPR.parquet",
+      "rows": 2104,
+      "sha256": "880106911aca92be920e59c49abbf374685849a7bf4a1e955caa18137731448a",
+      "start": "2006-12-31"
+    },
+    "JNS": {
+      "end": "2017-03-31",
+      "file": "JNS.parquet",
+      "rows": 898,
+      "sha256": "7ced8e391efda795858a2a010c1385210b900074bdacd1cf41b37dcb659b2a69",
+      "start": "2007-12-31"
+    },
+    "JNY": {
+      "end": "2013-12-31",
+      "file": "JNY.parquet",
+      "rows": 572,
+      "sha256": "c4f8dd186c689209a4a21935a735be9630b054d2a0b88ce5abef4575065d8b64",
+      "start": "2006-12-31"
+    },
+    "JOY": {
+      "end": "2017-01-27",
+      "file": "JOY.parquet",
+      "rows": 674,
+      "sha256": "79978c838a76d97c169df94e17916953afd8f8a300cef6b5682dfca2f7122b58",
+      "start": "2006-10-28"
+    },
+    "JPM": {
+      "end": "2026-06-30",
+      "file": "JPM.parquet",
+      "rows": 1612,
+      "sha256": "7c82a2c8255dd7da0523d1105188c63eb5b9b5e5fdc60a2a883b2975c9e2ab04",
+      "start": "2007-12-31"
+    },
+    "JWN": {
+      "end": "2025-02-01",
+      "file": "JWN.parquet",
+      "rows": 1552,
+      "sha256": "c17d801d961bf4d53ab85e6802591c817c5d5f5468c4c109212f0d66794c91e8",
+      "start": "2007-02-03"
+    },
+    "K": {
+      "end": "2025-09-27",
+      "file": "K.parquet",
+      "rows": 1783,
+      "sha256": "7cfad3da29f2c082dfd9660225f38d51a71ed10783a14821406f9a0657a99f8b",
+      "start": "2006-12-30"
+    },
+    "KBH": {
+      "end": "2026-08-31",
+      "file": "KBH.parquet",
+      "rows": 1405,
+      "sha256": "01998076c9af7236467f9c6a1dbb2eea36f8af03edcc9c37d34eee200001d2f2",
+      "start": "2007-11-30"
+    },
+    "KDP": {
+      "end": "2026-06-30",
+      "file": "KDP.parquet",
+      "rows": 2083,
+      "sha256": "d4a74ac8049dae8ac22ab0066185938b9d05d7bd881d0d0f08f4626ebdbd1f9e",
+      "start": "2008-12-31"
+    },
+    "KEY": {
+      "end": "2026-06-30",
+      "file": "KEY.parquet",
+      "rows": 1634,
+      "sha256": "9a66d04aa0384a7822aa93cc234f3df752c03e9cb636f5d12f8fec5a4c91297c",
+      "start": "2007-12-31"
+    },
+    "KEYS": {
+      "end": "2026-07-31",
+      "file": "KEYS.parquet",
+      "rows": 1208,
+      "sha256": "89817b3a24cc35d6e932b8663c902cba23813500c169b45768f967292246b8d2",
+      "start": "2012-10-31"
+    },
+    "KG": {
+      "end": "2026-06-30",
+      "file": "KG.parquet",
+      "rows": 120,
+      "sha256": "554c5fa00d66c09f0dc0afe441d46541e294568b7eafaeb4d2532ed8be9c3c2c",
+      "start": "2024-06-30"
+    },
+    "KHC": {
+      "end": "2026-06-27",
+      "file": "KHC.parquet",
+      "rows": 1220,
+      "sha256": "576897e49fcbd3c0f5d801cba4dcaf1116376ecf9bc3fbbde55f8ea651f7b20b",
+      "start": "2013-12-29"
+    },
+    "KIM": {
+      "end": "2026-06-30",
+      "file": "KIM.parquet",
+      "rows": 1817,
+      "sha256": "51065672e3d2ca796b9e0a6391f2f8624013bd86c25cb8c961b0dc8fd39596e2",
+      "start": "2006-12-31"
+    },
+    "KKR": {
+      "end": "2026-06-30",
+      "file": "KKR.parquet",
+      "rows": 1312,
+      "sha256": "4ef475d18ba870df7cecb8b18f72a63b14774fa0a03f55336057ee67a398dcec",
+      "start": "2009-09-30"
+    },
+    "KLAC": {
+      "end": "2026-09-30",
+      "file": "KLAC.parquet",
+      "rows": 1950,
+      "sha256": "f76c7ec77040d7ff605e13c05d7df479f6b5bff659ff004dadb7e27467144668",
+      "start": "2008-06-30"
+    },
+    "KMB": {
+      "end": "2026-06-30",
+      "file": "KMB.parquet",
+      "rows": 1640,
+      "sha256": "34d873b6458078ae7ff5a7cd93d80819cfe3aec4ef521276983b3e5f66c7f972",
+      "start": "2007-12-31"
+    },
+    "KMI": {
+      "end": "2026-09-30",
+      "file": "KMI.parquet",
+      "rows": 1530,
+      "sha256": "1c7248c765fd628c434ff71c604017d94bb709157e73f32d23dfa4f4e0733fd1",
+      "start": "2009-12-31"
+    },
+    "KMX": {
+      "end": "2026-08-31",
+      "file": "KMX.parquet",
+      "rows": 1894,
+      "sha256": "545750e5ab0e890091f2bc6e92b0daf78643ae3c3d76570357a343df7d38dca8",
+      "start": "2008-02-29"
+    },
+    "KO": {
+      "end": "2026-10-02",
+      "file": "KO.parquet",
+      "rows": 1570,
+      "sha256": "dc7230a54b37bb0c822ae50c1ab95db4e6e00e9a56f188f444ed59eb1eb1aec1",
+      "start": "2006-12-31"
+    },
+    "KORS": {
+      "end": "2026-09-26",
+      "file": "KORS.parquet",
+      "rows": 1560,
+      "sha256": "408964e6b5c16ca4ac1e1d13a4f0b90251d0c61c47583ac3465ecde9734fae4c",
+      "start": "2010-04-03"
+    },
+    "KR": {
+      "end": "2026-08-15",
+      "file": "KR.parquet",
+      "rows": 2381,
+      "sha256": "f13b9dc3201d9f9e4ac46825907ec3b08affd75860e6183c68cc0d03749213f1",
+      "start": "2007-02-03"
+    },
+    "KRFT": {
+      "end": "2015-03-28",
+      "file": "KRFT.parquet",
+      "rows": 336,
+      "sha256": "4194fa9c206b6b02492922a22486ae52eb22e237a9d8aa15c1091264d6c77574",
+      "start": "2009-12-31"
+    },
+    "KSS": {
+      "end": "2026-08-01",
+      "file": "KSS.parquet",
+      "rows": 2052,
+      "sha256": "ed6a99b9f81465d61159fff1a5fa3a97acd5742f47c3e6a0102ab17c740a3f70",
+      "start": "2007-02-03"
+    },
+    "KSU": {
+      "end": "2022-12-31",
+      "file": "KSU.parquet",
+      "rows": 1738,
+      "sha256": "d44001a9dfd6a81ca8d3acbc05573a5be1d669949b26be10e8e064e88a2d875e",
+      "start": "2006-12-31"
+    },
+    "KVUE": {
+      "end": "2026-09-27",
+      "file": "KVUE.parquet",
+      "rows": 424,
+      "sha256": "9fc64b4afa5517c3e6d8d84b2c8c7da9b40f0ba47e57ee5474922ef2c1953274",
+      "start": "2021-01-03"
+    },
+    "L": {
+      "end": "2026-06-30",
+      "file": "L.parquet",
+      "rows": 1759,
+      "sha256": "e1a2b1d5c6645fe4f7789993893c2a3c2882ad7ba90ec6d1e16cca0091fce7df",
+      "start": "2006-12-31"
+    },
+    "LB": {
+      "end": "2026-06-30",
+      "file": "LB.parquet",
+      "rows": 223,
+      "sha256": "ce121703ecf30c40ba46c1de36cb99fa98b7397b86aa158df74ad3d90c050f17",
+      "start": "2022-12-31"
+    },
+    "LDOS": {
+      "end": "2026-07-03",
+      "file": "LDOS.parquet",
+      "rows": 1827,
+      "sha256": "1d4a92fb9418bc2910803192ff63d784a73ac20d8e1a2925907ee3e48325d8da",
+      "start": "2008-01-31"
+    },
+    "LEG": {
+      "end": "2026-06-30",
+      "file": "LEG.parquet",
+      "rows": 1996,
+      "sha256": "5214f712cc68b68a9f80f7203d53381576154936b2e12c0696e07220ee5f58c9",
+      "start": "2007-12-31"
+    },
+    "LEN": {
+      "end": "2026-08-31",
+      "file": "LEN.parquet",
+      "rows": 1994,
+      "sha256": "d418cfa2457f326a762b06c122974c615c0d8b18d8aa927d0c154c8738960b21",
+      "start": "2008-11-30"
+    },
+    "LH": {
+      "end": "2026-06-30",
+      "file": "LH.parquet",
+      "rows": 1947,
+      "sha256": "094283fda67ebec8dcedd468496831bf318574467086d515a72492bc3ff25354",
+      "start": "2006-12-31"
+    },
+    "LHX": {
+      "end": "2026-10-02",
+      "file": "LHX.parquet",
+      "rows": 1704,
+      "sha256": "5ebf7e9041d0eb094b7e275556780bd9acf296533981262aa992e62a90a4c8b3",
+      "start": "2007-06-29"
+    },
+    "LIFE": {
+      "end": "2026-06-30",
+      "file": "LIFE.parquet",
+      "rows": 63,
+      "sha256": "7946d1a22ba39f171d0c16b2c50ba716df5e1e628805d684d67ab467f2ef3cb6",
+      "start": "2023-12-31"
+    },
+    "LII": {
+      "end": "2026-09-30",
+      "file": "LII.parquet",
+      "rows": 1786,
+      "sha256": "66d40a38a1521d5606fd1b5e46eaa3c7875304415934ff5685729a88caf05908",
+      "start": "2007-12-31"
+    },
+    "LIN": {
+      "end": "2026-09-30",
+      "file": "LIN.parquet",
+      "rows": 939,
+      "sha256": "39dbd8d80b5a1961ebc072dc9a1712f44fd3dd960600d66f130c94c83e919d7d",
+      "start": "2015-12-31"
+    },
+    "LITE": {
+      "end": "2026-06-27",
+      "file": "LITE.parquet",
+      "rows": 1510,
+      "sha256": "0952b9c201722faf7f33afd4a759ee78beb3f434d35b5af17f867f5077408ad6",
+      "start": "2012-06-30"
+    },
+    "LKQ": {
+      "end": "2026-09-30",
+      "file": "LKQ.parquet",
+      "rows": 1709,
+      "sha256": "a2c809495ff5d39a6b6af3731cc8b1fbb766232c719604ddd658de11321f1d86",
+      "start": "2007-12-31"
+    },
+    "LLL": {
+      "end": "2019-03-29",
+      "file": "LLL.parquet",
+      "rows": 346,
+      "sha256": "8819f2c992351247a82daf4cfaa22816673fda522ef866c7db30cb36e3a26ff8",
+      "start": "2013-12-31"
+    },
+    "LLTC": {
+      "end": "2017-01-01",
+      "file": "LLTC.parquet",
+      "rows": 713,
+      "sha256": "954b78b4ac9659481e0a274944bffae71b67d62f5586338aaf7cc7e1928a3f6a",
+      "start": "2008-06-29"
+    },
+    "LLY": {
+      "end": "2026-09-30",
+      "file": "LLY.parquet",
+      "rows": 1939,
+      "sha256": "a190633cc19e3da2e29bbf55e21fc3a7871e43f4b449b067072380ed8dabf892",
+      "start": "2007-12-31"
+    },
+    "LM": {
+      "end": "2020-06-30",
+      "file": "LM.parquet",
+      "rows": 330,
+      "sha256": "0976403a25a61b7ca263b27d7cf8ce6c0e0814eec053d91017c2fa033e55f43e",
+      "start": "2008-03-31"
+    },
+    "LMT": {
+      "end": "2026-09-27",
+      "file": "LMT.parquet",
+      "rows": 2187,
+      "sha256": "e620945aae59fdbd3487257988c98cf38b0d55233f067b625e5c98ead8c6e90c",
+      "start": "2006-12-31"
+    },
+    "LNC": {
+      "end": "2026-06-30",
+      "file": "LNC.parquet",
+      "rows": 1960,
+      "sha256": "8c6aecc426a70a3ab08bae3c15d62e0a20c7017a3cbddb8dc5b9ff7680c31746",
+      "start": "2007-12-31"
+    },
+    "LNT": {
+      "end": "2026-03-31",
+      "file": "LNT.parquet",
+      "rows": 1694,
+      "sha256": "c800260d87959fe164f430a436c709da3b203c4adda73d8f80a342723011d3ec",
+      "start": "2007-12-31"
+    },
+    "LOW": {
+      "end": "2026-07-31",
+      "file": "LOW.parquet",
+      "rows": 1662,
+      "sha256": "3d8b4420e72b15ffafee3fc11ec4f5e8579da6a68f8a972c24679ff5d1b8abd6",
+      "start": "2007-02-02"
+    },
+    "LRCX": {
+      "end": "2026-09-27",
+      "file": "LRCX.parquet",
+      "rows": 1592,
+      "sha256": "7d06362c01de7e36bfdb125f9767cae0d2308e7c8262b3999400f83abc167d9d",
+      "start": "2008-06-29"
+    },
+    "LSI": {
+      "end": "2014-03-30",
+      "file": "LSI.parquet",
+      "rows": 352,
+      "sha256": "8eafeb67e1135e14855e10197d197c9e5d1c2884f92194f3a43ba277018814f0",
+      "start": "2007-12-31"
+    },
+    "LULU": {
+      "end": "2026-08-02",
+      "file": "LULU.parquet",
+      "rows": 1940,
+      "sha256": "b59f2538ec132f98d927bdc55434327a46d88a0cbb520f582e57f25822da910e",
+      "start": "2008-02-03"
+    },
+    "LUMN": {
+      "end": "2026-06-30",
+      "file": "LUMN.parquet",
+      "rows": 1770,
+      "sha256": "31873493fab389d89c1d2b386ebd956394787870ebcb5af5a055e464576b0fcf",
+      "start": "2007-12-31"
+    },
+    "LUV": {
+      "end": "2026-09-30",
+      "file": "LUV.parquet",
+      "rows": 2193,
+      "sha256": "9c4dbcf713aed5a707f94bf272a6cc29092a4a9246d3efc4ff3bce54b1ef0df4",
+      "start": "2006-12-31"
+    },
+    "LVLT": {
+      "end": "2025-12-31",
+      "file": "LVLT.parquet",
+      "rows": 1518,
+      "sha256": "4bbb5f638f4f37dcf2321a878d694a217eee8a8c855467d5f91a929aed7cbcec",
+      "start": "2007-12-31"
+    },
+    "LVS": {
+      "end": "2026-09-30",
+      "file": "LVS.parquet",
+      "rows": 2085,
+      "sha256": "4cebe4ee01d093223e3bdf14d67dd7d075d86265bcc36cd0cd10aad80876f3e6",
+      "start": "2007-12-31"
+    },
+    "LW": {
+      "end": "2026-08-30",
+      "file": "LW.parquet",
+      "rows": 1121,
+      "sha256": "4e14a3478a78d9ff30573953030096ec4c2c89650bbfbf22301bf42a7c81a160",
+      "start": "2014-05-25"
+    },
+    "LXK": {
+      "end": "2016-09-30",
+      "file": "LXK.parquet",
+      "rows": 770,
+      "sha256": "658f5e87055a077f1968119d70b957ef0ec87fd75b04e7043e01a3434deb17ea",
+      "start": "2007-12-31"
+    },
+    "LYB": {
+      "end": "2026-09-30",
+      "file": "LYB.parquet",
+      "rows": 1567,
+      "sha256": "0f7a57afdf41297e9a775ddcb3ce04365a0ec81f2b6b1d2fa87bb1eac5560b78",
+      "start": "2010-12-31"
+    },
+    "LYV": {
+      "end": "2026-06-30",
+      "file": "LYV.parquet",
+      "rows": 1695,
+      "sha256": "ee194b5c769460bf2336eda4022f31c27669f80e5ed13850685136c8f0104e02",
+      "start": "2008-12-31"
+    },
+    "M": {
+      "end": "2026-08-01",
+      "file": "M.parquet",
+      "rows": 2055,
+      "sha256": "c55f337f9616b20a567cdd200d54a91ca15b5e1f9c5d34e101ca4453fa59947c",
+      "start": "2007-02-03"
+    },
+    "MA": {
+      "end": "2026-09-30",
+      "file": "MA.parquet",
+      "rows": 2074,
+      "sha256": "c11d3a9ed9333f5aa40181a46d8244181c7d5140a5c143f67ccac5b6b778c12b",
+      "start": "2006-12-31"
+    },
+    "MAA": {
+      "end": "2026-03-31",
+      "file": "MAA.parquet",
+      "rows": 969,
+      "sha256": "ae76a09eb0e92598fb77ae333a522dcb153abc3b144349018a5c89c746cb565d",
+      "start": "2007-12-31"
+    },
+    "MAC": {
+      "end": "2026-06-30",
+      "file": "MAC.parquet",
+      "rows": 1284,
+      "sha256": "3f170fbb504e7f516292e61c920066e03afb26cb29229b7e73dd011c018c5ddc",
+      "start": "2007-12-31"
+    },
+    "MAR": {
+      "end": "2026-06-30",
+      "file": "MAR.parquet",
+      "rows": 1952,
+      "sha256": "1eb7fefb9b5e7c162079fb84f1ea2847fbfae9b2627310afacf09aadeffa2245",
+      "start": "2006-12-29"
+    },
+    "MAS": {
+      "end": "2026-09-30",
+      "file": "MAS.parquet",
+      "rows": 2244,
+      "sha256": "db5b4df7a7044d1526b2e650cbbee1a928bb550f2930bc8b9ca8d53b0f502270",
+      "start": "2006-12-31"
+    },
+    "MAT": {
+      "end": "2026-06-30",
+      "file": "MAT.parquet",
+      "rows": 2378,
+      "sha256": "0a77dcdf190113d93be7140bd4a1182161aad6f6206f9995a66131672c0794f7",
+      "start": "2006-12-31"
+    },
+    "MBI": {
+      "end": "2026-06-30",
+      "file": "MBI.parquet",
+      "rows": 1463,
+      "sha256": "857a436e77972dd65a940c7f04d0f4a1c71945e4dd862acadbd1696e2e0524fb",
+      "start": "2007-12-31"
+    },
+    "MCD": {
+      "end": "2026-06-30",
+      "file": "MCD.parquet",
+      "rows": 1831,
+      "sha256": "6d1e95b2555a112cbfe15766e1d010ac2e22d1614bc5ed86e235002154a7c51f",
+      "start": "2006-12-31"
+    },
+    "MCHP": {
+      "end": "2026-06-30",
+      "file": "MCHP.parquet",
+      "rows": 2014,
+      "sha256": "fb952800af9b40b5cdbf9b4f34f0c396b0dcc5c495a34e76ee54beaf8885e19d",
+      "start": "2007-03-31"
+    },
+    "MCK": {
+      "end": "2026-06-30",
+      "file": "MCK.parquet",
+      "rows": 1907,
+      "sha256": "a9f9a47721927acab9e0efc44497701ea60038065f2f20ea0fa30b07b1090855",
+      "start": "2007-03-31"
+    },
+    "MCO": {
+      "end": "2026-09-30",
+      "file": "MCO.parquet",
+      "rows": 2072,
+      "sha256": "4f386436886a3fe3b5abd9571c3f59ff0b77c0e14b590ab724db283ec476462c",
+      "start": "2006-12-31"
+    },
+    "MDLZ": {
+      "end": "2026-09-30",
+      "file": "MDLZ.parquet",
+      "rows": 2004,
+      "sha256": "e2f690cd6ad379afa72837a95c00caf3c4073178f8d2a429af88d3b177d891a2",
+      "start": "2006-12-31"
+    },
+    "MDP": {
+      "end": "2021-09-30",
+      "file": "MDP.parquet",
+      "rows": 1505,
+      "sha256": "699e5a8a6ef1c0e0e38e4d8bfd8119bb5f114bd9d87ec090d6fd1410cdec29bb",
+      "start": "2008-06-30"
+    },
+    "MDT": {
+      "end": "2026-07-31",
+      "file": "MDT.parquet",
+      "rows": 1301,
+      "sha256": "b7eb79ec110df8bf03e9327ce94b4110eb69adae7a5545175015be9c558dad81",
+      "start": "2012-04-27"
+    },
+    "MEE": {
+      "end": "2011-03-31",
+      "file": "MEE.parquet",
+      "rows": 160,
+      "sha256": "636fb4933b034932598337b9f6b6ebe4ce438b86c7363b31e8684c6116bf28fd",
+      "start": "2006-12-31"
+    },
+    "MER": {
+      "end": "2013-06-30",
+      "file": "MER.parquet",
+      "rows": 230,
+      "sha256": "811cd5508ab9ccf72202ab70a89a14882ff2ba3d134d029f1bed8283a9d56ae4",
+      "start": "2008-12-31"
+    },
+    "MET": {
+      "end": "2026-06-30",
+      "file": "MET.parquet",
+      "rows": 1954,
+      "sha256": "c650282f5135af6776711cec7ecc31c30c2b87716be7a57fb7659c2d0d5782b4",
+      "start": "2006-12-31"
+    },
+    "META": {
+      "end": "2026-09-30",
+      "file": "META.parquet",
+      "rows": 1413,
+      "sha256": "4793efa20f16d944ea5190e176d78719074d0bd04126c510f2017c575605c041",
+      "start": "2010-12-31"
+    },
+    "MFE": {
+      "end": "2010-12-31",
+      "file": "MFE.parquet",
+      "rows": 162,
+      "sha256": "ea18cca2795286e19174bae29e8998152bf03857a4b5c2a297c7efd00da94ae0",
+      "start": "2006-12-31"
+    },
+    "MGM": {
+      "end": "2026-09-30",
+      "file": "MGM.parquet",
+      "rows": 1938,
+      "sha256": "f201ad8306362a09100a4b97feb5fc20fa6dc40ef95788c42272b1afc12638e2",
+      "start": "2007-12-31"
+    },
+    "MHK": {
+      "end": "2026-10-03",
+      "file": "MHK.parquet",
+      "rows": 1799,
+      "sha256": "704cd56a303d3695da007224e5d560103593a0bcc0fef130cba523acc982873e",
+      "start": "2007-12-31"
+    },
+    "MHS": {
+      "end": "2011-12-31",
+      "file": "MHS.parquet",
+      "rows": 272,
+      "sha256": "84653b3578e0563f601e43fbeb903e8c66758208c2a0035c0d738e285f0855e3",
+      "start": "2006-12-30"
+    },
+    "MJN": {
+      "end": "2017-03-31",
+      "file": "MJN.parquet",
+      "rows": 630,
+      "sha256": "19f5982bf208e4ac094261d6fa58313fddb212519ce620969fbe4e4c11a8dec2",
+      "start": "2008-12-31"
+    },
+    "MKC": {
+      "end": "2026-08-31",
+      "file": "MKC.parquet",
+      "rows": 2020,
+      "sha256": "b69d759814038ec222faa3ce8797bca4356296986256fcb03eb1d6c88ead82a1",
+      "start": "2007-11-30"
+    },
+    "MKTX": {
+      "end": "2026-06-30",
+      "file": "MKTX.parquet",
+      "rows": 1560,
+      "sha256": "35536d669ffd65578d9e62af3f205718ca799d0175b2b50928627cb8b533639c",
+      "start": "2008-12-31"
+    },
+    "MLM": {
+      "end": "2026-06-30",
+      "file": "MLM.parquet",
+      "rows": 1708,
+      "sha256": "28f40ec22129b4087d9bc8b9aa1b2f69c9ec3b835745ec383e477fe48f6d35b3",
+      "start": "2007-12-31"
+    },
+    "MMC": {
+      "end": "2026-09-30",
+      "file": "MMC.parquet",
+      "rows": 1696,
+      "sha256": "2bcba4db14e9e45e84f5973c46a8668dbd6baf2c7886cb78dc7beb1af447f1f8",
+      "start": "2007-12-31"
+    },
+    "MMI": {
+      "end": "2026-06-30",
+      "file": "MMI.parquet",
+      "rows": 1461,
+      "sha256": "6e4cb1b090058a83242547a36a22a434c23530de10622ee9166825e6d7a6a99d",
+      "start": "2010-12-31"
+    },
+    "MMM": {
+      "end": "2026-09-30",
+      "file": "MMM.parquet",
+      "rows": 2137,
+      "sha256": "7ea86e278495900baa55bffe191d2be79e1e61ec86e497a9a8ebd49990abc9f6",
+      "start": "2006-12-31"
+    },
+    "MNK": {
+      "end": "2026-06-30",
+      "file": "MNK.parquet",
+      "rows": 1379,
+      "sha256": "377e17fa0ac9f2844cf2fab37292ad246d7591220e1e5f40d9e217a8e78b190d",
+      "start": "2010-09-24"
+    },
+    "MNST": {
+      "end": "2026-06-30",
+      "file": "MNST.parquet",
+      "rows": 1155,
+      "sha256": "212a81cb6218e857b098bf5476c42aa8f96e06523fd2ca7eb0fef55ccc20786a",
+      "start": "2007-12-31"
+    },
+    "MO": {
+      "end": "2026-09-30",
+      "file": "MO.parquet",
+      "rows": 1899,
+      "sha256": "1189d55dc82c9558f7495e7244119a804a102810e4b1136f8aa04e3afa17ff2d",
+      "start": "2006-12-31"
+    },
+    "MOH": {
+      "end": "2026-09-30",
+      "file": "MOH.parquet",
+      "rows": 1857,
+      "sha256": "924ddea199993dd83dee5a9423625c12374f504f8fd5c3a5e3b55f289414a1b9",
+      "start": "2008-12-31"
+    },
+    "MOLX": {
+      "end": "2013-09-30",
+      "file": "MOLX.parquet",
+      "rows": 367,
+      "sha256": "77081a19623fca3296f97c0c5e0a061b4c1a24862a71ba81a3cf9339291260ad",
+      "start": "2009-06-30"
+    },
+    "MON": {
+      "end": "2018-02-28",
+      "file": "MON.parquet",
+      "rows": 1202,
+      "sha256": "d89b0b2e0ce9f1256520e23eebea95cf40537d65eb83617519651d0379e9fb7c",
+      "start": "2007-08-31"
+    },
+    "MOS": {
+      "end": "2026-06-30",
+      "file": "MOS.parquet",
+      "rows": 1460,
+      "sha256": "0b679d3e3942211fe172db70afd60f246e3feb3aa2df3466ca795e929def2152",
+      "start": "2008-05-31"
+    },
+    "MPC": {
+      "end": "2026-06-30",
+      "file": "MPC.parquet",
+      "rows": 1728,
+      "sha256": "3d67db7d430313d819da549dfb6b853c7822dbc3d0fc243dddacac8fcf6baa56",
+      "start": "2008-12-31"
+    },
+    "MPWR": {
+      "end": "2026-06-30",
+      "file": "MPWR.parquet",
+      "rows": 1794,
+      "sha256": "d522fddb61352999badeaedcce9382736c7cc030a8a18f6ce876ac64350c8527",
+      "start": "2008-12-31"
+    },
+    "MRK": {
+      "end": "2026-06-30",
+      "file": "MRK.parquet",
+      "rows": 1647,
+      "sha256": "cff03fae8ad1d6c16ff322fc4d7fd512efbb21dd73f3f645758b1d44e80eda09",
+      "start": "2006-12-31"
+    },
+    "MRNA": {
+      "end": "2026-06-30",
+      "file": "MRNA.parquet",
+      "rows": 763,
+      "sha256": "3b8a93b78987b8504ccdc81b994d5e62f3f3c15f0083110e04edf296f9062e5b",
+      "start": "2015-12-31"
+    },
+    "MRO": {
+      "end": "2024-09-30",
+      "file": "MRO.parquet",
+      "rows": 1504,
+      "sha256": "f524be8f6f601752ce50692ab14a2e2a2b4a32cc81e113f7d28d1d4c9d81fc8d",
+      "start": "2006-12-31"
+    },
+    "MRSH": {
+      "end": "2026-09-30",
+      "file": "MRSH.parquet",
+      "rows": 1696,
+      "sha256": "ec59a73ec402642378ea5e8d6aee3ba900dd41cdeb3ee67d95375213429d8ac7",
+      "start": "2007-12-31"
+    },
+    "MRVL": {
+      "end": "2026-08-01",
+      "file": "MRVL.parquet",
+      "rows": 566,
+      "sha256": "fd0ce28801c5c245dfc6acdd7d1268383889249cc9ca61de661e1d6892648faa",
+      "start": "2019-02-02"
+    },
+    "MS": {
+      "end": "2026-06-30",
+      "file": "MS.parquet",
+      "rows": 2282,
+      "sha256": "835b93aaba38e32a38bbda819327e51717bd0450f6ecafa49c19015933b9c70e",
+      "start": "2006-11-30"
+    },
+    "MSCI": {
+      "end": "2026-09-30",
+      "file": "MSCI.parquet",
+      "rows": 2335,
+      "sha256": "9545fd7449eb009e5ebc25bc8761432dc032bebe9c91c763385df3e5582c304b",
+      "start": "2007-11-30"
+    },
+    "MSFT": {
+      "end": "2026-09-30",
+      "file": "MSFT.parquet",
+      "rows": 2005,
+      "sha256": "2508839cd46ce2f1a71cc7d1aa5c691a7f0bcb094a53ca0d0eae63fd630a9d2a",
+      "start": "2007-09-30"
+    },
+    "MSI": {
+      "end": "2026-07-04",
+      "file": "MSI.parquet",
+      "rows": 2018,
+      "sha256": "5812235d2320847edd4ae31aa63d76adcc3db845d48585f232bb84efe6b82462",
+      "start": "2007-12-31"
+    },
+    "MTB": {
+      "end": "2026-06-30",
+      "file": "MTB.parquet",
+      "rows": 1533,
+      "sha256": "ea8eb29caf8228cae8bf3294dcc2a5d6af5dc35c3bb4bc13aab51bac2a6e1324",
+      "start": "2006-12-31"
+    },
+    "MTCH": {
+      "end": "2026-06-30",
+      "file": "MTCH.parquet",
+      "rows": 2072,
+      "sha256": "d62063158381c6d39e72235666ba0aae68e4bbf66486550df85efd2d47893a04",
+      "start": "2007-12-31"
+    },
+    "MTD": {
+      "end": "2026-06-30",
+      "file": "MTD.parquet",
+      "rows": 1991,
+      "sha256": "44ecdc9a7405a154833a31393a2cda74480b6760dc5ce6e1f6dc555a1ac86c46",
+      "start": "2007-12-31"
+    },
+    "MTG": {
+      "end": "2026-06-30",
+      "file": "MTG.parquet",
+      "rows": 1739,
+      "sha256": "f492e233a12fb87770c0a2aaa467d97fa114ca7d9348d33ec86b4a4eb2cbdfc6",
+      "start": "2008-12-31"
+    },
+    "MTLQQ": {
+      "end": "2026-09-30",
+      "file": "MTLQQ.parquet",
+      "rows": 1757,
+      "sha256": "eae0ca76048268b4a3b13a91dfad19360ba1f44f895bb17d14498eca48eb284b",
+      "start": "2009-07-09"
+    },
+    "MTW": {
+      "end": "2026-06-30",
+      "file": "MTW.parquet",
+      "rows": 1868,
+      "sha256": "f4a6e4ccadcb79b0d0e3aba399956a852743d2fba65d14a6fae6c9da9235e7c4",
+      "start": "2008-12-31"
+    },
+    "MU": {
+      "end": "2026-09-03",
+      "file": "MU.parquet",
+      "rows": 1940,
+      "sha256": "3549f9ed51b874298c9cda367ceffdce3b8b08e362db49ef3352d90aeb13e508",
+      "start": "2008-08-28"
+    },
+    "MUR": {
+      "end": "2026-06-30",
+      "file": "MUR.parquet",
+      "rows": 2245,
+      "sha256": "804a2f6cbf566e957e9a056ac60b9b48a157f3ef87e1618d80c0b0817154ba2e",
+      "start": "2007-12-31"
+    },
+    "MWV": {
+      "end": "2015-03-31",
+      "file": "MWV.parquet",
+      "rows": 550,
+      "sha256": "5dbf492540940c1b1bef1386feb1b8e2ca7df0744f13170b9d758334a34eabd8",
+      "start": "2007-12-31"
+    },
+    "MWW": {
+      "end": "2016-09-30",
+      "file": "MWW.parquet",
+      "rows": 858,
+      "sha256": "73813f6f98ab0da7dc71315ec8419c2cf1fb8d5415d968d943e07b14cdcb0c62",
+      "start": "2007-12-31"
+    },
+    "MXIM": {
+      "end": "2021-06-26",
+      "file": "MXIM.parquet",
+      "rows": 1347,
+      "sha256": "28c1ed998522477249af302d3ef3b0450e90432a3354531aa5fac9e973c9cb0d",
+      "start": "2008-06-28"
+    },
+    "MYL": {
+      "end": "2014-12-31",
+      "file": "MYL.parquet",
+      "rows": 582,
+      "sha256": "c037695fc5d79242a01e6eaea66a652a136fb33886c3dda1f3242198078a879b",
+      "start": "2007-12-31"
+    },
+    "NAVI": {
+      "end": "2026-06-30",
+      "file": "NAVI.parquet",
+      "rows": 1410,
+      "sha256": "b5b1a0da7b754d7cbe0c243d3ea4bb834ebb1020395643a8d2618c044bf81650",
+      "start": "2011-12-31"
+    },
+    "NBL": {
+      "end": "2020-06-30",
+      "file": "NBL.parquet",
+      "rows": 1191,
+      "sha256": "808f59e47c1f82b42e281f88948391cd63121779908c83e39503a8147966a8af",
+      "start": "2007-12-31"
+    },
+    "NBR": {
+      "end": "2026-06-30",
+      "file": "NBR.parquet",
+      "rows": 1994,
+      "sha256": "0744f426078dfcd0e9b40248f4f60615994b2f5f306225247bd1ac424bc9f0d3",
+      "start": "2006-12-31"
+    },
+    "NCLH": {
+      "end": "2026-09-30",
+      "file": "NCLH.parquet",
+      "rows": 1616,
+      "sha256": "0a935e59550d88d500fde304bceba98109e53825eda9beee4282bdb8a4e7eb22",
+      "start": "2010-12-31"
+    },
+    "NCR": {
+      "end": "2026-06-30",
+      "file": "NCR.parquet",
+      "rows": 1948,
+      "sha256": "f0431a12ce74da6054f89af42c4dabfc8dbaf38d97735b5cc754a101318cae40",
+      "start": "2007-12-31"
+    },
+    "NDAQ": {
+      "end": "2026-09-30",
+      "file": "NDAQ.parquet",
+      "rows": 1592,
+      "sha256": "7b8bcbcae0b7aacc30bb4cf33295882963091b7d3e39ad38830bf7a67aac418a",
+      "start": "2007-12-31"
+    },
+    "NDSN": {
+      "end": "2026-07-31",
+      "file": "NDSN.parquet",
+      "rows": 1930,
+      "sha256": "16cd21d3b55c0749e8c59b4d15bcb346855afb69663d40eb77d52885c33a707c",
+      "start": "2008-10-31"
+    },
+    "NE": {
+      "end": "2026-09-30",
+      "file": "NE.parquet",
+      "rows": 481,
+      "sha256": "13bb610524a0deab9f0b4e6b60b23c5799a0f96d09add56b52d09b09848422da",
+      "start": "2019-12-31"
+    },
+    "NEE": {
+      "end": "2026-03-31",
+      "file": "NEE.parquet",
+      "rows": 1875,
+      "sha256": "63789be94d7c13fdf0a3434708abae1eda8b8908fd637741c90dce8b9faa6498",
+      "start": "2006-12-31"
+    },
+    "NEM": {
+      "end": "2026-09-30",
+      "file": "NEM.parquet",
+      "rows": 1880,
+      "sha256": "bda798f32bf66aa8bdc3a68be935c4d0db8207292d9a1f215bc057b2542b56d9",
+      "start": "2006-12-31"
+    },
+    "NFLX": {
+      "end": "2026-09-30",
+      "file": "NFLX.parquet",
+      "rows": 2079,
+      "sha256": "a37488de42db11df678d5241d4ced1fecd778e64df9f00b5abb8291f47668d14",
+      "start": "2006-12-31"
+    },
+    "NFX": {
+      "end": "2018-09-30",
+      "file": "NFX.parquet",
+      "rows": 945,
+      "sha256": "988f9d35399d8cef3696353bb8855f0fac398fd033d4f759e27b775379836d2a",
+      "start": "2006-12-31"
+    },
+    "NI": {
+      "end": "2026-09-30",
+      "file": "NI.parquet",
+      "rows": 1693,
+      "sha256": "01062445fd43918a91f1298ab7ca7c05a198f398d7eb6c1376c9e48c1fb9118d",
+      "start": "2007-12-31"
+    },
+    "NKE": {
+      "end": "2026-08-31",
+      "file": "NKE.parquet",
+      "rows": 1743,
+      "sha256": "7cfba1b170a9927cad70d867018c3e2740379f49846812b8d2c2e08030444dc6",
+      "start": "2007-05-31"
+    },
+    "NKTR": {
+      "end": "2026-06-30",
+      "file": "NKTR.parquet",
+      "rows": 1681,
+      "sha256": "3e55cf32aabdf34c1d2132a32f1589e3ae904938c5268e5b14d952f28b465924",
+      "start": "2008-12-31"
+    },
+    "NLOK": {
+      "end": "2026-10-02",
+      "file": "NLOK.parquet",
+      "rows": 1657,
+      "sha256": "e29e5d4816ee9da2dc8bc5843f92cf2470f81371e6534061b810a81671a110a8",
+      "start": "2007-03-30"
+    },
+    "NLSN": {
+      "end": "2022-09-30",
+      "file": "NLSN.parquet",
+      "rows": 1485,
+      "sha256": "debd81793284b48103b9673cca30b6d8dc9788ce4fad07e10585730392172e2d",
+      "start": "2008-12-31"
+    },
+    "NOC": {
+      "end": "2026-09-30",
+      "file": "NOC.parquet",
+      "rows": 1997,
+      "sha256": "ce67188cb7fda22ba08db52d207386919fd6fe59eaedf9bae09f3b2943d365f7",
+      "start": "2007-12-31"
+    },
+    "NOV": {
+      "end": "2026-09-30",
+      "file": "NOV.parquet",
+      "rows": 2006,
+      "sha256": "081ef643308c7f1b95566e519a144835d1de04221d31e982d0a3e207fc1af486",
+      "start": "2006-12-31"
+    },
+    "NOVL": {
+      "end": "2011-01-31",
+      "file": "NOVL.parquet",
+      "rows": 62,
+      "sha256": "6a40c8272c9b3cbd20999f6d808b49856a29d023141b09b769c3b1079f758e3f",
+      "start": "2007-10-31"
+    },
+    "NOW": {
+      "end": "2026-09-30",
+      "file": "NOW.parquet",
+      "rows": 1338,
+      "sha256": "9a0a2182995da6a31cf8ebb89a8dc95fbf6ca10cbe95c3fe8c5d59277470ff74",
+      "start": "2009-06-30"
+    },
+    "NRG": {
+      "end": "2026-06-30",
+      "file": "NRG.parquet",
+      "rows": 2104,
+      "sha256": "cdcd85618771174de70690ba422f8ce1f3212776821e9491496019fc68a650b0",
+      "start": "2006-12-31"
+    },
+    "NSC": {
+      "end": "2026-09-30",
+      "file": "NSC.parquet",
+      "rows": 2030,
+      "sha256": "ce7f764615e1c337270c3723b6b5c7181016383ce0dee3dd08192bdae546af75",
+      "start": "2006-12-31"
+    },
+    "NSM": {
+      "end": "2011-05-29",
+      "file": "NSM.parquet",
+      "rows": 96,
+      "sha256": "0629b776aef395b8bc06eacacc74cd9e760fc462bb480a7ab7c2dbceeed08c36",
+      "start": "2008-05-25"
+    },
+    "NTAP": {
+      "end": "2026-07-31",
+      "file": "NTAP.parquet",
+      "rows": 1787,
+      "sha256": "ab90aff2952393e433ac86fe1d88e11d216e0ff26fd114841068ee19d515232e",
+      "start": "2008-04-25"
+    },
+    "NTRS": {
+      "end": "2026-09-30",
+      "file": "NTRS.parquet",
+      "rows": 1635,
+      "sha256": "186be0bb59607bab9072d8702ad5356f7e483c868d62493a3a31c25aea92960e",
+      "start": "2007-12-31"
+    },
+    "NUE": {
+      "end": "2026-07-04",
+      "file": "NUE.parquet",
+      "rows": 2031,
+      "sha256": "951ea6af7e38283d27a3e8a1cf85e320d3a1f07d0edd25f57e5a055279d5120f",
+      "start": "2006-12-31"
+    },
+    "NVDA": {
+      "end": "2026-07-26",
+      "file": "NVDA.parquet",
+      "rows": 1937,
+      "sha256": "255ddaa0d7f7c8c17c6308411d6359ee2c43296479a79462388937396cb37fcf",
+      "start": "2007-01-28"
+    },
+    "NVLS": {
+      "end": "2012-03-31",
+      "file": "NVLS.parquet",
+      "rows": 200,
+      "sha256": "75dd0992760679858f76a5937dc42087ff3d85c64206afc46e58b1376f71466d",
+      "start": "2007-12-31"
+    },
+    "NVR": {
+      "end": "2026-06-30",
+      "file": "NVR.parquet",
+      "rows": 1258,
+      "sha256": "dca72ce03a699b9a64ebf1dc699f042116be66010571d3751c2b0a0118446593",
+      "start": "2007-12-31"
+    },
+    "NWL": {
+      "end": "2026-06-30",
+      "file": "NWL.parquet",
+      "rows": 1696,
+      "sha256": "6161652c756bd0c420990d3c0ebe7893f19c727aa36cc8735a0d4c3865c72d28",
+      "start": "2007-12-31"
+    },
+    "NWS": {
+      "end": "2026-06-30",
+      "file": "NWS.parquet",
+      "rows": 1460,
+      "sha256": "fb2f6f24411998d61297b6b3a9dd19bf630f96d3daa48116e9192301ea8a12d9",
+      "start": "2011-06-30"
+    },
+    "NWSA": {
+      "end": "2026-06-30",
+      "file": "NWSA.parquet",
+      "rows": 1460,
+      "sha256": "c9c30d2bb7680c86c2e738679879976f19aada956c08763be86f5dac93136a0e",
+      "start": "2011-06-30"
+    },
+    "NXPI": {
+      "end": "2026-09-27",
+      "file": "NXPI.parquet",
+      "rows": 789,
+      "sha256": "5c4ac80a312fbc9fd881ed9f4d29d9f688774c5f604b9d5361ddebe71eeee89a",
+      "start": "2016-12-31"
+    },
+    "NYT": {
+      "end": "2026-06-30",
+      "file": "NYT.parquet",
+      "rows": 2062,
+      "sha256": "f2a6c02515e89e3c41ab4884f81f91ee8d8cf9906cd9bc68020fb1bc461511f6",
+      "start": "2007-12-30"
+    },
+    "NYX": {
+      "end": "2013-09-30",
+      "file": "NYX.parquet",
+      "rows": 440,
+      "sha256": "bfec54be3ae55424361eb2e4b3f5117722dcb9a16c41fa3648ee270b65e86490",
+      "start": "2006-12-31"
+    },
+    "O": {
+      "end": "2026-06-30",
+      "file": "O.parquet",
+      "rows": 1117,
+      "sha256": "cdc5e8a9bcc6bb036d90ecc0203a7a000ee9802b823cad8bfb549010cb8ca1a3",
+      "start": "2007-12-31"
+    },
+    "ODFL": {
+      "end": "2026-06-30",
+      "file": "ODFL.parquet",
+      "rows": 1593,
+      "sha256": "c752aa2e0fd88266b0015d6a69ab12ca8044e431397a914d580c05eda85c822e",
+      "start": "2007-12-31"
+    },
+    "ODP": {
+      "end": "2025-09-27",
+      "file": "ODP.parquet",
+      "rows": 1940,
+      "sha256": "fd7db5d914b02ff94b913e1be4b374d3d0cd90bff684d93440a16f9d2e65f385",
+      "start": "2007-12-29"
+    },
+    "OGN": {
+      "end": "2026-09-30",
+      "file": "OGN.parquet",
+      "rows": 634,
+      "sha256": "1c08cd69a92d126233bd6ec5ea94cd1d9df76d6d4e9c44bfb9534ca48247347d",
+      "start": "2018-12-31"
+    },
+    "OI": {
+      "end": "2026-09-30",
+      "file": "OI.parquet",
+      "rows": 1687,
+      "sha256": "b808612e4013e4be2e213565f2efcfbdfafa560758d40281d40f1bb3bc50a51b",
+      "start": "2006-12-31"
+    },
+    "OKE": {
+      "end": "2026-09-30",
+      "file": "OKE.parquet",
+      "rows": 2087,
+      "sha256": "ee3a5015534ecd7427e277ac59343ffe9367b0818995359f8489c70628753735",
+      "start": "2006-12-31"
+    },
+    "OMC": {
+      "end": "2026-09-30",
+      "file": "OMC.parquet",
+      "rows": 1936,
+      "sha256": "db9392a955e83b5561da8713ce738097b4ce1b58f5050f3972ce1a46d14cffa2",
+      "start": "2006-12-31"
+    },
+    "OMX": {
+      "end": "2013-09-28",
+      "file": "OMX.parquet",
+      "rows": 310,
+      "sha256": "8f191509ef4dc346a34c9ab9aea7828ed65c00539c91ac73cee7a0915807a470",
+      "start": "2008-12-27"
+    },
+    "ON": {
+      "end": "2026-07-03",
+      "file": "ON.parquet",
+      "rows": 1850,
+      "sha256": "8e6b18264109b78accbabc6192f8edc0b3832965a5348b19c7b5cfd04a9fc228",
+      "start": "2007-12-31"
+    },
+    "ORCL": {
+      "end": "2026-08-31",
+      "file": "ORCL.parquet",
+      "rows": 1345,
+      "sha256": "d494e92dfc3054476bf971aea22cc729df9e22e92653d4d47ee5732e857adcee",
+      "start": "2007-05-31"
+    },
+    "ORLY": {
+      "end": "2026-06-30",
+      "file": "ORLY.parquet",
+      "rows": 2125,
+      "sha256": "d0a6821c3957edb14d249a36cb2deb5778e8ab838c5983e227e705f1ababb1e9",
+      "start": "2007-12-31"
+    },
+    "OTIS": {
+      "end": "2026-09-30",
+      "file": "OTIS.parquet",
+      "rows": 739,
+      "sha256": "03fefb27e66a9c2376756fc1ca1c42ae6154f77b63cd541f3c34b9211c196ec6",
+      "start": "2017-12-31"
+    },
+    "OXY": {
+      "end": "2026-06-30",
+      "file": "OXY.parquet",
+      "rows": 1757,
+      "sha256": "ab79c6d8d464eaddb9e7cf13cb429b2005c11fd14ec1f41ddcd1f22bfdcdb0c8",
+      "start": "2007-12-31"
+    },
+    "PANW": {
+      "end": "2026-07-31",
+      "file": "PANW.parquet",
+      "rows": 1609,
+      "sha256": "ef64b6f8102c73a93337aefa42f2b994367ffabb580d57cc21b8710bfbf099bb",
+      "start": "2010-07-31"
+    },
+    "PARA": {
+      "end": "2026-06-30",
+      "file": "PARA.parquet",
+      "rows": 435,
+      "sha256": "08cf0e01c22030ef5ce5ab58ad9a231c68685163490b0abb4973dd9bd805d7a2",
+      "start": "2020-12-31"
+    },
+    "PAYC": {
+      "end": "2026-06-30",
+      "file": "PAYC.parquet",
+      "rows": 1519,
+      "sha256": "4042c2a9553d73131d896710ae66a4f0fd333d24e9cc60c6338b71d6dabca6dd",
+      "start": "2011-12-31"
+    },
+    "PAYX": {
+      "end": "2026-08-31",
+      "file": "PAYX.parquet",
+      "rows": 1978,
+      "sha256": "38553ab13f321f51627f364e5287b9459fb12bcc7fb32583430a4c76937fa1d4",
+      "start": "2007-05-31"
+    },
+    "PBCT": {
+      "end": "2021-12-31",
+      "file": "PBCT.parquet",
+      "rows": 1609,
+      "sha256": "6d949781a559ff29f270a7e153fadefdccf812cfbb3424b9b89cd3526e3f2f5b",
+      "start": "2006-12-31"
+    },
+    "PBG": {
+      "end": "2009-12-26",
+      "file": "PBG.parquet",
+      "rows": 36,
+      "sha256": "6929113aca4d1c10d20adc4262f5544b7cd9dbbf8dca5b06c035c4635a51777b",
+      "start": "2006-12-30"
+    },
+    "PBI": {
+      "end": "2026-09-30",
+      "file": "PBI.parquet",
+      "rows": 2415,
+      "sha256": "74846b8fd0911554c03ac72fadabe1efda0a0576ba922bf13581432f13e42f86",
+      "start": "2007-12-31"
+    },
+    "PCAR": {
+      "end": "2026-09-30",
+      "file": "PCAR.parquet",
+      "rows": 1622,
+      "sha256": "74613d9d92552843c2f0560914a6d5e5fb31cf79d249b8a5a04c6d03691c13ec",
+      "start": "2007-12-31"
+    },
+    "PCG": {
+      "end": "2026-06-30",
+      "file": "PCG.parquet",
+      "rows": 1784,
+      "sha256": "6788d3e0e10b2a8ab9edc5d4703895dcbca95dbd250acbcc8a0ca41605d77f9c",
+      "start": "2006-12-31"
+    },
+    "PCL": {
+      "end": "2015-12-31",
+      "file": "PCL.parquet",
+      "rows": 129,
+      "sha256": "4831154e0946241aaa60628779391ad9b26bf383532ea499fccbc5eccf477e2e",
+      "start": "2009-12-31"
+    },
+    "PCP": {
+      "end": "2015-09-27",
+      "file": "PCP.parquet",
+      "rows": 740,
+      "sha256": "b64410d7bfda4f0c7bf6c605d15c773a9a361680abdfce254341ce8a2ecf2d99",
+      "start": "2007-04-01"
+    },
+    "PD": {
+      "end": "2026-07-31",
+      "file": "PD.parquet",
+      "rows": 733,
+      "sha256": "a8f51a344910b4c81c74a42198ce372907d2dad948b1032acc3ab219089bbf68",
+      "start": "2017-01-31"
+    },
+    "PDCO": {
+      "end": "2025-01-25",
+      "file": "PDCO.parquet",
+      "rows": 1908,
+      "sha256": "22c6ddab8aca5601fa16d627ec9365de427256704ac1898780a108019ccb4b7e",
+      "start": "2008-04-26"
+    },
+    "PEAK": {
+      "end": "2026-06-30",
+      "file": "PEAK.parquet",
+      "rows": 2190,
+      "sha256": "f9e2641693593c404e9ed849f22f27faff86b484f40253917005f9167b2ca67e",
+      "start": "2006-12-31"
+    },
+    "PEG": {
+      "end": "2026-06-30",
+      "file": "PEG.parquet",
+      "rows": 1894,
+      "sha256": "ebe399833cdfbe8d7c8d54cd9992b74bdf92548a3bd47ffdc8ea65b141006ea8",
+      "start": "2006-12-31"
+    },
+    "PENN": {
+      "end": "2026-06-30",
+      "file": "PENN.parquet",
+      "rows": 1981,
+      "sha256": "624a967c8346cf9485881a5a1e79f286cee67a7b3db9f137ea3002c43b2fb680",
+      "start": "2007-12-31"
+    },
+    "PEP": {
+      "end": "2026-09-05",
+      "file": "PEP.parquet",
+      "rows": 1649,
+      "sha256": "04b1edb233636fb92ae39901126c0efb6091596c42c5569fdeb5387b086829bf",
+      "start": "2007-12-29"
+    },
+    "PETM": {
+      "end": "2014-11-02",
+      "file": "PETM.parquet",
+      "rows": 548,
+      "sha256": "4aa958227d6c4d8cf45d5980956e0b40372bd4d03bf0a970a21e2ee2c440158d",
+      "start": "2008-02-03"
+    },
+    "PFE": {
+      "end": "2026-06-28",
+      "file": "PFE.parquet",
+      "rows": 1688,
+      "sha256": "770bddda74eba12f0accf65ffab49850c891cfc5bd30d99ffaca7f9c96605906",
+      "start": "2006-12-31"
+    },
+    "PFG": {
+      "end": "2026-09-30",
+      "file": "PFG.parquet",
+      "rows": 1636,
+      "sha256": "64dfe1ddc147bc7b940b4506f2609421ffc9bd375395e95f68f650d2ec7d2d45",
+      "start": "2006-12-31"
+    },
+    "PG": {
+      "end": "2026-09-30",
+      "file": "PG.parquet",
+      "rows": 1909,
+      "sha256": "fa958dfe1adcf3acfb6b7592df16a0fb9d13662a7ae567a4210a6ad7cf4131ad",
+      "start": "2007-06-30"
+    },
+    "PGN": {
+      "end": "2012-09-30",
+      "file": "PGN.parquet",
+      "rows": 354,
+      "sha256": "e2d2851f8ecaf5e9e93d66ec75eeb3b9ee70fbd4f8b6ed96b228d99601c645de",
+      "start": "2006-12-31"
+    },
+    "PGR": {
+      "end": "2026-06-30",
+      "file": "PGR.parquet",
+      "rows": 1637,
+      "sha256": "65cabbedc475cd3195ec42830fb6bb305e2a25efd3f419d4fd63f5690c915952",
+      "start": "2007-12-31"
+    },
+    "PH": {
+      "end": "2026-06-30",
+      "file": "PH.parquet",
+      "rows": 2052,
+      "sha256": "ad88bf0c6aa1c8df5265fdf5e8d0a0c3ccd4e65f0aa2875241cdf6902cfafd01",
+      "start": "2007-06-30"
+    },
+    "PHM": {
+      "end": "2026-09-30",
+      "file": "PHM.parquet",
+      "rows": 1489,
+      "sha256": "37d93cc4963161cb08b0fd3fa74c54105ba9b7f354fa14593afe675b767825d1",
+      "start": "2007-12-31"
+    },
+    "PKG": {
+      "end": "2026-06-30",
+      "file": "PKG.parquet",
+      "rows": 1939,
+      "sha256": "2aa9b40a4999cfd43897e7d8de2d30a06dc56e67bc0fded59587096d077506ac",
+      "start": "2007-12-31"
+    },
+    "PKI": {
+      "end": "2026-07-05",
+      "file": "PKI.parquet",
+      "rows": 2138,
+      "sha256": "81d93bca1e2fe22be253ad490203f7631847229a1cd8d56e80ebe4b5f4451839",
+      "start": "2007-12-30"
+    },
+    "PLD": {
+      "end": "2026-03-31",
+      "file": "PLD.parquet",
+      "rows": 1757,
+      "sha256": "b57f2d0c2912b6ed7b6c0bdf7159f788ab84312d5a7f6775d7be56d98208bf90",
+      "start": "2008-12-31"
+    },
+    "PLL": {
+      "end": "2015-04-30",
+      "file": "PLL.parquet",
+      "rows": 418,
+      "sha256": "223b3b297056efe61158786af5f1f1b2a4701bae3e50b8aa208eb8a039739dfc",
+      "start": "2008-07-31"
+    },
+    "PLTR": {
+      "end": "2026-06-30",
+      "file": "PLTR.parquet",
+      "rows": 598,
+      "sha256": "0b0bee4b1c7d0946ee9be2d9d1632c666d52b5f98804511ee1b059af994e3cae",
+      "start": "2017-12-31"
+    },
+    "PM": {
+      "end": "2026-09-30",
+      "file": "PM.parquet",
+      "rows": 1951,
+      "sha256": "6943b75cf1e158c97d4fd737f785493fa287a90eeeeacbfce618a9f8828f7567",
+      "start": "2006-12-31"
+    },
+    "PMCS": {
+      "end": "2015-09-26",
+      "file": "PMCS.parquet",
+      "rows": 601,
+      "sha256": "73429da03242a0104e6bc87876129843a665b4c1cc9eb1b57b243b288c9777f9",
+      "start": "2007-12-30"
+    },
+    "PNC": {
+      "end": "2026-06-30",
+      "file": "PNC.parquet",
+      "rows": 1590,
+      "sha256": "74c9cfc55471569360fe5b7c880bc8fea65422ab20c0807767737789bf3aba5e",
+      "start": "2006-12-31"
+    },
+    "PNR": {
+      "end": "2026-09-30",
+      "file": "PNR.parquet",
+      "rows": 2154,
+      "sha256": "c86e9f2a5ce2e299bf71436b4342f529d0a1fc978a9fc38c5b1bc9f5e276d793",
+      "start": "2007-12-31"
+    },
+    "PNW": {
+      "end": "2026-06-30",
+      "file": "PNW.parquet",
+      "rows": 1913,
+      "sha256": "d2f5f9a6570de2cf0c921e92dbd92bc86a379ddf96c4a3a50e20c383c08093c0",
+      "start": "2008-12-31"
+    },
+    "PODD": {
+      "end": "2026-06-30",
+      "file": "PODD.parquet",
+      "rows": 1693,
+      "sha256": "4475f8f3c6ca5ff70e8924ae2768fdb0501307eac2c64923b63609da9765fd54",
+      "start": "2008-12-31"
+    },
+    "POOL": {
+      "end": "2026-09-30",
+      "file": "POOL.parquet",
+      "rows": 2124,
+      "sha256": "650ec460170ae46cd7449b7f3a6b7afd69dc493f05a9d3e7dfc97be73c4cfbea",
+      "start": "2007-12-31"
+    },
+    "PPG": {
+      "end": "2026-09-30",
+      "file": "PPG.parquet",
+      "rows": 2208,
+      "sha256": "da0d7b2118fa52479db634a4a3084719b2022e9dbf2f0de459e60e5873d7fe98",
+      "start": "2006-12-31"
+    },
+    "PPL": {
+      "end": "2026-03-31",
+      "file": "PPL.parquet",
+      "rows": 2083,
+      "sha256": "9aaa99d6c7e56aa15ea4c625c6b7980490cf54cfa0bd56756e77b9c633f39bcd",
+      "start": "2006-12-31"
+    },
+    "PRGO": {
+      "end": "2026-06-27",
+      "file": "PRGO.parquet",
+      "rows": 1509,
+      "sha256": "acb808d1166bcbbfe1bc9222eab9e8456e8e9a15ae4fb7cd3483d339156c54b4",
+      "start": "2011-06-25"
+    },
+    "PRU": {
+      "end": "2026-06-30",
+      "file": "PRU.parquet",
+      "rows": 1884,
+      "sha256": "4dd940706e9a504da57347db46169aba51d51a2e09e3668997ee26a55a3de44e",
+      "start": "2006-12-31"
+    },
+    "PSA": {
+      "end": "2026-09-30",
+      "file": "PSA.parquet",
+      "rows": 1501,
+      "sha256": "6949bd1267a6d09f692d421691e3181bb9e1e13a1b590c43dafc80b9ed88e474",
+      "start": "2006-12-31"
+    },
+    "PSKY": {
+      "end": "2026-06-30",
+      "file": "PSKY.parquet",
+      "rows": 145,
+      "sha256": "b31ae962ad35b63032961cc1f1fdb661497c92898a9081ac6dbae02a284e9667",
+      "start": "2022-12-31"
+    },
+    "PSX": {
+      "end": "2026-09-30",
+      "file": "PSX.parquet",
+      "rows": 1375,
+      "sha256": "19465b1fffd01e8db0a2064df9bb3a951cf939109a716cb02f68c966ee47a3a4",
+      "start": "2009-12-31"
+    },
+    "PTC": {
+      "end": "2026-06-30",
+      "file": "PTC.parquet",
+      "rows": 1572,
+      "sha256": "0510ae8eae2f8e57ab25651acd4ab60416566e55f30e7c7bea0bc33de06a8267",
+      "start": "2007-09-30"
+    },
+    "PTV": {
+      "end": "2010-09-30",
+      "file": "PTV.parquet",
+      "rows": 52,
+      "sha256": "c44a826e2412024a5756001d950cfd9a318319d54c21ba86f1122fdd1941ff23",
+      "start": "2008-12-31"
+    },
+    "PVH": {
+      "end": "2026-08-02",
+      "file": "PVH.parquet",
+      "rows": 1692,
+      "sha256": "20f1294310d4560d6477d87707637ff343ab7f30c73e6b5bf57255b10e989ff3",
+      "start": "2008-02-03"
+    },
+    "PWR": {
+      "end": "2026-09-30",
+      "file": "PWR.parquet",
+      "rows": 1656,
+      "sha256": "bee899d81d47cb2fc3352bc08db02d84f2aae024a02e6e303332cef9ee6511eb",
+      "start": "2006-12-31"
+    },
+    "PX": {
+      "end": "2018-09-30",
+      "file": "PX.parquet",
+      "rows": 1264,
+      "sha256": "30f408a700b28370546677fefa59aaf3905bb88dd7536efdd91b7a8fd4364743",
+      "start": "2006-12-31"
+    },
+    "PXD": {
+      "end": "2024-03-31",
+      "file": "PXD.parquet",
+      "rows": 1415,
+      "sha256": "90d6161ff6e4b609e14170a11ab88cb2fb40de8202f5b18af4ac174a482b0307",
+      "start": "2006-12-31"
+    },
+    "PYPL": {
+      "end": "2026-09-30",
+      "file": "PYPL.parquet",
+      "rows": 1283,
+      "sha256": "2005b77570c373bb2477e897b9f7cee1ad682bf9c5ff30d7b47ea2134a5efcc9",
+      "start": "2012-12-31"
+    },
+    "Q": {
+      "end": "2026-06-30",
+      "file": "Q.parquet",
+      "rows": 99,
+      "sha256": "3c5f3e2df6ece25567b2dbb5e1a5ba2fdb41f83bed9853eec705c6869e645341",
+      "start": "2022-12-31"
+    },
+    "QCOM": {
+      "end": "2026-06-28",
+      "file": "QCOM.parquet",
+      "rows": 2074,
+      "sha256": "ab7a7abf84569b5e065bf24f65a252c309d0dab29358630109bc0e4a20a13450",
+      "start": "2006-09-24"
+    },
+    "QEP": {
+      "end": "2020-12-31",
+      "file": "QEP.parquet",
+      "rows": 1059,
+      "sha256": "8933ac5b5254b9c8785cc532fc609fa6c2ceb8761b26b230b0994db420e41ca3",
+      "start": "2008-12-31"
+    },
+    "QLGC": {
+      "end": "2016-07-03",
+      "file": "QLGC.parquet",
+      "rows": 702,
+      "sha256": "4ec583a30e645f436402b2516fd2a0fd0a2cd7a0c1a21b63568555d2c444e750",
+      "start": "2008-03-30"
+    },
+    "QRVO": {
+      "end": "2026-03-28",
+      "file": "QRVO.parquet",
+      "rows": 1293,
+      "sha256": "9a95fca90874200e2521900a7b74744859e5e6902f452d7ee0016a6b17ab77c2",
+      "start": "2012-03-31"
+    },
+    "R": {
+      "end": "2026-09-30",
+      "file": "R.parquet",
+      "rows": 1924,
+      "sha256": "a01dcb8b3a75a5356f728d67f8cd7e86e26f957d6ae8c5e004931ceaa302b200",
+      "start": "2007-12-31"
+    },
+    "RAI": {
+      "end": "2017-06-30",
+      "file": "RAI.parquet",
+      "rows": 914,
+      "sha256": "2edb8f69f47e03d9506d98add268d051ac9e53a7296d3e14cebe4a2eb85cb973",
+      "start": "2006-12-31"
+    },
+    "RCL": {
+      "end": "2026-09-30",
+      "file": "RCL.parquet",
+      "rows": 1538,
+      "sha256": "f88ad5618922cc0238e00cc9e3538493c6400333ef9cdddcf0d1c6daf00fc13d",
+      "start": "2007-12-31"
+    },
+    "RDC": {
+      "end": "2018-12-31",
+      "file": "RDC.parquet",
+      "rows": 914,
+      "sha256": "614945d48d949b6a729f3a539a0cfdbeb11f78efc994c48d8c2127ceaff9d520",
+      "start": "2006-12-31"
+    },
+    "RDDT": {
+      "end": "2026-09-30",
+      "file": "RDDT.parquet",
+      "rows": 272,
+      "sha256": "2dd2ad6f30ad1764748f4741be52fb057dd68a8ad0cb2c76e0313f78dd1bf389",
+      "start": "2021-12-31"
+    },
+    "RE": {
+      "end": "2026-06-30",
+      "file": "RE.parquet",
+      "rows": 1723,
+      "sha256": "89ceac722c3382f5ce9bfd5738327cf77f24afe8fbe56a2171887944b2adca88",
+      "start": "2008-12-31"
+    },
+    "REG": {
+      "end": "2026-03-31",
+      "file": "REG.parquet",
+      "rows": 814,
+      "sha256": "1ee350118409a815a6685e22884c104469ba0c0b9d7f73b1485f5a878489f6ee",
+      "start": "2010-03-31"
+    },
+    "REGN": {
+      "end": "2026-09-30",
+      "file": "REGN.parquet",
+      "rows": 1922,
+      "sha256": "73e5a47c4820458fa02cffefd7c39ec32b61cd777b8e6e9b58b328b45c5b2c9b",
+      "start": "2007-12-31"
+    },
+    "RF": {
+      "end": "2026-06-30",
+      "file": "RF.parquet",
+      "rows": 1562,
+      "sha256": "343249e6aab9371d1ceb34ada0d6277507964d1e3478dab440f8b03b9415db6b",
+      "start": "2006-12-31"
+    },
+    "RHI": {
+      "end": "2026-09-30",
+      "file": "RHI.parquet",
+      "rows": 1896,
+      "sha256": "ec6f4033ab2506bb3f684f6ddb85ed0cbcee3fb27b768e0af3a0b0f4a6791474",
+      "start": "2008-12-31"
+    },
+    "RHT": {
+      "end": "2019-05-31",
+      "file": "RHT.parquet",
+      "rows": 1179,
+      "sha256": "803a66cf8ccf7bfbcd8582daeff200fb41ec2099554c5992739c1d67af7a471c",
+      "start": "2008-02-29"
+    },
+    "RIG": {
+      "end": "2026-06-30",
+      "file": "RIG.parquet",
+      "rows": 2039,
+      "sha256": "174edbd541226c6e1972288ac52a43055bcc1f5e634a7c46169b20fd4e8e6d64",
+      "start": "2006-12-31"
+    },
+    "RJF": {
+      "end": "2026-06-30",
+      "file": "RJF.parquet",
+      "rows": 1465,
+      "sha256": "34f533beafd913c2c562842dbecccacc18f6bb45c706da616317c65199e32f3e",
+      "start": "2008-09-30"
+    },
+    "RL": {
+      "end": "2026-06-27",
+      "file": "RL.parquet",
+      "rows": 1643,
+      "sha256": "6c09fb2d97b9684a8ac446369e001c3bf5f51447cd1c64ec2c8fbe4f44cb3658",
+      "start": "2008-03-29"
+    },
+    "RMD": {
+      "end": "2026-09-30",
+      "file": "RMD.parquet",
+      "rows": 1665,
+      "sha256": "5e3541ad629d8f628dc6d60fb146031eca7e4524f8ed266b16850500b293edd8",
+      "start": "2008-06-30"
+    },
+    "ROK": {
+      "end": "2026-06-30",
+      "file": "ROK.parquet",
+      "rows": 2146,
+      "sha256": "c5dc819206ae16e40fd76bc8b604b90049e32e71341a0468453edd1924f4f49f",
+      "start": "2006-09-30"
+    },
+    "ROL": {
+      "end": "2026-09-30",
+      "file": "ROL.parquet",
+      "rows": 1383,
+      "sha256": "e056cf6c62df2b2d1af165fab53ecbcce18bc30e9bb04d178752deda8712925c",
+      "start": "2007-12-31"
+    },
+    "ROP": {
+      "end": "2026-06-30",
+      "file": "ROP.parquet",
+      "rows": 2211,
+      "sha256": "acea3d13de66b957c051cf4c89acb06dcd3a6e2592d1b00cd5203f5451e3975b",
+      "start": "2007-12-31"
+    },
+    "ROST": {
+      "end": "2026-08-01",
+      "file": "ROST.parquet",
+      "rows": 2369,
+      "sha256": "67e965a895da61436011b8e7b9350f62b55bb7b4a3b9d333ddfd81d9cd707a7c",
+      "start": "2008-02-02"
+    },
+    "RRC": {
+      "end": "2026-09-30",
+      "file": "RRC.parquet",
+      "rows": 1728,
+      "sha256": "1da3f686d5e038a32ef874fff3645a404f89b26a712c0027832670ae7f8a94a1",
+      "start": "2006-12-31"
+    },
+    "RRD": {
+      "end": "2021-12-31",
+      "file": "RRD.parquet",
+      "rows": 1276,
+      "sha256": "7e2e80ae0c75279c363ab7ca4e25b33782df6b57a6915703fc65d7b93bd84dcf",
+      "start": "2006-12-31"
+    },
+    "RSG": {
+      "end": "2026-09-30",
+      "file": "RSG.parquet",
+      "rows": 2090,
+      "sha256": "3ad819e21bbcedbce81a2af865f2442b64d581e142cb892034828945c6b469df",
+      "start": "2006-12-31"
+    },
+    "RSHCQ": {
+      "end": "2014-11-01",
+      "file": "RSHCQ.parquet",
+      "rows": 805,
+      "sha256": "a8fa5965d47843af84323385dc428e3ca743c100e0b2fa0f3004652fd505905c",
+      "start": "2008-12-31"
+    },
+    "RTN": {
+      "end": "2019-12-31",
+      "file": "RTN.parquet",
+      "rows": 1360,
+      "sha256": "e0a4cb3a2f2f828424ad6c7da97e1bcf1f1dc142926d1a209deec6db09e63b42",
+      "start": "2006-12-31"
+    },
+    "RTX": {
+      "end": "2026-09-30",
+      "file": "RTX.parquet",
+      "rows": 2064,
+      "sha256": "d41c8dbacaf900b30b06b2cd822982ac103e74749a5b0cd981fe3d826b7d8a7b",
+      "start": "2006-12-31"
+    },
+    "RVTY": {
+      "end": "2026-07-05",
+      "file": "RVTY.parquet",
+      "rows": 2138,
+      "sha256": "e3f4bf4aeffdfee7b732fd86a9203369658e3657e671e32da75620fd60d599b8",
+      "start": "2007-12-30"
+    },
+    "RX": {
+      "end": "2016-06-30",
+      "file": "RX.parquet",
+      "rows": 244,
+      "sha256": "4d36098bc8da4df57a220fbe120e5fe0cef68941deabeaf07c674d964ae4635a",
+      "start": "2011-12-31"
+    },
+    "S": {
+      "end": "2026-07-31",
+      "file": "S.parquet",
+      "rows": 527,
+      "sha256": "a6b004b9ee46f3db6f439b74db4384cb91c44b4a823fe0e85eb63930daea3572",
+      "start": "2019-01-31"
+    },
+    "SANM": {
+      "end": "2026-06-27",
+      "file": "SANM.parquet",
+      "rows": 1635,
+      "sha256": "b2f69c8f79c210494e09a4891994f71aa7f10d35af89f635beacdc12fde0d049",
+      "start": "2008-09-27"
+    },
+    "SATS": {
+      "end": "2026-06-30",
+      "file": "SATS.parquet",
+      "rows": 319,
+      "sha256": "11e9b1009ba28971d0489204ce3a1524bff6d5ad7d669a33b643464aedb6ce89",
+      "start": "2020-12-31"
+    },
+    "SBAC": {
+      "end": "2026-06-30",
+      "file": "SBAC.parquet",
+      "rows": 2034,
+      "sha256": "e0592013a288379967deebd5d57b82bdb2ddd2b682094dbca2bf21db90a2a40e",
+      "start": "2007-12-31"
+    },
+    "SBUX": {
+      "end": "2026-06-28",
+      "file": "SBUX.parquet",
+      "rows": 2079,
+      "sha256": "90e311c8440d1ad3324e874f8ce74dd2cae9e17f9128b1f4355ba0094e363ba9",
+      "start": "2006-10-01"
+    },
+    "SCG": {
+      "end": "2018-12-31",
+      "file": "SCG.parquet",
+      "rows": 774,
+      "sha256": "b0177c1574e31940abd0b76bd857424254b0990ed6cc69749869f332c0c41449",
+      "start": "2007-12-31"
+    },
+    "SCHW": {
+      "end": "2026-06-30",
+      "file": "SCHW.parquet",
+      "rows": 1915,
+      "sha256": "b80e76c61e6a92bf307a1d19ad607490f2661e92675cbefd99fae1bf8f55163a",
+      "start": "2006-12-31"
+    },
+    "SEDG": {
+      "end": "2026-06-30",
+      "file": "SEDG.parquet",
+      "rows": 1152,
+      "sha256": "792baa6353f29f89d0cc5d1874ccfcb8066ece9b96590a008cd6ecddbc70ebd1",
+      "start": "2012-06-30"
+    },
+    "SEE": {
+      "end": "2025-12-31",
+      "file": "SEE.parquet",
+      "rows": 1660,
+      "sha256": "5882b23dda3c547a35a073c45d19b8a175526a0e99e4aeeab879613cc56c09c6",
+      "start": "2007-12-31"
+    },
+    "SGP": {
+      "end": "2026-06-30",
+      "file": "SGP.parquet",
+      "rows": 55,
+      "sha256": "459760abeaf8969d7316a02d9b9832ab18105dcf121daa4641024431b4c9ee5b",
+      "start": "2023-12-31"
+    },
+    "SHLD": {
+      "end": "2018-11-03",
+      "file": "SHLD.parquet",
+      "rows": 938,
+      "sha256": "c55423a280998f0629705104724d8c07fd0ae1da35a87637be48a4c06fb0364d",
+      "start": "2008-02-02"
+    },
+    "SHW": {
+      "end": "2026-09-30",
+      "file": "SHW.parquet",
+      "rows": 2215,
+      "sha256": "b74f0f32a910bf001c76b3d7e5d4602a21ef111445f9aeb372ace04c017b4594",
+      "start": "2006-12-31"
+    },
+    "SIAL": {
+      "end": "2015-09-30",
+      "file": "SIAL.parquet",
+      "rows": 584,
+      "sha256": "54881c13eac0a4f94c167caed2e21aae323ef59e8a6ed9eeb73efb8b22f5fedd",
+      "start": "2006-12-31"
+    },
+    "SIG": {
+      "end": "2026-08-01",
+      "file": "SIG.parquet",
+      "rows": 1892,
+      "sha256": "bd599f2a2c00296712c222bffcb59ef0ef042e15ccec69ab1d3a4d8285c64bd7",
+      "start": "2008-02-02"
+    },
+    "SIVB": {
+      "end": "2022-12-31",
+      "file": "SIVB.parquet",
+      "rows": 1616,
+      "sha256": "76acbda97933d49fc88346d4f9ece6b2cbaab8f6f1b89fde2f817751758596a4",
+      "start": "2007-12-31"
+    },
+    "SJM": {
+      "end": "2026-07-31",
+      "file": "SJM.parquet",
+      "rows": 1614,
+      "sha256": "1ebc8a2e2e8ccfda5f73d72c90172cfcfa301ce24a7a4e2a4764aafa35d4af38",
+      "start": "2008-04-30"
+    },
+    "SLB": {
+      "end": "2026-09-30",
+      "file": "SLB.parquet",
+      "rows": 1760,
+      "sha256": "3d49c39ba1a91ca6e9190eb3c02be1e4295659aef9fcd40d4c70d4c5bc6c5af5",
+      "start": "2006-12-31"
+    },
+    "SLG": {
+      "end": "2026-03-31",
+      "file": "SLG.parquet",
+      "rows": 1512,
+      "sha256": "809984be8b5237adec6598f85fec8c166e14a3e652a41e64d885d8bb7ba53149",
+      "start": "2007-12-31"
+    },
+    "SLM": {
+      "end": "2026-09-30",
+      "file": "SLM.parquet",
+      "rows": 1962,
+      "sha256": "93bf206df979fb04faddc9b24791baa733b3ab8d6243b4de6f21df45213bd422",
+      "start": "2006-12-31"
+    },
+    "SMCI": {
+      "end": "2026-06-30",
+      "file": "SMCI.parquet",
+      "rows": 1701,
+      "sha256": "db0d002876d03f5f692afc2666f5385f03e660b002fc773b3daf6a997a015b56",
+      "start": "2009-06-30"
+    },
+    "SNA": {
+      "end": "2026-10-03",
+      "file": "SNA.parquet",
+      "rows": 1951,
+      "sha256": "aa8d64b9dd89f93472a62cf1241ba008af94a3846bb0409328aa5b91027443d3",
+      "start": "2007-12-29"
+    },
+    "SNDK": {
+      "end": "2026-07-03",
+      "file": "SNDK.parquet",
+      "rows": 238,
+      "sha256": "b8a7964d42cd678384c152b8f0340e1bb6bd582c2c6d9cbcecd6de4a0d0a7ecc",
+      "start": "2022-07-01"
+    },
+    "SNI": {
+      "end": "2017-12-31",
+      "file": "SNI.parquet",
+      "rows": 1014,
+      "sha256": "ecefacaaa53f951277daa5483ca3b4b3b8dd01984ccac4bac6c408bc61ebba7d",
+      "start": "2007-12-31"
+    },
+    "SNPS": {
+      "end": "2026-07-31",
+      "file": "SNPS.parquet",
+      "rows": 1789,
+      "sha256": "b7e40f0cbaebd3e02eb42b778a9d2dfcdc9f61b1b581591657217ec358ebca7c",
+      "start": "2007-10-31"
+    },
+    "SNV": {
+      "end": "2025-09-30",
+      "file": "SNV.parquet",
+      "rows": 1774,
+      "sha256": "90b09688e67a1007454cc7a3f02b1fc8e8a5b3f710089f88601836d678ae269d",
+      "start": "2007-12-31"
+    },
+    "SO": {
+      "end": "2026-03-31",
+      "file": "SO.parquet",
+      "rows": 1732,
+      "sha256": "1e786e28ce3119692f17940e56f7f18a8d58d5af3348a3230ddc198e2e0c8b4f",
+      "start": "2006-12-31"
+    },
+    "SOLS": {
+      "end": "2026-06-30",
+      "file": "SOLS.parquet",
+      "rows": 100,
+      "sha256": "fffc7f56448353a2bdcd4d943c6230ffb35ae157f2ad69bbac96491362df7bee",
+      "start": "2022-12-31"
+    },
+    "SOLV": {
+      "end": "2026-06-30",
+      "file": "SOLV.parquet",
+      "rows": 262,
+      "sha256": "a6babfb81f8cc1027789cc2c2ba4cfa21bb628dff6e5cbb8e1b38e793b52f179",
+      "start": "2021-12-31"
+    },
+    "SOV": {
+      "end": "2026-06-30",
+      "file": "SOV.parquet",
+      "rows": 1374,
+      "sha256": "c66bf7464be56be70ef35ed7a8304592e4b0df55e50a8daafb85edfcc0e698c5",
+      "start": "2008-12-31"
+    },
+    "SPG": {
+      "end": "2026-06-30",
+      "file": "SPG.parquet",
+      "rows": 1741,
+      "sha256": "f4cf675d3d577194a672c84978e9b2fcefe0dc4ba67fea86e8cb5820ca06f785",
+      "start": "2006-12-31"
+    },
+    "SPGI": {
+      "end": "2026-09-30",
+      "file": "SPGI.parquet",
+      "rows": 2178,
+      "sha256": "c2a7a809ac6f8bf1b55b347b1d17db02d5cd185921582a10ccde1961dc91d9b8",
+      "start": "2006-12-31"
+    },
+    "SPLS": {
+      "end": "2017-07-29",
+      "file": "SPLS.parquet",
+      "rows": 906,
+      "sha256": "81f997baa41c769c2a9bf01ef0cc9a56f0b4b83d595e5c20aef22d0041474988",
+      "start": "2007-02-03"
+    },
+    "SRCL": {
+      "end": "2024-09-30",
+      "file": "SRCL.parquet",
+      "rows": 1775,
+      "sha256": "7b047210e3c8eaf8667134ce04cb78d2c6da0e93455a0a19e9f859b9ec2bd9e7",
+      "start": "2007-12-31"
+    },
+    "SRE": {
+      "end": "2026-03-31",
+      "file": "SRE.parquet",
+      "rows": 1626,
+      "sha256": "fd55aee63f63c03cc7a05dcb4e0b23777f07b6bc33c64dfdc116122897ca34e6",
+      "start": "2007-12-31"
+    },
+    "SSP": {
+      "end": "2026-06-30",
+      "file": "SSP.parquet",
+      "rows": 1916,
+      "sha256": "615c26d09a966a6442d7464b9735ce16602b2abfaa0da54de321b651b95f1c6d",
+      "start": "2008-12-31"
+    },
+    "STE": {
+      "end": "2026-06-30",
+      "file": "STE.parquet",
+      "rows": 923,
+      "sha256": "6b092be799d9e9613fee896f7525cb4b8874336508cba206abddf4a0a05936f8",
+      "start": "2016-03-31"
+    },
+    "STI": {
+      "end": "2026-06-30",
+      "file": "STI.parquet",
+      "rows": 351,
+      "sha256": "4875a497a9f8c3d3a53e85cac5e30cb47b099d5ea5a03b2dca7c6e1fc8872fe2",
+      "start": "2021-06-30"
+    },
+    "STJ": {
+      "end": "2016-10-01",
+      "file": "STJ.parquet",
+      "rows": 862,
+      "sha256": "f8200bdebdd818291f22ebbd34d82b796bdab610ccf5b80bb41fad00349eba4f",
+      "start": "2006-12-30"
+    },
+    "STLD": {
+      "end": "2026-09-30",
+      "file": "STLD.parquet",
+      "rows": 2134,
+      "sha256": "ecf2e9ddc557bdf7908303562304ebb251f948c8aa9fa7ebc125c3ff533840f8",
+      "start": "2006-12-31"
+    },
+    "STR": {
+      "end": "2016-06-30",
+      "file": "STR.parquet",
+      "rows": 1119,
+      "sha256": "fb23c6ec92eff7832ced81527128caa851d928bf9c8b6a4c2c79a9913543577e",
+      "start": "2007-12-31"
+    },
+    "STT": {
+      "end": "2026-09-30",
+      "file": "STT.parquet",
+      "rows": 1789,
+      "sha256": "d9061f507d617f7007319b709f302dfd9d201183da6f63719c8bab908b8129a9",
+      "start": "2006-12-31"
+    },
+    "STX": {
+      "end": "2026-10-02",
+      "file": "STX.parquet",
+      "rows": 1617,
+      "sha256": "5df5a0dd93b17f254dd61b6dc99f8ec3019cdddfb969e19c95e1462a86004c80",
+      "start": "2008-06-27"
+    },
+    "STZ": {
+      "end": "2026-08-31",
+      "file": "STZ.parquet",
+      "rows": 1439,
+      "sha256": "1d5d8efc521fe063acf0d3bb9539335c37e1fcb5d017f4dfc78a3b3b56938efd",
+      "start": "2008-02-29"
+    },
+    "SUN": {
+      "end": "2026-06-30",
+      "file": "SUN.parquet",
+      "rows": 1014,
+      "sha256": "0bddb34de1cfa597fb46090b095baf59645880940306b16c8056ad9187123a13",
+      "start": "2010-03-31"
+    },
+    "SUNEQ": {
+      "end": "2015-09-30",
+      "file": "SUNEQ.parquet",
+      "rows": 598,
+      "sha256": "a3d653dca072025346a46c57b3e656b1a446e64d3b5f7194fc807311160f3918",
+      "start": "2006-12-31"
+    },
+    "SVU": {
+      "end": "2018-09-08",
+      "file": "SVU.parquet",
+      "rows": 917,
+      "sha256": "f15cf6a218e678ce2a994c3f62c44364e301dff0f4754603182fda3f81e636d2",
+      "start": "2007-02-24"
+    },
+    "SW": {
+      "end": "2026-06-30",
+      "file": "SW.parquet",
+      "rows": 217,
+      "sha256": "1265a693994d03aa44dfa1b1e6b964f10a139c11e61430d1bfadeaf1fa0cc775",
+      "start": "2021-12-31"
+    },
+    "SWK": {
+      "end": "2026-07-04",
+      "file": "SWK.parquet",
+      "rows": 2007,
+      "sha256": "8f98d7642d4a1a323332c90a8b63fa536650ca7a99ccfe08199d99eb4d6a835e",
+      "start": "2007-12-29"
+    },
+    "SWKS": {
+      "end": "2026-07-03",
+      "file": "SWKS.parquet",
+      "rows": 1887,
+      "sha256": "3d1864bd6c194efa214071aedbf3bdce4b34e7c5db661f932190d762150046d5",
+      "start": "2007-09-28"
+    },
+    "SWN": {
+      "end": "2024-06-30",
+      "file": "SWN.parquet",
+      "rows": 1952,
+      "sha256": "d4ecf9798496bb84d882db145a8dcc23334c5a1d9843fd446494a01bdd878dc0",
+      "start": "2006-12-31"
+    },
+    "SWY": {
+      "end": "2015-01-03",
+      "file": "SWY.parquet",
+      "rows": 690,
+      "sha256": "efb721618c56a4735c6444a62bcf8c17725813f2fa856d221315080650992999",
+      "start": "2006-12-30"
+    },
+    "SYF": {
+      "end": "2026-09-30",
+      "file": "SYF.parquet",
+      "rows": 1438,
+      "sha256": "d279f5398c13ee71a81a8985b43c0b24d63324044e1ba63cb69d21a40cdf7f4e",
+      "start": "2011-12-31"
+    },
+    "SYK": {
+      "end": "2026-09-30",
+      "file": "SYK.parquet",
+      "rows": 2351,
+      "sha256": "d5a5c9ce97957d44128cc9875f29342ddd608fb95794541262e8f9f60f6af2fe",
+      "start": "2006-12-31"
+    },
+    "SYMC": {
+      "end": "2026-10-02",
+      "file": "SYMC.parquet",
+      "rows": 1657,
+      "sha256": "f908b41b84a3ceedfc5704b1147407d1cbd1c92ff9937278fd42ceb0bf0f9ec3",
+      "start": "2007-03-30"
+    },
+    "SYY": {
+      "end": "2026-06-27",
+      "file": "SYY.parquet",
+      "rows": 1869,
+      "sha256": "0a4bc8bf23b452580f65b572d457a0a78ef0bcbd3e8e5d28e39b607cf1d3d86d",
+      "start": "2007-06-30"
+    },
+    "T": {
+      "end": "2026-09-30",
+      "file": "T.parquet",
+      "rows": 2033,
+      "sha256": "8b9cfddbac2eabcb282c0fb620879f2648b8459d3ee9620835a93f991aa6d726",
+      "start": "2006-12-31"
+    },
+    "TAP": {
+      "end": "2026-06-30",
+      "file": "TAP.parquet",
+      "rows": 1689,
+      "sha256": "8500ca064c61b19bb4dc9eb2c4478ab02b2b7bec317e2bb1237444bdad88b8a6",
+      "start": "2006-12-31"
+    },
+    "TDC": {
+      "end": "2026-06-30",
+      "file": "TDC.parquet",
+      "rows": 2055,
+      "sha256": "5cf72eb7ab733dc1643fcb5be38ebeac8dc241b286acc3775ae7d5ef01d6fff0",
+      "start": "2007-12-31"
+    },
+    "TDG": {
+      "end": "2026-06-27",
+      "file": "TDG.parquet",
+      "rows": 1563,
+      "sha256": "ca406800a8de005d0a2c600425d7e3a974fa9aa7791c2ed8797a8bd0ab85a2e7",
+      "start": "2007-09-30"
+    },
+    "TDY": {
+      "end": "2026-09-27",
+      "file": "TDY.parquet",
+      "rows": 2119,
+      "sha256": "99fb15d45332edf3bef0b1f23c80f912075141b7b9c9f852c5f9185e18825a19",
+      "start": "2007-12-30"
+    },
+    "TE": {
+      "end": "2026-06-30",
+      "file": "TE.parquet",
+      "rows": 287,
+      "sha256": "870e89fe9f34da198d03344ccc5f65fdd9b9d1c25f44450b055f9d0de5d1dd95",
+      "start": "2020-12-31"
+    },
+    "TECH": {
+      "end": "2026-06-30",
+      "file": "TECH.parquet",
+      "rows": 1728,
+      "sha256": "89f863c3b3444aab3278697d993ef0d60b65811c37d676f08aa4e89430944534",
+      "start": "2008-06-30"
+    },
+    "TEG": {
+      "end": "2015-06-30",
+      "file": "TEG.parquet",
+      "rows": 585,
+      "sha256": "c31ad9c625a9a538bf5d345c60ee960d8481bddf2d5ffdfc4469bbc81c259ed3",
+      "start": "2007-12-31"
+    },
+    "TEL": {
+      "end": "2026-06-26",
+      "file": "TEL.parquet",
+      "rows": 1972,
+      "sha256": "6410aa78fac76a7535130c327c1ca0b5accd430763193dbaf3a9dfb280f7c4b9",
+      "start": "2006-09-29"
+    },
+    "TER": {
+      "end": "2026-09-27",
+      "file": "TER.parquet",
+      "rows": 2000,
+      "sha256": "bd4b87f322b986f2fcea813db22486e34f3a12906848215f811528eb4be9b7f9",
+      "start": "2007-12-31"
+    },
+    "TEX": {
+      "end": "2026-09-30",
+      "file": "TEX.parquet",
+      "rows": 1796,
+      "sha256": "85495e1d26965589103cdd3f39efa5342962ec3741e639eccbde30419bb41d61",
+      "start": "2006-12-31"
+    },
+    "TFC": {
+      "end": "2026-09-30",
+      "file": "TFC.parquet",
+      "rows": 1597,
+      "sha256": "e99018dc2b6b676a5ceefd094e3226c82b0a3f85fbf41c3a2bb3e6b55f731e7a",
+      "start": "2006-12-31"
+    },
+    "TFX": {
+      "end": "2026-06-30",
+      "file": "TFX.parquet",
+      "rows": 2084,
+      "sha256": "0d76f71a32fcb51c7d8065b9ca5e393b9277f72b493b34413f80211a17181c8e",
+      "start": "2007-12-31"
+    },
+    "TGNA": {
+      "end": "2025-12-31",
+      "file": "TGNA.parquet",
+      "rows": 1631,
+      "sha256": "fcca19f981d0683ac660da2ef47c35f15e31381c79dbd51ef21ebf17436b5037",
+      "start": "2006-12-31"
+    },
+    "TGT": {
+      "end": "2026-08-01",
+      "file": "TGT.parquet",
+      "rows": 2134,
+      "sha256": "8cef02190e24779fe434f2428b3aa420f8dfc8f0e73de4d72cb75b2011747b51",
+      "start": "2007-02-03"
+    },
+    "THC": {
+      "end": "2026-09-30",
+      "file": "THC.parquet",
+      "rows": 1555,
+      "sha256": "9f182abb1c394ea36714810130c7401007d0eed9c5c2e8413be1aa5d6c900f50",
+      "start": "2007-12-31"
+    },
+    "TIE": {
+      "end": "2012-09-30",
+      "file": "TIE.parquet",
+      "rows": 224,
+      "sha256": "c34c23b225973909dc9220ed8240c6c266ff75dab6d405b16973bcc90f2e2cde",
+      "start": "2007-12-31"
+    },
+    "TIF": {
+      "end": "2020-10-31",
+      "file": "TIF.parquet",
+      "rows": 1383,
+      "sha256": "ceaaad6d4a0d5f8816e97eb9790e6da5716e4fb456e605e33a129fc1b7ba989f",
+      "start": "2008-01-31"
+    },
+    "TIN": {
+      "end": "2011-10-01",
+      "file": "TIN.parquet",
+      "rows": 156,
+      "sha256": "3a3f09146e26ff9247df88b777acf9b2b0341f5d30de8ac789514ac1a2b0c26d",
+      "start": "2007-12-29"
+    },
+    "TJX": {
+      "end": "2026-08-01",
+      "file": "TJX.parquet",
+      "rows": 2086,
+      "sha256": "aa692e6405141a60756060d86eef7b3e4f4b6ae2857aaf2d88913322b7fbfbf7",
+      "start": "2007-01-27"
+    },
+    "TKO": {
+      "end": "2026-06-30",
+      "file": "TKO.parquet",
+      "rows": 349,
+      "sha256": "eb6175109b4be555a0232a813d163a02353993fc8860c597b88e959765958d8f",
+      "start": "2020-12-31"
+    },
+    "TLAB": {
+      "end": "2013-09-27",
+      "file": "TLAB.parquet",
+      "rows": 424,
+      "sha256": "de069b06f8b31c5dee6cfebb2b812809519f66276792337af863396768fbbaef",
+      "start": "2007-12-28"
+    },
+    "TMK": {
+      "end": "2026-06-30",
+      "file": "TMK.parquet",
+      "rows": 2197,
+      "sha256": "e015856d42c4e76d87b96d373937a7b7e2bbf87d93abceaaf559dc91667c32e3",
+      "start": "2006-12-31"
+    },
+    "TMO": {
+      "end": "2026-09-26",
+      "file": "TMO.parquet",
+      "rows": 1791,
+      "sha256": "bbf2a65aebf157e78c9c0f3ae2890afb40ef422b56c8a2b8f4f193ec0f884904",
+      "start": "2007-12-31"
+    },
+    "TMUS": {
+      "end": "2026-09-30",
+      "file": "TMUS.parquet",
+      "rows": 1954,
+      "sha256": "825629a02d4ccf99109cba37438268a0770020484710143730aee54af0a43bc0",
+      "start": "2007-12-31"
+    },
+    "TPL": {
+      "end": "2026-06-30",
+      "file": "TPL.parquet",
+      "rows": 628,
+      "sha256": "47e856ffe449d86440e714c9f07a5fed1fe75d09834de0215214c01270c9505a",
+      "start": "2017-12-31"
+    },
+    "TPR": {
+      "end": "2026-06-27",
+      "file": "TPR.parquet",
+      "rows": 2157,
+      "sha256": "665f5d6f6216e60278f9b97c69bdab29aff273edc0fa0da9b00849a189117dd0",
+      "start": "2007-06-30"
+    },
+    "TRGP": {
+      "end": "2026-06-30",
+      "file": "TRGP.parquet",
+      "rows": 1729,
+      "sha256": "3cddc2c6e234b3c4f684154c7d96385758e3020b7eb0f31b59dee01efb1608af",
+      "start": "2008-12-31"
+    },
+    "TRIP": {
+      "end": "2026-06-30",
+      "file": "TRIP.parquet",
+      "rows": 1729,
+      "sha256": "a1631e9871665f79a0ca20879c30367b48793737ddb172c483b8f678000d8fec",
+      "start": "2008-12-31"
+    },
+    "TRMB": {
+      "end": "2026-07-03",
+      "file": "TRMB.parquet",
+      "rows": 1887,
+      "sha256": "054aa0cba4a24ea5fed612e409fd4f85795225a0ef3613dc7031092bc8d22694",
+      "start": "2007-12-28"
+    },
+    "TROW": {
+      "end": "2026-09-30",
+      "file": "TROW.parquet",
+      "rows": 1828,
+      "sha256": "3fde84bc06c1c73e80ad769b10172a24b002d3badad3de49398ab960e8a79421",
+      "start": "2006-12-31"
+    },
+    "TRV": {
+      "end": "2026-09-30",
+      "file": "TRV.parquet",
+      "rows": 2053,
+      "sha256": "969b47826eca12246fb8f727b216c9d1318776977059569de0fcc2a2e209a93c",
+      "start": "2007-12-31"
+    },
+    "TSCO": {
+      "end": "2026-06-27",
+      "file": "TSCO.parquet",
+      "rows": 1599,
+      "sha256": "691d4aa6fdb744620fd2a22b1e0aff139d50ca1ec0b3c8fbc59658dd362116bf",
+      "start": "2007-12-29"
+    },
+    "TSG": {
+      "end": "2026-06-30",
+      "file": "TSG.parquet",
+      "rows": 1472,
+      "sha256": "70b130a0ae42b40b4dd49c85f00f5560007e7f79b71bd7b7e764f0c8e6df0cd8",
+      "start": "2011-12-31"
+    },
+    "TSLA": {
+      "end": "2026-09-30",
+      "file": "TSLA.parquet",
+      "rows": 1674,
+      "sha256": "5e195df09a3e2ac41f57a4fbe032c9da1dc281f3056617c7ebdda3ae78c9c667",
+      "start": "2008-12-31"
+    },
+    "TSN": {
+      "end": "2026-06-27",
+      "file": "TSN.parquet",
+      "rows": 1869,
+      "sha256": "e21eec2c19e8ff0f7a97cb1e39357c3141657b7efc2a21b87178756c65810e71",
+      "start": "2008-09-30"
+    },
+    "TSS": {
+      "end": "2019-06-30",
+      "file": "TSS.parquet",
+      "rows": 899,
+      "sha256": "e1d94ec0e03c5038b6cd3ab37cf8a5d9593edcb8426838343cbb7db7d0b4d38a",
+      "start": "2007-12-31"
+    },
+    "TT": {
+      "end": "2026-09-30",
+      "file": "TT.parquet",
+      "rows": 1858,
+      "sha256": "d452ce2776d6ab485c7e553a2fd23077c9e69527d84ced5e9c96cde104c7d181",
+      "start": "2006-12-31"
+    },
+    "TTD": {
+      "end": "2026-06-30",
+      "file": "TTD.parquet",
+      "rows": 991,
+      "sha256": "57ba7890a0121fe5b2d9aef79268d5d6c5d9302bf93236492dca641897374594",
+      "start": "2013-12-31"
+    },
+    "TTWO": {
+      "end": "2026-06-30",
+      "file": "TTWO.parquet",
+      "rows": 1955,
+      "sha256": "7044e1894f28762a8df85a4fc423cd0eae5995db6bab9de926b2159cceacef56",
+      "start": "2007-10-31"
+    },
+    "TWC": {
+      "end": "2016-03-31",
+      "file": "TWC.parquet",
+      "rows": 587,
+      "sha256": "5e44a588b9f53e38cf82ef649afc8920a0c0443004a997263256674ce82c8c57",
+      "start": "2007-12-31"
+    },
+    "TWTR": {
+      "end": "2022-06-30",
+      "file": "TWTR.parquet",
+      "rows": 747,
+      "sha256": "202997acc936946756beaab327e4ebcb3cd3e14055016e849c5a9e8a96ecaad9",
+      "start": "2012-12-31"
+    },
+    "TWX": {
+      "end": "2018-03-31",
+      "file": "TWX.parquet",
+      "rows": 781,
+      "sha256": "f83c0d804f6ce991d12744bfbb8da190ee21b26086d53174b1c70f38336fd803",
+      "start": "2006-12-31"
+    },
+    "TXN": {
+      "end": "2026-09-30",
+      "file": "TXN.parquet",
+      "rows": 1862,
+      "sha256": "761a24e4b86779162114c97d3ce618ccd1977aea9d6628c6884cce82b808791b",
+      "start": "2007-12-31"
+    },
+    "TXT": {
+      "end": "2026-10-03",
+      "file": "TXT.parquet",
+      "rows": 1702,
+      "sha256": "b65f0f16e9bccdedb7708221a8b31dc0102a7ff0ef19d28726575fab77c218f8",
+      "start": "2007-12-29"
+    },
+    "TXU": {
+      "end": "2016-09-30",
+      "file": "TXU.parquet",
+      "rows": 442,
+      "sha256": "2dc7ff061cfd95ff9f30017776295c2c1e1bd5ce3aa3561e37f01924c9258d45",
+      "start": "2009-12-31"
+    },
+    "TYL": {
+      "end": "2026-09-30",
+      "file": "TYL.parquet",
+      "rows": 1891,
+      "sha256": "eaedfd971886a60b34cf11e5a0608a90672a67715edc86d457f58c446e77d7d6",
+      "start": "2008-12-31"
+    },
+    "UA": {
+      "end": "2026-06-30",
+      "file": "UA.parquet",
+      "rows": 1992,
+      "sha256": "267beb22dee40dd9962da76a2b63490c567cde3dbeb02a395fb85377003dd8d6",
+      "start": "2007-12-31"
+    },
+    "UAA": {
+      "end": "2026-06-30",
+      "file": "UAA.parquet",
+      "rows": 1992,
+      "sha256": "1598f9d489193602e0651e7095a32107e39e469194696ecea37461fba425b0d1",
+      "start": "2007-12-31"
+    },
+    "UAL": {
+      "end": "2026-09-30",
+      "file": "UAL.parquet",
+      "rows": 1973,
+      "sha256": "f66eaf4657780deec5f5215e697621c32a257a6c0956d76ede681a34217fb81f",
+      "start": "2007-12-31"
+    },
+    "UBER": {
+      "end": "2026-06-30",
+      "file": "UBER.parquet",
+      "rows": 816,
+      "sha256": "e5414bc9e700f38623ec2c3efcceeb79ae7df6bb13289033d7207afc65de4fc8",
+      "start": "2016-12-31"
+    },
+    "UDR": {
+      "end": "2026-03-31",
+      "file": "UDR.parquet",
+      "rows": 1535,
+      "sha256": "41942b0b066f04080c56a0f4f3fc2a07b22193bc9a353c41060d4190a708f680",
+      "start": "2007-12-31"
+    },
+    "UHS": {
+      "end": "2026-06-30",
+      "file": "UHS.parquet",
+      "rows": 1861,
+      "sha256": "23c0fa63be9660e8e9e91218bea58dd22f4c48018ad91247dbee00ea52d477f1",
+      "start": "2007-12-31"
+    },
+    "UIS": {
+      "end": "2026-06-30",
+      "file": "UIS.parquet",
+      "rows": 1842,
+      "sha256": "c0147bf9192f37cce356877dabc155f152875e3f2d5ab502d54bf1073df93e93",
+      "start": "2007-12-31"
+    },
+    "ULTA": {
+      "end": "2026-08-01",
+      "file": "ULTA.parquet",
+      "rows": 2005,
+      "sha256": "924e47a275fa9f26726d87b39d0abc1d63b7fff0a6dc8ea297d9ed223b3e5305",
+      "start": "2009-01-31"
+    },
+    "UNH": {
+      "end": "2026-06-30",
+      "file": "UNH.parquet",
+      "rows": 1910,
+      "sha256": "d2f252d3b0fe21727704c7c3cf4264a0152f1ff294fbd862714e7fbf3295801a",
+      "start": "2006-12-31"
+    },
+    "UNM": {
+      "end": "2026-06-30",
+      "file": "UNM.parquet",
+      "rows": 2118,
+      "sha256": "e2377de5f20974e3f4b64218f09224a34d75ba13f7e952613cf1c2aa73992c95",
+      "start": "2007-12-31"
+    },
+    "UNP": {
+      "end": "2026-09-30",
+      "file": "UNP.parquet",
+      "rows": 2067,
+      "sha256": "0108229f98ff90434f9bbfd5cc2f42e64813d76fbad32f19bf8bd02027f36349",
+      "start": "2006-12-31"
+    },
+    "UPS": {
+      "end": "2026-06-30",
+      "file": "UPS.parquet",
+      "rows": 1958,
+      "sha256": "c8736350cff68abdafa8ccee49155cf761508aef393769a964a7de8a3abb9f88",
+      "start": "2007-12-31"
+    },
+    "URBN": {
+      "end": "2026-07-31",
+      "file": "URBN.parquet",
+      "rows": 1551,
+      "sha256": "0283054bd9e94741476841f90b4ebe1b22dfa9d0b0e6a3a2575de967d269a47a",
+      "start": "2008-01-31"
+    },
+    "URI": {
+      "end": "2026-09-30",
+      "file": "URI.parquet",
+      "rows": 1794,
+      "sha256": "6ba603f5e46c50880e2439d8614f1fc369074cf11a3b54582a788f4a94a9765a",
+      "start": "2009-12-31"
+    },
+    "USB": {
+      "end": "2026-06-30",
+      "file": "USB.parquet",
+      "rows": 1557,
+      "sha256": "475dd10c2d73f2e5110020db547287c794dae8146956fb14400674c46acfccea",
+      "start": "2006-12-31"
+    },
+    "UTX": {
+      "end": "2026-09-30",
+      "file": "UTX.parquet",
+      "rows": 2064,
+      "sha256": "56d4d0af59d12052d7d3c8d60402b5007575bdb89a6d9db5793c1d26a8eb2839",
+      "start": "2006-12-31"
+    },
+    "V": {
+      "end": "2026-03-31",
+      "file": "V.parquet",
+      "rows": 1399,
+      "sha256": "c41ffc945a48098016b9296a81c9122fd8fc4d003ef15c9a46a52758fd4417b7",
+      "start": "2006-09-30"
+    },
+    "VAR": {
+      "end": "2021-01-01",
+      "file": "VAR.parquet",
+      "rows": 1414,
+      "sha256": "9f24f10709799ee34f133e5cebcef1a40fd59776bcde96d7f292ab835400c64f",
+      "start": "2006-09-29"
+    },
+    "VEEV": {
+      "end": "2026-07-31",
+      "file": "VEEV.parquet",
+      "rows": 1500,
+      "sha256": "2425e1e1b0ee15dca7daecb18074192e45b56cde9e055cc7ad5425b12b403e8c",
+      "start": "2011-01-31"
+    },
+    "VFC": {
+      "end": "2026-09-26",
+      "file": "VFC.parquet",
+      "rows": 2000,
+      "sha256": "8499129e24438811b71a402e6658d1c4321f5183bebf4c0f9f4295c892f4dec7",
+      "start": "2007-12-29"
+    },
+    "VIAB": {
+      "end": "2019-09-30",
+      "file": "VIAB.parquet",
+      "rows": 1381,
+      "sha256": "42a4eb453a91d0e13fdafd1d57e03610c1daff3c30ac4634fadf2ba00146de98",
+      "start": "2006-12-31"
+    },
+    "VIAC": {
+      "end": "2025-06-30",
+      "file": "VIAC.parquet",
+      "rows": 1857,
+      "sha256": "77b996e10bed2699741473a655cf05633d78f4261484f5fbe8be6fabd2756e02",
+      "start": "2007-12-31"
+    },
+    "VIAV": {
+      "end": "2026-06-27",
+      "file": "VIAV.parquet",
+      "rows": 1862,
+      "sha256": "32ca5434b45b4b63907f2a3e3ae1827bc3af37464879f37a6c718bfa57d45249",
+      "start": "2008-06-28"
+    },
+    "VICI": {
+      "end": "2026-09-30",
+      "file": "VICI.parquet",
+      "rows": 1001,
+      "sha256": "57d79c1cc7757b7846364099605b58ddf33ebc6fd1e3cd8de4e11e0338d65b58",
+      "start": "2016-12-31"
+    },
+    "VLO": {
+      "end": "2026-09-30",
+      "file": "VLO.parquet",
+      "rows": 1914,
+      "sha256": "244e0cfd5ddbffa2915791272cd4b400787e340234c6480ab046279fd2424fa4",
+      "start": "2007-12-31"
+    },
+    "VLTO": {
+      "end": "2026-10-02",
+      "file": "VLTO.parquet",
+      "rows": 310,
+      "sha256": "1110874e4e0512106406902f6871a4c92202389c024606c5a5a6f791ab68d23d",
+      "start": "2021-12-31"
+    },
+    "VMC": {
+      "end": "2026-09-30",
+      "file": "VMC.parquet",
+      "rows": 2190,
+      "sha256": "75d03924a01b666cb856717cd0596ad7d72f2638a2b1e77a58f6cc4c25dfc6fb",
+      "start": "2006-12-31"
+    },
+    "VMRK": {
+      "end": "2026-06-30",
+      "file": "VMRK.parquet",
+      "rows": 1527,
+      "sha256": "31f297c3ce980ce76849971cb6e1cb599d005d35d7e9a36dc9f41a5c1b5bd444",
+      "start": "2007-12-31"
+    },
+    "VNO": {
+      "end": "2026-06-30",
+      "file": "VNO.parquet",
+      "rows": 1695,
+      "sha256": "05175b4d24005ca79f9abb68be4f3ae418073105bc8056dd807533e5f7bd1662",
+      "start": "2006-12-31"
+    },
+    "VNT": {
+      "end": "2026-07-03",
+      "file": "VNT.parquet",
+      "rows": 666,
+      "sha256": "89ff16b60b0a35571228904a7573552e1aea85c96f0802d4afcd5ede6b1c53cc",
+      "start": "2017-12-31"
+    },
+    "VRSK": {
+      "end": "2026-03-31",
+      "file": "VRSK.parquet",
+      "rows": 1389,
+      "sha256": "02379ae7148f8a06020ff7c73963f51eaf82247e7813a51e80e4c1385bb4694f",
+      "start": "2008-12-31"
+    },
+    "VRSN": {
+      "end": "2026-09-30",
+      "file": "VRSN.parquet",
+      "rows": 1478,
+      "sha256": "085833fd7998cf93eceb238a37251e22c43452d6001d6b8745f7b0be7a3d5dd7",
+      "start": "2006-12-31"
+    },
+    "VRT": {
+      "end": "2026-09-30",
+      "file": "VRT.parquet",
+      "rows": 1038,
+      "sha256": "a868c7e400038d2c6c0ce4f11aeae420300a9f22dea6d3ef560ecb2dea471c2b",
+      "start": "2016-04-25"
+    },
+    "VRTX": {
+      "end": "2026-06-30",
+      "file": "VRTX.parquet",
+      "rows": 2021,
+      "sha256": "79fc9c5fd2c5cf6a783eef8b3aae4ce23fea599aad339c745529608acc8424b2",
+      "start": "2007-12-31"
+    },
+    "VST": {
+      "end": "2026-06-30",
+      "file": "VST.parquet",
+      "rows": 899,
+      "sha256": "43ee6c476a0f0554e69015e60b1484999952629df7aac313309ae0555c39b116",
+      "start": "2016-12-31"
+    },
+    "VTR": {
+      "end": "2026-09-30",
+      "file": "VTR.parquet",
+      "rows": 2011,
+      "sha256": "4a8eef6c7762ca6235d2928863d77b48d7e85425e01c7c6e4479d5a5e32ed0fe",
+      "start": "2006-12-31"
+    },
+    "VTRS": {
+      "end": "2026-06-30",
+      "file": "VTRS.parquet",
+      "rows": 625,
+      "sha256": "3967160c9c85a149f3e4d33098d10d5860c89db2368b6c946ebc40b627f4c1c9",
+      "start": "2017-12-31"
+    },
+    "VZ": {
+      "end": "2026-09-30",
+      "file": "VZ.parquet",
+      "rows": 1859,
+      "sha256": "cae302a06a7b046943d4b85f8e802f7ae0832f5c837b4742087c1a5169df0ce6",
+      "start": "2007-12-31"
+    },
+    "WAB": {
+      "end": "2026-09-30",
+      "file": "WAB.parquet",
+      "rows": 1970,
+      "sha256": "322f7034114db164fe740c8e9baf37b041d34bc674136fd0f11a158788494a0f",
+      "start": "2007-12-31"
+    },
+    "WAMUQ": {
+      "end": "2025-06-30",
+      "file": "WAMUQ.parquet",
+      "rows": 1044,
+      "sha256": "1c5f8e94ef1fb17672a0cb08a8c90b32bb8c0236d93016c2faee1021a43263d2",
+      "start": "2011-12-31"
+    },
+    "WAT": {
+      "end": "2026-07-04",
+      "file": "WAT.parquet",
+      "rows": 2230,
+      "sha256": "9fb5f80609f067a7c144035ede57d7fd08b0a4a591db70dbfa5cc491e3e173af",
+      "start": "2006-12-31"
+    },
+    "WBA": {
+      "end": "2025-05-31",
+      "file": "WBA.parquet",
+      "rows": 1264,
+      "sha256": "c0f8427eaf80f0ddbbbcf5ee84219f42f7b83fcfded9b3452d04ec152f0fc421",
+      "start": "2012-08-31"
+    },
+    "WBD": {
+      "end": "2026-06-30",
+      "file": "WBD.parquet",
+      "rows": 2012,
+      "sha256": "f8bdf8df8c0c2ac3928dcdb0f1b8d63c13f09ba6f4975a8c81aeec9bf9561dea",
+      "start": "2006-12-31"
+    },
+    "WDAY": {
+      "end": "2026-07-31",
+      "file": "WDAY.parquet",
+      "rows": 1351,
+      "sha256": "f11928071f812d5f39e61230debc28e4445c5b0823881a993233428dd6848dc3",
+      "start": "2009-12-31"
+    },
+    "WDC": {
+      "end": "2026-10-02",
+      "file": "WDC.parquet",
+      "rows": 1952,
+      "sha256": "cd3dcd9029a425d1014c8b0b37b338c2a20d4ef45c4a51d6c575b11b9c396dab",
+      "start": "2007-06-29"
+    },
+    "WEC": {
+      "end": "2026-09-30",
+      "file": "WEC.parquet",
+      "rows": 1583,
+      "sha256": "9fed74219b883e8229f2274344f79847294650bd5092b41fe3cf540e718f0fe4",
+      "start": "2007-12-31"
+    },
+    "WELL": {
+      "end": "2026-09-30",
+      "file": "WELL.parquet",
+      "rows": 1787,
+      "sha256": "e8da66b33fe635b76ba12693f8d5f9f6b8d61a5fdd088e9d2a9c5084cbace392",
+      "start": "2007-12-31"
+    },
+    "WEN": {
+      "end": "2026-06-28",
+      "file": "WEN.parquet",
+      "rows": 1859,
+      "sha256": "fccbf78293255d41bcf7a74e262c0e24fafadddde56cd8b6cab6a7e06e35a0f9",
+      "start": "2007-12-30"
+    },
+    "WFC": {
+      "end": "2026-09-30",
+      "file": "WFC.parquet",
+      "rows": 1697,
+      "sha256": "6a6a7fe1a4159f6dbb8c4ff0b1a8c747c34d4cd10a93e3da2146fd02babd7382",
+      "start": "2006-12-31"
+    },
+    "WFM": {
+      "end": "2017-09-24",
+      "file": "WFM.parquet",
+      "rows": 1083,
+      "sha256": "69c38ea3a948012199dc0d1698618c24c5642ac21ebfd7f813cf472d7440a145",
+      "start": "2007-09-30"
+    },
+    "WFT": {
+      "end": "2014-03-31",
+      "file": "WFT.parquet",
+      "rows": 656,
+      "sha256": "bf76488f6aef16a42f3b89c56f07f296fe55640f7aa2af0e73360d2d30d95da9",
+      "start": "2006-12-31"
+    },
+    "WHR": {
+      "end": "2026-09-30",
+      "file": "WHR.parquet",
+      "rows": 2048,
+      "sha256": "3db8f7d1b4021fd61414a2fd6b5a13b467e3f7409762e0df8d5690e224c1cf8d",
+      "start": "2007-12-31"
+    },
+    "WIN": {
+      "end": "2020-06-30",
+      "file": "WIN.parquet",
+      "rows": 1193,
+      "sha256": "412f3743da01c9650949078c186a82d3b03bd53ba3bccb44de554d0cbc3a1361",
+      "start": "2006-12-31"
+    },
+    "WLTW": {
+      "end": "2026-09-30",
+      "file": "WLTW.parquet",
+      "rows": 2030,
+      "sha256": "e1d7c6643172a3da5d963c86317a8f698e7fd50ca8047ecef85d49d6b97a7ba0",
+      "start": "2008-12-31"
+    },
+    "WM": {
+      "end": "2026-09-30",
+      "file": "WM.parquet",
+      "rows": 1917,
+      "sha256": "160b60dc8ddf44091b513b5512149768d8dd0d881cf90db7828296f31829c499",
+      "start": "2006-12-31"
+    },
+    "WMB": {
+      "end": "2026-06-30",
+      "file": "WMB.parquet",
+      "rows": 1644,
+      "sha256": "10bff3cd9308570a77cee3a12ee40e1070ff5028c65980c7773eec6bdb1c5acf",
+      "start": "2006-12-31"
+    },
+    "WMT": {
+      "end": "2026-07-31",
+      "file": "WMT.parquet",
+      "rows": 2135,
+      "sha256": "6b57d63d5d5ccc763fc511adcbf20508e8060a7d9e8d28bf827eac578bc7d562",
+      "start": "2007-01-31"
+    },
+    "WPX": {
+      "end": "2020-09-30",
+      "file": "WPX.parquet",
+      "rows": 987,
+      "sha256": "ce2492f6275e7dfb6959f02c8675eec4b201103e9c73b875ba2c6a3a4bd0f663",
+      "start": "2009-12-31"
+    },
+    "WRB": {
+      "end": "2026-06-30",
+      "file": "WRB.parquet",
+      "rows": 1553,
+      "sha256": "0b178769f961ed3d6b4d11c8781bdcdeea93db34048b8ef727f8eab9523ab585",
+      "start": "2008-12-31"
+    },
+    "WRK": {
+      "end": "2024-03-31",
+      "file": "WRK.parquet",
+      "rows": 651,
+      "sha256": "bebbdfe4cad717af226e94e58e402f5cb98abd4138f49d13d63438c13daa3020",
+      "start": "2016-09-30"
+    },
+    "WSM": {
+      "end": "2026-08-02",
+      "file": "WSM.parquet",
+      "rows": 1761,
+      "sha256": "30f3e5473fc07e811a53a501cbe5e3bc03b3d19b4f24206db515425a5fb08ad4",
+      "start": "2008-02-03"
+    },
+    "WST": {
+      "end": "2026-09-30",
+      "file": "WST.parquet",
+      "rows": 1760,
+      "sha256": "67b85712b2956458d8403402969803963a31c770d1bdc2640c8c9b20db67eb39",
+      "start": "2007-12-31"
+    },
+    "WTW": {
+      "end": "2026-09-30",
+      "file": "WTW.parquet",
+      "rows": 2030,
+      "sha256": "03bf5879c455830513b0bbe8f8f065723211ffb4db26979b2575a05d53d262c0",
+      "start": "2008-12-31"
+    },
+    "WU": {
+      "end": "2026-06-30",
+      "file": "WU.parquet",
+      "rows": 2172,
+      "sha256": "e13ecad33fbab42f3886a6cff57ca0f972ced9361cbdecfdc89c0df9fe8504ea",
+      "start": "2006-12-31"
+    },
+    "WY": {
+      "end": "2026-06-30",
+      "file": "WY.parquet",
+      "rows": 1865,
+      "sha256": "458923f9afe9edd36b69568bd987580c9dff1002ef788f480f17fd05435bd6ae",
+      "start": "2007-12-30"
+    },
+    "WYE": {
+      "end": "2009-06-30",
+      "file": "WYE.parquet",
+      "rows": 30,
+      "sha256": "1317df2bba33cc461df7573a224fdc1f4e4bf5dec1d418ee692607fa11665fb7",
+      "start": "2007-12-31"
+    },
+    "WYND": {
+      "end": "2026-09-30",
+      "file": "WYND.parquet",
+      "rows": 2146,
+      "sha256": "78a36bbd05be01e8f0ab781da73d731dcb98df790b3ce7e7c8be18a54ca2c9ab",
+      "start": "2007-12-31"
+    },
+    "WYNN": {
+      "end": "2026-06-30",
+      "file": "WYNN.parquet",
+      "rows": 1843,
+      "sha256": "2fb8c279b6dda4eef1ad88db2a0b21d0b69b469ba529987bf772a3ae28b4650e",
+      "start": "2007-12-31"
+    },
+    "X": {
+      "end": "2025-03-31",
+      "file": "X.parquet",
+      "rows": 1568,
+      "sha256": "9bd7137909737da13ce06d8d8ab27937cc55fab3cd32893e9f86f65b8d5c4d22",
+      "start": "2006-12-31"
+    },
+    "XEC": {
+      "end": "2021-06-30",
+      "file": "XEC.parquet",
+      "rows": 1384,
+      "sha256": "26dc7773c98082ac05935478a4bafc0e30a7f474db44a6e1d90a1c957c4c9dc9",
+      "start": "2006-12-31"
+    },
+    "XEL": {
+      "end": "2026-09-30",
+      "file": "XEL.parquet",
+      "rows": 1985,
+      "sha256": "0b38dbb4e1dc8dca0959971a0585baa3742d8128813f7dc40f96b4fe7b04931e",
+      "start": "2007-12-31"
+    },
+    "XL": {
+      "end": "2018-06-30",
+      "file": "XL.parquet",
+      "rows": 663,
+      "sha256": "2b8bcf453ca43d5513003b679b4ca74d97f5651339d0306c9238e47ffb195132",
+      "start": "2008-12-31"
+    },
+    "XLNX": {
+      "end": "2022-01-01",
+      "file": "XLNX.parquet",
+      "rows": 1528,
+      "sha256": "c0c74f7a49d1d0e7c442eac5494d40c5da663985a4b0885f3fc1467720a03d15",
+      "start": "2008-03-29"
+    },
+    "XOM": {
+      "end": "2026-06-30",
+      "file": "XOM.parquet",
+      "rows": 1559,
+      "sha256": "bce2eade02a83c3ede77835550e9f3c5f92cc74b47697347467e03bc4353d467",
+      "start": "2006-12-31"
+    },
+    "XRAY": {
+      "end": "2026-06-30",
+      "file": "XRAY.parquet",
+      "rows": 2181,
+      "sha256": "e5f7715738f6d7954324cafb2389acec82f5008604e6665beb20d12ca57ed5b1",
+      "start": "2006-12-31"
+    },
+    "XRX": {
+      "end": "2026-06-30",
+      "file": "XRX.parquet",
+      "rows": 672,
+      "sha256": "d675d2d400f90477bd2764e43fba98341a88379844c2a3449eb415b575d158c0",
+      "start": "2016-12-31"
+    },
+    "XTO": {
+      "end": "2010-03-31",
+      "file": "XTO.parquet",
+      "rows": 102,
+      "sha256": "54f43505872c64237d00be7acd3511d3422b52ab9cfed93a5748a7bbc298bc96",
+      "start": "2006-12-31"
+    },
+    "XYL": {
+      "end": "2026-09-30",
+      "file": "XYL.parquet",
+      "rows": 1946,
+      "sha256": "49a3f7a9ca1f8cfbedfad58ac3c960713d4492a24d0c4d59be66f2c719c404ee",
+      "start": "2008-12-31"
+    },
+    "XYZ": {
+      "end": "2026-06-30",
+      "file": "XYZ.parquet",
+      "rows": 1114,
+      "sha256": "089b256479c60693e3ca00991d1ed3044204fbb1f6aedf8e039e8ee54c73cc12",
+      "start": "2013-12-31"
+    },
+    "YUM": {
+      "end": "2026-06-30",
+      "file": "YUM.parquet",
+      "rows": 1810,
+      "sha256": "eeda7e2fa45c0c5459e346811192250f1af21a1fa3bae14cdca3905ced7fecdc",
+      "start": "2006-12-30"
+    },
+    "ZBH": {
+      "end": "2026-06-30",
+      "file": "ZBH.parquet",
+      "rows": 1871,
+      "sha256": "23f07ca209f7b4189527392375469ce6cf90aa177cf64322fc0ae5c7bd8d91d2",
+      "start": "2006-12-31"
+    },
+    "ZBRA": {
+      "end": "2026-07-04",
+      "file": "ZBRA.parquet",
+      "rows": 1998,
+      "sha256": "cd15e48da8cd5cbc0c2f0bf97cb6ca60cc77c5cd7053d28b2f353a56fc92e70f",
+      "start": "2007-12-31"
+    },
+    "ZION": {
+      "end": "2026-06-30",
+      "file": "ZION.parquet",
+      "rows": 1350,
+      "sha256": "221a056ac5b62e7a115071df486f17ef08e743fcab7dd95d18b19c59dff7f1b2",
+      "start": "2007-12-31"
+    },
+    "ZTS": {
+      "end": "2026-06-30",
+      "file": "ZTS.parquet",
+      "rows": 1740,
+      "sha256": "987441acf540e155c7011f49a73365ddbc8845d97192643332a7e7b37f150117",
+      "start": "2010-12-31"
+    }
+  },
+  "tickers_solicitados": 932,
+  "timeframe": "quarterly",
+  "yfinance_version": "1.7.0"
+}

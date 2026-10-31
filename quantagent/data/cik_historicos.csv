@@ -1,0 +1,267 @@
+ticker,cik,nombre,fuente
+AABA,1011006,YAHOO INC,sec-lookup+submissions
+ABC,1140859,AMERISOURCE BERGEN CORP,sec-lookup+submissions
+ABKFQ,874501,AMBAC FINANCIAL GROUP INC,sec-lookup+submissions
+ABMD,815094,ABIOMED INC,sec-lookup+submissions
+ACS,2135,AFFILIATED COMPUTER SERVICES INC,sec-lookup+submissions
+ADS,1101215,ALLIANCE DATA SYSTEMS CORP,sec-lookup+submissions
+AET,1122304,AETNA INC /PA/,sec-lookup+submissions
+AKS,918192,AK STEEL CORP,sec-lookup+submissions
+ALTR,768251,ALTERA CORP,sec-lookup+submissions
+ALXN,899866,ALEXION PHARMACEUTICALS INC,sec-lookup+submissions
+ANDV,50104,ANDEAVOR,sec-lookup+submissions
+ANRZQ,1301063,"Alpha Natural Resources, Inc.",sec-lookup+submissions
+ANSS,1013462,ANSYS INC,sec-lookup+submissions
+ANTM,1156039,ANTHEM INC,sec-lookup+submissions
+APCC,835910,AMERICAN POWER CONVERSION CORPORATION,sec-lookup+submissions
+APOL,929887,APOLLO EDUCATION GROUP INC,sec-lookup+submissions
+ARG,804212,AIRGAS INC,sec-lookup+submissions
+ARNC,4281,Arconic Inc.,sec-lookup+submissions (desempate manual)
+ASN,1156826,ARCHSTONE SMITH TRUST,sec-lookup+submissions
+AT,65873,ALLTEL CORP,sec-lookup+submissions
+ATGE,730464,DEVRY INC,sec-lookup+submissions
+ATVI,718877,"Activision Blizzard, Inc.",sec-lookup+submissions
+AV,1116521,AVAYA INC,sec-lookup+submissions
+AVB,915912,AVALONBAY COMMUNITIES INC,sec-lookup+submissions
+AVP,8868,AVON PRODUCTS INC,sec-lookup+submissions
+AW,848865,ALLIED WASTE INDUSTRIES INC,sec-lookup+submissions
+AYE,3673,ALLEGHENY ENERGY INC,sec-lookup+submissions
+BBBY,886158,BED BATH & BEYOND INC,sec-lookup+submissions
+BCR,9892,BARD C R INC /NJ/,sec-lookup+submissions
+BDK,12355,BLACK & DECKER CORP,sec-lookup+submissions
+BHGE,1701605,BAKER HUGHES INC,sec-lookup+submissions (desempate manual)
+BIG,768835,BIG LOTS INC,sec-lookup+submissions
+BJS,864328,BJ SERVICES CO,sec-lookup+submissions
+BK,1390777,Bank of New York Mellon Corp,sec-lookup+submissions
+BLL,9389,BALL Corp,sec-lookup+submissions
+BMC,835729,BMC SOFTWARE INC,sec-lookup+submissions
+BMET,351346,BIOMET INC,sec-lookup+submissions
+BMS,11199,BEMIS CO INC,sec-lookup+submissions
+BNI,934612,BURLINGTON NORTHERN SANTA FE CORP,sec-lookup+submissions
+BRCM,1054374,BROADCOM CORP,sec-lookup+submissions (desempate manual)
+BRL,10081,BARR PHARMACEUTICALS INC,sec-lookup+submissions
+BTUUQ,1064728,PEABODY ENERGY CORP,sec-lookup+submissions
+BXLT,1620546,Baxalta Inc,sec-lookup+submissions
+CA,356028,COMPUTER ASSOCIATES INTERNATIONAL INC,sec-lookup+submissions
+CAM,941548,CAMERON INTERNATIONAL CORP,sec-lookup+submissions
+CBE,1141982,COOPER INDUSTRIES LTD,sec-lookup+submissions
+CBS,813828,CBS CORP,sec-lookup+submissions
+CBSS,18568,COMPASS BANCSHARES INC,sec-lookup+submissions
+CCE,1491675,"COCA-COLA ENTERPRISES, INC.",sec-lookup+submissions (desempate manual)
+CCTYQ,104599,CIRCUIT CITY STORES INC,sec-lookup+submissions
+CDAY,1725057,Ceridian HCM Holding Inc.,sec-lookup+submissions
+CELG,816284,CELGENE CORP /DE/,sec-lookup+submissions
+CEPH,873364,CEPHALON INC,sec-lookup+submissions
+CERN,804753,CERNER CORP /MO/,sec-lookup+submissions
+CFC,25191,COUNTRYWIDE FINANCIAL CORP,sec-lookup+submissions
+CFN,1457543,CAREFUSION Corp,sec-lookup+submissions
+CHK,895126,CHESAPEAKE ENERGY CORP,sec-lookup+submissions
+CITGQ,1171825,CIT GROUP INC,sec-lookup+submissions
+CMA,28412,COMERICA INC /NEW/,sec-lookup+submissions
+CMCSK,1166691,COMCAST CORP,sec-lookup+submissions
+CMVT,803014,COMVERSE TECHNOLOGY INC/NY/,sec-lookup+submissions
+CMX,1000736,CAREMARK RX INC,sec-lookup+submissions
+COG,858470,CABOT OIL & GAS CORP,sec-lookup+submissions
+COL,1137411,NEW ROCKWELL COLLINS INC,sec-lookup+submissions
+COV,1385187,Covidien Ltd.,sec-lookup+submissions
+CPGX,1629995,"Columbia Pipeline Group, Inc.",sec-lookup+submissions
+CSRA,1646383,CSRA Inc.,sec-lookup+submissions
+CTL,18926,CENTURYTEL INC,sec-lookup+submissions
+CTLT,1596783,"Catalent, Inc.",sec-lookup+submissions
+CTRA,858470,Coterra Energy Inc.,sec-lookup+submissions
+CTXS,877890,CITRIX SYSTEMS INC,sec-lookup+submissions
+CVC,1053112,CABLEVISION SYSTEMS CORP /NY,sec-lookup+submissions
+CVG,1062047,CONVERGYS CORP,sec-lookup+submissions
+CVH,1054833,COVENTRY HEALTH CARE INC,sec-lookup+submissions
+CXO,1358071,CONCHO RESOURCES INC,sec-lookup+submissions
+DAY,1725057,"Dayforce, Inc.",sec-lookup+submissions
+DDR,894315,DEVELOPERS DIVERSIFIED REALTY CORP,sec-lookup+submissions
+DF,931336,DEAN FOODS CO/,sec-lookup+submissions
+DFS,1393612,Discover Financial Services,sec-lookup+submissions
+DISCA,1437107,"Discovery, Inc.",sec-lookup+submissions
+DISCK,1437107,"Discovery Communications, Inc.",sec-lookup+submissions
+DISH,1001082,DISH Network CORP,sec-lookup+submissions
+DJ,29924,DOW JONES & CO INC,sec-lookup+submissions
+DNB,1115222,DUN & BRADSTREET CORP/NW,sec-lookup+submissions
+DNR,945764,DENBURY RESOURCES INC,sec-lookup+submissions
+DO,949039,DIAMOND OFFSHORE DRILLING INC,sec-lookup+submissions
+DRE,783280,DUKE REALTY CORP,sec-lookup+submissions
+DTV,1465112,DIRECTV,sec-lookup+submissions (desempate manual)
+DWDP,1666700,DowDuPont Inc.,sec-lookup+submissions
+EA,712515,ELECTRONIC ARTS INC,sec-lookup+submissions
+EKDKQ,31235,EASTMAN KODAK CO,sec-lookup+submissions
+EMC,790070,EMC CORP,sec-lookup+submissions
+ENDP,1593034,Endo International Ltd,sec-lookup+submissions
+EOP,1038339,EQUITY OFFICE PROPERTIES TRUST,sec-lookup+submissions
+EQR,906107,EQUITY RESIDENTIAL,sec-lookup+submissions
+ESRX,885721,EXPRESS SCRIPTS INC,sec-lookup+submissions
+ESV,314808,Ensco plc,sec-lookup+submissions
+ETFC,1015780,E TRADE GROUP INC,sec-lookup+submissions
+EVHC,1678531,Envision Healthcare Corp,sec-lookup+submissions (desempate manual)
+FB,1326801,Facebook Inc,sec-lookup+submissions
+FBHS,1519751,"Fortune Brands Home & Security, Inc.",sec-lookup+submissions
+FDC,883980,FIRST DATA CORPORATION,sec-lookup+submissions
+FDO,34408,FAMILY DOLLAR STORES INC,sec-lookup+submissions
+FI,798354,FISERV INC,sec-lookup+submissions
+FII,1056288,FEDERATED INVESTORS INC /PA/,sec-lookup+submissions
+FL,850209,FOOT LOCKER INC,sec-lookup+submissions
+FLIR,354908,FLIR SYSTEMS INC,sec-lookup+submissions
+FLT,1175454,FLEETCOR TECHNOLOGIES INC,sec-lookup+submissions
+FRX,38074,FOREST LABORATORIES INC,sec-lookup+submissions
+FTR,20520,FRONTIER COMMUNICATIONS CORP,sec-lookup+submissions
+GAS,1004155,AGL RESOURCES INC,sec-lookup+submissions
+GENZ,732485,GENZYME CORP,sec-lookup+submissions
+GGP,1496048,"New GGP, Inc.",sec-lookup+submissions
+GMCR,909954,"KEURIG GREEN MOUNTAIN, INC.",sec-lookup+submissions
+GPS,39911,GAP INC,sec-lookup+submissions
+GR,42542,GOODRICH CORP,sec-lookup+submissions
+HAR,800459,HARMAN INTERNATIONAL INDUSTRIES INC /DE/,sec-lookup+submissions
+HBI,1359841,Hanesbrands Inc.,sec-lookup+submissions
+HCBK,921847,HUDSON CITY BANCORP INC,sec-lookup+submissions
+HCP,765880,"HCP, INC.",sec-lookup+submissions
+HES,4447,HESS CORP,sec-lookup+submissions
+HET,858339,HARRAHS ENTERTAINMENT INC,sec-lookup+submissions
+HFC,48039,HollyFrontier Corp,sec-lookup+submissions
+HMA,792985,HEALTH MANAGEMENT ASSOCIATES INC,sec-lookup+submissions
+HNZ,46640,HEINZ H J CO,sec-lookup+submissions
+HOLX,859737,HOLOGIC INC,sec-lookup+submissions
+HPC,46989,HERCULES INC,sec-lookup+submissions
+HRS,202058,HARRIS CORP /DE/,sec-lookup+submissions
+HSH,23666,Hillshire Brands Co,sec-lookup+submissions
+HSP,1274057,HOSPIRA INC,sec-lookup+submissions
+IAC,891103,IAC/INTERACTIVECORP,sec-lookup+submissions
+IGT,353944,INTERNATIONAL GAME TECHNOLOGY,sec-lookup+submissions
+INFO,1598014,IHS Markit Ltd.,sec-lookup+submissions
+IPG,51644,INTERPUBLIC GROUP OF COMPANIES INC,sec-lookup+submissions
+JAVA,709519,SUN MICROSYSTEMS INC,sec-lookup+submissions
+JCP,1166126,J C PENNEY CO INC,sec-lookup+submissions
+JEC,52988,JACOBS ENGINEERING GROUP INC /DE/,sec-lookup+submissions
+JNPR,1043604,JUNIPER NETWORKS INC,sec-lookup+submissions
+JNS,1065865,JANUS CAPITAL GROUP INC,sec-lookup+submissions
+JNY,874016,JONES APPAREL GROUP INC,sec-lookup+submissions
+JOY,801898,JOY GLOBAL INC,sec-lookup+submissions
+JWN,72333,NORDSTROM INC,sec-lookup+submissions
+K,55067,KELLANOVA,sec-lookup+submissions
+KORS,1530721,Michael Kors Holdings Ltd,sec-lookup+submissions
+KRFT,1545158,KRAFT FOODS INC,sec-lookup+submissions (desempate manual)
+KSE,1062379,KEYSPAN CORP,sec-lookup+submissions
+KSU,54480,KANSAS CITY SOUTHERN,sec-lookup+submissions
+LEG,58492,LEGGETT & PLATT INC,sec-lookup+submissions
+LLL,1039101,"L3 TECHNOLOGIES, INC.",sec-lookup+submissions
+LLTC,791907,LINEAR TECHNOLOGY CORP /CA/,sec-lookup+submissions
+LM,704051,LEGG MASON INC,sec-lookup+submissions
+LO,862178,LORILLARD TOBACCO CO,sec-lookup+submissions
+LSI,703360,LSI CORP,sec-lookup+submissions
+LVLT,794323,LEVEL 3 COMMUNICATIONS INC,sec-lookup+submissions
+LXK,1001288,LEXMARK INTERNATIONAL GROUP INC,sec-lookup+submissions
+MDP,65011,MEREDITH CORP,sec-lookup+submissions
+MEE,37748,MASSEY ENERGY CO,sec-lookup+submissions
+MER,65100,MERRILL LYNCH & CO INC,sec-lookup+submissions
+MFE,890801,"McAfee, Inc.",sec-lookup+submissions
+MHS,1170650,MEDCO HEALTH SOLUTIONS INC,sec-lookup+submissions
+MIL,66479,MILLIPORE CORP,sec-lookup+submissions
+MJN,1452575,Mead Johnson Nutrition Co,sec-lookup+submissions
+MMC,62709,MARSH & MCLENNAN COMPANIES INC,sec-lookup+submissions
+MNK,1567892,Mallinckrodt plc,sec-lookup+submissions
+MOLX,67472,MOLEX INC,sec-lookup+submissions
+MON,1110783,MONSANTO CO /NEW/,sec-lookup+submissions
+MRO,101778,MARATHON OIL CORP,sec-lookup+submissions
+MTLQQ,1467858,General Motors Co,sec-lookup+submissions
+MWV,1159297,MEADWESTVACO Corp,sec-lookup+submissions
+MWW,1020416,MONSTER WORLDWIDE INC,sec-lookup+submissions
+MXIM,743316,MAXIM INTEGRATED PRODUCTS INC,sec-lookup+submissions
+MYL,69499,MYLAN INC.,sec-lookup+submissions
+NBL,72207,NOBLE ENERGY INC,sec-lookup+submissions
+NCC,69970,NATIONAL CITY CORP,sec-lookup+submissions
+NCR,70866,NCR CORP,sec-lookup+submissions
+NFX,912750,NEWFIELD EXPLORATION CO /DE/,sec-lookup+submissions
+NLOK,849399,SYMANTEC CORP,sec-lookup+submissions
+NLSN,1492633,Nielsen Holdings plc,sec-lookup+submissions
+NOVL,758004,NOVELL INC,sec-lookup+submissions
+NSM,70530,NATIONAL SEMICONDUCTOR CORP,sec-lookup+submissions
+NVLS,836106,NOVELLUS SYSTEMS INC,sec-lookup+submissions
+NYX,1368007,"NYSE Euronext, Inc.",sec-lookup+submissions
+ODP,800240,OFFICE DEPOT INC,sec-lookup+submissions
+OMX,12978,OFFICEMAX INC,sec-lookup+submissions
+PBCT,1378946,"People's United Financial, Inc.",sec-lookup+submissions
+PBG,1076405,PEPSI BOTTLING GROUP INC,sec-lookup+submissions
+PCL,849213,PLUM CREEK TIMBER CO INC,sec-lookup+submissions
+PCP,79958,PRECISION CASTPARTS CORP,sec-lookup+submissions
+PDCO,891024,"PATTERSON COMPANIES, INC.",sec-lookup+submissions
+PEAK,765880,"HCP, INC.",sec-lookup+submissions
+PETM,863157,PETSMART INC,sec-lookup+submissions
+PGN,1094093,PROGRESS ENERGY INC,sec-lookup+submissions
+PKI,31791,PERKINELMER INC,sec-lookup+submissions
+PLL,75829,PALL CORP,sec-lookup+submissions
+PMCS,767920,PMC SIERRA INC,sec-lookup+submissions
+PSKY,2041610,Paramount Skydance Corp,sec-lookup+submissions (desempate manual)
+PTV,1089976,PACTIV CORP,sec-lookup+submissions
+PX,884905,PRAXAIR INC,sec-lookup+submissions
+PXD,1038357,PIONEER NATURAL RESOURCES CO,sec-lookup+submissions
+QEP,1108827,"QEP RESOURCES, INC.",sec-lookup+submissions
+QLGC,918386,QLOGIC CORP,sec-lookup+submissions
+QRVO,1604778,"Qorvo, Inc.",sec-lookup+submissions
+RAI,1275283,REYNOLDS AMERICAN INC,sec-lookup+submissions
+RDC,85408,ROWAN COMPANIES INC,sec-lookup+submissions
+RE,1095073,EVEREST RE GROUP LTD,sec-lookup+submissions
+RHT,1087423,RED HAT INC,sec-lookup+submissions
+ROH,84792,ROHM & HAAS CO,sec-lookup+submissions
+RRD,29669,RR Donnelley & Sons Co,sec-lookup+submissions
+RSHCQ,96289,RADIOSHACK CORP,sec-lookup+submissions
+RTN,1047122,RAYTHEON CO/,sec-lookup+submissions
+RX,1595262,"IMS Health Holdings, Inc.",sec-lookup+submissions
+SAF,86104,SAFECO CORP,sec-lookup+submissions
+SBL,278352,SYMBOL TECHNOLOGIES INC,sec-lookup+submissions
+SBNY,1288784,Signature Bank Corp,sec-lookup+submissions
+SCG,754737,SCANA CORP,sec-lookup+submissions
+SEE,1012100,SEALED AIR CORP/DE,sec-lookup+submissions
+SHLD,1310067,SEARS HOLDINGS CORP,sec-lookup+submissions
+SIAL,90185,SIGMA ALDRICH CORP,sec-lookup+submissions
+SIVB,719739,SVB FINANCIAL GROUP,sec-lookup+submissions
+SLR,835541,SOLECTRON CORP,sec-lookup+submissions
+SNI,1430602,"Scripps Networks Interactive, Inc.",sec-lookup+submissions
+SNV,18349,SYNOVUS FINANCIAL CORP,sec-lookup+submissions
+SOV,811830,SOVEREIGN BANCORP INC,sec-lookup+submissions
+SPLS,791519,STAPLES INC,sec-lookup+submissions
+SRCL,861878,STERICYCLE INC,sec-lookup+submissions
+STJ,203077,ST JUDE MEDICAL INC,sec-lookup+submissions
+STR,751652,QUESTAR CORP,sec-lookup+submissions
+SUNEQ,945436,MEMC ELECTRONIC MATERIALS INC,sec-lookup+submissions
+SVU,95521,SUPERVALU INC,sec-lookup+submissions
+SWN,7332,SOUTHWESTERN ENERGY CO,sec-lookup+submissions
+SWY,86144,SAFEWAY INC,sec-lookup+submissions
+SYMC,849399,SYMANTEC CORP,sec-lookup+submissions
+TEG,916863,"INTEGRYS ENERGY GROUP, INC.",sec-lookup+submissions
+TEK,96879,TEKTRONIX INC,sec-lookup+submissions
+TGNA,39899,TEGNA INC,sec-lookup+submissions
+TIE,1011657,TITANIUM METALS CORP,sec-lookup+submissions
+TIF,98246,TIFFANY & CO,sec-lookup+submissions
+TIN,731939,TEMPLE INLAND INC,sec-lookup+submissions
+TLAB,317771,TELLABS INC,sec-lookup+submissions
+TMK,320335,TORCHMARK CORP,sec-lookup+submissions
+TSG,1597033,Sabre Corp,sec-lookup+submissions
+TSS,721683,TOTAL SYSTEM SERVICES INC,sec-lookup+submissions
+TWC,1377013,TIME WARNER CABLE INC.,sec-lookup+submissions
+TWTR,1418091,"TWITTER, INC.",sec-lookup+submissions
+TWX,1105705,TIME WARNER INC,sec-lookup+submissions
+TXU,1023291,TXU CORP /TX/,sec-lookup+submissions
+UTX,101829,UNITED TECHNOLOGIES CORP /DE/,sec-lookup+submissions
+VAR,203527,VARIAN MEDICAL SYSTEMS INC,sec-lookup+submissions
+VIAB,1339947,VIACOM INC,sec-lookup+submissions (desempate manual)
+VIAC,813828,CBS CORP,sec-lookup+submissions
+WAMUQ,933136,WASHINGTON MUTUAL INC,sec-lookup+submissions
+WBA,1618921,"Walgreens Boots Alliance, Inc.",sec-lookup+submissions
+WBD,1437107,"Warner Bros. Discovery, Inc.",sec-lookup+submissions
+WFM,865436,WHOLE FOODS MARKET INC,sec-lookup+submissions
+WFT,1453090,Weatherford International Ltd./Switzerland,sec-lookup+submissions
+WIN,1282266,WINDSTREAM CORP,sec-lookup+submissions
+WLTW,1140536,WILLIS TOWERS WATSON PLC,sec-lookup+submissions
+WPX,1518832,"WPX ENERGY, INC.",sec-lookup+submissions
+WRK,1732845,WestRock Co,sec-lookup+submissions (desempate manual)
+WYE,5187,WYETH,sec-lookup+submissions
+WYND,1361658,WYNDHAM WORLDWIDE CORP,sec-lookup+submissions
+X,1163302,UNITED STATES STEEL LLC,sec-lookup+submissions
+XEC,1168054,CIMAREX ENERGY CO,sec-lookup+submissions
+XL,875159,XL GROUP PLC,sec-lookup+submissions
+XLNX,743988,XILINX INC,sec-lookup+submissions
+XTO,868809,XTO ENERGY INC,sec-lookup+submissions

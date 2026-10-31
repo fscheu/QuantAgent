@@ -917,6 +917,19 @@ del estado de la base.
 
 ---
 
+### L28 — partición de M5-34
+
+El contrato de `QuantAgent-fnpr.4.5` se ejecuta en los cuatro hijos siguientes
+([partición](docs/loop/particiones/QuantAgent-fnpr.4.5.md)); el padre queda en curso.
+El resto de L28 sigue en el [plan M5](docs/02_planning/QuantAgent-M5-PL-motor-top-down.md#l28--screener-etapa-2-h3-y-h4).
+
+| # | Ticket | Objetivo | Aceptación binaria | Revisión | Lote |
+|---|---|---|---|---|---|
+| M5-34.1 | `QuantAgent-fnpr.4.5.1` | Datos y señales A desde el cache H3 | Tests de elegibilidad semanal y truncamiento pasan | leer | L28 |
+| M5-34.2 | `QuantAgent-fnpr.4.5.2` | Órdenes stop y gestión A; depende de .1 | Entrada habilitada, vencimiento y persistencia tras rebalanceo probados | leer | L28 |
+| M5-34.3 | `QuantAgent-fnpr.4.5.3` | Curva D2, heat y costos; depende de .2 | Tests de sizing, equity y rechazo por heat pasan | leer | L28 |
+| M5-34.4 | `QuantAgent-fnpr.4.5.4` | Medición e informe H4 contra H3; depende de .3 | V30 etapa 2, un intento y todas las métricas en el IM | decidir | L28 |
+
 ## 5. Formato de log de revisión
 
 ### 5.1 La línea
