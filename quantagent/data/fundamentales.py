@@ -4,16 +4,19 @@ from __future__ import annotations
 
 import csv
 import json
+import re
+import tempfile
 import time
 import urllib.error
 import urllib.request
+from datetime import date
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
 import numpy as np
 import pandas as pd
 
-from quantagent.data.snapshot import load_manifest, read_snapshot, write_snapshot
+from quantagent.data.snapshot import SnapshotError, load_manifest, read_snapshot, snapshot_root, verify_snapshot, write_snapshot
 
 SEC_USER_AGENT = "QuantAgent Research admin@quantagent.dev"
 SEC_TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
@@ -107,6 +110,7 @@ def extraer_hechos(ticker: str, json_data: dict) -> pd.DataFrame:
 
 METRICAS = ["roic_4t", "margen_op_yoy", "aceleracion_ingresos", "crecimiento_eps", "roe_4t", "margen_pretax_yoy"]
 MAX_ANTIGUEDAD_DIAS = 200
+UMBRAL_COBERTURA_FUNDAMENTALES = 60.0  # % de elegibles por sector, cobertura_screener.py (M5-32)
 
 
 def preparar_ticker(df_ticker: pd.DataFrame) -> pd.DataFrame:
@@ -218,6 +222,65 @@ def crear_snapshot_fundamentales(
     return write_snapshot(nombre, frames, source="sec-edgar", timeframe="quarterly", base_dir=base_dir, extra={"sin_cik": sin_cik, "fallidos": fallidos, "tickers_solicitados": len(tickers)})
 
 
+def refrescar_fundamentales(
+    hoy: date, composicion: str, base_dir: Optional[Path] = None,
+    downloader: Optional[Callable[[int], dict]] = None, umbral_cobertura: float = UMBRAL_COBERTURA_FUNDAMENTALES,
+) -> dict:
+    """Publica una foto diaria verificada o devuelve el último snapshot válido anterior."""
+    import pandas_market_calendars as mcal
+
+    from quantagent.data.sp500 import miembros
+
+    raiz = snapshot_root(base_dir)
+    nombre = f"fundamentales-sp500-{hoy.isoformat()}"
+    composicion = str((raiz / composicion).resolve())
+
+    def validar(candidato, carpeta, fecha):
+        manifest = verify_snapshot(candidato, base_dir=carpeta)
+        if not manifest["symbols"]:
+            raise SnapshotError("sin símbolos")
+        sesion = mcal.get_calendar("NYSE").schedule(pd.Timestamp(fecha) - pd.Timedelta(days=10), fecha).index[-1]
+        rep = reporte_cobertura_fundamentales(
+            candidato, composicion, desde=str(sesion.date()), hasta=str(sesion.date()),
+            base_dir=carpeta, elegibilidad=True,
+        )
+        bajos = {s: p for s, p in rep["elegibles_por_sector"].items() if p < umbral_cobertura}
+        if not rep["elegibles_por_sector"] or bajos:
+            raise SnapshotError(f"cobertura bajo el umbral {umbral_cobertura}%: {bajos}")
+
+    try:
+        if (raiz / nombre).exists():
+            validar(nombre, raiz, hoy)
+            return {"snapshot_vigente": nombre, "nuevo": False, "motivo": "ya existe; no se vuelve a descargar"}
+        tickers = miembros(composicion, load_manifest(composicion, raiz)["end"], raiz)
+        raiz.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix=".refresco-", dir=raiz) as temporal:
+            manifest = crear_snapshot_fundamentales(nombre, tickers, base_dir=Path(temporal), downloader=downloader)
+            if manifest["fallidos"]:
+                raise SnapshotError(f"descarga fallida: {manifest['fallidos']}")
+            validar(nombre, Path(temporal), hoy)
+            (Path(temporal) / nombre).rename(raiz / nombre)
+        return {"snapshot_vigente": nombre, "nuevo": True, "motivo": "descarga, hashes y cobertura verificados"}
+    except Exception as exc:
+        motivo = f"refresco rechazado: {exc}"
+
+    anteriores = sorted(
+        (p.name for p in raiz.glob("fundamentales-sp500-*")
+         if re.fullmatch(r"fundamentales-sp500-\d{4}-\d{2}-\d{2}", p.name) and p.name < nombre), reverse=True,
+    )
+    for previo in [*anteriores, "fundamentales-sp500-2026-10"]:
+        try:
+            if previo == "fundamentales-sp500-2026-10":
+                if not verify_snapshot(previo, base_dir=raiz)["symbols"]:
+                    continue
+            else:
+                validar(previo, raiz, date.fromisoformat(previo.removeprefix("fundamentales-sp500-")))
+        except Exception:
+            continue
+        return {"snapshot_vigente": previo, "nuevo": False, "motivo": motivo}
+    return {"snapshot_vigente": None, "nuevo": False, "motivo": f"{motivo}; no hay ningún snapshot válido"}
+
+
 def leer_fundamentales(nombre: str, ticker: str, base_dir: Optional[Path] = None) -> pd.DataFrame:
     """Lee el Parquet de fundamentales de un ticker sin ajuste de dividendos."""
     return read_snapshot(nombre, ticker, base_dir=base_dir, adjusted=False)
@@ -238,11 +301,12 @@ def metricas_fundamentales(nombre: str, tickers: List[str], sesiones: pd.Datetim
 
 def reporte_cobertura_fundamentales(
     nombre: str, composicion: str = "sp500-2026-10", desde: str = "2010-01-01", hasta: Optional[str] = None, base_dir: Optional[Path] = None,
+    elegibilidad: bool = False,
 ) -> dict:
     """Calcula la cobertura por métrica (% miembros-día desde 2010), tickers sin CIK y valores de muestra."""
     import pandas_market_calendars as mcal
 
-    from quantagent.data.sp500 import miembros
+    from quantagent.data.sp500 import miembros, sector
 
     manifest = load_manifest(nombre, base_dir)
     sin_cik = manifest.get("sin_cik", [])
@@ -261,4 +325,16 @@ def reporte_cobertura_fundamentales(
     for sym in ["AAPL", "JPM", "XOM"]:
         if sym in universo:
             muestra[sym] = {f: {m: (round(float(paneles[m].loc[pd.Timestamp(f), sym]), 4) if pd.Timestamp(f) in sesiones and not pd.isna(paneles[m].loc[pd.Timestamp(f), sym]) else None) for m in paneles} for f in ["2015-06-30", "2020-06-30"]}
-    return {"cobertura": cobertura, "sin_cik": {"cantidad": len(sin_cik), "ejemplos": sin_cik[:10]}, "muestra": muestra}
+    reporte = {"cobertura": cobertura, "sin_cik": {"cantidad": len(sin_cik), "ejemplos": sin_cik[:10]}, "muestra": muestra}
+    if elegibilidad:
+        sectores = {}
+        for d, miembros_d in zip(sesiones, miembros_ses):
+            for t in miembros_d:
+                sec = sector(composicion, t, d, base_dir)
+                calidad = ["roe_4t", "margen_pretax_yoy"] if sec == "Financials" else ["roic_4t", "margen_op_yoy"]
+                faltan = sum(pd.isna(paneles[m].loc[d, t]) for m in [*calidad, "aceleracion_ingresos", "crecimiento_eps"])
+                cuenta = sectores.setdefault(sec or "sin_sector", [0, 0])
+                cuenta[0] += int(t in manifest["symbols"] and faltan < 2 and sec is not None)
+                cuenta[1] += 1
+        reporte["elegibles_por_sector"] = {s: 100.0 * n / total for s, (n, total) in sectores.items()}
+    return reporte
