@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 import yaml
 
 from quantagent.backtesting.signals import bar_signals, check_no_lookahead
@@ -83,3 +84,47 @@ def test_posicion_fuera_del_conjunto_stop_y_chandelier_temporal():
     assert h4.posicion_a(posicion, dict(open=108, high=120, low=100, close=118), senal) == ("TRAILING_STOP", 108)
     _, recien_abierta = h4.orden_a(pendiente, vela, senal, True)
     assert h4.posicion_a(recien_abierta, dict(vela, low=85), senal) == ("STOP_LOSS", 90)
+
+
+def test_curva_d2_fracciones_tope_costos_y_persistencia():
+    fechas = pd.bdate_range("2011-01-03", periods=4)
+    velas = {t: pd.DataFrame(dict(open=[100, 103, 110, 90], high=[100, 110, 115, 95],
+                                low=[99, 103, 104, 85], close=[100, 110, 112, 92]), index=fechas) for t in ("R", "C")}
+    senales = {t: pd.DataFrame(dict(entry=[1, 0, 0, 0], entry_price=101, entry_expiry_bars=3,
+                                  stop_loss_pct=pct, chandelier_dist=100), index=fechas) for t, pct in (("R", .1), ("C", .01))}
+    diario, trades, abiertas = h4.curva(velas, pd.DataFrame({t: [True, True, False, False] for t in velas}, index=fechas), senales)
+    qr, qc = 250 / 10.3, (100_000 - 2500 * .0005) * .1 / 103
+    entrada, salida = 103 * (qr + qc), 90 * (qr + qc)
+    assert [t["cantidad"] for t in trades] == pytest.approx([qr, qc])
+    assert diario.equity.iloc[2] == pytest.approx(100_000 + 9 * (qr + qc) - entrada * .0005)
+    assert diario.equity.iloc[-1] == pytest.approx(100_000 + salida - entrada - (entrada + salida) * .0005)
+    assert (diario.costos.sum(), diario.volumen.sum()) == pytest.approx(((entrada + salida) * .0005, entrada + salida))
+    assert sum(t["pnl"] for t in trades) == pytest.approx(diario.equity.iloc[-1] - 100_000)
+    assert diario.invertido.tolist() == [False, True, True, True] and not abiertas
+
+
+def test_curva_heat_limite_rechazo_y_breakeven(monkeypatch):
+    fechas, simbolos = pd.bdate_range("2011-01-03", periods=4), list("ABCDEFGHI")
+    velas = {t: pd.DataFrame(dict(open=[100, 100, 100, 105], high=[100, 100, 105, 105],
+                                low=[99, 99, 99, 104], close=[100, 100, 105, 105]), index=fechas) for t in simbolos}
+    senales = {t: pd.DataFrame(dict(entry=[1, 0, 1, 0], entry_price=100, entry_expiry_bars=3,
+                                  stop_loss_pct=.05, chandelier_dist=5), index=fechas) for t in simbolos}
+    senales["I"]["stop_loss_pct"] = .024982498687417944  # heat justo bajo 2% antes del costo de entrada
+    con_costos, _, _ = h4.curva(velas, pd.DataFrame(True, index=fechas, columns=simbolos), senales)
+    assert con_costos.rechazos.iloc[1] == 2 and con_costos.heat.iloc[1] <= .02
+    senales["I"]["stop_loss_pct"] = .05
+    monkeypatch.setitem(h4.h3.COSTOS_PERFILES, "etf", dict(slippage_pct=0, commission_pct=0))
+    diario, trades, abiertas = h4.curva(velas, pd.DataFrame(True, index=fechas, columns=simbolos), senales)
+    assert diario.rechazos.tolist() == [0, 1, 0, 0] and len(abiertas) == 9 and not trades
+    assert diario.heat.iloc[1] == pytest.approx(.02) and diario.heat.iloc[2] == 0
+    assert abiertas["A"]["cantidad"] == 50 and abiertas["A"]["stop_loss"] == 100
+    assert abiertas["I"]["cantidad"] == pytest.approx(255 / 5.25)
+
+
+def test_curva_cancela_pendiente_al_salir_sin_vela():
+    fechas = pd.bdate_range("2011-01-03", periods=3)
+    velas = pd.DataFrame(dict(open=100, high=101, low=99, close=100), index=fechas[[0, 2]])
+    senales = pd.DataFrame(dict(entry=[1, 0, 0], entry_price=100, entry_expiry_bars=3,
+                               stop_loss_pct=.05, chandelier_dist=10), index=fechas)
+    diario, trades, abiertas = h4.curva({"A": velas}, pd.DataFrame({"A": [True, False, True]}, index=fechas), {"A": senales})
+    assert diario.equity.eq(100_000).all() and not diario.invertido.any() and not trades and not abiertas
