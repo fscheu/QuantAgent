@@ -1,13 +1,18 @@
 """Refresco diario real sobre snapshots temporales, sin descargas de red (M5-55a)."""
 
 from datetime import date
+from http.client import IncompleteRead
+from io import BytesIO
+from threading import Event, current_thread
+from time import monotonic
+from urllib.error import HTTPError
 
 import pandas as pd
 import pytest
 from click.testing import CliRunner
 
 from quantagent.cli.data import data_group
-from quantagent.data.fundamentales import crear_snapshot_fundamentales, refrescar_fundamentales
+from quantagent.data.fundamentales import MAX_FALLIDOS_PCT, crear_snapshot_fundamentales, descargar_facts_cik, refrescar_fundamentales
 from quantagent.data.snapshot import load_manifest, verify_snapshot
 from quantagent.data.sp500 import CURRENT_CSV, HISTORICAL_CSV, crear_snapshot_sp500
 
@@ -142,3 +147,118 @@ def test_cli_existente_valido_sale_cero(datos, monkeypatch):
     salida = CliRunner().invoke(data_group, ["fundamentales", "refrescar", "--composicion", "comp"])
     assert salida.exit_code == 0
     assert NUEVO in salida.output and "ya existe" in salida.output
+
+
+@pytest.fixture
+def universo_amplio(datos, monkeypatch):
+    tickers = [f"T{i:02}" for i in range(50)]
+    csv = datos / "csv-amplio"
+    csv.mkdir()
+    pd.DataFrame([{"date": "2026-08-18", "tickers": ",".join(tickers)}]).to_csv(csv / HISTORICAL_CSV, index=False)
+    pd.DataFrame([{"Symbol": t, "GICS Sector": "Information Technology"} for t in tickers]).to_csv(csv / CURRENT_CSV, index=False)
+    crear_snapshot_sp500("comp-amplia", base_dir=datos, csv_dir=csv)
+    monkeypatch.setattr("quantagent.data.fundamentales.mapa_tickers_cik", lambda: dict(zip(tickers, range(1, 51))))
+    return datos
+
+
+@pytest.mark.parametrize("cantidad", [1, 2])
+def test_limite_fallidos_y_progreso(universo_amplio, monkeypatch, cantidad):
+    datos = universo_amplio
+    crear_snapshot_fundamentales(HISTORICO, ["T01"], datos, downloader=facts)
+    previo = (datos / HISTORICO / "manifest.json").read_bytes()
+    fallidos = [f"T{i:02}: ConnectionError" for i in range(cantidad)]
+
+    def bajar(cik):
+        if 1 <= cik <= cantidad:
+            raise ConnectionError("SEC interrumpió la conexión")
+        return facts(cik)
+
+    progreso = []
+    res = refrescar_fundamentales(HOY, "comp-amplia", datos, downloader=bajar, progreso=lambda n, total: progreso.append((n, total)))
+    assert progreso == [(50, 50)]
+    assert (datos / HISTORICO / "manifest.json").read_bytes() == previo
+    assert not list(datos.glob(".refresco-*"))
+    if cantidad * 100 / 50 <= MAX_FALLIDOS_PCT:
+        assert res["nuevo"] and res["snapshot_vigente"] == NUEVO
+        assert res["fallidos"] == fallidos
+        assert "fallidos dentro del límite" in res["motivo"]
+        assert verify_snapshot(NUEVO, datos)["fallidos"] == fallidos
+        segunda = refrescar_fundamentales(HOY, "comp-amplia", datos, downloader=bajar)
+        assert segunda["fallidos"] == fallidos and not segunda["nuevo"]
+    else:
+        assert not res["nuevo"] and res["snapshot_vigente"] == HISTORICO
+        assert f"supera {MAX_FALLIDOS_PCT}%" in res["motivo"]
+        assert not (datos / NUEVO).exists()
+
+
+def test_cli_progreso_stderr_cada_50(universo_amplio, monkeypatch):
+    monkeypatch.setattr("quantagent.data.fundamentales.descargar_facts_cik", facts)
+    monkeypatch.setattr("quantagent.data.fundamentales.time.sleep", lambda _: None)
+    monkeypatch.setattr("quantagent.cli.data.date", type("Reloj", (), {"today": staticmethod(lambda: HOY)}))
+    salida = CliRunner().invoke(data_group, ["fundamentales", "refrescar", "--composicion", "comp-amplia"])
+    assert salida.exit_code == 0, salida.output
+    assert salida.stderr == "Fundamentales: 50/50 tickers procesados\n"
+    assert "tickers procesados" not in salida.stdout
+
+
+@pytest.mark.parametrize("error", [IncompleteRead(b"parcial", 100), ConnectionError("conexión cortada")])
+def test_descarga_reintenta_lectura_incompleta_y_conexion(monkeypatch, error):
+    pedidos, esperas = [], []
+
+    class Respuesta(BytesIO):
+        def read(self):
+            if len(pedidos) < 3:
+                raise error
+            return super().read()
+
+    def abrir(req, timeout):
+        pedidos.append((req.full_url, timeout))
+        return Respuesta(b'{"cik": 1}')
+
+    monkeypatch.setattr("urllib.request.urlopen", abrir)
+    monkeypatch.setattr("quantagent.data.fundamentales.time.sleep", esperas.append)
+    assert descargar_facts_cik(1) == {"cik": 1}
+    assert len(pedidos) == 3 and esperas == [2, 4]
+
+
+@pytest.mark.parametrize("fase", ["apertura", "lectura"])
+def test_descarga_tope_total_aunque_socket_no_agote_timeout(monkeypatch, fase):
+    liberar, hilos, esperas = Event(), [], []
+
+    class Respuesta(BytesIO):
+        def read(self):
+            liberar.wait(2)
+            return super().read()
+
+    def abrir(req, timeout):
+        hilos.append(current_thread())
+        if fase == "apertura":
+            liberar.wait(2)
+        return Respuesta(b"{}")
+
+    monkeypatch.setattr("urllib.request.urlopen", abrir)
+    monkeypatch.setattr("quantagent.data.fundamentales.FACTS_TIMEOUT_TOTAL", 0.02)
+    monkeypatch.setattr("quantagent.data.fundamentales.time.sleep", esperas.append)
+    inicio = monotonic()
+    try:
+        with pytest.raises(TimeoutError):
+            descargar_facts_cik(1)
+        assert monotonic() - inicio < 1
+        assert len(hilos) == 3 and esperas == [2, 4]
+    finally:
+        liberar.set()
+        for hilo in hilos:
+            hilo.join(timeout=1)
+
+
+def test_descarga_http_error_no_reintenta(monkeypatch):
+    pedidos = []
+
+    def abrir(req, timeout):
+        pedidos.append(req)
+        raise HTTPError(req.full_url, 503, "SEC no disponible", {}, None)
+
+    monkeypatch.setattr("urllib.request.urlopen", abrir)
+    with pytest.raises(HTTPError):
+        descargar_facts_cik(1)
+    assert len(pedidos) == 1

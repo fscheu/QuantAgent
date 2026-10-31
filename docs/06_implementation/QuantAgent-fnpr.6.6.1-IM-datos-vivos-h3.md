@@ -64,3 +64,56 @@ con `Read-only file system`; no se llegó a ejecutar `git commit`. Los cambios
 quedan sin stage en la rama `loop/QuantAgent-fnpr.6.6.1`, pendientes de commit
 desde una sesión con escritura sobre el directorio administrativo de Git.
 Mensaje requerido: `feat(QuantAgent-fnpr.6.6.1): refresco de fundamentales con fallback al snapshot previo`.
+
+## Corrección 2026-10-31
+
+QuantAgent-fnpr.6.6.1b corrige M5-55a a partir de las mediciones provistas de
+la VM con SEC real: descargar los 503 `companyfacts` del S&P 500 llevó unos
+6 minutos; AEE y MAR (2 de 503) fallaron con `http.client.IncompleteRead`.
+Algunos pedidos demoraron entre 10 y 40 s. Dos corridas reales de
+`quantagent data fundamentales refrescar` quedaron colgadas más de 25 minutos
+sin escribir nada. Estas mediciones no se repitieron en esta entrega sin red.
+
+`descargar_facts_cik` ahora reintenta también `IncompleteRead` y
+`ConnectionError`: conserva los tres intentos, las esperas de 2 y 4 s y la
+salida inmediata ante `HTTPError`. `FACTS_TIMEOUT_TOTAL = 90` segundos limita
+cada intento completo, incluyendo apertura, lectura y parseo. La descarga corre
+en un hilo daemon y el llamador espera un `Future` con ese límite; no usa un
+executor que espere al hilo al salir. El timeout de socket de 30 s se conserva.
+Un intento vencido puede terminar su lectura después: el hilo no se cancela y
+sólo escribe su propio Future, nunca el snapshot. Tres intentos agotados toman
+como máximo aproximadamente 276 s (3 × 90 + 2 + 4), más planificación del sistema.
+
+Un fallido aislado ya no impide publicar: se rechaza cuando los fallidos superan
+`MAX_FALLIDOS_PCT = 2.0` por ciento de los tickers pedidos, o cuando no pasa la
+cobertura sectorial existente. El 2 % exacto se acepta. La caída total sigue
+rechazándose y el snapshot previo queda intacto. El resultado aceptado incluye
+`fallidos` y explica la aceptación parcial en `motivo`; al reutilizar el snapshot
+del día también devuelve sus fallidos. La CLI informa cada 50 tickers procesados
+por stderr mediante el callback opcional `progreso(n, total)`, sin cambiar la ayuda.
+
+Los tests agregados usan snapshots locales y un opener falso, sin conexiones:
+aceptación de 1/50 fallidos, rechazo de 2/50 conservando el previo, reintentos de
+lectura incompleta y conexión, límite total en apertura y lectura bloqueadas,
+`HTTPError` sin reintento y progreso por stderr. La referencia CLI conserva su
+contenido porque no cambió la ayuda.
+
+Validación de la corrección (comandos desde este worktree):
+
+```bash
+PYTHONPATH=. PYTHONDONTWRITEBYTECODE=1 MPLCONFIGDIR="$PWD/.pytest_cache/mpl" NUMBA_CACHE_DIR="$PWD/.pytest_cache/numba" /home/azureuser/repos/projects/QuantAgent/.venv/bin/python scripts/gen_cli_reference.py --output-dir docs/manual/reference/cli > .pytest_cache/cli-reference.log
+PYTHONPATH=. PYTHONDONTWRITEBYTECODE=1 MPLCONFIGDIR="$PWD/.pytest_cache/mpl" NUMBA_CACHE_DIR="$PWD/.pytest_cache/numba" /home/azureuser/repos/projects/QuantAgent/.venv/bin/python -m pytest tests/test_fundamentales_refresco.py tests/test_fundamentales.py tests/test_sp500.py tests/test_cli_help.py tests/test_cli_reference.py --basetemp=.pytest_cache/tmp -q
+git diff --check
+```
+
+Resultados: generador **exit 0**, sin diferencias en la referencia; pytest
+**42 passed, 0 failed, 1 warning** en 36,23 s; `git diff --check` sin errores.
+Las cachés de Numba y Matplotlib se dirigen al worktree: sin esa configuración,
+la primera corrida se frenó en colección porque Numba no podía escribir su caché
+junto al entorno compartido. Una corrida intermedia dio 41 passed y 1 failed
+por cambiar innecesariamente el mensaje esperado del caso de caída total;
+se restauró esa expectativa antes de la validación final.
+
+Handoff de QuantAgent-fnpr.6.6.1b: cambios sin stage en
+`loop/QuantAgent-fnpr.6.6.1b`, sin commit, push, PR ni uso de Beads o red,
+según la instrucción de esta entrega. Pendiente revisión por la otra sesión.

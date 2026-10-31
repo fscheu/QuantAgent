@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import csv
+import http.client
 import json
 import re
 import tempfile
 import time
 import urllib.error
 import urllib.request
+from concurrent.futures import Future
 from datetime import date
 from pathlib import Path
+from threading import Thread
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
 import numpy as np
@@ -22,6 +25,7 @@ SEC_USER_AGENT = "QuantAgent Research admin@quantagent.dev"
 SEC_TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 CIK_HISTORICOS_CSV = Path(__file__).resolve().parent / "cik_historicos.csv"
 SEC_FACTS_URL_TEMPLATE = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json"
+FACTS_TIMEOUT_TOTAL = 90  # segundos por intento, incluida apertura y lectura completa
 
 _TAX_BT = [
     "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest",
@@ -55,11 +59,20 @@ def mapa_tickers_cik() -> Dict[str, int]:
 def descargar_facts_cik(cik: int) -> dict:
     """Descarga el JSON companyfacts de un CIK desde la API de la SEC."""
     req = urllib.request.Request(SEC_FACTS_URL_TEMPLATE.format(cik=cik), headers={"User-Agent": SEC_USER_AGENT})
-    for intento in range(3):
+
+    def descargar(resultado):
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:
-                return json.loads(resp.read().decode("utf-8"))
-        except (urllib.error.URLError, TimeoutError) as exc:
+                resultado.set_result(json.loads(resp.read().decode("utf-8")))
+        except Exception as exc:
+            resultado.set_exception(exc)
+
+    for intento in range(3):
+        try:
+            resultado = Future()
+            Thread(target=descargar, args=(resultado,), daemon=True).start()
+            return resultado.result(timeout=FACTS_TIMEOUT_TOTAL)
+        except (urllib.error.URLError, TimeoutError, http.client.IncompleteRead, ConnectionError) as exc:
             if isinstance(exc, urllib.error.HTTPError) or intento == 2:
                 raise
             time.sleep(2 * (intento + 1))
@@ -111,6 +124,7 @@ def extraer_hechos(ticker: str, json_data: dict) -> pd.DataFrame:
 METRICAS = ["roic_4t", "margen_op_yoy", "aceleracion_ingresos", "crecimiento_eps", "roe_4t", "margen_pretax_yoy"]
 MAX_ANTIGUEDAD_DIAS = 200
 UMBRAL_COBERTURA_FUNDAMENTALES = 60.0  # % de elegibles por sector, cobertura_screener.py (M5-32)
+MAX_FALLIDOS_PCT = 2.0
 
 
 def preparar_ticker(df_ticker: pd.DataFrame) -> pd.DataFrame:
@@ -199,6 +213,7 @@ def calcular_metricas_ticker(df: pd.DataFrame, sesiones: pd.DatetimeIndex) -> Di
 
 def crear_snapshot_fundamentales(
     nombre: str, tickers: List[str], base_dir: Optional[Path] = None, delay: float = 0.2, downloader: Optional[Callable[[int], dict]] = None,
+    progreso: Optional[Callable[[int, int], None]] = None,
 ) -> dict:
     """Descarga facts de sec.gov para cada ticker con CIK y congela un snapshot versionado."""
     ciks, historicos, frames, sin_cik, con_cik, fallidos = mapa_tickers_cik(), mapa_cik_historicos(), {}, [], {}, []
@@ -217,6 +232,8 @@ def crear_snapshot_fundamentales(
                 frames[t] = df
         except Exception as exc:
             fallidos.append(f"{t}: {type(exc).__name__}")
+        if progreso is not None and (i + 1) % 50 == 0:
+            progreso(i + 1, len(con_cik))
         if delay > 0 and downloader is None and i < len(con_cik) - 1:
             time.sleep(delay)
     return write_snapshot(nombre, frames, source="sec-edgar", timeframe="quarterly", base_dir=base_dir, extra={"sin_cik": sin_cik, "fallidos": fallidos, "tickers_solicitados": len(tickers)})
@@ -225,6 +242,7 @@ def crear_snapshot_fundamentales(
 def refrescar_fundamentales(
     hoy: date, composicion: str, base_dir: Optional[Path] = None,
     downloader: Optional[Callable[[int], dict]] = None, umbral_cobertura: float = UMBRAL_COBERTURA_FUNDAMENTALES,
+    progreso: Optional[Callable[[int, int], None]] = None,
 ) -> dict:
     """Publica una foto diaria verificada o devuelve el último snapshot válido anterior."""
     import pandas_market_calendars as mcal
@@ -247,20 +265,24 @@ def refrescar_fundamentales(
         bajos = {s: p for s, p in rep["elegibles_por_sector"].items() if p < umbral_cobertura}
         if not rep["elegibles_por_sector"] or bajos:
             raise SnapshotError(f"cobertura bajo el umbral {umbral_cobertura}%: {bajos}")
+        return manifest
 
     try:
         if (raiz / nombre).exists():
-            validar(nombre, raiz, hoy)
-            return {"snapshot_vigente": nombre, "nuevo": False, "motivo": "ya existe; no se vuelve a descargar"}
+            manifest = validar(nombre, raiz, hoy)
+            return {"snapshot_vigente": nombre, "nuevo": False, "fallidos": manifest.get("fallidos", []), "motivo": "ya existe; no se vuelve a descargar"}
         tickers = miembros(composicion, load_manifest(composicion, raiz)["end"], raiz)
         raiz.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(prefix=".refresco-", dir=raiz) as temporal:
-            manifest = crear_snapshot_fundamentales(nombre, tickers, base_dir=Path(temporal), downloader=downloader)
-            if manifest["fallidos"]:
-                raise SnapshotError(f"descarga fallida: {manifest['fallidos']}")
+            manifest = crear_snapshot_fundamentales(nombre, tickers, base_dir=Path(temporal), downloader=downloader, progreso=progreso)
+            if len(manifest["fallidos"]) * 100 > MAX_FALLIDOS_PCT * len(tickers):
+                raise SnapshotError(f"descarga fallida: supera {MAX_FALLIDOS_PCT}%: {manifest['fallidos']}")
             validar(nombre, Path(temporal), hoy)
             (Path(temporal) / nombre).rename(raiz / nombre)
-        return {"snapshot_vigente": nombre, "nuevo": True, "motivo": "descarga, hashes y cobertura verificados"}
+        motivo = "descarga, hashes y cobertura verificados"
+        if manifest["fallidos"]:
+            motivo += f"; fallidos dentro del límite {MAX_FALLIDOS_PCT}%: {manifest['fallidos']}"
+        return {"snapshot_vigente": nombre, "nuevo": True, "fallidos": manifest["fallidos"], "motivo": motivo}
     except Exception as exc:
         motivo = f"refresco rechazado: {exc}"
 
