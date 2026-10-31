@@ -171,8 +171,11 @@ def _resolve_source_and_meta(
 
 def _engine_config(commission_pct: Optional[float], costos: Optional[str] = None,
                    tamano_posicion: Optional[float] = None, regla_tamano: Optional[str] = None,
-                   orden_minima: Optional[float] = None, riesgo_por_trade: Optional[float] = None) -> dict:
+                   orden_minima: Optional[float] = None, riesgo_por_trade: Optional[float] = None,
+                   cuenta_chica: Optional[float] = None) -> dict:
     config = {"market_hours_filter": False, "offline_data": True}
+    if cuenta_chica is not None:
+        config.update(initial_capital=cuenta_chica, round_shares=True)
     if tamano_posicion is not None:
         config["base_position_pct"] = config["max_position_pct"] = tamano_posicion
     if regla_tamano is not None:
@@ -291,7 +294,9 @@ def correr_par(
     slippage_pct, comision_pct, costos (nombre del perfil o None), tamano_pct (None si no se
     pidió tamaño), regla_tamano (None si no se pidió), bh_pnl, bh_sharpe, bh_max_drawdown,
     retorno_anualizado, exceso_sobre_referencia, tiempo_en_mercado, capital_invertido_medio,
-    sharpe_tasa_0, peor_dia (estas seis son None si no hay curva de equity), max_drawdown,
+    sharpe_tasa_0, peor_dia (estas seis son None si no hay curva de equity), posiciones_en_cero
+    (solo con --cuenta-chica),
+    max_drawdown,
     equity_curve, cierres (timestamp, cierre ajustado de cada vela), entradas_descartadas_orden_minima y filas (TradeRow; vacía salvo con con_filas=True).
     `params` son los parámetros del constructor de la estrategia (el resto, los defaults del registro).
     """
@@ -392,6 +397,7 @@ def correr_par(
         "equity_curve": curve,
         "filas": rows,
         "entradas_descartadas_orden_minima": bt.order_manager.entradas_descartadas_orden_minima,
+        **({"posiciones_en_cero": bt.positions_en_cero} if config.get("round_shares") else {}),
     }
     if "base_position_pct" in config or "regla_tamano" in config:
         r["tamano_pct"] = config.get("base_position_pct", settings.TRADING_BASE_POSITION_PCT)
@@ -413,7 +419,10 @@ def backtest_group() -> None:
     """Root command group for backtest operations."""
 
 
-@backtest_group.command("run", help="Run a backtest against a versioned fixture.")
+@backtest_group.command(
+    "run", help="Run a backtest against a versioned fixture.",
+    epilog="Example: quantagent backtest run --strategy rsi --fixture spy-90d --cuenta-chica 2500",
+)
 @click.option(
     "--strategy",
     "strategy_name",
@@ -474,6 +483,8 @@ def backtest_group() -> None:
 )
 @click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="apertura", show_default=True,
               help="Fill price: opening or closing price of the candle.")
+@click.option("--cuenta-chica", type=click.FloatRange(min=0.0, min_open=True), default=None,
+              help="Initial backtest capital in USD; enables whole-share entries. Default: disabled ($100,000 capital).")
 @_tamano_options
 @_params_option
 @click.option(
@@ -500,10 +511,11 @@ def run_backtest(
     regla_tamano: Optional[str],
     orden_minima: Optional[float],
     riesgo_por_trade: Optional[float],
+    cuenta_chica: Optional[float],
     params: dict,
     llenado: str,
 ) -> None:
-    config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano, orden_minima, riesgo_por_trade)
+    config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano, orden_minima, riesgo_por_trade, cuenta_chica)
     meta, symbol, to_date = _resolve_source_and_meta(
         "run",
         strategy_name,
@@ -539,6 +551,16 @@ def run_backtest(
     _echo_tamano(config)
     if "orden_minima" in config:
         click.echo(f"Entradas descartadas por orden mínima: {r['entradas_descartadas_orden_minima']}")
+    if cuenta_chica is not None:
+        dates_by_symbol = {}
+        for position in r["posiciones_en_cero"]:
+            dates = dates_by_symbol.setdefault(position["symbol"], {})
+            dates[position["date"].strftime("%Y-%m-%d")] = None
+        summary = "; ".join(
+            f"{symbol}: {', '.join(list(dates)[:10])}{', …' if len(dates) > 10 else ''}"
+            for symbol, dates in dates_by_symbol.items()
+        )
+        click.echo(f"posicion_en_cero: {len(r['posiciones_en_cero'])}" + (f" ({summary})" if summary else ""))
     click.echo(
         f"Comprar y mantener: PnL {r['bh_pnl']:.2f}, Sharpe {r['bh_sharpe']:.2f}, "
         f"max drawdown {r['bh_max_drawdown']:.6f}"

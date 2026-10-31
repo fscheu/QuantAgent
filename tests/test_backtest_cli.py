@@ -32,6 +32,38 @@ def test_riesgo_por_trade_se_agrega_a_config_solo_si_se_pide():
     assert _engine_config(None, regla_tamano="riesgo", riesgo_por_trade=0.0025)["riesgo_por_trade_pct"] == 0.0025
 
 
+def test_cuenta_chica_limita_posiciones_y_registra_entradas_descartadas(cli_runner, monkeypatch, tmp_path):
+    from quantagent.backtesting.backtest import Backtest
+
+    real_run, runs = Backtest.run, []
+
+    def capture(self, *args, **kwargs):
+        result = real_run(self, *args, **kwargs)
+        runs.append((self, result))
+        return result
+
+    monkeypatch.setattr(Backtest, "run", capture)
+    out_path = tmp_path / "trades.csv"
+    result = cli_runner.invoke(backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke",
+                                                 "--cuenta-chica", "3000", "--tamano-posicion", "0.5",
+                                                 "--out", str(out_path)])
+    assert result.exit_code == 0, result.output
+    small, metrics = runs[-1]
+    assert metrics.total_trades > 0
+    with out_path.open(newline="") as trades_file:
+        quantities = [float(row["qty"]) for row in csv.DictReader(trades_file)]
+    assert quantities
+    assert all(qty.is_integer() and 1 <= qty <= 3 for qty in quantities)
+    assert small.positions_en_cero
+
+    result = cli_runner.invoke(backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke",
+                                                 "--cuenta-chica", "2500"])
+    assert result.exit_code == 0, result.output
+    small, metrics = runs[-1]
+    assert metrics.total_trades == 0
+    assert small.positions_en_cero and all(p["symbol"] == "SPY" and p["date"] for p in small.positions_en_cero)
+
+
 @pytest.mark.parametrize("command", ["run", "compare"])
 @pytest.mark.parametrize("fill", [None, "cierre", "apertura"])
 def test_cli_llenado_real_y_snapshot(cli_runner, monkeypatch, tmp_path, command, fill):
