@@ -14,7 +14,7 @@ Relacionado: [`QuantAgent-fnpr.4.12-IM-etapa3`](../06_implementation/QuantAgent-
 1. Lo de M5 se toma como **implementación inicial**. **No se pone dinero real** en estas estrategias, ni ahora ni como consecuencia de este paper.
 2. El paper de M5 tiene un solo fin: **probar el sistema completo de punta a punta** (datos, señales, órdenes, stops, reconciliación, digest, monitoreo) y **armar los ciclos de aprendizaje y mejora** a partir del análisis de backtests y de paper.
 3. Que H1 y H3 no hayan pasado la etapa 3 **no frena paper**: es lo ya previsto por R01 #4 (paper como prueba del sistema). Queda registrado como veredicto de etapa 3, sin reabrirlo.
-4. Se da de alta **H3 en paper** junto con lo que ya corre (M5-55 / `fnpr.6.6`), como segunda pierna de la cuenta M5 (misma cuenta, base y bucket `m5`; USD 1.500 por pierna, órdenes etiquetadas por pierna), junto al pipeline ETF+arquetipos que ya arranca el 2026-11-02. H1 se compara en sombra (mismos datos, sin órdenes). El plan de paper en dos tiempos ya preveía sumar acciones al mismo pipeline cuando cerrara L28. El detalle de tickets está en Beads bajo `fnpr.6.6`.
+4. El paper M5 es **un solo pipeline** (régimen → screener → arquetipos A y B → riesgo → órdenes, diseño §4). H1 a H4 son la escalera que valida sus capas, no carteras paralelas. En el tiempo 2 (M5-55 / `fnpr.6.6`) el pipeline suma las acciones que elige el screener (los candidatos de H3), con las mismas reglas de riesgo y stops. H1 y H3 se calculan en sombra, sin órdenes, para seguir comparando. Misma cuenta, base y bucket `m5`; sin cuentas nuevas.
 
 ## Consecuencias
 
