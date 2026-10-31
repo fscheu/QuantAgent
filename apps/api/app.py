@@ -33,12 +33,12 @@ class SPAStaticFiles(StaticFiles):
 
 class CalendarEventResponse(BaseModel):
     id: str
-    kind: Literal["holiday", "early_close", "rebalance"]
+    kind: Literal["holiday", "early_close", "rebalance", "macro"]
     starts_at: str | None = None
     date: str
     title: str
     subtitle: str | None = None
-    source: Literal["alpaca", "strategy"]
+    source: Literal["alpaca", "strategy", "fred", "manual"]
     account_id: str | None = None
 
 
