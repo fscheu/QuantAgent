@@ -6,14 +6,19 @@ Todas las fechas de decisión salen de ``as_of`` y la sesión NYSE cerrada.
 """
 
 import logging
+import re
 from decimal import Decimal
 from pathlib import Path
 
 import pandas as pd
 from sqlalchemy.orm import Session
 
+from quantagent.data.snapshot import SnapshotError, snapshot_root, verify_snapshot
+from quantagent.fabrica.candidatos_vivo import candidatos_en_vivo
+from quantagent.fabrica.cartera import pesos, pesos_h3
 from quantagent.fabrica.regimen import regimen_semanal
-from quantagent.fabrica.transversal import PRIORS_M5
+from quantagent.fabrica.screener import COLS_CANDIDATOS
+from quantagent.fabrica.transversal import MASCARAS, METRICAS, PRIORS_M5, REGLAS, señales_transversales
 from quantagent.models import ActivePosition, Environment, Order, OrderSide, OrderType, TradeIntentRecord
 from quantagent.portfolio.manager import PortfolioManager
 from quantagent.strategy.arquetipo_a_strategy import ArquetipoAStrategy
@@ -49,6 +54,68 @@ def _resolver_narrador(narrador):
     return llm_por_defecto() if narrador == "auto" else narrador
 
 
+def fundamentales_vigente(base_dir):
+    """Elige el snapshot diario más reciente verificable, o el respaldo mensual."""
+    raiz = snapshot_root(base_dir)
+    diarios = sorted((p.name for p in raiz.glob("fundamentales-sp500-????-??-??")
+                      if re.fullmatch(r"fundamentales-sp500-\d{4}-\d{2}-\d{2}", p.name)), reverse=True)
+    for nombre in diarios:
+        try:
+            verify_snapshot(nombre, base_dir=raiz)
+            return nombre
+        except (SnapshotError, ValueError, OSError, KeyError):
+            continue
+    return "fundamentales-sp500-2026-10"
+
+
+def _upsert_semana(path, filas, fecha):
+    """Reemplaza todas las filas de una fecha, incluso si la nueva selección está vacía."""
+    if path.exists():
+        previo = pd.read_csv(path, parse_dates=["fecha"], float_precision="round_trip")
+        filas = pd.concat([previo[pd.to_datetime(previo["fecha"]).dt.normalize() != fecha], filas], ignore_index=True)
+    filas.sort_values("fecha", kind="stable").to_csv(path, index=False)
+
+
+def _etapa2_semanal(as_of, data_provider, cierres, regimen, carpeta, base_dir, composicion):
+    fecha = pd.Timestamp(regimen["fecha"]).normalize()
+    candidatos = pd.DataFrame(columns=COLS_CANDIDATOS)
+    descartes = []
+    if regimen["estado"] != "risk-off":
+        try:
+            fundamentales = fundamentales_vigente(base_dir)
+            habilitados = [e for e in regimen["habilitados"].split(",") if e in UNIVERSO_M5]
+            candidatos, descartes = candidatos_en_vivo(
+                as_of, habilitados, data_provider, fundamentales, composicion, base_dir)
+        except Exception as exc:
+            logger.warning("Screener semanal M5 sin candidatos", exc_info=True)
+            candidatos = pd.DataFrame(columns=COLS_CANDIDATOS)
+            descartes = [{"simbolo": None, "motivo": f"screener: {exc}"}]
+    _upsert_semana(carpeta / "m5-candidatos-semanales.csv", candidatos, fecha)
+    rechazos = pd.DataFrame(descartes, columns=["simbolo", "motivo"])
+    rechazos.insert(0, "fecha", fecha)
+    _upsert_semana(carpeta / "m5-candidatos-descartes.csv", rechazos, fecha)
+
+    seleccion = señales_transversales(
+        cierres, METRICAS["sector-score-h1"], mascara=MASCARAS["sin-caida-m5"],
+        **REGLAS["sector-score-h1"])
+    # pesos rebalancea en la apertura siguiente usando sigma hasta el cierre de decisión.
+    futuras = sesiones_cerradas_nyse(fecha + pd.Timedelta(days=14), n_sesiones=12)
+    siguiente = futuras[futuras > fecha][0]
+    extendido = cierres.reindex(cierres.index.append(pd.DatetimeIndex([siguiente])))
+    seleccion = seleccion.reindex(extendido.index).ffill()
+    h1 = pesos(extendido, {0: list(UNIVERSO_M5)}, seleccion={0: seleccion}, semanales={0}).fillna(0.0)
+    h1.columns = h1.columns.droplevel(0)
+    h1 = h1.loc[[siguiente]]
+    if regimen["estado"] == "risk-off":
+        h1.loc[:] = 0.0
+    h3 = pesos_h3(h1, candidatos, {siguiente: fecha})
+    sombra = pd.concat([h1.iloc[0].rename("peso_h1"), h3.iloc[0].rename("peso_h3")], axis=1).fillna(0.0)
+    sombra.index.name = "activo"
+    sombra = sombra.reset_index()
+    sombra.insert(0, "fecha", fecha)
+    _upsert_semana(carpeta / "m5-sombra-semanal.csv", sombra, fecha)
+
+
 def _narrativa_path(narrativa_path, regimen_path):
     return narrativa_path or Path(regimen_path).parent / "m5-narrativa.csv"
 
@@ -65,8 +132,8 @@ def _narrar_intent(intent, narrador, narrativa_path, regimen_path, fecha, simbol
 
 def correr_semanal(as_of, *, data_provider, db: Session | None = None,
                    regimen_path="local-data/m5-regimen-semanal.csv", narrador="auto",
-                   narrativa_path=None):
-    """Calcula H1 al cierre semanal y hace upsert CSV por fecha, sin depender del reloj del sistema."""
+                   narrativa_path=None, base_dir=None, composicion="sp500-2026-10"):
+    """Guarda régimen, candidatos y sombra H1/H3 al cierre semanal con reloj inyectado."""
     ultima = ultima_sesion_cerrada_nyse(as_of)
     sesiones = sesiones_cerradas_nyse(as_of, n_sesiones=504)
     cierres = _panel_cierres(data_provider, sesiones).dropna(how="all").ffill()
@@ -78,7 +145,7 @@ def correr_semanal(as_of, *, data_provider, db: Session | None = None,
     path.parent.mkdir(parents=True, exist_ok=True)
     anterior = None
     if path.exists():
-        previo = pd.read_csv(path, parse_dates=["fecha"])
+        previo = pd.read_csv(path, parse_dates=["fecha"], float_precision="round_trip")
         previas = previo[previo["fecha"].dt.normalize() < ultima.normalize()]
         if not previas.empty:
             anterior = previas.sort_values("fecha").iloc[-1]
@@ -86,6 +153,7 @@ def correr_semanal(as_of, *, data_provider, db: Session | None = None,
     else:
         tabla = fila
     tabla.sort_values("fecha").to_csv(path, index=False)
+    _etapa2_semanal(as_of, data_provider, cierres, fila.iloc[0], path.parent, base_dir, composicion)
     try:
         llm = _resolver_narrador(narrador)
         texto = nota_semanal(fila.iloc[0], anterior, llm)
