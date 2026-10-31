@@ -33,6 +33,7 @@ Implementation documents should include:
 
 ## Active Per-Change Implementation
 
+- [QuantAgent-fnpr.4.11-IM-precios-acciones-2019.md](./QuantAgent-fnpr.4.11-IM-precios-acciones-2019.md) - Precios S&P 500 2019–hoy: snapshot 10c y cobertura por año y sector.
 - [QuantAgent-jpwz-IM-diagnostico-conteo-f1.md](./QuantAgent-jpwz-IM-diagnostico-conteo-f1.md) - F1 tiene cambios de pesos que el conteo por señales omite.
 - [QuantAgent-e4jc.3-IM-f1-etapas-0-2.md](./QuantAgent-e4jc.3-IM-f1-etapas-0-2.md) - F1 pasa etapas 0 a 2 en f1d; pendiente OK de Fede antes de abrir la reserva.
 - [QuantAgent-46pk-IM-diagnostico-adaptador-cortos.md](./QuantAgent-46pk-IM-diagnostico-adaptador-cortos.md) - Diagnóstico F2 etapa 2 y normalización de brackets cortos en el adaptador.
