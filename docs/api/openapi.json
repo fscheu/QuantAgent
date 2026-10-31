@@ -265,7 +265,8 @@
             "enum": [
               "holiday",
               "early_close",
-              "rebalance"
+              "rebalance",
+              "macro"
             ],
             "title": "Kind",
             "type": "string"
@@ -273,7 +274,9 @@
           "source": {
             "enum": [
               "alpaca",
-              "strategy"
+              "strategy",
+              "fred",
+              "manual"
             ],
             "title": "Source",
             "type": "string"

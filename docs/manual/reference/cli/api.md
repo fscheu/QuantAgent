@@ -9,11 +9,12 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  accounts          Manage configured trading accounts.
-  migrate-paper-db  Repair a legacy paper database and stamp it at the...
-  schema            Export or check the live OpenAPI contract.
-  serve             Serve the read-only QuantAgent API.
-  sync-calendar     Synchronize Alpaca market holidays and early closes.
+  accounts            Manage configured trading accounts.
+  migrate-paper-db    Repair a legacy paper database and stamp it at the...
+  schema              Export or check the live OpenAPI contract.
+  serve               Serve the read-only QuantAgent API.
+  sync-calendar       Synchronize Alpaca market holidays and early closes.
+  sync-fred-calendar  Synchronize FRED releases and manual calendar events.
 ```
 
 ## `quantagent api accounts`
@@ -107,4 +108,17 @@ Options:
   --help  Show this message and exit.
 
   Example: quantagent api sync-calendar
+```
+
+## `quantagent api sync-fred-calendar`
+
+```text
+Usage: quantagent api sync-fred-calendar [OPTIONS]
+
+  Synchronize FRED releases and manual calendar events.
+
+Options:
+  --help  Show this message and exit.
+
+  Example: quantagent api sync-fred-calendar
 ```

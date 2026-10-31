@@ -1,0 +1,21 @@
+events:
+  - date: "2026-01-28"
+    title: "FOMC"
+  - date: "2026-03-18"
+    title: "FOMC"
+  - date: "2026-04-29"
+    title: "FOMC"
+  - date: "2026-06-17"
+    title: "FOMC"
+  - date: "2026-07-29"
+    title: "FOMC"
+  - date: "2026-09-16"
+    title: "FOMC"
+  - date: "2026-10-28"
+    title: "FOMC"
+  - date: "2026-12-09"
+    title: "FOMC"
+
+# Recordatorios propios: agregá eventos con fecha ISO y título.
+#  - date: "2026-11-20"
+#    title: "Recordatorio propio"

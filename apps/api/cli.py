@@ -47,6 +47,14 @@ def sync_calendar_command():
     click.echo(f"Synchronized {sync_from_alpaca()} calendar events.")
 
 
+@api_group.command("sync-fred-calendar", help="Synchronize FRED releases and manual calendar events.",
+                   epilog="Example: quantagent api sync-fred-calendar")
+def sync_fred_calendar_command():
+    from .calendar_fred import sync_fred_calendar
+
+    click.echo(f"Synchronized {sync_fred_calendar()} calendar events.")
+
+
 @api_group.command("migrate-paper-db", help="Repair a legacy paper database and stamp it at the current Alembic head.",
                    epilog="Example: quantagent api migrate-paper-db --database-url sqlite:////srv/quantagent/paper.db --apply")
 @click.option("--database-url", required=True, help="SQLAlchemy database URL to inspect and repair.")
