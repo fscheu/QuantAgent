@@ -5,9 +5,10 @@ import os
 from datetime import datetime, time, timezone
 from pathlib import Path
 from types import SimpleNamespace
+from zoneinfo import ZoneInfo
 
 import click
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
@@ -17,11 +18,12 @@ from quantagent.data.provider import DataProvider
 from quantagent.data.sources import build_source
 from quantagent.database import Base
 from quantagent.digest import build_digest
-from quantagent.digest_datos import consultar_datos_cartera, consultar_datos_paper, consultar_valuacion_actual
+from quantagent.digest_datos import (consultar_datos_cartera, consultar_datos_paper,
+                                     consultar_valuacion_actual, crear_broker_alpaca_paper)
 from quantagent.digest_m5 import build_digest_m5, consultar_datos_m5
 from quantagent.fabrica.cartera import leer_sombra
 from quantagent.fabrica.chequeos_paper import comparar_pesos, reportar_dividendos, reportar_rechazos
-from quantagent.models import Environment, Position
+from quantagent.models import EquitySnapshot, Environment, Position
 from quantagent.strategy.assembler import StrategyAssembler
 from quantagent.trading.cartera_paper import ultima_sesion_cerrada_nyse
 from quantagent.trading.pipeline_m5 import correr_diario, correr_semanal
@@ -34,6 +36,40 @@ from . import utils
 @click.group("trading", help="Paper trading operations.")
 def trading_group() -> None:
     pass
+
+
+@trading_group.command("snapshot", help="Save today's Alpaca account equity and cash snapshot.",
+                       epilog="Example: quantagent trading snapshot --db paper.db --portfolio paper-m4")
+@click.option("--db", required=True, type=click.Path(dir_okay=False), help="SQLite database file to update.")
+@click.option("--portfolio", required=True, help="Portfolio profile used to connect to Alpaca.")
+def trading_snapshot(db: str, portfolio: str) -> None:
+    previous_url = os.environ.get("DATABASE_URL")
+    previous_settings_url = settings.DATABASE_URL
+    os.environ["DATABASE_URL"] = f"sqlite:///{os.path.abspath(db)}"
+    try:
+        with utils.session_scope() as session:
+            try:
+                account = crear_broker_alpaca_paper().get_account()
+            except Exception as exc:
+                raise click.ClickException(f"Alpaca account query failed ({type(exc).__name__}).") from exc
+            EquitySnapshot.__table__.create(session.get_bind(), checkfirst=True)
+            snapshot_date = datetime.now(ZoneInfo("America/New_York")).date()
+            row = session.scalar(select(EquitySnapshot).where(EquitySnapshot.snapshot_date == snapshot_date))
+            values = {"taken_at": datetime.now(timezone.utc), "equity": float(account["equity"]),
+                      "cash": float(account["cash"])}
+            values["invested"] = values["equity"] - values["cash"]
+            if row is None:
+                session.add(EquitySnapshot(snapshot_date=snapshot_date, **values))
+            else:
+                for key, value in values.items():
+                    setattr(row, key, value)
+            click.echo(f"Equity snapshot saved for {portfolio} ({snapshot_date}).")
+    finally:
+        settings.DATABASE_URL = previous_settings_url
+        if previous_url is None:
+            os.environ.pop("DATABASE_URL", None)
+        else:
+            os.environ["DATABASE_URL"] = previous_url
 
 
 @trading_group.command("reconciliar", help="Compare local PAPER positions with Alpaca.")
@@ -220,10 +256,7 @@ def trading_digest(archivo, digest_date, bucket: str | None, db: str | None, sha
     if dividendos_alpaca:
         try:
             from quantagent.trading.alpaca_dividendos import leer_dividendos_alpaca
-            resolved = StrategyAssembler.from_profiles(
-                overrides={"broker_type": "alpaca_paper"}, environment=Environment.PAPER
-            )
-            client = StrategyAssembler.BROKER_CONSTRUCTORS["alpaca_paper"](resolved).client
+            client = crear_broker_alpaca_paper().client
             dividendos = leer_dividendos_alpaca(client, day)
         except Exception as exc:
             warnings.append(f"Dividendos: error al consultar Alpaca ({type(exc).__name__}).")
@@ -240,10 +273,7 @@ def trading_digest(archivo, digest_date, bucket: str | None, db: str | None, sha
                 portfolios, executions, pending = consultar_datos_cartera(session, day, portfolio)
                 trades, cumulative_pnl = [], None
                 try:
-                    resolved = StrategyAssembler.from_profiles(
-                        overrides={"broker_type": "alpaca_paper"}, environment=Environment.PAPER
-                    )
-                    broker = StrategyAssembler.BROKER_CONSTRUCTORS["alpaca_paper"](resolved)
+                    broker = crear_broker_alpaca_paper()
                     valuation = consultar_valuacion_actual(broker, portfolios)
                 except (RuntimeError, ValueError) as exc:
                     raise click.ClickException(str(exc)) from exc

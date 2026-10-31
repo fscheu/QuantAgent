@@ -1,0 +1,26 @@
+.qa-position-card { display: grid; gap: var(--qa-space-3); min-width: 0; }
+.qa-position-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--qa-space-2); }
+.qa-position-heading h3 { margin: 0; font: var(--qa-heading-sm); }
+.qa-position-heading p,.qa-position-value span,.qa-position-explanation { margin: var(--qa-space-1) 0 0; color: var(--qa-text-2); font: var(--qa-text-small); }
+.qa-position-value { display: grid; gap: var(--qa-space-1); }
+.qa-position-explanation { margin: 0; }
+.qa-position-symbol { display: grid; }
+.qa-position-symbol small { color: var(--qa-text-2); }
+.qa-stop { display: grid; gap: var(--qa-space-1); min-width: 0; font: var(--qa-text-small); }
+.qa-stop-copy { display: flex; align-items: center; gap: var(--qa-space-1); min-width: 0; }
+.qa-stop-icon { width: 1.25em; text-align: center; font-weight: 700; }
+.qa-stop-track { display: flex; height: 8px; overflow: hidden; background: var(--qa-surface-sunken); border: 1px solid var(--qa-border); border-radius: var(--qa-radius-pill); }
+.qa-stop-fill { display: block; height: 100%; background: var(--qa-text-2); }
+.qa-stop-anchor-left { justify-content: flex-start; }
+.qa-stop-anchor-right { justify-content: flex-end; }
+.qa-stop-attention .qa-stop-icon,.qa-stop-attention .qa-stop-copy { color: var(--qa-warn); }
+.qa-stop-attention .qa-stop-fill { background: var(--qa-warn); }
+.qa-stop-near .qa-stop-icon,.qa-stop-near .qa-stop-copy,.qa-stop-breached .qa-stop-icon,.qa-stop-breached .qa-stop-copy { color: var(--qa-neg); }
+.qa-stop-near .qa-stop-fill { background: var(--qa-neg); }
+.qa-stop-breached .qa-stop-track { border: 1px solid var(--qa-neg); }
+.qa-stop-breached .qa-stop-fill { background: var(--qa-neg-soft); }
+.qa-stop-none .qa-stop-track { border-style: dotted; }
+.qa-stop-none .qa-stop-icon,.qa-stop-none .qa-stop-copy { color: var(--qa-text-2); }
+.qa-stop-anatomy { color: var(--qa-text-2); font: var(--qa-text-caption); }
+.qa-stop-compact .qa-stop-track { height: 6px; }
+@media (max-width: 639px) { .qa-position-card { padding: var(--qa-space-4); } }

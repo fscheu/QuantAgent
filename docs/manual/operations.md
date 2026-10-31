@@ -1,6 +1,6 @@
 # Operations
 
-Commands below inspect the configured paper account or local data. They do not start a trading cycle. All of them are read-only except `trading pre-apertura`, which can submit stop orders and cancel stale entry orders at the broker.
+Commands below inspect the configured paper account or local data. They do not start a trading cycle. `trading snapshot` queries Alpaca without changing the broker, then writes a snapshot to the local database. `trading pre-apertura` can submit stop orders and cancel stale entry orders at the broker.
 
 ## Reconcile paper positions
 
@@ -20,10 +20,20 @@ Run `python -m quantagent.cli trading digest --date YYYY-MM-DD` for the configur
 
 For the M5 bucket, run `python -m quantagent.cli trading digest --bucket m5 --date YYYY-MM-DD`; it reads `local-data/m5.db` by default and reports intents, current stops, and heat.
 
+## Equity snapshots
+
+Run `python -m quantagent.cli trading snapshot --db <file> --portfolio <portfolio>` to query the Alpaca paper account and upsert one row for the current New York date in `equity_snapshots`. Each row stores `equity`, `cash`, and `invested` (`equity - cash`). This is read-only at the broker; rerunning it on the same day overwrites that day's row. The command requires a deployed tag that includes it.
+
+Schedule it after each digest; a snapshot failure should not fail the digest.
+
+Before the API reads each paper database, run `python -m quantagent.cli api migrate-paper-db --database-url <url>` and review the dry run, then run it again with `--apply`. Back up each database first.
+
+The read-only web app replaces the Streamlit QA interface.
+
 ## Local data and snapshots
 
 `local-data/` holds ignored local databases and snapshot files. Set `QUANTAGENT_SNAPSHOT_DIR` to the directory holding snapshots; do not commit its data. Verify an existing snapshot with `python -m quantagent.cli data snapshot verify <name>`; success prints `OK <symbols> símbolos, <rows> filas`. Check its sessions and OHLC quality with `python -m quantagent.cli data snapshot check --name <name>`; expect one quality summary per symbol and exit status 1 only for missing sessions.
 
 To create a snapshot, run `python -m quantagent.cli data snapshot create --name <name> --symbols SPY --start YYYY-MM-DD --end YYYY-MM-DD`. It downloads from Yahoo and prints `Snapshot <name> creado: <symbols> símbolos, <rows> filas`. Use a completed session as the end date; snapshots are immutable.
 
-Paper deployment setup and its approval gates are described in the [paper operations runbook](../06_implementation/QuantAgent-av1p.5-IM-runbook-paper-ops.md). This manual does not activate services or run operational procedures.
+Paper trading setup is described in the [paper operations runbook](../06_implementation/QuantAgent-av1p.5-IM-runbook-paper-ops.md). This runbook does not activate services or run operational procedures.

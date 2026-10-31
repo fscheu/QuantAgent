@@ -111,10 +111,11 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  acciones  Manage S&P 500 stock snapshots for 2007-2018 using Yahoo or...
-  consenso  Manage daily earnings and revenue estimates.
-  macro     Manage ALFRED macro snapshots (all vintages) in Parquet.
-  snapshot  Manage Parquet snapshots outside the repository...
+  acciones       Manage S&P 500 stock snapshots for 2007-2018 using Yahoo...
+  consenso       Manage daily earnings and revenue estimates.
+  fundamentales  Manage SEC EDGAR (XBRL) fundamentals snapshots.
+  macro          Manage ALFRED macro snapshots (all vintages) in Parquet.
+  snapshot       Manage Parquet snapshots outside the repository...
 ```
 
 ## `quantagent backtest hipotesis`

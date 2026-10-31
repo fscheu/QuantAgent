@@ -1,0 +1,21 @@
+id: m5-h3
+autor: fede
+justificacion: >-
+  H3 de la escalera M5: H1 con acciones en vez de ETFs. Cada semana H1 elige
+  sus ETFs sectoriales (mismo score, k = 3, score mayor que 0, efectivo en
+  risk-off, pesos 1/σ). Por cada ETF sectorial elegido se compran las 3
+  primeras acciones de candidatos_semanales de ese sector en esa fecha, en
+  partes iguales dentro del sector; con menos de 3 candidatos, las que haya, y
+  sin candidatos, el ETF. EEM, EWZ y SPY quedan como ETF (D5). Se mantienen una
+  semana. Benchmark: H1, los ETFs de esos mismos sectores. Sin parámetros
+  libres: el screener (pesos 35/35/30, top 3, cuartil de fuerza relativa) se
+  fijó en el diseño antes de correr. La pierna declara la misma elegibilidad
+  que H1; las acciones se sustituyen en scripts/m5/h3.py.
+fuente: docs/03_design/QuantAgent-M5-DS-motor-top-down.md §6.2 y §7 ; catalogo/m5-priors.yaml
+timeframe: 1d
+piernas:
+  - clase: sector-score-h3
+    parametros: {}
+    elegibilidad: sin-caida-m5
+    activos: [XLB, XLC, XLE, XLF, XLI, XLK, XLP, XLRE, XLU, XLV, XLY, SPY, EEM, EWZ]
+    universo: Los 14 ETFs de catalogo/m5-priors.yaml (11 sectores SPDR, SPY, EEM y EWZ) en un único ranking semanal; las acciones del screener reemplazan a cada ETF sectorial elegido.

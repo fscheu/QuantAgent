@@ -98,6 +98,24 @@ def leer_sombra(archivo, cartera, fecha):
     return json.loads(Path(archivo).read_text())[str(fecha)][cartera]
 
 
+def pesos_h3(pesos_etf, candidatos, decisiones):
+    """Pesos de H3 (M5-33): cada ETF sectorial de `pesos_etf` (fecha × ETF, pesos de H1) pasa a sus acciones.
+
+    `decisiones`: {fecha de rebalanceo: fecha de decisión de `candidatos_semanales`}. El peso del ETF se reparte
+    por igual entre sus candidatos de rank 1-3 en esa fecha (los que haya); sin candidatos, o si el ETF no es
+    sectorial (EEM, EWZ, SPY: sin rank), queda el ETF. Devuelve fecha de rebalanceo × activo (ETFs y acciones).
+    """
+    filas = {}
+    for fecha, decision in decisiones.items():
+        fila = {}
+        for etf, peso in pesos_etf.loc[fecha][lambda s: s > 0].items():
+            elegidos = candidatos[(candidatos["fecha"] == decision) & (candidatos["etf"] == etf) & (candidatos["rank"] <= 3)]
+            for activo in elegidos["simbolo"].tolist() or [etf]:
+                fila[activo] = peso / max(len(elegidos), 1)
+        filas[fecha] = fila
+    return pd.DataFrame.from_dict(filas, orient="index").reindex(list(decisiones)).fillna(0.0)  # semana sin activos = efectivo
+
+
 def combinar(retornos, pesos):
     """Retorno diario de la cartera: Σ peso × retorno de la pierna en cada activo."""
     return (retornos[pesos.columns] * pesos).sum(axis=1)

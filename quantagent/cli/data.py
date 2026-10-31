@@ -11,6 +11,10 @@ import click
 import pandas as pd
 
 from quantagent.data.acciones import crear_snapshot_acciones, reporte_cobertura
+from quantagent.data.fundamentales import (
+    crear_snapshot_fundamentales,
+    reporte_cobertura_fundamentales,
+)
 from quantagent.data.macro import crear_snapshot_macro, verificar_snapshot_macro
 from quantagent.data.snapshot import (
     SnapshotError,
@@ -252,3 +256,56 @@ def cobertura_acciones(name: str) -> None:
         click.echo(f"Reúso cambiados a WIKI ({len(reporte['reuso_cambiados_a_wiki'])}): {reporte['reuso_cambiados_a_wiki']}")
     if reporte.get("yahoo_sin_wiki"):
         click.echo(f"Yahoo sin WIKI ({len(reporte['yahoo_sin_wiki'])}): {list(reporte['yahoo_sin_wiki'].keys())}")
+
+
+@data_group.group("fundamentales", help="Manage SEC EDGAR (XBRL) fundamentals snapshots.")
+def fundamentales_group() -> None:
+    """Fundamentales snapshot subcommands."""
+
+
+@fundamentales_group.command("create", help="Download companyfacts from SEC EDGAR and create the snapshot.")
+@click.option("--name", required=True, help="Snapshot name, for example fundamentales-sp500-2026-10.")
+@click.option("--tickers-de", default="sp500-2026-10", help="Composition snapshot providing the 2007-to-date index members.")
+@click.option("--tickers", default=None, help="Comma-separated ticker symbols to use instead of the composition snapshot.")
+def create_fundamentales(name: str, tickers_de: str, tickers: Optional[str]) -> None:
+    if tickers:
+        lista_tickers = [t.strip().upper() for t in tickers.split(",") if t.strip()]
+    else:
+        df_comp = pd.read_parquet(snapshot_root() / tickers_de / load_manifest(tickers_de)["files"]["composicion"]["file"])
+        lista_tickers = sorted({t.strip().upper() for s in df_comp[df_comp["date"].astype(str) >= "2007-01-01"]["tickers"] for t in str(s).split(",") if t.strip()})
+    try:
+        manifest = crear_snapshot_fundamentales(name, lista_tickers)
+    except SnapshotError as exc:
+        raise click.ClickException(str(exc))
+    click.echo(f"Snapshot {name} creado: {len(manifest['symbols'])} tickers con datos")
+
+
+@fundamentales_group.command("verify", help="Recompute the file hashes against the manifest.")
+@click.argument("name_arg", required=False, default=None)
+@click.option("--name", default=None, help="Snapshot name to verify (alternative to the argument).")
+def verify_fundamentales(name_arg: Optional[str], name: Optional[str]) -> None:
+    snapshot_name = name or name_arg
+    if not snapshot_name:
+        raise click.ClickException("Falta el nombre del snapshot (--name o argumento)")
+    try:
+        verify_snapshot(snapshot_name)
+        symbols = load_manifest(snapshot_name)["symbols"]
+    except SnapshotError as exc:
+        raise click.ClickException(str(exc))
+    click.echo(f"OK {len(symbols)} tickers, {sum(i['rows'] for i in symbols.values())} filas")
+
+
+@fundamentales_group.command("cobertura", help="Report per-metric coverage since 2010 and tickers without a CIK.")
+@click.option("--name", required=True, help="Snapshot name to report.")
+@click.option("--composicion", default="sp500-2026-10", help="Composition snapshot used to define index member-days.")
+def cobertura_fundamentales_cmd(name: str, composicion: str) -> None:
+    try:
+        rep = reporte_cobertura_fundamentales(name, composicion=composicion)
+    except SnapshotError as exc:
+        raise click.ClickException(str(exc))
+    carpeta = snapshot_root() / name
+    (carpeta / "cobertura.json").write_text(json.dumps(rep, indent=2, ensure_ascii=False) + "\n")
+    click.echo("Cobertura miembro-día desde 2010: " + ", ".join(f"{m}: {info['pct']:.2f}%" for m, info in rep["cobertura"].items()))
+    click.echo(f"Sin CIK ({rep['sin_cik']['cantidad']}): {', '.join(rep['sin_cik']['ejemplos'])}")
+    if rep.get("muestra"):
+        click.echo(f"Muestra: {rep['muestra']}")

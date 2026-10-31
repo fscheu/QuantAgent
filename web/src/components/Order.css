@@ -1,0 +1,8 @@
+.qa-order-card { display: grid; gap: var(--qa-space-2); }
+.qa-order-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--qa-space-2); }
+.qa-order-heading > div { display: grid; gap: var(--qa-space-1); }
+.qa-order-heading span,.qa-order-card > p { margin: 0; color: var(--qa-text-2); font: var(--qa-text-small); }
+.qa-reject-reason,.qa-reject-missing { display: grid; gap: var(--qa-space-1); padding: var(--qa-space-3); border-radius: var(--qa-radius-md); background: var(--qa-neg-soft); }
+.qa-reject-reason small { color: var(--qa-text-2); }
+.qa-reject-missing { grid-template-columns: auto 1fr auto; align-items: center; background: var(--qa-surface-sunken); color: var(--qa-text-2); }
+.qa-order-expired { margin: 0; color: var(--qa-text-2); font: var(--qa-text-small); }

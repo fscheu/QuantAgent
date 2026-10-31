@@ -102,6 +102,7 @@ def _sector_score(peso_macro):
 
 METRICAS["sector-score-h1"] = _sector_score(0.0)
 METRICAS["sector-score-h2"] = _sector_score(0.5)
+METRICAS["sector-score-h3"] = METRICAS["sector-score-h1"]  # H3 elige los mismos ETFs que H1; las acciones salen de `cartera.pesos_h3`
 
 
 def _sin_caida_m5(cierres):
@@ -118,7 +119,7 @@ MASCARAS["sin-caida-m5"] = _sin_caida_m5
 
 # Regla de selección por clase (distinta del tercio mensual por defecto de `señales_transversales`): los
 # parámetros se pasan como `**REGLAS.get(clase, {})`. Decisión semanal, k = 3 fijo, solo valores > 0.
-REGLAS = {clase: {"frecuencia": "semanal", "k": 3, "minimo": 0.0} for clase in ("sector-score-h1", "sector-score-h2")}
+REGLAS = {clase: {"frecuencia": "semanal", "k": 3, "minimo": 0.0} for clase in ("sector-score-h1", "sector-score-h2", "sector-score-h3")}
 
 
 def semanales(piernas):

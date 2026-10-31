@@ -15,4 +15,6 @@ flowchart LR
 
 Snapshots live outside version control under `$QUANTAGENT_SNAPSHOT_DIR` (default: `local-data/`). Backtests read a named snapshot. The paper scheduler builds portfolio targets, checks existing state, and submits orders through the paper broker; the database records executions and operational state.
 
+The read-only web app and API show each portfolio's summary, equity, positions, and orders from that portfolio's own database.
+
 See [operations](operations.md) for inspection commands and [the research funnel](funnel.md) for promotion gates.
