@@ -181,6 +181,9 @@ Options:
                                   pct.
   --llenado [apertura|cierre]     Fill price: opening or closing price of the
                                   candle.  [default: apertura]
+  --cuenta-chica FLOAT RANGE      Initial backtest capital in USD; enables
+                                  whole-share entries. Default: disabled
+                                  ($100,000 capital).  [x>0.0]
   --tamano-posicion FLOAT RANGE   Capital fraction per position, in (0, 1]
                                   (1.0 = 100%). Sets the run's base and
                                   maximum size.  [0.0<x<=1.0]
@@ -197,6 +200,9 @@ Options:
                                   Evaluate stop loss and take profit against
                                   intrabar high/low prices.
   --help                          Show this message and exit.
+
+  Example: quantagent backtest run --strategy rsi --fixture spy-90d --cuenta-
+  chica 2500
 ```
 
 Options and defaults:
@@ -215,6 +221,7 @@ Options and defaults:
 - `--commission-pct` — default: `None`
 - `--costos` — default: `None`
 - `--llenado` — default: `'apertura'`
+- `--cuenta-chica` — default: `None`
 - `--tamano-posicion` — default: `None`
 - `--riesgo-por-trade` — default: `None`
 - `--regla-tamano` — default: `None`

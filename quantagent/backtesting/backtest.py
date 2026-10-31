@@ -142,8 +142,8 @@ class Backtest:
         self.end_date = end_date
         self.assets = assets
         self.timeframe = timeframe
-        self.initial_capital = initial_capital
         self.config = config or {}
+        self.initial_capital = self.config.get("initial_capital", initial_capital)
         self.use_checkpointing = use_checkpointing
         self.intrabar_stops = bool(self.config.get("intrabar_stops", intrabar_stops))
         if fill not in ("cierre", "apertura"):
@@ -170,7 +170,7 @@ class Backtest:
 
         resolved = StrategyAssembler.from_snapshot(
             {
-                "initial_cash": initial_capital,
+                "initial_cash": self.initial_capital,
                 "base_position_pct": self.config.get("base_position_pct", settings.TRADING_BASE_POSITION_PCT),
                 "max_daily_loss_pct": self.config.get("max_daily_loss_pct", settings.TRADING_MAX_DAILY_LOSS_PCT),
                 "max_position_pct": self.config.get("max_position_pct", settings.TRADING_MAX_POSITION_PCT),
@@ -212,6 +212,17 @@ class Backtest:
         # Trading components
         self.portfolio = components.portfolio_manager
         self.order_manager = components.order_manager
+        if self.config.get("round_shares"):
+            calculate_size = self.order_manager.position_sizer.calculate_size
+            self.positions_en_cero = []
+
+            def round_shares(**kwargs):
+                quantity = calculate_size(**kwargs)
+                return self._round_entry_quantity(kwargs["symbol"], quantity)
+
+            self.order_manager.position_sizer.calculate_size = round_shares
+        else:
+            self.positions_en_cero = []
         self.order_manager.risk_manager.timeframe = self.timeframe
 
         def candle_clock():
@@ -245,6 +256,12 @@ class Backtest:
         self._asset_types: Dict[str, AssetType] = {
             asset: get_asset_type(asset) for asset in assets
         }
+
+    def _round_entry_quantity(self, symbol: str, quantity: float) -> int:
+        rounded = math.floor(quantity)
+        if quantity > 0 and rounded == 0:
+            self.positions_en_cero.append({"symbol": symbol, "date": self.current_date})
+        return rounded
 
     def run(self, name: Optional[str] = None) -> BacktestMetrics:
         """
