@@ -33,6 +33,7 @@ Implementation documents should include:
 
 ## Active Per-Change Implementation
 
+- [QuantAgent-fnpr.4.5-IM-h4.md](./QuantAgent-fnpr.4.5-IM-h4.md) - H4 contra H3 en 2011–2018: veredicto V30 de etapa 2 y un único intento.
 - [QuantAgent-fnpr.4.11-IM-precios-acciones-2019.md](./QuantAgent-fnpr.4.11-IM-precios-acciones-2019.md) - Precios S&P 500 2019–hoy: snapshot 10c y cobertura por año y sector.
 - [QuantAgent-jpwz-IM-diagnostico-conteo-f1.md](./QuantAgent-jpwz-IM-diagnostico-conteo-f1.md) - F1 tiene cambios de pesos que el conteo por señales omite.
 - [QuantAgent-e4jc.3-IM-f1-etapas-0-2.md](./QuantAgent-e4jc.3-IM-f1-etapas-0-2.md) - F1 pasa etapas 0 a 2 en f1d; pendiente OK de Fede antes de abrir la reserva.

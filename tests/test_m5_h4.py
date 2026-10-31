@@ -128,3 +128,25 @@ def test_curva_cancela_pendiente_al_salir_sin_vela():
                                stop_loss_pct=.05, chandelier_dist=10), index=fechas)
     diario, trades, abiertas = h4.curva({"A": velas}, pd.DataFrame({"A": [True, False, True]}, index=fechas), {"A": senales})
     assert diario.equity.eq(100_000).all() and not diario.invertido.any() and not trades and not abiertas
+
+
+def test_entrypoint_registro_unico_y_reproduccion(monkeypatch, tmp_path, capsys):
+    fechas = pd.bdate_range("2011-01-03", periods=40)
+    cierre = 100 + 3 * np.sin(np.arange(40))
+    velas = {"A": pd.DataFrame(dict(open=cierre, high=cierre + 1, low=cierre - 1, close=cierre), index=fechas)}
+    w = pd.DataFrame({"A": 1.0}, index=fechas)
+    senales = {"A": pd.DataFrame(dict(entry=1, entry_price=100, entry_expiry_bars=3,
+                                     stop_loss_pct=.05, chandelier_dist=2), index=fechas)}
+    monkeypatch.setattr(h4, "preparar_datos", lambda cache: (velas, w, w.gt(0), senales))
+    cache = tmp_path / "cache.pkl"
+    cache.touch()
+    h4.main(["--cache", str(cache), "--sin-registro"])
+    assert not list(tmp_path.glob("*.csv"))
+    h4.main(["--cache", str(cache)])
+    registros = {p: p.read_bytes() for p in tmp_path.glob("*.csv")}
+    assert len(registros) == 2 and len(pd.read_csv(tmp_path / "intentos.csv")) == 1
+    assert pd.read_csv(tmp_path / "hipotesis.csv")["etapa"].tolist() == [2]
+    h4.main(["--cache", str(cache), "--sin-registro"])
+    h4.main(["--cache", str(cache)])
+    assert registros == {p: p.read_bytes() for p in tmp_path.glob("*.csv")}
+    assert "ΔSharpe" in capsys.readouterr().out
