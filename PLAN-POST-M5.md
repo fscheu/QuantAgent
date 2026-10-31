@@ -40,3 +40,10 @@ Orden: M-manual ya y en paralelo; M-datos (decisión) antes de L22; M-web (solo 
 - **Punto de control:** modo cuenta chica del backtest, prueba de sensibilidad a USD 1.000, 2.500 y 5.000, puerta escrita y cuenta paper al capital real.
 - **Decidido:** capital USD 2.500; cuenta cash, sin cortos en la primera cuenta; el costo fiscal lo revisa Fede con una contadora y entra al modo cuenta chica (K1–K3).
 - **Cola:** lote L33 `lote/cuenta-chica` (epic `QuantAgent-yvo0`, aprobado por Fede 2026-10-29): CC-01 capital real y acciones enteras, CC-02 retención de dividendos, CC-03 spread y costo de entrada, CC-04 comando de sensibilidad contra SPY, CC-05 informe sobre las carteras de M4, CC-06 puerta escrita (decide Fede). Se adelanta: sobre M4 apenas exista el modo, y sobre M5 antes de decidir el pago de Sharadar (L25).
+
+## Quick wins de la comparación con repos externos
+
+- **Objetivo:** aprovechar lo chico y útil de ai-hedge-fund, TradingAgents, quantstats, QuantDinger y tradesight sin sumar código ni dependencias de más. Detalle en [`docs/02_planning/2026-10-30_comparacion_repos_externos.md`](docs/02_planning/2026-10-30_comparacion_repos_externos.md).
+- **Decidido (Fede, 2026-10-30):** no sumar quantstats como librería; se copia la idea con código propio y sin dependencias nuevas (QW-01).
+- **Cola (sin lote asignado, labels `plan-post-m5` y `quick-win-repos-externos`):** QW-01 `QuantAgent-qpwd` informe de performance propio; QW-02 `QuantAgent-pu76` página de métricas del manual; QW-03 `QuantAgent-rzab` recibo de ciclo y de candidata; QW-04 `QuantAgent-6qss` tests de contabilidad; QW-05 `QuantAgent-txq8` decidir dónde se incuba (decide Fede); QW-06 `QuantAgent-jcgm` auditoría de paridad de `correr_motor()`.
+- **Ya cubiertos por tickets existentes:** la sensibilidad a USD 1.000/2.500/5.000 contra SPY es CC-04 y CC-05 (`QuantAgent-yvo0.4`, `.5`); frescura y alarmas reales de la cuenta es WEB-12 (`QuantAgent-e452.12`).
