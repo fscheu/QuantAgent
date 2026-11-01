@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from quantagent.backtesting.buy_and_hold import buy_and_hold
+from quantagent.backtesting.buy_and_hold import buy_and_hold, buy_and_hold_cuenta_chica
 
 DAYS = [datetime(2024, 1, 1) + timedelta(days=i) for i in range(3)]
 CLOSES = [100.0, 90.0, 120.0]
@@ -32,3 +32,16 @@ def test_three_candles_with_slippage_and_commission_on_both_sides():
     mean, std = (r1 + r2) / 2, math.sqrt(((r1 - r2) / 2) ** 2 * 2)
     assert r["sharpe"] == pytest.approx((mean - 0.02 / 365.25) / std * math.sqrt(365.25))
     assert r["max_drawdown"] == pytest.approx(0.10)
+
+
+def test_cuenta_chica_uses_integer_shares_and_keeps_entry_cash():
+    r = buy_and_hold_cuenta_chica(
+        DAYS, [10.0, 12.0, 15.0], 100.0, 0.01, 0.02, costo_entrada_usd=5.0,
+    )
+    shares = 9  # floor(95 / (10 * 1.01 * 1.02))
+    cash = 95 - shares * 10 * 1.01 * 1.02
+    final = cash + shares * 15 * 0.99 * 0.98
+    assert r["shares"] == shares
+    assert r["cash_left"] == pytest.approx(cash)
+    assert r["pnl"] == pytest.approx(final - 100)
+    assert r["return"] == pytest.approx(final / 100 - 1)
