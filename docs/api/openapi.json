@@ -368,6 +368,37 @@
         "title": "CalendarEventResponse",
         "type": "object"
       },
+      "DividendResponse": {
+        "properties": {
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "net": {
+            "title": "Net",
+            "type": "number"
+          },
+          "symbols": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Symbols",
+            "type": "array"
+          },
+          "withheld": {
+            "title": "Withheld",
+            "type": "number"
+          }
+        },
+        "required": [
+          "date",
+          "symbols",
+          "net",
+          "withheld"
+        ],
+        "title": "DividendResponse",
+        "type": "object"
+      },
       "EquityPoint": {
         "properties": {
           "account": {
@@ -375,16 +406,30 @@
             "type": "number"
           },
           "benchmark": {
-            "title": "Benchmark",
-            "type": "null"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Benchmark"
           },
           "date": {
             "title": "Date",
             "type": "string"
           },
           "shadow": {
-            "title": "Shadow",
-            "type": "null"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shadow"
           }
         },
         "required": [
@@ -727,6 +772,34 @@
         "title": "PositionResponse",
         "type": "object"
       },
+      "SectorExposure": {
+        "properties": {
+          "long": {
+            "title": "Long",
+            "type": "number"
+          },
+          "pct": {
+            "title": "Pct",
+            "type": "number"
+          },
+          "sector": {
+            "title": "Sector",
+            "type": "string"
+          },
+          "short": {
+            "title": "Short",
+            "type": "number"
+          }
+        },
+        "required": [
+          "sector",
+          "long",
+          "short",
+          "pct"
+        ],
+        "title": "SectorExposure",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -795,6 +868,49 @@
           }
         },
         "summary": "Accounts"
+      }
+    },
+    "/api/accounts/{account_id}/dividends": {
+      "get": {
+        "operationId": "account_dividends_api_accounts__account_id__dividends_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DividendResponse"
+                  },
+                  "title": "Response Account Dividends Api Accounts  Account Id  Dividends Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Account Dividends"
       }
     },
     "/api/accounts/{account_id}/equity": {
@@ -957,6 +1073,49 @@
           }
         },
         "summary": "Account Positions"
+      }
+    },
+    "/api/accounts/{account_id}/sector-exposure": {
+      "get": {
+        "operationId": "account_sector_exposure_api_accounts__account_id__sector_exposure_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SectorExposure"
+                  },
+                  "title": "Response Account Sector Exposure Api Accounts  Account Id  Sector Exposure Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Account Sector Exposure"
       }
     },
     "/api/accounts/{account_id}/summary": {

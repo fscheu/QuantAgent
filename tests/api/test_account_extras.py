@@ -39,7 +39,7 @@ def test_equity_reads_scaled_spy_and_account_shadow(tmp_path, monkeypatch):
     write_snapshot("web", {"SPY": prices}, base_dir=tmp_path / "snapshots")
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path / "snapshots"))
     monkeypatch.setenv("QUANTAGENT_WEB_SNAPSHOT", "web")
-    shadow = {today.isoformat(): {"acct": {"pesos": {}, "valor": 211}}}
+    shadow = {today.isoformat(): {"paper": {"pesos": {}, "valor": 211}}}
     (tmp_path / "paper.sombra.json").write_text(json.dumps(shadow))
     master = registry(tmp_path)
     with Session(master) as db:
@@ -51,9 +51,10 @@ def test_equity_reads_scaled_spy_and_account_shadow(tmp_path, monkeypatch):
 
 
 def test_dividends_are_filtered_by_account(tmp_path):
+    (tmp_path / 'paper.db').touch()
     engine = registry(tmp_path)
     with Session(engine) as db:
-        add_registry_account(db, "acct", str(tmp_path / "paper.db"))
+        add_registry_account(db, "acct", f"sqlite:///{tmp_path / 'paper.db'}")
         db.add_all([Event(type="dividend_received", severity="info", occurred_at=datetime(2026, 1, 1), account_id="acct",
                           payload={"symbols": ["SPY"], "net": 2.5, "withheld": .5}),
                     Event(type="dividend_received", severity="info", occurred_at=datetime(2026, 1, 2), account_id="other",
@@ -82,8 +83,8 @@ def test_sector_exposure_keeps_short_and_unclassified_etf_cash(tmp_path, monkeyp
         from apps.api.accounts import account_session_factory
         with account_session_factory(account)() as source:
             result = account_sector_exposure("acct", db)
-    by_sector = {row.sector: row for row in result}
-    assert by_sector["Sin clasificar"].long == 20
-    assert by_sector["Sin clasificar"].short == 20
-    assert by_sector["Cash"].long == 10
+    by_sector = {row["sector"]: row for row in result}
+    assert by_sector["Sin clasificar"]["long"] == 20
+    assert by_sector["Sin clasificar"]["short"] == 20
+    assert by_sector["Cash"]["long"] == 10
     engine.dispose(); master.dispose()

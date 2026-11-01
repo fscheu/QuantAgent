@@ -66,7 +66,7 @@ def test_drawdown_and_stale_and_shadow_evaluation(tmp_path):
             db.commit()
         source.dispose()
         shadow_file = (tmp_path / "account.sombra.json")
-        shadow_file.write_text(json.dumps({"2026-10-30": {"acct": {"pesos": {"A": 0.7}}}}))
+        shadow_file.write_text(json.dumps({"2026-10-30": {"account": {"pesos": {"A": 0.7}}}}))
         alarms = evaluate_account_alarms(account, master, datetime(2026, 10, 30, 20, tzinfo=timezone.utc))
         assert [a.kind for a in alarms] == ["shadow_divergence"]
         shadow_file.unlink()
