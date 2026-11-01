@@ -256,7 +256,7 @@ def _hide_data_warnings(record: logging.LogRecord) -> bool:
     return getattr(record, "event_type", None) != "backtest_data_warning"
 
 
-def _extract_trade_rows(session: Session, backtest_run_id: int, spread_bps: float = 0.0) -> list[TradeRow]:
+def _extract_trade_rows(session: Session, backtest_run_id: int, spread_bps: Optional[float] = None) -> list[TradeRow]:
     trade_ids = select(ActivePosition.trade_id).where(
         ActivePosition.backtest_run_id == backtest_run_id,
         ActivePosition.trade_id.is_not(None),
@@ -280,9 +280,9 @@ def _extract_trade_rows(session: Session, backtest_run_id: int, spread_bps: floa
             stop_loss=float(stop_loss) if stop_loss is not None else None,
             pnl=float(trade.pnl) if trade.pnl is not None else None,
             exit_reason=trade.exit_signal,
-            spread_cost_entry_usd=float(trade.quantity) * float(trade.entry_price) * spread_bps / 10000,
-            spread_cost_exit_usd=(float(trade.quantity) * float(trade.exit_price) * spread_bps / 10000)
-            if trade.exit_price is not None else 0.0,
+            spread_cost_entry_usd=None if spread_bps is None else float(trade.quantity) * float(trade.entry_price) * spread_bps / 10000,
+            spread_cost_exit_usd=None if spread_bps is None or trade.exit_price is None
+            else float(trade.quantity) * float(trade.exit_price) * spread_bps / 10000,
         )
         for trade, stop_loss in trades
     ]
@@ -383,7 +383,7 @@ def correr_par(
         commission = bt.order_manager.broker.commission_pct
         spread_bps = config.get("spread_bps")
         if spread_bps is None:
-            spread_bps = settings.SPREAD_BPS_POR_CLASE[get_asset_type(meta.symbol).value] if config.get("round_shares") else 0.0
+            spread_bps = settings.SPREAD_BPS_POR_CLASE[get_asset_type(meta.symbol).value] if config.get("round_shares") else None
         rows = _extract_trade_rows(session, bt.backtest_run_id, spread_bps) if con_filas else []
         candles = (
             session.query(MarketData.timestamp, MarketData.close)

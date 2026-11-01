@@ -16,10 +16,9 @@ COLUMNS = [
     "exit_price",
     "stop_loss",
     "pnl",
-    "spread_cost_entry_usd",
-    "spread_cost_exit_usd",
     "exit_reason",
 ]
+SPREAD_COLUMNS = ["spread_cost_entry_usd", "spread_cost_exit_usd"]
 
 EQUITY_COLUMNS = ["timestamp", "equity", "cash", "positions_value", "drawdown_pct"]
 
@@ -38,15 +37,16 @@ class TradeRow:
     stop_loss: Optional[float]
     pnl: Optional[float]
     exit_reason: Optional[str]
-    spread_cost_entry_usd: float = 0.0
-    spread_cost_exit_usd: float = 0.0
+    spread_cost_entry_usd: Optional[float] = None
+    spread_cost_exit_usd: Optional[float] = None
 
 
 def trades_to_csv(trades: List[TradeRow]) -> str:
     """Serialize trade rows into the entregable's 10-column CSV format."""
     buffer = io.StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(COLUMNS)
+    with_spread = any(t.spread_cost_entry_usd is not None for t in trades)
+    writer.writerow(COLUMNS + SPREAD_COLUMNS if with_spread else COLUMNS)
 
     for trade in trades:
         writer.writerow(
@@ -60,10 +60,13 @@ def trades_to_csv(trades: List[TradeRow]) -> str:
                 trade.exit_price if trade.exit_price is not None else "",
                 trade.stop_loss if trade.stop_loss is not None else "",
                 trade.pnl if trade.pnl is not None else "",
-                trade.spread_cost_entry_usd,
-                trade.spread_cost_exit_usd if trade.exit_price is not None else "",
                 trade.exit_reason or "",
             ]
+            + (
+                [trade.spread_cost_entry_usd, trade.spread_cost_exit_usd if trade.exit_price is not None else ""]
+                if with_spread
+                else []
+            )
         )
 
     return buffer.getvalue()
