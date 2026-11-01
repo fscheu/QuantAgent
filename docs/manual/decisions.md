@@ -33,6 +33,7 @@
 | RSI/GLD next-open diagnostic | Date not recorded | [Decision](../04_decisions/QuantAgent-u8lf-DC-diagnostico-rsi-gld-apertura-siguiente.md) |
 | Verdict thresholds, fills, sizing, and shorts | Date not recorded | [Decision](../04_decisions/QuantAgent-yo4s-DC-umbrales-y-llenado.md) |
 | Streamlit to FastAPI and Angular framework proposal | Date not recorded | [Decision](../04_decisions/ui_framework_decision.md) |
+| Data storage: Parquet, monthly freeze, DuckDB and Postgres deferred | 2026-10-28 | [Decision](../04_decisions/QuantAgent-aj1s-DC-almacenamiento-de-datos.md) |
 | M5 decisions D1–D7 | 2026-10-25 and pending | [Planning table](../02_planning/QuantAgent-M5-PL-motor-top-down.md#2-decisiones-que-necesita-fede) |
 | Post-M5 milestones: M5 is the top-down engine; real money is the output of M-ciclos + M-cuenta (G1, G2) | 2026-10-28 | [Roadmap §0 and §7](../02_planning/2026-10-28_roadmap_post_m5.md#7-decisiones-que-necesita-fede-resumen) |
 | Small real account: USD 2,500 start, cash account, tax cost reviewed with an accountant (K1–K3) | 2026-10-28 | [Roadmap §2](../02_planning/2026-10-28_roadmap_post_m5.md#2-m-cuenta-que-la-candidata-funcione-en-una-cuenta-de-usd-20003000) |

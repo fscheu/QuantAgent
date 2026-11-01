@@ -1,0 +1,67 @@
+id: composicion-sp500
+descripcion: Composición histórica y tabla de miembros/sectores del S&P500, fuente fijada al commit a2430f2af0c79ddf0748e91de11bdeb1616ab5a7.
+  date es vigencia, no publicación.
+fuente:
+  nombre: fja05680/sp500
+  url: https://github.com/fja05680/sp500
+  licencia: No consta licencia en el manifiesto; no presumir permiso de redistribución.
+  regla_de_borrado: null
+campos:
+- nombre: date
+  unidad: fecha
+  descripcion: Fecha efectiva de composición en composicion.parquet.
+- nombre: tickers
+  unidad: lista de símbolos separada por comas
+  descripcion: Miembros en esa fecha en composicion.parquet.
+- nombre: Symbol
+  unidad: símbolo
+  descripcion: Ticker en sp500.parquet.
+- nombre: Security
+  unidad: texto
+  descripcion: Nombre de la empresa.
+- nombre: GICS Sector
+  unidad: texto
+  descripcion: Sector GICS actual de la fuente; sector() aplica tablas versionadas de reclasificación.
+- nombre: GICS Sub-Industry
+  unidad: texto
+  descripcion: Subindustria GICS de la fuente.
+- nombre: Headquarters Location
+  unidad: texto
+  descripcion: Ubicación de la sede.
+- nombre: Date added
+  unidad: fecha o texto vacío
+  descripcion: Fecha de incorporación indicada por la fuente.
+- nombre: CIK
+  unidad: identificador SEC
+  descripcion: CIK de la empresa.
+- nombre: Founded
+  unidad: texto
+  descripcion: Fundación indicada por la fuente.
+columna_cuando_se_supo:
+  columna: manifest.json:downloaded_at
+  descripcion: Fecha de descarga global. No se conserva publicación histórica por fila; date y Date added
+    son fechas efectivas, no de conocimiento.
+frecuencia:
+  capa_viva: ninguna
+  congelado: Mensual según ADR; la fuente actual está fijada a un commit y requiere actualización explícita.
+carpeta:
+- sp500-*
+snapshots:
+- sp500-2026-10.json
+lectores:
+- archivo: quantagent/data/sp500.py
+  tipo: datos
+  descripcion: Lee composición y sectores mediante miembros y sector.
+- archivo: quantagent/data/acciones.py
+  tipo: datos
+  descripcion: Lee miembros para construir el universo de precios.
+- archivo: quantagent/data/fundamentales.py
+  tipo: datos
+  descripcion: Lee composición para descarga y cobertura.
+- archivo: quantagent/fabrica/screener.py
+  tipo: embudo
+  descripcion: Lee miembros y sectores punto en el tiempo.
+- archivo: quantagent/fabrica/candidatos_vivo.py
+  tipo: paper
+  descripcion: Lee miembros y sectores para candidatos semanales.
+datos_esperados: true

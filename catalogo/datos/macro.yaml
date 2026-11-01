@@ -1,0 +1,54 @@
+id: macro
+descripcion: Observaciones ALFRED con revisiones históricas por serie, incluido el conjunto M5. NEWORDER
+  sustituye ISM New Orders según la nota del manifiesto M5; se preservan todas las versiones.
+fuente:
+  nombre: ALFRED / FRED
+  url: https://alfred.stlouisfed.org/
+  licencia: Términos de FRED y restricciones de cada serie/proveedor; no consta licencia uniforme en el
+    manifiesto.
+  regla_de_borrado: null
+campos:
+- nombre: fecha
+  unidad: fecha
+  descripcion: Período de observación económica o sesión de mercado.
+- nombre: valor
+  unidad: según serie
+  descripcion: Valor original FRED, sin conversión de unidad; NaN para faltantes. Incluye tasas,
+    spreads, índices, empleo y pedidos. Ni el código ni los manifiestos almacenan la escala
+    o base de cada serie; debe consultarse su metadata de origen antes de comparar niveles.
+- nombre: realtime_start
+  unidad: fecha
+  descripcion: Primera fecha de validez de esta versión ALFRED.
+- nombre: realtime_end
+  unidad: fecha
+  descripcion: Última fecha de validez de la versión, inclusiva.
+columna_cuando_se_supo:
+  columna: realtime_start
+  descripcion: Fecha de disponibilidad de la versión; realtime_end acota su vigencia. fecha es la observación,
+    no publicación. Se consulta realtime_start <= al <= realtime_end.
+frecuencia:
+  capa_viva: ninguna
+  congelado: Mensual; historia completa en un snapshot nuevo e inmutable con manifiesto.
+carpeta:
+- macro-20*
+- macro-m5-*
+snapshots:
+- macro-2026-10.json
+- macro-m5-2026-10.json
+lectores:
+- archivo: quantagent/data/macro.py
+  tipo: datos
+  descripcion: Lee versiones Parquet y selecciona la conocida en cada fecha.
+- archivo: quantagent/strategy/curva_pendiente_strategy.py
+  tipo: estrategias
+  descripcion: Consulta valor_conocido para pendiente de curva.
+- archivo: quantagent/strategy/tsmom_largo_corto_strategy.py
+  tipo: estrategias
+  descripcion: Consulta DGS3MO conocido para la tasa.
+- archivo: quantagent/fabrica/criterio.py
+  tipo: embudo
+  descripcion: Lee series punto en el tiempo.
+- archivo: quantagent/fabrica/regimen.py
+  tipo: embudo
+  descripcion: Transforma las series conocidas para el régimen macro.
+datos_esperados: true

@@ -1,0 +1,68 @@
+id: precios-acciones-sp500
+descripcion: Precios de miembros históricos del S&P500. 10 y 10b combinan Yahoo y Quandl WIKI por ticker
+  (sin empalmar fuentes dentro de un símbolo); 10c usa Yahoo. El manifiesto conserva fuentes y faltantes.
+fuente:
+  nombre: Yahoo Finance + Quandl WIKI
+  url: https://finance.yahoo.com/
+  licencia: 'Yahoo: términos del proveedor; WIKI: sin licencia de redistribución registrada en los manifiestos.
+    WIKI no es Sharadar.'
+  regla_de_borrado: null
+campos:
+- nombre: timestamp
+  unidad: fecha de sesión
+  descripcion: Índice de la vela diaria; no es fecha de publicación ni de descarga.
+- nombre: open
+  unidad: USD por acción
+  descripcion: Apertura ajustada por splits, sin ajuste por dividendos. En WIKI se usan adj_open/adj_high/adj_low/adj_close,
+    ya ajustados por dividendos.
+- nombre: high
+  unidad: USD por acción
+  descripcion: Máximo ajustado por splits, sin ajuste por dividendos. En WIKI se usan adj_open/adj_high/adj_low/adj_close,
+    ya ajustados por dividendos.
+- nombre: low
+  unidad: USD por acción
+  descripcion: Mínimo ajustado por splits, sin ajuste por dividendos. En WIKI se usan adj_open/adj_high/adj_low/adj_close,
+    ya ajustados por dividendos.
+- nombre: close
+  unidad: USD por acción
+  descripcion: Cierre ajustado por splits, sin ajuste por dividendos. En WIKI se usan adj_open/adj_high/adj_low/adj_close,
+    ya ajustados por dividendos.
+- nombre: adj_close
+  unidad: USD por acción
+  descripcion: Cierre ajustado también por dividendos. En WIKI es igual a close.
+- nombre: volume
+  unidad: acciones
+  descripcion: Volumen de la sesión. En WIKI proviene de adj_volume.
+columna_cuando_se_supo:
+  columna: manifest.json:downloaded_at
+  descripcion: Fecha de descarga global; no hay fecha de conocimiento por vela. timestamp sólo identifica
+    la sesión. fuentes del manifiesto identifica el proveedor por ticker.
+frecuencia:
+  capa_viva: ninguna
+  congelado: Mensual; historia completa en un snapshot nuevo e inmutable con manifiesto.
+carpeta:
+- acciones-sp500-*
+snapshots:
+- acciones-sp500-2026-10.json
+- acciones-sp500-2026-10b.json
+- acciones-sp500-2026-10c.json
+lectores:
+- archivo: quantagent/data/snapshot.py
+  tipo: datos
+  descripcion: read_snapshot lee Parquet y aplica por defecto el ajuste por dividendos.
+- archivo: quantagent/backtesting/fixtures.py
+  tipo: estrategias
+  descripcion: Carga snapshots de precios en el motor de backtest.
+- archivo: quantagent/fabrica/validacion.py
+  tipo: embudo
+  descripcion: Lee cierres para las etapas de validación.
+- archivo: quantagent/fabrica/screener.py
+  tipo: embudo
+  descripcion: Lee precios para el screener M5.
+- archivo: scripts/m5/h3.py
+  tipo: investigacion
+  descripcion: Lee ETFs y acciones para H3.
+- archivo: quantagent/data/acciones.py
+  tipo: datos
+  descripcion: Lee precios para verificar la cobertura histórica.
+datos_esperados: true

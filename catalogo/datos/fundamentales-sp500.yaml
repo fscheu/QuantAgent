@@ -1,0 +1,67 @@
+id: fundamentales-sp500
+descripcion: Hechos SEC EDGAR originales normalizados por ticker. Incluye el histórico de octubre y fundamentales-sp500-2026-11-01
+  (manifest.json sólo local). Las métricas ROIC y demás se calculan al leer, no son columnas persistidas.
+fuente:
+  nombre: SEC EDGAR
+  url: https://data.sec.gov/api/xbrl/companyfacts/
+  licencia: Información pública SEC; no consta licencia adicional en los manifiestos.
+  regla_de_borrado: null
+campos:
+- nombre: ticker
+  unidad: símbolo
+  descripcion: Ticker del hecho contable.
+- nombre: concepto
+  unidad: texto
+  descripcion: 'Concepto normalizado: ingresos, OperatingIncomeLoss, EarningsPerShareDiluted, NetIncomeLoss,
+    StockholdersEquity, deuda, IncomeTaxExpenseBenefit o IncomeLossFromContinuingOperationsBeforeIncomeTaxes;
+    con fallbacks SEC.'
+- nombre: start
+  unidad: fecha o texto vacío
+  descripcion: Inicio del período; vacío para conceptos de balance.
+- nombre: end
+  unidad: fecha
+  descripcion: Fin del período contable.
+- nombre: val
+  unidad: USD; USD por acción para EPS
+  descripcion: Valor del concepto; la unidad XBRL original no se conserva como columna.
+- nombre: fy
+  unidad: año fiscal
+  descripcion: Año fiscal declarado, puede faltar.
+- nombre: fp
+  unidad: texto
+  descripcion: Período fiscal declarado (FY, Q1, etc.).
+- nombre: form
+  unidad: texto
+  descripcion: Formulario 10-Q, 10-Q/A, 10-K o 10-K/A.
+- nombre: filed
+  unidad: fecha
+  descripcion: Fecha de presentación ante SEC.
+- nombre: accn
+  unidad: identificador SEC
+  descripcion: Accession number de la presentación.
+columna_cuando_se_supo:
+  columna: filed
+  descripcion: Fecha de presentación; las métricas del código rigen desde filed + 1 día. end es el período
+    económico y downloaded_at del manifiesto es la descarga.
+frecuencia:
+  capa_viva: ninguna
+  congelado: Mensual según ADR. El código existente también publica snapshots diarios inmutables para
+    paper; existe 2026-11-01 sin manifiesto versionado. No es una capa viva mutable.
+carpeta:
+- fundamentales-sp500-*
+snapshots:
+- fundamentales-sp500-2026-10.json
+lectores:
+- archivo: quantagent/data/fundamentales.py
+  tipo: datos
+  descripcion: Lee hechos y calcula métricas punto en el tiempo.
+- archivo: quantagent/fabrica/screener.py
+  tipo: embudo
+  descripcion: Solicita métricas del snapshot histórico.
+- archivo: quantagent/fabrica/candidatos_vivo.py
+  tipo: paper
+  descripcion: Lee manifiesto y métricas para candidatos.
+- archivo: quantagent/trading/pipeline_m5.py
+  tipo: paper
+  descripcion: Selecciona el snapshot diario válido o el histórico.
+datos_esperados: true

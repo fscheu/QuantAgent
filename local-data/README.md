@@ -4,6 +4,8 @@ Esta carpeta contiene archivos y datos locales necesarios para el desarrollo, ba
 
 **Regla:** Todo dato local nuevo va en esta carpeta (`local-data/`) y se anota en este README en la misma entrega. Ningún dato local se comitea al repositorio git (todos los archivos excepto este `README.md` están ignorados en `.gitignore`).
 
+Todo dato nuevo se da de alta en `catalogo/datos/`.
+
 **Ubicación:** Esta carpeta vive en la raíz del repositorio (`local-data/`) y no bajo `data/local/` porque `data/` pertenece a root en la VM (montada por el contenedor `quantagent_qa`).
 
 ---

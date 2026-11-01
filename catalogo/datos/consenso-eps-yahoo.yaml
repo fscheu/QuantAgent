@@ -1,0 +1,61 @@
+id: consenso-eps-yahoo
+descripcion: Foto diaria de consenso EPS y revisiones Yahoo, una fecha por Parquet. Sin manifest.json
+  ni manifiestos versionados. No se encontró consumidor de las fotos persistidas en estrategias, embudo,
+  paper o web; consenso.py y CLI las escriben.
+fuente:
+  nombre: Yahoo Finance
+  url: https://finance.yahoo.com/
+  licencia: Términos de Yahoo Finance; uso local, sin licencia de redistribución registrada.
+  regla_de_borrado: null
+campos:
+- nombre: period
+  unidad: texto
+  descripcion: Horizonte de estimación Yahoo (0q, +1q, 0y, +1y).
+- nombre: current
+  unidad: moneda por acción
+  descripcion: Consenso EPS actual del horizonte.
+- nombre: d7
+  unidad: moneda por acción
+  descripcion: Consenso EPS informado por Yahoo hace 7 días.
+- nombre: d30
+  unidad: moneda por acción
+  descripcion: Consenso EPS informado por Yahoo hace 30 días.
+- nombre: d60
+  unidad: moneda por acción
+  descripcion: Consenso EPS informado por Yahoo hace 60 días.
+- nombre: d90
+  unidad: moneda por acción
+  descripcion: Consenso EPS informado por Yahoo hace 90 días.
+- nombre: currency
+  unidad: código de moneda
+  descripcion: Moneda de la estimación.
+- nombre: up_7d
+  unidad: cantidad de revisiones
+  descripcion: Revisiones de analistas al alza (up) o baja (down) en la ventana indicada.
+- nombre: up_30d
+  unidad: cantidad de revisiones
+  descripcion: Revisiones de analistas al alza (up) o baja (down) en la ventana indicada.
+- nombre: down_30d
+  unidad: cantidad de revisiones
+  descripcion: Revisiones de analistas al alza (up) o baja (down) en la ventana indicada.
+- nombre: down_7d
+  unidad: cantidad de revisiones
+  descripcion: Revisiones de analistas al alza (up) o baja (down) en la ventana indicada.
+- nombre: symbol
+  unidad: símbolo
+  descripcion: Ticker solicitado.
+- nombre: fecha_foto
+  unidad: fecha
+  descripcion: Día de captura de la foto.
+columna_cuando_se_supo:
+  columna: fecha_foto
+  descripcion: Día de captura local, no fecha de publicación histórica de cada estimación. El llamador
+    puede indicar la fecha; no incluye hora.
+frecuencia:
+  capa_viva: Foto diaria de EPS; única capa viva prevista por el ADR.
+  congelado: Foto diaria inmutable (rechaza sobrescribir la misma fecha), sin congelado mensual implementado.
+carpeta:
+- consenso-eps-yahoo
+snapshots: []
+lectores: []
+datos_esperados: true
