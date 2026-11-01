@@ -275,6 +275,17 @@ def trading_digest(archivo, digest_date, bucket: str | None, db: str | None, sha
             from quantagent.trading.alpaca_dividendos import leer_dividendos_alpaca
             client = crear_broker_alpaca_paper().client
             dividendos = leer_dividendos_alpaca(client, day)
+            if dividendos and os.environ.get("QUANTAGENT_DATABASE_URL"):
+                from quantagent.trading.alpaca_dividendos import registrar_dividendos_evento
+
+                master_engine = create_engine(os.environ["QUANTAGENT_DATABASE_URL"])
+                master_session = sessionmaker(bind=master_engine)()
+                try:
+                    if registrar_dividendos_evento(master_session, portfolio, day, dividendos):
+                        master_session.commit()
+                finally:
+                    master_session.close()
+                    master_engine.dispose()
         except Exception as exc:
             warnings.append(f"Dividendos: error al consultar Alpaca ({type(exc).__name__}).")
             if isinstance(exc, ValueError):

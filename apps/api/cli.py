@@ -243,3 +243,71 @@ def evaluate_alarms_command():
                     resolved_count += 1
         db.commit()
     click.echo(f"{created} nuevas, {resolved_count} resueltas")
+
+
+@api_group.command("sync-events", help="Copy account orders and closed trades into the activity feed.",
+                   epilog="Example: quantagent api sync-events")
+def sync_events_command():
+    from datetime import datetime, timezone
+
+    from quantagent.models import Account, Event, Order, OrderStatus, OrderType, Trade
+
+    from .accounts import account_session_factory, write_session
+    from .events import record_event
+
+    def utc(value):
+        return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
+
+    created = skipped = 0
+    with write_session() as master:
+        accounts = master.scalars(select(Account).where(Account.status == "active").order_by(Account.id)).all()
+        for account in accounts:
+            try:
+                with account_session_factory(account)() as source:
+                    orders = source.scalars(select(Order).where(Order.status.in_((OrderStatus.REJECTED, OrderStatus.FILLED)))
+                                            .order_by(Order.id)).all()
+                    for order in orders:
+                        _ = order.trades
+                    trades = source.scalars(select(Trade).where(Trade.closed_at.is_not(None)).order_by(Trade.id)).all()
+            except Exception as exc:
+                click.echo(f"{account.id}: omitida ({type(exc).__name__}: {exc})", err=True)
+                skipped += 1
+                continue
+            for order in orders:
+                rejected = order.status == OrderStatus.REJECTED
+                stop = (order.order_type in (OrderType.STOP, OrderType.STOP_LIMIT) or
+                        "stop" in (order.comment or "").lower() or
+                        any("stop" in (trade.exit_signal or "").lower() for trade in order.trades))
+                kind = "order_rejected" if rejected else "stop_triggered" if stop else "order_filled"
+                entity_id = str(order.id)
+                if master.scalar(select(Event.id).where(Event.type == kind, Event.account_id == account.id,
+                                                       Event.entity_id == entity_id)) is not None:
+                    continue
+                when = order.updated_at if rejected else order.filled_at or order.updated_at
+                payload = {"symbol": order.symbol, "side": order.side.value,
+                           "quantity": float(order.filled_quantity if not rejected else order.quantity)}
+                if order.average_fill_price is not None:
+                    payload["price"] = float(order.average_fill_price)
+                if rejected and order.comment:
+                    payload["reason"] = order.comment
+                if kind == "stop_triggered":
+                    related = next(iter(order.trades), None)
+                    if related and related.pnl is not None:
+                        payload["pnl"] = float(related.pnl)
+                record_event(master, kind, "warning" if rejected or stop else "neutral", utc(when),
+                             account.id, entity_id, payload)
+                created += 1
+            for trade in trades:
+                entity_id = str(trade.id)
+                if master.scalar(select(Event.id).where(Event.type == "position_closed", Event.account_id == account.id,
+                                                       Event.entity_id == entity_id)) is not None:
+                    continue
+                payload = {"symbol": trade.symbol}
+                if trade.pnl is not None:
+                    payload["pnl"] = float(trade.pnl)
+                if trade.pnl_pct is not None:
+                    payload["pct"] = float(trade.pnl_pct) * 100
+                record_event(master, "position_closed", "neutral", utc(trade.closed_at), account.id, entity_id, payload)
+                created += 1
+        master.commit()
+    click.echo(f"{created} eventos nuevos; {skipped} cuentas omitidas")

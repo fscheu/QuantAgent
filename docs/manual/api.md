@@ -32,6 +32,8 @@ python -m quantagent.cli api accounts flows reconcile paper-nucleo-curva 12
 
 Flow records live in the account database. Upgrade each database to the current Alembic head before using these commands.
 
+Run `python -m quantagent.cli api sync-events` to append rejected orders, filled orders, stop fills, and closed trades from active account databases to the master feed. The command is idempotent by event type, account, and source entity. It reports and skips accounts whose databases cannot be read. A stop is emitted only when its order type, comment, or linked trade exit signal explicitly identifies a stop. Dividend events are recorded by the daily digest when it reads dividends from Alpaca; the event uses the configured portfolio slug and date as its identity, includes net amount and symbols, and reports withheld amount as zero because the reader does not provide withholding data. See [operations](operations.md) for the schedule and classification limits.
+
 ## OpenAPI contract
 
 The frozen contract is [`docs/api/openapi.json`](../api/openapi.json). Regenerate it from the running application definition with:
