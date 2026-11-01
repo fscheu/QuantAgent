@@ -12,6 +12,9 @@ class AlpacaBroker(Broker):
     def __init__(self, client):
         self.client = client
 
+    def es_fraccionable(self, simbolo: str) -> bool:
+        return bool(self.client.get_asset(simbolo).fractionable)
+
     def submit_order(self, order: Order) -> Order:
         types = {OrderType.MARKET: "market", OrderType.LIMIT: "limit", OrderType.STOP: "stop"}
         if order.order_type not in types:

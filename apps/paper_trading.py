@@ -78,6 +78,10 @@ def _build_portfolio_scheduler(config, path: str):
     from quantagent.fabrica.hipotesis import cargar_hipotesis
 
     cartera = cargar_hipotesis(hypothesis)
+    if (cartera.id == "m5" or cartera.id.startswith("m5-")):
+        from dataclasses import replace
+        from quantagent.trading.bucket_m5 import cargar_credenciales
+        cargar_credenciales()
     macro = FredClient() if any(p.clase == "curva-pendiente" for p in cartera.piernas) else None
     db_path = Path("local-data") / f"{cartera.id}.db"
     engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
@@ -87,6 +91,10 @@ def _build_portfolio_scheduler(config, path: str):
         resolved = StrategyAssembler.from_profiles(
             overrides={"universe": config.assets, "broker_type": broker_type}, environment=Environment(config.environment)
         )
+        if (cartera.id == "m5" or cartera.id.startswith("m5-")):
+            resolved = replace(resolved, initial_cash=3000.0, max_position_pct=0.10,
+                               regla_tamano="riesgo", riesgo_por_trade_pct=0.0025,
+                               extras={**(resolved.extras or {}), "bucket_m5": True})
         components = StrategyAssembler.build_components(resolved, db_session=session, build_graph=False)
         provider = DataProvider(session, source=build_source("alpaca"))
         scheduler = TradingScheduler(
