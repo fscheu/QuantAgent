@@ -20,6 +20,7 @@ dependencies = [
     "numpy",
     "matplotlib",
     "mplfinance",
+    "six",
     "scipy",
     "TA-Lib",
     "tabulate>=0.9",
