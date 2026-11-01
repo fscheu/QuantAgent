@@ -31,6 +31,7 @@ Options:
 Commands:
   add      Register an account and its strategy.
   archive  Archive an account so it is hidden from the API.
+  flows    Register and reconcile manual deposits and withdrawals.
   list     List active accounts.
   show     Show one account by slug.
 ```
