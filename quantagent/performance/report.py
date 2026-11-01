@@ -53,6 +53,7 @@ def build_report(
     range: str,
     align_with: Any = None,
     thresholds: Mapping[str, int] | None = None,
+    flows: Any = None,
 ) -> dict:
     """Calculate a PerformanceReport from supplied equity and SPY observations."""
     limits = {**DEFAULT_THRESHOLDS, **(thresholds or {})}
@@ -68,6 +69,7 @@ def build_report(
             common_start, common_end = common[0], common[-1]
             original, spy = original.loc[common_start:common_end], spy.loc[common_start:common_end]
     joined = pd.concat([original.rename("value"), spy.rename("benchmark")], axis=1).dropna()
+    flow_rows = list(flows or [])
     if len(joined) and range != "all":
         last = joined.index[-1]
         cut = {"ytd": pd.Timestamp(year=last.year, month=1, day=1)}.get(
@@ -78,7 +80,15 @@ def build_report(
     else:
         start = end = pd.Timestamp("1970-01-01")
     values, bench = joined.value, joined.benchmark
-    returns, breturns = values.pct_change().dropna(), bench.pct_change().dropna()
+    flow_by_date = {}
+    for flow in flow_rows:
+        date = pd.Timestamp(flow["date"]).normalize()
+        flow_by_date[date] = flow_by_date.get(date, 0.0) + float(flow["amount"])
+    returns = values.pct_change().dropna()
+    if flow_by_date:
+        returns = pd.Series([(values.loc[d] - flow_by_date.get(d, 0.0)) / values.shift(1).loc[d] - 1
+                             for d in returns.index], index=returns.index)
+    breturns = bench.pct_change().dropna()
     returns, breturns = returns.align(breturns, join="inner")
     n = len(returns)
     total = float((1 + returns).prod() - 1) if n else 0.0
@@ -229,6 +239,15 @@ def build_report(
     report = _assemble(subject, range, align_with, start, end, n, limits, sample, metrics, benchmark_metrics, total, btotal, max_dd, max_idx,
                        recovery_idx, equity_series, drawdown_series, rolling, monthly_returns, annual_rows, monthly_bins, mvals, month_rows,
                        complete_months, daily_dist, daily_reason, worst, rf)
+    report["flows"] = {"registered": flows is not None,
+                       "unreconciled": [{"date": str(row["date"]), "amount": float(row["amount"])}
+                                         for row in flow_rows if not row.get("reconciled", False)]}
+    if subject.get("type") == "portfolio" and flows is None:
+        report["status"] = "returns_not_computable"
+        report["not_computable_reason"] = "unregistered_flows"
+    elif subject.get("type") == "portfolio" and report["flows"]["unreconciled"]:
+        report["status"] = "returns_not_computable"
+        report["not_computable_reason"] = "unregistered_flows"
     if not has_bench:
         _drop_benchmark(report)
     return report

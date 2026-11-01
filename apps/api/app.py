@@ -156,6 +156,32 @@ def backtest_performance(backtest_id: int, range_: Literal["ytd", "1y", "3y", "5
     return build_report(equity, spy, subject=subject, range=range_, align_with=align)
 
 
+@app.get("/api/performance/portfolio/{account_id}")
+def portfolio_performance(account_id: str, range_: Literal["ytd", "1y", "3y", "5y", "all"] = Query("all", alias="range"), db: Session = Depends(get_db)):
+    from sqlalchemy import inspect
+
+    from quantagent.models import CashFlow, EquitySnapshot
+    from quantagent.performance import build_report
+
+    from .accounts import account_session_factory
+
+    account = configured_account(account_id, db)
+    with account_session_factory(account)() as source:
+        if not inspect(source.get_bind()).has_table("equity_snapshots"):
+            raise HTTPException(status_code=404, detail="Account has no equity snapshots")
+        equity = [{"date": row.snapshot_date, "equity": row.equity} for row in
+                  source.scalars(select(EquitySnapshot).order_by(EquitySnapshot.snapshot_date)).all()]
+        registered = inspect(source.get_bind()).has_table("cash_flows")
+        flows = ([{"date": row.flow_date, "amount": row.amount, "reconciled": row.reconciled}
+                  for row in source.scalars(select(CashFlow).order_by(CashFlow.flow_date)).all()]
+                 if registered else None)
+    subject = {"type": "portfolio", "id": account.id, "name": account.name, "env": account.env,
+               "account_id": account.id, "strategies": None}
+    report = build_report(equity, [], subject=subject, range=range_, flows=flows)
+    report["flows"]["registered"] = registered
+    return report
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}

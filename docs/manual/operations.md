@@ -22,6 +22,8 @@ Schedule it after each digest; a snapshot failure should not fail the digest.
 
 Before the API reads each paper database, run `python -m quantagent.cli api migrate-paper-db --database-url <url>` and review the dry run, then run it again with `--apply`. Back up each database first.
 
+Register account deposits and withdrawals manually after upgrading the account database: `python -m quantagent.cli api accounts flows register <account-id> --date YYYY-MM-DD --amount <positive-amount> --type deposit|withdrawal`. Review entries with `api accounts flows list <account-id>` and reconcile a verified entry with `api accounts flows reconcile <account-id> <flow-id>`. The CLI does not query or modify Alpaca.
+
 The read-only web app replaces the Streamlit QA interface.
 
 ## Local data and snapshots

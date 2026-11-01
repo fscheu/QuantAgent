@@ -35,3 +35,5 @@ Thresholds are provisional backend parameters. `short sample` marks the point be
 ## Statuses and display
 
 The backend assigns each metric `ok`, `short_sample`, or `not_computable` and supplies the reason. A non-computable metric is shown as a dash with its reason, never as a fabricated value. A short-sample metric may display its value with a short-sample label. The backend returns the active thresholds so the UI can describe them accurately.
+
+Portfolio returns are time-weighted between daily equity snapshots. Register deposits and withdrawals with `quantagent api accounts flows register`; withdrawals are recorded as negative amounts. Reports expose registered and unreconciled flows. An unreconciled flow sets `status: returns_not_computable` with `not_computable_reason: unregistered_flows`. A portfolio database without the `cash_flows` table has no flow registry and its return is not calculable.
