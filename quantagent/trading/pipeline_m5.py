@@ -7,7 +7,7 @@ Todas las fechas de decisión salen de ``as_of`` y la sesión NYSE cerrada.
 
 import logging
 import re
-from decimal import Decimal
+from decimal import Decimal, ROUND_DOWN
 from pathlib import Path
 
 import pandas as pd
@@ -36,18 +36,24 @@ logger = logging.getLogger(__name__)
 UNIVERSO_M5 = tuple(PRIORS_M5["universo"])
 
 
-def _panel_cierres(proveedor, sesiones):
+def _panel_cierres(proveedor, sesiones, universo=UNIVERSO_M5):
     inicio = sesiones[0].to_pydatetime()
     fin = (sesiones[-1] + pd.Timedelta(days=1)).to_pydatetime()
     columnas = {}
-    for simbolo in UNIVERSO_M5:
-        df = proveedor.get_ohlc(simbolo, "1d", inicio, fin)
+    for simbolo in universo:
+        try:
+            df = proveedor.get_ohlc(simbolo, "1d", inicio, fin)
+        except Exception as exc:
+            if simbolo in UNIVERSO_M5:
+                raise
+            logger.warning("M5 descarta %s: sin_precio (%s)", simbolo, exc)
+            continue
         if df.empty:
             continue
         fechas = pd.to_datetime(df["timestamp"]).dt.normalize()
         series = pd.Series(df["close"].to_numpy(), index=fechas)
         columnas[simbolo] = series[~series.index.duplicated(keep="last")]
-    return pd.DataFrame(columnas).reindex(index=sesiones, columns=UNIVERSO_M5)
+    return pd.DataFrame(columnas).reindex(index=sesiones, columns=universo)
 
 
 def _resolver_narrador(narrador):
@@ -170,6 +176,22 @@ def _regimen_actual(path, fecha):
     return None if filas.empty else filas.sort_values("fecha").iloc[-1]
 
 
+def _candidatos_actuales(path, fecha):
+    if not path.exists():
+        return []
+    try:
+        tabla = pd.read_csv(path, parse_dates=["fecha"])
+    except pd.errors.EmptyDataError:
+        return []
+    if tabla.empty:
+        return []
+    tabla = tabla[tabla.fecha.dt.normalize() <= fecha.normalize()]
+    if tabla.empty:
+        return []
+    vigente = tabla[tabla.fecha == tabla.fecha.max()]
+    return vigente.loc[vigente["rank"].notna(), "simbolo"].drop_duplicates().tolist()
+
+
 def _seguir_stops(db, broker, data_provider, panel, fecha):
     monitor = PositionMonitor(db, environment=Environment.PAPER)
     for position in db.query(ActivePosition).filter(
@@ -183,7 +205,11 @@ def _seguir_stops(db, broker, data_provider, panel, fecha):
             continue
         inicio = pd.Timestamp(position.decision_timestamp).to_pydatetime()
         fin = (fecha + pd.Timedelta(days=1)).to_pydatetime()
-        candles = data_provider.get_ohlc(position.symbol, "1d", inicio, fin)
+        try:
+            candles = data_provider.get_ohlc(position.symbol, "1d", inicio, fin)
+        except Exception as exc:
+            logger.warning("M5 conserva stop de %s: sin_precio (%s)", position.symbol, exc)
+            continue
         if len(candles) < 14:
             continue
         candles = candles[pd.to_datetime(candles["timestamp"]).dt.normalize() >= bars.index[0]]
@@ -209,18 +235,28 @@ def _seguir_stops(db, broker, data_provider, panel, fecha):
 
 def correr_diario(as_of, *, data_provider, db: Session, broker,
                   portfolio_manager=None, regimen_path="local-data/m5-regimen-semanal.csv",
-                  estrategias=None, narrador="auto", narrativa_path=None):
-    """Evalúa arquetipos sobre ETFs habilitados; crea intents idempotentes y órdenes stop protegidas."""
+                  estrategias=None, narrador="auto", narrativa_path=None, es_fraccionable=None):
+    """Evalúa ETFs y candidatos vigentes; conserva stops de posiciones que salen de selección."""
     fecha = ultima_sesion_cerrada_nyse(as_of)
     timestamp = pd.Timestamp(as_of)
     timestamp = timestamp.tz_convert("UTC").tz_localize(None) if timestamp.tzinfo else timestamp
     ses = sesiones_cerradas_nyse(as_of, n_sesiones=504)
     regimen = _regimen_actual(regimen_path, fecha)
-    if regimen is None or regimen["estado"] == "risk-off":
+    candidatos = _candidatos_actuales(Path(regimen_path).parent / "m5-candidatos-semanales.csv", fecha)
+    activas = [p.symbol for p in db.query(ActivePosition).filter(
+        ActivePosition.is_active.is_(True), ActivePosition.quantity > 0,
+        ActivePosition.environment == Environment.PAPER).all()]
+    sin_entradas = regimen is None or regimen["estado"] == "risk-off"
+    if sin_entradas and not activas:
         return []
-    habilitados = [s for s in str(regimen["habilitados"]).split(",") if s in UNIVERSO_M5]
-    panel = _panel_cierres(data_provider, ses)
+    universo = list(dict.fromkeys(activas if sin_entradas else [*UNIVERSO_M5, *candidatos, *activas]))
+    panel = _panel_cierres(data_provider, ses, universo)
     _seguir_stops(db, broker, data_provider, panel, fecha)
+    if sin_entradas:
+        return []
+    habilitados = list(dict.fromkeys([
+        *[s for s in str(regimen["habilitados"]).split(",") if s in UNIVERSO_M5], *candidatos]))
+    fraccionable = es_fraccionable or getattr(broker, "es_fraccionable", lambda simbolo: False)
     manager = portfolio_manager or PortfolioManager(CAPITAL_INICIAL, db=db, clock=lambda: fecha.date())
     manager.set_date(fecha.date())
     risk = crear_risk_manager(manager, db=db, clock=lambda: fecha.date())
@@ -230,17 +266,32 @@ def correr_diario(as_of, *, data_provider, db: Session, broker,
     creados = []
     for simbolo in habilitados:
         serie = panel[simbolo].dropna()
-        if serie.empty:
+        accion = simbolo not in UNIVERSO_M5
+        if serie.empty or (accion and (serie.index[-1] != fecha or serie.iloc[-1] <= 0)):
+            logger.warning("M5 descarta %s: sin_precio", simbolo)
             continue
-        candles = data_provider.get_ohlc(simbolo, "1d", serie.index[0].to_pydatetime(),
-                                         (fecha + pd.Timedelta(days=1)).to_pydatetime())
+        try:
+            candles = data_provider.get_ohlc(simbolo, "1d", serie.index[0].to_pydatetime(),
+                                             (fecha + pd.Timedelta(days=1)).to_pydatetime())
+            permite_fracciones = fraccionable(simbolo) if accion else True
+        except Exception as exc:
+            if not accion:
+                raise
+            logger.warning("M5 descarta %s: sin_precio_o_activo (%s)", simbolo, exc)
+            continue
         candles = candles[pd.to_datetime(candles["timestamp"]).dt.normalize().isin(serie.index)]
         records = candles.to_dict("records")
         if not records:
             continue
+        if accion and len(records) < 14:
+            logger.warning("M5 descarta %s: velas_insuficientes", simbolo)
+            continue
         precio = float(records[-1]["close"])
         atr_value = float(atr(pd.DataFrame(records)).iloc[-1])
         for strategy_id, strategy in strategies:
+            if accion and len(records) < strategy.required_history_bars:
+                logger.warning("M5 descarta %s (%s): velas_insuficientes", simbolo, strategy_id)
+                continue
             signal = strategy.generate_signal(records, simbolo, "1d", precio)
             if signal is None or signal.decision.upper() != "LONG":
                 continue
@@ -249,10 +300,10 @@ def correr_diario(as_of, *, data_provider, db: Session, broker,
                 decision=signal.decision, confidence=signal.confidence,
                 entry_price=signal.entry_price or precio, stop_loss=signal.stop_loss,
                 take_profit=signal.take_profit, reasoning=signal.reasoning,
-                exit_policy=signal.exit_policy, entry_order=signal.entry_order,
+                exit_policy=signal.exit_policy, entry_order="stop" if accion else signal.entry_order,
                 entry_expiry_bars=signal.entry_expiry_bars,
                 bucket_id="m5", strategy_id=strategy_id, symbol=simbolo,
-                order_type="stop" if signal.entry_order == "stop" else "market",
+                order_type="stop" if accion or signal.entry_order == "stop" else "market",
                 atr_at_signal=atr_value, reasoning_metadata=razonamiento,
             )
             duplicado = next((r for r in db.query(TradeIntentRecord).filter(
@@ -262,7 +313,10 @@ def correr_diario(as_of, *, data_provider, db: Session, broker,
             if duplicado:
                 continue
             qty = sizer.calculate_size(simbolo, intent.confidence, float(intent.entry_price),
-                                       manager.get_total_value(), stop_price=float(intent.stop_loss))
+                                       manager.get_total_value(), stop_price=float(intent.stop_loss),
+                                       fraccionable=permite_fracciones)
+            if accion:
+                qty = float(Decimal(str(qty)).quantize(Decimal("0.00000001"), rounding=ROUND_DOWN))
             valido, motivo = risk.validate_trade(simbolo, OrderSide.BUY, qty,
                                                   float(intent.entry_price), float(intent.stop_loss))
             if qty <= 0:
