@@ -123,7 +123,8 @@ def extraer_hechos(ticker: str, json_data: dict) -> pd.DataFrame:
 
 METRICAS = ["roic_4t", "margen_op_yoy", "aceleracion_ingresos", "crecimiento_eps", "roe_4t", "margen_pretax_yoy"]
 MAX_ANTIGUEDAD_DIAS = 200
-UMBRAL_COBERTURA_FUNDAMENTALES = 60.0  # % de elegibles por sector, cobertura_screener.py (M5-32)
+MAX_CAIDA_COBERTURA_PP = 10.0
+MIN_COBERTURA_SECTOR = 20.0  # % de elegibles por sector
 MAX_FALLIDOS_PCT = 2.0
 
 
@@ -241,7 +242,7 @@ def crear_snapshot_fundamentales(
 
 def refrescar_fundamentales(
     hoy: date, composicion: str, base_dir: Optional[Path] = None,
-    downloader: Optional[Callable[[int], dict]] = None, umbral_cobertura: float = UMBRAL_COBERTURA_FUNDAMENTALES,
+    downloader: Optional[Callable[[int], dict]] = None,
     progreso: Optional[Callable[[int, int], None]] = None,
 ) -> dict:
     """Publica una foto diaria verificada o devuelve el último snapshot válido anterior."""
@@ -253,54 +254,76 @@ def refrescar_fundamentales(
     nombre = f"fundamentales-sp500-{hoy.isoformat()}"
     composicion = str((raiz / composicion).resolve())
 
-    def validar(candidato, carpeta, fecha):
-        manifest = verify_snapshot(candidato, base_dir=carpeta)
-        if not manifest["symbols"]:
-            raise SnapshotError("sin símbolos")
+    def medir(candidato, carpeta, fecha):
         sesion = mcal.get_calendar("NYSE").schedule(pd.Timestamp(fecha) - pd.Timedelta(days=10), fecha).index[-1]
         rep = reporte_cobertura_fundamentales(
             candidato, composicion, desde=str(sesion.date()), hasta=str(sesion.date()),
             base_dir=carpeta, elegibilidad=True,
         )
-        bajos = {s: p for s, p in rep["elegibles_por_sector"].items() if p < umbral_cobertura}
-        if not rep["elegibles_por_sector"] or bajos:
-            raise SnapshotError(f"cobertura bajo el umbral {umbral_cobertura}%: {bajos}")
+        return rep["elegibles_por_sector"]
+
+    def validar(candidato, carpeta, fecha):
+        manifest = verify_snapshot(candidato, base_dir=carpeta)
+        if not manifest["symbols"]:
+            raise SnapshotError("sin símbolos")
+        cobertura = medir(candidato, carpeta, fecha)
+        if not cobertura or any(p < MIN_COBERTURA_SECTOR for p in cobertura.values()):
+            raise SnapshotError(f"cobertura bajo el piso {MIN_COBERTURA_SECTOR}%: {cobertura}")
         return manifest
+
+    anteriores = sorted(
+        (p.name for p in raiz.glob("fundamentales-sp500-*")
+         if re.fullmatch(r"fundamentales-sp500-\d{4}-\d{2}-\d{2}", p.name) and p.name < nombre), reverse=True,
+    )
+    previo = None
+    for candidato in [*anteriores, "fundamentales-sp500-2026-10"]:
+        try:
+            if candidato == "fundamentales-sp500-2026-10":
+                if not verify_snapshot(candidato, base_dir=raiz)["symbols"]:
+                    continue
+            else:
+                validar(candidato, raiz, date.fromisoformat(candidato.removeprefix("fundamentales-sp500-")))
+        except Exception:
+            continue
+        previo = candidato
+        break
+
+    comparacion = {}
+
+    def comparar(carpeta):
+        nueva = medir(nombre, carpeta, hoy)
+        vigente = medir(previo, raiz, hoy) if previo else {}
+        comparacion.update({s: {"nueva": p, "vigente": vigente.get(s)} for s, p in nueva.items()})
+        if not nueva or any(p < MIN_COBERTURA_SECTOR for p in nueva.values()):
+            raise SnapshotError(f"cobertura bajo el piso {MIN_COBERTURA_SECTOR}%")
+        if any(vigente[s] - p > MAX_CAIDA_COBERTURA_PP for s, p in nueva.items() if s in vigente):
+            raise SnapshotError(f"caída de cobertura mayor a {MAX_CAIDA_COBERTURA_PP} puntos")
 
     try:
         if (raiz / nombre).exists():
-            manifest = validar(nombre, raiz, hoy)
-            return {"snapshot_vigente": nombre, "nuevo": False, "fallidos": manifest.get("fallidos", []), "motivo": "ya existe; no se vuelve a descargar"}
+            manifest = verify_snapshot(nombre, base_dir=raiz)
+            comparar(raiz)
+            return {"snapshot_vigente": nombre, "nuevo": False, "fallidos": manifest.get("fallidos", []), "cobertura_por_sector": comparacion, "motivo": f"ya existe; no se vuelve a descargar; cobertura nueva vs vigente: {comparacion}"}
         tickers = miembros(composicion, load_manifest(composicion, raiz)["end"], raiz)
         raiz.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(prefix=".refresco-", dir=raiz) as temporal:
             manifest = crear_snapshot_fundamentales(nombre, tickers, base_dir=Path(temporal), downloader=downloader, progreso=progreso)
             if len(manifest["fallidos"]) * 100 > MAX_FALLIDOS_PCT * len(tickers):
                 raise SnapshotError(f"descarga fallida: supera {MAX_FALLIDOS_PCT}%: {manifest['fallidos']}")
-            validar(nombre, Path(temporal), hoy)
+            verify_snapshot(nombre, base_dir=Path(temporal))
+            comparar(Path(temporal))
             (Path(temporal) / nombre).rename(raiz / nombre)
         motivo = "descarga, hashes y cobertura verificados"
         if manifest["fallidos"]:
             motivo += f"; fallidos dentro del límite {MAX_FALLIDOS_PCT}%: {manifest['fallidos']}"
-        return {"snapshot_vigente": nombre, "nuevo": True, "fallidos": manifest["fallidos"], "motivo": motivo}
+        return {"snapshot_vigente": nombre, "nuevo": True, "fallidos": manifest["fallidos"], "cobertura_por_sector": comparacion, "motivo": f"{motivo}; cobertura nueva vs vigente: {comparacion}"}
     except Exception as exc:
         motivo = f"refresco rechazado: {exc}"
 
-    anteriores = sorted(
-        (p.name for p in raiz.glob("fundamentales-sp500-*")
-         if re.fullmatch(r"fundamentales-sp500-\d{4}-\d{2}-\d{2}", p.name) and p.name < nombre), reverse=True,
-    )
-    for previo in [*anteriores, "fundamentales-sp500-2026-10"]:
-        try:
-            if previo == "fundamentales-sp500-2026-10":
-                if not verify_snapshot(previo, base_dir=raiz)["symbols"]:
-                    continue
-            else:
-                validar(previo, raiz, date.fromisoformat(previo.removeprefix("fundamentales-sp500-")))
-        except Exception:
-            continue
-        return {"snapshot_vigente": previo, "nuevo": False, "motivo": motivo}
-    return {"snapshot_vigente": None, "nuevo": False, "motivo": f"{motivo}; no hay ningún snapshot válido"}
+    motivo += f"; cobertura nueva vs vigente: {comparacion}"
+    if previo is None:
+        motivo += "; no hay ningún snapshot válido"
+    return {"snapshot_vigente": previo, "nuevo": False, "cobertura_por_sector": comparacion, "motivo": motivo}
 
 
 def leer_fundamentales(nombre: str, ticker: str, base_dir: Optional[Path] = None) -> pd.DataFrame:

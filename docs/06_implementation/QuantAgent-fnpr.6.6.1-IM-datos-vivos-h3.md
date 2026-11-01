@@ -117,3 +117,50 @@ se restauró esa expectativa antes de la validación final.
 Handoff de QuantAgent-fnpr.6.6.1b: cambios sin stage en
 `loop/QuantAgent-fnpr.6.6.1b`, sin commit, push, PR ni uso de Beads o red,
 según la instrucción de esta entrega. Pendiente revisión por la otra sesión.
+
+## Corrección 2026-11-01
+
+QuantAgent-fnpr.6.6.1c reemplaza el corte absoluto del 60 % por una comparación
+contra el snapshot anterior válido que usaría el fallback. El 60 % de la
+[medición del screener](QuantAgent-fnpr.4.10-IM-cobertura-screener.md) marcaba
+sector-años con cobertura baja; no era una compuerta de publicación. Según la
+medición provista de SEC real del 2026-10-31, Utilities tenía 45 % y Real Estate
+57 %, prácticamente iguales al congelado de octubre. No se repitió esa descarga.
+
+Se rechaza si algún sector cae más de `MAX_CAIDA_COBERTURA_PP = 10.0` puntos
+porcentuales respecto del vigente, o queda debajo de
+`MIN_COBERTURA_SECTOR = 20.0` por ciento. Ambos snapshots se miden con
+`reporte_cobertura_fundamentales(..., elegibilidad=True)` en la misma última
+sesión NYSE hasta `hoy`, incluso si el anterior es el congelado de octubre.
+Sin anterior válido sólo rige el piso; se aceptan exactamente 10 puntos de caída
+y exactamente 20 % de cobertura. Se retira el parámetro `umbral_cobertura`.
+
+El fallback mantiene el orden de diarios anteriores y después octubre: los
+diarios validan hashes y el nuevo piso en su propia fecha; octubre conserva su
+validación de hashes. El resultado agrega `cobertura_por_sector`, con `nueva` y
+`vigente` por sector (`None` sin anterior), y `motivo` incluye esa comparación al
+aceptar o rechazar por cobertura. Se conservan el límite de fallidos del 2 %, la
+publicación mediante rename y la reutilización sin pisar el snapshot del día.
+
+Los tests usan composición y snapshots locales, sin red ni mocks del cálculo de
+cobertura. Cubren 60 % → 45 % rechazado sin modificar el previo, 45 % estable
+aceptado, caída exacta de 10 puntos, piso y ausencia de anterior; se prueban tanto
+un previo diario como el congelado de octubre. Financials permanece al 100 %
+para verificar que un solo sector alcanza para rechazar.
+
+Validación desde este worktree:
+
+```bash
+PYTHONPATH=. PYTHONDONTWRITEBYTECODE=1 MPLCONFIGDIR=$PWD/.cache/mpl NUMBA_CACHE_DIR=$PWD/.cache/numba /home/azureuser/repos/projects/QuantAgent/.venv/bin/python -m pytest tests/test_fundamentales_refresco.py tests/test_fundamentales.py tests/test_cli_help.py tests/test_cli_reference.py --basetemp=.cache/pytest-tmp -q
+PATH=/home/azureuser/repos/projects/QuantAgent/.venv/bin:$PATH TMPDIR=$PWD/.cache PYTHONPATH=. PYTHONDONTWRITEBYTECODE=1 MPLCONFIGDIR=$PWD/.cache/mpl NUMBA_CACHE_DIR=$PWD/.cache/numba bash scripts/loop/smoke.sh
+git diff --check
+```
+
+Handoff de QuantAgent-fnpr.6.6.1c: cambios sin stage, sin commit, push, PR ni uso
+de Beads o red, según la instrucción de esta entrega. La otra sesión realiza la
+revisión e integración. Se elimina `.cache` al terminar.
+
+Resultados: pytest **51 passed, 0 failed, 1 warning** en 129,18 s; smoke
+**exit 0**, 9 trades y PnL 561,18; `git diff --check` sin errores. La ayuda y la
+referencia CLI no cambiaron. Tamaño: **173 líneas agregadas + borradas en
+3 archivos**, sin cambios en fixtures.

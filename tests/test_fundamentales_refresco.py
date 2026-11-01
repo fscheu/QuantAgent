@@ -79,11 +79,11 @@ def test_rechazo_conserva_historico_y_limpia_parcial(datos, fallo):
     def bajar(cik):
         if fallo == "descarga" or (fallo == "parcial" and cik == 2):
             raise OSError("SEC no disponible")
-        return {} if fallo == "cobertura" and cik == 2 else facts(cik)
+        return {} if fallo == "cobertura" and cik == 3 else facts(cik)
 
     res = refrescar_fundamentales(HOY, "comp", datos, downloader=bajar)
     assert res["snapshot_vigente"] == HISTORICO and not res["nuevo"]
-    motivo = {"descarga": "no hay símbolos", "parcial": "descarga fallida", "cobertura": "cobertura bajo el umbral 60.0%"}
+    motivo = {"descarga": "no hay símbolos", "parcial": "descarga fallida", "cobertura": "cobertura bajo el piso 20.0%"}
     assert motivo[fallo] in res["motivo"]
     assert not (datos / NUEVO).exists()
     assert not list(datos.glob(".refresco-*"))
@@ -100,6 +100,49 @@ def test_fallback_mas_reciente_omite_corrupto_y_futuro(datos):
     assert res["snapshot_vigente"] == ultimo and ultimo != primero
     assert verify_snapshot(ultimo, datos) == load_manifest(ultimo, datos)
     assert (datos / corrupto / "AAPL.parquet").read_bytes() == b"corrupto"
+
+
+@pytest.mark.parametrize("anterior", [HISTORICO, "fundamentales-sp500-2026-10-29"])
+@pytest.mark.parametrize("elegibles_previos,elegibles_nuevos,acepta", [
+    (12, 9, False),  # 60 % -> 45 %: caída de 15 puntos.
+    (9, 9, True),    # 45 % estable, debajo del antiguo corte del 60 %.
+    (11, 9, True),   # El límite de 10 puntos se acepta.
+    (4, 3, False),   # Caída de sólo 5 puntos, pero debajo del piso.
+    (None, 9, True),
+    (None, 4, True),  # Sin anterior, el piso exacto se acepta.
+    (None, 3, False),
+])
+def test_cobertura_relativa_y_piso(datos, monkeypatch, anterior, elegibles_previos, elegibles_nuevos, acepta):
+    tickers = [f"T{i:02}" for i in range(20)]
+    csv = datos / "csv-sector"
+    csv.mkdir()
+    pd.DataFrame([{"date": "2026-08-18", "tickers": ",".join([*tickers, "JPM"])}]).to_csv(csv / HISTORICAL_CSV, index=False)
+    pd.DataFrame([{"Symbol": t, "GICS Sector": "Information Technology"} for t in tickers] +
+                 [{"Symbol": "JPM", "GICS Sector": "Financials"}]).to_csv(csv / CURRENT_CSV, index=False)
+    crear_snapshot_sp500("comp-sector", base_dir=datos, csv_dir=csv)
+    monkeypatch.setattr("quantagent.data.fundamentales.mapa_tickers_cik", lambda: dict(zip([*tickers, "JPM"], range(1, 22))))
+    if elegibles_previos is not None:
+        crear_snapshot_fundamentales(anterior, [*tickers, "JPM"], datos,
+                                     downloader=lambda cik: facts(cik) if cik <= elegibles_previos or cik == 21 else {})
+        previo = (datos / anterior / "manifest.json").read_bytes()
+
+    res = refrescar_fundamentales(HOY, "comp-sector", datos,
+                                 downloader=lambda cik: facts(cik) if cik <= elegibles_nuevos or cik == 21 else {})
+    comparacion = {"Information Technology": {"nueva": elegibles_nuevos * 5.0,
+                                             "vigente": elegibles_previos * 5.0 if elegibles_previos is not None else None},
+                   "Financials": {"nueva": 100.0, "vigente": 100.0 if elegibles_previos is not None else None}}
+    assert res["cobertura_por_sector"] == comparacion
+    for sector, valores in comparacion.items():
+        assert f"'{sector}': {valores}" in res["motivo"]
+    assert res["nuevo"] == acepta
+    assert res["snapshot_vigente"] == (NUEVO if acepta else anterior if elegibles_previos is not None else None)
+    assert (datos / NUEVO).exists() == acepta
+    assert not list(datos.glob(".refresco-*"))
+    if elegibles_previos is not None:
+        assert (datos / anterior / "manifest.json").read_bytes() == previo
+        verify_snapshot(anterior, datos)
+    if not acepta:
+        assert ("bajo el piso 20.0%" if elegibles_nuevos < 4 else "mayor a 10.0 puntos") in res["motivo"]
 
 
 @pytest.mark.parametrize("faltan", [1, 2])
