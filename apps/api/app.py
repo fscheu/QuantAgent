@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from sqlalchemy import create_engine, event, func, inspect, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from .schemas import AccountRef, AccountSummaryActive, AccountSummaryNoData, EquityPoint, OrderResponse, PositionResponse, HomeStatus
+from .schemas import AccountRef, AccountSummaryActive, AccountSummaryNoData, DividendResponse, EquityPoint, HomeStatus, OrderResponse, PositionResponse, SectorExposure
 from .feed import build_feed
 
 app = FastAPI(title="QuantAgent API")
@@ -229,8 +229,33 @@ def account_equity(account_id: str, range: Literal["1W", "1M", "3M", "YTD", "ALL
         starts = {"1W": today - timedelta(days=7), "1M": today - timedelta(days=30),
                   "3M": today - timedelta(days=90), "YTD": today.replace(month=1, day=1), "ALL": None}
         start = starts[range]
-        return [EquityPoint(date=row.snapshot_date.isoformat(), account=float(row.equity))
-                for row in rows if start is None or row.snapshot_date >= start]
+        selected = [row for row in rows if start is None or row.snapshot_date >= start]
+        from .account_extras import equity_extras
+        benchmark, shadow = equity_extras(account, selected)
+        return [EquityPoint(date=row.snapshot_date.isoformat(), account=float(row.equity),
+                            benchmark=benchmark[row.snapshot_date.isoformat()],
+                            shadow=shadow[row.snapshot_date.isoformat()]) for row in selected]
+
+
+@app.get("/api/accounts/{account_id}/dividends", response_model=list[DividendResponse])
+def account_dividends(account_id: str, db: Session = Depends(get_db)):
+    from quantagent.models import Event
+
+    configured_account(account_id, db)
+    rows = db.scalars(select(Event).where(Event.account_id == account_id,
+        Event.type == "dividend_received").order_by(Event.occurred_at.desc(), Event.id.desc())).all()
+    return [DividendResponse(date=utc_z(row.occurred_at), symbols=row.payload.get("symbols", []),
+        net=float(row.payload.get("net", 0)), withheld=float(row.payload.get("withheld", 0))) for row in rows]
+
+
+@app.get("/api/accounts/{account_id}/sector-exposure", response_model=list[SectorExposure])
+def account_sector_exposure(account_id: str, db: Session = Depends(get_db)):
+    from .accounts import account_session_factory
+    from .account_extras import sector_exposure
+
+    account = configured_account(account_id, db)
+    with account_session_factory(account)() as source:
+        return sector_exposure(account, source, datetime.now(NEW_YORK).date())
 
 
 @app.get("/api/accounts/{account_id}/positions", response_model=list[PositionResponse])

@@ -56,8 +56,10 @@ All endpoints use `GET`. Response bodies are JSON; `422` responses use FastAPI's
 | GET | `/api/calendar` | `200` `CalendarEventResponse[]`; `422` validation error | `days` query, integer, default `30`, range `1`–`120` |
 | GET | `/api/accounts` | `200` `AccountRef[]` | None |
 | GET | `/api/accounts/{account_id}/summary` | `200` `AccountSummaryActive` or `AccountSummaryNoData`; `422` validation error | `account_id` path, string, required |
-| GET | `/api/accounts/{account_id}/equity` | `200` `EquityPoint[]`; `422` validation error | `account_id` path, string, required; `range` query, `1W`, `1M`, `3M`, `YTD`, or `ALL`, default `1M` |
+| GET | `/api/accounts/{account_id}/equity` | `200` `EquityPoint[]`; `404` unknown/inactive account; `422` validation error | `account_id` path, string, required; `range` query, `1W`, `1M`, `3M`, `YTD`, or `ALL`, default `1M` |
+| GET | `/api/accounts/{account_id}/dividends` | `200` `DividendResponse[]`; `404` unknown/inactive account | `account_id` path, string, required |
+| GET | `/api/accounts/{account_id}/sector-exposure` | `200` `SectorExposure[]`; `404` unknown/inactive account | `account_id` path, string, required |
 | GET | `/api/accounts/{account_id}/positions` | `200` `PositionResponse[]`; `422` validation error | `account_id` path, string, required |
 | GET | `/api/accounts/{account_id}/orders` | `200` `OrderResponse[]`; `422` validation error | `account_id` path, string, required; `date` query, `YYYY-MM-DD`, optional (defaults to today in New York) |
 
-`GET /api/accounts/{account_id}/equity` reads history from daily equity snapshots (`equity`, `cash`, and `invested`) in that portfolio's database.
+`GET /api/accounts/{account_id}/equity` reads history from daily equity snapshots (`equity`, `cash`, and `invested`) in that portfolio's database. It includes optional SPY and shadow values when the configured snapshot or shadow file has matching dates. Dividends come from account-filtered master database events. Sector exposure reads portfolio positions, groups GICS sectors (or unclassified holdings), and reports cash from the latest equity snapshot.
