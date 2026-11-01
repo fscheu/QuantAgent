@@ -37,6 +37,7 @@ Decision documents should include:
 
 ## Active Per-Change Decisions
 
+- [QuantAgent-aj1s-DC-almacenamiento-de-datos.md](./QuantAgent-aj1s-DC-almacenamiento-de-datos.md) - Almacenamiento: Parquet inmutable, congelado mensual y adopción diferida de DuckDB y Postgres para el embudo (aceptada por Fede, D1/D2/D3, 2026-10-28)
 - [QuantAgent-69d-DC-reuse-logs-for-llm-telemetry.md](./QuantAgent-69d-DC-reuse-logs-for-llm-telemetry.md) - Choose existing `logs` over new metrics tables for this P3 feature
 - [QuantAgent-hx0.7-DC-sharpe-annualization.md](./QuantAgent-hx0.7-DC-sharpe-annualization.md) - Sharpe ratio annualization periods for 24/7 fixtures
 - [QuantAgent-u8lf-DC-diagnostico-rsi-gld-apertura-siguiente.md](./QuantAgent-u8lf-DC-diagnostico-rsi-gld-apertura-siguiente.md) - Diagnóstico: rsi/GLD 243 trades al cierre vs 242 en apertura siguiente (V27c)
