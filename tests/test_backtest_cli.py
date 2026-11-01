@@ -126,6 +126,44 @@ def test_cuenta_chica_sensibilidad_y_benchmark_con_costos_reales(cli_runner):
     assert reported == pytest.approx(manual, abs=0.0001)
 
 
+def test_cuenta_chica_hipotesis_cli_tarjetas_y_restricciones(cli_runner, monkeypatch, tmp_path):
+    import numpy as np
+    import pandas as pd
+    from quantagent.data.snapshot import write_snapshot
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path / "snapshots"))
+    idx = pd.bdate_range("2017-10-02", periods=65, name="timestamp")
+    frames = {}
+    for symbol, start, end in (("SPY", 20, 30), ("IWM", 30, 20)):
+        close = np.linspace(start, end, len(idx))
+        frame = pd.DataFrame({"open": close, "high": close * 1.01, "low": close * .99,
+                              "close": close, "adj_close": close, "volume": 1000}, index=idx)
+        frames[symbol] = frame
+    write_snapshot("synthetic", frames)
+    hypothesis = tmp_path / "h.yaml"
+    hypothesis.write_text("""id: synthetic
+autor: test
+justificacion: synthetic
+clase: sma-cross
+parametros: {fast: [2], slow: [3]}
+activos: [SPY, IWM]
+universo: synthetic
+timeframe: 1d
+""")
+    result = cli_runner.invoke(backtest_group, ["cuenta-chica", "--hipotesis", str(hypothesis),
+                                                "--snapshot", "synthetic"])
+    assert result.exit_code == 0, (result.output, result.exception)
+    assert result.output.count("Capital: USD") == 3
+    assert all(f"Capital: USD {n:,}" in result.output for n in (1000, 2500, 5000))
+
+    rejected = cli_runner.invoke(backtest_group, ["cuenta-chica", "--hipotesis", str(hypothesis),
+                                                  "--snapshot", "synthetic", "--to", "2019-01-01"])
+    assert rejected.exit_code == 1 and "no admite --to" in rejected.output
+    conflict = cli_runner.invoke(backtest_group, ["cuenta-chica", "--hipotesis", str(hypothesis),
+                                                   "--snapshot", "synthetic", "--strategy", "rsi"])
+    assert conflict.exit_code == 2 and "mutuamente excluyente" in conflict.output
+
+
 @pytest.mark.parametrize("command", ["run", "compare"])
 @pytest.mark.parametrize("fill", [None, "cierre", "apertura"])
 def test_cli_llenado_real_y_snapshot(cli_runner, monkeypatch, tmp_path, command, fill):
