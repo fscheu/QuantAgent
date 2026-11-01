@@ -15,6 +15,7 @@ Commands:
   schema              Export or check the live OpenAPI contract.
   serve               Serve the read-only QuantAgent API.
   sync-calendar       Synchronize Alpaca market holidays and early closes.
+  sync-events         Copy account orders and closed trades into the...
   sync-fred-calendar  Synchronize FRED releases and manual calendar events.
 ```
 
@@ -123,6 +124,19 @@ Options:
   --help  Show this message and exit.
 
   Example: quantagent api sync-calendar
+```
+
+## `quantagent api sync-events`
+
+```text
+Usage: quantagent api sync-events [OPTIONS]
+
+  Copy account orders and closed trades into the activity feed.
+
+Options:
+  --help  Show this message and exit.
+
+  Example: quantagent api sync-events
 ```
 
 ## `quantagent api sync-fred-calendar`
