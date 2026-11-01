@@ -39,3 +39,10 @@ const toOrder = (o: OrderResponse): Order => ({
 
 export const getOrders = (accountId: string, date: string) =>
   get<OrderResponse[]>(`/api/accounts/${encodeURIComponent(accountId)}/orders?date=${encodeURIComponent(date)}`).then(rows => rows.map(toOrder))
+
+import type { BacktestListItem, PerformanceReport, PerfRange } from './types'
+export const getBacktests = () => get<BacktestListItem[]>('/api/backtests')
+export const getBacktestPerformance = (id: string, range: PerfRange, vs: string | null) => {
+  const params = new URLSearchParams({ range }); if (vs?.startsWith('backtest:')) params.set('align_with', vs)
+  return get<PerformanceReport>(`/api/performance/backtest/${encodeURIComponent(id)}?${params}`)
+}
