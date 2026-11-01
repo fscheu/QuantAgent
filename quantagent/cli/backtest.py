@@ -368,6 +368,7 @@ def correr_par(
 
     curve = bt.equity_curve
     r = {
+        "backtest_run_id": bt.backtest_run_id,
         "cierres": [(c.timestamp, float(c.close)) for c in candles],
         "trades": metrics.total_trades,
         "win_rate": metrics.win_rate,
@@ -523,6 +524,12 @@ def run_backtest(
         fill=llenado,
     )
     rows = r["filas"]
+
+    equity_dir = os.environ.get("QUANTAGENT_BACKTEST_EQUITY_DIR", "local-data/backtest-equity")
+    os.makedirs(equity_dir, exist_ok=True)
+    equity_path = os.path.join(equity_dir, f"{r['backtest_run_id']}.csv")
+    with open(equity_path, "w", newline="") as f:
+        f.write(equity_to_csv(r["equity_curve"]))
 
     click.echo(f"Trades: {r['trades']}")
     click.echo(f"Win rate: {r['win_rate']:.2%}")

@@ -86,3 +86,23 @@ def test_output_top_level_fields_match_performance_report_contract():
         "worst_drawdowns", "cash_flows", "conventions",
     }
     assert set(result["metrics"]) == set(result["benchmark_metrics"])
+
+
+def test_without_benchmark_relative_metrics_are_not_computable_and_not_invented():
+    dates = pd.bdate_range("2024-01-01", periods=30)
+    result = build_report(pd.Series(np.linspace(100, 110, 30), index=dates), None, subject=SUBJECT, range="all")
+    assert result["metrics"]["total_return"]["status"] == "ok"
+    for key in ("alpha", "beta", "relative_return"):
+        assert result["metrics"][key]["status"] == "not_computable"
+    assert result["headline"]["benchmark_total_return"] is None
+    assert all(point["benchmark"] is None for point in result["series"]["equity"])
+
+
+def test_range_keeps_only_the_requested_window_ending_at_the_last_date():
+    dates = pd.bdate_range("2022-01-03", "2024-06-28")
+    equity = pd.Series(np.linspace(100, 200, len(dates)), index=dates)
+    full = build_report(equity, equity, subject=SUBJECT, range="all")
+    one_year = build_report(equity, equity, subject=SUBJECT, range="1y")
+    assert full["period"]["start"] == "2022-01-03"
+    assert one_year["period"]["end"] == "2024-06-28"
+    assert one_year["period"]["start"] >= "2023-06-28"

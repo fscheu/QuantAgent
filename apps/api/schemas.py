@@ -104,3 +104,12 @@ class OrderResponse(BaseModel):
     reject_reason: str | None
     reject_detail: None = None
     reject_reason_raw: None = None
+
+
+class BacktestRef(BaseModel):
+    id: int
+    label: str
+    hypothesis_name: str | None
+    start: str
+    end: str
+    total_return: float

@@ -61,5 +61,9 @@ All endpoints use `GET`. Response bodies are JSON; `422` responses use FastAPI's
 | GET | `/api/accounts/{account_id}/sector-exposure` | `200` `SectorExposure[]`; `404` unknown/inactive account | `account_id` path, string, required |
 | GET | `/api/accounts/{account_id}/positions` | `200` `PositionResponse[]`; `422` validation error | `account_id` path, string, required |
 | GET | `/api/accounts/{account_id}/orders` | `200` `OrderResponse[]`; `422` validation error | `account_id` path, string, required; `date` query, `YYYY-MM-DD`, optional (defaults to today in New York) |
+| GET | `/api/backtests` | `200` `BacktestRef[]` | `hypothesis_id` and `q` queries, optional |
+| GET | `/api/performance/backtest/{backtest_id}` | `200` `PerformanceReport`; `404` unknown backtest or missing equity CSV; `422` invalid parameters | `backtest_id` path, integer; `range` query, default `all`; `align_with` query, optional backtest id (or `backtest:<id>`) |
 
 `GET /api/accounts/{account_id}/equity` reads history from daily equity snapshots (`equity`, `cash`, and `invested`) in that portfolio's database. It includes optional SPY and shadow values when the configured snapshot or shadow file has matching dates. Dividends come from account-filtered master database events. Sector exposure reads portfolio positions, groups GICS sectors (or unclassified holdings), and reports cash from the latest equity snapshot.
+
+Backtest equity curves are saved as `{BacktestRun.id}.csv` under `QUANTAGENT_BACKTEST_EQUITY_DIR` (default `local-data/backtest-equity`). The backtest command always writes this artifact. Performance uses SPY closes from `QUANTAGENT_WEB_SNAPSHOT` when configured.
