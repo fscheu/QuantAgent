@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import click
+import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from tabulate import tabulate
@@ -637,10 +638,12 @@ def run_backtest(
 
 
 @backtest_group.command("cuenta-chica", help="Compare small-account backtests with a cost-matched SPY buy-and-hold benchmark.",
-                        epilog="Example: quantagent backtest cuenta-chica --strategy rsi --fixture spy-smoke")
-@click.option("--strategy", "strategy_name", required=True, type=_AliasChoice(), help="Strategy to run.")
+                        epilog="Example: quantagent backtest cuenta-chica --hipotesis hipotesis.yaml --snapshot etf-1d")
+@click.option("--strategy", "strategy_name", required=False, type=_AliasChoice(), help="Strategy to run when using a fixture or one-symbol snapshot.")
+@click.option("--hipotesis", type=click.Path(exists=True, dir_okay=False), default=None, help="Portfolio hypothesis YAML to simulate.")
 @click.option("--fixture", "fixture_name", help="Fixture name under tests/fixtures/ (without .csv).")
 @click.option("--snapshot", "snapshot_name", help="Snapshot in $QUANTAGENT_SNAPSHOT_DIR.")
+@click.option("--macro-snapshot", help="Macro snapshot in $QUANTAGENT_SNAPSHOT_DIR (required for curva-pendiente).")
 @click.option("--symbol", help="Snapshot symbol (one per run).")
 @click.option("--from", "from_date", type=click.DateTime(formats=["%Y-%m-%d"]), help="First session, YYYY-MM-DD (default: first in the snapshot).")
 @click.option("--to", "to_date", type=click.DateTime(formats=["%Y-%m-%d"]), help="Last session, YYYY-MM-DD (default: last in the snapshot).")
@@ -655,7 +658,7 @@ def run_backtest(
 @_params_option
 @click.option("--intrabar-stops/--no-intrabar-stops", default=True, help="Evaluate stop loss and take profit against intrabar high/low prices (default: enabled).")
 @click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="cierre", show_default=True, help="Fill price: opening or closing price of the candle.")
-def cuenta_chica_command(strategy_name, fixture_name, snapshot_name, symbol, from_date, to_date, capitales,
+def cuenta_chica_command(strategy_name, hipotesis, fixture_name, snapshot_name, macro_snapshot, symbol, from_date, to_date, capitales,
                          commission_pct, costos, spread_bps, costo_entrada_usd, retencion_dividendos,
                          costo_fiscal_pct, tamano_posicion, regla_tamano, orden_minima, riesgo_por_trade,
                          params, intrabar_stops, llenado):
@@ -666,6 +669,76 @@ def cuenta_chica_command(strategy_name, fixture_name, snapshot_name, symbol, fro
             raise ValueError
     except ValueError as exc:
         raise click.BadParameter("Use comma-separated positive USD amounts.", param_hint="--capitales") from exc
+    # Portfolio hypotheses use the complete panel and the paper portfolio's weight/rebalance rules.
+    hipotesis_path = hipotesis
+    if hipotesis_path:
+        if strategy_name or fixture_name or symbol:
+            raise click.UsageError("--hipotesis es mutuamente excluyente con --strategy, --fixture y --symbol.")
+        if not snapshot_name:
+            raise click.UsageError("--hipotesis requiere --snapshot.")
+        if to_date and to_date.date() >= datetime(2019, 1, 1).date():
+            raise click.ClickException("cuenta-chica con hipótesis no admite --to >= 2019-01-01.")
+        from quantagent.fabrica.hipotesis import cargar_hipotesis
+        from quantagent.backtesting.cartera_cuenta_chica import simular_cartera_cuenta_chica
+        try:
+            h = cargar_hipotesis(hipotesis_path)
+            requiere_macro = any(p.clase == "curva-pendiente" for p in h.piernas)
+            if macro_snapshot and not requiere_macro:
+                raise click.UsageError("--macro-snapshot solo se admite con una hipótesis que incluya curva-pendiente.")
+            if requiere_macro and not macro_snapshot:
+                raise click.ClickException("La hipótesis incluye curva-pendiente; indicá --macro-snapshot <nombre>.")
+            symbols = sorted({a for p in h.piernas for a in p.activos})
+            frames = {s: read_snapshot(snapshot_name, s) for s in symbols}
+            panel = pd.DataFrame({s: f["close"] for s, f in frames.items()})
+            panel = panel.loc[:pd.Timestamp(to_date).tz_localize("UTC") if to_date else "2018-12-31"]
+            if from_date:
+                panel = panel.loc[pd.Timestamp(from_date).tz_localize("UTC"):]
+            if panel.empty:
+                raise click.ClickException("El snapshot no tiene cierres en el rango solicitado.")
+            macro = None
+            if macro_snapshot:
+                from quantagent.data.macro import serie_punto_en_el_tiempo
+                macro = serie_punto_en_el_tiempo(macro_snapshot, "T10Y2Y", panel.index)
+        except (ValueError, SnapshotError, FileNotFoundError) as exc:
+            raise click.ClickException(str(exc)) from exc
+        base_slippage = settings.TRADING_SLIPPAGE_PCT
+        commission = settings.TRADING_COMMISSION_PCT if commission_pct is None else commission_pct
+        if costos:
+            base_slippage, commission = COSTOS_PERFILES[costos]["slippage_pct"], COSTOS_PERFILES[costos]["commission_pct"]
+        elif commission_pct is not None:
+            commission = commission_pct
+        slippage = {
+            s: base_slippage + (spread_bps if spread_bps is not None else settings.SPREAD_BPS_POR_CLASE[get_asset_type(s).value]) / 10000
+            for s in symbols
+        }
+        if costos and commission_pct is not None:
+            raise click.UsageError("--costos y --commission-pct son excluyentes: elegí uno.")
+        withholding = (0.30 if retencion_dividendos is None else retencion_dividendos) + costo_fiscal_pct
+        div = {}
+        for s, f in frames.items():
+            if "close_sin_dividendos" not in f:
+                continue
+            rates = f["close"].pct_change() - f["close_sin_dividendos"].pct_change()
+            div[s] = {ts.date().isoformat(): float(v) for ts, v in rates.items() if pd.notna(v)}
+        timestamps = list(panel.index.to_pydatetime())
+        if "SPY" not in panel.columns:
+            raise click.ClickException("La hipótesis debe incluir SPY para calcular el benchmark.")
+        spy = "SPY"
+        benchmark_prices = panel[spy].tolist()
+        for capital in map(float, capitales.split(",")):
+            result = simular_cartera_cuenta_chica(h, panel, capital, slippage, commission,
+                                                   costo_entrada_usd or 0, div, withholding, macro=macro)
+            bench = buy_and_hold_cuenta_chica(timestamps, benchmark_prices, capital, slippage[spy], commission,
+                                               costo_entrada_usd=costo_entrada_usd or 0,
+                                               dividend_rates=div.get(spy, {}), withholding=withholding)
+            click.echo(f"Capital: USD {capital:,.0f}")
+            click.echo(f"  Sharpe: {result['sharpe']:.2f} | Retorno: {result['return']:.2%}")
+            click.echo(f"  Costos pagados: USD {result['costs']:.2f} | Posiciones en cero: {', '.join(result['zero_positions']) or 'ninguna'}")
+            click.echo(f"  Posición más concentrada: {result['concentration']:.2%}")
+            click.echo(f"  SPY comprar y mantener: retorno {bench['return']:.2%}, Sharpe {bench['sharpe']:.2f}; diferencia: {result['return']-bench['return']:+.2%}")
+        return
+    if not strategy_name:
+        raise click.UsageError("Indicá --strategy o --hipotesis.")
     meta, symbol, to_date = _resolve_source_and_meta("cuenta-chica", strategy_name, fixture_name, snapshot_name,
                                                       symbol, from_date, to_date, False)
     for capital in amounts:

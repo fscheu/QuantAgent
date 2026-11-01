@@ -111,10 +111,14 @@ Usage: quantagent backtest cuenta-chica [OPTIONS]
 
 Options:
   --strategy [arquetipo-a|arquetipo-b|curva-pendiente|fifty-two-week-high|halloween|momentum-12m|rebalanceo-fin-de-mes|rsi|rsi-regimen|senal-externa|sma-cross|triple-screen|tsmom-largo-corto|turn-of-the-month]
-                                  Strategy to run.  [required]
+                                  Strategy to run when using a fixture or one-
+                                  symbol snapshot.
+  --hipotesis FILE                Portfolio hypothesis YAML to simulate.
   --fixture TEXT                  Fixture name under tests/fixtures/ (without
                                   .csv).
   --snapshot TEXT                 Snapshot in $QUANTAGENT_SNAPSHOT_DIR.
+  --macro-snapshot TEXT           Macro snapshot in $QUANTAGENT_SNAPSHOT_DIR
+                                  (required for curva-pendiente).
   --symbol TEXT                   Snapshot symbol (one per run).
   --from [%Y-%m-%d]               First session, YYYY-MM-DD (default: first in
                                   the snapshot).
@@ -157,14 +161,17 @@ Options:
                                   candle.  [default: cierre]
   --help                          Show this message and exit.
 
-  Example: quantagent backtest cuenta-chica --strategy rsi --fixture spy-smoke
+  Example: quantagent backtest cuenta-chica --hipotesis hipotesis.yaml
+  --snapshot etf-1d
 ```
 
 Options and defaults:
 
 - `--strategy` — default: `None`
+- `--hipotesis` — default: `None`
 - `--fixture` — default: `None`
 - `--snapshot` — default: `None`
+- `--macro-snapshot` — default: `None`
 - `--symbol` — default: `None`
 - `--from` — default: `None`
 - `--to` — default: `None`
