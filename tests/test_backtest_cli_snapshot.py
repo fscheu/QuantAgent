@@ -93,6 +93,66 @@ def test_carga_velas_ajustadas_y_solo_las_del_rango(snap_env):
     assert float(rows[0].close) != pytest.approx(expected["close"].iloc[0], rel=1e-3)  # ajustado, no el guardado
 
 
+def test_retencion_dividendos_y_cuenta_chica_en_snapshot(snap_env, tmp_path, monkeypatch):
+    from quantagent.backtesting.backtest import Backtest
+
+    frame = _daily_frame()
+    # Un breakout inequívoco seguido por un precio plano mantiene abierta la posición.
+    trigger = 310
+    raw_price = 125.0
+    frame.loc[:, ["open", "high", "low", "close"]] = 120.0
+    frame.loc[frame.index[trigger]:, ["open", "high", "low", "close"]] = raw_price
+    frame["volume"] = 100
+    frame.iloc[trigger, frame.columns.get_loc("volume")] = 1000
+    frame["adj_close"] = frame["close"]
+    ex_date = frame.index[trigger + 5]
+    frame.loc[ex_date:, "adj_close"] = frame.loc[ex_date:, "close"] * 1.01
+    write_snapshot("dividend", {"SPY": frame})
+
+    params = tmp_path / "params.json"
+    params.write_text(json.dumps({"fifty-two-week-high": {
+        "lookback_days": 2, "trend_ma_period": 2, "volume_ma_period": 2,
+        "volume_factor": 1.5, "stop_loss_pct": 0.5, "take_profit_pct": 0.5,
+        "trailing_stop_pct": 0.5,
+    }}))
+    captured = []
+    original_run = Backtest.run
+    quantities = []
+    original_record_equity = Backtest._record_equity
+
+    def capture_equity(self, current_date):
+        if current_date.date() == ex_date.date() and "SPY" in self.portfolio.positions:
+            quantities.append(self.portfolio.positions["SPY"]["qty"])
+        return original_record_equity(self, current_date)
+
+    def capture(self, *args, **kwargs):
+        result = original_run(self, *args, **kwargs)
+        captured.append(self)
+        return result
+
+    monkeypatch.setattr(Backtest, "run", capture)
+    monkeypatch.setattr(Backtest, "_record_equity", capture_equity)
+    runner, _ = snap_env
+    base = ["--snapshot", "dividend", "--symbol", "SPY", "--params", str(params),
+            "--llenado", "cierre", "--tamano-posicion", "1", "--regla-tamano", "fijo"]
+    no_withholding = _run(runner, *base, "--retencion-dividendos", "0")
+    assert no_withholding.exit_code == 0, no_withholding.output
+    retained = _run(runner, *base, "--retencion-dividendos", "0.30")
+    assert retained.exit_code == 0, retained.output
+
+    qty = quantities[0]
+    previous_close = float(frame.loc[ex_date, "close"])
+    expected_tax = 0.30 * 0.01 * qty * previous_close
+    assert captured[0].equity_curve[-1]["equity"] - captured[1].equity_curve[-1]["equity"] == pytest.approx(expected_tax, abs=0.01)
+
+    small = _run(runner, *base, "--retencion-dividendos", "0", "--cuenta-chica", "100000")
+    assert small.exit_code == 0, small.output
+    without_new_option = _run(runner, *base)
+    assert without_new_option.exit_code == 0, without_new_option.output
+    final_equities = [run.equity_curve[-1]["equity"] for run in captured]
+    assert final_equities[-2] == final_equities[-1]
+
+
 def test_fixture_y_snapshot_son_excluyentes_y_snapshot_pide_symbol(snap_env):
     runner, _ = snap_env
     write_snapshot("t", {"SPY": _daily_frame()})

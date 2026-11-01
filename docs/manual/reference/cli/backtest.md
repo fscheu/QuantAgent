@@ -184,6 +184,14 @@ Options:
   --cuenta-chica FLOAT RANGE      Initial backtest capital in USD; enables
                                   whole-share entries. Default: disabled
                                   ($100,000 capital).  [x>0.0]
+  --retencion-dividendos FLOAT RANGE
+                                  Dividend withholding fraction (0–1);
+                                  defaults to 0.30 with --cuenta-chica,
+                                  otherwise 0.  [0.0<=x<=1.0]
+  --costo-fiscal-pct FLOAT RANGE  Additional fraction on implicit dividends;
+                                  placeholder for future capital
+                                  gains/personal assets taxes.  [default: 0.0;
+                                  0.0<=x<=1.0]
   --tamano-posicion FLOAT RANGE   Capital fraction per position, in (0, 1]
                                   (1.0 = 100%). Sets the run's base and
                                   maximum size.  [0.0<x<=1.0]
@@ -222,6 +230,8 @@ Options and defaults:
 - `--costos` — default: `None`
 - `--llenado` — default: `'apertura'`
 - `--cuenta-chica` — default: `None`
+- `--retencion-dividendos` — default: `None`
+- `--costo-fiscal-pct` — default: `0.0`
 - `--tamano-posicion` — default: `None`
 - `--riesgo-por-trade` — default: `None`
 - `--regla-tamano` — default: `None`
