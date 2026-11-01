@@ -151,7 +151,8 @@ universo: synthetic
 timeframe: 1d
 """)
     result = cli_runner.invoke(backtest_group, ["cuenta-chica", "--hipotesis", str(hypothesis),
-                                                "--snapshot", "synthetic"])
+                                                "--snapshot", "synthetic", "--from", "2017-10-10",
+                                                "--to", "2017-12-01"])
     assert result.exit_code == 0, (result.output, result.exception)
     assert result.output.count("Capital: USD") == 3
     assert all(f"Capital: USD {n:,}" in result.output for n in (1000, 2500, 5000))

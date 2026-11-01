@@ -671,6 +671,8 @@ def cuenta_chica_command(strategy_name, hipotesis, fixture_name, snapshot_name, 
         raise click.BadParameter("Use comma-separated positive USD amounts.", param_hint="--capitales") from exc
     # Portfolio hypotheses use the complete panel and the paper portfolio's weight/rebalance rules.
     hipotesis_path = hipotesis
+    if macro_snapshot and not hipotesis_path:
+        raise click.UsageError("--macro-snapshot requiere --hipotesis.")
     if hipotesis_path:
         if strategy_name or fixture_name or symbol:
             raise click.UsageError("--hipotesis es mutuamente excluyente con --strategy, --fixture y --symbol.")
@@ -679,7 +681,7 @@ def cuenta_chica_command(strategy_name, hipotesis, fixture_name, snapshot_name, 
         if to_date and to_date.date() >= datetime(2019, 1, 1).date():
             raise click.ClickException("cuenta-chica con hipótesis no admite --to >= 2019-01-01.")
         from quantagent.fabrica.hipotesis import cargar_hipotesis
-        from quantagent.backtesting.cartera_cuenta_chica import simular_cartera_cuenta_chica
+        from quantagent.backtesting.cartera_cuenta_chica import pesos_operables_por_fecha, simular_cartera_cuenta_chica
         try:
             h = cargar_hipotesis(hipotesis_path)
             requiere_macro = any(p.clase == "curva-pendiente" for p in h.piernas)
@@ -690,9 +692,16 @@ def cuenta_chica_command(strategy_name, hipotesis, fixture_name, snapshot_name, 
             symbols = sorted({a for p in h.piernas for a in p.activos})
             frames = {s: read_snapshot(snapshot_name, s) for s in symbols}
             panel = pd.DataFrame({s: f["close"] for s, f in frames.items()})
-            panel = panel.loc[:pd.Timestamp(to_date).tz_localize("UTC") if to_date else "2018-12-31"]
+            timezone = panel.index.tz
+            to_bound = pd.Timestamp(to_date) if to_date else pd.Timestamp("2018-12-31")
+            from_bound = pd.Timestamp(from_date) if from_date else None
+            if timezone is not None:
+                to_bound = to_bound.tz_localize(timezone)
+                if from_bound is not None:
+                    from_bound = from_bound.tz_localize(timezone)
+            panel = panel.loc[:to_bound]
             if from_date:
-                panel = panel.loc[pd.Timestamp(from_date).tz_localize("UTC"):]
+                panel = panel.loc[from_bound:]
             if panel.empty:
                 raise click.ClickException("El snapshot no tiene cierres en el rango solicitado.")
             macro = None
@@ -713,6 +722,7 @@ def cuenta_chica_command(strategy_name, hipotesis, fixture_name, snapshot_name, 
         }
         if costos and commission_pct is not None:
             raise click.UsageError("--costos y --commission-pct son excluyentes: elegí uno.")
+        pesos_fecha = pesos_operables_por_fecha(h, panel, macro)
         withholding = (0.30 if retencion_dividendos is None else retencion_dividendos) + costo_fiscal_pct
         div = {}
         for s, f in frames.items():
@@ -727,7 +737,8 @@ def cuenta_chica_command(strategy_name, hipotesis, fixture_name, snapshot_name, 
         benchmark_prices = panel[spy].tolist()
         for capital in map(float, capitales.split(",")):
             result = simular_cartera_cuenta_chica(h, panel, capital, slippage, commission,
-                                                   costo_entrada_usd or 0, div, withholding, macro=macro)
+                                                   costo_entrada_usd or 0, div, withholding, macro=macro,
+                                                   pesos_fecha=pesos_fecha)
             bench = buy_and_hold_cuenta_chica(timestamps, benchmark_prices, capital, slippage[spy], commission,
                                                costo_entrada_usd=costo_entrada_usd or 0,
                                                dividend_rates=div.get(spy, {}), withholding=withholding)
