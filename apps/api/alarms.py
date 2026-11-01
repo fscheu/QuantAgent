@@ -68,7 +68,7 @@ def evaluate_account_alarms(account, master_db, now, config=None):
             try:
                 raw = json.loads(shadow_path.read_text())
                 shadow_date = max(raw)
-                shadow = raw[shadow_date][account.id]["pesos"]
+                shadow = raw[shadow_date][Path(path).stem]["pesos"]
                 values = {p.symbol: abs(float(p.quantity) * float(p.current_price)) for p in positions}
                 total = sum(values.values())
                 if total > 0:

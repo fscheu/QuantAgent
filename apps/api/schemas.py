@@ -55,8 +55,22 @@ class AccountSummaryActive(AccountRef):
 class EquityPoint(BaseModel):
     date: str
     account: float
-    benchmark: None = None
-    shadow: None = None
+    benchmark: float | None = None
+    shadow: float | None = None
+
+
+class DividendResponse(BaseModel):
+    date: str
+    symbols: list[str]
+    net: float
+    withheld: float
+
+
+class SectorExposure(BaseModel):
+    sector: str
+    long: float
+    short: float
+    pct: float
 
 
 class PositionResponse(BaseModel):
