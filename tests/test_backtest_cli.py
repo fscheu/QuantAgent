@@ -105,6 +105,27 @@ def test_cuenta_chica_limita_posiciones_y_registra_entradas_descartadas(cli_runn
     assert small.positions_en_cero and all(p["symbol"] == "SPY" and p["date"] for p in small.positions_en_cero)
 
 
+def test_cuenta_chica_sensibilidad_y_benchmark_con_costos_reales(cli_runner):
+    from quantagent.backtesting.fixtures import FIXTURES_DIR
+    result = cli_runner.invoke(backtest_group, ["cuenta-chica", "--strategy", "rsi", "--fixture", "spy-smoke",
+                                                "--commission-pct", "0.001", "--spread-bps", "5",
+                                                "--costo-entrada-usd", "10"])
+    assert result.exit_code == 0, result.output
+    assert result.output.count("Capital: USD") == 3
+    assert "Posiciones en cero: SPY" in result.output
+    import re
+    card = result.output.split("Capital: USD 2,500", 1)[1].split("Capital: USD 5,000", 1)[0]
+    reported = float(re.search(r"SPY comprar y mantener: retorno ([+-]?[0-9.]+)%", card).group(1)) / 100
+    import csv
+    with (FIXTURES_DIR / "spy-smoke.csv").open(newline="") as fixture:
+        closes = [float(row["close"]) for row in csv.DictReader(fixture)]
+    cost = 0.0005 + 0.0005
+    qty = int((2500 - 10) / (closes[0] * (1 + cost) * (1 + 0.001)))
+    leftover = 2500 - 10 - qty * closes[0] * (1 + cost) * (1 + 0.001)
+    manual = (leftover + qty * closes[-1] * (1 - cost) * (1 - 0.001)) / 2500 - 1
+    assert reported == pytest.approx(manual, abs=0.0001)
+
+
 @pytest.mark.parametrize("command", ["run", "compare"])
 @pytest.mark.parametrize("fill", [None, "cierre", "apertura"])
 def test_cli_llenado_real_y_snapshot(cli_runner, monkeypatch, tmp_path, command, fill):

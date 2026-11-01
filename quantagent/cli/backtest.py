@@ -18,7 +18,7 @@ from tabulate import tabulate
 
 from quantagent import settings
 from quantagent.backtesting.backtest import Backtest
-from quantagent.backtesting.buy_and_hold import annual_return, buy_and_hold, exposure, worst_day
+from quantagent.backtesting.buy_and_hold import annual_return, buy_and_hold, buy_and_hold_cuenta_chica, exposure, worst_day
 from quantagent.backtesting.export import TradeRow, equity_to_csv, trades_to_csv
 from quantagent.backtesting.fixtures import (
     FixtureMetadata,
@@ -634,6 +634,79 @@ def run_backtest(
             f"Equity curve written to {equity_out_path} "
             f"(max drawdown: {r['max_drawdown']:.6f})"
         )
+
+
+@backtest_group.command("cuenta-chica", help="Compare small-account backtests with a cost-matched SPY buy-and-hold benchmark.",
+                        epilog="Example: quantagent backtest cuenta-chica --strategy rsi --fixture spy-smoke")
+@click.option("--strategy", "strategy_name", required=True, type=_AliasChoice(), help="Strategy to run.")
+@click.option("--fixture", "fixture_name", help="Fixture name under tests/fixtures/ (without .csv).")
+@click.option("--snapshot", "snapshot_name", help="Snapshot in $QUANTAGENT_SNAPSHOT_DIR.")
+@click.option("--symbol", help="Snapshot symbol (one per run).")
+@click.option("--from", "from_date", type=click.DateTime(formats=["%Y-%m-%d"]), help="First session, YYYY-MM-DD (default: first in the snapshot).")
+@click.option("--to", "to_date", type=click.DateTime(formats=["%Y-%m-%d"]), help="Last session, YYYY-MM-DD (default: last in the snapshot).")
+@click.option("--capitales", default="1000,2500,5000", show_default=True, help="Comma-separated initial capital amounts in USD.")
+@click.option("--commission-pct", type=click.FloatRange(min=0.0), default=None, help="Commission per side on notional (0.001 = 0.10%). Default: TRADING_COMMISSION_PCT.")
+@click.option("--costos", type=click.Choice(sorted(COSTOS_PERFILES)), default=None, help="Cost profile (slippage and commission per side; default: none).")
+@click.option("--spread-bps", type=click.FloatRange(min=0.0), default=None, help="Spread per side in basis points (defaults to the asset-class estimate).")
+@click.option("--costo-entrada-usd", type=click.FloatRange(min=0.0), default=None, help="Fixed USD cost charged once at account start (default: USD 0).")
+@click.option("--retencion-dividendos", type=click.FloatRange(min=0.0, max=1.0), default=None, help="Dividend withholding fraction (0–1); defaults to 0.30.")
+@click.option("--costo-fiscal-pct", type=click.FloatRange(min=0.0, max=1.0), default=0.0, show_default=True, help="Additional fraction on implicit dividends.")
+@_tamano_options
+@_params_option
+@click.option("--intrabar-stops/--no-intrabar-stops", default=True, help="Evaluate stop loss and take profit against intrabar high/low prices (default: enabled).")
+@click.option("--llenado", type=click.Choice(["apertura", "cierre"]), default="cierre", show_default=True, help="Fill price: opening or closing price of the candle.")
+def cuenta_chica_command(strategy_name, fixture_name, snapshot_name, symbol, from_date, to_date, capitales,
+                         commission_pct, costos, spread_bps, costo_entrada_usd, retencion_dividendos,
+                         costo_fiscal_pct, tamano_posicion, regla_tamano, orden_minima, riesgo_por_trade,
+                         params, intrabar_stops, llenado):
+    """Run one card per initial capital and compare it with cost-matched SPY."""
+    try:
+        amounts = [float(value) for value in capitales.split(",")]
+        if not amounts or any(value <= 0 for value in amounts):
+            raise ValueError
+    except ValueError as exc:
+        raise click.BadParameter("Use comma-separated positive USD amounts.", param_hint="--capitales") from exc
+    meta, symbol, to_date = _resolve_source_and_meta("cuenta-chica", strategy_name, fixture_name, snapshot_name,
+                                                      symbol, from_date, to_date, False)
+    for capital in amounts:
+        config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano, orden_minima,
+                                riesgo_por_trade, capital, retencion_dividendos, costo_fiscal_pct,
+                                spread_bps, costo_entrada_usd)
+        r = correr_par(strategy_name, meta, config, costos, fixture_name, snapshot_name, symbol,
+                       from_date, to_date, intrabar_stops, con_filas=True,
+                       params=params.get(strategy_name), fill=llenado)
+        prices = [close for _, close in r["cierres"]]
+        timestamps = [ts for ts, _ in r["cierres"]]
+        slippage = r["slippage_pct"]
+        commission = r["comision_pct"]
+        withholding = (0.30 if retencion_dividendos is None else retencion_dividendos) + costo_fiscal_pct
+        dividend_rates = {}
+        if snapshot_name and withholding:
+            frame = read_snapshot(snapshot_name, symbol)
+            rates = frame["close"].pct_change() - frame["close_sin_dividendos"].pct_change()
+            dividend_rates = {ts.date().isoformat(): float(rate) for ts, rate in rates.items() if abs(rate) >= 1e-9}
+        benchmark = buy_and_hold_cuenta_chica(
+            timestamps, prices, capital, slippage, commission,
+            costo_entrada_usd=costo_entrada_usd or 0.0,
+            dividend_rates=dividend_rates, withholding=withholding,
+        )
+        strategy_taxes = sum(
+            abs(point["positions_value"]) * dividend_rates.get(point["date"].date().isoformat(), 0.0) * withholding
+            for point in r["equity_curve"]
+        )
+        paid = (costo_entrada_usd or 0.0) + strategy_taxes + sum(
+            (row.qty * row.entry_price + (row.qty * row.exit_price if row.exit_price else 0)) * (slippage + commission)
+            for row in r["filas"]
+        )
+        curve = r["equity_curve"]
+        strategy_return = curve[-1]["equity"] / capital - 1 if curve else 0
+        concentration = max((abs(point["positions_value"]) / point["equity"] for point in curve if point["equity"]), default=0)
+        zeros = sorted({position["symbol"] for position in r["posiciones_en_cero"]})
+        click.echo(f"Capital: USD {capital:,.0f}")
+        click.echo(f"  Sharpe: {r['sharpe']:.2f} | Retorno: {strategy_return:.2%}")
+        click.echo(f"  Costos pagados: USD {paid:.2f} | Posiciones en cero: {', '.join(zeros) if zeros else 'ninguna'}")
+        click.echo(f"  Posición más concentrada: {concentration:.2%}")
+        click.echo(f"  SPY comprar y mantener: retorno {benchmark['return']:.2%}, Sharpe {benchmark['sharpe']:.2f}; diferencia: {strategy_return-benchmark['return']:+.2%}")
 
 
 @contextmanager
