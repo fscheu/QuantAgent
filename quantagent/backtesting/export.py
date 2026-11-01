@@ -16,6 +16,8 @@ COLUMNS = [
     "exit_price",
     "stop_loss",
     "pnl",
+    "spread_cost_entry_usd",
+    "spread_cost_exit_usd",
     "exit_reason",
 ]
 
@@ -36,6 +38,8 @@ class TradeRow:
     stop_loss: Optional[float]
     pnl: Optional[float]
     exit_reason: Optional[str]
+    spread_cost_entry_usd: float = 0.0
+    spread_cost_exit_usd: float = 0.0
 
 
 def trades_to_csv(trades: List[TradeRow]) -> str:
@@ -56,6 +60,8 @@ def trades_to_csv(trades: List[TradeRow]) -> str:
                 trade.exit_price if trade.exit_price is not None else "",
                 trade.stop_loss if trade.stop_loss is not None else "",
                 trade.pnl if trade.pnl is not None else "",
+                trade.spread_cost_entry_usd,
+                trade.spread_cost_exit_usd if trade.exit_price is not None else "",
                 trade.exit_reason or "",
             ]
         )
