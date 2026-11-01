@@ -290,6 +290,51 @@
         "title": "Alarm",
         "type": "object"
       },
+      "BacktestRef": {
+        "properties": {
+          "end": {
+            "title": "End",
+            "type": "string"
+          },
+          "hypothesis_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hypothesis Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "start": {
+            "title": "Start",
+            "type": "string"
+          },
+          "total_return": {
+            "title": "Total Return",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "hypothesis_name",
+          "start",
+          "end",
+          "total_return"
+        ],
+        "title": "BacktestRef",
+        "type": "object"
+      },
       "CalendarEventResponse": {
         "properties": {
           "account_id": {
@@ -1165,6 +1210,72 @@
         "summary": "Account Summary"
       }
     },
+    "/api/backtests": {
+      "get": {
+        "operationId": "backtests_api_backtests_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "hypothesis_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hypothesis Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BacktestRef"
+                  },
+                  "title": "Response Backtests Api Backtests Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Backtests"
+      }
+    },
     "/api/calendar": {
       "get": {
         "operationId": "calendar_api_calendar_get",
@@ -1290,6 +1401,76 @@
           }
         },
         "summary": "Home Status"
+      }
+    },
+    "/api/performance/backtest/{backtest_id}": {
+      "get": {
+        "operationId": "backtest_performance_api_performance_backtest__backtest_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "backtest_id",
+            "required": true,
+            "schema": {
+              "title": "Backtest Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "range",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "ytd",
+                "1y",
+                "3y",
+                "5y",
+                "all"
+              ],
+              "title": "Range",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "align_with",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Align With"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Backtest Performance"
       }
     },
     "/health": {

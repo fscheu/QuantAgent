@@ -1,21 +1,32 @@
 """FastAPI application and read-only database dependency."""
 
 import os
-from datetime import date as Date, datetime, timedelta
+from datetime import date as Date
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Literal
 from zoneinfo import ZoneInfo
 
-from fastapi import Depends, FastAPI, Query
-from fastapi import HTTPException
-from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy import create_engine, event, func, inspect, select
 from sqlalchemy.orm import Session, sessionmaker
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from .schemas import AccountRef, AccountSummaryActive, AccountSummaryNoData, DividendResponse, EquityPoint, HomeStatus, OrderResponse, PositionResponse, SectorExposure
 from .feed import build_feed
+from .schemas import (
+    AccountRef,
+    AccountSummaryActive,
+    AccountSummaryNoData,
+    BacktestRef,
+    DividendResponse,
+    EquityPoint,
+    HomeStatus,
+    OrderResponse,
+    PositionResponse,
+    SectorExposure,
+)
 
 app = FastAPI(title="QuantAgent API")
 NEW_YORK = ZoneInfo("America/New_York")
@@ -76,6 +87,75 @@ def get_db():
         db.close()
 
 
+def _backtest_curve(run_id: int):
+    import csv
+    from pathlib import Path
+
+    root = Path(os.environ.get("QUANTAGENT_BACKTEST_EQUITY_DIR", "local-data/backtest-equity"))
+    path = root / f"{run_id}.csv"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail=f"Backtest {run_id} exists but has no saved equity curve")
+    with path.open(newline="", encoding="utf-8") as source:
+        return [{"date": row["timestamp"], "equity": float(row["equity"])} for row in csv.DictReader(source)]
+
+
+@app.get("/api/backtests", response_model=list[BacktestRef])
+def backtests(hypothesis_id: str | None = None, q: str | None = None, db: Session = Depends(get_db)):
+    from quantagent.models import BacktestRun
+
+    rows = db.scalars(select(BacktestRun).order_by(BacktestRun.created_at.desc())).all()
+    result = []
+    for row in rows:
+        config = row.config_snapshot or {}
+        candidate_id = config.get("hypothesis_id")
+        hypothesis_name = config.get("hypothesis_name")
+        if hypothesis_id and str(candidate_id) != hypothesis_id:
+            continue
+        label = row.name or f"Backtest #{row.id}"
+        if q and q.casefold() not in f"{label} {hypothesis_name or ''}".casefold():
+            continue
+        try:
+            curve = _backtest_curve(row.id)
+        except HTTPException:
+            curve = []
+        total_return = (curve[-1]["equity"] / curve[0]["equity"] - 1) * 100 if len(curve) > 1 and curve[0]["equity"] else 0.0
+        result.append(BacktestRef(id=row.id, label=label, hypothesis_name=hypothesis_name,
+                                  start=row.start_date.date().isoformat(), end=row.end_date.date().isoformat(),
+                                  total_return=total_return))
+    return result
+
+
+@app.get("/api/performance/backtest/{backtest_id}")
+def backtest_performance(backtest_id: int, range_: Literal["ytd", "1y", "3y", "5y", "all"] = Query("all", alias="range"), align_with: str | None = Query(None), db: Session = Depends(get_db)):
+    from quantagent.data.snapshot import SnapshotError, read_snapshot
+    from quantagent.models import BacktestRun
+    from quantagent.performance import build_report
+
+    run = db.get(BacktestRun, backtest_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Backtest not found")
+    equity = _backtest_curve(backtest_id)
+    if not equity:
+        raise HTTPException(status_code=404, detail=f"Backtest {backtest_id} has no saved equity curve")
+    align = None
+    if align_with:
+        other_id = int(align_with.split(":")[-1])
+        if db.get(BacktestRun, other_id) is None:
+            raise HTTPException(status_code=404, detail=f"Comparison backtest {other_id} not found")
+        align = _backtest_curve(other_id)
+    snapshot_name = os.environ.get("QUANTAGENT_WEB_SNAPSHOT")
+    try:
+        spy = read_snapshot(snapshot_name, "SPY")["close"] if snapshot_name else []
+    except (SnapshotError, OSError, ValueError, KeyError):
+        spy = []
+    config = run.config_snapshot or {}
+    subject = {"type": "backtest", "id": str(run.id), "name": run.name or f"Backtest #{run.id}",
+               "env": None, "run_label": f"#{run.id}", "account_id": None,
+               "hypothesis_id": config.get("hypothesis_id"), "backtest_id": str(run.id),
+               "out_of_sample_start": None, "costs_bps": None, "strategies": None}
+    return build_report(equity, spy, subject=subject, range=range_, align_with=align)
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -84,6 +164,7 @@ def health():
 @app.get("/api/calendar", response_model=list[CalendarEventResponse])
 def calendar(days: int = Query(30, ge=1, le=120), db: Session = Depends(get_db)):
     from quantagent.models import Account, CalendarEvent
+
     from .rebalances import proximos_rebalanceos
 
     today = datetime.now(NEW_YORK).date()
@@ -147,6 +228,7 @@ def utc_z(value):
 @app.get("/api/accounts/{account_id}/summary", response_model=AccountSummaryActive | AccountSummaryNoData)
 def account_summary(account_id: str, db: Session = Depends(get_db)):
     from quantagent.models import EquitySnapshot, Order, Position
+
     from .accounts import account_session_factory
     from .alarms import evaluate_account_alarms
 
@@ -190,6 +272,7 @@ def account_summary(account_id: str, db: Session = Depends(get_db)):
 @app.get("/api/home/status", response_model=HomeStatus)
 def home_status(db: Session = Depends(get_db)):
     from quantagent.models import Account, Position
+
     from .accounts import account_session_factory
     from .alarms import evaluate_account_alarms
 
@@ -216,6 +299,7 @@ def home_status(db: Session = Depends(get_db)):
 def account_equity(account_id: str, range: Literal["1W", "1M", "3M", "YTD", "ALL"] = Query("1M"),
                    db: Session = Depends(get_db)):
     from quantagent.models import EquitySnapshot
+
     from .accounts import account_session_factory
 
     account = configured_account(account_id, db)
@@ -250,8 +334,8 @@ def account_dividends(account_id: str, db: Session = Depends(get_db)):
 
 @app.get("/api/accounts/{account_id}/sector-exposure", response_model=list[SectorExposure])
 def account_sector_exposure(account_id: str, db: Session = Depends(get_db)):
-    from .accounts import account_session_factory
     from .account_extras import sector_exposure
+    from .accounts import account_session_factory
 
     account = configured_account(account_id, db)
     with account_session_factory(account)() as source:
@@ -261,6 +345,7 @@ def account_sector_exposure(account_id: str, db: Session = Depends(get_db)):
 @app.get("/api/accounts/{account_id}/positions", response_model=list[PositionResponse])
 def account_positions(account_id: str, db: Session = Depends(get_db)):
     from quantagent.models import ActivePosition, Position
+
     from .accounts import account_session_factory
 
     account = configured_account(account_id, db)
@@ -290,6 +375,7 @@ def account_positions(account_id: str, db: Session = Depends(get_db)):
 @app.get("/api/accounts/{account_id}/orders", response_model=list[OrderResponse])
 def account_orders(account_id: str, date: str | None = Query(None), db: Session = Depends(get_db)):
     from quantagent.models import Order, TradeIntentRecord
+
     from .accounts import account_session_factory
     from .reject_reasons import rejection_text
 

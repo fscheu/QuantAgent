@@ -57,7 +57,10 @@ def build_report(
     """Calculate a PerformanceReport from supplied equity and SPY observations."""
     limits = {**DEFAULT_THRESHOLDS, **(thresholds or {})}
     original = _curve(equity).dropna()
-    spy = _curve(benchmark).dropna()
+    spy = _curve(benchmark).dropna() if benchmark is not None and len(benchmark) else pd.Series(dtype=float)
+    has_bench = len(spy) > 0
+    if not has_bench:
+        spy = pd.Series(1.0, index=original.index)  # neutro: se descarta al armar la salida
     if align_with is not None:
         other = _curve(align_with).dropna()
         common = original.index.intersection(spy.index).intersection(other.index)
@@ -65,6 +68,11 @@ def build_report(
             common_start, common_end = common[0], common[-1]
             original, spy = original.loc[common_start:common_end], spy.loc[common_start:common_end]
     joined = pd.concat([original.rename("value"), spy.rename("benchmark")], axis=1).dropna()
+    if len(joined) and range != "all":
+        last = joined.index[-1]
+        cut = {"ytd": pd.Timestamp(year=last.year, month=1, day=1)}.get(
+            range, last - pd.DateOffset(years=int(range[:-1])) if range[:-1].isdigit() else joined.index[0])
+        joined = joined.loc[joined.index >= cut]
     if len(joined):
         start, end = joined.index[0], joined.index[-1]
     else:
@@ -218,6 +226,44 @@ def build_report(
     sample = {"short": bool(reasons or n < limits["annualized_days"]), "reasons": sorted(reasons),
               "not_computable": [k for k, v in metrics.items() if v["status"] == "not_computable"], "unreliable": [k for k, v in metrics.items() if v["status"] == "short_sample"],
               "months_until_full": max(0, 12-complete_months), "thresholds": {k: limits[k] for k in ("descriptive_days", "risk_days", "annualized_days", "min_rebalances")}}
+    report = _assemble(subject, range, align_with, start, end, n, limits, sample, metrics, benchmark_metrics, total, btotal, max_dd, max_idx,
+                       recovery_idx, equity_series, drawdown_series, rolling, monthly_returns, annual_rows, monthly_bins, mvals, month_rows,
+                       complete_months, daily_dist, daily_reason, worst, rf)
+    if not has_bench:
+        _drop_benchmark(report)
+    return report
+
+
+def _drop_benchmark(report: dict) -> None:
+    """Sin SPY no se inventan números: todo lo relativo queda como no calculable."""
+    reason = "Sin datos de SPY para este período"
+    for key in report["benchmark_metrics"]:
+        report["benchmark_metrics"][key] = _mv(None, "not_computable", reason)
+    for key in ("alpha", "beta", "relative_return"):
+        report["metrics"][key] = _mv(None, "not_computable", reason)
+    sample = report["sample"]
+    sample["not_computable"] = [k for k, v in report["metrics"].items() if v["status"] == "not_computable"]
+    sample["unreliable"] = [k for k, v in report["metrics"].items() if v["status"] == "short_sample"]
+    report["headline"]["benchmark_total_return"] = None
+    for point in report["series"]["equity"]:
+        point["benchmark"] = None
+    for point in report["series"]["drawdown"]:
+        point["benchmark_dd"] = None
+    for row in report["monthly_returns"] + report["annual_returns"]:
+        row["benchmark_ret"] = None
+    for dist in (report["distributions"]["monthly"], report["distributions"]["daily"]):
+        if dist:
+            dist["benchmark_mean"] = None
+            for bin_ in dist["bins"]:
+                bin_["benchmark_count"] = None
+    for window in report["rolling"]:
+        for point in window["points"]:
+            point["benchmark_sharpe"] = point["benchmark_volatility"] = None
+
+
+def _assemble(subject, range, align_with, start, end, n, limits, sample, metrics, benchmark_metrics, total, btotal, max_dd, max_idx,
+              recovery_idx, equity_series, drawdown_series, rolling, monthly_returns, annual_rows, monthly_bins, mvals, month_rows,
+              complete_months, daily_dist, daily_reason, worst, rf):
     return {
         "subject": dict(subject), "benchmark": {"symbol": "SPY"}, "status": "ready" if n >= limits["descriptive_days"] else "insufficient_data",
         "not_computable_reason": None, "range": range, "available_ranges": [{"range": r, "available": True, "reason": None} for r in ("ytd", "1y", "3y", "5y", "all")],
