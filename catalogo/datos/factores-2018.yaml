@@ -1,0 +1,40 @@
+id: factores-2018
+descripcion: Factores mensuales BAB de AQR, FF5/momentum/49 industrias de Kenneth French, cortados a 2018-12.
+  Receta documentada; carpeta ausente en el inventario local del 2026-11-01. No conectados a estrategias.
+fuente:
+  nombre: AQR + Kenneth French
+  url: https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html
+  licencia: Condiciones de AQR y Kenneth French; derivados AQR locales ignorados por git; no consta licencia
+    uniforme.
+  regla_de_borrado: null
+campos:
+- nombre: month
+  unidad: mes YYYYMM
+  descripcion: Mes del retorno; no es fecha de publicación.
+- nombre: columnas BAB por país y agregado
+  unidad: retorno decimal
+  descripcion: Columnas originales AQR, conservadas por la receta del README; vacíos para faltantes.
+- nombre: Mkt-RF, SMB, HML, RMW, CMA, RF
+  unidad: porcentaje mensual
+  descripcion: FF5 y libre de riesgo Kenneth French.
+- nombre: Mom
+  unidad: porcentaje mensual
+  descripcion: Momentum Kenneth French.
+- nombre: 49 industrias (columnas originales French)
+  unidad: porcentaje mensual
+  descripcion: Retornos por industria; sentinelas -99.99/-999 sin convertir.
+columna_cuando_se_supo:
+  columna: ninguna
+  descripcion: month es período de retorno. La receta no conserva fecha de descarga ni publicación; sólo
+    URL y hashes del original y CSV en manifest.json. Una descarga actual puede revisar la historia.
+frecuencia:
+  capa_viva: ninguna
+  congelado: Inventario de investigación fijo hasta 2018-12; no hay congelado periódico implementado.
+carpeta:
+- factores-2018
+snapshots: []
+lectores:
+- archivo: local-data/README.md
+  tipo: investigacion
+  descripcion: Receta que carga CSV y manifiesto para verificar corte y hashes; sin consumidor en el motor.
+datos_esperados: false

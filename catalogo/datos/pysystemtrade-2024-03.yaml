@@ -1,0 +1,50 @@
+id: pysystemtrade-2024-03
+descripcion: CSV originales de futuros ajustados y múltiples contratos de pysystemtrade, revisión 007feb5da6cde5b812cdbc1463e73d016393bc63
+  del 2024-03-25. Conserva LICENSE y README; carpeta ausente en el inventario local del 2026-11-01. Sin
+  conexión al motor o Alpaca.
+fuente:
+  nombre: pysystemtrade / Robert Carver
+  url: https://github.com/robcarver17/pysystemtrade/tree/007feb5da6cde5b812cdbc1463e73d016393bc63/data/futures
+  licencia: GPL-3.0
+  regla_de_borrado: null
+campos:
+- nombre: DATETIME
+  unidad: fecha/hora
+  descripcion: Índice original; puede tener frecuencia intradiaria.
+- nombre: columna de precio continuo (nombre original según CSV)
+  unidad: puntos de precio del instrumento
+  descripcion: Serie continua ajustada en adjusted_prices_csv; nombre original de columna según el CSV.
+- nombre: PRICE
+  unidad: puntos de precio del instrumento
+  descripcion: Precio del contrato de referencia en multiple_prices_csv.
+- nombre: CARRY
+  unidad: puntos de precio del instrumento
+  descripcion: Precio de otro contrato; no es retorno ni señal calculada.
+- nombre: FORWARD
+  unidad: puntos de precio del instrumento
+  descripcion: Precio del contrato forward.
+- nombre: PRICE_CONTRACT
+  unidad: identificador de contrato
+  descripcion: Contrato asociado a la columna de precio correspondiente.
+- nombre: CARRY_CONTRACT
+  unidad: identificador de contrato
+  descripcion: Contrato asociado a la columna de precio correspondiente.
+- nombre: FORWARD_CONTRACT
+  unidad: identificador de contrato
+  descripcion: Contrato asociado a la columna de precio correspondiente.
+columna_cuando_se_supo:
+  columna: manifest.json:downloaded_at
+  descripcion: Fecha de descarga global en la receta. DATETIME es fecha de observación; no hay publicación
+    histórica por fila ni vintages del precio ajustado.
+frecuencia:
+  capa_viva: ninguna
+  congelado: Inventario fijo de una revisión de marzo de 2024; sin congelado periódico implementado.
+carpeta:
+- pysystemtrade-2024-03
+snapshots: []
+lectores:
+- archivo: local-data/README.md
+  tipo: investigacion
+  descripcion: Receta que carga CSV y manifiesto para verificar fechas, columnas y hashes; sin consumidor
+    en el motor.
+datos_esperados: false

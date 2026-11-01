@@ -1,0 +1,40 @@
+- entrada: README.md
+  motivo: Documentación del almacenamiento local.
+- entrada: golden
+  motivo: Resultados de referencia del motor, no datos de entrada.
+- entrada: m5
+  motivo: Resultados y reportes de investigación M5.
+- entrada: m5-arquetipo-a
+  motivo: Artefactos del arquetipo M5.
+- entrada: reserva*
+  motivo: Resultados y auditoría de acceso a la reserva.
+- entrada: sintetico
+  motivo: Fixtures generadas para pruebas, no datos de mercado.
+- entrada: hipotesis*.csv
+  motivo: Registro de hipótesis y copias históricas.
+- entrada: intentos*.csv*
+  motivo: Registro de intentos y backups.
+- entrada: '*.log'
+  motivo: Logs operativos y de auditoría.
+- entrada: punto-de-control-*
+  motivo: Resultados de puntos de control del embudo.
+- entrada: curvas-l14-curva
+  motivo: Curvas derivadas de validación L14.
+- entrada: epoca_limpia.json
+  motivo: Estado operativo de época de investigación.
+- entrada: h.yaml
+  motivo: Definición local de hipótesis.
+- entrada: t
+  motivo: Artefactos temporales de pruebas de snapshot.
+- entrada: t_gap
+  motivo: Artefactos temporales de pruebas con huecos.
+- entrada: .refresco-*
+  motivo: Directorio temporal de refresco de fundamentales; el existente está vacío, no es un snapshot publicado.
+- entrada: .agents
+  motivo: Directorio técnico vacío, sin datos.
+- entrada: .codex
+  motivo: Directorio técnico vacío, sin datos.
+- entrada: .aws
+  motivo: Directorio técnico vacío, sin datos.
+- entrada: .git
+  motivo: Directorio técnico vacío, sin datos.

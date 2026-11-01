@@ -1,0 +1,66 @@
+id: precios-etf
+descripcion: 'Velas diarias de ETFs: base, universo amplio, ampliados y universo M5. Son precios históricos
+  ajustados de Yahoo; no se almacenan indicadores.'
+fuente:
+  nombre: Yahoo Finance
+  url: https://finance.yahoo.com/
+  licencia: Términos de Yahoo Finance; uso local, sin licencia de redistribución registrada.
+  regla_de_borrado: null
+campos:
+- nombre: timestamp
+  unidad: fecha de sesión
+  descripcion: Índice de la vela diaria; no es fecha de publicación ni de descarga.
+- nombre: open
+  unidad: USD por participación
+  descripcion: Apertura ajustada por splits, sin ajuste por dividendos.
+- nombre: high
+  unidad: USD por participación
+  descripcion: Máximo ajustado por splits, sin ajuste por dividendos.
+- nombre: low
+  unidad: USD por participación
+  descripcion: Mínimo ajustado por splits, sin ajuste por dividendos.
+- nombre: close
+  unidad: USD por participación
+  descripcion: Cierre ajustado por splits, sin ajuste por dividendos.
+- nombre: adj_close
+  unidad: USD por participación
+  descripcion: Cierre ajustado también por dividendos.
+- nombre: volume
+  unidad: participaciones
+  descripcion: Volumen de la sesión.
+columna_cuando_se_supo:
+  columna: manifest.json:downloaded_at
+  descripcion: Fecha de descarga del snapshot completo, no disponibilidad histórica por fila. timestamp
+    indica la sesión; Yahoo puede revisar su historia por splits y dividendos.
+frecuencia:
+  capa_viva: ninguna
+  congelado: Mensual; historia completa en un snapshot nuevo e inmutable con manifiesto.
+carpeta:
+- etf-1d-*
+- etf-ampliados-1d-*
+- etf-m5-1d-*
+snapshots:
+- etf-1d-2026-10.json
+- etf-1d-2026-10-amplio.json
+- etf-ampliados-1d-2018-20261022.json
+- etf-m5-1d-2026-10.json
+lectores:
+- archivo: quantagent/data/snapshot.py
+  tipo: datos
+  descripcion: read_snapshot lee Parquet y aplica por defecto el ajuste por dividendos.
+- archivo: quantagent/backtesting/fixtures.py
+  tipo: estrategias
+  descripcion: Carga snapshots de precios en el motor de backtest.
+- archivo: quantagent/fabrica/validacion.py
+  tipo: embudo
+  descripcion: Lee cierres para las etapas de validación.
+- archivo: quantagent/fabrica/screener.py
+  tipo: embudo
+  descripcion: Lee precios para el screener M5.
+- archivo: scripts/m5/h3.py
+  tipo: investigacion
+  descripcion: Lee ETFs y acciones para H3.
+- archivo: scripts/crossval_compare.py
+  tipo: investigacion
+  descripcion: Selecciona el snapshot para comparar motores.
+datos_esperados: true
