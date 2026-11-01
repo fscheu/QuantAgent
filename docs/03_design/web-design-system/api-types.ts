@@ -205,6 +205,118 @@ export interface CalendarEvent {
   account_id: string | null;
 }
 
+/* ---------- Rendimiento (v0.3) — ver RENDIMIENTO.md ---------- */
+export type PerfSubjectType = 'backtest' | 'run' | 'portfolio';
+export type PerfRange = 'ytd' | '1y' | '3y' | '5y' | 'all';
+
+export type MetricKey =
+  | 'total_return' | 'cagr' | 'positive_months' | 'best_month' | 'worst_month'
+  | 'volatility' | 'sharpe' | 'sortino' | 'max_drawdown' | 'calmar'
+  | 'alpha' | 'beta' | 'relative_return';
+
+export interface MetricValue {
+  /** % como número (12.5 = 12,5 %), salvo cocientes (sharpe, sortino, calmar, beta). alpha en pp. */
+  value: number | null;
+  /** Lo decide el backend. 'not_computable' ⇒ value = null. */
+  status: 'ok' | 'short_sample' | 'not_computable';
+  /** Texto corto para la web: "Necesita 12 meses; hay 3,6". */
+  reason: string | null;
+  detail?: {
+    peak_date?: string; trough_date?: string; recovery_date?: string | null; days?: number; // max_drawdown
+    month?: string;                                                                       // best/worst_month 'YYYY-MM'
+    positive?: number; total?: number;                                                    // positive_months
+  };
+}
+
+export interface PerfSubject {
+  type: PerfSubjectType;
+  id: string;
+  name: string;
+  env: Env | null;                       // null en backtest
+  run_label: string | null;              // '#bt-0412'
+  account_id: string | null;             // run: cuenta donde corre; portfolio: la cuenta
+  hypothesis_id: string | null;
+  backtest_id: string | null;            // run: backtest original
+  out_of_sample_start: string | null;    // backtest: inicio de la reserva
+  costs_bps: number | null;
+  strategies: { run_id: string; name: string; total_return: number }[] | null; // portfolio
+}
+
+export interface PerformanceReport {
+  subject: PerfSubject;
+  benchmark: { symbol: 'SPY' };
+  status: 'ready' | 'insufficient_data' | 'no_runs' | 'returns_not_computable';
+  /**
+   * Por qué no se puede calcular el retorno:
+   * - 'unregistered_flows': cartera con aportes/retiros sin registrar (con registro: alguno sin conciliar, ver flows.unreconciled).
+   * - 'capital_not_isolated': estrategia en ejecución sin capital propio; comparte posiciones y caja con la cuenta.
+   */
+  not_computable_reason: 'unregistered_flows' | 'capital_not_isolated' | null;
+  range: PerfRange;
+  available_ranges: { range: PerfRange; available: boolean; reason: string | null }[];
+  period: { start: string; end: string; trading_days: number; complete_months: number; rebalances: number | null };
+  as_of: string;
+  stale: boolean;                        // siempre false en backtest
+  aligned_with: string | null;           // 'backtest:bt-0415' si se pidió período común
+  sample: {
+    short: boolean;
+    reasons: ('few_days' | 'few_months' | 'few_rebalances')[];
+    not_computable: MetricKey[];
+    unreliable: MetricKey[];
+    months_until_full: number | null;
+    /** Parámetros vigentes del backend (provisorios): 21 / 63 / 252 días y 12 rebalanceos. */
+    thresholds: { descriptive_days: number; risk_days: number; annualized_days: number; min_rebalances: number };
+  };
+  /** Cartera: estado del registro de flujos. null en backtest. */
+  flows: { registered: boolean; unreconciled: { date: string; amount: number }[] } | null;
+  insufficient: { days_have: number; days_needed: number; first_report_estimate: string | null } | null;
+  no_runs: { approved_at: string; account_id: string; next_rebalance_at: string | null } | null;
+  headline: {
+    total_return: number; benchmark_total_return: number;
+    max_drawdown: number; max_dd_trough: string; max_dd_recovery_days: number | null;
+    shadow_gap_pp: number | null;
+  } | null;
+  metrics: Record<MetricKey, MetricValue>;
+  benchmark_metrics: Record<MetricKey, MetricValue>;
+  series: {
+    equity: { date: string; value: number; benchmark: number; shadow: number | null }[];
+    drawdown: { date: string; dd: number; benchmark_dd: number }[];
+  };
+  rolling: {
+    window_days: 126 | 252;
+    points: { date: string; sharpe: number | null; volatility: number | null; benchmark_sharpe: number | null; benchmark_volatility: number | null }[];
+  }[];
+  monthly_returns: { year: number; month: number; ret: number; benchmark_ret: number; complete: boolean }[];
+  annual_returns: { year: number; ret: number; benchmark_ret: number; partial: boolean }[];
+  distributions: {
+    monthly: ReturnDistribution;
+    /** Vista secundaria: null con menos de `risk_days` días hábiles. */
+    daily: (ReturnDistribution & { var_95: number; cvar_95: number }) | null;
+    daily_reason: string | null;        // "Disponible desde 63 días; hay 41"
+  };
+  worst_drawdowns: {
+    rank: number; peak_date: string; trough_date: string; recovery_date: string | null;
+    depth: number; days_to_trough: number; days_to_recovery: number | null; total_days: number;
+  }[];
+  cash_flows: { date: string; amount: number }[] | null;   // portfolio
+  conventions: {
+    frequency: 'daily'; method: 'time_weighted'; annualization_days: 252;
+    risk_free_source: string; risk_free_avg: number;
+    benchmark: string; data_source: string; costs_bps: number | null; manual_url: string;
+  };
+}
+
+export interface ReturnDistribution {
+  bin_width_pct: number;
+  bins: { from: number; to: number; count: number; benchmark_count: number }[];
+  mean: number; benchmark_mean: number; n: number;
+}
+
+/** hypothesis_name null = backtest corrido suelto, sin hipótesis. */
+export interface BacktestListItem {
+  id: string; label: string; hypothesis_name: string | null; start: string; end: string; total_return: number;
+}
+
 export interface MarketClock {
   is_open: boolean;
   next_open: string;

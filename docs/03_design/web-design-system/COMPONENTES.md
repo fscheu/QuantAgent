@@ -164,7 +164,7 @@ Comportamiento:
 - **Grupos y sub-filas**: `groupBy` agrega encabezados de grupo (ej. "Rechazadas · 3" en neg-soft); `subRow` agrega una línea debajo de la fila (motivo), sin romper la grilla.
 
 ### `BottomNav` (< 1024 px) / `SideNav` (≥ 1024 px)
-4 destinos: Inicio, Cuenta, Embudo, Mercado. Ícono + texto siempre. Activo: `aria-current="page"`, accent-soft. Destinos aún no construidos: texto apagado + "pronto". SideNav: ícono de advertencia junto a "Cuenta" si hay alarmas. Densidad y tema al pie (escritorio) o en el ícono de ajustes de Inicio (teléfono).
+5 destinos (v0.3.1): Inicio, Cuenta, Backtests, Embudo, Mercado. Backtests es sección propia (ícono de reloj con flecha). En la barra inferior, etiquetas de 11,5 px y ancho flexible para que entren los 5 en 390 px. Ícono + texto siempre. Activo: `aria-current="page"`, accent-soft. Destinos aún no construidos: texto apagado + "pronto". SideNav: ícono de advertencia junto a "Cuenta" si hay alarmas. Densidad y tema al pie (escritorio) o en el ícono de ajustes de Inicio (teléfono).
 
 ---
 
@@ -204,8 +204,8 @@ Reemplaza **todo** el contenido de Cuenta cuando `status: 'no_data'`.
 - **El eje horizontal es el precio** (izquierda = menor, derecha = mayor). Larga: stop a la izquierda, relleno crece desde la izquierda (`anchor: 'left'`). Corta: stop a la derecha, relleno crece desde la derecha (`anchor: 'right'`). En los dos casos el relleno va del stop al precio y mide el margen.
 - Distancia: larga `(precio − stop) / precio`; corta `(stop − precio) / precio`. Zonas iguales en los dos lados.
 - Zona `ok`: relleno text-2. `attention`: warn + triángulo + "Atención". `near`: neg + octógono + "Cerca". `breached` (precio ya pasó el stop: salto de apertura o recompra pendiente): pista con borde neg + octógono + "Stop superado". `none`: pista punteada + "Sin stop vigente".
-- Texto siempre presente cuando hay stop: zona + distancia + monto (por ejemplo, "Cerca · 1,5 % · USD 125", "Margen · 10,00 % · USD 100,00" o "Atención · 4,00 % · USD 40,00"). Si el precio superó el stop: "Stop superado · USD {amount}" ({amount} es cuánto lo pasó). Sin stop: "Sin stop vigente". En tarjeta, la etiqueta del stop dice "Stop abajo · 520,00" o "Stop arriba · 81,50".
-- `role="meter"` con `aria-valuenow` y `aria-valuetext`: en `ok`/`attention`/`near`, "a {pct} por ciento del stop, stop por debajo|encima del precio"; en `breached`, "precio por debajo|encima del stop"; en `none`, "Sin stop vigente".
+- Texto siempre presente: "Cerca · 1,5 % · USD 125". En tarjeta, la etiqueta del stop dice "Stop abajo · 520,00" o "Stop arriba · 81,50".
+- `role="meter"` con `aria-valuenow` y `aria-valuetext` ("a 6 por ciento del stop, stop por encima del precio").
 - Implementación: contenedor `display:flex; justify-content: flex-start | flex-end` según `anchor`, relleno con `width = fill`.
 
 ### `PositionCard` (teléfono) / `PositionRow` (≥ 1024 px)
@@ -250,10 +250,6 @@ Bloque de fecha (día de semana + número), título, `Badge` de tipo (Rebalanceo
 
 ## 4. Gráficos
 
-### `AccountSelect` y `DateStepper`
-
-Controles nativos accesibles de Cuenta: `AccountSelect` permite navegar entre cuentas; `DateStepper` cambia el día consultado y ofrece entrada de fecha.
-
 Biblioteca sugerida para todo salvo velas: **Recharts** (simple, SVG, buen soporte de React). Alternativa si hace falta más control: visx. Velas: **lightweight-charts** con `candleTheme()` de `tokens.ts`.
 
 | Componente | Notas |
@@ -280,3 +276,89 @@ Reglas comunes: grilla horizontal `--qa-grid`, sin grilla vertical (salvo velas)
 - [ ] Gráficos con `aria-label` de resumen.
 - [ ] Zoom 200 % sin scroll horizontal; tamaños en rem.
 - [ ] `prefers-reduced-motion` respetado.
+
+---
+
+## 6. Rendimiento (v0.3)
+
+Referencia: canvas, página **Rendimiento** (tablero “Componentes nuevos”). Uso y datos: RENDIMIENTO.md.
+
+### `SubjectHeader`
+| Prop | Tipo | Nota |
+|---|---|---|
+| `subject` | `PerfSubject` | Define insignia, entorno e identificador |
+| `period`, `asOf`, `rebalances` | de `PerformanceReport` | |
+| `sentence` | `string` | Armada por el cliente con la plantilla de RENDIMIENTO.md §4.1 |
+| `back?` | `{ label, href }` | Ausente en cartera (pestaña) |
+| `range`, `availableRanges`, `onRangeChange` | | `SegmentedControl` YTD · 1A · 3A · 5A · Todo; opciones no disponibles deshabilitadas con motivo en `title` y `aria-describedby` |
+| `compare`, `onCompareChange` | `{ type, id, name } \| 'spy' \| null` | Abre `CompareSelector` |
+Teléfono: controles a todo el ancho, debajo de la frase. Escritorio: a la derecha.
+
+### `CompareSelector`
+Escritorio: menú; teléfono: hoja inferior. Opciones con `role="radio"`: SPY (por defecto), Nada, Otro backtest…, Otra estrategia en ejecución…, recientes. Al elegir “Otro…” abre la lista con búsqueda (`DataTable` con casillas, `maxSelected` = 1 en este contexto). Muestra siempre la regla “Se comparan como máximo dos”. En pantalla, los sujetos comparados se ven como fichas A/B con la muestra de trazo y botón “Quitar B” de 44 px.
+
+### `ShortSampleBanner`
+| Prop | Tipo |
+|---|---|
+| `sample` | `PerformanceReport['sample']` |
+| `period` | para el texto (“3,6 meses y 15 rebalanceos”) |
+| `collapsed?` | `boolean` (recordado por dispositivo con `localStorage`) |
+Tono info (`--qa-info-soft`), ícono reloj de arena (pocos meses) o ciclo (pocos rebalanceos), `role="note"`. Plegado: botón de 44 px con `aria-expanded`.
+
+### `MetricGroup` / `MetricRow`
+- `MetricGroup`: `title`, `columns` (`['A']` o `['A','B']` con nombre y muestra de trazo), `rows: MetricRow[]`, `state: 'ready' | 'loading' | 'stale'`.
+- `MetricRow`: `metricKey`, `label`, `help` (clave de help-texts), `a: MetricValue`, `b?: MetricValue`, `kind: 'variation' | 'level'`, `format: 'pct' | 'pp' | 'ratio' | 'count'`.
+- `variation` → signo + flecha + color semántico. `level` → sin flecha ni color (Sharpe, volatilidad, beta…).
+- `short_sample` → texto secundario + marca punteada “muestra corta”. `not_computable` → “—” + “no calculable” + `reason` en la línea secundaria.
+- Grilla: `minmax(0,1fr) 92px 76px` (escritorio) / `minmax(0,1fr) 86px 62px` (teléfono); filas ≥ 44 px; columna B en texto secundario.
+
+### `ChartCard`
+Contenedor de todo gráfico de Rendimiento.
+| Prop | Tipo |
+|---|---|
+| `title`, `help?` | |
+| `summary` | `string` — siempre visible y usada como `aria-label` |
+| `controls?` | `ReactNode` (segmentados propios) |
+| `view`, `onViewChange` | `'chart' \| 'table'` (preferencia por dispositivo) |
+| `table` | `{ columns, rows }` para `DataTable` |
+| `state` | `'ready' \| 'loading' \| 'empty' \| 'error'` + `emptyMessage`, `onRetry` |
+| `pinned?` | `{ label, values[] } \| null` — franja de tooltip fijo (teléfono) con botón “quitar” |
+
+### `DrawdownChart`
+Área bajo cero en `--qa-neg` al 14 % + línea `--qa-neg`; B en guiones `--qa-chart-2`. `highlight: number` (por defecto 3) peores caídas como bandas `--qa-neg` al 8 % numeradas en círculos (coinciden con la tabla). Eje Y de 0 hacia abajo con marcas cada 10 %. En backtest, franja de reserva fuera de muestra (`--qa-info` al 7 %).
+
+### `CumulativeChart` (extensión)
+Nueva prop `scale: 'linear' | 'log'`. En log, marcas en 0, +50, +100, +200, +300 % (factores 1; 1,5; 2; 3; 4). Línea 0 % con `--qa-border-control`.
+
+### `MonthlyHeatmap`
+| Prop | Tipo |
+|---|---|
+| `data` | `monthly_returns` |
+| `annual` | `annual_returns` (columna Año y columna B) |
+| `thresholds` | `[1, 3, 6]` (mensual) — `monthlyHeatStep()` |
+| `layout` | `'grid' \| 'cards'` (automático por ancho) |
+| `openYears?` | `3` en tarjetas |
+- `grid` (≥ 1024 px útiles): fila por año, 12 celdas + Año + B; celdas 26 px de alto, número dentro.
+- `cards` (< 1024 px): tarjeta por año con total y B; grilla 6 × 2 (4 × 3 por debajo de 360 px), celda ≥ 44 px con mes + valor; años viejos plegados (`aria-expanded`).
+- Mes sin dato: celda punteada “—”. `role="table"`, cada celda con `aria-label` “mar 2020: −9,4 %”.
+
+### `ReturnsBars`
+`by: 'month' | 'year'`. Barras de A rellenas (`--qa-pos` / `--qa-neg`) con ▲/▼ y valor encima o debajo; B como contorno `--qa-text-3` al lado. Línea 0 con `--qa-border-control`. En teléfono, solo flecha (el valor exacto en “Tabla”); años abreviados (’15).
+
+### `ReturnsHistogram`
+`frequency: 'monthly' | 'daily'` con conmutador “Mensual / Diaria”; **mensual por defecto**. Diaria es vista secundaria, deshabilitada (con motivo vía `aria-describedby`) mientras `distributions.daily` sea `null` (menos de 63 días).
+- Mensual: barras por intervalo de 1 %: negativas `--qa-neg`, positivas `--qa-pos`; B como escalón en guiones `--qa-chart-2`; línea vertical del promedio `--qa-text` con etiqueta “Promedio +1,0 %”. Ejes −10, −5, 0, +5, +10 %.
+- Diaria: intervalos de 0,25 %; línea de VaR 95 % (guiones `--qa-text`) y CVaR (puntos), cola izquierda sombreada en `--qa-neg` al 7 %; frase con VaR y CVaR en palabras. Ejes −4 … +4 %.
+
+### `ReturnsNotComputable` (v0.3.2)
+Reemplaza métricas y gráficos cuando `status: 'returns_not_computable'`. Dos variantes según `not_computable_reason`:
+- `unregistered_flows` (cartera, flag encendido): título “Retorno no calculable: hay N aporte(s) sin registrar”, qué movimiento (fecha y monto) y “cuando se registre, el informe se calcula solo”, más la tarjeta de valor en USD descrita abajo.
+- `capital_not_isolated` (estrategia en ejecución): título “Rendimiento no aislable”, explicación (comparte posiciones y caja con la cuenta) y enlaces al backtest y a la cuenta. Sin tarjeta de valor ni números.
+
+Variante `unregistered_flows`, detalle: Tarjeta punteada: ícono, “Retorno no calculable: hay aportes sin registrar”, explicación y enlace al manual. Debajo, `Card` “Valor de la cuenta” en USD marcado “incluye aportes”: línea neutra (`--qa-text-2`), sin %, sin colores de ganancia/pérdida, con los saltos de `flows.unreconciled` marcados (línea punteada `--qa-warn` + fecha y monto con “?”). Prop `unreconciled` cambia el texto a “Hay N movimientos sin registrar: …”.
+
+### `RollingChart`
+`metric: 'sharpe' | 'volatility'` (uno a la vez), `window: 126 | 252`. A continua, B en guiones; línea 0 marcada en Sharpe. Los primeros días sin ventana completa no se dibujan (sin interpolar).
+
+### `CalcConventions`
+Pie en `--qa-surface-sunken` con las convenciones del informe y enlace al manual (44 px en teléfono).
