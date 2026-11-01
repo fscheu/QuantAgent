@@ -33,9 +33,9 @@ ETF_SNAP, DESDE, HASTA, ID = "etf-m5-1d-2026-10", pd.Timestamp("2011-01-01"), pd
 ACTIVOS = ["XLB", "XLC", "XLE", "XLF", "XLI", "XLK", "XLP", "XLRE", "XLU", "XLV", "XLY", "SPY", "EEM", "EWZ"]
 
 
-def pesos_h1():
+def pesos_h1(desde=DESDE, hasta=HASTA):
     """Pesos de H1 por sesión (fecha × ETF) desde 2006, y fechas de rebalanceo con su sesión de decisión."""
-    velas = {a: read_snapshot(ETF_SNAP, a).loc[:HASTA] for a in ACTIVOS}
+    velas = {a: read_snapshot(ETF_SNAP, a).loc[:hasta] for a in ACTIVOS}
     cierres = pd.DataFrame({a: v["close"] for a, v in velas.items()})
     panel = señales_transversales(cierres, METRICAS["sector-score-h1"], mascara=MASCARAS["sin-caida-m5"], **REGLAS["sector-score-h1"])
     w = pesos(cierres, {0: ACTIVOS}, seleccion={0: panel}, semanales={0}).fillna(0.0)
@@ -44,7 +44,7 @@ def pesos_h1():
     primeras = cierres.index[(semana != semana.shift()).to_numpy()]
     previa = cierres.index.to_series().shift(1)
     assert all(_ultima_sesion_de_semana(previa[d]) for d in primeras[1:]), "decisión no es la última sesión de la semana"
-    return velas, w, {d: previa[d] for d in primeras if DESDE <= d <= HASTA}
+    return velas, w, {d: previa[d] for d in primeras if desde <= d <= hasta}
 
 
 def candidatos(decisiones, etfs_por_fecha, cache):

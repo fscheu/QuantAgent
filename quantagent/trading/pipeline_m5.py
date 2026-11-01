@@ -1,0 +1,354 @@
+"""Jobs semanal y diario de M5.
+
+El régimen se conserva en ``local-data/m5-regimen-semanal.csv`` (una fila por
+sesión de decisión), separado de la DB ``local-data/m5.db`` de intents y órdenes.
+Todas las fechas de decisión salen de ``as_of`` y la sesión NYSE cerrada.
+"""
+
+import logging
+import re
+from decimal import Decimal, ROUND_DOWN
+from pathlib import Path
+
+import pandas as pd
+from sqlalchemy.orm import Session
+
+from quantagent.data.snapshot import SnapshotError, snapshot_root, verify_snapshot
+from quantagent.fabrica.candidatos_vivo import candidatos_en_vivo
+from quantagent.fabrica.cartera import pesos, pesos_h3
+from quantagent.fabrica.regimen import regimen_semanal
+from quantagent.fabrica.screener import COLS_CANDIDATOS
+from quantagent.fabrica.transversal import MASCARAS, METRICAS, PRIORS_M5, REGLAS, señales_transversales
+from quantagent.models import ActivePosition, Environment, Order, OrderSide, OrderType, TradeIntentRecord
+from quantagent.portfolio.manager import PortfolioManager
+from quantagent.strategy.arquetipo_a_strategy import ArquetipoAStrategy
+from quantagent.strategy.arquetipo_b_strategy import ArquetipoBStrategy
+from quantagent.strategy.indicadores import atr
+from quantagent.strategy.trade_intent import TradeIntent
+from quantagent.trading.bucket_m5 import CAPITAL_INICIAL, crear_position_sizer, crear_risk_manager
+from quantagent.trading.cartera_paper import sesiones_cerradas_nyse, ultima_sesion_cerrada_nyse
+from quantagent.trading.intent_persistence import save_trade_intent
+from quantagent.trading.narrativa_m5 import explicar_intent, guardar_narrativa, llm_por_defecto, nota_semanal
+from quantagent.trading.position_monitor import PositionMonitor
+from quantagent.trading.stop_management import propuesta_breakeven, propuesta_chandelier
+
+logger = logging.getLogger(__name__)
+UNIVERSO_M5 = tuple(PRIORS_M5["universo"])
+
+
+def _panel_cierres(proveedor, sesiones, universo=UNIVERSO_M5):
+    inicio = sesiones[0].to_pydatetime()
+    fin = (sesiones[-1] + pd.Timedelta(days=1)).to_pydatetime()
+    columnas = {}
+    for simbolo in universo:
+        try:
+            df = proveedor.get_ohlc(simbolo, "1d", inicio, fin)
+        except Exception as exc:
+            if simbolo in UNIVERSO_M5:
+                raise
+            logger.warning("M5 descarta %s: sin_precio (%s)", simbolo, exc)
+            continue
+        if df.empty:
+            continue
+        fechas = pd.to_datetime(df["timestamp"]).dt.normalize()
+        series = pd.Series(df["close"].to_numpy(), index=fechas)
+        columnas[simbolo] = series[~series.index.duplicated(keep="last")]
+    return pd.DataFrame(columnas).reindex(index=sesiones, columns=universo)
+
+
+def _resolver_narrador(narrador):
+    return llm_por_defecto() if narrador == "auto" else narrador
+
+
+def fundamentales_vigente(base_dir):
+    """Elige el snapshot diario más reciente verificable, o el respaldo mensual."""
+    raiz = snapshot_root(base_dir)
+    diarios = sorted((p.name for p in raiz.glob("fundamentales-sp500-????-??-??")
+                      if re.fullmatch(r"fundamentales-sp500-\d{4}-\d{2}-\d{2}", p.name)), reverse=True)
+    for nombre in diarios:
+        try:
+            verify_snapshot(nombre, base_dir=raiz)
+            return nombre
+        except (SnapshotError, ValueError, OSError, KeyError):
+            continue
+    return "fundamentales-sp500-2026-10"
+
+
+def _upsert_semana(path, filas, fecha):
+    """Reemplaza todas las filas de una fecha, incluso si la nueva selección está vacía."""
+    if path.exists():
+        previo = pd.read_csv(path, parse_dates=["fecha"], float_precision="round_trip")
+        filas = pd.concat([previo[pd.to_datetime(previo["fecha"]).dt.normalize() != fecha], filas], ignore_index=True)
+    filas.sort_values("fecha", kind="stable").to_csv(path, index=False)
+
+
+def _etapa2_semanal(as_of, data_provider, cierres, regimen, carpeta, base_dir, composicion):
+    fecha = pd.Timestamp(regimen["fecha"]).normalize()
+    candidatos = pd.DataFrame(columns=COLS_CANDIDATOS)
+    descartes = []
+    if regimen["estado"] != "risk-off":
+        try:
+            fundamentales = fundamentales_vigente(base_dir)
+            habilitados = [e for e in regimen["habilitados"].split(",") if e in UNIVERSO_M5]
+            candidatos, descartes = candidatos_en_vivo(
+                as_of, habilitados, data_provider, fundamentales, composicion, base_dir)
+        except Exception as exc:
+            logger.warning("Screener semanal M5 sin candidatos", exc_info=True)
+            candidatos = pd.DataFrame(columns=COLS_CANDIDATOS)
+            descartes = [{"simbolo": None, "motivo": f"screener: {exc}"}]
+    _upsert_semana(carpeta / "m5-candidatos-semanales.csv", candidatos, fecha)
+    rechazos = pd.DataFrame(descartes, columns=["simbolo", "motivo"])
+    rechazos.insert(0, "fecha", fecha)
+    _upsert_semana(carpeta / "m5-candidatos-descartes.csv", rechazos, fecha)
+
+    seleccion = señales_transversales(
+        cierres, METRICAS["sector-score-h1"], mascara=MASCARAS["sin-caida-m5"],
+        **REGLAS["sector-score-h1"])
+    # pesos rebalancea en la apertura siguiente usando sigma hasta el cierre de decisión.
+    futuras = sesiones_cerradas_nyse(fecha + pd.Timedelta(days=14), n_sesiones=12)
+    siguiente = futuras[futuras > fecha][0]
+    extendido = cierres.reindex(cierres.index.append(pd.DatetimeIndex([siguiente])))
+    seleccion = seleccion.reindex(extendido.index).ffill()
+    h1 = pesos(extendido, {0: list(UNIVERSO_M5)}, seleccion={0: seleccion}, semanales={0}).fillna(0.0)
+    h1.columns = h1.columns.droplevel(0)
+    h1 = h1.loc[[siguiente]]
+    if regimen["estado"] == "risk-off":
+        h1.loc[:] = 0.0
+    h3 = pesos_h3(h1, candidatos, {siguiente: fecha})
+    sombra = pd.concat([h1.iloc[0].rename("peso_h1"), h3.iloc[0].rename("peso_h3")], axis=1).fillna(0.0)
+    sombra.index.name = "activo"
+    sombra = sombra.reset_index()
+    sombra.insert(0, "fecha", fecha)
+    _upsert_semana(carpeta / "m5-sombra-semanal.csv", sombra, fecha)
+
+
+def _narrativa_path(narrativa_path, regimen_path):
+    return narrativa_path or Path(regimen_path).parent / "m5-narrativa.csv"
+
+
+def _narrar_intent(intent, narrador, narrativa_path, regimen_path, fecha, simbolo, strategy_id):
+    """Texto del LLM sobre un intent ya guardado; nunca altera ni propaga errores al pipeline."""
+    try:
+        texto = explicar_intent(intent, _resolver_narrador(narrador))
+        guardar_narrativa(_narrativa_path(narrativa_path, regimen_path), "intent",
+                          f"{fecha.date()}:{simbolo}:{strategy_id}", texto)
+    except Exception:
+        logger.warning("Narrativa de intent M5 no guardada", exc_info=True)
+
+
+def correr_semanal(as_of, *, data_provider, db: Session | None = None,
+                   regimen_path="local-data/m5-regimen-semanal.csv", narrador="auto",
+                   narrativa_path=None, base_dir=None, composicion="sp500-2026-10"):
+    """Guarda régimen, candidatos y sombra H1/H3 al cierre semanal con reloj inyectado."""
+    ultima = ultima_sesion_cerrada_nyse(as_of)
+    sesiones = sesiones_cerradas_nyse(as_of, n_sesiones=504)
+    cierres = _panel_cierres(data_provider, sesiones).dropna(how="all").ffill()
+    tabla = regimen_semanal(cierres, PRIORS_M5, peso_macro=0.0)
+    fila = tabla.loc[tabla["fecha"].dt.normalize() == ultima.normalize()].tail(1)
+    if fila.empty:
+        return None
+    path = Path(regimen_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    anterior = None
+    if path.exists():
+        previo = pd.read_csv(path, parse_dates=["fecha"], float_precision="round_trip")
+        previas = previo[previo["fecha"].dt.normalize() < ultima.normalize()]
+        if not previas.empty:
+            anterior = previas.sort_values("fecha").iloc[-1]
+        tabla = pd.concat([previo[previo["fecha"].dt.normalize() != ultima.normalize()], fila])
+    else:
+        tabla = fila
+    tabla.sort_values("fecha").to_csv(path, index=False)
+    _etapa2_semanal(as_of, data_provider, cierres, fila.iloc[0], path.parent, base_dir, composicion)
+    try:
+        llm = _resolver_narrador(narrador)
+        texto = nota_semanal(fila.iloc[0], anterior, llm)
+        guardar_narrativa(_narrativa_path(narrativa_path, path), "nota_semanal",
+                          pd.Timestamp(fila.iloc[0]["fecha"]).date().isoformat(), texto)
+    except Exception:
+        logger.warning("Narrativa semanal M5 no guardada", exc_info=True)
+    return fila.iloc[0].to_dict()
+
+
+def _regimen_actual(path, fecha):
+    tabla = pd.read_csv(path, parse_dates=["fecha"])
+    filas = tabla[tabla["fecha"].dt.normalize() <= fecha.normalize()]
+    return None if filas.empty else filas.sort_values("fecha").iloc[-1]
+
+
+def _candidatos_actuales(path, fecha):
+    if not path.exists():
+        return []
+    try:
+        tabla = pd.read_csv(path, parse_dates=["fecha"])
+    except pd.errors.EmptyDataError:
+        return []
+    if tabla.empty:
+        return []
+    tabla = tabla[tabla.fecha.dt.normalize() <= fecha.normalize()]
+    if tabla.empty:
+        return []
+    vigente = tabla[tabla.fecha == tabla.fecha.max()]
+    return vigente.loc[vigente["rank"].notna(), "simbolo"].drop_duplicates().tolist()
+
+
+def _seguir_stops(db, broker, data_provider, panel, fecha):
+    monitor = PositionMonitor(db, environment=Environment.PAPER)
+    for position in db.query(ActivePosition).filter(
+            ActivePosition.is_active.is_(True), ActivePosition.quantity > 0,
+            ActivePosition.environment == Environment.PAPER).all():
+        if position.symbol not in panel:
+            continue
+        bars = panel[position.symbol].dropna()
+        bars = bars[bars.index >= pd.Timestamp(position.decision_timestamp).normalize()]
+        if bars.empty:
+            continue
+        inicio = pd.Timestamp(position.decision_timestamp).to_pydatetime()
+        fin = (fecha + pd.Timedelta(days=1)).to_pydatetime()
+        try:
+            candles = data_provider.get_ohlc(position.symbol, "1d", inicio, fin)
+        except Exception as exc:
+            logger.warning("M5 conserva stop de %s: sin_precio (%s)", position.symbol, exc)
+            continue
+        if len(candles) < 14:
+            continue
+        candles = candles[pd.to_datetime(candles["timestamp"]).dt.normalize() >= bars.index[0]]
+        atr_value = float(atr(candles).iloc[-1])
+        if pd.isna(atr_value) or atr_value <= 0:
+            continue
+        extremo = float(candles["high"].max() if position.side == OrderSide.BUY else candles["low"].min())
+        proposed = propuesta_chandelier(extremo, atr_value, position.side)
+        breakeven = propuesta_breakeven(float(position.entry_price), float(position.stop_loss),
+                                         float(bars.iloc[-1]), position.side)
+        if breakeven is not None:
+            proposed = max(proposed, breakeven) if position.side == OrderSide.BUY else min(proposed, breakeven)
+        stop_anterior = position.stop_loss
+        decision = monitor.actualizar_stop(position, proposed)
+        if decision.stop == stop_anterior or not position.broker_stop_order_id:
+            continue
+        stop_order = db.query(Order).filter(Order.alpaca_order_id == position.broker_stop_order_id).first()
+        if stop_order is not None and hasattr(broker, "replace_stop"):
+            broker.replace_stop(position.broker_stop_order_id, decision.stop)
+            stop_order.stop_price = decision.stop
+            db.commit()
+
+
+def correr_diario(as_of, *, data_provider, db: Session, broker,
+                  portfolio_manager=None, regimen_path="local-data/m5-regimen-semanal.csv",
+                  estrategias=None, narrador="auto", narrativa_path=None, es_fraccionable=None):
+    """Evalúa ETFs y candidatos vigentes; conserva stops de posiciones que salen de selección."""
+    fecha = ultima_sesion_cerrada_nyse(as_of)
+    timestamp = pd.Timestamp(as_of)
+    timestamp = timestamp.tz_convert("UTC").tz_localize(None) if timestamp.tzinfo else timestamp
+    ses = sesiones_cerradas_nyse(as_of, n_sesiones=504)
+    regimen = _regimen_actual(regimen_path, fecha)
+    candidatos = _candidatos_actuales(Path(regimen_path).parent / "m5-candidatos-semanales.csv", fecha)
+    activas = [p.symbol for p in db.query(ActivePosition).filter(
+        ActivePosition.is_active.is_(True), ActivePosition.quantity > 0,
+        ActivePosition.environment == Environment.PAPER).all()]
+    sin_entradas = regimen is None or regimen["estado"] == "risk-off"
+    if sin_entradas and not activas:
+        return []
+    universo = list(dict.fromkeys(activas if sin_entradas else [*UNIVERSO_M5, *candidatos, *activas]))
+    panel = _panel_cierres(data_provider, ses, universo)
+    _seguir_stops(db, broker, data_provider, panel, fecha)
+    if sin_entradas:
+        return []
+    habilitados = list(dict.fromkeys([
+        *[s for s in str(regimen["habilitados"]).split(",") if s in UNIVERSO_M5], *candidatos]))
+    fraccionable = es_fraccionable or getattr(broker, "es_fraccionable", lambda simbolo: False)
+    manager = portfolio_manager or PortfolioManager(CAPITAL_INICIAL, db=db, clock=lambda: fecha.date())
+    manager.set_date(fecha.date())
+    risk = crear_risk_manager(manager, db=db, clock=lambda: fecha.date())
+    sizer = crear_position_sizer()
+    strategies = estrategias or (("arquetipo-a-pullback", ArquetipoAStrategy()),
+                                 ("arquetipo-b-breakout", ArquetipoBStrategy()))
+    creados = []
+    for simbolo in habilitados:
+        serie = panel[simbolo].dropna()
+        accion = simbolo not in UNIVERSO_M5
+        if serie.empty or (accion and (serie.index[-1] != fecha or serie.iloc[-1] <= 0)):
+            logger.warning("M5 descarta %s: sin_precio", simbolo)
+            continue
+        try:
+            candles = data_provider.get_ohlc(simbolo, "1d", serie.index[0].to_pydatetime(),
+                                             (fecha + pd.Timedelta(days=1)).to_pydatetime())
+            permite_fracciones = fraccionable(simbolo) if accion else True
+        except Exception as exc:
+            if not accion:
+                raise
+            logger.warning("M5 descarta %s: sin_precio_o_activo (%s)", simbolo, exc)
+            continue
+        candles = candles[pd.to_datetime(candles["timestamp"]).dt.normalize().isin(serie.index)]
+        records = candles.to_dict("records")
+        if not records:
+            continue
+        if accion and len(records) < 14:
+            logger.warning("M5 descarta %s: velas_insuficientes", simbolo)
+            continue
+        precio = float(records[-1]["close"])
+        atr_value = float(atr(pd.DataFrame(records)).iloc[-1])
+        for strategy_id, strategy in strategies:
+            if accion and len(records) < strategy.required_history_bars:
+                logger.warning("M5 descarta %s (%s): velas_insuficientes", simbolo, strategy_id)
+                continue
+            signal = strategy.generate_signal(records, simbolo, "1d", precio)
+            if signal is None or signal.decision.upper() != "LONG":
+                continue
+            razonamiento = dict(session_date=str(fecha.date()), source="pipeline_m5")
+            intent = TradeIntent(
+                decision=signal.decision, confidence=signal.confidence,
+                entry_price=signal.entry_price or precio, stop_loss=signal.stop_loss,
+                take_profit=signal.take_profit, reasoning=signal.reasoning,
+                exit_policy=signal.exit_policy, entry_order="stop" if accion else signal.entry_order,
+                entry_expiry_bars=signal.entry_expiry_bars,
+                bucket_id="m5", strategy_id=strategy_id, symbol=simbolo,
+                order_type="stop" if accion or signal.entry_order == "stop" else "market",
+                atr_at_signal=atr_value, reasoning_metadata=razonamiento,
+            )
+            duplicado = next((r for r in db.query(TradeIntentRecord).filter(
+                TradeIntentRecord.bucket_id == "m5", TradeIntentRecord.symbol == simbolo,
+                TradeIntentRecord.strategy_id == strategy_id).all()
+                if (r.reasoning_metadata or {}).get("session_date") == str(fecha.date())), None)
+            if duplicado:
+                continue
+            qty = sizer.calculate_size(simbolo, intent.confidence, float(intent.entry_price),
+                                       manager.get_total_value(), stop_price=float(intent.stop_loss),
+                                       fraccionable=permite_fracciones)
+            if accion:
+                qty = float(Decimal(str(qty)).quantize(Decimal("0.00000001"), rounding=ROUND_DOWN))
+            valido, motivo = risk.validate_trade(simbolo, OrderSide.BUY, qty,
+                                                  float(intent.entry_price), float(intent.stop_loss))
+            if qty <= 0:
+                motivo = "tamano_cero"
+                valido = False
+            if not valido:
+                record = save_trade_intent(db, intent, "rechazado_riesgo", motivo.split(":")[0])
+                record.created_at = record.updated_at = timestamp.to_pydatetime()
+                db.commit()
+                creados.append(record)
+                _narrar_intent(intent, narrador, narrativa_path, regimen_path, fecha, simbolo, strategy_id)
+                continue
+            entrada = Order(symbol=simbolo, side=OrderSide.BUY, quantity=Decimal(str(qty)),
+                            order_type=OrderType.STOP if intent.order_type == "stop" else OrderType.MARKET,
+                            price=Decimal(str(intent.entry_price)) if intent.order_type == "market" else None,
+                            stop_price=Decimal(str(intent.entry_price)) if intent.order_type == "stop" else None,
+                            environment=Environment.PAPER, created_at=timestamp.to_pydatetime(),
+                            comment=f"m5; vence={intent.entry_expires_bars} barras")
+            db.add(entrada)
+            db.flush()
+            broker.submit_order(entrada)
+            db.add(entrada)
+            proteccion = Order(symbol=simbolo, side=OrderSide.SELL, quantity=Decimal(str(qty)),
+                               order_type=OrderType.STOP, stop_price=Decimal(str(intent.stop_loss)),
+                               environment=Environment.PAPER, created_at=timestamp.to_pydatetime(),
+                               comment=f"proteccion intent={simbolo}:{strategy_id}")
+            db.add(proteccion)
+            db.flush()
+            broker.submit_order(proteccion)
+            record = save_trade_intent(db, intent, "aprobado", order_id=entrada.id)
+            record.created_at = record.updated_at = timestamp.to_pydatetime()
+            db.commit()
+            creados.append(record)
+            _narrar_intent(intent, narrador, narrativa_path, regimen_path, fecha, simbolo, strategy_id)
+    return creados
