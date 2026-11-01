@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { OrderStatus } from '../api/types'
 import { useAccounts, useDividends, useEquity, useOrders, usePositions, useSectorExposure, useSummary } from '../api/hooks'
-import { dataConfig } from '../config'
+import { dataConfig, featureFlags } from '../config'
 import { money, relative, time } from '../lib/format'
 import { AccountNoData, AccountSelect, AccountSummaryCard, ChipGroup, DataTable, DateStepper, DivergingBar, EmptyState, EquityChart, ErrorState, Notice, OrderCard, orderColumns, orderGroupBy, orderSubRow, PositionCard, positionColumns, Skeleton } from '../components'
 import type { EquityRange } from '../components'
@@ -35,6 +35,7 @@ export function Cuenta({ accountId, navigate }: { accountId: string; navigate: (
   const isStale = account?.status === 'active' && (account.stale || Date.now() - new Date(account.as_of).getTime() > staleMinutes * 60000)
   const changeDate = (next: string) => setDate(next)
   return <main className="qa-cuenta">
+    {featureFlags.accountPerformanceTab && <nav role="tablist" aria-label="Secciones de cuenta" className="qa-account-tabs"><a role="tab" aria-selected="true" href={`/cuenta/${accountId}`} onClick={event => { event.preventDefault(); navigate(`/cuenta/${accountId}`) }}>Hoy</a><a role="tab" aria-selected="false" href={`/cuenta/${accountId}/rendimiento`} onClick={event => { event.preventDefault(); navigate(`/cuenta/${accountId}/rendimiento`) }}>Rendimiento</a></nav>}
     <header className="qa-cuenta-top"><div>{accounts.status === 'ok' ? <AccountSelect accounts={accounts.data} value={accountId} onChange={id => navigate(`/cuenta/${id}`)} /> : accounts.status === 'error' ? <ErrorState message="No pudimos cargar las cuentas." action={{ label: 'Reintentar', onClick: accounts.reload }} /> : <Skeleton width="220px" label="Cuentas" />}</div><p>Actualizado {account?.status === 'active' ? time(account.as_of, 'ART') : '—'}{account?.status === 'active' ? ` · ${relative(account.as_of)}` : ''}</p></header>
     {isStale && <Notice severity="stale" title="Datos desactualizados" message={`Sin datos nuevos desde hace más de ${staleMinutes} min.`} />}
     <section><h2>Resumen</h2>{summary.status === 'loading' ? <Skeleton label="Resumen" /> : summary.status === 'error' ? <ErrorState message="No pudimos cargar el resumen." action={{ label: 'Reintentar', onClick: summary.reload }} /> : <AccountSummaryCard account={summary.data} />}</section>

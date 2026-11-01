@@ -33,3 +33,5 @@ export const useHomeStatus = () => useLoad(api.getHomeStatus, 'home-status')
 
 export const useBacktests = () => useLoad(api.getBacktests, 'backtests')
 export const useBacktestPerformance = (id: string, range: import('./types').PerfRange, vs: string | null) => useLoad(() => api.getBacktestPerformance(id, range, vs), `performance:${id}:${range}:${vs}`)
+export const useAccountPerformance = (type: 'portfolio' | 'run', id: string, range: import('./types').PerfRange) => useLoad(() => api.getAccountPerformance(type, id, range), `performance:${type}:${id}:${range}`)
+export const usePerformance = (type: 'backtest' | 'portfolio' | 'run', id: string, range: import('./types').PerfRange, vs: string | null) => useLoad(() => type === 'backtest' ? api.getBacktestPerformance(id, range, vs) : api.getAccountPerformance(type, id, range), `performance:${type}:${id}:${range}:${vs}`)

@@ -46,3 +46,5 @@ export const getBacktestPerformance = (id: string, range: PerfRange, vs: string 
   const params = new URLSearchParams({ range }); if (vs?.startsWith('backtest:')) params.set('align_with', vs)
   return get<PerformanceReport>(`/api/performance/backtest/${encodeURIComponent(id)}?${params}`)
 }
+export const getAccountPerformance = (type: 'portfolio' | 'run', id: string, range: PerfRange) =>
+  get<PerformanceReport>(`/api/performance/${type}/${encodeURIComponent(id)}?range=${range}`)
