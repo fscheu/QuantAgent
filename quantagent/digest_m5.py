@@ -50,7 +50,7 @@ def build_digest_m5(day: date, datos: dict, *, capital: float = CAPITAL_INICIAL,
     rejected = datos["rechazados"]
     positions = datos["posiciones"]
     lines = [f"Resumen M5 — {day.isoformat()}", f"Intents aprobados ({len(approved)})"]
-    lines.extend(f"- {item['symbol']} {item['qty']:g} @ {float(item['entry']):.2f}, stop {float(item['stop']):.2f}"
+    lines.extend(f"- {item['symbol']} {format(item['qty'], '.4f').rstrip('0').rstrip('.')} @ {float(item['entry']):.2f}, stop {float(item['stop']):.2f}"
                  for item in approved)
     lines.append(f"Intents rechazados ({len(rejected)})")
     lines.extend(f"- {item['symbol']}: {item['reject_reason']}" for item in rejected)
@@ -68,4 +68,9 @@ def build_digest_m5(day: date, datos: dict, *, capital: float = CAPITAL_INICIAL,
     equity = capital + sum(position["unrealized_pnl"] for position in positions)
     heat_pct = heat / equity * 100 if equity else 0.0
     lines.append(f"Heat: {heat_pct:.2f} % (límite {max_heat * 100:.2f} %)")
+    if positions:
+        lines.append("Posiciones")
+        lines.extend(f"- {p['symbol']}: {format(p['quantity'], '.4f').rstrip('0').rstrip('.')}"
+                     for p in positions)
+    lines.extend(datos.get("semanal", []))
     return "\n".join(lines)
