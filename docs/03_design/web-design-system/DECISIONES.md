@@ -31,6 +31,19 @@ Cada fila tiene un valor provisorio para no bloquear el desarrollo. Cuando se de
 | 25 | Vencidas: ¿también "Vencidas" en el feed de Inicio? | No (no requieren acción) | EVENTOS.md | Uso real | — |
 | 26 | DataTable: tercer clic en el encabezado | Vuelve al orden por defecto | `DataTable` | Primer uso en Mercado | — |
 | 27 | Pantallas de Live con datos (v0.1) | Quedan como referencia de "cuando la cuenta esté abierta" | Canvas | Al abrir la cuenta live | — |
+| 28 | Umbrales de métricas de Rendimiento | — | Backend (parámetros) + espejo en `performanceConfig` | — | **01/11/2026**: escalones 21 (descriptivo) / 63 (riesgo con aviso) / 252 (anualizadas). Provisorios: parámetros del backend devueltos en `sample.thresholds`, no fijos en el diseño. |
+| 29 | Aviso “pocos rebalanceos” | — | Backend (parámetro) | — | **01/11/2026**: < 12, razonable para estrategia mensual; provisorio y parametrizable. |
+| 30 | Tasa libre de riesgo | Letra del Tesoro de EE. UU. a 3 meses, diaria | Backend (`conventions`) | Al implementar | — |
+| 31 | Selector de Período: global o solo de la curva | Global (afecta métricas y todos los gráficos); `EquityChart` sin selector propio en esta pantalla | `SubjectHeader` | Uso real | — |
+| 32 | Cuenta: pestañas “Hoy · Rendimiento” vs sección con enlace | Pestañas | Pantalla Cuenta | Uso real | — |
+| 33 | Distribución: mensual o diaria | — | `ReturnsHistogram` | — | **01/11/2026**: mensual por defecto + conmutador “Diaria” secundario desde 63 días, con VaR 95 % y CVaR. |
+| 34 | Ventanas de métricas móviles | 6M y 12M (126 y 252 días) | `performanceConfig` | Uso real | — |
+| 35 | Comparar dos sujetos con períodos distintos | Período común (`align_with`) y aviso en el encabezado | Backend | Al implementar | — |
+| 36 | Lista de backtests: ubicación | — | Navegación | — | **01/11/2026**: sección propia `/backtests` en la navegación principal (5 destinos). La ficha de hipótesis enlaza al backtest. |
+| 37 | Cartera: retorno ponderado por tiempo | — | Backend | — | **01/11/2026**: hoy NO se calcula (`EquitySnapshot` sin flujos ni id de cuenta). Prerrequisito de backend junto con QW-04. Mientras tanto, estado `returns_not_computable`. |
+| 38 | Cómo se asigna capital por estrategia (para aislar su rendimiento) | Sin capital por estrategia: estado “rendimiento no aislable” y acceso oculto (`runPerformance` apagado). No se promete pantalla para estrategias sueltas | Backend (`models.py`, `cartera_paper.py`) | **Decide Fede**; pregunta anotada en el ticket de backend | — |
+| 39 | Diseño completo de la sección Backtests | — | Canvas | — | **01/11/2026**: primero el corte de Rendimiento con la lista mínima (casillas, hasta dos). Búsqueda, filtros y estados, después, cuando haya backtests suficientes. |
+| 40 | Pestaña Rendimiento en Cuenta | — | `featureFlags.accountPerformanceTab` | — | **01/11/2026**: oculta detrás de flag hasta que el backend calcule TWR. El estado “1 aporte sin registrar” queda diseñado para después. |
 
 ## Decisiones tomadas (registro)
 
@@ -47,3 +60,8 @@ Cada fila tiene un valor provisorio para no bloquear el desarrollo. Cuando se de
 | 30/10/2026 | v0.2: estados de orden del backend `cancelled` (dos L) y `expired`; "Vencida" con reloj de arena y borde punteado, distinta de "Cancelada". |
 | 30/10/2026 | v0.2: cuenta sin datos = `status: 'no_data'`, nunca ceros. Reemplaza toda la pantalla Cuenta; tarjeta punteada en Inicio; "Sin datos todavía" en el selector. |
 | 30/10/2026 | v0.2: `DataTable` genérica; `PositionRow` y `OrderRow` pasan a ser configuraciones de ella. |
+| 01/11/2026 | v0.3: pantalla Rendimiento, un layout para backtest, ejecución y cartera; máximo dos sujetos (A continuo, B en guiones, aunque B sea SPY). |
+| 01/11/2026 | v0.3: métricas anualizadas con muestra insuficiente = “no calculable” + motivo, nunca un número; el estado lo decide el backend. |
+| 01/11/2026 | v0.3: todo gráfico tiene frase-resumen visible y alternativa en tabla con los mismos datos. |
+| 01/11/2026 | v0.3.1: Backtests como sección propia; distribución mensual + diaria; cartera con estado “retorno no calculable” hasta que el backend registre aportes. |
+| 01/11/2026 | v0.3.2: primer corte = Rendimiento de backtests. Cartera y estrategia en ejecución detrás de flags (`accountPerformanceTab`, `runPerformance`). Estrategia en ejecución: estado “rendimiento no aislable”. |
