@@ -146,9 +146,15 @@ def regimen_semanal(cierres: pd.DataFrame, priors: dict, peso_macro: float, base
     momentum = price_momentum_score(cierres)
     ultimas = cierres.index.to_series().groupby(cierres.index.to_period("W")).max()
     semanas = pd.DatetimeIndex(ultimas[ultimas >= "2006-01-01"])
-    z_tema = z_temas(z_series_macro(priors, semanas, base_dir), priors)
     mom = momentum.loc[semanas]
-    score = sector_score(macro_theme_score(z_tema, priors), mom, peso_macro)
+    if peso_macro:
+        z_tema = z_temas(z_series_macro(priors, semanas, base_dir), priors)
+        macro = macro_theme_score(z_tema, priors)
+    else:
+        # H1 is the price-only baseline; it must not require the macro snapshot.
+        z_tema = pd.DataFrame(index=semanas, columns=priors["temas"], dtype=float)
+        macro = pd.DataFrame(0.0, index=semanas, columns=mom.columns)
+    score = sector_score(macro, mom, peso_macro)
     bloqueo = filtro_caida(mom, cierres["SPY"])
     risk_off = filtro_caida(pd.DataFrame({"SPY": -1.0}, index=semanas), cierres["SPY"])["SPY"]
     filas = []

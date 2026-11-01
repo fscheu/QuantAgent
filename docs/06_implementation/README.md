@@ -33,6 +33,12 @@ Implementation documents should include:
 
 ## Active Per-Change Implementation
 
+- [QuantAgent-fnpr.6.6.5-IM-digest-acciones.md](./QuantAgent-fnpr.6.6.5-IM-digest-acciones.md) - Digest M5 con candidatos, descartes y comparación semanal H1/H3/1/N.
+- [QuantAgent-fnpr.6.6.4-IM-diario-acciones.md](./QuantAgent-fnpr.6.6.4-IM-diario-acciones.md) - Diario con candidatos vigentes, stops, fracciones según Alpaca y seguimiento de posiciones retiradas.
+- [QuantAgent-fnpr.6.6.3-IM-job-semanal-candidatos.md](./QuantAgent-fnpr.6.6.3-IM-job-semanal-candidatos.md) - Job semanal con candidatos vigentes, descartes y pesos H1/H3 en sombra.
+- [QuantAgent-fnpr.6.6.2-IM-candidatos-vivo.md](./QuantAgent-fnpr.6.6.2-IM-candidatos-vivo.md) - Adaptador de candidatos semanales con precios vivos y reloj inyectado.
+- [QuantAgent-fnpr.6.6.1-IM-datos-vivos-h3.md](./QuantAgent-fnpr.6.6.1-IM-datos-vivos-h3.md) - Refresco diario de fundamentales para paper M5 con validación y fallback.
+- [QuantAgent-fnpr.4.12-IM-etapa3.md](./QuantAgent-fnpr.4.12-IM-etapa3.md) - H1/H3 2019–2022 y límites del conteo de sesgo por precios faltantes.
 - [QuantAgent-fnpr.4.5-IM-h4.md](./QuantAgent-fnpr.4.5-IM-h4.md) - H4 contra H3 en 2011–2018: veredicto V30 de etapa 2 y un único intento.
 - [QuantAgent-fnpr.4.11-IM-precios-acciones-2019.md](./QuantAgent-fnpr.4.11-IM-precios-acciones-2019.md) - Precios S&P 500 2019–hoy: snapshot 10c y cobertura por año y sector.
 - [QuantAgent-jpwz-IM-diagnostico-conteo-f1.md](./QuantAgent-jpwz-IM-diagnostico-conteo-f1.md) - F1 tiene cambios de pesos que el conteo por señales omite.

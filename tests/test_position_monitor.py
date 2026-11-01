@@ -115,6 +115,8 @@ def test_open_position_uses_monitor_environment(db_session):
     "local_qty,remote_positions,expected",
     [
         (Decimal("2"), {"BTC": SimpleNamespace(qty="2", side="long")}, []),
+        (Decimal("0.12345678"), {"BTC": SimpleNamespace(qty="0.12345678", side="long")}, []),
+        (Decimal("0.12345678"), {"BTC": SimpleNamespace(qty="0.12345679", side="long")}, ["BTC"]),
         (Decimal("2"), {"BTC": SimpleNamespace(qty="1", side="long")}, ["BTC"]),
         (Decimal("2"), {}, ["BTC"]),
         (None, {"BTC": SimpleNamespace(qty="2", side="long")}, ["BTC"]),

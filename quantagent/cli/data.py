@@ -13,6 +13,7 @@ import pandas as pd
 from quantagent.data.acciones import crear_snapshot_acciones, reporte_cobertura
 from quantagent.data.fundamentales import (
     crear_snapshot_fundamentales,
+    refrescar_fundamentales,
     reporte_cobertura_fundamentales,
 )
 from quantagent.data.macro import crear_snapshot_macro, verificar_snapshot_macro
@@ -261,6 +262,18 @@ def cobertura_acciones(name: str) -> None:
 @data_group.group("fundamentales", help="Manage SEC EDGAR (XBRL) fundamentals snapshots.")
 def fundamentales_group() -> None:
     """Fundamentales snapshot subcommands."""
+
+
+@fundamentales_group.command("refrescar", help="Refresh current index fundamentals and retain the previous valid snapshot on failure.", epilog="Example: quantagent data fundamentales refrescar --composicion sp500-2026-10")
+@click.option("--composicion", default="sp500-2026-10", show_default=True, help="Composition snapshot providing the latest index members.")
+def refrescar_fundamentales_cmd(composicion: str) -> None:
+    resultado = refrescar_fundamentales(
+        date.today(), composicion,
+        progreso=lambda n, total: click.echo(f"Fundamentales: {n}/{total} tickers procesados", err=True),
+    )
+    click.echo(f"Snapshot vigente: {resultado['snapshot_vigente'] or 'ninguno'}; {resultado['motivo']}")
+    if resultado["snapshot_vigente"] is None:
+        raise SystemExit(1)
 
 
 @fundamentales_group.command("create", help="Download companyfacts from SEC EDGAR and create the snapshot.")
