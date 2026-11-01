@@ -1,4 +1,4 @@
-import type { AccountSummary, MarketClock, Order, Position } from '../api/types'
+import type { AccountRef, AccountSummary, CalendarEvent, FeedEvent, HomeStatus, MarketClock, Order, Position } from '../api/types'
 
 const asOf = '2026-10-30T19:30:00Z'
 
@@ -21,6 +21,18 @@ export const accounts = [
     id: 'live-main', name: 'Live', env: 'live', status: 'no_data', no_data_reason: 'not_funded', checked_at: asOf, next_check_at: null,
   },
 ] satisfies AccountSummary[]
+export const accountRefs = accounts.map(({ id, name, env }) => ({ id, name, env })) satisfies AccountRef[]
+export const homeStatus = { level: 'warning', headline: 'Casi todo bien: 1 advertencia', message: 'El broker y la simulación local difieren 0,8 %.', link: '/cuenta/paper-m4' } satisfies HomeStatus
+export const feedEvents = [
+  { id: 'drawdown-1', type: 'drawdown_limit', severity: 'critical', occurred_at: '2026-10-30T19:20:00Z', account_id: 'paper-m4', title: 'Drawdown sobre el límite en Paper M4', subtitle: '−8,4 % desde el máximo; límite 8 %', link: '/cuenta/paper-m4', group_count: 1 },
+  { id: 'reject-1', type: 'order_rejected', severity: 'warning', occurred_at: '2026-10-30T18:00:00Z', account_id: 'paper-m4', title: '2 órdenes rechazadas en Paper M4', subtitle: 'Poder de compra insuficiente', link: '/cuenta/paper-m4?tab=ordenes', group_count: 2 },
+  { id: 'cycle-1', type: 'cycle_completed', severity: 'info', occurred_at: '2026-10-30T17:00:00Z', account_id: null, title: 'Terminó el ciclo 12 del embudo', subtitle: '24 entraron, 3 siguen, 21 cayeron', link: '/embudo?cycle=12', group_count: 1 },
+  { id: 'filled-1', type: 'order_filled', severity: 'neutral', occurred_at: '2026-10-30T16:00:00Z', account_id: 'paper-m3', title: '1 compra ejecutada', subtitle: 'MSFT 25 a 431,55', link: '/cuenta/paper-m3?tab=ordenes', group_count: 1 },
+] satisfies FeedEvent[]
+export const calendarEvents = [
+  { id: 'calendar-2', kind: 'macro', starts_at: '2026-11-05T13:30:00Z', date: '2026-11-05', title: 'Empleo', subtitle: null, source: 'fred', account_id: null },
+  { id: 'calendar-1', kind: 'rebalance', starts_at: null, date: '2026-11-02', title: 'Rebalanceo', subtitle: 'Paper M4', source: 'strategy', account_id: 'paper-m4' },
+] satisfies CalendarEvent[]
 
 export const positions = [
   { symbol: 'SPY', description: 'ETF S&P 500', side: 'long', qty: 20, avg_entry_price: 490, current_price: 500, market_value: 10000, unrealized_pl: 200, unrealized_pl_pct: 0.02, stop_price: 475, opened_at: '2026-10-01T14:30:00Z' },

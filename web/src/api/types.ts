@@ -173,7 +173,7 @@ export interface Hypothesis {
 
 /* ---------- Inicio ---------- */
 export interface HomeStatus {
-  level: 'ok' | Severity;
+  level: 'ok' | Severity | 'neutral';
   headline: string;                     // 'Casi todo bien: 1 advertencia'
   message: string;
   link: string | null;
@@ -201,7 +201,7 @@ export interface CalendarEvent {
   date: string;                         // 'YYYY-MM-DD' (fecha de NY)
   title: string;
   subtitle: string | null;
-  source: 'alpaca' | 'fred' | 'manual' | 'system';
+  source: 'alpaca' | 'strategy' | 'fred' | 'manual';
   account_id: string | null;
 }
 

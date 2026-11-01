@@ -14,9 +14,9 @@ function Preferences() {
 }
 
 describe('App', () => {
-  it('renders QuantAgent', () => {
+  it('renders the Inicio screen', () => {
     render(<ThemeProvider><App /></ThemeProvider>)
-    expect(screen.getByText('QuantAgent')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Inicio' })).toBeTruthy()
   })
 
   it('applies theme and density changes to the document', () => {
@@ -31,7 +31,7 @@ describe('App', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked') })
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
     expect(() => render(<ThemeProvider><App /></ThemeProvider>)).not.toThrow()
-    expect(screen.getByText('QuantAgent')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Inicio' })).toBeTruthy()
   })
 
   afterEach(() => {
