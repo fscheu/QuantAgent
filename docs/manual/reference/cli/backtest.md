@@ -184,6 +184,13 @@ Options:
   --cuenta-chica FLOAT RANGE      Initial backtest capital in USD; enables
                                   whole-share entries. Default: disabled
                                   ($100,000 capital).  [x>0.0]
+  --spread-bps FLOAT RANGE        Spread per side in basis points (defaults to
+                                  the asset-class estimate); requires
+                                  --cuenta-chica.  [x>=0.0]
+  --costo-entrada-usd FLOAT RANGE
+                                  Fixed USD cost charged once at account start
+                                  (default: USD 0); requires --cuenta-chica.
+                                  [x>=0.0]
   --retencion-dividendos FLOAT RANGE
                                   Dividend withholding fraction (0–1);
                                   defaults to 0.30 with --cuenta-chica,
@@ -230,6 +237,8 @@ Options and defaults:
 - `--costos` — default: `None`
 - `--llenado` — default: `'apertura'`
 - `--cuenta-chica` — default: `None`
+- `--spread-bps` — default: `None`
+- `--costo-entrada-usd` — default: `None`
 - `--retencion-dividendos` — default: `None`
 - `--costo-fiscal-pct` — default: `0.0`
 - `--tamano-posicion` — default: `None`

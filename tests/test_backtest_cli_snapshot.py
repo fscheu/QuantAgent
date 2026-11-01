@@ -145,7 +145,7 @@ def test_retencion_dividendos_y_cuenta_chica_en_snapshot(snap_env, tmp_path, mon
     expected_tax = 0.30 * 0.01 * qty * previous_close
     assert captured[0].equity_curve[-1]["equity"] - captured[1].equity_curve[-1]["equity"] == pytest.approx(expected_tax, abs=0.01)
 
-    small = _run(runner, *base, "--retencion-dividendos", "0", "--cuenta-chica", "100000")
+    small = _run(runner, *base, "--retencion-dividendos", "0", "--cuenta-chica", "100000", "--spread-bps", "0")
     assert small.exit_code == 0, small.output
     without_new_option = _run(runner, *base)
     assert without_new_option.exit_code == 0, without_new_option.output

@@ -28,6 +28,7 @@ from quantagent.backtesting.fixtures import (
     snapshot_metadata,
 )
 from quantagent.data.snapshot import SnapshotError, load_manifest, read_snapshot, snapshot_root
+from quantagent.data.asset_types import get_asset_type
 from quantagent.models import ActivePosition, MarketData, Trade
 from quantagent.settings import COSTOS_PERFILES
 from quantagent.strategy.registry import STRATEGY_REGISTRY, build_strategy, cli_aliases, effective_params
@@ -173,10 +174,18 @@ def _engine_config(commission_pct: Optional[float], costos: Optional[str] = None
                    tamano_posicion: Optional[float] = None, regla_tamano: Optional[str] = None,
                    orden_minima: Optional[float] = None, riesgo_por_trade: Optional[float] = None,
                    cuenta_chica: Optional[float] = None, retencion_dividendos: Optional[float] = None,
-                   costo_fiscal_pct: float = 0.0) -> dict:
+                   costo_fiscal_pct: float = 0.0, spread_bps: Optional[float] = None,
+                   costo_entrada_usd: Optional[float] = None) -> dict:
+    costo_entrada_pedido = costo_entrada_usd is not None
+    costo_entrada_usd = costo_entrada_usd or 0.0
     config = {"market_hours_filter": False, "offline_data": True}
     if cuenta_chica is not None:
-        config.update(initial_capital=cuenta_chica, round_shares=True)
+        config.update(initial_capital=cuenta_chica - costo_entrada_usd, round_shares=True,
+                      costo_entrada_usd=costo_entrada_usd)
+    elif spread_bps is not None or costo_entrada_pedido:
+        raise click.UsageError("--spread-bps y --costo-entrada-usd requieren --cuenta-chica.")
+    if spread_bps is not None:
+        config["spread_bps"] = spread_bps
     if cuenta_chica is not None or retencion_dividendos is not None or costo_fiscal_pct:
         config["retencion_dividendos"] = (0.30 if cuenta_chica is not None else 0.0) if retencion_dividendos is None else retencion_dividendos
         config["costo_fiscal_pct"] = costo_fiscal_pct
@@ -247,7 +256,7 @@ def _hide_data_warnings(record: logging.LogRecord) -> bool:
     return getattr(record, "event_type", None) != "backtest_data_warning"
 
 
-def _extract_trade_rows(session: Session, backtest_run_id: int) -> list[TradeRow]:
+def _extract_trade_rows(session: Session, backtest_run_id: int, spread_bps: Optional[float] = None) -> list[TradeRow]:
     trade_ids = select(ActivePosition.trade_id).where(
         ActivePosition.backtest_run_id == backtest_run_id,
         ActivePosition.trade_id.is_not(None),
@@ -271,6 +280,9 @@ def _extract_trade_rows(session: Session, backtest_run_id: int) -> list[TradeRow
             stop_loss=float(stop_loss) if stop_loss is not None else None,
             pnl=float(trade.pnl) if trade.pnl is not None else None,
             exit_reason=trade.exit_signal,
+            spread_cost_entry_usd=None if spread_bps is None else float(trade.quantity) * float(trade.entry_price) * spread_bps / 10000,
+            spread_cost_exit_usd=None if spread_bps is None or trade.exit_price is None
+            else float(trade.quantity) * float(trade.exit_price) * spread_bps / 10000,
         )
         for trade, stop_loss in trades
     ]
@@ -369,7 +381,10 @@ def correr_par(
 
         slippage_pct = bt.order_manager.broker.slippage_pct
         commission = bt.order_manager.broker.commission_pct
-        rows = _extract_trade_rows(session, bt.backtest_run_id) if con_filas else []
+        spread_bps = config.get("spread_bps")
+        if spread_bps is None:
+            spread_bps = settings.SPREAD_BPS_POR_CLASE[get_asset_type(meta.symbol).value] if config.get("round_shares") else None
+        rows = _extract_trade_rows(session, bt.backtest_run_id, spread_bps) if con_filas else []
         candles = (
             session.query(MarketData.timestamp, MarketData.close)
             .filter(
@@ -500,6 +515,10 @@ def backtest_group() -> None:
               help="Fill price: opening or closing price of the candle.")
 @click.option("--cuenta-chica", type=click.FloatRange(min=0.0, min_open=True), default=None,
               help="Initial backtest capital in USD; enables whole-share entries. Default: disabled ($100,000 capital).")
+@click.option("--spread-bps", type=click.FloatRange(min=0.0), default=None,
+              help="Spread per side in basis points (defaults to the asset-class estimate); requires --cuenta-chica.")
+@click.option("--costo-entrada-usd", type=click.FloatRange(min=0.0), default=None,
+              help="Fixed USD cost charged once at account start (default: USD 0); requires --cuenta-chica.")
 @click.option("--retencion-dividendos", type=click.FloatRange(min=0.0, max=1.0), default=None,
               help="Dividend withholding fraction (0–1); defaults to 0.30 with --cuenta-chica, otherwise 0.")
 @click.option("--costo-fiscal-pct", type=click.FloatRange(min=0.0, max=1.0), default=0.0, show_default=True,
@@ -531,12 +550,14 @@ def run_backtest(
     orden_minima: Optional[float],
     riesgo_por_trade: Optional[float],
     cuenta_chica: Optional[float],
+    spread_bps: Optional[float],
+    costo_entrada_usd: Optional[float],
     retencion_dividendos: Optional[float],
     costo_fiscal_pct: float,
     params: dict,
     llenado: str,
 ) -> None:
-    config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano, orden_minima, riesgo_por_trade, cuenta_chica, retencion_dividendos, costo_fiscal_pct)
+    config = _engine_config(commission_pct, costos, tamano_posicion, regla_tamano, orden_minima, riesgo_por_trade, cuenta_chica, retencion_dividendos, costo_fiscal_pct, spread_bps, costo_entrada_usd)
     meta, symbol, to_date = _resolve_source_and_meta(
         "run",
         strategy_name,
@@ -565,6 +586,9 @@ def run_backtest(
         click.echo(f"Profit factor: {r['profit_factor']:.2f}")
     click.echo(f"Sharpe ratio: {r['sharpe']:.2f}")
     click.echo(f"Total PnL: {r['pnl']:.2f}")
+    if cuenta_chica is not None:
+        click.echo(f"Costo fijo de entrada: {(costo_entrada_usd or 0.0):.2f} USD")
+        click.echo(f"Capital inicial efectivo: {config['initial_capital']:.2f} USD")
     click.echo(f"Slippage: {r['slippage_pct'] * 100:.2f}% por lado")
     click.echo(f"Comisión: {r['comision_pct'] * 100:.2f}% por lado")
     if costos:
