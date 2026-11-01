@@ -1,4 +1,4 @@
-import type { AccountSummary, Order, Position } from './types'
+import type { AccountRef, AccountSummary, CalendarEvent, FeedEvent, HomeStatus, Order, Position } from './types'
 
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) { super(message); this.name = 'ApiError' }
@@ -10,8 +10,12 @@ async function get<T>(path: string): Promise<T> {
   return response.json() as Promise<T>
 }
 
-export const getAccounts = () => get<AccountSummary[]>('/api/accounts')
+export const getAccountRefs = () => get<AccountRef[]>('/api/accounts')
+export const getAccounts = async () => Promise.all((await getAccountRefs()).map(({ id }) => getSummary(id)))
 export const getSummary = (accountId: string) => get<AccountSummary>(`/api/accounts/${encodeURIComponent(accountId)}/summary`)
+export const getFeed = () => get<FeedEvent[]>('/api/feed')
+export const getCalendar = (days: number) => get<CalendarEvent[]>(`/api/calendar?days=${days}`)
+export const getHomeStatus = () => get<HomeStatus>('/api/home/status')
 export const getPositions = (accountId: string) => get<Position[]>(`/api/accounts/${encodeURIComponent(accountId)}/positions`)
 /** Orden tal como la devuelve la API (OrderResponse del contrato OpenAPI). */
 interface OrderResponse {

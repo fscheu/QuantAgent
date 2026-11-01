@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
-import type { AccountSummary, Order, Position } from '../api/types'
-import { accounts, marketClock, orders, positions } from './data'
+import type { AccountRef, AccountSummary, CalendarEvent, FeedEvent, HomeStatus, Order, Position } from '../api/types'
+import { accountRefs, accounts, calendarEvents, feedEvents, homeStatus, marketClock, orders, positions } from './data'
 
 /** Forma que devuelve la API real (OrderResponse); el cliente la convierte a Order. */
 const toOrderResponse = (o: Order) => ({
@@ -11,11 +11,11 @@ const toOrderResponse = (o: Order) => ({
 })
 
 export const handlers = [
-  http.get('*/api/accounts', () => HttpResponse.json<AccountSummary[]>(accounts)),
-  http.get('*/api/accounts/:accountId/summary', ({ params }) => {
-    const account = accounts.find(({ id }) => id === params.accountId)!
-    return HttpResponse.json<AccountSummary>(account)
-  }),
+  http.get('*/api/accounts', () => HttpResponse.json<AccountRef[]>(accountRefs)),
+  http.get('*/api/accounts/:accountId/summary', ({ params }) => HttpResponse.json<AccountSummary>(accounts.find(({ id }) => id === params.accountId)!)),
+  http.get('*/api/feed', () => HttpResponse.json<FeedEvent[]>(feedEvents)),
+  http.get('*/api/calendar', () => HttpResponse.json<CalendarEvent[]>(calendarEvents)),
+  http.get('*/api/home/status', () => HttpResponse.json<HomeStatus>(homeStatus)),
   http.get('*/api/accounts/:accountId/positions', ({ params }) =>
     HttpResponse.json<Position[]>(params.accountId === 'paper-m4' ? positions : [])),
   http.get('*/api/accounts/:accountId/orders', ({ params }) =>
