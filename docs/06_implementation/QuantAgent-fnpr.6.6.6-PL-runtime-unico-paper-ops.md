@@ -1,6 +1,6 @@
 # Runtime único de paper-ops (plan de migración para el lunes 2026-11-02)
 
-Estado: **propuesto, sin aplicar**. Pedido de Fede (2026-11-01): una sola versión productiva de QuantAgent, asociada a un tag, que corra las dos carteras M4 (nucleo-curva, transversal) y M5 contra Alpaca paper, con los jobs diarios y semanales, y con un directorio de datos único y separado del de desarrollo. Cada mejora de la semana se despliega con un tag nuevo. Cambia el ADR `ADR-runtime-paper-deploy-por-tags` solo en el punto de los datos (antes cada clon traía su `local-data/`).
+Estado: **aplicado el 2026-11-01 (ver «Registro de aplicación» al final)**. Pedido de Fede (2026-11-01): una sola versión productiva de QuantAgent, asociada a un tag, que corra las dos carteras M4 (nucleo-curva, transversal) y M5 contra Alpaca paper, con los jobs diarios y semanales, y con un directorio de datos único y separado del de desarrollo. Cada mejora de la semana se despliega con un tag nuevo. Cambia el ADR `ADR-runtime-paper-deploy-por-tags` solo en el punto de los datos (antes cada clon traía su `local-data/`).
 
 ## Estado de hoy
 
@@ -57,3 +57,15 @@ Cada paso con respaldo previo; ninguno envía órdenes.
 - Las carteras M4 llevan apagadas desde el 10-30: al encenderlas con `Persistent=true` pueden disparar un ciclo atrasado. Se revisa con `list-timers` antes de habilitar.
 - Dependencias del venv respecto del tag nuevo (ya se agregó `six`).
 - Alpaca: M4 y M5 usan cuentas distintas (`alpaca-cartera-nucleo-curva.env`, `...transversal.env`, `...m5.env`); no se mezclan.
+
+## Registro de aplicación (2026-11-01)
+
+- #719 mergeado a `main` (CI verde); tag `paper-2026-11-02` sobre `6dee2fae`, creado vía API de GitHub porque el hook `pre-push` de `bd` falla en el checkout de desarrollo (la base de beads de la VM está desfasada).
+- Respaldos en `~/paper-ops/backups/20261101-runtime-unico/` (ambos `local-data`, `maestro.db`, unidades).
+- Clon único `~/paper-ops/QuantAgent` en el tag; el clon M5 quedó como `QuantAgent-m5.retirado` (borrable tras una semana sin incidentes). `pip check` del venv sin problemas.
+- **Trampa encontrada:** el clon tenía un tag local viejo con el mismo nombre (`paper-2026-11-02` apuntando a un commit del 28-10), por lo que `git checkout` dejó el código anterior sin avisar. Regla para los deploys: `git tag -d <tag>; git fetch origin tag <tag>` y confirmar con `git rev-parse HEAD` antes de reiniciar.
+- Datos: `~/paper-ops/local-data` con las tres bases, los CSV de M5, las sombras y los 8 snapshots (hashes verificados). `maestro.db`: dos filas actualizadas y cuenta `m5` registrada.
+- Unidades: las cuatro `m5-*`, `paper-cartera@`, `paper-digest@` y `quantagent-api` con `WorkingDirectory=~/paper-ops`, `PYTHONPATH` al clon único y `QUANTAGENT_SNAPSHOT_DIR`; nueva `m5-fundamentales` (viernes 22:30 UTC).
+- Verificación: web `/health` 200 y `/api/accounts` con las 3 cuentas; `m5-semanal.service` ejecutado a mano por la unidad nueva (régimen, 9 candidatos y sombra iguales al ensayo en seco); `reconciliar` de M5 sin diferencias.
+- Observación: `reconciliar` en las carteras M4 muestra posiciones solo en Alpaca. Es esperable: el último ciclo (10-30 08:01 UTC) dejó órdenes `PENDING` en la base y los fills se sincronizan en el próximo ciclo. Se confirma tras el primero.
+- Timers encendidos sin disparos atrasados (se borraron los marcadores de M4 para que `Persistent=true` no corra el ciclo del sábado). Próximos: M5 pre-apertura lunes 10:30 ART; M4 y M5 diario martes 05:00 a 05:10 ART; digests martes 05:20 y 05:30; fundamentales viernes 19:30 ART; semanal M5 sábado 05:00 ART.
