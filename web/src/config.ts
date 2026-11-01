@@ -104,3 +104,5 @@ export const homeConfig = {
   /** Severidades del feed, de mayor a menor prioridad. */
   feedSeverityOrder: ['critical', 'warning', 'info', 'neutral'] as const,
 } as const;
+
+export const featureFlags = { accountPerformanceTab: false, runPerformance: false } as const

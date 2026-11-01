@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import type { AccountRef, AccountSummary, CalendarEvent, Dividend, EquityPoint, FeedEvent, HomeStatus, Order, Position, SectorExposure } from '../api/types'
-import { accountRefs, accounts, calendarEvents, dividends, equity, feedEvents, homeStatus, marketClock, orders, positions, sectorExposure } from './data'
+import { accountRefs, accounts, backtests, calendarEvents, dividends, equity, feedEvents, homeStatus, marketClock, orders, performance, positions, sectorExposure } from './data'
 
 /** Forma que devuelve la API real (OrderResponse); el cliente la convierte a Order. */
 const toOrderResponse = (o: Order) => ({
@@ -11,6 +11,8 @@ const toOrderResponse = (o: Order) => ({
 })
 
 export const handlers = [
+  http.get('*/api/backtests', () => HttpResponse.json(backtests)),
+  http.get('*/api/performance/backtest/:id', ({ params, request }) => { const align = new URL(request.url).searchParams.get('align_with'); return HttpResponse.json({ ...performance, subject: { ...performance.subject, id: String(params.id) }, aligned_with: align }) }),
   http.get('*/api/accounts', () => HttpResponse.json<AccountRef[]>(accountRefs)),
   http.get('*/api/accounts/:accountId/summary', ({ params }) => HttpResponse.json<AccountSummary>(accounts.find(({ id }) => id === params.accountId)!)),
   http.get('*/api/feed', () => HttpResponse.json<FeedEvent[]>(feedEvents)),
