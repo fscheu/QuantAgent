@@ -47,6 +47,15 @@ class Client:
         return self.positions
 def make_order(kind=OrderType.MARKET):
     return Order(symbol="SPY", side=OrderSide.BUY, order_type=kind, quantity=Decimal("2"), price=Decimal("100"))
+
+@pytest.mark.parametrize("permite", [True, False])
+def test_fractionable_consulta_activo(permite):
+    class AssetClient:
+        def get_asset(self, symbol):
+            assert symbol == "CARA"
+            return SimpleNamespace(fractionable=permite)
+
+    assert AlpacaBroker(AssetClient()).es_fraccionable("CARA") is permite
 @pytest.mark.parametrize("kind,expected", [(OrderType.MARKET, "market"), (OrderType.LIMIT, "limit")])
 def test_submit_maps_market_and_limit(kind, expected):
     client = Client(SimpleNamespace(id="alpaca-123", status="new", filled_qty="0"))
@@ -106,7 +115,8 @@ def test_paper_short_opens_with_sell_and_closes_with_buy():
     assert client.position == 0
     assert client.submitted == 2
 
-@pytest.mark.parametrize("qty,status", [("2", OrderStatus.FILLED), ("1", OrderStatus.PARTIALLY_FILLED)])
+@pytest.mark.parametrize("qty,status", [("2", OrderStatus.FILLED), ("1", OrderStatus.PARTIALLY_FILLED),
+                                       ("0.12345678", OrderStatus.PARTIALLY_FILLED)])
 def test_submit_preserves_cumulative_fills(qty, status):
     client = Client(SimpleNamespace(status=status.value, filled_qty=qty, filled_avg_price="101"))
     order = AlpacaBroker(client).submit_order(make_order())

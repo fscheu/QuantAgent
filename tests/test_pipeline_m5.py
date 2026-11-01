@@ -1,5 +1,6 @@
 import shutil
 from datetime import datetime, timezone
+from decimal import Decimal
 
 import numpy as np
 import pandas as pd
@@ -11,7 +12,7 @@ from quantagent.fabrica.candidatos_vivo import candidatos_en_vivo
 from quantagent.fabrica.cartera import pesos, pesos_h3
 from quantagent.fabrica.regimen import regimen_semanal
 from quantagent.fabrica.transversal import MASCARAS, METRICAS, PRIORS_M5, REGLAS, señales_transversales
-from quantagent.models import OrderSide, OrderType, TradeIntentRecord
+from quantagent.models import ActivePosition, Environment, ExitPolicy, Order, OrderSide, OrderType, TradeIntentRecord
 from quantagent.portfolio.manager import PortfolioManager
 from quantagent.strategy.base import TradingSignal, TradingStrategy
 from quantagent.trading.cartera_paper import sesiones_cerradas_nyse
@@ -268,3 +269,143 @@ def test_fundamentales_vigente_verifica_y_respalda(tmp_path):
     assert fundamentales_vigente(tmp_path) == "fundamentales-sp500-2026-10-29"
     (tmp_path / "fundamentales-sp500-2026-10-29" / "AAA.parquet").unlink()
     assert fundamentales_vigente(tmp_path) == "fundamentales-sp500-2026-10-28"
+
+
+@pytest.mark.parametrize("archivo", ["ausente", "vacio", "cabecera", "futuro"])
+def test_diario_sin_candidatos_golden_pre_m555d(db_session, mercado, tmp_path, archivo):
+    as_of, data = mercado
+    path = tmp_path / "regimen.csv"
+    correr_semanal(as_of, data_provider=data, regimen_path=path, narrador=None)
+    candidatos = tmp_path / "m5-candidatos-semanales.csv"
+    candidatos.unlink()
+    if archivo == "vacio":
+        candidatos.write_text("")
+    elif archivo == "cabecera":
+        candidatos.write_text("fecha,simbolo,rank\n")
+    elif archivo == "futuro":
+        candidatos.write_text("fecha,simbolo,rank\n2026-11-02,FUTURO,1\n")
+    broker = BrokerMemoria()
+    intents = correr_diario(as_of, data_provider=data, db=db_session, broker=broker,
+                            regimen_path=path, estrategias=(("test", SiempreSenala()),), narrador=None)
+    # Capturado del pipeline anterior al cambio, con esta misma fixture y SQLite.
+    assert [(r.symbol, r.status, r.reject_reason) for r in intents] == [
+        ("XLK", "aprobado", None), ("XLP", "aprobado", None), ("XLF", "aprobado", None)]
+    assert [(o.symbol, o.side.value, str(o.quantity), str(o.stop_price)) for o in broker.orders] == [
+        ("XLK", "buy", "0.20665971", "131.29154391"), ("XLK", "sell", "0.20665971", "95.00000000"),
+        ("XLP", "buy", "0.19672895", "133.12351894"), ("XLP", "sell", "0.19672895", "95.00000000"),
+        ("XLF", "buy", "0.22986678", "127.62759385"), ("XLF", "sell", "0.22986678", "95.00000000")]
+
+
+def test_semana_acciones_arquetipos_reales_fracciones_e_idempotencia(db_session, mercado, tmp_path):
+    from tests.test_arquetipo_a import _make_series
+    from tests.test_arquetipo_b import _make_breakout_df
+
+    as_of, data = mercado
+    path = tmp_path / "regimen.csv"
+    path.write_text("fecha,estado,habilitados\n2026-10-23,risk-on,\n")
+    (tmp_path / "m5-candidatos-semanales.csv").write_text(
+        "fecha,simbolo,rank\n2026-10-16,VIEJA,1\n2026-10-23,AAA,1\n"
+        "2026-10-23,BBB,2\n2026-10-23,PAIS,\n2026-11-02,FUTURA,1\n")
+    a, b = _make_series(200), _make_breakout_df()
+    a.loc[a.index[-1], "close"] = a.close.iloc[-2] - 1.5
+    for simbolo, df, escala in (("AAA", a, 3), ("BBB", b, 5)):
+        df[["open", "high", "low", "close"]] *= escala
+        df["timestamp"] = sesiones_cerradas_nyse(as_of, len(df))
+        data.panel[simbolo] = df
+    broker = BrokerMemoria()
+    args = dict(data_provider=data, db=db_session, broker=broker, regimen_path=path,
+                narrador=None, es_fraccionable=lambda s: s in {"AAA", "BBB"})
+    for dias in (4, 3, 2, 1, 0):
+        reloj = as_of - pd.Timedelta(days=dias)
+        correr_diario(reloj, **args)
+        cantidades = (db_session.query(TradeIntentRecord).count(), len(broker.orders))
+        assert correr_diario(reloj, **args) == []
+        assert (db_session.query(TradeIntentRecord).count(), len(broker.orders)) == cantidades
+    aprobados = db_session.query(TradeIntentRecord).filter_by(status="aprobado").all()
+    assert {(r.symbol, r.strategy_id) for r in aprobados} >= {
+        ("AAA", "arquetipo-a-pullback"), ("BBB", "arquetipo-b-breakout")}
+    assert {r.symbol for r in db_session.query(TradeIntentRecord)} == {"AAA", "BBB"}
+    for intent in aprobados:
+        entrada = db_session.get(Order, intent.order_id)
+        assert entrada.order_type == OrderType.STOP and 0 < entrada.quantity < 1
+        assert entrada.quantity * entrada.stop_price <= 300
+        assert any(o.side == OrderSide.SELL and o.symbol == entrada.symbol
+                   and o.quantity == entrada.quantity and o.order_type == OrderType.STOP
+                   and 0 < o.stop_price < entrada.stop_price for o in broker.orders)
+
+
+@pytest.mark.parametrize("fraccionable", [None, False, True])
+@pytest.mark.parametrize("origen", ["funcion", "broker"])
+def test_accion_cara_cantidad_entera_y_rechazo_persistido(db_session, mercado, tmp_path, fraccionable, origen):
+    as_of, data = mercado
+    path = tmp_path / "regimen.csv"
+    path.write_text("fecha,estado,habilitados\n2026-10-23,risk-on,\n")
+    (tmp_path / "m5-candidatos-semanales.csv").write_text("fecha,simbolo,rank\n2026-10-23,CARA,1\n")
+    data.panel["CARA"] = data.panel["SPY"].copy()
+    data.panel["CARA"][["open", "high", "low", "close"]] *= 10
+    broker = BrokerMemoria()
+    args = {} if fraccionable is None else {"es_fraccionable": lambda s: fraccionable}
+    if origen == "broker" and args:
+        broker.es_fraccionable = args.pop("es_fraccionable")
+    records = correr_diario(as_of, data_provider=data, db=db_session, broker=broker,
+                            regimen_path=path, estrategias=(("test", SiempreSenala(stop=900)),),
+                            narrador=None, **args)
+    record, = db_session.query(TradeIntentRecord).all()
+    assert records == [record] and record.symbol == "CARA"
+    if fraccionable:
+        assert record.status == "aprobado" and len(broker.orders) == 2
+        assert 0 < broker.orders[0].quantity < 1
+    else:
+        assert (record.status, record.reject_reason) == ("rechazado_riesgo", "tamano_cero")
+        assert not broker.orders
+
+
+@pytest.mark.parametrize("estado", ["risk-on", "risk-off"])
+def test_accion_fuera_de_candidatos_sigue_stop_sin_entrada(db_session, mercado, tmp_path, estado):
+    as_of, data = mercado
+    data.panel["SALIO"] = data.panel["SPY"].copy()
+    path = tmp_path / "regimen.csv"
+    path.write_text(f"fecha,estado,habilitados\n2026-10-30,{estado},\n")
+    (tmp_path / "m5-candidatos-semanales.csv").write_text(
+        "fecha,simbolo,rank\n2026-10-23,SALIO,1\n2026-10-30,EEM,\n")
+    stop = Order(symbol="SALIO", side=OrderSide.SELL, quantity=Decimal("0.25"),
+                 order_type=OrderType.STOP, stop_price=Decimal("90"),
+                 environment=Environment.PAPER, alpaca_order_id="proteccion-previa")
+    position = ActivePosition(symbol="SALIO", side=OrderSide.BUY, quantity=Decimal("0.25"),
+                              entry_price=100, stop_loss=90, take_profit=0,
+                              decision_timestamp=data.panel["SALIO"].timestamp.iloc[-30].to_pydatetime(),
+                              exit_policy=ExitPolicy.TRAILING_STOP, environment=Environment.PAPER,
+                              broker_stop_order_id="proteccion-previa")
+    db_session.add_all([stop, position])
+    db_session.commit()
+
+    class BrokerStops(BrokerMemoria):
+        def replace_stop(self, order_id, precio):
+            self.reemplazo = (order_id, precio)
+
+    broker = BrokerStops()
+    assert correr_diario(as_of, data_provider=data, db=db_session, broker=broker, regimen_path=path,
+                         estrategias=(("test", SiempreSenala()),), narrador=None) == []
+    db_session.refresh(position)
+    assert position.is_active and position.quantity == Decimal("0.25")
+    assert position.stop_loss > 100 and stop.stop_price == position.stop_loss
+    assert broker.reemplazo[0] == "proteccion-previa"
+    assert broker.reemplazo[1].quantize(Decimal("0.00000001")) == position.stop_loss
+    assert not broker.orders and db_session.query(TradeIntentRecord).count() == 0
+
+
+@pytest.mark.parametrize("caso", ["error", "vacio", "corto", "sin_cierre"])
+def test_acciones_sin_precio_o_historia_no_rompen_job(db_session, mercado, tmp_path, caplog, caso):
+    as_of, data = mercado
+    path = tmp_path / "regimen.csv"
+    path.write_text("fecha,estado,habilitados\n2026-10-23,risk-on,SPY\n")
+    (tmp_path / "m5-candidatos-semanales.csv").write_text("fecha,simbolo,rank\n2026-10-23,MALA,1\n")
+    if caso != "error":
+        df = data.panel["SPY"].copy()
+        data.panel["MALA"] = df.iloc[:0] if caso == "vacio" else df.iloc[-3:] if caso == "corto" else df.iloc[:-1]
+    broker = BrokerMemoria()
+    intents = correr_diario(as_of, data_provider=data, db=db_session, broker=broker, regimen_path=path,
+                            estrategias=(("test", SiempreSenala()),), narrador=None)
+    assert [(i.symbol, i.status) for i in intents] == [("SPY", "aprobado")]
+    assert len(broker.orders) == 2 and all(o.symbol == "SPY" for o in broker.orders)
+    assert f"M5 descarta MALA: {'velas_insuficientes' if caso == 'corto' else 'sin_precio'}" in caplog.text
