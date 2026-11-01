@@ -44,6 +44,7 @@ Decision documents should include:
 - [2026-10-17-DC-cartera-de-primas.md](./2026-10-17-DC-cartera-de-primas.md) - Propuesta: carteras de primas de riesgo con universo por estrategia, veredicto de cartera, capa macro y datos (L12)
 - [QuantAgent-R01-DC-decisiones-investigacion-edge.md](./QuantAgent-R01-DC-decisiones-investigacion-edge.md) - Decisiones de investigación de edge, generador, sizing por riesgo y DBC/USO (Fede, 2026-10-22)
 - [QuantAgent-e4jc.14-DC-protocolo-reserva-2023.md](./QuantAgent-e4jc.14-DC-protocolo-reserva-2023.md) - Protocolo cerrado para evaluar hipótesis en la reserva 2023+
+- [2026-10-31-DC-paper-m5-validacion-del-sistema.md](./2026-10-31-DC-paper-m5-validacion-del-sistema.md) - Paper M5 es validación del sistema y base de ciclos de mejora, no inversión; H3 entra a paper junto con H1 (Fede, 2026-10-31)
 
 
 ## Per-Change Decision Documents

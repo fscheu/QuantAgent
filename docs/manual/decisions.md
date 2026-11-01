@@ -11,6 +11,7 @@
 | Risk-premium portfolio scope and data | 2026-10-17 | [Decision](../04_decisions/2026-10-17-DC-cartera-de-primas.md) |
 | Cross-sectional strategy legs | 2026-10-17 | [Decision](../04_decisions/2026-10-17-DC-piernas-transversales.md) |
 | Stage 3 pass criteria and research loop | 2026-10-19 | [Decision](../04_decisions/2026-10-19-DC-criterio-etapa3-y-loop-de-mejora.md) |
+| M5 paper validates the system, not an investment; one pipeline with stocks added in time 2; H1/H3 in shadow | 2026-10-31 | [Decision](../04_decisions/2026-10-31-DC-paper-m5-validacion-del-sistema.md) |
 | Backtest engine choice | 2026-10-08 | [Decision](../04_decisions/2026-10-ADR-backtest-engine-propio-vs-terceros.md) |
 | Paper trading deployment by tags | 2026-10-22 | [Decision](../04_decisions/ADR-runtime-paper-deploy-por-tags.md) |
 | Reuse logs for LLM telemetry | Date not recorded | [Decision](../04_decisions/QuantAgent-69d-DC-reuse-logs-for-llm-telemetry.md) |

@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from quantagent import settings
 from quantagent.stop_loss import resolve_stop_loss
 from quantagent.data.provider import DataProvider
-from quantagent.models import Environment, Order, OrderSide, OrderStatus, OrderType, SchedulerHeartbeat, Signal, Trade, TradeSignal
+from quantagent.models import Environment, Order, OrderSide, OrderStatus, OrderType, SchedulerHeartbeat, Signal, Trade, TradeIntentRecord, TradeSignal
 from quantagent.static_util import format_ohlcv_for_agents
 from quantagent.strategy.base import TradingSignal as StrategyTradingSignal
 from quantagent.strategy.base import TradingStrategy
@@ -26,6 +26,7 @@ from quantagent.trading.alpaca_broker import AlpacaBroker
 from quantagent.trading.position_monitor import PositionMonitor
 from quantagent.trading.cartera_paper import entradas_cartera, pesos_operables
 from quantagent.trading.rebalanceador import rebalancear
+from quantagent.trading.stop_management import posiciones_con_stops
 from quantagent.trading_graph import TradingGraph
 
 logger = logging.getLogger(__name__)
@@ -167,6 +168,22 @@ class TradingScheduler:
         """Run a single analyze+trade cycle synchronously."""
         return self.analyze_and_trade()
 
+    def correr_m5_semanal(self, as_of, *, regimen_path="local-data/m5-regimen-semanal.csv"):
+        """Punto de enganche explícito para el job semanal de M5; no registra timers."""
+        from quantagent.trading.pipeline_m5 import correr_semanal
+
+        return correr_semanal(as_of, data_provider=self.data_provider, db=self.db,
+                              regimen_path=regimen_path)
+
+    def correr_m5_diario(self, as_of, *, regimen_path="local-data/m5-regimen-semanal.csv"):
+        """Punto de enganche explícito para el job diario de M5; no registra timers."""
+        from quantagent.trading.pipeline_m5 import correr_diario
+
+        return correr_diario(as_of, data_provider=self.data_provider, db=self.db,
+                             broker=self.order_manager.broker,
+                             portfolio_manager=self.order_manager.portfolio,
+                             regimen_path=regimen_path)
+
     def reconcile_alpaca_positions(self) -> list[str]:
         """Compare local PAPER positions with the configured Alpaca broker."""
         return self.position_monitor.reconcile_alpaca_positions(self.order_manager.broker)
@@ -275,11 +292,18 @@ class TradingScheduler:
         if isinstance(broker, AlpacaBroker):
             account = broker.get_account()
             manager.portfolio.cash = float(account["cash"])
-            manager.portfolio.positions = {
-                symbol: {"qty": float(pos.qty), "avg_cost": float(pos.avg_entry_price),
-                         "current_price": float(pos.current_price), "pnl": float(pos.unrealized_pl)}
-                for symbol, pos in broker.get_positions().items()
-            }
+            try:
+                from quantagent.trading.pre_apertura import _ordenes_abiertas
+                ordenes = list(_ordenes_abiertas(broker.client))
+            except Exception as exc:
+                logger.warning("No se pudieron consultar órdenes abiertas para resolver stops: %s", exc)
+                ordenes = []
+            intents = self.db.query(TradeIntentRecord).filter(
+                TradeIntentRecord.status != "rejected"
+            ).order_by(TradeIntentRecord.created_at.desc(), TradeIntentRecord.id.desc()).all()
+            manager.portfolio.positions = posiciones_con_stops(
+                broker.get_positions(), ordenes, intents
+            )
         fecha, panel, precios = entradas_cartera(
             config["hipotesis"], self.data_provider, config["reloj"],
             manager.portfolio.positions,
