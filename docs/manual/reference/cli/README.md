@@ -5,6 +5,7 @@
 - [Command overview](index.md)
 - [API commands](api.md) (serve the API, export its OpenAPI contract, synchronize the Alpaca market calendar, and manage accounts)
 - [Account commands](api/accounts.md)
+- [Account flow commands](api/accounts/flows.md)
 - [Backtest commands](backtest.md)
 - [Backtest data commands](backtest/data.md)
 - [Backtest stock data commands](backtest/data/acciones.md)

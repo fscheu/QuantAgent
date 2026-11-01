@@ -22,6 +22,16 @@ python -m quantagent.cli api accounts add --id paper-nucleo-curva --name 'Paper 
 
 Use `python -m quantagent.cli api accounts list` to inspect active accounts. The `api accounts show` and `api accounts archive` commands inspect or hide a configured account.
 
+Register, list, and reconcile manual account flows with `api accounts flows`. For example:
+
+```sh
+python -m quantagent.cli api accounts flows register paper-nucleo-curva --date 2026-11-01 --amount 1000 --type deposit
+python -m quantagent.cli api accounts flows list paper-nucleo-curva
+python -m quantagent.cli api accounts flows reconcile paper-nucleo-curva 12
+```
+
+Flow records live in the account database. Upgrade each database to the current Alembic head before using these commands.
+
 ## OpenAPI contract
 
 The frozen contract is [`docs/api/openapi.json`](../api/openapi.json). Regenerate it from the running application definition with:
@@ -63,6 +73,7 @@ All endpoints use `GET`. Response bodies are JSON; `422` responses use FastAPI's
 | GET | `/api/accounts/{account_id}/orders` | `200` `OrderResponse[]`; `422` validation error | `account_id` path, string, required; `date` query, `YYYY-MM-DD`, optional (defaults to today in New York) |
 | GET | `/api/backtests` | `200` `BacktestRef[]` | `hypothesis_id` and `q` queries, optional |
 | GET | `/api/performance/backtest/{backtest_id}` | `200` `PerformanceReport`; `404` unknown backtest or missing equity CSV; `422` invalid parameters | `backtest_id` path, integer; `range` query, default `all`; `align_with` query, optional backtest id (or `backtest:<id>`) |
+| GET | `/api/performance/portfolio/{account_id}` | `200` `PerformanceReport`; `404` unknown/inactive account or missing snapshots; `422` invalid parameters | `account_id` path, string; `range` query, default `all` |
 
 `GET /api/accounts/{account_id}/equity` reads history from daily equity snapshots (`equity`, `cash`, and `invested`) in that portfolio's database. It includes optional SPY and shadow values when the configured snapshot or shadow file has matching dates. Dividends come from account-filtered master database events. Sector exposure reads portfolio positions, groups GICS sectors (or unclassified holdings), and reports cash from the latest equity snapshot.
 
