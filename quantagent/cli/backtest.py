@@ -671,6 +671,8 @@ def cuenta_chica_command(strategy_name, hipotesis, fixture_name, snapshot_name, 
         raise click.BadParameter("Use comma-separated positive USD amounts.", param_hint="--capitales") from exc
     # Portfolio hypotheses use the complete panel and the paper portfolio's weight/rebalance rules.
     hipotesis_path = hipotesis
+    if macro_snapshot and not hipotesis_path:
+        raise click.UsageError("--macro-snapshot requiere --hipotesis.")
     if hipotesis_path:
         if strategy_name or fixture_name or symbol:
             raise click.UsageError("--hipotesis es mutuamente excluyente con --strategy, --fixture y --symbol.")
