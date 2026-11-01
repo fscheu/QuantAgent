@@ -10,6 +10,7 @@ Options:
 
 Commands:
   accounts            Manage configured trading accounts.
+  evaluate-alarms     Evaluate active account alarms and append state...
   migrate-paper-db    Repair a legacy paper database and stamp it at the...
   schema              Export or check the live OpenAPI contract.
   serve               Serve the read-only QuantAgent API.
@@ -32,6 +33,19 @@ Commands:
   archive  Archive an account so it is hidden from the API.
   list     List active accounts.
   show     Show one account by slug.
+```
+
+## `quantagent api evaluate-alarms`
+
+```text
+Usage: quantagent api evaluate-alarms [OPTIONS]
+
+  Evaluate active account alarms and append state changes to events.
+
+Options:
+  --help  Show this message and exit.
+
+  Example: quantagent api evaluate-alarms
 ```
 
 ## `quantagent api migrate-paper-db`

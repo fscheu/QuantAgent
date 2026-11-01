@@ -31,8 +31,9 @@
       "AccountSummaryActive": {
         "properties": {
           "alarms": {
-            "default": [],
-            "items": {},
+            "items": {
+              "$ref": "#/components/schemas/Alarm"
+            },
             "title": "Alarms",
             "type": "array"
           },
@@ -240,6 +241,55 @@
         "title": "AccountSummaryNoData",
         "type": "object"
       },
+      "Alarm": {
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "critical",
+              "warning",
+              "info",
+              "neutral"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "since": {
+            "title": "Since",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "account_id",
+          "severity",
+          "kind",
+          "title",
+          "message",
+          "since"
+        ],
+        "title": "Alarm",
+        "type": "object"
+      },
       "CalendarEventResponse": {
         "properties": {
           "account_id": {
@@ -420,6 +470,48 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HomeStatus": {
+        "properties": {
+          "headline": {
+            "title": "Headline",
+            "type": "string"
+          },
+          "level": {
+            "enum": [
+              "ok",
+              "critical",
+              "warning",
+              "info",
+              "neutral"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "level",
+          "headline",
+          "message",
+          "link"
+        ],
+        "title": "HomeStatus",
         "type": "object"
       },
       "OrderResponse": {
@@ -1021,6 +1113,24 @@
           }
         },
         "summary": "Feed"
+      }
+    },
+    "/api/home/status": {
+      "get": {
+        "operationId": "home_status_api_home_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Home Status"
       }
     },
     "/health": {

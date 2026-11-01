@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from sqlalchemy import create_engine, event, func, inspect, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from .schemas import AccountRef, AccountSummaryActive, AccountSummaryNoData, EquityPoint, OrderResponse, PositionResponse
+from .schemas import AccountRef, AccountSummaryActive, AccountSummaryNoData, EquityPoint, OrderResponse, PositionResponse, HomeStatus
 from .feed import build_feed
 
 app = FastAPI(title="QuantAgent API")
@@ -148,6 +148,7 @@ def utc_z(value):
 def account_summary(account_id: str, db: Session = Depends(get_db)):
     from quantagent.models import EquitySnapshot, Order, Position
     from .accounts import account_session_factory
+    from .alarms import evaluate_account_alarms
 
     account = configured_account(account_id, db)
     with account_session_factory(account)() as source:
@@ -181,8 +182,34 @@ def account_summary(account_id: str, db: Session = Depends(get_db)):
             day_change_pct=day_change / float(previous.equity) if previous and previous.equity else None,
             week_change=week_change,
             week_change_pct=week_change / float(week_base.equity) if week_base and week_base.equity else None,
-            positions_count=len(positions), orders_today=orders_today, orders_rejected_today=rejected, alarms=[],
+            positions_count=len(positions), orders_today=orders_today, orders_rejected_today=rejected,
+            alarms=[alarm.model_dump() for alarm in evaluate_account_alarms(account, db, datetime.now(ZoneInfo("UTC")))],
             spark_30d=spark if len(spark) >= 2 else None)
+
+
+@app.get("/api/home/status", response_model=HomeStatus)
+def home_status(db: Session = Depends(get_db)):
+    from quantagent.models import Account, Position
+    from .accounts import account_session_factory
+    from .alarms import evaluate_account_alarms
+
+    alarms = []
+    for account in db.scalars(select(Account).where(Account.status == "active").order_by(Account.id)).all():
+        with account_session_factory(account)() as source:
+            if not source.scalars(select(Position).limit(1)).first():
+                continue
+        alarms.extend(evaluate_account_alarms(account, db, datetime.now(ZoneInfo("UTC"))))
+    rank = {"critical": 0, "warning": 1, "info": 2, "neutral": 3}
+    alarms.sort(key=lambda alarm: (rank[alarm.severity], alarm.since))
+    if not alarms:
+        return HomeStatus(level="ok", headline="Todo en orden", message="Ninguna cuenta tiene alarmas.", link=None)
+    first = alarms[0]
+    count = sum(a.severity == first.severity for a in alarms)
+    if first.severity == "critical":
+        headline = f"Atención: {count} alarma crítica" + ("s" if count != 1 else "")
+    else:
+        headline = f"Casi todo bien: {count} advertencia" + ("s" if count != 1 else "")
+    return HomeStatus(level=first.severity, headline=headline, message=first.message, link=f"/cuenta/{first.account_id}")
 
 
 @app.get("/api/accounts/{account_id}/equity", response_model=list[EquityPoint])
