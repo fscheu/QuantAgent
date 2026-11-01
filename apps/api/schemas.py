@@ -1,6 +1,23 @@
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+
+class Alarm(BaseModel):
+    id: str
+    account_id: str
+    severity: Literal["critical", "warning", "info", "neutral"]
+    kind: str
+    title: str
+    message: str
+    since: str
+
+
+class HomeStatus(BaseModel):
+    level: Literal["ok", "critical", "warning", "info", "neutral"]
+    headline: str
+    message: str
+    link: str | None
 
 
 class AccountRef(BaseModel):
@@ -31,7 +48,7 @@ class AccountSummaryActive(AccountRef):
     positions_count: int
     orders_today: int
     orders_rejected_today: int
-    alarms: list = []
+    alarms: list[Alarm] = Field(default_factory=list)
     spark_30d: list[float] | None = None
 
 

@@ -128,3 +128,44 @@ def account_archive(account_id):
         except ValueError as exc:
             raise click.ClickException(str(exc)) from exc
     click.echo(f"Archived {account_id}.")
+
+
+@api_group.command("evaluate-alarms", help="Evaluate active account alarms and append state changes to events.",
+                   epilog="Example: quantagent api evaluate-alarms")
+def evaluate_alarms_command():
+    from datetime import datetime, timezone
+    from .accounts import write_session
+    from .alarms import evaluate_account_alarms
+    from .events import record_event
+    from quantagent.models import Account, Event
+
+    now = datetime.now(timezone.utc)
+    created = resolved_count = 0
+    with write_session() as db:
+        accounts = db.scalars(select(Account).where(Account.status == "active").order_by(Account.id)).all()
+        for account in accounts:
+            evaluated = evaluate_account_alarms(account, db, now)
+            rows = db.scalars(select(Event).where(Event.account_id == account.id,
+                Event.type.in_(["drawdown_limit", "shadow_divergence", "data_stale", "alarm_resolved"]))
+                .order_by(Event.occurred_at, Event.id)).all()
+            opened = {}
+            for event in rows:
+                if event.type == "alarm_resolved":
+                    opened.pop((event.payload or {}).get("alarm_type"), None)
+                else:
+                    opened[event.type] = event
+            current = {alarm.kind: alarm for alarm in evaluated}
+            for kind, alarm in current.items():
+                if kind not in opened:
+                    record_event(db, kind, alarm.severity, now, account.id, None, alarm.payload)
+                    created += 1
+            for kind, event in opened.items():
+                if kind not in current:
+                    duration = max(0, int((now - event.occurred_at.replace(tzinfo=timezone.utc)).total_seconds()))
+                    title = {"drawdown_limit": "Drawdown sobre el límite", "shadow_divergence": "Sombra desalineada",
+                             "data_stale": "Sin datos recientes"}[kind]
+                    record_event(db, "alarm_resolved", "neutral", now, account.id, None,
+                        {"title": title, "duration_seconds": duration, "alarm_type": kind})
+                    resolved_count += 1
+        db.commit()
+    click.echo(f"{created} nuevas, {resolved_count} resueltas")
