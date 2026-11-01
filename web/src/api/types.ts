@@ -123,8 +123,8 @@ export interface Alarm {
 
 /* Planeado (marcado "Próximamente" en el diseño) */
 export interface EquityPoint { date: string; account: number; benchmark: number | null; shadow: number | null; }
-export interface SectorExposure { sector: string; account_weight: number; benchmark_weight: number; }
-export interface Dividend { symbol: string; paid_at: string; gross: number; withheld: number; net: number; }
+export interface SectorExposure { sector: string; long: number; short: number; pct: number; }
+export interface Dividend { date: string; symbols: string[]; net: number; withheld: number; }
 
 /* ---------- Embudo ---------- */
 export type StageId = 'e0' | 'e1' | 'e2' | 'e3' | 'reserve' | 'shadow' | 'paper' | 'candidate' | 'production';

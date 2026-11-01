@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
-import type { AccountRef, AccountSummary, CalendarEvent, FeedEvent, HomeStatus, Order, Position } from '../api/types'
-import { accountRefs, accounts, calendarEvents, feedEvents, homeStatus, marketClock, orders, positions } from './data'
+import type { AccountRef, AccountSummary, CalendarEvent, Dividend, EquityPoint, FeedEvent, HomeStatus, Order, Position, SectorExposure } from '../api/types'
+import { accountRefs, accounts, calendarEvents, dividends, equity, feedEvents, homeStatus, marketClock, orders, positions, sectorExposure } from './data'
 
 /** Forma que devuelve la API real (OrderResponse); el cliente la convierte a Order. */
 const toOrderResponse = (o: Order) => ({
@@ -18,6 +18,9 @@ export const handlers = [
   http.get('*/api/home/status', () => HttpResponse.json<HomeStatus>(homeStatus)),
   http.get('*/api/accounts/:accountId/positions', ({ params }) =>
     HttpResponse.json<Position[]>(params.accountId === 'paper-m4' ? positions : [])),
+  http.get('*/api/accounts/:accountId/equity', ({ params }) => HttpResponse.json<EquityPoint[]>(params.accountId === 'paper-m4' ? equity : [])),
+  http.get('*/api/accounts/:accountId/dividends', ({ params }) => HttpResponse.json<Dividend[]>(params.accountId === 'paper-m4' ? dividends : [])),
+  http.get('*/api/accounts/:accountId/sector-exposure', ({ params }) => HttpResponse.json<SectorExposure[]>(params.accountId === 'paper-m4' ? sectorExposure : [])),
   http.get('*/api/accounts/:accountId/orders', ({ params }) =>
     HttpResponse.json((params.accountId === 'paper-m4' ? orders : []).map(toOrderResponse))),
   http.get('*/api/market/clock', () => HttpResponse.json(marketClock)),

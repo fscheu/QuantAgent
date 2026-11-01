@@ -1,4 +1,4 @@
-import type { AccountRef, AccountSummary, CalendarEvent, FeedEvent, HomeStatus, MarketClock, Order, Position } from '../api/types'
+import type { AccountRef, AccountSummary, CalendarEvent, Dividend, EquityPoint, FeedEvent, HomeStatus, MarketClock, Order, Position, SectorExposure } from '../api/types'
 
 const asOf = '2026-10-30T19:30:00Z'
 
@@ -38,6 +38,18 @@ export const positions = [
   { symbol: 'SPY', description: 'ETF S&P 500', side: 'long', qty: 20, avg_entry_price: 490, current_price: 500, market_value: 10000, unrealized_pl: 200, unrealized_pl_pct: 0.02, stop_price: 475, opened_at: '2026-10-01T14:30:00Z' },
   { symbol: 'TSLA', description: 'Tesla', side: 'short', qty: 10, avg_entry_price: 205, current_price: 200, market_value: 2000, unrealized_pl: 50, unrealized_pl_pct: 0.025, stop_price: 220, opened_at: '2026-10-15T14:30:00Z' },
 ] satisfies Position[]
+export const equity: EquityPoint[] = [
+  { date: '2026-10-26', account: 12650, benchmark: 681, shadow: 12620 },
+  { date: '2026-10-27', account: 12810, benchmark: 686, shadow: 12770 },
+  { date: '2026-10-28', account: 12760, benchmark: 684, shadow: 12740 },
+  { date: '2026-10-29', account: 12920, benchmark: 690, shadow: 12880 },
+  { date: '2026-10-30', account: 13000, benchmark: 693, shadow: 12900 },
+]
+export const dividends = [{ date: '2026-10-15', symbols: ['SPY', 'MSFT'], net: 24.8, withheld: 3.2 }] satisfies Dividend[]
+export const sectorExposure = [
+  { sector: 'Tecnología', long: 42, short: 8, pct: 34 },
+  { sector: 'Consumo', long: 18, short: 0, pct: 18 },
+] satisfies SectorExposure[]
 
 export const orders = [
   { id: 'order-filled', symbol: 'SPY', side: 'buy', type: 'limit', qty: 2, limit_price: 500, stop_price: null, status: 'filled', filled_qty: 2, filled_avg_price: 499.5, time_in_force: 'day', submitted_at: asOf, cancelled_at: null, expired_at: null, reject_reason: null, reject_detail: null, reject_reason_raw: null },
