@@ -33,6 +33,7 @@ Implementation documents should include:
 
 ## Active Per-Change Implementation
 
+- [QuantAgent-fnpr.6.6.4-IM-diario-acciones.md](./QuantAgent-fnpr.6.6.4-IM-diario-acciones.md) - Diario con candidatos vigentes, stops, fracciones según Alpaca y seguimiento de posiciones retiradas.
 - [QuantAgent-fnpr.6.6.3-IM-job-semanal-candidatos.md](./QuantAgent-fnpr.6.6.3-IM-job-semanal-candidatos.md) - Job semanal con candidatos vigentes, descartes y pesos H1/H3 en sombra.
 - [QuantAgent-fnpr.6.6.2-IM-candidatos-vivo.md](./QuantAgent-fnpr.6.6.2-IM-candidatos-vivo.md) - Adaptador de candidatos semanales con precios vivos y reloj inyectado.
 - [QuantAgent-fnpr.6.6.1-IM-datos-vivos-h3.md](./QuantAgent-fnpr.6.6.1-IM-datos-vivos-h3.md) - Refresco diario de fundamentales para paper M5 con validación y fallback.
