@@ -22,9 +22,10 @@ def test_rebalanceador_floor_y_venta_precede_compra():
 
 def test_simulacion_reporta_activo_que_no_entra_con_capital_chico(monkeypatch):
     from quantagent.backtesting import cartera_cuenta_chica as module
-    monkeypatch.setattr(module, "pesos_operables", lambda *_, **__: pd.Series({"AAA": .5, "BBB": .5}))
     panel = pd.DataFrame({"AAA": [100., 100.], "BBB": [100., 100.]},
                          index=pd.to_datetime(["2018-01-02", "2018-01-03"], utc=True))
+    monkeypatch.setattr(module, "pesos_operables_por_fecha", lambda *_, **__: pd.DataFrame(
+        [{"AAA": .5, "BBB": .5}] * len(panel), index=panel.index))
     result = simular_cartera_cuenta_chica(_Hypothesis(), panel, 100)
     assert result["zero_positions"] == ["AAA", "BBB"]
     assert result["equity_curve"][-1]["equity"] == pytest.approx(100)
@@ -92,3 +93,30 @@ def test_sin_costos_capital_grande_se_aproxima_a_curva_cartera():
     # La diferencia restante viene de la reserva del 5%, lotes enteros y costos nulos.
     assert result["equity_curve"][-1]["equity"] / 1_000_000_000 == pytest.approx(
         referencia.iloc[-1] / 1_000_000_000, rel=.10)
+
+
+def test_pesos_precalculados_coinciden_con_paneles_causales(monkeypatch):
+    from quantagent.backtesting.cartera_cuenta_chica import pesos_operables_por_fecha
+    from quantagent.trading.cartera_paper import pesos_operables
+    from quantagent.fabrica import transversal
+
+    class PiernaTransversal:
+        clase = "test-transversal"
+        activos = tuple(f"T{i}" for i in range(6))
+
+    class Hipotesis:
+        piernas = (_hipotesis().piernas[0], PiernaTransversal())
+        timeframe = "1d"
+
+    monkeypatch.setitem(transversal.METRICAS, "test-transversal", lambda cierres: cierres)
+    idx = pd.bdate_range("2018-01-02", periods=90, tz="UTC")
+    panel = pd.DataFrame({"AAA": 100 + np.arange(len(idx)) * np.where(np.arange(len(idx)) < 45, -1, 1),
+                          "BBB": 120 - np.arange(len(idx)) * .3,
+                          **{f"T{i}": 80 + np.arange(len(idx)) * (i + 1) / 100 for i in range(6)}}, index=idx)
+    h = Hipotesis()
+    precalculados = pesos_operables_por_fecha(h, panel)
+    for fecha in panel.index:
+        esperado = pesos_operables(h, panel.loc[:fecha], fecha)
+        pd.testing.assert_series_equal(precalculados.loc[fecha].reindex(precalculados.columns).fillna(0),
+                                       esperado.reindex(precalculados.columns).fillna(0),
+                                       check_names=False, check_dtype=False)

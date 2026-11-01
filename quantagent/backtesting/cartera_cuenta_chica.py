@@ -6,15 +6,39 @@ import statistics
 import pandas as pd
 
 from quantagent.fabrica.transversal import semanales
-from quantagent.trading.cartera_paper import pesos_operables
+from quantagent.trading.cartera_paper import exposicion_piernas
+from quantagent.fabrica.cartera import pesos
+from quantagent.fabrica.transversal import es_transversal
 from quantagent.trading.rebalanceador import ordenes_rebalanceo
+
+
+def pesos_operables_por_fecha(hipotesis, cierres, macro=None):
+    """Calcula una vez los pesos operables fecha × activo para el panel completo."""
+    piernas = {i: tuple(p.activos) for i, p in enumerate(hipotesis.piernas)}
+    expos = exposicion_piernas(hipotesis, cierres, macro)
+    seleccion = {i: expos.xs(i, axis=1, level=0) for i, p in enumerate(hipotesis.piernas)
+                 if es_transversal(p.clase)}
+    por_pierna = pesos(cierres, piernas, seleccion=seleccion)
+    filas = []
+    for fecha in cierres.index:
+        fila_pesos = por_pierna.loc[fecha]
+        estado = expos.loc[fecha].fillna(0)
+        activos = {}
+        for (i, simbolo), peso in fila_pesos.items():
+            activos[simbolo] = activos.get(simbolo, 0.0) + float(peso) * float(estado[(i, simbolo)])
+        filas.append(activos)
+    resultado = pd.DataFrame(filas, index=cierres.index).fillna(0.0)
+    resultado.attrs["bloqueos"] = expos.attrs["bloqueos"]
+    return resultado
 
 
 def simular_cartera_cuenta_chica(hipotesis, cierres, capital, slippage_pct=0.0,
                                   commission_pct=0.0, costo_entrada_usd=0.0,
-                                  dividend_rates=None, withholding=0.0, macro=None):
+                                  dividend_rates=None, withholding=0.0, macro=None,
+                                  pesos_fecha=None):
     """Simula mensual/semanalmente una hipótesis sobre cierres ajustados."""
     dividend_rates = dividend_rates or {}
+    pesos_fecha = pesos_fecha if pesos_fecha is not None else pesos_operables_por_fecha(hipotesis, cierres, macro)
     posiciones, cash = {}, float(capital) - costo_entrada_usd
     pagos = float(costo_entrada_usd)
     curve, zeros = [], set()
@@ -26,9 +50,9 @@ def simular_cartera_cuenta_chica(hipotesis, cierres, capital, slippage_pct=0.0,
         posiciones_previas = posiciones.copy()
         precios_previos = cierres.iloc[i - 1].to_dict() if i else precios
         if rebalanceos.loc[fecha]:
-            pesos = pesos_operables(hipotesis, cierres.loc[:fecha], fecha, macro=macro)
-            if pesos.attrs.get("bloqueos"):
-                raise ValueError("No se pudieron calcular pesos operables: " + "; ".join(pesos.attrs["bloqueos"]))
+            pesos = pesos_fecha.loc[fecha]
+            if pesos_fecha.attrs.get("bloqueos"):
+                raise ValueError("No se pudieron calcular pesos operables: " + "; ".join(pesos_fecha.attrs["bloqueos"]))
             equity = cash + sum(qty * precios[s] for s, qty in posiciones.items())
             ordenes = ordenes_rebalanceo(pesos.to_dict(), {s: {"qty": q} for s, q in posiciones.items()}, precios, equity * .95)
             for symbol, side, qty, price in ordenes:
