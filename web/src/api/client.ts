@@ -1,4 +1,4 @@
-import type { AccountRef, AccountSummary, CalendarEvent, FeedEvent, HomeStatus, Order, Position } from './types'
+import type { AccountRef, AccountSummary, CalendarEvent, Dividend, EquityPoint, FeedEvent, HomeStatus, Order, Position, SectorExposure } from './types'
 
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) { super(message); this.name = 'ApiError' }
@@ -17,6 +17,10 @@ export const getFeed = () => get<FeedEvent[]>('/api/feed')
 export const getCalendar = (days: number) => get<CalendarEvent[]>(`/api/calendar?days=${days}`)
 export const getHomeStatus = () => get<HomeStatus>('/api/home/status')
 export const getPositions = (accountId: string) => get<Position[]>(`/api/accounts/${encodeURIComponent(accountId)}/positions`)
+export type EquityRange = '1W' | '1M' | '3M' | 'YTD' | 'ALL'
+export const getEquity = (accountId: string, range: EquityRange) => get<EquityPoint[]>(`/api/accounts/${encodeURIComponent(accountId)}/equity?range=${range}`)
+export const getDividends = (accountId: string) => get<Dividend[]>(`/api/accounts/${encodeURIComponent(accountId)}/dividends`)
+export const getSectorExposure = (accountId: string) => get<SectorExposure[]>(`/api/accounts/${encodeURIComponent(accountId)}/sector-exposure`)
 /** Orden tal como la devuelve la API (OrderResponse del contrato OpenAPI). */
 interface OrderResponse {
   id: number; symbol: string; side: Order['side']; type: Order['type']; status: Order['status']
