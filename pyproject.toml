@@ -45,6 +45,7 @@ dependencies = [
     "pandas_market_calendars>=4.0.0,<5.0.0",
     "pyarrow>=14",
     "vectorbt==1.1.2",  # motor del filtro (quantagent/backtesting/vbt_filter.py)
+    "six>=1.16",  # dependencia transitiva que CI no instalaba (apareció en 2026-11-01)
 ]
 
 [project.optional-dependencies]
