@@ -292,7 +292,7 @@ def correr_par(
     pidió tamaño), regla_tamano (None si no se pidió), bh_pnl, bh_sharpe, bh_max_drawdown,
     retorno_anualizado, exceso_sobre_referencia, tiempo_en_mercado, capital_invertido_medio,
     sharpe_tasa_0, peor_dia (estas seis son None si no hay curva de equity), max_drawdown,
-    equity_curve, cierres (timestamp, cierre ajustado de cada vela), entradas_descartadas_orden_minima y filas (TradeRow; vacía salvo con con_filas=True).
+    equity_curve, backtest_run_id (id de BacktestRun o None si no se guardó la corrida), cierres (timestamp, cierre ajustado de cada vela), entradas_descartadas_orden_minima y filas (TradeRow; vacía salvo con con_filas=True).
     `params` son los parámetros del constructor de la estrategia (el resto, los defaults del registro).
     """
     reg_name = cli_aliases()[strategy_name]
@@ -525,11 +525,11 @@ def run_backtest(
     )
     rows = r["filas"]
 
-    equity_dir = os.environ.get("QUANTAGENT_BACKTEST_EQUITY_DIR", "local-data/backtest-equity")
-    os.makedirs(equity_dir, exist_ok=True)
-    equity_path = os.path.join(equity_dir, f"{r['backtest_run_id']}.csv")
-    with open(equity_path, "w", newline="") as f:
-        f.write(equity_to_csv(r["equity_curve"]))
+    if r["backtest_run_id"] is not None:
+        equity_dir = os.environ.get("QUANTAGENT_BACKTEST_EQUITY_DIR", "local-data/backtest-equity")
+        os.makedirs(equity_dir, exist_ok=True)
+        with open(os.path.join(equity_dir, f"{r['backtest_run_id']}.csv"), "w", newline="") as f:
+            f.write(equity_to_csv(r["equity_curve"]))
 
     click.echo(f"Trades: {r['trades']}")
     click.echo(f"Win rate: {r['win_rate']:.2%}")
