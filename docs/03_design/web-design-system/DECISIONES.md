@@ -40,10 +40,10 @@ Cada fila tiene un valor provisorio para no bloquear el desarrollo. Cuando se de
 | 34 | Ventanas de métricas móviles | 6M y 12M (126 y 252 días) | `performanceConfig` | Uso real | — |
 | 35 | Comparar dos sujetos con períodos distintos | Período común (`align_with`) y aviso en el encabezado | Backend | Al implementar | — |
 | 36 | Lista de backtests: ubicación | — | Navegación | — | **01/11/2026**: sección propia `/backtests` en la navegación principal (5 destinos). La ficha de hipótesis enlaza al backtest. |
-| 37 | Cartera: retorno ponderado por tiempo | — | Backend | — | **01/11/2026**: hoy NO se calcula (`EquitySnapshot` sin flujos ni id de cuenta). Prerrequisito de backend junto con QW-04. Mientras tanto, estado `returns_not_computable`. |
-| 38 | Cómo se asigna capital por estrategia (para aislar su rendimiento) | Sin capital por estrategia: estado “rendimiento no aislable” y acceso oculto (`runPerformance` apagado). No se promete pantalla para estrategias sueltas | Backend (`models.py`, `cartera_paper.py`) | **Decide Fede**; pregunta anotada en el ticket de backend | — |
+| 37 | Cartera: retorno ponderado por tiempo | Cálculo por snapshots y flujos registrados por cuenta | Backend | Cerrada con PERF-05 el 01/11/2026; flujos sin conciliar devuelven `returns_not_computable`. |
+| 38 | Cómo se asigna capital por estrategia (para aislar su rendimiento) | Una cuenta por estrategia, sin caja virtual: el rendimiento de `run` es el de su cuenta | Backend (`models.py`, `cartera_paper.py`) | Cerrada por Fede el 01/11/2026; documentada en [PERF-05/06](../../04_decisions/QuantAgent-pf05-DC-flujos-y-capital-por-estrategia.md) | — |
 | 39 | Diseño completo de la sección Backtests | — | Canvas | — | **01/11/2026**: primero el corte de Rendimiento con la lista mínima (casillas, hasta dos). Búsqueda, filtros y estados, después, cuando haya backtests suficientes. |
-| 40 | Pestaña Rendimiento en Cuenta | — | `featureFlags.accountPerformanceTab` | — | **01/11/2026**: oculta detrás de flag hasta que el backend calcule TWR. El estado “1 aporte sin registrar” queda diseñado para después. |
+| 40 | Pestaña Rendimiento en Cuenta | Pestañas “Hoy · Rendimiento” | `featureFlags.accountPerformanceTab` | **01/11/2026**: habilitada con PERF-05; flujos no conciliados se informan en Rendimiento. |
 
 ## Decisiones tomadas (registro)
 
@@ -65,3 +65,4 @@ Cada fila tiene un valor provisorio para no bloquear el desarrollo. Cuando se de
 | 01/11/2026 | v0.3: todo gráfico tiene frase-resumen visible y alternativa en tabla con los mismos datos. |
 | 01/11/2026 | v0.3.1: Backtests como sección propia; distribución mensual + diaria; cartera con estado “retorno no calculable” hasta que el backend registre aportes. |
 | 01/11/2026 | v0.3.2: primer corte = Rendimiento de backtests. Cartera y estrategia en ejecución detrás de flags (`accountPerformanceTab`, `runPerformance`). Estrategia en ejecución: estado “rendimiento no aislable”. |
+| 01/11/2026 | PERF-06: cada cuenta corresponde a una estrategia; `run` muestra el informe de la cuenta y #38 queda cerrada. |

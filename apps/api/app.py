@@ -182,6 +182,15 @@ def portfolio_performance(account_id: str, range_: Literal["ytd", "1y", "3y", "5
     return report
 
 
+@app.get("/api/performance/run/{account_id}")
+def run_performance(account_id: str, range_: Literal["ytd", "1y", "3y", "5y", "all"] = Query("all", alias="range"), db: Session = Depends(get_db)):
+    report = portfolio_performance(account_id, range_, db)
+    account = configured_account(account_id, db)
+    report["subject"].update(type="run", name=account.strategy or account.name,
+                             run_label=account.id, backtest_id=None)
+    return report
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}

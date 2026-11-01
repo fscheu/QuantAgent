@@ -105,4 +105,4 @@ export const homeConfig = {
   feedSeverityOrder: ['critical', 'warning', 'info', 'neutral'] as const,
 } as const;
 
-export const featureFlags = { accountPerformanceTab: false, runPerformance: false } as const
+export const featureFlags = { accountPerformanceTab: true, runPerformance: true } as const

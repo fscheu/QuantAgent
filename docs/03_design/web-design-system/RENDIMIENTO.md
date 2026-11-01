@@ -10,8 +10,8 @@ Referencia visual: canvas, página **Rendimiento** (escritorio, teléfono, qué 
 | Tipo (`type`) | Qué es | Ejemplo |
 |---|---|---|
 | `backtest` | Una corrida histórica del motor de backtest | “Rotación sectorial por momentum 3M”, #bt-0412, 2015–2026 |
-| `run` | Una estrategia en ejecución (paper o live), con su historia real | “Reversión a la media en ETFs grandes” en Paper M5 desde 14/07 |
-| `portfolio` | Una cuenta con varias estrategias | Paper M4 |
+| `run` | Una estrategia en ejecución; devuelve el rendimiento de su cuenta | Estrategia configurada en Paper M5 |
+| `portfolio` | Una cuenta y sus flujos registrados | Paper M5 |
 
 Mismo layout para los tres. Lo que cambia está en la sección 7.
 
@@ -28,12 +28,12 @@ Mismo layout para los tres. Lo que cambia está en la sección 7.
 Parámetros de URL (compartibles y persistentes al recargar): `?range=ytd|1y|3y|5y|all` (por defecto `all`), `?vs=spy|none|backtest:<id>|run:<id>|portfolio:<id>` (por defecto `spy`), `?view=chart|table` por gráfico no se guarda en la URL (preferencia local).
 
 **Cómo se llega**
-1. **Cuenta** → pestañas “Hoy · Rendimiento”, **solo con el flag `featureFlags.accountPerformanceTab`** (apagado hasta que el backend registre aportes y calcule el retorno ponderado por tiempo; apagado = Cuenta sin pestañas). Pestañas (control segmentado con `role="tablist"`). Rendimiento de la cuenta = sujeto `portfolio`. No hay botón “volver”: se cambia de pestaña.
-2. **Ficha de hipótesis** → botón “Rendimiento del backtest” (siempre). El botón “Rendimiento en paper/live” queda **oculto con el flag `featureFlags.runPerformance`** mientras no haya capital asignado por estrategia (#38): hoy el rendimiento de una estrategia no se puede aislar de su cuenta. No se promete pantalla para estrategias sueltas.
+1. **Cuenta** → pestañas “Hoy · Rendimiento” con el flag `featureFlags.accountPerformanceTab`. Pestañas (control segmentado con `role="tablist"`). Rendimiento de la cuenta = sujeto `portfolio`. No hay botón “volver”: se cambia de pestaña.
+2. **Ficha de hipótesis** → botón “Rendimiento del backtest” (siempre). El acceso “Rendimiento en paper/live” depende de `featureFlags.runPerformance`; su ficha todavía no existe en web (Embudo diferido).
 3. **Sección Backtests** (propia, en la navegación principal, ruta `/backtests`; los backtests existen sin Embudo y también se corren sueltos) → tocar una fila abre su Rendimiento. Desde la ficha de hipótesis se enlaza al backtest, pero la lista no vive adentro de Embudo. Con casillas (`DataTable`, máximo 2) aparece “Comparar 2 ›”, que abre `/rendimiento/backtest/<A>?vs=backtest:<B>`.
 4. **Cartera** → la lista “Estrategias en la cartera” (con retorno por estrategia) también depende de `runPerformance`; con el flag apagado no se muestra.
 
-**Cómo se vuelve**: enlace “‹ {origen}” arriba a la izquierda (44 px). Si se llegó desde la app, vuelve al origen real (historial). Si se entró por link directo, vuelve al padre lógico: `backtest` → lista de backtests; `run` → ficha de hipótesis; `portfolio` no tiene (es pestaña). En escritorio, además, una ruta de migas (`Embudo / Backtests / {nombre}`).
+**Cómo se vuelve**: enlace “‹ {origen}” arriba a la izquierda (44 px). Si se llegó desde la app, vuelve al origen real (historial). Si se entró por link directo, vuelve al padre lógico: `backtest` → lista de backtests; `run` → cuenta; `portfolio` vuelve a la pestaña Hoy. En escritorio, además, una ruta de migas (`Embudo / Backtests / {nombre}`).
 
 **Comparación (máximo dos sujetos)**
 - El sujeto de la pantalla es **A**. “Comparar con” elige **B**: SPY (por defecto), nada, u otro sujeto (backtest, ejecución o cartera; recientes primero).
@@ -130,8 +130,8 @@ Frecuencia (diaria), método (ponderado por tiempo; en cartera, depósitos y ret
 | Desactualizado | `stale: true` (`run`/`portfolio`) | Aviso punteado en advertencia con antigüedad y hora; cifras en texto secundario sin color semántico (conservan signo y flecha) |
 | Sin ejecuciones | `status: 'no_runs'` (`run` aprobado sin días operados) | “Todavía no empezó a operar”, cuenta, fecha de aprobación, próximo rebalanceo y enlace al backtest |
 | Muestra corta | `sample.short: true` | Pantalla completa + `ShortSampleBanner` + métricas marcadas |
-| Retorno no calculable: aporte sin registrar | `status: 'returns_not_computable'`, `not_computable_reason: 'unregistered_flows'` (cartera, con el flag encendido y algún movimiento en `flows.unreconciled`) | “Retorno no calculable: hay 1 aporte sin registrar” + qué movimiento (fecha y monto) + “cuando se registre, el informe se calcula solo”. Sin métricas ni gráficos de rendimiento. Solo “Valor de la cuenta” en USD, marcado “incluye aportes”, sin % ni color de ganancia/pérdida, con el salto marcado. Sin registro de flujos no se llega acá: la pestaña está oculta |
-| Rendimiento no aislable | `status: 'returns_not_computable'`, `not_computable_reason: 'capital_not_isolated'` (estrategia en ejecución) | “Rendimiento no aislable”: comparte posiciones y caja con la cuenta; no hay capital por estrategia. Enlaces al backtest y a la cuenta. Sin números. El acceso está oculto (`runPerformance`); el estado solo cubre un link directo |
+| Retorno no calculable: flujo sin conciliar | `status: 'returns_not_computable'`, `not_computable_reason: 'unregistered_flows'` (cuenta o ejecución) | Indica cada movimiento con fecha y monto. Sin métricas ni gráficos de rendimiento. Solo el último “Valor de la cuenta” en USD, marcado “incluye aportes”, sin porcentaje ni color de ganancia/pérdida. |
+| Rendimiento de ejecución | `run` usa el mismo cálculo y flujos de la cuenta asignada a su estrategia | Si hay flujos sin conciliar, se aplica el estado anterior. |
 
 Cartera sin datos usa el estado “cuenta sin datos” de v0.2.
 
@@ -157,7 +157,7 @@ Cartera sin datos usa el estado “cuenta sin datos” de v0.2.
 | Reserva fuera de muestra | Franja sombreada en curva y caídas | No | No |
 | Aviso de muestra corta | Raro | Frecuente al inicio | Frecuente al inicio |
 | Volver a | Sección Backtests / ficha (según origen) | Ficha de hipótesis | (pestaña de Cuenta) |
-| Retorno ponderado por tiempo | No aplica | Hoy no aislable: estado “rendimiento no aislable”, acceso oculto hasta definir capital por estrategia | Pestaña oculta hasta que exista registro de aportes y TWR; después, estado “1 aporte sin registrar” si falta alguno |
+| Retorno ponderado por tiempo | No aplica | El de la cuenta asignada a la estrategia | Informe de la cuenta; los flujos sin conciliar bloquean el retorno y muestran el estado correspondiente |
 | Bloque extra | Configuración y costos de la corrida | Enlace al backtest original | Lista de estrategias + nota de depósitos/retiros |
 | Estado “sin ejecuciones” | No aplica | Sí | Usa “cuenta sin datos” |
 
@@ -194,10 +194,10 @@ Lista de backtests (sección propia y selector de comparación; en el primer cor
 
 ## 9. Prerrequisitos de backend
 
-0. **Flags**: `accountPerformanceTab` se enciende cuando esté el punto 1; `runPerformance`, cuando se cierre el punto 4.
+0. **Flags**: `accountPerformanceTab` se enciende con PERF-05; `runPerformance` con PERF-06. Ambos están habilitados.
 1. **Registro de aportes y retiros por cuenta**: `cash_flows` guarda fecha, monto con signo, tipo y conciliación en la base propia de cada cuenta. El reporte enlaza subperíodos entre snapshots y excluye flujos conciliados. Sin tabla de registro o con flujos sin conciliar, el endpoint de cartera devuelve `returns_not_computable` con `unregistered_flows`. Los flujos se registran manualmente por CLI, sin integración Alpaca.
 2. **Umbrales como parámetros** del cálculo de rendimiento (21 / 63 / 252 días, 12 rebalanceos), devueltos en `sample.thresholds`.
 3. **Distribución diaria con VaR y CVaR** históricos al 95 %, disponible desde 63 días.
-4. **Capital por estrategia** (pregunta abierta para Fede en el ticket de backend): hoy `models.py` no tiene estrategia ni capital asignado; posiciones y caja son de la cuenta, y `cartera_paper.py` reparte pesos por símbolo sobre una sola caja. Hasta decidir cómo se asigna capital, el rendimiento de una estrategia en ejecución no se puede aislar.
+4. Una cuenta corresponde a una estrategia. El endpoint `run` presenta el rendimiento calculado para esa cuenta, sin repartir capital ni crear caja virtual.
 
 **Primer corte de implementación**: Rendimiento de **backtests** (incluida la comparación de dos) + lista mínima de Backtests con casillas. Cartera y estrategia en ejecución quedan detrás de sus flags.
