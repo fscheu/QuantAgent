@@ -18,13 +18,19 @@ from quantagent.data.provider import DataProvider
 from quantagent.data.sources import build_source
 from quantagent.database import Base
 from quantagent.digest import build_digest
-from quantagent.digest_datos import (consultar_datos_cartera, consultar_datos_paper,
-                                     consultar_valuacion_actual, crear_broker_alpaca_paper)
+from quantagent.digest_datos import (
+    consultar_datos_cartera,
+    consultar_datos_paper,
+    consultar_valuacion_actual,
+    crear_broker_alpaca_paper,
+)
 from quantagent.digest_m5 import build_digest_m5, consultar_datos_m5
+from quantagent.digest_m5_semanal import resumen_semanal
 from quantagent.fabrica.cartera import leer_sombra
 from quantagent.fabrica.chequeos_paper import comparar_pesos, reportar_dividendos, reportar_rechazos
-from quantagent.models import EquitySnapshot, Environment, Position
+from quantagent.models import Environment, EquitySnapshot, Position
 from quantagent.strategy.assembler import StrategyAssembler
+from quantagent.trading.bucket_m5 import CAPITAL_INICIAL
 from quantagent.trading.cartera_paper import ultima_sesion_cerrada_nyse
 from quantagent.trading.pipeline_m5 import correr_diario, correr_semanal
 from quantagent.trading.position_monitor import PositionMonitor
@@ -211,6 +217,17 @@ def trading_digest(archivo, digest_date, bucket: str | None, db: str | None, sha
             datos = {}
             with utils.session_scope() as session:
                 datos = consultar_datos_m5(session, digest_date.date())
+                carpeta = Path(db_path).parent
+                provider = None
+                if (carpeta / "m5-sombra-semanal.csv").exists():
+                    from quantagent.trading.bucket_m5 import cargar_credenciales
+                    cargar_credenciales()
+                    provider = DataProvider(session, source=build_source("alpaca"))
+                datos["semanal"] = resumen_semanal(
+                    digest_date.date(), session,
+                    CAPITAL_INICIAL + sum(p["unrealized_pnl"] for p in datos["posiciones"]),
+                    carpeta=carpeta, data_provider=provider,
+                    base_dir=os.environ.get("QUANTAGENT_SNAPSHOT_DIR"))
             click.echo(build_digest_m5(digest_date.date(), datos))
         finally:
             settings.DATABASE_URL = previous_settings_url
