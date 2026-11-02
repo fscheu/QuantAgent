@@ -1,4 +1,5 @@
-from datetime import date, time
+from datetime import date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -72,16 +73,17 @@ def test_sync_upserts_holiday_and_early_close_idempotently(tmp_path):
 def test_calendar_endpoint_filters_window_and_formats_dates(tmp_path, monkeypatch):
     engine = create_engine(f"sqlite:///{tmp_path / 'calendar.db'}", connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine, tables=[CalendarEvent.__table__, Account.__table__])
+    today = datetime.now(ZoneInfo("America/New_York")).date()
     with Session(engine) as db:
         db.add_all([
-            CalendarEvent(date=date(2026, 11, 26), kind="holiday", title="Thanksgiving", source="alpaca"),
-            CalendarEvent(date=date(2026, 12, 1), kind="early_close", title="Early close", source="alpaca"),
-            CalendarEvent(date=date(2027, 1, 15), kind="holiday", title="Future holiday", source="alpaca"),
+            CalendarEvent(date=today + timedelta(days=10), kind="holiday", title="Thanksgiving", source="alpaca"),
+            CalendarEvent(date=today + timedelta(days=45), kind="early_close", title="Early close", source="alpaca"),
+            CalendarEvent(date=today + timedelta(days=120), kind="holiday", title="Future holiday", source="alpaca"),
         ])
         db.commit()
 
     with Session(engine) as db:
         result = calendar_route(days=30, db=db)
-    assert result[0].date == "2026-11-26"
+    assert result[0].date == (today + timedelta(days=10)).isoformat()
     assert result[0].kind == "holiday"
     assert len(result) == 1
