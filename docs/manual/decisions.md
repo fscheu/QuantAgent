@@ -39,3 +39,4 @@
 | Web app: FastAPI + React, Streamlit removed, visual design in sessions with Fede (W1–W3) | 2026-10-28 | [Roadmap §3](../02_planning/2026-10-28_roadmap_post_m5.md#3-m-web-aplicacin-web-que-reemplaza-streamlit) |
 | Data storage: Parquet for history, DuckDB to query, funnel records in Postgres, monthly freeze (D1–D3) | 2026-10-28 | [Roadmap §4](../02_planning/2026-10-28_roadmap_post_m5.md#4-m-datos-dnde-guardar-los-datos-de-mercado-y-fundamentales) |
 | User manual: English Markdown, old manual deleted, CLI help in English (U1–U4) | 2026-10-28 | [Roadmap §5](../02_planning/2026-10-28_roadmap_post_m5.md#5-m-manual-manual-de-usuario-como-pginas-de-la-aplicacin) |
+| One account per strategy (no virtual cash); manual deposit and withdrawal log per account; incubation ladder fixed only at 3 months for now | 2026-11-01 | [Decision](../04_decisions/QuantAgent-pf05-DC-flujos-y-capital-por-estrategia.md) |

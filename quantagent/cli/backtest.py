@@ -314,7 +314,7 @@ def correr_par(
     sharpe_tasa_0, peor_dia (estas seis son None si no hay curva de equity), posiciones_en_cero
     (solo con --cuenta-chica),
     max_drawdown,
-    equity_curve, cierres (timestamp, cierre ajustado de cada vela), entradas_descartadas_orden_minima y filas (TradeRow; vacía salvo con con_filas=True).
+    equity_curve, backtest_run_id (id de BacktestRun o None si no se guardó la corrida), cierres (timestamp, cierre ajustado de cada vela), entradas_descartadas_orden_minima y filas (TradeRow; vacía salvo con con_filas=True).
     `params` son los parámetros del constructor de la estrategia (el resto, los defaults del registro).
     """
     reg_name = cli_aliases()[strategy_name]
@@ -404,6 +404,7 @@ def correr_par(
 
     curve = bt.equity_curve
     r = {
+        "backtest_run_id": bt.backtest_run_id,
         "cierres": [(c.timestamp, float(c.close)) for c in candles],
         "trades": metrics.total_trades,
         "win_rate": metrics.win_rate,
@@ -578,6 +579,12 @@ def run_backtest(
         fill=llenado,
     )
     rows = r["filas"]
+
+    if r["backtest_run_id"] is not None:
+        equity_dir = os.environ.get("QUANTAGENT_BACKTEST_EQUITY_DIR", "local-data/backtest-equity")
+        os.makedirs(equity_dir, exist_ok=True)
+        with open(os.path.join(equity_dir, f"{r['backtest_run_id']}.csv"), "w", newline="") as f:
+            f.write(equity_to_csv(r["equity_curve"]))
 
     click.echo(f"Trades: {r['trades']}")
     click.echo(f"Win rate: {r['win_rate']:.2%}")

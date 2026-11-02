@@ -101,4 +101,8 @@ export const homeConfig = {
   feedFallbackHours: 24,
   /** Horizonte de "Próximos eventos" (días). */
   calendarDays: 14,
+  /** Severidades del feed, de mayor a menor prioridad. */
+  feedSeverityOrder: ['critical', 'warning', 'info', 'neutral'] as const,
 } as const;
+
+export const featureFlags = { accountPerformanceTab: true, runPerformance: true } as const

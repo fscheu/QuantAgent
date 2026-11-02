@@ -1,0 +1,10 @@
+[Unit]
+Description=QuantAgent web: copiar eventos de las cuentas al feed (diario)
+
+[Timer]
+# 06:00 ART, después del digest de paper (05:20 ART). Es idempotente: se puede correr de nuevo sin duplicar.
+OnCalendar=*-*-* 09:00:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

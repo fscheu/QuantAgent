@@ -9,11 +9,14 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  accounts          Manage configured trading accounts.
-  migrate-paper-db  Repair a legacy paper database and stamp it at the...
-  schema            Export or check the live OpenAPI contract.
-  serve             Serve the read-only QuantAgent API.
-  sync-calendar     Synchronize Alpaca market holidays and early closes.
+  accounts            Manage configured trading accounts.
+  evaluate-alarms     Evaluate active account alarms and append state...
+  migrate-paper-db    Repair a legacy paper database and stamp it at the...
+  schema              Export or check the live OpenAPI contract.
+  serve               Serve the read-only QuantAgent API.
+  sync-calendar       Synchronize Alpaca market holidays and early closes.
+  sync-events         Copy account orders and closed trades into the...
+  sync-fred-calendar  Synchronize FRED releases and manual calendar events.
 ```
 
 ## `quantagent api accounts`
@@ -29,8 +32,22 @@ Options:
 Commands:
   add      Register an account and its strategy.
   archive  Archive an account so it is hidden from the API.
+  flows    Register and reconcile manual deposits and withdrawals.
   list     List active accounts.
   show     Show one account by slug.
+```
+
+## `quantagent api evaluate-alarms`
+
+```text
+Usage: quantagent api evaluate-alarms [OPTIONS]
+
+  Evaluate active account alarms and append state changes to events.
+
+Options:
+  --help  Show this message and exit.
+
+  Example: quantagent api evaluate-alarms
 ```
 
 ## `quantagent api migrate-paper-db`
@@ -107,4 +124,30 @@ Options:
   --help  Show this message and exit.
 
   Example: quantagent api sync-calendar
+```
+
+## `quantagent api sync-events`
+
+```text
+Usage: quantagent api sync-events [OPTIONS]
+
+  Copy account orders and closed trades into the activity feed.
+
+Options:
+  --help  Show this message and exit.
+
+  Example: quantagent api sync-events
+```
+
+## `quantagent api sync-fred-calendar`
+
+```text
+Usage: quantagent api sync-fred-calendar [OPTIONS]
+
+  Synchronize FRED releases and manual calendar events.
+
+Options:
+  --help  Show this message and exit.
+
+  Example: quantagent api sync-fred-calendar
 ```
