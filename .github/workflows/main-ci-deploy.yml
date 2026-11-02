@@ -39,7 +39,7 @@ jobs:
     name: Web (TypeScript + Build + Vitest)
     needs: web-changes
     if: needs.web-changes.outputs.web == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     defaults:
