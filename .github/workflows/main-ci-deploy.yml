@@ -18,6 +18,43 @@ env:
   PYTHON_VERSION: "3.11"
 
 jobs:
+  web-changes:
+    name: Detect web changes
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      web: ${{ steps.changes.outputs.web }}
+    steps:
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            web:
+              - 'web/**'
+
+  web:
+    name: Web (TypeScript + Build + Vitest)
+    needs: web-changes
+    if: needs.web-changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+
   ci:
     name: CI (Lint + Tests)
     runs-on: ubuntu-latest
