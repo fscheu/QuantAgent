@@ -18,3 +18,4 @@ local-data/*
 web/node_modules/
 web/dist/
 web/build/
+web/e2e-artifacts/
