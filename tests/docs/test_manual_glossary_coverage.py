@@ -7,7 +7,7 @@ TERMS = (
     "Hypothesis", "Funnel", "Sharpe deflated", "Reserve", "Reserva 2023+ with cap 3", "C0", "M1",
     "N (attempts)", "Stages 0–3", "Candidate", "1/N", "Shadow (sombra local)", "Paper",
     "Fraccionable", "Cuenta cash", "Clean epoch (época limpia, `invalida_bug`)", "PDT", "Snapshot", "Equity snapshot", "Master accounts database", "Manifest",
-    "Train, test, and reserve", "Buy and hold", "Intrabar", "Control (backtesting.py)", "Golden test", "Walk-forward",
+    "Train, test, and reserve", "Buy and hold", "Intrabar", "Control (backtesting.py)", "Golden test", "Walk-forward", "Cuenta chica",
 )
 
 
