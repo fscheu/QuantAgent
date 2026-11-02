@@ -33,6 +33,7 @@ jobs:
           filters: |
             web:
               - 'web/**'
+              - '.github/workflows/main-ci-deploy.yml'
 
   web:
     name: Web (TypeScript + Build + Vitest)
