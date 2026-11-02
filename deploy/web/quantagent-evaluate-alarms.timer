@@ -1,0 +1,10 @@
+[Unit]
+Description=QuantAgent web: evaluar alarmas de las cuentas (diario)
+
+[Timer]
+# 06:10 ART, después de sync-events (06:00 ART). Solo agrega aperturas y resoluciones; es idempotente.
+OnCalendar=*-*-* 09:10:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,12 @@
+[Unit]
+Description=QuantAgent web: evaluar alarmas de las cuentas
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/azureuser/paper-ops
+Environment=PYTHONPATH=/home/azureuser/paper-ops/QuantAgent
+Environment=QUANTAGENT_SNAPSHOT_DIR=/home/azureuser/paper-ops/local-data
+Environment=QUANTAGENT_DATABASE_URL=sqlite:////home/azureuser/web-ops/maestro.db
+Environment=NUMBA_CACHE_DIR=/tmp/numba-cache
+ExecStart=/home/azureuser/paper-ops/venv/bin/quantagent api evaluate-alarms
+TimeoutStartSec=10min
