@@ -46,6 +46,7 @@ def test_preview_prepares_branch_and_isolated_data(tmp_path):
         "QUANTAGENT_PREVIEW_DIR": str(preview_dir),
         "QUANTAGENT_PREVIEW_SOURCE_MAESTRO": str(maestro_db),
         "QUANTAGENT_PREVIEW_SKIP_BUILD": "1",
+        "QUANTAGENT_PREVIEW_SKIP_SYSTEMD": "1",
     })
 
     try:
@@ -80,6 +81,7 @@ def test_preview_resolves_pr_reference(tmp_path):
         "QUANTAGENT_PREVIEW_DIR": str(preview_dir),
         "QUANTAGENT_PREVIEW_SOURCE_MAESTRO": str(maestro_db),
         "QUANTAGENT_PREVIEW_SKIP_BUILD": "1",
+        "QUANTAGENT_PREVIEW_SKIP_SYSTEMD": "1",
     })
 
     try:
@@ -101,7 +103,88 @@ def test_preview_unknown_ref_fails(tmp_path):
         "QUANTAGENT_PREVIEW_DIR": str(preview_dir),
         "QUANTAGENT_PREVIEW_SOURCE_MAESTRO": str(maestro_db),
         "QUANTAGENT_PREVIEW_SKIP_BUILD": "1",
+        "QUANTAGENT_PREVIEW_SKIP_SYSTEMD": "1",
     })
     proc = subprocess.run([str(SCRIPT), "nonexistent-branch-xyz"], env=env, capture_output=True, text=True)
     assert proc.returncode != 0
     assert not (preview_dir / "preview.env").exists()
+
+
+def test_dev_service_unit_file():
+    service_path = REPO_ROOT / "deploy" / "web" / "quantagent-api-dev.service"
+    assert service_path.is_file()
+    content = service_path.read_text()
+    assert "--port 8012" in content
+    assert "--host 127.0.0.1" in content
+    assert "WorkingDirectory=/tmp/quantagent-web-preview/worktree" in content
+    assert "EnvironmentFile=-/tmp/quantagent-web-preview/preview.env" in content
+    assert "quantagent.cli api serve" in content
+    assert "paper-ops" not in content
+    assert "APCA" not in content
+    assert "timer" not in content.lower()
+
+
+def test_preview_stop_shuts_down_unit_and_cleans_dirs(tmp_path):
+    preview_dir = tmp_path / "preview"
+    worktree_dir = preview_dir / "worktree"
+    data_dir = preview_dir / "data"
+    worktree_dir.mkdir(parents=True)
+    data_dir.mkdir(parents=True)
+    (preview_dir / "preview.env").write_text("PORT=8012\n")
+
+    mock_systemctl = tmp_path / "mock_systemctl.sh"
+    log_file = tmp_path / "systemctl.log"
+    mock_systemctl.write_text(f'#!/bin/sh\necho "$@" >> "{log_file}"\nexit 0\n')
+    mock_systemctl.chmod(0o755)
+
+    env = os.environ.copy()
+    env.update({
+        "QUANTAGENT_PREVIEW_DIR": str(preview_dir),
+        "QUANTAGENT_PREVIEW_SYSTEMCTL": str(mock_systemctl),
+    })
+
+    proc = subprocess.run([str(SCRIPT), "stop"], env=env, capture_output=True, text=True, check=True)
+    assert proc.returncode == 0
+    assert not worktree_dir.exists()
+    assert not data_dir.exists()
+    assert not (preview_dir / "preview.env").exists()
+
+    log_content = log_file.read_text()
+    assert "--user stop quantagent-api-dev.service" in log_content
+
+
+def test_preview_start_installs_unit_and_restarts(tmp_path):
+    preview_dir = tmp_path / "preview"
+    worktree_dir = preview_dir / "worktree"
+    user_units_dir = tmp_path / "systemd"
+    maestro_db = _setup_dbs(tmp_path / "prod")
+
+    mock_systemctl = tmp_path / "mock_systemctl.sh"
+    log_file = tmp_path / "systemctl.log"
+    mock_systemctl.write_text(f'#!/bin/sh\necho "$@" >> "{log_file}"\nexit 0\n')
+    mock_systemctl.chmod(0o755)
+
+    env = os.environ.copy()
+    env.update({
+        "QUANTAGENT_PREVIEW_DIR": str(preview_dir),
+        "QUANTAGENT_PREVIEW_SOURCE_MAESTRO": str(maestro_db),
+        "QUANTAGENT_PREVIEW_SKIP_BUILD": "1",
+        "QUANTAGENT_PREVIEW_SYSTEMCTL": str(mock_systemctl),
+        "QUANTAGENT_SYSTEMD_USER_DIR": str(user_units_dir),
+    })
+
+    try:
+        proc = subprocess.run([str(SCRIPT), "HEAD"], env=env, capture_output=True, text=True, check=True)
+        assert proc.returncode == 0
+        installed_service = user_units_dir / "quantagent-api-dev.service"
+        assert installed_service.is_file()
+        svc_content = installed_service.read_text()
+        assert f"WorkingDirectory={worktree_dir}" in svc_content
+        assert f"EnvironmentFile=-{preview_dir}/preview.env" in svc_content
+
+        log_content = log_file.read_text()
+        assert "--user daemon-reload" in log_content
+        assert "--user restart quantagent-api-dev.service" in log_content
+    finally:
+        subprocess.run(["git", "-C", str(REPO_ROOT), "worktree", "remove", "--force", str(worktree_dir)],
+                       capture_output=True)
