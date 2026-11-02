@@ -67,6 +67,24 @@ Alpaca aclara que no da asesoramiento fiscal y comparte reglas generales para un
 
 Fuentes: respuesta de soporte de Alpaca (mail de Fede, 2026-10-25); 10-K de Invesco DB Commodity Index Tracking Fund y de United States Oil Fund, LP en SEC EDGAR; aviso de qualified notices de Invesco (2025-12-09); nota de CIBC Mellon sobre 1446(f).
 
+### Segunda respuesta de Alpaca (2026-11-02)
+
+Respuesta del soporte de Alpaca (Luke) a la pregunta pendiente de arriba. Tampoco es asesoramiento fiscal.
+
+- **Estado hoy:** DBC y USO figuran en el sistema de Alpaca como PTP con *qualified notice* y tasa de retención 0 %. La retención del 10 % sobre el bruto de la venta **no aplica** al vender ninguno de los dos. Responde (a): sí aplican los qualified notices.
+- **Condición:** Alpaca depende de que el emisor tenga publicado un aviso vigente. Si el aviso vence, la excepción deja de valer y el 10 % puede retenerse en la venta siguiente, sea ganancia o pérdida. El estado de un símbolo puede cambiar con el tiempo.
+- **Cómo verificarlo antes de operar:** el campo `attributes` de la Assets API. `ptp_with_exception` indica aviso vigente; `ptp_no_exception` indica que no, y un no residente puede sufrir el 10 % del bruto.
+- **Distribuciones:** Alpaca **no confirma** una tasa para estos fondos. Se revisan con las reglas de no residente y PTP vigentes al momento del pago, y no puede asegurar que sigan en el 30 % de un dividendo común. Responde (b): sin respuesta útil.
+
+Consecuencias para la decisión:
+
+- La condición escrita de la sección anterior (confirmación de Alpaca sobre los qualified notices) queda cumplida **para ventas**, hoy. No para distribuciones, y no a futuro.
+- Propuesta del PM, pendiente de aprobación de Fede: mantener DBC por PDBC y sacar USO antes de dinero real, porque el riesgo (aviso que vence, tasa de distribuciones desconocida) no se compensa con lo que aportan; con una cuenta real de USD 2.500 una retención del 10 % sobre el bruto de cada rotación inmoviliza capital hasta recuperarlo con una declaración en EE.UU.
+- Independiente de esa decisión, agregar un chequeo previo a operar (y antes de cada rebalanceo) que lea `attributes` de la Assets API y bloquee o avise si algún símbolo del universo trae `ptp_no_exception`. Ticket `QuantAgent-etqz` (PTP-01).
+- Paper no cambia: es simulado y no retiene.
+
+Fuente: mail de respuesta del soporte de Alpaca recibido por Fede el 2026-11-02.
+
 ## Pendiente fuera de este documento
 
 - `R:` de Fede sobre el lote #360 cuando termine L19.

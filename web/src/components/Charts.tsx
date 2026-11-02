@@ -38,7 +38,7 @@ export function EquityChart({ data, range = '3M', onRangeChange, loading = false
         {series.map(({ key, label }) => { const index = key === 'account' ? 0 : key === 'benchmark' ? 1 : 2; return <Line key={key} yAxisId="right" type="monotone" dataKey={key} name={label} stroke={colors[index]} strokeWidth={index === 0 ? 2.25 : 1.75} strokeDasharray={seriesDash[index]} dot={false} connectNulls isAnimationActive={false} /> })}
       </ComposedChart></ResponsiveContainer>
     </div>
-    <table className="qa-visually-hidden"><caption>Valores de la curva de valor</caption><thead><tr><th>Fecha</th>{series.map(s => <th key={s.key}>{s.label}</th>)}</tr></thead><tbody>{data.map(row => <tr key={row.date}><th>{row.date}</th>{series.map(s => <td key={s.key}>{row[s.key as keyof EquityPoint] === null ? 'Sin dato' : money(row[s.key as keyof EquityPoint] as number)}</td>)}</tr>)}</tbody></table>
+    <div className="qa-visually-hidden"><table><caption>Valores de la curva de valor</caption><thead><tr><th>Fecha</th>{series.map(s => <th key={s.key}>{s.label}</th>)}</tr></thead><tbody>{data.map(row => <tr key={row.date}><th>{row.date}</th>{series.map(s => <td key={s.key}>{row[s.key as keyof EquityPoint] === null ? 'Sin dato' : money(row[s.key as keyof EquityPoint] as number)}</td>)}</tr>)}</tbody></table></div>
     <ul className="qa-chart-legend" aria-hidden="true">{series.map(s => { const index = s.key === 'account' ? 0 : s.key === 'benchmark' ? 1 : 2; return <li key={s.key}><span style={{ borderColor: colors[index], borderTopStyle: index ? 'dashed' : 'solid' }} />{s.label}</li> })}</ul>
   </div>
 }
@@ -52,7 +52,7 @@ export function DivergingBar({ data, loading = false }: { data: SectorExposure[]
   const summary = `Exposición por sector: ${data.map(row => `${row.sector}, corta ${pct(Math.abs(row.short))}, larga ${pct(row.long)}`).join('; ')}`
   return <div className="qa-diverging" role="img" aria-label={summary}>
     {data.map(row => <div className="qa-diverging-row" key={row.sector}><span className="qa-diverging-sector">{row.sector}</span><div className="qa-diverging-bars"><span className="qa-diverging-left"><span className="qa-diverging-short" style={{ width: `${Math.abs(row.short) / max * 100}%`, background: colors[1] }} /></span><span className="qa-diverging-axis" /><span className="qa-diverging-right"><span className="qa-diverging-long" style={{ width: `${row.long / max * 100}%`, background: colors[0] }} /></span></div><span className="qa-diverging-value">{pct(row.pct)}</span></div>)}
-    <table className="qa-visually-hidden"><caption>{summary}</caption><thead><tr><th>Sector</th><th>Short</th><th>Long</th><th>Exposición</th></tr></thead><tbody>{data.map(row => <tr key={row.sector}><th>{row.sector}</th><td>{pct(row.short)}</td><td>{pct(row.long)}</td><td>{pct(row.pct)}</td></tr>)}</tbody></table>
+    <div className="qa-visually-hidden"><table><caption>{summary}</caption><thead><tr><th>Sector</th><th>Short</th><th>Long</th><th>Exposición</th></tr></thead><tbody>{data.map(row => <tr key={row.sector}><th>{row.sector}</th><td>{pct(row.short)}</td><td>{pct(row.long)}</td><td>{pct(row.pct)}</td></tr>)}</tbody></table></div>
   </div>
 }
 
