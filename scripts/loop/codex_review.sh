@@ -32,6 +32,8 @@ TICKET="QuantAgent-${BRANCH##*QuantAgent-}"
 WT="/tmp/ai-review/$PR-$(date -u +%H%M%S)"; mkdir -p /tmp/ai-review
 git -C "$REPO" worktree add -q --detach "$WT" "origin/$BRANCH" >/dev/null 2>&1 || { echo "⚠ revisión Codex: no pude crear el worktree"; rm -rf "$TMP"; exit 0; }
 OUT="$STATE/review-$PR.md"; rm -f "$OUT"
+WEB_CHANGED=0
+git -C "$WT" diff --quiet "origin/$BASE"...HEAD -- web/ || WEB_CHANGED=1
 {
   cat "$TMP/loop/REVIEW-PROMPT.md"
   printf '\nCONTEXTO\nPR: #%s · rama: %s · base: origin/%s · ticket: %s · modelo: %s\n\nTICKET (bd show)\n' "$PR" "$BRANCH" "$BASE" "$TICKET" "$MODEL"
@@ -43,11 +45,23 @@ cat >"$TMP/run.sh" <<RUN
 cd '$WT' && source '$REPO/.venv/bin/activate'
 export DATABASE_URL='sqlite:///$WT/try.db' QUANTAGENT_SNAPSHOT_DIR='$LOOP_SNAPSHOT_DIR'
 python -c 'from quantagent.database import init_db; init_db()'
+# E2E runs through try.sh; preserve its status and screenshots before its worktree is removed.
+E2E_REPORT='No aplica: el diff no toca web/.'
+if [ '$WEB_CHANGED' = 1 ]; then
+  E2E_ARTIFACTS='$STATE/review-$PR-e2e-artifacts'
+  rm -rf "\$E2E_ARTIFACTS"
+  timeout '${LOOP_REVIEW_TIMEOUT_MIN}m' bash '$WT/scripts/loop/try.sh' '$BRANCH' -- "cd web && npm ci && { npm run e2e; status=\\\$?; cp -R e2e-artifacts '\$E2E_ARTIFACTS'; exit \\\$status; }" >'$STATE/review-$PR-e2e.log' 2>&1
+  E2E_STATUS=\$?
+  E2E_REPORT="npm run e2e vía try.sh: exit \$E2E_STATUS; screenshots: \$E2E_ARTIFACTS"
+  printf '\\nWEB: %s\\nMirá los screenshots de 390px antes de reportar; un exit distinto de 0 impide aprobar.\\n' "\$E2E_REPORT" >>.review-prompt.txt
+fi
 timeout '${LOOP_REVIEW_TIMEOUT_MIN}m' '${LOOP_CODEX_BIN:-codex}' exec -m '$MODEL' -s workspace-write -c shell_environment_policy.inherit=all \\
   -o '$OUT' - <.review-prompt.txt >'$STATE/review-$PR.log' 2>&1
 [ -s '$OUT' ] || echo 'Codex no entregó reporte (ver review-$PR.log).' >'$OUT'
 # The gate tells PM: from R: by line prefix: a report line must never start with either.
 sed -i -E 's/^(PM|R):/> \\1:/' '$OUT'; sed -i '1i CODEX: $TICKET · #$PR · modelo $MODEL · reporte mecánico, no decide\\n' '$OUT'
+printf '\\nE2E: %s\\n' "\$E2E_REPORT" >>'$OUT'
+if [ '$WEB_CHANGED' = 1 ]; then tail -n 15 '$STATE/review-$PR-e2e.log' >>'$OUT'; fi
 [ -n '${LOOP_REVIEW_DRY:-}' ] || gh pr comment '$PR' -R '$LOOP_GITHUB_REPO' --body-file '$OUT' >/dev/null
 cd /; git -C '$REPO' worktree remove --force '$WT' >/dev/null 2>&1; rm -rf '$TMP' '$STATE/review.pid'
 RUN
