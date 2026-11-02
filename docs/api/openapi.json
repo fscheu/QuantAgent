@@ -31,8 +31,9 @@
       "AccountSummaryActive": {
         "properties": {
           "alarms": {
-            "default": [],
-            "items": {},
+            "items": {
+              "$ref": "#/components/schemas/Alarm"
+            },
             "title": "Alarms",
             "type": "array"
           },
@@ -240,6 +241,100 @@
         "title": "AccountSummaryNoData",
         "type": "object"
       },
+      "Alarm": {
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "critical",
+              "warning",
+              "info",
+              "neutral"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "since": {
+            "title": "Since",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "account_id",
+          "severity",
+          "kind",
+          "title",
+          "message",
+          "since"
+        ],
+        "title": "Alarm",
+        "type": "object"
+      },
+      "BacktestRef": {
+        "properties": {
+          "end": {
+            "title": "End",
+            "type": "string"
+          },
+          "hypothesis_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hypothesis Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "start": {
+            "title": "Start",
+            "type": "string"
+          },
+          "total_return": {
+            "title": "Total Return",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "hypothesis_name",
+          "start",
+          "end",
+          "total_return"
+        ],
+        "title": "BacktestRef",
+        "type": "object"
+      },
       "CalendarEventResponse": {
         "properties": {
           "account_id": {
@@ -264,13 +359,20 @@
           "kind": {
             "enum": [
               "holiday",
-              "early_close"
+              "early_close",
+              "rebalance",
+              "macro"
             ],
             "title": "Kind",
             "type": "string"
           },
           "source": {
-            "const": "alpaca",
+            "enum": [
+              "alpaca",
+              "strategy",
+              "fred",
+              "manual"
+            ],
             "title": "Source",
             "type": "string"
           },
@@ -311,6 +413,37 @@
         "title": "CalendarEventResponse",
         "type": "object"
       },
+      "DividendResponse": {
+        "properties": {
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "net": {
+            "title": "Net",
+            "type": "number"
+          },
+          "symbols": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Symbols",
+            "type": "array"
+          },
+          "withheld": {
+            "title": "Withheld",
+            "type": "number"
+          }
+        },
+        "required": [
+          "date",
+          "symbols",
+          "net",
+          "withheld"
+        ],
+        "title": "DividendResponse",
+        "type": "object"
+      },
       "EquityPoint": {
         "properties": {
           "account": {
@@ -318,16 +451,30 @@
             "type": "number"
           },
           "benchmark": {
-            "title": "Benchmark",
-            "type": "null"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Benchmark"
           },
           "date": {
             "title": "Date",
             "type": "string"
           },
           "shadow": {
-            "title": "Shadow",
-            "type": "null"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shadow"
           }
         },
         "required": [
@@ -335,6 +482,71 @@
           "account"
         ],
         "title": "EquityPoint",
+        "type": "object"
+      },
+      "FeedEventResponse": {
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "group_count": {
+            "title": "Group Count",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "link": {
+            "title": "Link",
+            "type": "string"
+          },
+          "occurred_at": {
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          },
+          "subtitle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subtitle"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "severity",
+          "occurred_at",
+          "title",
+          "link",
+          "group_count"
+        ],
+        "title": "FeedEventResponse",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -348,6 +560,48 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HomeStatus": {
+        "properties": {
+          "headline": {
+            "title": "Headline",
+            "type": "string"
+          },
+          "level": {
+            "enum": [
+              "ok",
+              "critical",
+              "warning",
+              "info",
+              "neutral"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "level",
+          "headline",
+          "message",
+          "link"
+        ],
+        "title": "HomeStatus",
         "type": "object"
       },
       "OrderResponse": {
@@ -563,6 +817,34 @@
         "title": "PositionResponse",
         "type": "object"
       },
+      "SectorExposure": {
+        "properties": {
+          "long": {
+            "title": "Long",
+            "type": "number"
+          },
+          "pct": {
+            "title": "Pct",
+            "type": "number"
+          },
+          "sector": {
+            "title": "Sector",
+            "type": "string"
+          },
+          "short": {
+            "title": "Short",
+            "type": "number"
+          }
+        },
+        "required": [
+          "sector",
+          "long",
+          "short",
+          "pct"
+        ],
+        "title": "SectorExposure",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -631,6 +913,49 @@
           }
         },
         "summary": "Accounts"
+      }
+    },
+    "/api/accounts/{account_id}/dividends": {
+      "get": {
+        "operationId": "account_dividends_api_accounts__account_id__dividends_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DividendResponse"
+                  },
+                  "title": "Response Account Dividends Api Accounts  Account Id  Dividends Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Account Dividends"
       }
     },
     "/api/accounts/{account_id}/equity": {
@@ -795,6 +1120,49 @@
         "summary": "Account Positions"
       }
     },
+    "/api/accounts/{account_id}/sector-exposure": {
+      "get": {
+        "operationId": "account_sector_exposure_api_accounts__account_id__sector_exposure_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SectorExposure"
+                  },
+                  "title": "Response Account Sector Exposure Api Accounts  Account Id  Sector Exposure Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Account Sector Exposure"
+      }
+    },
     "/api/accounts/{account_id}/summary": {
       "get": {
         "operationId": "account_summary_api_accounts__account_id__summary_get",
@@ -842,6 +1210,72 @@
         "summary": "Account Summary"
       }
     },
+    "/api/backtests": {
+      "get": {
+        "operationId": "backtests_api_backtests_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "hypothesis_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hypothesis Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BacktestRef"
+                  },
+                  "title": "Response Backtests Api Backtests Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Backtests"
+      }
+    },
     "/api/calendar": {
       "get": {
         "operationId": "calendar_api_calendar_get",
@@ -886,6 +1320,265 @@
           }
         },
         "summary": "Calendar"
+      }
+    },
+    "/api/feed": {
+      "get": {
+        "operationId": "feed_api_feed_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FeedEventResponse"
+                  },
+                  "title": "Response Feed Api Feed Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Feed"
+      }
+    },
+    "/api/home/status": {
+      "get": {
+        "operationId": "home_status_api_home_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Home Status"
+      }
+    },
+    "/api/performance/backtest/{backtest_id}": {
+      "get": {
+        "operationId": "backtest_performance_api_performance_backtest__backtest_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "backtest_id",
+            "required": true,
+            "schema": {
+              "title": "Backtest Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "range",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "ytd",
+                "1y",
+                "3y",
+                "5y",
+                "all"
+              ],
+              "title": "Range",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "align_with",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Align With"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Backtest Performance"
+      }
+    },
+    "/api/performance/portfolio/{account_id}": {
+      "get": {
+        "operationId": "portfolio_performance_api_performance_portfolio__account_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "range",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "ytd",
+                "1y",
+                "3y",
+                "5y",
+                "all"
+              ],
+              "title": "Range",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Portfolio Performance"
+      }
+    },
+    "/api/performance/run/{account_id}": {
+      "get": {
+        "operationId": "run_performance_api_performance_run__account_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "range",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "ytd",
+                "1y",
+                "3y",
+                "5y",
+                "all"
+              ],
+              "title": "Range",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Performance"
       }
     },
     "/health": {

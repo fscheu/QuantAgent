@@ -10,6 +10,8 @@ export type { StopDistanceBarProps } from './StopDistanceBar';
 export { PositionCard, PositionRow, positionColumns } from './Position';
 export { OrderCard, OrderRow, RejectReason, orderColumns, orderGroupBy, orderSubRow } from './Order';
 export { AccountCard, AccountSummaryCard, AccountNoData } from './Account';
+export { EquityChart, DivergingBar, Sparkline } from './Charts';
+export type { EquityRange } from './Charts';
 
 type CardProps = HTMLAttributes<HTMLElement> & { as?: 'div' | 'section' | 'article' | 'a'; href?: string; variant?: 'default' | 'dashed'; children: ReactNode };
 export function Card({ as = 'div', href, variant = 'default', className = '', children, ...props }: CardProps) {

@@ -3,6 +3,7 @@ import { cleanup, render, screen } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { Cuenta } from './Cuenta'
+import { ThemeProvider } from '../ThemeContext'
 
 // Respuestas con la forma que devuelve la API real (docs/api/openapi.json), incluidos los null que hoy
 // salen de las bases paper: sin stop, sin descripción, sin día/semana, sin sparkline.
@@ -28,7 +29,7 @@ afterAll(() => server.close())
 
 describe('Cuenta con respuestas de la API real', () => {
   it('dibuja posiciones y órdenes sin romper aunque falten stop, descripción y variaciones', async () => {
-    render(<Cuenta accountId="cartera-x" navigate={() => {}} />)
+    render(<ThemeProvider><Cuenta accountId="cartera-x" navigate={() => {}} /></ThemeProvider>)
     expect((await screen.findAllByText('EEM')).length).toBeGreaterThan(0)
     expect(screen.getAllByText('XLB').length).toBeGreaterThan(0)
     expect(screen.getAllByText('DBC').length).toBeGreaterThan(0)

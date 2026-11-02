@@ -1,7 +1,25 @@
-# QuantAgent Web — traspaso de diseño a código (v0.2)
+# QuantAgent Web — traspaso de diseño a código (v0.3)
 
 Paquete para empezar a programar el frontend (React + TypeScript) a partir del canvas de diseño.
-Canvas: https://claude.ai/artifact/G3CGyvdzFTek2bSSRTr1uc (páginas: Sistema de diseño, Cuenta, Embudo, Inicio, v0.2 · Ajustes).
+Canvas: https://claude.ai/artifact/G3CGyvdzFTek2bSSRTr1uc (páginas: Sistema de diseño, Cuenta, Embudo, Inicio, v0.2 · Ajustes, Rendimiento).
+
+## Cambios en v0.3.2 (01/11/2026)
+
+- **Primer corte = Rendimiento de backtests** + lista mínima de Backtests (casillas, hasta dos).
+- `featureFlags` en `config.ts`: `accountPerformanceTab` (pestaña en Cuenta; se enciende cuando el backend calcule TWR) y `runPerformance` (rendimiento por estrategia; se enciende cuando haya capital por estrategia). Ambos apagados.
+- Estrategia en ejecución: nuevo estado “rendimiento no aislable” (`not_computable_reason: 'capital_not_isolated'`). Cartera: el estado pasa a “1 aporte sin registrar”, para cuando el flag esté encendido.
+- DECISIONES #38 (decide Fede), #39 y #40.
+
+## Cambios en v0.3.1 (01/11/2026)
+
+- Umbrales de Rendimiento (21/63/252 días, 12 rebalanceos) como parámetros del backend (`sample.thresholds`), no fijos.
+- Distribución: mensual por defecto + vista diaria secundaria (desde 63 días) con VaR 95 % y CVaR.
+- Backtests pasa a ser sección propia de la navegación (5 destinos); fuera de Embudo.
+- Cartera: nuevo estado `returns_not_computable` (“hay aportes sin registrar”) y prerrequisito de backend (registro de flujos + id de cuenta + TWR, junto con QW-04). Ver RENDIMIENTO.md §9.
+
+## Cambios en v0.3 (01/11/2026)
+
+Nueva pantalla **Rendimiento** (tearsheet nativo) para backtest, estrategia en ejecución y cartera. Archivo nuevo: `RENDIMIENTO.md` (rutas, navegación, comparación, layout, métricas con fórmulas y mínimos, gráficos, estados y contrato de datos). Tocados: `COMPONENTES.md` (§6, 11 componentes nuevos o extendidos), `PANTALLAS.md` (sección Rendimiento y pestañas en Cuenta), `api-types.ts` (`PerformanceReport` y afines), `config.ts` (`performanceConfig`, `monthlyHeatStep()`), `help-texts.es.json` (términos de métricas), `DECISIONES.md` (#28–#37).
 
 ## Cambios en v0.2 (30/10/2026, revisión contra el backend real)
 
@@ -23,6 +41,7 @@ Archivos tocados: `api-types.ts`, `config.ts`, `help-texts.es.json`, `COMPONENTE
 | `help-texts.es.json` | Textos del "¿qué es esto?" | `web/src/content/help-texts.es.json` |
 | `api-types.ts` | Contrato de datos que necesitan las pantallas (propuesta para Pydantic) | `web/src/api/types.ts` + espejo en `api/schemas.py` |
 | `COMPONENTES.md` | Inventario: props, variantes, estados, accesibilidad, gráficos | `docs/design/` |
+| `RENDIMIENTO.md` | Pantalla Rendimiento completa + contrato de datos para el backend | `docs/design/` |
 | `PANTALLAS.md` | Composición de cada pantalla, endpoints y comportamiento común | `docs/design/` |
 | `EVENTOS.md` | Catálogo del feed "Desde tu última visita" y fuentes del calendario | `docs/design/` |
 | `DECISIONES.md` | Decisiones abiertas con valor provisorio + registro de las tomadas | `docs/design/` (o raíz) |

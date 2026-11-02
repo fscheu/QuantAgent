@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { setupServer } from 'msw/node'
-import { accounts, marketClock, orders, positions } from './data'
+import { accountRefs, accounts, calendarEvents, feedEvents, homeStatus, marketClock, orders, positions } from './data'
 import { handlers } from './handlers'
 import { startMocks } from './mock-mode'
 
@@ -13,11 +13,19 @@ describe('MSW sample API data', () => {
 
   it('returns each account response in the API contract shape', async () => {
     const list = await fetch('http://localhost/api/accounts').then((response) => response.json())
-    expect(list).toEqual(accounts)
+    expect(list).toEqual(accountRefs)
     const active = await fetch('http://localhost/api/accounts/paper-m4/summary').then((response) => response.json())
     const noData = await fetch('http://localhost/api/accounts/live-main/summary').then((response) => response.json())
     expect(active).toEqual(accounts[0])
     expect(noData).toEqual(accounts[2])
+  })
+
+  it('serves the dashboard feeds in backend response shapes', async () => {
+    const [feed, calendar, status] = await Promise.all(['/api/feed', '/api/calendar?days=14', '/api/home/status'].map(path => fetch(`http://localhost${path}`).then(response => response.json())))
+    expect(feed).toEqual(feedEvents)
+    expect(feed.find((event: (typeof feedEvents)[number]) => event.type === 'order_rejected')?.group_count).toBe(2)
+    expect(calendar).toEqual(calendarEvents)
+    expect(status).toEqual(homeStatus)
   })
 
   it('returns typed positions and their total matches the active account summary', async () => {

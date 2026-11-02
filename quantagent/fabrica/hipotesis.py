@@ -9,8 +9,6 @@ from typing import Any
 
 import yaml
 
-from quantagent.cli.sweep import validar_grilla
-
 _TEXTOS = ("id", "autor", "justificacion", "timeframe")
 
 
@@ -23,6 +21,10 @@ class Pierna:
     elegibilidad: str | None = None
 
     def combinaciones(self) -> list[dict[str, Any]]:
+        # Import diferido: hipotesis -> cli.sweep -> ... -> trading.cartera_paper -> hipotesis es un ciclo;
+        # a nivel de módulo, importar hipotesis (p. ej. desde cartera_paper) falla con ImportError parcial.
+        from quantagent.cli.sweep import validar_grilla
+
         from quantagent.fabrica.transversal import es_transversal
 
         if not self.parametros and es_transversal(self.clase):

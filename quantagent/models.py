@@ -2,9 +2,25 @@
 
 import enum
 import math
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 
-from sqlalchemy import JSON, Boolean, CheckConstraint, Column, Date, DateTime, Enum, Float, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    CheckConstraint,
+    Column,
+    Date,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship, validates
 
 from .database import Base
@@ -532,3 +548,15 @@ class EquitySnapshot(Base):
     equity = Column(Float, nullable=False)
     cash = Column(Float, nullable=False)
     invested = Column(Float, nullable=False)
+
+
+class CashFlow(Base):
+    """Manually registered account deposits and withdrawals."""
+
+    __tablename__ = "cash_flows"
+
+    id = Column(Integer, primary_key=True)
+    flow_date = Column(Date, nullable=False)
+    amount = Column(Float, nullable=False)
+    kind = Column(String(20), nullable=False)
+    reconciled = Column(Boolean, nullable=False, default=False)

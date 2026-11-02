@@ -41,7 +41,13 @@ printf '4. Install API unit and digest snapshot drop-in\n'
 run mkdir -p "${USER_UNITS}/paper-digest@.service.d"
 run install -m 0644 "${SCRIPT_DIR}/quantagent-api.service" "${USER_UNITS}/quantagent-api.service"
 run install -m 0644 "${SCRIPT_DIR}/paper-digest-snapshot.conf" "${USER_UNITS}/paper-digest@.service.d/snapshot.conf"
+run install -m 0644 "${SCRIPT_DIR}/quantagent-sync-events.service" "${USER_UNITS}/quantagent-sync-events.service"
+run install -m 0644 "${SCRIPT_DIR}/quantagent-sync-events.timer" "${USER_UNITS}/quantagent-sync-events.timer"
+run install -m 0644 "${SCRIPT_DIR}/quantagent-evaluate-alarms.service" "${USER_UNITS}/quantagent-evaluate-alarms.service"
+run install -m 0644 "${SCRIPT_DIR}/quantagent-evaluate-alarms.timer" "${USER_UNITS}/quantagent-evaluate-alarms.timer"
 
 printf '5. Reload user units and enable the API\n'
 run systemctl --user daemon-reload
 run systemctl --user enable --now quantagent-api.service
+run systemctl --user enable --now quantagent-sync-events.timer
+run systemctl --user enable --now quantagent-evaluate-alarms.timer

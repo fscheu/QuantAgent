@@ -64,6 +64,34 @@ Orden de hipótesis: etapa más avanzada primero, luego fecha descendente.
 
 ---
 
+## Backtests `/backtests` (v0.3.1, sección propia)
+
+Destino propio en la navegación (no depende de Embudo: hay backtests sueltos). Lista con `DataTable`: Nombre · Hipótesis (o “suelto”) · Período · Retorno acumulado; búsqueda; casillas con máximo 2 → “Comparar 2 ›”. Tocar una fila abre su Rendimiento. Datos: `GET /api/backtests` → `BacktestListItem[]`. Primer corte: lista mínima (fragmento en la hoja “Rendimiento · Qué cambia por sujeto”). Búsqueda, filtros y estados, después, cuando haya backtests suficientes para necesitarlos.
+
+---
+
+## Rendimiento `/cuenta/:id/rendimiento` · `/rendimiento/run/:id` · `/rendimiento/backtest/:id` (v0.3)
+
+Especificación completa en **RENDIMIENTO.md**. Resumen:
+
+| Orden | Bloque | Componentes | Datos |
+|---|---|---|---|
+| 0 | Volver / migas | enlace “‹ origen” | origen de navegación |
+| 1 | Encabezado + Período + Comparar con | `SubjectHeader`, `CompareSelector` | `PerformanceReport.{subject,period,as_of,headline,available_ranges}` |
+| 2 | Aviso de muestra corta | `ShortSampleBanner` | `sample` |
+| 3 | Métricas (Rendimiento · Riesgo · Contra SPY) | `MetricGroup` × 3 | `metrics`, `benchmark_metrics` |
+| 4 | Curva de valor · Retorno acumulado · Caídas · Mapa mensual · Retornos por año/mes · Distribución · Métricas móviles | `ChartCard` + `EquityChart`, `CumulativeChart`, `DrawdownChart`, `MonthlyHeatmap`, `ReturnsBars`, `ReturnsHistogram`, `RollingChart` | `series`, `monthly_returns`, `annual_returns`, `distribution`, `rolling` |
+| 5 | 5 peores caídas · Retorno por año contra SPY | `DataTable` | `worst_drawdowns`, `annual_returns` |
+| 6 | Convenciones | `CalcConventions` | `conventions` |
+
+Endpoint: `GET /api/performance/{type}/{id}?range=&align_with=` → `PerformanceReport`.
+
+**Flags (v0.3.2)**: la pestaña Rendimiento de Cuenta está oculta (`featureFlags.accountPerformanceTab = false`) hasta que el backend registre aportes y calcule el retorno ponderado por tiempo; con el flag apagado, Cuenta queda como antes, sin pestañas. El Rendimiento de una estrategia en ejecución también está oculto (`featureFlags.runPerformance = false`) hasta que haya capital por estrategia. **Primer corte: solo backtests.**
+
+**Cambio en Cuenta**: arriba de la pantalla, pestañas “Hoy · Rendimiento”. “Hoy” es la pantalla Cuenta actual; “Rendimiento” es este informe con la cuenta como sujeto. La sección “Curva de valor · Próximamente” de “Hoy” pasa a ser un resumen de una línea con enlace a la pestaña Rendimiento.
+
+---
+
 ## Mercado (fase posterior) — lo que ya está definido
 
 El patrón "comparar activos" usa `DataTable` con casillas (máximo 5 tildadas), muestra de serie junto al símbolo y orden por columna; las filas tildadas alimentan `CumulativeChart` con el mismo color y trazo. En teléfono, tarjetas con casilla y selector "Ordenar por".

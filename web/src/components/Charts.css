@@ -1,0 +1,19 @@
+.qa-chart-loading { min-height: 250px; display: grid; align-items: center; }
+.qa-equity-chart { display: grid; gap: 12px; }
+.qa-chart-summary { margin: 0; color: var(--qa-text-2); font-size: 14px; }
+.qa-chart-plot { width: 100%; height: 260px; }
+.qa-chart-legend { display: flex; gap: 16px; list-style: none; padding: 0; margin: 0; color: var(--qa-text-2); font-size: 12px; }
+.qa-chart-legend li { display: flex; align-items: center; gap: 6px; }
+.qa-chart-legend li span { width: 18px; border-top-width: 2px; border-top-style: solid; }
+.qa-visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.qa-diverging { display: grid; gap: 12px; }
+.qa-diverging-row { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(140px, 2fr) 64px; gap: 12px; align-items: center; }
+.qa-diverging-sector { color: var(--qa-text); }
+.qa-diverging-bars { display: grid; grid-template-columns: 1fr 1px 1fr; align-items: center; height: 18px; }
+.qa-diverging-left, .qa-diverging-right { display: flex; height: 12px; }
+.qa-diverging-left { justify-content: flex-end; }
+.qa-diverging-short, .qa-diverging-long { height: 12px; }
+.qa-diverging-axis { align-self: stretch; border-left: 1px solid var(--qa-border-strong); }
+.qa-diverging-value { text-align: right; color: var(--qa-text-2); font-family: var(--qa-font-mono); font-variant-numeric: tabular-nums; }
+.qa-sparkline { width: 88px; height: 28px; overflow: visible; }
+@media (max-width: 639px) { .qa-chart-plot { height: 210px; } .qa-diverging-row { grid-template-columns: 76px minmax(80px, 1fr) 56px; gap: 8px; font-size: 13px; } }

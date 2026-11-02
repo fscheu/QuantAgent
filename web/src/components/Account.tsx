@@ -1,6 +1,7 @@
 import type { AccountSummary, AccountSummaryNoData } from '../api/types';
 import { money, time } from '../lib/format';
 import { Badge, Card, Delta, Num } from './index';
+import { Sparkline } from './Charts';
 import './Account.css';
 
 function AccountHeading({ account }: { account: AccountSummary }) {
@@ -9,7 +10,7 @@ function AccountHeading({ account }: { account: AccountSummary }) {
 
 export function AccountCard({ account, href }: { account: AccountSummary; href?: string }) {
   if (account.status === 'no_data') return <Card as="article" href={href} variant="dashed" className="qa-account-card qa-account-no-data-card"><AccountHeading account={account} /><strong>Sin datos todavía</strong><p>{noDataReason(account.no_data_reason)}</p></Card>;
-  return <Card as="article" href={href} className="qa-account-card"><AccountHeading account={account} /><Num value={account.equity} size="l" /><div className="qa-account-deltas"><Delta value={account.day_change} pct={account.day_change_pct} size="s" /><Delta value={account.week_change} pct={account.week_change_pct} size="s" /></div><footer>{account.alarms.length ? `${account.alarms.length} ${account.alarms.length === 1 ? 'alarma' : 'alarmas'}` : 'Sin alarmas'} · {time(account.as_of, 'ART')}</footer></Card>;
+  return <Card as="article" href={href} className="qa-account-card"><AccountHeading account={account} /><Num value={account.equity} size="l" /><div className="qa-account-deltas"><Delta value={account.day_change} pct={account.day_change_pct} size="s" /><Delta value={account.week_change} pct={account.week_change_pct} size="s" /></div>{account.spark_30d && account.spark_30d.length > 1 && <Sparkline values={account.spark_30d} label="Valor últimos 30 días" tone={account.spark_30d.at(-1)! >= account.spark_30d[0] ? 'positive' : 'negative'} />}<footer>{account.alarms.length ? `${account.alarms.length} ${account.alarms.length === 1 ? 'alarma' : 'alarmas'}` : 'Sin alarmas'} · {time(account.as_of, 'ART')}</footer></Card>;
 }
 
 export function AccountSummaryCard({ account }: { account: AccountSummary }) {

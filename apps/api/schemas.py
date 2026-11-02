@@ -1,6 +1,23 @@
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+
+class Alarm(BaseModel):
+    id: str
+    account_id: str
+    severity: Literal["critical", "warning", "info", "neutral"]
+    kind: str
+    title: str
+    message: str
+    since: str
+
+
+class HomeStatus(BaseModel):
+    level: Literal["ok", "critical", "warning", "info", "neutral"]
+    headline: str
+    message: str
+    link: str | None
 
 
 class AccountRef(BaseModel):
@@ -31,15 +48,29 @@ class AccountSummaryActive(AccountRef):
     positions_count: int
     orders_today: int
     orders_rejected_today: int
-    alarms: list = []
+    alarms: list[Alarm] = Field(default_factory=list)
     spark_30d: list[float] | None = None
 
 
 class EquityPoint(BaseModel):
     date: str
     account: float
-    benchmark: None = None
-    shadow: None = None
+    benchmark: float | None = None
+    shadow: float | None = None
+
+
+class DividendResponse(BaseModel):
+    date: str
+    symbols: list[str]
+    net: float
+    withheld: float
+
+
+class SectorExposure(BaseModel):
+    sector: str
+    long: float
+    short: float
+    pct: float
 
 
 class PositionResponse(BaseModel):
@@ -73,3 +104,12 @@ class OrderResponse(BaseModel):
     reject_reason: str | None
     reject_detail: None = None
     reject_reason_raw: None = None
+
+
+class BacktestRef(BaseModel):
+    id: int
+    label: str
+    hypothesis_name: str | None
+    start: str
+    end: str
+    total_return: float
