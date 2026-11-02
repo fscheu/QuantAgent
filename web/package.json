@@ -9,6 +9,7 @@
     "ladle:build": "ladle build",
     "ladle:serve": "ladle serve",
     "test": "vitest run",
+    "e2e": "playwright test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -21,6 +22,7 @@
   },
   "devDependencies": {
     "@ladle/react": "^5.1.1",
+    "@playwright/test": "1.60.0",
     "@testing-library/react": "^16.1.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
