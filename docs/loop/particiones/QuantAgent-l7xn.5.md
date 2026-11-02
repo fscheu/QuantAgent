@@ -34,3 +34,22 @@ implementador no modifica servicios ni directorios fuera del worktree.
 QA-06 conserva su dependencia del padre y agrega dependencia directa de .4:
 cerrar el padre al aprobar esta partición no habilita el tunnel antes de tiempo.
 QA-07 conserva su alcance. No se modifica install.sh ni la unit productiva.
+
+## Decisión QA-05a (PM, 2026-11-02)
+
+Origen de los datos del preview: lectura única con `sqlite3 .backup` de
+`/home/azureuser/web-ops/maestro.db` y de las bases que referencia
+`Account.database_url` (hoy `/home/azureuser/paper-ops/local-data/*.db`).
+`.backup` solo lee el origen: no escribe, no cambia el modo de la base y no
+exige parar la API. Fede autorizó el 2026-11-02 el preview con copias de las
+bases y sin tocar producción.
+
+Reglas para QA-05b a QA-05d:
+
+- El código nunca abre un original en modo escritura ni lo usa como base del
+  preview. Solo corre `.backup` hacia un directorio propio del preview.
+- Los tests de los implementadores usan bases SQLite creadas en un directorio
+  temporal. El sandbox del implementador no lee ni `~/paper-ops` ni `~/web-ops`.
+- La copia real la ejecuta el PM al probar la entrega, no el implementador.
+- Las referencias `database_url` se reescriben solo en el maestro copiado.
+- No se copian `.env` ni credenciales Alpaca.
