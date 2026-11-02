@@ -80,7 +80,7 @@ Consecuencias para la decisión:
 
 - La condición escrita de la sección anterior (confirmación de Alpaca sobre los qualified notices) queda cumplida **para ventas**, hoy. No para distribuciones, y no a futuro.
 - Propuesta del PM, pendiente de aprobación de Fede: mantener DBC por PDBC y sacar USO antes de dinero real, porque el riesgo (aviso que vence, tasa de distribuciones desconocida) no se compensa con lo que aportan; con una cuenta real de USD 2.500 una retención del 10 % sobre el bruto de cada rotación inmoviliza capital hasta recuperarlo con una declaración en EE.UU.
-- Independiente de esa decisión, agregar un chequeo previo a operar (y antes de cada rebalanceo) que lea `attributes` de la Assets API y bloquee o avise si algún símbolo del universo trae `ptp_no_exception`. Ticket por crear, sin Beads asignado.
+- Independiente de esa decisión, agregar un chequeo previo a operar (y antes de cada rebalanceo) que lea `attributes` de la Assets API y bloquee o avise si algún símbolo del universo trae `ptp_no_exception`. Ticket `QuantAgent-etqz` (PTP-01).
 - Paper no cambia: es simulado y no retiene.
 
 Fuente: mail de respuesta del soporte de Alpaca recibido por Fede el 2026-11-02.
