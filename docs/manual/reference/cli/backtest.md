@@ -9,15 +9,16 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  attempts     Count runs and parameter combinations recorded by sweep.
-  compare      Compare multiple strategies across symbols against a...
-  data         Manage frozen market data.
-  hipotesis    Evaluate strategy factory hypotheses.
-  run          Run a backtest against a versioned fixture.
-  sweep        Run a strategy parameter grid against an asset.
-  verdict      Evaluate strategies against a comparison table.
-  verify       Verify backtest reproducibility across two runs.
-  walkforward  Select parameters on training data and evaluate the winner...
+  attempts      Count runs and parameter combinations recorded by sweep.
+  compare       Compare multiple strategies across symbols against a...
+  cuenta-chica  Compare small-account backtests with a cost-matched SPY...
+  data          Manage frozen market data.
+  hipotesis     Evaluate strategy factory hypotheses.
+  run           Run a backtest against a versioned fixture.
+  sweep         Run a strategy parameter grid against an asset.
+  verdict       Evaluate strategies against a comparison table.
+  verify        Verify backtest reproducibility across two runs.
+  walkforward   Select parameters on training data and evaluate the...
 ```
 
 ## `quantagent backtest attempts`
@@ -100,6 +101,95 @@ Options and defaults:
 - `--llenado` — default: `'apertura'`
 - `--params` — default: `None`
 
+## `quantagent backtest cuenta-chica`
+
+```text
+Usage: quantagent backtest cuenta-chica [OPTIONS]
+
+  Compare small-account backtests with a cost-matched SPY buy-and-hold
+  benchmark.
+
+Options:
+  --strategy [arquetipo-a|arquetipo-b|curva-pendiente|fifty-two-week-high|halloween|momentum-12m|rebalanceo-fin-de-mes|rsi|rsi-regimen|senal-externa|sma-cross|triple-screen|tsmom-largo-corto|turn-of-the-month]
+                                  Strategy to run when using a fixture or one-
+                                  symbol snapshot.
+  --hipotesis FILE                Portfolio hypothesis YAML to simulate.
+  --fixture TEXT                  Fixture name under tests/fixtures/ (without
+                                  .csv).
+  --snapshot TEXT                 Snapshot in $QUANTAGENT_SNAPSHOT_DIR.
+  --macro-snapshot TEXT           Macro snapshot in $QUANTAGENT_SNAPSHOT_DIR
+                                  (required for curva-pendiente).
+  --symbol TEXT                   Snapshot symbol (one per run).
+  --from [%Y-%m-%d]               First session, YYYY-MM-DD (default: first in
+                                  the snapshot).
+  --to [%Y-%m-%d]                 Last session, YYYY-MM-DD (default: last in
+                                  the snapshot).
+  --capitales TEXT                Comma-separated initial capital amounts in
+                                  USD.  [default: 1000,2500,5000]
+  --commission-pct FLOAT RANGE    Commission per side on notional (0.001 =
+                                  0.10%). Default: TRADING_COMMISSION_PCT.
+                                  [x>=0.0]
+  --costos [cripto|etf|etf-conservador]
+                                  Cost profile (slippage and commission per
+                                  side; default: none).
+  --spread-bps FLOAT RANGE        Spread per side in basis points (defaults to
+                                  the asset-class estimate).  [x>=0.0]
+  --costo-entrada-usd FLOAT RANGE
+                                  Fixed USD cost charged once at account start
+                                  (default: USD 0).  [x>=0.0]
+  --retencion-dividendos FLOAT RANGE
+                                  Dividend withholding fraction (0–1);
+                                  defaults to 0.30.  [0.0<=x<=1.0]
+  --costo-fiscal-pct FLOAT RANGE  Additional fraction on implicit dividends.
+                                  [default: 0.0; 0.0<=x<=1.0]
+  --tamano-posicion FLOAT RANGE   Capital fraction per position, in (0, 1]
+                                  (1.0 = 100%). Sets the run's base and
+                                  maximum size.  [0.0<x<=1.0]
+  --riesgo-por-trade FLOAT RANGE  Capital fraction at risk per trade.  [x>0.0]
+  --regla-tamano [confianza|fijo|riesgo]
+                                  Position sizing rule: confidence (capital ×
+                                  fraction × signal confidence) or fixed.
+                                  Default: confidence.
+  --orden-minima FLOAT RANGE      Minimum USD amount per entry order.  [x>0.0]
+  --params FILE                   JSON {"<strategy>": {"<parameter>": value}}
+                                  with strategy parameters (default: registry
+                                  values).
+  --intrabar-stops / --no-intrabar-stops
+                                  Evaluate stop loss and take profit against
+                                  intrabar high/low prices (default: enabled).
+  --llenado [apertura|cierre]     Fill price: opening or closing price of the
+                                  candle.  [default: cierre]
+  --help                          Show this message and exit.
+
+  Example: quantagent backtest cuenta-chica --hipotesis hipotesis.yaml
+  --snapshot etf-1d
+```
+
+Options and defaults:
+
+- `--strategy` — default: `None`
+- `--hipotesis` — default: `None`
+- `--fixture` — default: `None`
+- `--snapshot` — default: `None`
+- `--macro-snapshot` — default: `None`
+- `--symbol` — default: `None`
+- `--from` — default: `None`
+- `--to` — default: `None`
+- `--capitales` — default: `'1000,2500,5000'`
+- `--commission-pct` — default: `None`
+- `--costos` — default: `None`
+- `--spread-bps` — default: `None`
+- `--costo-entrada-usd` — default: `None`
+- `--retencion-dividendos` — default: `None`
+- `--costo-fiscal-pct` — default: `0.0`
+- `--tamano-posicion` — default: `None`
+- `--riesgo-por-trade` — default: `None`
+- `--regla-tamano` — default: `None`
+- `--orden-minima` — default: `None`
+- `--params` — default: `None`
+- `--intrabar-stops, --no-intrabar-stops` — default: `True`
+- `--llenado` — default: `'cierre'`
+
 ## `quantagent backtest data`
 
 ```text
@@ -181,6 +271,24 @@ Options:
                                   pct.
   --llenado [apertura|cierre]     Fill price: opening or closing price of the
                                   candle.  [default: apertura]
+  --cuenta-chica FLOAT RANGE      Initial backtest capital in USD; enables
+                                  whole-share entries. Default: disabled
+                                  ($100,000 capital).  [x>0.0]
+  --spread-bps FLOAT RANGE        Spread per side in basis points (defaults to
+                                  the asset-class estimate); requires
+                                  --cuenta-chica.  [x>=0.0]
+  --costo-entrada-usd FLOAT RANGE
+                                  Fixed USD cost charged once at account start
+                                  (default: USD 0); requires --cuenta-chica.
+                                  [x>=0.0]
+  --retencion-dividendos FLOAT RANGE
+                                  Dividend withholding fraction (0–1);
+                                  defaults to 0.30 with --cuenta-chica,
+                                  otherwise 0.  [0.0<=x<=1.0]
+  --costo-fiscal-pct FLOAT RANGE  Additional fraction on implicit dividends;
+                                  placeholder for future capital
+                                  gains/personal assets taxes.  [default: 0.0;
+                                  0.0<=x<=1.0]
   --tamano-posicion FLOAT RANGE   Capital fraction per position, in (0, 1]
                                   (1.0 = 100%). Sets the run's base and
                                   maximum size.  [0.0<x<=1.0]
@@ -197,6 +305,9 @@ Options:
                                   Evaluate stop loss and take profit against
                                   intrabar high/low prices.
   --help                          Show this message and exit.
+
+  Example: quantagent backtest run --strategy rsi --fixture spy-90d --cuenta-
+  chica 2500
 ```
 
 Options and defaults:
@@ -215,6 +326,11 @@ Options and defaults:
 - `--commission-pct` — default: `None`
 - `--costos` — default: `None`
 - `--llenado` — default: `'apertura'`
+- `--cuenta-chica` — default: `None`
+- `--spread-bps` — default: `None`
+- `--costo-entrada-usd` — default: `None`
+- `--retencion-dividendos` — default: `None`
+- `--costo-fiscal-pct` — default: `0.0`
 - `--tamano-posicion` — default: `None`
 - `--riesgo-por-trade` — default: `None`
 - `--regla-tamano` — default: `None`

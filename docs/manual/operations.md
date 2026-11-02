@@ -43,3 +43,12 @@ The read-only web app replaces the Streamlit QA interface.
 To create a snapshot, run `python -m quantagent.cli data snapshot create --name <name> --symbols SPY --start YYYY-MM-DD --end YYYY-MM-DD`. It downloads from Yahoo and prints `Snapshot <name> creado: <symbols> símbolos, <rows> filas`. Use a completed session as the end date; snapshots are immutable.
 
 Paper trading setup is described in the [paper operations runbook](../06_implementation/QuantAgent-av1p.5-IM-runbook-paper-ops.md). This runbook does not activate services or run operational procedures.
+
+## Small-account backtest
+
+`quantagent backtest cuenta-chica` shows how a strategy or portfolio behaves with the real account (default USD 1,000, 2,500 and 5,000) instead of USD 100,000. It buys whole shares only, keeps 5 % of a portfolio in cash, charges spread, commission and a fixed entry cost, and withholds 30 % of implied dividends. Each capital gets one card: Sharpe, return, costs paid, symbols that never fit one share, largest position, and the difference against SPY buy and hold with the same costs.
+
+- One strategy on one symbol: `quantagent backtest cuenta-chica --strategy rsi --snapshot <snapshot> --symbol SPY`.
+- A portfolio of several legs: `quantagent backtest cuenta-chica --hipotesis hipotesis/<file>.yaml --snapshot <snapshot> --costos etf --to 2018-12-31`. Add `--macro-snapshot <snapshot>` when a leg uses the yield-curve slope. The portfolio path rejects `--to` from 2019-01-01 so it never opens the test period or the reserve.
+
+Read the "positions at zero" line first: a symbol listed there could not buy one share at that capital, so the card describes a mostly-cash account, not the strategy. A large portfolio can take several minutes. The first report is in `docs/06_implementation/QuantAgent-yvo0.5-IM-cuenta-chica-m4.md`; the option list is in the [CLI reference](reference/cli/backtest.md).

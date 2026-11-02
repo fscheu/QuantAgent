@@ -85,6 +85,14 @@ COSTOS_PERFILES: dict = {
     "etf-conservador": {"slippage_pct": 0.0005, "commission_pct": 0.0002},
     "cripto": {"slippage_pct": 0.0005, "commission_pct": 0.001},
 }
+# Initial account-small spread estimates by asset class (basis points, each side).
+SPREAD_BPS_POR_CLASE: dict = {
+    "crypto": 10.0,
+    "us_equity": 5.0,
+    "us_futures": 5.0,
+    "european": 8.0,
+    "unknown": 10.0,
+}
 TRADING_USE_CHECKPOINTING: bool = os.getenv("TRADING_USE_CHECKPOINTING", "false").lower() in {"true", "1", "yes"}
 TRADING_UNIVERSE: str = os.getenv("TRADING_UNIVERSE", "")
 
