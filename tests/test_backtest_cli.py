@@ -13,6 +13,7 @@ import subprocess
 import sys
 from datetime import datetime, timedelta
 
+import click
 import pytest
 from click.testing import CliRunner
 from sqlalchemy import create_engine, text
@@ -30,6 +31,138 @@ from quantagent.models import Base, MarketData
 def test_riesgo_por_trade_se_agrega_a_config_solo_si_se_pide():
     assert "riesgo_por_trade_pct" not in _engine_config(None)
     assert _engine_config(None, regla_tamano="riesgo", riesgo_por_trade=0.0025)["riesgo_por_trade_pct"] == 0.0025
+
+
+def test_retencion_dividendos_default_solo_para_cuenta_chica():
+    assert "retencion_dividendos" not in _engine_config(None)
+    assert _engine_config(None, cuenta_chica=2500)["retencion_dividendos"] == 0.30
+    assert _engine_config(None, cuenta_chica=2500, retencion_dividendos=0)["retencion_dividendos"] == 0
+    config = _engine_config(None, costo_fiscal_pct=0.02)
+    assert config["retencion_dividendos"] == 0
+    assert config["costo_fiscal_pct"] == 0.02
+
+
+def test_costos_cuenta_chica_y_restriccion_de_opciones():
+    config = _engine_config(None, cuenta_chica=2500, spread_bps=5, costo_entrada_usd=25)
+    assert config["initial_capital"] == 2475
+    assert config["spread_bps"] == 5
+    assert config["costo_entrada_usd"] == 25
+    for kwargs in ({"spread_bps": 5}, {"costo_entrada_usd": 0}):
+        with pytest.raises(click.UsageError):
+            _engine_config(None, **kwargs)
+
+
+def test_cli_exporta_spread_por_lado(cli_runner, tmp_path):
+    out_path = tmp_path / "trades.csv"
+    result = cli_runner.invoke(backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke",
+                                                "--cuenta-chica", "2500", "--spread-bps", "5",
+                                                "--tamano-posicion", "0.5",
+                                                "--out", str(out_path)])
+    assert result.exit_code == 0, result.output
+    with out_path.open(newline="") as trades_file:
+        rows = list(csv.DictReader(trades_file))
+    assert rows
+    row = rows[0]
+    assert float(row["spread_cost_entry_usd"]) == pytest.approx(float(row["qty"]) * float(row["entry_price"]) * 5 / 10000)
+    if row["exit_price"]:
+        assert float(row["spread_cost_exit_usd"]) == pytest.approx(float(row["qty"]) * float(row["exit_price"]) * 5 / 10000)
+    fixed = cli_runner.invoke(backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke",
+                                               "--cuenta-chica", "2500", "--costo-entrada-usd", "25"])
+    assert fixed.exit_code == 0, fixed.output
+    assert "Capital inicial efectivo: 2475.00 USD" in fixed.output
+    assert "Costo fijo de entrada: 25.00 USD" in fixed.output
+
+
+def test_cuenta_chica_limita_posiciones_y_registra_entradas_descartadas(cli_runner, monkeypatch, tmp_path):
+    from quantagent.backtesting.backtest import Backtest
+
+    real_run, runs = Backtest.run, []
+
+    def capture(self, *args, **kwargs):
+        result = real_run(self, *args, **kwargs)
+        runs.append((self, result))
+        return result
+
+    monkeypatch.setattr(Backtest, "run", capture)
+    out_path = tmp_path / "trades.csv"
+    result = cli_runner.invoke(backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke",
+                                                 "--cuenta-chica", "3000", "--tamano-posicion", "0.5",
+                                                 "--out", str(out_path)])
+    assert result.exit_code == 0, result.output
+    small, metrics = runs[-1]
+    assert metrics.total_trades > 0
+    with out_path.open(newline="") as trades_file:
+        quantities = [float(row["qty"]) for row in csv.DictReader(trades_file)]
+    assert quantities
+    assert all(qty.is_integer() and 1 <= qty <= 3 for qty in quantities)
+    assert small.positions_en_cero
+
+    result = cli_runner.invoke(backtest_group, ["run", "--strategy", "rsi", "--fixture", "spy-smoke",
+                                                 "--cuenta-chica", "2500"])
+    assert result.exit_code == 0, result.output
+    small, metrics = runs[-1]
+    assert metrics.total_trades == 0
+    assert small.positions_en_cero and all(p["symbol"] == "SPY" and p["date"] for p in small.positions_en_cero)
+
+
+def test_cuenta_chica_sensibilidad_y_benchmark_con_costos_reales(cli_runner):
+    from quantagent.backtesting.fixtures import FIXTURES_DIR
+    result = cli_runner.invoke(backtest_group, ["cuenta-chica", "--strategy", "rsi", "--fixture", "spy-smoke",
+                                                "--commission-pct", "0.001", "--spread-bps", "5",
+                                                "--costo-entrada-usd", "10"])
+    assert result.exit_code == 0, result.output
+    assert result.output.count("Capital: USD") == 3
+    assert "Posiciones en cero: SPY" in result.output
+    import re
+    card = result.output.split("Capital: USD 2,500", 1)[1].split("Capital: USD 5,000", 1)[0]
+    reported = float(re.search(r"SPY comprar y mantener: retorno ([+-]?[0-9.]+)%", card).group(1)) / 100
+    import csv
+    with (FIXTURES_DIR / "spy-smoke.csv").open(newline="") as fixture:
+        closes = [float(row["close"]) for row in csv.DictReader(fixture)]
+    cost = 0.0005 + 0.0005
+    qty = int((2500 - 10) / (closes[0] * (1 + cost) * (1 + 0.001)))
+    leftover = 2500 - 10 - qty * closes[0] * (1 + cost) * (1 + 0.001)
+    manual = (leftover + qty * closes[-1] * (1 - cost) * (1 - 0.001)) / 2500 - 1
+    assert reported == pytest.approx(manual, abs=0.0001)
+
+
+def test_cuenta_chica_hipotesis_cli_tarjetas_y_restricciones(cli_runner, monkeypatch, tmp_path):
+    import numpy as np
+    import pandas as pd
+    from quantagent.data.snapshot import write_snapshot
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path / "snapshots"))
+    idx = pd.bdate_range("2017-10-02", periods=65, name="timestamp")
+    frames = {}
+    for symbol, start, end in (("SPY", 20, 30), ("IWM", 30, 20)):
+        close = np.linspace(start, end, len(idx))
+        frame = pd.DataFrame({"open": close, "high": close * 1.01, "low": close * .99,
+                              "close": close, "adj_close": close, "volume": 1000}, index=idx)
+        frames[symbol] = frame
+    write_snapshot("synthetic", frames)
+    hypothesis = tmp_path / "h.yaml"
+    hypothesis.write_text("""id: synthetic
+autor: test
+justificacion: synthetic
+clase: sma-cross
+parametros: {fast: [2], slow: [3]}
+activos: [SPY, IWM]
+universo: synthetic
+timeframe: 1d
+""")
+    result = cli_runner.invoke(backtest_group, ["cuenta-chica", "--hipotesis", str(hypothesis),
+                                                "--snapshot", "synthetic", "--from", "2017-10-10",
+                                                "--to", "2017-12-01"])
+    assert result.exit_code == 0, (result.output, result.exception)
+    assert result.output.count("Capital: USD") == 3
+    assert all(f"Capital: USD {n:,}" in result.output for n in (1000, 2500, 5000))
+
+    rejected = cli_runner.invoke(backtest_group, ["cuenta-chica", "--hipotesis", str(hypothesis),
+                                                  "--snapshot", "synthetic", "--to", "2019-01-01"])
+    assert rejected.exit_code == 1 and "no admite --to" in rejected.output
+    conflict = cli_runner.invoke(backtest_group, ["cuenta-chica", "--hipotesis", str(hypothesis),
+                                                   "--snapshot", "synthetic", "--strategy", "rsi"])
+    assert conflict.exit_code == 2 and "mutuamente excluyente" in conflict.output
 
 
 @pytest.mark.parametrize("command", ["run", "compare"])
