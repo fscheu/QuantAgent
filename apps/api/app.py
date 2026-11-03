@@ -193,7 +193,8 @@ def run_performance(account_id: str, range_: Literal["ytd", "1y", "3y", "5y", "a
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    branch = os.environ.get("QUANTAGENT_PREVIEW_BRANCH")
+    return {"status": "ok", "branch": branch} if branch else {"status": "ok"}
 
 
 @app.get("/api/calendar", response_model=list[CalendarEventResponse])

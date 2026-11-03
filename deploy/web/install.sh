@@ -4,7 +4,7 @@ set -euo pipefail
 DRY_RUN="${DRY_RUN:-1}"
 PAPER_DIR="/home/azureuser/paper-ops/QuantAgent"
 VENV="/home/azureuser/paper-ops/venv"
-DATA_DIR="${PAPER_DIR}/local-data"
+DATA_DIR="/home/azureuser/paper-ops/local-data"
 MASTER_DB="/home/azureuser/web-ops/maestro.db"
 USER_UNITS="/home/azureuser/.config/systemd/user"
 DATE="$(date -u +%Y%m%dT%H%M%SZ)"
@@ -23,7 +23,7 @@ run() {
 
 printf '1. Back up paper and master databases to %s\n' "${BACKUP_DIR}"
 run mkdir -p "${BACKUP_DIR}"
-for portfolio in cartera-nucleo-curva cartera-transversal; do
+for portfolio in cartera-nucleo-curva cartera-transversal m5; do
     run sqlite3 "${DATA_DIR}/${portfolio}.db" ".backup '${BACKUP_DIR}/${portfolio}.db'"
 done
 run sqlite3 "${MASTER_DB}" ".backup '${BACKUP_DIR}/maestro.db'"
@@ -33,13 +33,17 @@ run npm --prefix "${PAPER_DIR}/web" ci
 run npm --prefix "${PAPER_DIR}/web" run build
 
 printf '3. Apply paper database migrations\n'
-for portfolio in cartera-nucleo-curva cartera-transversal; do
-    run "${VENV}/bin/quantagent" api migrate-paper-db --database-url "sqlite:////home/azureuser/paper-ops/QuantAgent/local-data/${portfolio}.db" --apply
+for portfolio in cartera-nucleo-curva cartera-transversal m5; do
+    run "${VENV}/bin/quantagent" api migrate-paper-db --database-url "sqlite:///${DATA_DIR}/${portfolio}.db" --apply
 done
 
 printf '4. Install API unit and digest snapshot drop-in\n'
 run mkdir -p "${USER_UNITS}/paper-digest@.service.d"
-run install -m 0644 "${SCRIPT_DIR}/quantagent-api.service" "${USER_UNITS}/quantagent-api.service"
+if [[ -e "${USER_UNITS}/quantagent-api.service" || -L "${USER_UNITS}/quantagent-api.service" ]]; then
+    printf 'Preserve existing API unit: %s\n' "${USER_UNITS}/quantagent-api.service"
+else
+    run install -m 0644 "${SCRIPT_DIR}/quantagent-api.service" "${USER_UNITS}/quantagent-api.service"
+fi
 run install -m 0644 "${SCRIPT_DIR}/paper-digest-snapshot.conf" "${USER_UNITS}/paper-digest@.service.d/snapshot.conf"
 run install -m 0644 "${SCRIPT_DIR}/quantagent-sync-events.service" "${USER_UNITS}/quantagent-sync-events.service"
 run install -m 0644 "${SCRIPT_DIR}/quantagent-sync-events.timer" "${USER_UNITS}/quantagent-sync-events.timer"
