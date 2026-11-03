@@ -153,7 +153,7 @@ def test_motor_dos_activos(tmp_path, monkeypatch, abrir_prueba, etapa, desde):
         assert intento["hipotesis"] == h.id and intento["etapa"] == etapa
         assert json.loads(intento["params"]) == params[fila["activo"]]
         assert intento["pnl"] == pytest.approx(float(fila["pnl"]))
-        assert intento["sharpe"] == fila["sharpe_tasa_0"]
+        assert intento["sharpe"] == pytest.approx(float(fila["sharpe_tasa_0"]))
         assert intento["sharpe_base"] == "tasa_0"
     with pytest.raises(RuntimeError, match="AUSENTE"):
         validacion.correr_motor(h, "sintetico", {"AUSENTE": {}}, desde, fechas[-1].date(), carpeta, etapa, abrir_prueba)

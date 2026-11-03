@@ -297,14 +297,17 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
     for intento, salida in zip(intentos_rows, out_rows * 2):
         assert datetime.fromisoformat(intento["fecha_utc"]).utcoffset() == timezone.utc.utcoffset(None)
         assert (intento["estrategia"], intento["activo"], intento["snapshot"]) == ("rsi", "SPY", "snap_rsi")
-        assert (intento["costos"], intento["tamano"]) == ("", 1.0)
+        assert (intento["costos"], float(intento["tamano"])) == ("", 1.0)
         assert intento["params"] == json.dumps({
             "llenado": "apertura",
             "oversold_threshold": float(salida["oversold_threshold"]),
             "rsi_period": int(salida["rsi_period"]),
         }, sort_keys=True)
         for campo in ("desde", "hasta", "trades", "pnl", "sharpe"):
-            assert intento[campo] == salida[campo]
+            if campo in ("trades", "pnl", "sharpe") and salida[campo] != "":
+                assert float(intento[campo]) == pytest.approx(float(salida[campo]))
+            else:
+                assert intento[campo] == salida[campo]
     anterior = leer_intentos()
     grid_file.write_text(json.dumps({"inexistente": [1]}), encoding="utf-8")
     res = runner.invoke(backtest_group, [
@@ -337,6 +340,7 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
         f14 = filas_por_combo[(ot, 14)]
         assert (int(f7["trades"]) != int(f14["trades"])) or (float(f7["pnl"]) != float(f14["pnl"]))
 
+    intentos_antes_vecinos = len(leer_intentos())
     res = runner.invoke(backtest_group, [
         "sweep", "--strategy", "rsi", "--symbol", "SPY", "--snapshot", "snap_rsi",
         "--vecinos-20", "--out", str(out_csv),
@@ -344,7 +348,7 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
     assert res.exit_code == 0, res.output
     with out_csv.open() as f:
         vecinos = list(csv.DictReader(f))
-    assert len(leer_intentos()) == len(vecinos) == 13
+    assert len(leer_intentos()) - intentos_antes_vecinos == len(vecinos) == 13
     assert vecinos[0]["vecino"] == "default"
     assert (int(vecinos[0]["trades"]), float(vecinos[0]["pnl"])) == (baseline["trades"], round(baseline["pnl"], 2))
 

@@ -145,7 +145,7 @@ def test_paridad_n_efectivo_e_informe_con_filas_fijas(registro_modulo):
                                   ({"p": 2}, "SPY", "1")):
         modulo_db.registrar_intento("rsi", activo, "real", None, None, params, resultado,
                                     "H-paridad", etapa)
-    registrar_evento("H-paridad", "etapa", "3", "PASA")
+    registrar_evento("H-paridad", "etapa", "3", "PASA", "n_efectivo=2")
     todas = modulo_db.intentos(valida_solo=False)
     # Las tres filas son válidas; las dos primeras comparten clave efectiva.
     assert len(filas_validas(todas)) == 3

@@ -232,10 +232,10 @@ def test_sharpe_deflactado_un_intento_tiene_sr0_cero():
 EQUITY_DSR = [100, 101, 99.5, 102, 103.5, 102.8, 105]
 
 
-def _intentos(sharpes, base="tasa_libre"):
+def _intentos(sharpes, base="tasa_libre", combos=None):
     from quantagent.fabrica.registro_db import intentos, registrar_intento
     for i, valor in enumerate(sharpes):
-        registrar_intento(f"s{i}", f"A{i}", "real", None, None, {"i": i},
+        registrar_intento("s", "A", "real", None, None, combos[i] if combos else {"i": i},
                           {"desde": "2020-01-01", "hasta": "2020-12-31", "trades": 2,
                            "pnl": 1, "sharpe": valor}, sharpe_base=base)
     return intentos()
@@ -273,7 +273,14 @@ def test_dsr_contra_intentos_curva_plana_y_filas_vacias(tmp_path):
 
 
 def test_dsr_contra_intentos_ignora_tasa_libre_con_suficientes_tasa_0(tmp_path):
-    path = _intentos([0.5, 1.0, 1.5, 10.0, -10.0], "tasa_0")
+    from quantagent.fabrica.registro_db import registrar_intento
+    path = _intentos([0.5, 1.0, 1.5], "tasa_0")
+    for i, valor in enumerate([10.0, -10.0]):
+        registrar_intento("s", "A", "real", None, None, {"extra": i},
+                          {"desde": "2020-01-01", "hasta": "2020-12-31", "trades": 2,
+                           "pnl": 1, "sharpe": valor}, sharpe_base="tasa_libre")
+    from quantagent.fabrica.registro_db import intentos
+    path = intentos()
     r = np.diff(EQUITY_DSR) / np.array(EQUITY_DSR[:-1])
     sr = r.mean() / r.std(ddof=1)
     z = (r - r.mean()) / r.std()
@@ -335,7 +342,7 @@ def test_dsr_contra_intentos_parametro_n_intentos(tmp_path):
 
 
 def test_dsr_deduplica_n_pero_conserva_varianza_de_repeticiones(tmp_path):
-    path = _intentos([0.5, 1.0, 1.5])
+    path = _intentos([0.5, 1.0, 1.5], combos=[{"p": 1}, {"p": 1}, {"p": 2}])
     r = np.diff(EQUITY_DSR) / np.array(EQUITY_DSR[:-1])
     z = (r - r.mean()) / r.std()
     esperado = sharpe_deflactado(r.mean() / r.std(ddof=1), 2,
@@ -377,6 +384,11 @@ def test_filtro_valido_compartido_por_dsr_y_conteos(tmp_path, monkeypatch, exclu
     with path.open(newline="") as f:
         assert dsr_contra_intentos(EQUITY_DSR, list(csv.DictReader(f))) == pytest.approx(esperado, abs=1e-12)
     assert n_efectivo(filas) == 2
+    from quantagent.fabrica.registro_db import registrar_intento
+    for h, sr, params in (("h1", 0.5, {"p": 1}), ("h2", 1.0, {"p": 2})):
+        registrar_intento("rsi", "SPY", "real", None, None, params,
+                          {"desde": "2020-01-01", "hasta": "2020-12-31", "trades": 2,
+                           "pnl": 1, "sharpe": sr}, hipotesis=h)
     assert _n_intentos(path) == contar_intentos() == 2
     assert contar_intentos("h1") == contar_intentos("h2") == 1
     registrar_estado("h1", "0", "PASA")
