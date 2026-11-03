@@ -1,6 +1,5 @@
 """Regla del Juego 2 para una celda estrategia × activo."""
 
-import csv
 from math import e, isfinite, sqrt
 
 import numpy as np
@@ -97,14 +96,17 @@ def n_efectivo(filas) -> int:
     return len(distintos)
 
 
-def dsr_contra_intentos(equity, intentos_path, n_intentos: int | None = None) -> float | None:
-    """Sharpe deflactado contra `intentos.csv` (N = configuraciones distintas o n_intentos)."""
+def dsr_contra_intentos(equity, intentos=None, n_intentos: int | None = None) -> float | None:
+    """Sharpe deflactado contra los intentos almacenados en la base."""
     curva = np.asarray(equity, dtype=float)
     retornos = curva[1:] / curva[:-1] - 1
     if len(retornos) < 3 or np.std(retornos, ddof=1) == 0:
         return None
-    with open(intentos_path, newline="", encoding="utf-8") as f:
-        filas = list(csv.DictReader(f))
+    if intentos is None:
+        from quantagent.fabrica.registro_db import intentos as leer_intentos
+        filas = leer_intentos()
+    else:
+        filas = intentos
     filas_con_sharpe = []
     sharpes, sharpes_tasa_0 = [], []
     for fila in filas_validas(filas):

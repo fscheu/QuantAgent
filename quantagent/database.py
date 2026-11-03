@@ -18,7 +18,13 @@ def _get_engine():
     """Create or return the cached engine. Validates DATABASE_URL on first call only."""
     global _engine
     if _engine is None:
-        url = settings.require("DATABASE_URL")
+        try:
+            url = settings.require("DATABASE_URL")
+        except ValueError as exc:
+            raise ValueError(
+                "DATABASE_URL no está configurada; definí una URL SQLAlchemy, "
+                "por ejemplo sqlite:////ruta/quantagent.db, para usar la base de datos."
+            ) from exc
         if url.startswith("sqlite"):
             _engine = create_engine(
                 url, connect_args={"check_same_thread": False}, poolclass=StaticPool

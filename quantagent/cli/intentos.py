@@ -1,11 +1,9 @@
 """Inspección e invalidación de corridas con backup del registro."""
 
-import csv
 import json
 from datetime import datetime, timedelta, timezone
 
 import click
-
 from quantagent.data.snapshot import snapshot_root
 
 
@@ -39,45 +37,35 @@ def epoca_limpia(desde, motivo):
     click.echo(f"Época limpia guardada: {path}")
 
 
-@intentos_group.command("invalidar", help="List matching rows; invalidate them with a backup only when --aplicar is set.")
+@intentos_group.command("invalidar", help="List matching rows and mark them invalid in the database when --aplicar is set.")
 @click.option("--hipotesis", required=True, help="Hypothesis ID whose attempts should be selected.")
 @click.option("--desde", help="Inclusive start timestamp in ISO 8601 UTC format.")
 @click.option("--hasta", help="Inclusive end timestamp in ISO 8601 UTC format.")
 @click.option("--motivo", required=True, help="Reason for invalidating the selected attempts.")
-@click.option("--aplicar", is_flag=True, help="Write invalidation marks and create a backup; otherwise show a dry run.")
+@click.option("--aplicar", is_flag=True, help="Persist invalidation marks; otherwise show a dry run.")
 def invalidar(hipotesis, desde, hasta, motivo, aplicar):
     desde = _fecha_utc(desde) if desde is not None else None
     hasta = _fecha_utc(hasta) if hasta is not None else None
-    path = snapshot_root() / "intentos.csv"
-    filas = []
-    if path.exists():
-        with path.open(newline="", encoding="utf-8") as archivo:
-            reader = csv.DictReader(archivo)
-            campos = reader.fieldnames
-            filas = list(reader)
-    if not any(fila["hipotesis"] == hipotesis for fila in filas):
-        raise click.ClickException(f"Hipótesis inexistente en intentos.csv: {hipotesis}")
+    from quantagent.fabrica.registro_db import invalidar_intentos, intentos
+
+    todas = intentos(valida_solo=False)
+    if not any(fila["hipotesis"] == hipotesis for fila in todas):
+        raise click.ClickException(f"Hipótesis inexistente: {hipotesis}")
     seleccionadas = []
-    for fila in filas:
-        if fila["hipotesis"] != hipotesis:
+    for fila in todas:
+        if fila["hipotesis"] != hipotesis or fila.get("estado") == "invalida_bug":
             continue
         fecha = _fecha_utc(fila["fecha_utc"])
         if (desde is None or fecha >= desde) and (hasta is None or fecha <= hasta):
             seleccionadas.append(fila)
+
     if aplicar:
-        marca = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
-        backup = path.with_name(f"{path.name}.bak-{marca}")
-        with backup.open("xb") as archivo:
-            archivo.write(path.read_bytes())
-        if "estado" not in campos:
-            campos.append("estado")
+        cantidad = invalidar_intentos({"hipotesis": hipotesis,
+                                       "desde": desde.isoformat() if desde else None,
+                                       "hasta": hasta.isoformat() if hasta else None})
         for fila in seleccionadas:
             fila["estado"] = "invalida_bug"
-        with path.open("w", newline="", encoding="utf-8") as archivo:
-            writer = csv.DictWriter(archivo, fieldnames=campos)
-            writer.writeheader()
-            writer.writerows(filas)
-        click.echo(f"Aplicado: {len(seleccionadas)} filas; motivo: {motivo}; backup: {backup}")
+        click.echo(f"Aplicado: {cantidad} filas; motivo: {motivo}")
     else:
         click.echo(f"Dry-run: {len(seleccionadas)} filas; motivo: {motivo}")
     for fila in seleccionadas:

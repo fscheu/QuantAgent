@@ -1,19 +1,17 @@
 """Comparador núcleo contra núcleo + capa (QuantAgent-d4cq.73, M05)."""
-import csv
-from pathlib import Path
 
 from quantagent.backtesting.vbt_filter import equity_metrics
 from quantagent.backtesting.verdict import dsr_contra_intentos, filas_validas
+from quantagent.fabrica.registro_db import intentos as leer_intentos
 from quantagent.fabrica.criterio import anios_positivos, error_estandar_delta_sharpe
 
 
-def _n_intentos(intentos_path):
-    with Path(intentos_path).open(newline="", encoding="utf-8") as f:
-        return len(filas_validas(csv.DictReader(f)))
+def _n_intentos(_intentos_path=None):
+    return len(filas_validas(leer_intentos()))
 
 
 def comparar(eq_nucleo, eq_capa, intentos_path, margen):
-    """ΔSharpe y ΔDSR de la capa. Ambos DSR usan el mismo `intentos.csv`, con las dos filas ya registradas.
+    """ΔSharpe y ΔDSR de la capa. Ambos DSR usan los intentos registrados, con las dos filas ya guardadas.
 
     La capa se acepta solo si se cumplen las tres condiciones de QuantAgent-m9cx (Fede, 2026-10-20):
     ΔDSR supera `margen` (lo fija Fede antes de correr), ΔSharpe es positivo y la capa no pierde años
@@ -21,7 +19,7 @@ def comparar(eq_nucleo, eq_capa, intentos_path, margen):
     """
     n = _n_intentos(intentos_path)
     sharpe_n, sharpe_c = (equity_metrics(eq, 0.0)["sharpe"] for eq in (eq_nucleo, eq_capa))
-    dsr_n, dsr_c = (dsr_contra_intentos(eq, intentos_path) for eq in (eq_nucleo, eq_capa))
+    dsr_n, dsr_c = (dsr_contra_intentos(eq) for eq in (eq_nucleo, eq_capa))
     ap_n, ap_c = anios_positivos(eq_nucleo), anios_positivos(eq_capa)
     delta_sharpe = sharpe_c - sharpe_n
     error_estandar = error_estandar_delta_sharpe(eq_capa, eq_nucleo)

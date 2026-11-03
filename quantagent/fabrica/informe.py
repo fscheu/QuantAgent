@@ -93,11 +93,11 @@ def datos_informe(hipotesis_id):
     por_etapa = {fila["etapa"]: fila for fila in _filas(ESTADO_CSV, hipotesis_id)}
     if not por_etapa:
         raise ValueError(f"Hipótesis desconocida: {hipotesis_id}")
-    intentos = _filas("intentos.csv", hipotesis_id)
+    from quantagent.fabrica.registro_db import intentos as leer_intentos
+    todas = leer_intentos(valida_solo=False)
+    intentos = [fila for fila in todas if fila.get("hipotesis") == hipotesis_id]
     ultima = max(por_etapa)
 
-    path_int = snapshot_root() / "intentos.csv"
-    todas = list(csv.DictReader(path_int.open(newline="", encoding="utf-8"))) if path_int.exists() else []
     from quantagent.backtesting.verdict import filas_validas, n_efectivo
     n_crudo, n_eff = len(todas), n_efectivo(todas) if todas else 0
     path_epoca = snapshot_root() / "epoca_limpia.json"

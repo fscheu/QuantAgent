@@ -589,7 +589,7 @@ class HypothesisEvent(Base):
 
 
 class HypothesisAttempt(Base):
-    """Attempt from intentos.csv. CSV mapping: fecha_utc→ts, hipotesis→hypothesis_id,
+    """Attempt row mapping: fecha_utc→ts, hipotesis→hypothesis_id,
     estrategia→strategy, activo→asset, params→params, sharpe/trades/pnl map directly,
     etapa→stage, estado→status. snapshot maps directly. The remaining CAMPOS_INTENTOS
     fields (desde, hasta, costos, tamano, sharpe_base) are stored in extra under their
