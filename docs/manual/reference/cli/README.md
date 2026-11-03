@@ -23,4 +23,6 @@
 - [Snapshot data commands](data/snapshot.md)
 - [Trade attempt commands](intentos.md)
 - [Profile commands](profile.md)
+- [Hypothesis cycle commands](registro.md)
+- [Cycle commands](registro/ciclo.md)
 - [Trading commands](trading.md)

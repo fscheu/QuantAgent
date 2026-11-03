@@ -1,5 +1,6 @@
 import json
 import re
+from pathlib import Path
 
 import pytest
 
@@ -76,3 +77,49 @@ def test_estados_actuales_con_dos_hipotesis(raiz):
         "H1": "2",
         "H2": "1",
     }
+
+
+def test_abrir_ciclo_limita_a_cinco_hipotesis(raiz):
+    with pytest.raises(ValueError, match="máximo 5"):
+        registro.abrir_ciclo("2026-11", ["H1", "H2", "H3", "H4", "H5", "H6"])
+
+    registro.abrir_ciclo("2026-11", ["H1", "H2", "H3", "H4", "H5"])
+    assert json.loads(raiz.read_text().splitlines()[0])["datos"]["hipotesis"] == ["H1", "H2", "H3", "H4", "H5"]
+
+
+def test_cerrar_sin_promovidas_guarda_recibo_y_es_inmutable(raiz):
+    registro.abrir_ciclo("2026-11", ["H1"])
+    registro.registrar_evento("H1", "etapa", "0", "CORTA", "filtro", ciclo="2026-11")
+    recibo = registro.cerrar_ciclo("2026-11")
+
+    assert recibo["promovidas"] == 0
+    assert recibo["etapas"] == {"0": 1, "1": 0, "2": 0, "3": 0}
+    assert json.loads(raiz.read_text().splitlines()[-1])["motivo"]
+    with pytest.raises(ValueError, match="ya fue cerrado"):
+        registro.cerrar_ciclo("2026-11")
+
+
+def test_recibo_se_reconstruye_solo_desde_jsonl(raiz, tmp_path):
+    registro.abrir_ciclo("2026-11", ["H1"])
+    registro.registrar_evento("H1", "intento", ciclo="2026-11", datos={"snapshot": "ausente"})
+    registro.registrar_evento("H1", "etapa", "3", "PASA", ciclo="2026-11")
+    esperado = registro.cerrar_ciclo("2026-11")
+    (tmp_path / "hipotesis.csv").unlink(missing_ok=True)
+    (tmp_path / "intentos.csv").unlink(missing_ok=True)
+
+    assert registro.recibo_ciclo("2026-11") == esperado
+    assert esperado["intentos"] == {"H1": 1}
+    assert esperado["promovidas"] == 1
+    assert esperado["hashes_manifiesto"] == {"ausente": None}
+
+
+def test_cli_ciclo_expone_help_epilog_y_referencia():
+    from click.testing import CliRunner
+    from quantagent.cli.__main__ import cli
+
+    ayuda = CliRunner().invoke(cli, ["registro", "ciclo", "abrir", "--help"])
+    assert ayuda.exit_code == 0
+    assert "Open a cycle with up to five hypothesis IDs." in ayuda.output
+    assert "Example: quantagent registro ciclo abrir 2026-11 H1 H2" in ayuda.output
+    referencia = Path("docs/manual/reference/cli/registro/ciclo.md").read_text()
+    assert "Example: quantagent registro ciclo cerrar 2026-11" in referencia
