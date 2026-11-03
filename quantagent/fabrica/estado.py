@@ -15,6 +15,12 @@ VEREDICTOS = ("PASA", "CORTA", "ALARMA", "ERROR")
 logger = logging.getLogger(__name__)
 
 
+def causas_de_motivo(motivo):
+    return {causa for causa in
+            (re.sub(r"\b[A-Z][A-Z0-9.-]*:\s*", "", c).strip() for c in motivo.split(";"))
+            if causa}
+
+
 def registrar_estado(hipotesis_id, etapa, veredicto, motivo=""):
     if etapa not in ETAPAS:
         raise ValueError(f"etapa inválida: {etapa!r}; debe ser una de {ETAPAS}")
@@ -85,11 +91,8 @@ def resumen_tanda(desde=None):
     else:
         ultimos = {r["hipotesis"]: r for r in registros[ESTADO_CSV]}
     conteos = Counter((r["etapa"], r["veredicto"]) for r in ultimos.values())
-    causas = Counter(causa
-                     for r in ultimos.values() if r["veredicto"] != "PASA"
-                     for causa in {re.sub(r"\b[A-Z][A-Z0-9.-]*:\s*", "", c).strip()
-                                   for c in r["motivo"].split(";")
-                                   if re.sub(r"\b[A-Z][A-Z0-9.-]*:\s*", "", c).strip()})
+    causas = Counter(causa for r in ultimos.values() if r["veredicto"] != "PASA"
+                     for causa in causas_de_motivo(r["motivo"]))
     intentos = sum(r.get("hipotesis") in ultimos for r in filas_validas(registros["intentos.csv"]))
     lineas = ["# Resumen de la tanda", "", "| Etapa | Veredicto | Hipótesis |",
               "| --- | --- | ---: |"]
