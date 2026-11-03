@@ -1,9 +1,16 @@
 """Administración de ciclos de evaluación."""
 
 import click
+from datetime import date
 
 from quantagent.default_config import CICLOS_PARA_REVISAR
-from quantagent.fabrica.registro import abrir_ciclo, cerrar_ciclo, ciclos_sin_etapa3, importar_csv
+from quantagent.fabrica.registro import (
+    abrir_ciclo,
+    calendario_ciclos,
+    cerrar_ciclo,
+    ciclos_sin_etapa3,
+    importar_csv,
+)
 
 
 @click.group("registro", help="Manage hypothesis evaluation cycles.",
@@ -35,6 +42,30 @@ def importar_command(dry_run):
     else:
         click.echo(f"Importación: etapas {etapas['agregados']} agregadas de {etapas['leidos']}; "
                    f"intentos {intentos['agregados']} agregados de {intentos['leidos']}; omitidas {resultado['omitidas']}")
+
+
+@registro_group.command("calendario", help="Show monthly hypothesis cycle dates and registry status.",
+                        epilog="Example: quantagent registro calendario 2026-11")
+@click.argument("desde", required=False, default=None)
+def calendario_command(desde):
+    desde = desde or date.today().strftime("%Y-%m")
+    try:
+        ciclos = calendario_ciclos(desde)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+    for ciclo in ciclos:
+        linea = (f"{ciclo['ciclo']}: propuesta {ciclo['propuesta']}; "
+                 f"embudo {ciclo['embudo']}; revisión paper {ciclo['revision_paper']}; "
+                 f"{ciclo['estado']}")
+        if ciclo["estado"] == "cerrado":
+            linea += f" (promovidas: {ciclo['promovidas']})"
+        click.echo(linea)
+    cuenta = ciclos_sin_etapa3()
+    click.echo(f"Corte: {cuenta}/{CICLOS_PARA_REVISAR} ciclos cerrados consecutivos sin pasar etapa 3.")
+    if cuenta >= CICLOS_PARA_REVISAR:
+        click.echo("Toca revisar el enfoque.")
+    else:
+        click.echo("Todavía no toca revisar el enfoque.")
 
 
 @registro_group.group("ciclo", help="Open or close a monthly hypothesis cycle.",

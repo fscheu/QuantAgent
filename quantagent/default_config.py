@@ -19,6 +19,11 @@ DEFAULT_TEMPERATURE = 0.1
 # Consecutive closed hypothesis cycles without a stage 3 pass before reviewing the approach.
 CICLOS_PARA_REVISAR = 6
 
+# Monthly hypothesis cycle milestones (day of month).
+DIA_PROPUESTA_HIPOTESIS = 1
+DIA_INICIO_EMBUDO = 8
+DIA_REVISION_PAPER = 25
+
 # Retry configuration for LLM API calls
 RETRY_CONFIG = {
     "max_retries": 5,

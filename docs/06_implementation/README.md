@@ -33,6 +33,8 @@ Implementation documents should include:
 
 ## Active Per-Change Implementation
 
+- [QuantAgent-w9vi-IM-calendario-mensual.md](./QuantAgent-w9vi-IM-calendario-mensual.md) - Fechas mensuales del ciclo, estado del registro y corte de revisión.
+
 - [QuantAgent-fnpr.6.6.5-IM-digest-acciones.md](./QuantAgent-fnpr.6.6.5-IM-digest-acciones.md) - Digest M5 con candidatos, descartes y comparación semanal H1/H3/1/N.
 - [QuantAgent-fnpr.6.6.4-IM-diario-acciones.md](./QuantAgent-fnpr.6.6.4-IM-diario-acciones.md) - Diario con candidatos vigentes, stops, fracciones según Alpaca y seguimiento de posiciones retiradas.
 - [QuantAgent-fnpr.6.6.3-IM-job-semanal-candidatos.md](./QuantAgent-fnpr.6.6.3-IM-job-semanal-candidatos.md) - Job semanal con candidatos vigentes, descartes y pesos H1/H3 en sombra.
