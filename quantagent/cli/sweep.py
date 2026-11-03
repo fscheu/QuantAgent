@@ -118,21 +118,10 @@ def registrar_intento(
     hipotesis: Optional[str] = None, etapa: Optional[str] = None,
     sharpe_base: Optional[str] = "tasa_libre",
 ) -> None:
-    """Registra una corrida en la base y conserva el evento JSONL de hipótesis."""
-    from quantagent.fabrica.registro_db import registrar_intento as registrar_en_db
-
-    registrar_en_db(strategy_name, symbol, snapshot_name, costos, tamano_posicion, combo, row,
+    """Registra una corrida en la base de datos."""
+    from quantagent.fabrica.registro_db import registrar_intento as guardar_intento
+    guardar_intento(strategy_name, symbol, snapshot_name, costos, tamano_posicion, combo, row,
                     hipotesis, etapa, sharpe_base)
-    if hipotesis:
-        try:
-            from quantagent.fabrica.estado import ETAPAS
-            from quantagent.fabrica.registro import registrar_evento
-
-            datos = {"snapshot": snapshot_name, "estrategia": strategy_name, "activo": symbol,
-                     "params": combo, "sharpe": row["sharpe"], "trades": row["trades"], "pnl": row["pnl"]}
-            registrar_evento(hipotesis, "intento", etapa=etapa if etapa in ETAPAS else None, datos=datos)
-        except Exception:
-            logger.warning("No se pudo registrar el evento de intento para %s", hipotesis, exc_info=True)
 
 
 @click.command("attempts", help="Count runs and parameter combinations recorded by sweep.")

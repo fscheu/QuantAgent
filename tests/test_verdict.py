@@ -354,7 +354,7 @@ def test_dsr_deduplica_n_pero_conserva_varianza_de_repeticiones(tmp_path):
 
 @pytest.mark.parametrize("excluida", [{"estado": "invalida_bug"}, {"snapshot": "sintetico"}])
 @pytest.mark.parametrize("estado", [None, "", "otro"])
-def test_filtro_valido_compartido_por_dsr_y_conteos(tmp_path, monkeypatch, excluida, estado):
+def test_filtro_valido_compartido_por_dsr_y_conteos(tmp_path, monkeypatch, excluida, estado, db_temporal):
     from quantagent.cli.sweep import contar_intentos
     from quantagent.fabrica.comparar import _n_intentos
     from quantagent.fabrica.estado import registrar_estado, resumen_tanda
@@ -385,10 +385,10 @@ def test_filtro_valido_compartido_por_dsr_y_conteos(tmp_path, monkeypatch, exclu
         assert dsr_contra_intentos(EQUITY_DSR, list(csv.DictReader(f))) == pytest.approx(esperado, abs=1e-12)
     assert n_efectivo(filas) == 2
     from quantagent.fabrica.registro_db import registrar_intento
-    for h, sr, params in (("h1", 0.5, {"p": 1}), ("h2", 1.0, {"p": 2})):
-        registrar_intento("rsi", "SPY", "real", None, None, params,
-                          {"desde": "2020-01-01", "hasta": "2020-12-31", "trades": 2,
-                           "pnl": 1, "sharpe": sr}, hipotesis=h)
+    for fila in filas[:2]:
+        registrar_intento(fila["estrategia"], "SPY", "real", "", 1, {},
+                          {"desde": "", "hasta": "", "trades": "", "pnl": "", "sharpe": fila["sharpe"]},
+                          hipotesis=fila["hipotesis"])
     assert _n_intentos(path) == contar_intentos() == 2
     assert contar_intentos("h1") == contar_intentos("h2") == 1
     registrar_estado("h1", "0", "PASA")

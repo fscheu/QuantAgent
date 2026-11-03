@@ -933,3 +933,21 @@ def _cleanup_xdist_worker_database():
         except Exception:
             pass
 
+
+
+@pytest.fixture
+def db_temporal(tmp_path, monkeypatch):
+    """Inicializa una base SQLite aislada para pruebas del registro de hipótesis."""
+    from quantagent import database, settings
+
+    url = f"sqlite:///{tmp_path / 'registro.db'}"
+    monkeypatch.setenv("DATABASE_URL", url)
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    monkeypatch.setattr(settings, "DATABASE_URL", url, raising=False)
+    database._engine = None
+    database._SessionLocal = None
+    database.init_db()
+    yield tmp_path
+    database._engine.dispose()
+    database._engine = None
+    database._SessionLocal = None

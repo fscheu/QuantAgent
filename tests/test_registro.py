@@ -248,14 +248,15 @@ def test_importar_csv_no_duplica_evento_vivo_y_omite_fila_mala(raiz, tmp_path):
     assert registro.estado_actual("H1")["fecha_utc"] == "2026-02-01T00:00:00+00:00"
     assert registro.estados_actuales()["H1"]["etapa"] == "0"
 
-def test_cli_calendario_muestra_ciclos_y_corte(raiz):
+def test_cli_calendario_muestra_ciclos_y_corte(raiz, db_temporal):
     from click.testing import CliRunner
     from quantagent.cli.__main__ import cli
+    from quantagent.fabrica import registro_db
 
     for mes in range(1, 7):
         ciclo = f"2026-{mes:02d}"
-        registro.abrir_ciclo(ciclo, [f"H{mes}"])
-        registro.cerrar_ciclo(ciclo)
+        registro_db.abrir_ciclo(ciclo, [f"H{mes}"])
+        registro_db.cerrar_ciclo(ciclo)
 
     resultado = CliRunner().invoke(cli, ["registro", "calendario", "2026-12"])
     assert resultado.exit_code == 0
@@ -265,13 +266,14 @@ def test_cli_calendario_muestra_ciclos_y_corte(raiz):
 
 
 
-def test_cli_ver_lista_eventos_ordenados_y_filtra_hipotesis(raiz):
+def test_cli_ver_lista_eventos_ordenados_y_filtra_hipotesis(raiz, db_temporal):
     from click.testing import CliRunner
     from quantagent.cli.__main__ import cli
+    from quantagent.fabrica import registro_db
 
-    registro.registrar_evento("H1", "etapa", "1", "PASA", fecha_utc="2026-02-02T00:00:00+00:00")
-    registro.registrar_evento("H2", "admision", fecha_utc="2026-02-01T00:00:00+00:00")
-    registro.registrar_evento("H1", "etapa", "0", "CORTA", fecha_utc="2026-02-01T00:00:00+00:00")
+    registro_db.registrar_evento("H1", "etapa", "1", "PASA", fecha_utc="2026-02-02T00:00:00+00:00")
+    registro_db.registrar_evento("H2", "admision", fecha_utc="2026-02-01T00:00:00+00:00")
+    registro_db.registrar_evento("H1", "etapa", "0", "CORTA", fecha_utc="2026-02-01T00:00:00+00:00")
     resultado = CliRunner().invoke(cli, ["registro", "ver", "--hipotesis", "H1"])
     assert resultado.exit_code == 0
     assert [line.split(" | ")[0] for line in resultado.output.splitlines()] == [

@@ -8,6 +8,11 @@ from quantagent.cli.hipotesis import correr_command, hipotesis_group
 from quantagent.fabrica.estado import registrar_estado
 
 
+@pytest.fixture(autouse=True)
+def _base_registro(db_temporal):
+    return db_temporal
+
+
 @pytest.mark.parametrize("todas_cortan", [False, True])
 def test_tanda_continua_y_escribe_informes_logs_y_resumen(tmp_path, monkeypatch, todas_cortan):
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path / "datos"))
@@ -79,7 +84,8 @@ def test_tanda_solo_corre_estados_no_finales(tmp_path, monkeypatch, estados):
             registrar_estado(nombre, *estado, "último estado")
         if estado and (estado[1] in ("CORTA", "ALARMA") or estado == ("3", "PASA")):
             finales.append(nombre)
-    registros = (tmp_path / "datos" / "hipotesis.csv").read_bytes()
+    from quantagent.fabrica.registro_db import eventos, intentos
+    registros = (eventos(), intentos(valida_solo=False))
     llamadas = []
 
     def correr(archivo, snapshot_name, carpeta):
@@ -91,8 +97,7 @@ def test_tanda_solo_corre_estados_no_finales(tmp_path, monkeypatch, estados):
                                                    "--carpeta", str(tmp_path / "salida")])
     assert resultado.exit_code == 0, resultado.output
     assert llamadas == [f"tanda-{i}" for i in range(4) if f"tanda-{i}" not in finales]
-    assert (tmp_path / "datos" / "hipotesis.csv").read_bytes() == registros
-    assert not (tmp_path / "datos" / "intentos.csv").exists()
+    assert (eventos(), intentos(valida_solo=False)) == registros
     for i, estado in enumerate(estados):
         salida = tmp_path / "salida" / f"tanda-{i}"
         log = (salida / "corrida.log").read_text()

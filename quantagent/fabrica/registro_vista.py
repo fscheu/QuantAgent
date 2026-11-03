@@ -4,7 +4,12 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from textwrap import fill
 
-from quantagent.fabrica import estado, registro
+from quantagent.fabrica import estado
+from quantagent.fabrica import registro_db as registro
+
+
+def _fecha(e):
+    return datetime.fromisoformat(str(e.get("fecha_utc", "")).replace("Z", "+00:00"))
 
 _CAIDAS = ("CORTA", "ERROR", "ALARMA")
 _ETAPAS = ("0", "1", "2", "3")
@@ -22,13 +27,13 @@ def _estados(eventos):
             continue
         h = e.get("hipotesis")
         previo = actuales.get(h)
-        if previo is None or registro._fecha(e) >= registro._fecha(previo):
+        if previo is None or _fecha(e) >= _fecha(previo):
             actuales[h] = e
     return actuales
 
 
 def embudo(ciclo=None, periodo=None, *, ahora=None):
-    eventos, _ = registro._leer_eventos()
+    eventos = registro.eventos()
     if ciclo is not None:
         aperturas = _aperturas(eventos)
         ids = aperturas.get(ciclo, {}).get("datos", {}).get("hipotesis", [])
@@ -37,7 +42,7 @@ def embudo(ciclo=None, periodo=None, *, ahora=None):
     if periodo is not None:
         ahora = ahora or datetime.now(timezone.utc)
         desde = ahora - timedelta(days=periodo)
-        eventos = [e for e in eventos if desde <= registro._fecha(e) <= ahora]
+        eventos = [e for e in eventos if desde <= _fecha(e) <= ahora]
     estados = _estados(eventos)
     etapas_evento = [e for e in eventos if e.get("evento") == "etapa"]
     etapas = []
@@ -59,7 +64,7 @@ def embudo(ciclo=None, periodo=None, *, ahora=None):
 
 
 def ciclos(limite):
-    eventos, _ = registro._leer_eventos()
+    eventos = registro.eventos()
     aperturas = _aperturas(eventos)
     resultado = []
     for ciclo, apertura in sorted(aperturas.items(), reverse=True)[:limite]:
@@ -84,7 +89,7 @@ def ciclos(limite):
 
 
 def hipotesis(estado=None, etapa=None, ciclo=None):
-    eventos, _ = registro._leer_eventos()
+    eventos = registro.eventos()
     aperturas = _aperturas(eventos)
     ciclo_por_h = {h: c for c, e in aperturas.items() for h in e.get("datos", {}).get("hipotesis", [])}
     actuales = _estados(eventos)
@@ -104,7 +109,8 @@ def hipotesis(estado=None, etapa=None, ciclo=None):
 
 
 def informe_ciclo(ciclo):
-    eventos_ciclo = registro._eventos_ciclo(ciclo)
+    registro._ciclo_valido(ciclo)
+    eventos_ciclo = [e for e in registro.eventos() if e.get("ciclo") == ciclo]
     apertura = next((e for e in eventos_ciclo if e.get("evento") == "ciclo"
                      and e.get("datos", {}).get("accion") == "abrir"), None)
     if apertura is None:
@@ -115,10 +121,12 @@ def informe_ciclo(ciclo):
                    and e.get("datos", {}).get("accion") == "cerrar"), None)
     ids = apertura.get("datos", {}).get("hipotesis", [])
     if parcial:
-        eventos, _ = registro._leer_eventos()
+        eventos = registro.eventos()
         inicio = eventos.index(apertura)
         propios = [e for e in eventos[inicio + 1:]
                    if e.get("hipotesis") in ids and e.get("evento") in ("etapa", "intento")]
+        intentos_db = [i for i in registro.intentos() if i.get("hipotesis") in ids and
+                       _fecha({"fecha_utc": i["fecha_utc"]}) >= _fecha(apertura)]
         recibo = {"ciclo": ciclo, "hipotesis": ids,
                   "etapas": {etapa: len({e.get("hipotesis") for e in propios
                                          if e.get("evento") == "etapa" and e.get("etapa") == etapa})
@@ -131,12 +139,12 @@ def informe_ciclo(ciclo):
             propios_h = [e for e in propios if e.get("hipotesis") == h]
             caidas = [e for e in propios_h if e.get("evento") == "etapa" and e.get("veredicto") in _CAIDAS]
             if caidas:
-                caida = max(caidas, key=registro._fecha)
+                caida = max(caidas, key=_fecha)
                 recibo["caidas"][h] = {k: caida.get(k, "") for k in ("etapa", "veredicto", "motivo")}
-            recibo["intentos"][h] = sum(e.get("evento") == "intento" for e in propios_h)
-        recibo["snapshots"] = sorted({e.get("datos", {}).get("snapshot") for e in propios
-                                      if e.get("evento") == "intento" and e.get("datos", {}).get("snapshot")})
-        recibo["hashes_manifiesto"] = {s: registro.snapshot_manifest_hash(s) for s in recibo["snapshots"]}
+            recibo["intentos"][h] = sum(i.get("hipotesis") == h for i in intentos_db)
+        recibo["snapshots"] = sorted({i.get("snapshot") for i in intentos_db if i.get("snapshot")})
+        from quantagent.data.snapshot import snapshot_manifest_hash
+        recibo["hashes_manifiesto"] = {s: snapshot_manifest_hash(s) for s in recibo["snapshots"]}
 
     lineas = [f"Ciclo {ciclo}: {len(recibo.get('hipotesis', ids))} hipótesis entraron;",
               f"{recibo.get('promovidas', 0)} promovieron.", ""]

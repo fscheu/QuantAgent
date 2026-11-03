@@ -94,13 +94,14 @@ def test_epoca_limpia_fecha_invalida(db_intentos, desde):
     assert "ISO con zona UTC" in result.output
 
 
-def test_registrar_intento_escribe_evento_jsonl(db_intentos, tmp_path, monkeypatch):
+def test_registrar_intento_guarda_el_intento_en_la_base_sin_archivos(db_intentos, tmp_path, monkeypatch):
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     from quantagent.cli.sweep import registrar_intento
 
     row = {"desde": "2020-01-01", "hasta": "2021-01-01", "trades": 3, "pnl": 2.5, "sharpe": 0.8}
     registrar_intento("rsi", "SPY", "snap-1", None, 1.0, {"period": 14}, row, hipotesis="H1", etapa="1")
-    evento = json.loads((tmp_path / "registro-hipotesis.jsonl").read_text().splitlines()[0])
-    assert evento["evento"] == "intento" and evento["hipotesis"] == "H1"
     from quantagent.fabrica.registro_db import intentos
     assert intentos()[-1]["snapshot"] == "snap-1"
+    assert intentos()[-1]["hipotesis"] == "H1"
+    assert not (tmp_path / "registro-hipotesis.jsonl").exists()
+    assert not (tmp_path / "intentos.csv").exists()

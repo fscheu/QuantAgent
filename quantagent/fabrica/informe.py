@@ -9,7 +9,6 @@ import pandas as pd
 from quantagent.data.snapshot import snapshot_root
 from quantagent.fabrica.candado import abierto
 from quantagent.fabrica.criterio import recargo_paper
-from quantagent.fabrica.estado import ESTADO_CSV
 
 
 def diagnostico_exceso(hipotesis, carpeta_equity, snapshot, base_dir=None):
@@ -81,16 +80,9 @@ GLOSARIO = (
 )
 
 
-def _filas(nombre, hipotesis_id):
-    path = snapshot_root() / nombre
-    if not path.exists():
-        return []
-    with path.open(newline="", encoding="utf-8") as f:
-        return [fila for fila in csv.DictReader(f) if fila["hipotesis"] == hipotesis_id]
-
-
 def datos_informe(hipotesis_id):
-    por_etapa = {fila["etapa"]: fila for fila in _filas(ESTADO_CSV, hipotesis_id)}
+    from quantagent.fabrica.registro_db import eventos_etapa, intentos as leer_intentos
+    por_etapa = {fila["etapa"]: fila for fila in eventos_etapa(hipotesis_id)}
     if not por_etapa:
         from quantagent.fabrica.registro_db import eventos
         por_etapa = {fila["etapa"]: fila for fila in eventos()

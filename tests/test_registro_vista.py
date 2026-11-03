@@ -6,14 +6,14 @@ from pathlib import Path
 
 import pytest
 
-from quantagent.fabrica import estado, registro
+from quantagent.fabrica import estado
+from quantagent.fabrica import registro_db as registro
 from quantagent.fabrica import registro_vista as vista
 
 
 @pytest.fixture
-def raiz(tmp_path, monkeypatch):
-    monkeypatch.setattr("quantagent.fabrica.registro.snapshot_root", lambda: tmp_path)
-    return tmp_path
+def raiz(db_temporal):
+    return db_temporal
 
 
 def _keys(interface):
@@ -133,7 +133,8 @@ def test_informe_hashes_parciales_validacion_y_ancho(raiz):
         carpeta.mkdir()
         (carpeta / "manifest.json").write_text(json.dumps({"contenido": contenido}))
         registro.abrir_ciclo(ciclo, ["A"])
-        registro.registrar_evento("A", "intento", datos={"snapshot": nombre})
+        registro.registrar_intento("s", "SPY", nombre, None, None, {},
+            {"desde": "2026-01-01", "hasta": "2026-01-02", "trades": 1, "pnl": 1, "sharpe": 1}, "A")
         registro.cerrar_ciclo(ciclo)
     primero = vista.informe_ciclo("2026-03")
     segundo = vista.informe_ciclo("2026-04")
@@ -148,3 +149,13 @@ def test_informe_hashes_parciales_validacion_y_ancho(raiz):
         vista.informe_ciclo("2026-06")
     with pytest.raises(ValueError, match="ciclo inválido"):
         vista.informe_ciclo("2026-13")
+
+
+def test_recibo_cuenta_intentos_desde_sql_y_persiste_sin_evento_intento(raiz):
+    registro.abrir_ciclo("2026-06", ["A"])
+    registro.registrar_intento("s", "SPY", "snap", None, None, {},
+        {"desde": "2026-01-01", "hasta": "2026-01-02", "trades": 1, "pnl": 1, "sharpe": 1}, "A")
+    recibo = registro.cerrar_ciclo("2026-06")
+    assert recibo["intentos"] == {"A": 1}
+    assert not any(e["evento"] == "intento" for e in registro.eventos())
+    assert registro.recibo_ciclo("2026-06") == recibo
