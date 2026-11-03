@@ -1,5 +1,4 @@
 """Investigador (QuantAgent-d4cq.42): pedido al LLM y escritura en `catalogo/propuestas/`, nunca en `hipotesis/`."""
-import csv
 import json
 import os
 import re
@@ -21,12 +20,13 @@ ID_VALIDO = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 
 def _contar_intentos(intentos):
     if intentos is None:
-        intentos = Path(os.environ.get("QUANTAGENT_SNAPSHOT_DIR", "local-data")) / "intentos.csv"
+        from quantagent.fabrica.registro_db import intentos as leer_intentos
+        return len(leer_intentos())
     if isinstance(intentos, int):
         return intentos
     if isinstance(intentos, (str, Path)):
-        p = Path(intentos)
-        return sum(1 for _ in csv.DictReader(p.read_text(encoding="utf-8").splitlines())) if p.exists() else 0
+        from quantagent.fabrica.registro_db import intentos as leer_intentos
+        return len(leer_intentos())
     return len(intentos)
 
 

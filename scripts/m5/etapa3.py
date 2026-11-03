@@ -1,7 +1,6 @@
 """M5-36: H1/H3 2019–2022, sin abrir 2023+. Ejecutar con PYTHONPATH=.:scripts/m5."""
 
 import argparse
-import csv
 import pickle
 from pathlib import Path
 
@@ -10,7 +9,7 @@ import pandas as pd
 from cobertura_screener import paneles_en_fechas
 
 from quantagent.backtesting.verdict import dsr_contra_intentos
-from quantagent.data.snapshot import snapshot_root
+from quantagent.fabrica.registro_db import intentos as leer_intentos
 from quantagent.fabrica.candado import abrir, fecha_apertura
 from quantagent.fabrica.criterio import evaluar_etapa3_cartera, sharpe_benchmark
 
@@ -100,18 +99,16 @@ def main():
         costos = float((eq.shift().fillna(100_000) * op * costo).sum())
         print(nombre, h3.metricas(eq, op), "trades", trades, "costos", costos, "bench2/3", b2, b3, veredicto, motivos)
         if not args.sin_registro:
-            path = snapshot_root() / "intentos.csv"
-            with path.open() as f:
-                registrado = any(r["hipotesis"] == nombre and r["etapa"] == "3" for r in csv.DictReader(f))
+            registrado = any(r["hipotesis"] == nombre and r["etapa"] == "3" for r in leer_intentos())
             if not registrado:
                 h3.registrar_estado(nombre, "3", veredicto, "; ".join(motivos) or "cumple criterio cartera etapa 3")
                 h3.registrar_intento("sector-score-" + nombre[3:], "cartera", h3.ETF_SNAP, "etf", 1., {},
                                     dict(desde=str(DESDE.date()), hasta=str(HASTA.date()), trades=trades,
                                          pnl=float(eq.iloc[-1] - 100_000), sharpe=h3.metricas(eq, op)["sharpe"]),
                                     hipotesis=nombre, etapa="3", sharpe_base="tasa_0")
-    path = snapshot_root() / "intentos.csv"
-    if path.exists():
-        print("DSR informativo", {n: dsr_contra_intentos(eq, path) for n, eq in (("H1", eq1), ("H3", eq3))})
+    filas = leer_intentos()
+    if filas:
+        print("DSR informativo", {n: dsr_contra_intentos(eq, filas) for n, eq in (("H1", eq1), ("H3", eq3))})
     sesgo = contar_sesgo(detalle, w1, decisiones)
     sesgo.to_csv(cache.with_suffix(".sesgo.csv"), index=False)
     for clave in ("anio", "sector"):

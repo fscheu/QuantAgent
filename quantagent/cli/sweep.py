@@ -5,14 +5,13 @@ import itertools
 import json
 import logging
 import math
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional
 
 import click
 from tabulate import tabulate
 
-from quantagent.backtesting.verdict import filas_validas
 from quantagent.settings import COSTOS_PERFILES
 from quantagent.strategy.registry import STRATEGY_REGISTRY, cli_aliases
 from quantagent.trading.position_sizer import PositionSizer
@@ -103,92 +102,35 @@ def grilla_vecinos(strategy: str) -> tuple[list[dict[str, Any]], list[str]]:
     return combos, labels
 
 
-CAMPOS_INTENTOS = [
-    "fecha_utc", "estrategia", "activo", "snapshot", "desde", "hasta", "costos",
-    "tamano", "params", "trades", "pnl", "sharpe", "hipotesis", "etapa", "sharpe_base", "estado",
-]
+from quantagent.fabrica.campos_intentos import CAMPOS_INTENTOS
 
 
 def contar_intentos(hipotesis: Optional[str] = None) -> int:
-    """Cuenta filas válidas de intentos.csv; con `hipotesis`, solo las de esa hipótesis."""
-    from quantagent.data.snapshot import snapshot_root
+    """Cuenta intentos válidos almacenados en la base."""
+    from quantagent.fabrica.registro_db import intentos
 
-    path = snapshot_root() / "intentos.csv"
-    if not path.exists():
-        return 0
-    with path.open(newline="", encoding="utf-8") as f:
-        return sum(1 for r in filas_validas(csv.DictReader(f)) if hipotesis is None or r.get("hipotesis") == hipotesis)
+    return sum(1 for fila in intentos() if hipotesis is None or fila.get("hipotesis") == hipotesis)
 
 
 def registrar_intento(
-    strategy_name: str,
-    symbol: str,
-    snapshot_name: str,
-    costos: Optional[str],
-    tamano_posicion: Optional[float],
-    combo: dict[str, Any],
-    row: dict[str, Any],
-    hipotesis: Optional[str] = None,
-    etapa: Optional[str] = None,
+    strategy_name: str, symbol: str, snapshot_name: str, costos: Optional[str],
+    tamano_posicion: Optional[float], combo: dict[str, Any], row: dict[str, Any],
+    hipotesis: Optional[str] = None, etapa: Optional[str] = None,
     sharpe_base: Optional[str] = "tasa_libre",
 ) -> None:
-    """Agrega una corrida al registro, conservando sus valores.
+    """Registra una corrida en la base y conserva el evento JSONL de hipótesis."""
+    from quantagent.fabrica.registro_db import registrar_intento as registrar_en_db
 
-    Un archivo con encabezado viejo se reescribe con el nuevo (columnas faltantes vacías).
-    """
-    from quantagent.data.snapshot import snapshot_root
-
-    intentos_path = snapshot_root() / "intentos.csv"
-    intento = {
-        "fecha_utc": datetime.now(timezone.utc).isoformat(),
-        "estrategia": strategy_name,
-        "activo": symbol,
-        "snapshot": snapshot_name,
-        "desde": row["desde"],
-        "hasta": row["hasta"],
-        "costos": costos or "",
-        "tamano": tamano_posicion,
-        "params": json.dumps(combo, sort_keys=True),
-        "trades": row["trades"],
-        "pnl": row["pnl"],
-        "sharpe": row["sharpe"],
-        "hipotesis": hipotesis or "",
-        "etapa": etapa or "",
-        "sharpe_base": sharpe_base or "",
-        "estado": "",
-    }
-    previas = []
-    if intentos_path.exists():
-        with intentos_path.open(newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            if reader.fieldnames == CAMPOS_INTENTOS:
-                previas = None
-            else:
-                previas = list(reader)
-    nuevo = not intentos_path.exists() or previas is not None
-    with intentos_path.open("w" if nuevo else "a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=CAMPOS_INTENTOS, restval="", extrasaction="ignore")
-        if nuevo:
-            writer.writeheader()
-            writer.writerows(previas or [])
-        writer.writerow(intento)
+    registrar_en_db(strategy_name, symbol, snapshot_name, costos, tamano_posicion, combo, row,
+                    hipotesis, etapa, sharpe_base)
     if hipotesis:
         try:
             from quantagent.fabrica.estado import ETAPAS
             from quantagent.fabrica.registro import registrar_evento
 
-            datos = {
-                "snapshot": snapshot_name,
-                "estrategia": strategy_name,
-                "activo": symbol,
-                "params": combo,
-                "sharpe": row["sharpe"],
-                "trades": row["trades"],
-                "pnl": row["pnl"],
-            }
-            registrar_evento(
-                hipotesis, "intento", etapa=etapa if etapa in ETAPAS else None, datos=datos
-            )
+            datos = {"snapshot": snapshot_name, "estrategia": strategy_name, "activo": symbol,
+                     "params": combo, "sharpe": row["sharpe"], "trades": row["trades"], "pnl": row["pnl"]}
+            registrar_evento(hipotesis, "intento", etapa=etapa if etapa in ETAPAS else None, datos=datos)
         except Exception:
             logger.warning("No se pudo registrar el evento de intento para %s", hipotesis, exc_info=True)
 
@@ -197,31 +139,21 @@ def registrar_intento(
 @click.option("--strategy", "strategy_name", required=True, help="Strategy whose attempts to count.")
 @click.option("--symbol", default=None, help="Limit the count to this symbol.")
 def attempts_command(strategy_name: str, symbol: Optional[str]) -> None:
-    from quantagent.data.snapshot import snapshot_root
+    from quantagent.fabrica.registro_db import intentos
 
     aliases = cli_aliases()
     strategy = aliases.get(strategy_name, strategy_name)
     if strategy not in STRATEGY_REGISTRY:
         raise click.ClickException(f"Estrategia desconocida '{strategy_name}'")
-    path = snapshot_root() / "intentos.csv"
     corridas = 0
     combinaciones = set()
-    if path.exists():
-        with path.open(newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            if not {"estrategia", "activo", "params"}.issubset(reader.fieldnames or []):
-                raise click.ClickException("Encabezado inválido en intentos.csv")
-            for row in reader:
-                if aliases.get(row["estrategia"], row["estrategia"]) != strategy:
-                    continue
-                if symbol is not None and row["activo"] != symbol.upper():
-                    continue
-                try:
-                    params = json.dumps(json.loads(row["params"]), sort_keys=True)
-                except (ValueError, TypeError) as exc:
-                    raise click.ClickException("params JSON inválido en intentos.csv") from exc
-                corridas += 1
-                combinaciones.add(params)
+    for row in intentos():
+        if aliases.get(row["estrategia"], row["estrategia"]) != strategy:
+            continue
+        if symbol is not None and row["activo"] != symbol.upper():
+            continue
+        corridas += 1
+        combinaciones.add(json.dumps(json.loads(row["params"]), sort_keys=True))
     click.echo(f"Corridas: {corridas}")
     click.echo(f"Combinaciones distintas: {len(combinaciones)}")
 

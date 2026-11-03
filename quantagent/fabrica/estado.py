@@ -68,7 +68,7 @@ def ultimo_estado(hipotesis_id):
 def resumen_tanda(desde=None):
     """Último estado por hipótesis e intentos dentro del período UTC indicado."""
     registros = {}
-    for nombre in (ESTADO_CSV, "intentos.csv"):
+    for nombre in (ESTADO_CSV,):
         path = snapshot_root() / nombre
         filas = []
         if path.exists():
@@ -93,7 +93,8 @@ def resumen_tanda(desde=None):
     conteos = Counter((r["etapa"], r["veredicto"]) for r in ultimos.values())
     causas = Counter(causa for r in ultimos.values() if r["veredicto"] != "PASA"
                      for causa in causas_de_motivo(r["motivo"]))
-    intentos = sum(r.get("hipotesis") in ultimos for r in filas_validas(registros["intentos.csv"]))
+    from quantagent.fabrica.registro_db import intentos as leer_intentos
+    intentos = sum(r.get("hipotesis") in ultimos for r in filas_validas(leer_intentos()))
     lineas = ["# Resumen de la tanda", "", "| Etapa | Veredicto | Hipótesis |",
               "| --- | --- | ---: |"]
     lineas += [f"| {e} | {v} | {n} |" for (e, v), n in sorted(conteos.items())]

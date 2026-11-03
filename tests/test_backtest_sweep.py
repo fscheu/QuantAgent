@@ -276,49 +276,46 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
     assert header == expected_cols
     assert len(out_rows) == 4
 
-    intentos = snap_dir / "intentos.csv"
-    prefijo = intentos.read_bytes()
+    from quantagent.fabrica.registro_db import intentos as leer_intentos
+    prefijo = leer_intentos()
     res = runner.invoke(backtest_group, [
         "sweep", "--strategy", "rsi", "--symbol", "spy",
         "--snapshot", "snap_rsi", "--grid", str(grid_file), "--out", str(out_csv),
     ])
     assert res.exit_code == 0, res.output
-    assert intentos.read_bytes().startswith(prefijo)
-    with intentos.open(newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        assert reader.fieldnames == CAMPOS_INTENTOS
-        intentos_rows = list(reader)
+    assert leer_intentos()[:len(prefijo)] == prefijo
+    intentos_rows = leer_intentos()
     assert len(intentos_rows) == 8
     assert CAMPOS_INTENTOS[-1] == "estado"
     assert all(intento["estado"] == "" for intento in intentos_rows)
-    antes = intentos.read_bytes()
+    antes = leer_intentos()
     consulta = runner.invoke(backtest_group, ["attempts", "--strategy", "rsi"])
     assert consulta.exit_code == 0, consulta.output
     assert consulta.output == "Corridas: 8\nCombinaciones distintas: 4\n"
-    assert intentos.read_bytes() == antes
+    assert leer_intentos() == antes
     from datetime import datetime, timezone
     for intento, salida in zip(intentos_rows, out_rows * 2):
         assert datetime.fromisoformat(intento["fecha_utc"]).utcoffset() == timezone.utc.utcoffset(None)
         assert (intento["estrategia"], intento["activo"], intento["snapshot"]) == ("rsi", "SPY", "snap_rsi")
-        assert (intento["costos"], intento["tamano"]) == ("", "1.0")
+        assert (intento["costos"], float(intento["tamano"])) == ("", 1.0)
         assert intento["params"] == json.dumps({
             "llenado": "apertura",
             "oversold_threshold": float(salida["oversold_threshold"]),
             "rsi_period": int(salida["rsi_period"]),
         }, sort_keys=True)
         for campo in ("desde", "hasta", "trades", "pnl", "sharpe"):
-            assert intento[campo] == salida[campo]
-    for existente in (True, False):
-        if not existente:
-            intentos.unlink()
-        anterior = intentos.read_bytes() if existente else None
-        grid_file.write_text(json.dumps({"inexistente": [1]}), encoding="utf-8")
-        res = runner.invoke(backtest_group, [
-            "sweep", "--strategy", "rsi", "--symbol", "SPY",
-            "--snapshot", "snap_rsi", "--grid", str(grid_file), "--out", str(out_csv),
-        ])
-        assert res.exit_code == 1
-        assert (intentos.read_bytes() if intentos.exists() else None) == anterior
+            if campo in ("trades", "pnl", "sharpe") and salida[campo] != "":
+                assert float(intento[campo]) == pytest.approx(float(salida[campo]))
+            else:
+                assert intento[campo] == salida[campo]
+    anterior = leer_intentos()
+    grid_file.write_text(json.dumps({"inexistente": [1]}), encoding="utf-8")
+    res = runner.invoke(backtest_group, [
+        "sweep", "--strategy", "rsi", "--symbol", "SPY",
+        "--snapshot", "snap_rsi", "--grid", str(grid_file), "--out", str(out_csv),
+    ])
+    assert res.exit_code == 1
+    assert leer_intentos() == anterior
 
     meta = snapshot_metadata("snap_rsi", "SPY", None, None)
     config = _engine_config(None, None, 1.0, None, None)
@@ -343,6 +340,7 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
         f14 = filas_por_combo[(ot, 14)]
         assert (int(f7["trades"]) != int(f14["trades"])) or (float(f7["pnl"]) != float(f14["pnl"]))
 
+    intentos_antes_vecinos = len(leer_intentos())
     res = runner.invoke(backtest_group, [
         "sweep", "--strategy", "rsi", "--symbol", "SPY", "--snapshot", "snap_rsi",
         "--vecinos-20", "--out", str(out_csv),
@@ -350,8 +348,7 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
     assert res.exit_code == 0, res.output
     with out_csv.open() as f:
         vecinos = list(csv.DictReader(f))
-    with intentos.open() as f:
-        assert len(list(csv.DictReader(f))) == len(vecinos) == 13
+    assert len(leer_intentos()) - intentos_antes_vecinos == len(vecinos) == 13
     assert vecinos[0]["vecino"] == "default"
     assert (int(vecinos[0]["trades"]), float(vecinos[0]["pnl"])) == (baseline["trades"], round(baseline["pnl"], 2))
 
@@ -365,8 +362,7 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
         assert res.exit_code == 0, res.output
         with out_csv.open() as f:
             resultados.append(list(csv.DictReader(f)))
-        with intentos.open() as f:
-            ultimos = list(csv.DictReader(f))[-2:]
+        ultimos = leer_intentos()[-2:]
         assert [json.loads(r["params"]) for r in ultimos] == [
             {"rsi_period": p, "llenado": fill} for p in [7, 14]]
         for fila, p in zip(resultados[-1], [7, 14]):
@@ -379,22 +375,19 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
 
 
 def test_attempts_filtra_alias_y_activo_sin_modificar(monkeypatch, tmp_path):
-    import csv
     from click.testing import CliRunner
     from quantagent.cli.backtest import backtest_group
+    from quantagent.fabrica.registro_db import intentos, registrar_intento
 
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
-    path = tmp_path / "intentos.csv"
-    with path.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow(["estrategia", "activo", "params"])
-        writer.writerows([
-            ["rsi", "SPY", '{"rsi_period": 14, "oversold_threshold": 30}'],
-            ["RSIMeanReversionStrategy", "SPY", '{"oversold_threshold":30,"rsi_period":14}'],
-            ["rsi", "TLT", '{"rsi_period": 7}'],
-            ["sma-cross", "SPY", '{"fast": 50}'],
-        ])
-    antes = path.read_bytes()
+    row = {"desde": "2010-01-01", "hasta": "2012-01-01", "trades": 4, "pnl": 1.5, "sharpe": 0.3}
+    for strategy, symbol, params in [
+        ("rsi", "SPY", {"rsi_period": 14, "oversold_threshold": 30}),
+        ("RSIMeanReversionStrategy", "SPY", {"oversold_threshold": 30, "rsi_period": 14}),
+        ("rsi", "TLT", {"rsi_period": 7}), ("sma-cross", "SPY", {"fast": 50}),
+    ]:
+        registrar_intento(strategy, symbol, "snap", None, 1.0, params, row)
+    antes = intentos()
     runner = CliRunner()
     for strategy, symbol, expected in [
         ("rsi", None, (3, 2)), ("RSIMeanReversionStrategy", "spy", (2, 1)),
@@ -404,10 +397,10 @@ def test_attempts_filtra_alias_y_activo_sin_modificar(monkeypatch, tmp_path):
         res = runner.invoke(backtest_group, args)
         assert res.exit_code == 0, res.output
         assert res.output == f"Corridas: {expected[0]}\nCombinaciones distintas: {expected[1]}\n"
-        assert path.read_bytes() == antes
+        assert intentos() == antes
 
 
-def test_attempts_registro_ausente_o_encabezado_invalido(monkeypatch, tmp_path):
+def test_attempts_registro_vacio(monkeypatch, tmp_path):
     from click.testing import CliRunner
     from quantagent.cli.backtest import backtest_group
 
@@ -415,79 +408,43 @@ def test_attempts_registro_ausente_o_encabezado_invalido(monkeypatch, tmp_path):
     runner = CliRunner()
     args = ["attempts", "--strategy", "rsi"]
     assert runner.invoke(backtest_group, args).output == "Corridas: 0\nCombinaciones distintas: 0\n"
-    path = tmp_path / "intentos.csv"
-    path.write_text("otra,columna\n", encoding="utf-8")
-    res = runner.invoke(backtest_group, args)
-    assert res.exit_code == 1
-    assert "Encabezado inválido" in res.output
-    assert path.read_text() == "otra,columna\n"
+    from quantagent.fabrica.registro_db import intentos
+    assert intentos() == []
 
 
 
-def test_registrar_intento_migra_encabezado_viejo_y_cuenta_por_hipotesis(monkeypatch, tmp_path):
-    import csv
-    from quantagent.cli.sweep import CAMPOS_INTENTOS, contar_intentos, registrar_intento
+def test_registrar_intento_persiste_metadatos_y_cuenta_por_hipotesis(monkeypatch, tmp_path):
+    from quantagent.cli.sweep import contar_intentos, registrar_intento
+    from quantagent.fabrica.registro_db import intentos
 
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
-    path = tmp_path / "intentos.csv"
-    viejo = CAMPOS_INTENTOS[:CAMPOS_INTENTOS.index("hipotesis")]
-    filas = [{c: f"{c}{i}" for c in viejo} for i in range(3)]
-    with path.open("w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=viejo)
-        w.writeheader()
-        w.writerows(filas)
-    assert contar_intentos() == 3 and contar_intentos("h1") == 0
+    assert contar_intentos() == 0
 
     row = {"desde": "2010-01-01", "hasta": "2012-01-01", "trades": 4, "pnl": 1.5, "sharpe": 0.3}
     registrar_intento("rsi", "SPY", "snap", None, 1.0, {"a": 1}, row, hipotesis="h1", etapa="E1")
     registrar_intento("rsi", "SPY", "snap", None, 1.0, {"a": 2}, row)
 
-    with path.open(newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        assert reader.fieldnames == CAMPOS_INTENTOS
-        rows = list(reader)
-    assert len(rows) == 5
-    for orig, nueva in zip(filas, rows[:3]):
-        assert {c: nueva[c] for c in viejo} == orig
-        assert (nueva["hipotesis"], nueva["etapa"], nueva["sharpe_base"]) == ("", "", "")
-        assert nueva["estado"] == ""
-    assert (rows[3]["hipotesis"], rows[3]["etapa"]) == ("h1", "E1")
-    assert contar_intentos() == 5 and contar_intentos("h1") == 1
+    rows = intentos()
+    assert len(rows) == 2
+    assert (rows[0]["hipotesis"], rows[0]["etapa"]) == ("h1", "E1")
+    assert rows[1]["hipotesis"] == rows[1]["etapa"] == ""
+    assert contar_intentos() == 2 and contar_intentos("h1") == 1
 
 
-@pytest.mark.parametrize("columna_faltante", ["sharpe_base", "estado"])
-def test_registrar_intento_migra_encabezado_previo(monkeypatch, tmp_path, columna_faltante):
-    import csv
-    from quantagent.cli.sweep import CAMPOS_INTENTOS, contar_intentos, registrar_intento
+@pytest.mark.parametrize("sharpe_base", ["tasa_0", "tasa_libre"])
+def test_registrar_intento_conserva_sharpe_base_y_estado_vacio(monkeypatch, tmp_path, sharpe_base):
+    from quantagent.cli.sweep import contar_intentos, registrar_intento
+    from quantagent.fabrica.registro_db import intentos
 
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
-    path = tmp_path / "intentos.csv"
-    campos_previos = CAMPOS_INTENTOS[:CAMPOS_INTENTOS.index(columna_faltante)]
-    filas = [{c: f"v_{c}_{i},\"\n" for c in campos_previos} for i in range(2)]
-    with path.open("w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=campos_previos)
-        w.writeheader()
-        w.writerows(filas)
-    assert contar_intentos() == 2
-
     row = {"desde": "2010-01-01", "hasta": "2012-01-01", "trades": 4, "pnl": 1.5, "sharpe": 0.3}
-    registrar_intento("rsi", "SPY", "snap", None, 1.0, {"a": 1}, row, hipotesis="h1", etapa="1", sharpe_base="tasa_0")
-    prefijo = path.read_bytes()
-    registrar_intento("rsi", "SPY", "snap", None, 1.0, {"a": 2}, row)
-    assert path.read_bytes().startswith(prefijo)
-
-    with path.open(newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        assert reader.fieldnames == CAMPOS_INTENTOS
-        rows = list(reader)
-    assert len(rows) == 4
-    for orig, guardada in zip(filas, rows[:2]):
-        assert {c: guardada[c] for c in campos_previos} == orig
-        assert all(guardada[c] == "" for c in CAMPOS_INTENTOS[len(campos_previos):])
-    assert all(guardada["estado"] == "" for guardada in rows)
-    assert contar_intentos() == 4
-    assert rows[2]["sharpe_base"] == "tasa_0"
-    assert rows[2]["hipotesis"] == "h1"
+    registrar_intento("rsi", "SPY", "snap", None, 1.0, {"a": 1}, row,
+                      hipotesis="h1", etapa="1", sharpe_base=sharpe_base)
+    guardada, = intentos()
+    assert guardada["params"] == '{"a": 1}'
+    assert guardada["sharpe_base"] == sharpe_base
+    assert guardada["estado"] == ""
+    assert contar_intentos() == 1 and contar_intentos("h1") == 1
 
 
 def test_grilla_vacia_solo_vale_para_estrategias_sin_parametros():

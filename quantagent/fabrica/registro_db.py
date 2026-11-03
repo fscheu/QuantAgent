@@ -3,7 +3,7 @@
 from datetime import date, datetime, timezone
 import json
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from quantagent.database import SessionLocal
 from quantagent.default_config import (
@@ -14,7 +14,7 @@ from quantagent.data.snapshot import snapshot_manifest_hash
 from quantagent.fabrica.estado import ETAPAS, VEREDICTOS
 from quantagent.fabrica.registro import EVENTOS, _CICLO_RE
 from quantagent.models import Cycle, Hypothesis, HypothesisAttempt, HypothesisEvent
-from quantagent.cli.sweep import CAMPOS_INTENTOS
+from quantagent.fabrica.campos_intentos import CAMPOS_INTENTOS
 
 def _fecha(value):
     if value is None:
@@ -69,16 +69,19 @@ def registrar_evento(hipotesis_id, evento, etapa=None, veredicto=None, motivo=""
 
 
 def registrar_intento(strategy_name, symbol, snapshot_name, costos, tamano_posicion, combo, row,
-                      hipotesis=None, etapa=None, sharpe_base="tasa_libre"):
-    ts = datetime.now(timezone.utc)
+                      hipotesis=None, etapa=None, sharpe_base="tasa_libre", fecha_utc=None):
+    ts = _fecha(fecha_utc)
+    sharpe = row["sharpe"]
+    pnl = row["pnl"]
     extra = {"desde": row["desde"], "hasta": row["hasta"], "costos": costos or "",
              "tamano": tamano_posicion, "sharpe_base": sharpe_base or ""}
     with SessionLocal() as db:
         if hipotesis is not None and db.get(Hypothesis, hipotesis) is None:
             db.add(Hypothesis(id=hipotesis, created_at=ts))
         db.add(HypothesisAttempt(ts=ts, hypothesis_id=hipotesis, snapshot=snapshot_name,
-            strategy=strategy_name, asset=symbol, params=combo, sharpe=row["sharpe"],
-            trades=row["trades"], pnl=row["pnl"], stage=etapa, status=None, extra=extra))
+            strategy=strategy_name, asset=symbol, params=combo,
+            sharpe=None if sharpe == "" else sharpe, trades=row["trades"],
+            pnl=None if pnl == "" else pnl, stage=etapa, status=None, extra=extra))
         db.commit()
 
 
@@ -103,7 +106,10 @@ def invalidar_intentos(filtro):
     desde = _fecha(filtro["desde"]) if filtro.get("desde") is not None else None
     hasta = _fecha(filtro["hasta"]) if filtro.get("hasta") is not None else None
     with SessionLocal() as db:
-        rows = db.scalars(select(HypothesisAttempt).where(HypothesisAttempt.hypothesis_id == hipotesis)).all()
+        rows = db.scalars(select(HypothesisAttempt).where(
+            HypothesisAttempt.hypothesis_id == hipotesis,
+            or_(HypothesisAttempt.status.is_(None), HypothesisAttempt.status != "invalida_bug"),
+        )).all()
         selected = [r for r in rows if (desde is None or _fecha(r.ts) >= desde)
                     and (hasta is None or _fecha(r.ts) <= hasta)]
         for row in selected:

@@ -37,8 +37,8 @@ def test_comando_csv_y_rechazos(snapshot_walkforward, hasta):
                            prueba_desde="2015-01-01", prueba_hasta="2016-12-30",
                            params='{"rsi_period": 7}', ajuste_sharpe_tasa_0="-0.71",
                            trades="1", pnl="-99.95", sharpe_tasa_0="-1.0")
-    with (snapshot_walkforward / "intentos.csv").open() as f:
-        intentos = list(csv.DictReader(f))
+    from quantagent.fabrica.registro_db import intentos as leer_intentos
+    intentos = leer_intentos()
     assert [json.loads(r["params"]) for r in intentos] == [
         {"rsi_period": p, "llenado": "cierre"} for p in [7, 14]]
     assert all(r["hasta"] == "2014-12-31" and r["activo"] == "SPY" for r in intentos)
@@ -52,7 +52,7 @@ def test_seleccion_motor_real_y_registro_solo_ajustes(snapshot_walkforward, monk
 
     from quantagent.backtesting.fixtures import snapshot_metadata
     from quantagent.cli import backtest
-    from quantagent.cli.sweep import registrar_intento
+    from quantagent.fabrica.registro_db import intentos as leer_intentos, registrar_intento
     from quantagent.data.snapshot import write_snapshot
 
     fechas = pd.date_range("2007-01-05", "2010-12-31", freq="W-FRI")
@@ -90,18 +90,16 @@ def test_seleccion_motor_real_y_registro_solo_ajustes(snapshot_walkforward, monk
         return motor(*args, **kwargs)
 
     monkeypatch.setattr(backtest, "correr_par", observar)
-    registro = snapshot_walkforward / "intentos.csv"
     previo = esperados[0][1][0]
     registrar_intento("rsi", "SPY", "real", "etf", 1.0, combos[0],
                       {**previo, "desde": "2007-01-05", "hasta": "2008-12-26"})
-    prefijo = registro.read_bytes()
+    prefijo = leer_intentos()
     result = CliRunner().invoke(backtest.backtest_group, args)
     assert result.exit_code == 0, result.output
-    assert registro.read_bytes().startswith(prefijo)
+    assert leer_intentos()[:1] == prefijo
     with out.open() as f:
         filas = list(csv.DictReader(f))
-    with registro.open() as f:
-        intentos = list(csv.DictReader(f))[1:]
+    intentos = leer_intentos()[1:]
     assert len(filas) == len(ventanas) == 2 and len(intentos) == 6
     assert all(a < b < c <= d for a, b, c, d in ventanas) and ventanas[0][3] < ventanas[1][2]
     assert any(r["trades"] > 0 for _, _, r in esperados)
@@ -146,7 +144,8 @@ def test_preparacion_default_y_recorte(snapshot_walkforward, capsys):
         "rsi", "SPY", "wf", {"rsi_period": [14]}, to_date=datetime(2016, 12, 30))
     assert len(ventanas) == 3
     assert meta.end_date == ventanas[-1][3] == datetime(2016, 12, 30)
-    assert not (snapshot_walkforward / "intentos.csv").exists()
+    from quantagent.fabrica.registro_db import intentos
+    assert intentos() == []
 
 
 @pytest.mark.parametrize("fecha,mensaje", [("2012-12-23", "ventana completa"),

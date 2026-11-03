@@ -1,7 +1,5 @@
 import csv
-import hashlib
 import json
-import os
 from pathlib import Path
 
 import numpy as np
@@ -16,6 +14,7 @@ from quantagent.cli.backtest import backtest_group
 from quantagent.data.macro import crear_snapshot_macro
 from quantagent.data.snapshot import write_snapshot
 from quantagent.fabrica.cartera import combinar, pesos
+from quantagent.fabrica.registro_db import intentos as leer_intentos
 from quantagent.fabrica.hipotesis import Hipotesis, Pierna
 from quantagent.strategy.rebalanceo_fin_de_mes_strategy import RebalanceoFinDeMesStrategy
 from tests.test_filtrar_pierna import resultado_ganadores_distintos as resultado_ganadores_distintos
@@ -141,8 +140,7 @@ def test_reserva_abierta_imprime_c0_m1_y_registra_intento(tmp_path, monkeypatch)
                                 ["reserva", str(archivo), "--snapshot", "reserva-sintetica", "--abrir"])
     assert result.exit_code == 0, result.output
     assert "C0: CORTA" in result.output and "Sharpe en exceso de DGS3MO" in result.output
-    with (tmp_path / "intentos.csv").open() as f:
-        intentos = list(csv.DictReader(f))
+    intentos = leer_intentos()
     intento = next(f for f in intentos if f["sharpe_base"] == "DGS3MO")
     assert intento["activo"] == "cartera" and intento["etapa"] == "3"
     assert intento["desde"] == "2023-01-01" and intento["hasta"] == "2024-01-02"
@@ -191,7 +189,7 @@ def test_reserva_veredicto_recupera_m1_una_vez_desde_curvas(tmp_path, monkeypatc
     pasa, _ = evaluar_etapa3_cartera(eq_cartera, sharpe_benchmark(cierres), None,
                                      sharpe_benchmark(cierres_etapa2) if not cierres_etapa2.empty else None,
                                      trades=2)
-    intentos = list(csv.DictReader((tmp_path / "intentos.csv").open()))
+    intentos = leer_intentos()
     assert len(intentos) == 1 and float(intentos[0]["sharpe"]) == pytest.approx(esperado, abs=0.01)
     assert len([r for r in csv.DictReader((tmp_path / "hipotesis.csv").open()) if r["etapa"] == "3"]) == 1
     assert "M1 cartera" in primera.output
@@ -341,8 +339,7 @@ def test_correr_corte_real_y_estado(tmp_path, monkeypatch, rechazo):
         f"Llegó a la etapa {filas[-1]['etapa']}: CORTA ({filas[-1]['motivo']})",
     ]
     assert ("justificación" if rechazo else "menos de 30 trades") in filas[-1]["motivo"]
-    with (tmp_path / "intentos.csv").open() as f:
-        intentos = list(csv.DictReader(f))
+    intentos = leer_intentos(valida_solo=False)
     assert [r["etapa"] for r in intentos] == ["0" if rechazo else "1"]
     assert not (tmp_path / "hipotesis-candado.csv").exists()
 
@@ -401,8 +398,7 @@ def test_correr_control_real(tmp_path, monkeypatch, cortar):
     params, (veredicto, resultados) = controles[0]
     assert params == elegidos[0] and set(params) == {"SPY", "TLT"}
     assert veredicto == ("CORTA" if cortar else "PASA")
-    with (tmp_path / "intentos.csv").open() as f:
-        intentos = list(csv.DictReader(f))
+    intentos = leer_intentos(valida_solo=False)
     assert [r["etapa"] for r in intentos] == ["1", "2", "2"]
     assert {r["activo"]: json.loads(r["params"]) for r in intentos[1:]} == params
     assert all((tmp_path / "motor" / f"{a}.csv").exists() for a in params)
@@ -478,14 +474,14 @@ def test_correr_prueba_real_y_reapertura(tmp_path, monkeypatch, rechazo):
     assert "V30" in primera.output and "DSR" in primera.output
     candado = (tmp_path / "hipotesis-candado.csv").read_text()
     assert [r[:2] for r in csv.reader(candado.splitlines())] == [[data["id"], "prueba"]]
-    with (tmp_path / "intentos.csv").open() as f:
-        intentos = list(csv.DictReader(f))
+    intentos = leer_intentos(valida_solo=False)
     assert [r["etapa"] for r in intentos] == ["1", "2", "3"]
     for carpeta, desde, hasta in [("motor", "2007-01-01", "2018-12-31"),
                                  ("motor/etapa3", "2019-01-01", "2022-12-31")]:
         curva = pd.read_csv(tmp_path / carpeta / "equity/rsi-SPY.csv")
         assert list(pd.to_datetime(curva["date"])) == list(velas.loc[desde:hasta].index)
-    antes = {p: (tmp_path / p).read_bytes() for p in ("intentos.csv", "hipotesis.csv")}
+    intentos_antes = leer_intentos(valida_solo=False)
+    estado_antes = (tmp_path / "hipotesis.csv").read_bytes()
 
     def filtro_prohibido(*args):
         pytest.fail("La reapertura no debe ejecutar el filtro")
@@ -500,7 +496,8 @@ def test_correr_prueba_real_y_reapertura(tmp_path, monkeypatch, rechazo):
     assert segunda.output == f"prueba de {data['id']} ya abierta el {fecha}; no se vuelve a correr\n"
     assert comandos == [("2007-01-01", "2018-12-31"), ("2019-01-01", "2022-12-31")]
     assert (tmp_path / "hipotesis-candado.csv").read_text() == candado
-    assert {p: (tmp_path / p).read_bytes() for p in antes} == antes
+    assert leer_intentos(valida_solo=False) == intentos_antes
+    assert (tmp_path / "hipotesis.csv").read_bytes() == estado_antes
 
 
 @pytest.mark.parametrize("final", ["PASA", "CORTA"])
@@ -579,8 +576,7 @@ def test_admision_rango_y_registro(tmp_path, monkeypatch):
     assert motivos and all(motivo in result.output for motivo in motivos)
     if rechazo:
         assert "justificación" in result.output and "AAPL" in result.output
-        with (tmp_path / "intentos.csv").open() as f:
-            filas = list(csv.DictReader(f))
+        filas = leer_intentos(valida_solo=False)
         assert len(filas) == 1 and filas[0]["hipotesis"] == data["id"] and filas[0]["etapa"] == "0"
     ayuda = runner.invoke(backtest_group, ["hipotesis", "filtrar", "--help"])
     assert ayuda.exit_code == 0 and "--snapshot" in ayuda.output and "ARCHIVO" in ayuda.output
@@ -626,8 +622,7 @@ def test_filtro_real_dos_activos(tmp_path, monkeypatch, exportar):
     result = CliRunner().invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico", *args])
     assert result.exit_code == 0, result.output
     assert "CORTA" in result.output
-    with (tmp_path / "intentos.csv").open() as f:
-        filas = list(csv.DictReader(f))
+    filas = leer_intentos(valida_solo=False)
     assert len(filas) == 1 and filas[0]["activo"] == "cartera"
     for activo, r in zip(data["activos"], resultados):
         celdas = next(line for line in result.output.splitlines() if f" {activo} " in line).split("|")
@@ -666,8 +661,7 @@ def test_etapa1_cartera_12_activos_5_trades_pasa(tmp_path, monkeypatch):
     })
     res = CliRunner().invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico"])
     assert res.exit_code == 0 and "PASA" in res.output
-    with (tmp_path / "intentos.csv").open() as f:
-        filas = list(csv.DictReader(f))
+    filas = leer_intentos(valida_solo=False)
     assert len(filas) == 1 and filas[0]["activo"] == "cartera" and int(filas[0]["trades"]) == 60
 
 
@@ -715,8 +709,7 @@ def test_etapa1_cartera_dos_piernas_tres_activos_un_intento(tmp_path, monkeypatc
     })
     res = CliRunner().invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico"])
     assert res.exit_code == 0
-    with (tmp_path / "intentos.csv").open() as f:
-        filas = list(csv.DictReader(f))
+    filas = leer_intentos(valida_solo=False)
     assert len(filas) == 1 and filas[0]["activo"] == "cartera" and filas[0]["etapa"] == "1" and int(filas[0]["trades"]) == 60
 
 
@@ -869,46 +862,25 @@ def test_filtrar_hipotesis_cartera_dos_piernas_mismo_activo_parametros_por_clase
     }
 
 
-def test_hipotesis_correr_sintetico_no_escribe_en_local_data():
-    local_data = Path(__file__).resolve().parents[1] / "local-data"
-    for cand in (Path("/home/azureuser/repos/projects/QuantAgent/local-data"), local_data):
-        if (cand / "intentos.csv").exists():
-            local_data = cand
-            break
+def test_hipotesis_correr_sintetico_registra_intento_en_base_aislada(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    fechas = pd.date_range("2007-01-01", "2018-12-31", freq="7D")
+    velas = pd.DataFrame(
+        {c: 100.0 for c in ("open", "high", "low", "close", "adj_close", "volume")}, index=fechas,
+    )
+    write_snapshot("sintetico", {"SPY": velas}, base_dir=tmp_path)
+    data = yaml.safe_load((Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml").read_text())
+    data["parametros"] = {"rsi_period": [7], "oversold_threshold": [30.0]}
+    archivo = tmp_path / "h.yaml"
+    archivo.write_text(yaml.safe_dump(data))
 
-    intentos_real = local_data / "intentos.csv"
-    creado = False
-    if not intentos_real.exists():
-        intentos_real.write_text("fecha_utc,estrategia,activo,snapshot,desde,hasta,costos,tamano,params,trades,pnl,sharpe,hipotesis,etapa,sharpe_base\n")
-        creado = True
-    try:
-        h_antes = hashlib.sha256(intentos_real.read_bytes()).hexdigest()
+    CliRunner().invoke(backtest_group, [
+        "hipotesis", "correr", str(archivo), "--snapshot", "sintetico", "--carpeta", str(tmp_path / "salida"),
+    ])
 
-        snapshot_dir = Path(os.environ["QUANTAGENT_SNAPSHOT_DIR"])
-        intentos_aislado = snapshot_dir / "intentos.csv"
-        if not intentos_aislado.exists():
-            intentos_aislado.write_text("fecha_utc,estrategia,activo,snapshot,desde,hasta,costos,tamano,params,trades,pnl,sharpe,hipotesis,etapa,sharpe_base\n")
-
-        fechas = pd.date_range("2007-01-01", "2018-12-31", freq="7D")
-        velas = pd.DataFrame(
-            {c: 100.0 for c in ("open", "high", "low", "close", "adj_close", "volume")}, index=fechas,
-        )
-        write_snapshot("sintetico", {"SPY": velas}, base_dir=snapshot_dir)
-        data = yaml.safe_load((Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml").read_text())
-        data["parametros"] = {"rsi_period": [7], "oversold_threshold": [30.0]}
-        archivo = snapshot_dir / "h.yaml"
-        archivo.write_text(yaml.safe_dump(data))
-
-        CliRunner().invoke(backtest_group, [
-            "hipotesis", "correr", str(archivo), "--snapshot", "sintetico", "--carpeta", str(snapshot_dir / "salida"),
-        ])
-
-        assert (snapshot_dir / "intentos.csv").exists()
-        h_despues = hashlib.sha256(intentos_real.read_bytes()).hexdigest()
-        assert h_despues == h_antes
-    finally:
-        if creado and intentos_real.exists():
-            intentos_real.unlink()
+    intentos_sinteticos = leer_intentos(valida_solo=False)
+    assert len(intentos_sinteticos) == 1 and intentos_sinteticos[0]["snapshot"] == "sintetico"
+    assert leer_intentos() == []
 
 
 @pytest.mark.parametrize("hasta_etapa", [0, 1, 2, 3, None])

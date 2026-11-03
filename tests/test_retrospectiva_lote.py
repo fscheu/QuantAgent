@@ -4,17 +4,20 @@ import yaml
 from scripts.retrospectiva_lote import armar_retrospectiva, main
 
 
-def test_retrospectiva_cuenta_causas_con_fichas_sinteticas(tmp_path):
+def test_retrospectiva_cuenta_causas_con_fichas_sinteticas(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     p_dir = tmp_path / "postmortem"
     p_dir.mkdir()
     for f in ({"id": "c1", "causas": ["pocos_trades", "rotacion_alta"]},
               {"id": "c2", "causas": ["pocos_trades"]},
               {"id": "c3", "causas": ["costos_comen_ganancia"]}):
         (p_dir / f"{f['id']}.yaml").write_text(yaml.safe_dump(f), encoding="utf-8")
-    int_csv = tmp_path / "intentos.csv"
-    int_csv.write_text("hipotesis,activo,sharpe,dsr\nc1,S,0.5,0.9\nc2,T,0.2,0.4\nsin_ficha,S,0.8,0.99\n", encoding="utf-8")
+    from quantagent.fabrica.registro_db import registrar_intento
+    for hipotesis in ("c1", "c2", "sin_ficha"):
+        registrar_intento("rsi", "SPY", "snap", "", 1.0, {}, {"desde": "2007-01-01", "hasta": "2018-12-31", "sharpe": 0.5,
+                                                        "trades": 10, "pnl": 100.0}, hipotesis=hipotesis)
     out_file = tmp_path / "retro.md"
-    texto, dest = armar_retrospectiva("L16", postmortem_dir=p_dir, intentos_path=int_csv, out=out_file)
+    texto, dest = armar_retrospectiva("L16", postmortem_dir=p_dir, out=out_file)
     assert dest == out_file
     assert "| pocos_trades | 2 | c1, c2 |" in texto and "| rotacion_alta | 1 | c1 |" in texto
     assert "| costos_comen_ganancia | 1 | c3 |" in texto and "- Intentos registrados de las carteras con ficha: 2" in texto
