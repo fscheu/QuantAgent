@@ -4,13 +4,13 @@ import click
 from datetime import date
 
 from quantagent.default_config import CICLOS_PARA_REVISAR
-from quantagent.fabrica.registro import (
+from quantagent.fabrica.registro_db import (
     abrir_ciclo,
     calendario_ciclos,
     cerrar_ciclo,
     ciclos_sin_etapa3,
-    importar_csv,
 )
+from quantagent.fabrica.registro import importar_csv
 from quantagent.fabrica.registro_vista import informe_ciclo
 
 
@@ -73,12 +73,12 @@ def calendario_command(desde):
                         epilog="Examples:\n  quantagent registro ver\n  quantagent registro ver --hipotesis H1")
 @click.option("--hipotesis", "hipotesis_id", help="Show events for this hypothesis ID.")
 def ver_command(hipotesis_id):
-    from quantagent.fabrica.registro import _leer_eventos, _fecha
+    from quantagent.fabrica.registro_db import eventos
 
-    eventos, _ = _leer_eventos()
+    eventos = eventos()
     if hipotesis_id is not None:
         eventos = [e for e in eventos if e.get("hipotesis") == hipotesis_id]
-    eventos = sorted(enumerate(eventos), key=lambda item: (_fecha(item[1]), item[0]))
+    eventos = sorted(enumerate(eventos), key=lambda item: (item[1].get("fecha_utc", ""), item[0]))
     if not eventos:
         click.echo("No hay eventos en el registro.")
         return

@@ -136,61 +136,9 @@ def registrar_intento(
 
     Un archivo con encabezado viejo se reescribe con el nuevo (columnas faltantes vacías).
     """
-    from quantagent.data.snapshot import snapshot_root
-
-    intentos_path = snapshot_root() / "intentos.csv"
-    intento = {
-        "fecha_utc": datetime.now(timezone.utc).isoformat(),
-        "estrategia": strategy_name,
-        "activo": symbol,
-        "snapshot": snapshot_name,
-        "desde": row["desde"],
-        "hasta": row["hasta"],
-        "costos": costos or "",
-        "tamano": tamano_posicion,
-        "params": json.dumps(combo, sort_keys=True),
-        "trades": row["trades"],
-        "pnl": row["pnl"],
-        "sharpe": row["sharpe"],
-        "hipotesis": hipotesis or "",
-        "etapa": etapa or "",
-        "sharpe_base": sharpe_base or "",
-        "estado": "",
-    }
-    previas = []
-    if intentos_path.exists():
-        with intentos_path.open(newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            if reader.fieldnames == CAMPOS_INTENTOS:
-                previas = None
-            else:
-                previas = list(reader)
-    nuevo = not intentos_path.exists() or previas is not None
-    with intentos_path.open("w" if nuevo else "a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=CAMPOS_INTENTOS, restval="", extrasaction="ignore")
-        if nuevo:
-            writer.writeheader()
-            writer.writerows(previas or [])
-        writer.writerow(intento)
-    if hipotesis:
-        try:
-            from quantagent.fabrica.estado import ETAPAS
-            from quantagent.fabrica.registro import registrar_evento
-
-            datos = {
-                "snapshot": snapshot_name,
-                "estrategia": strategy_name,
-                "activo": symbol,
-                "params": combo,
-                "sharpe": row["sharpe"],
-                "trades": row["trades"],
-                "pnl": row["pnl"],
-            }
-            registrar_evento(
-                hipotesis, "intento", etapa=etapa if etapa in ETAPAS else None, datos=datos
-            )
-        except Exception:
-            logger.warning("No se pudo registrar el evento de intento para %s", hipotesis, exc_info=True)
+    from quantagent.fabrica.registro_db import registrar_intento as guardar_intento
+    guardar_intento(strategy_name, symbol, snapshot_name, costos, tamano_posicion, combo, row,
+                    hipotesis, etapa, sharpe_base)
 
 
 @click.command("attempts", help="Count runs and parameter combinations recorded by sweep.")

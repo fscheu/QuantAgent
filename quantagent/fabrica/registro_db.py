@@ -77,8 +77,11 @@ def registrar_intento(strategy_name, symbol, snapshot_name, costos, tamano_posic
         if hipotesis is not None and db.get(Hypothesis, hipotesis) is None:
             db.add(Hypothesis(id=hipotesis, created_at=ts))
         db.add(HypothesisAttempt(ts=ts, hypothesis_id=hipotesis, snapshot=snapshot_name,
-            strategy=strategy_name, asset=symbol, params=combo, sharpe=row["sharpe"],
-            trades=row["trades"], pnl=row["pnl"], stage=etapa, status=None, extra=extra))
+            strategy=strategy_name, asset=symbol, params=combo,
+            sharpe=None if row["sharpe"] in (None, "") else float(row["sharpe"]),
+            trades=None if row["trades"] in (None, "") else int(row["trades"]),
+            pnl=None if row["pnl"] in (None, "") else float(row["pnl"]),
+            stage=etapa, status=None, extra=extra))
         db.commit()
 
 
@@ -175,7 +178,10 @@ def cerrar_ciclo(ciclo):
         raise ValueError(f"el ciclo {ciclo} no está abierto")
     if any(e["evento"] == "ciclo" and e["datos"].get("accion") == "cerrar" for e in cycle_events):
         raise ValueError(f"el ciclo {ciclo} ya fue cerrado")
-    ids = apertura["datos"]["hipotesis"]
+    with SessionLocal() as db:
+        cycle_row = db.get(Cycle, ciclo)
+        ids = cycle_row.hypothesis_ids
+        opened_at = _fecha(cycle_row.opened_at)
     own = all_events[all_events.index(apertura)+1:]
     etapas = {str(i): 0 for i in range(4)}
     promoted, caidas, intentos_por_h, snapshots = 0, {}, {}, set()
@@ -188,8 +194,12 @@ def cerrar_ciclo(ciclo):
         for e in stages:
             if e["veredicto"] in ("CORTA", "ERROR", "ALARMA"):
                 caidas[h] = {"etapa": e["etapa"], "veredicto": e["veredicto"], "motivo": e["motivo"]}
-        intentos_por_h[h] = sum(e["evento"] == "intento" for e in records)
-        snapshots.update(e["datos"].get("snapshot") for e in records if e["evento"] == "intento" and e["datos"].get("snapshot"))
+        with SessionLocal() as db:
+            attempts = db.scalars(select(HypothesisAttempt).where(
+                HypothesisAttempt.hypothesis_id == h)).all()
+        attempts = [a for a in attempts if _fecha(a.ts) >= opened_at]
+        intentos_por_h[h] = len(attempts)
+        snapshots.update(a.snapshot for a in attempts if a.snapshot)
     snapshots = sorted(snapshots)
     receipt = {"ciclo": ciclo, "hipotesis": ids, "etapas": etapas, "promovidas": promoted,
                "caidas": caidas, "intentos": intentos_por_h, "snapshots": snapshots,
@@ -205,11 +215,15 @@ def cerrar_ciclo(ciclo):
 
 
 def recibo_ciclo(ciclo):
-    return next((e["datos"].get("recibo") for e in _eventos_ciclo(ciclo) if e["evento"] == "ciclo" and e["datos"].get("accion") == "cerrar"), None)
+    with SessionLocal() as db:
+        row = db.get(Cycle, ciclo)
+        return row.receipt if row else None
 
 
 def ciclos_sin_etapa3():
-    closes = [e["datos"].get("recibo", {}) for e in eventos() if e["evento"] == "ciclo" and e["datos"].get("accion") == "cerrar"]
+    with SessionLocal() as db:
+        closes = [r.receipt or {} for r in db.scalars(select(Cycle).where(
+            Cycle.closed_at.is_not(None)).order_by(Cycle.closed_at)).all()]
     count = 0
     for receipt in reversed(closes):
         if receipt.get("promovidas", 0): break

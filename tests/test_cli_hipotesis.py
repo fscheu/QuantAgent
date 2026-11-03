@@ -21,6 +21,21 @@ from quantagent.strategy.rebalanceo_fin_de_mes_strategy import RebalanceoFinDeMe
 from tests.test_filtrar_pierna import resultado_ganadores_distintos as resultado_ganadores_distintos
 
 
+@pytest.fixture(autouse=True)
+def base_registro_aislada(db_temporal):
+    return db_temporal
+
+
+def _intentos_db():
+    from quantagent.fabrica.registro_db import intentos
+    return intentos(valida_solo=False)
+
+
+def _etapas_db():
+    from quantagent.fabrica.registro_db import eventos_etapa
+    return eventos_etapa()
+
+
 def test_reserva_simulacro_valida_y_no_lee_datos(tmp_path, monkeypatch):
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     archivo = Path(__file__).parents[1] / "hipotesis/rebalanceo-fin-de-mes.yaml"
@@ -141,12 +156,11 @@ def test_reserva_abierta_imprime_c0_m1_y_registra_intento(tmp_path, monkeypatch)
                                 ["reserva", str(archivo), "--snapshot", "reserva-sintetica", "--abrir"])
     assert result.exit_code == 0, result.output
     assert "C0: CORTA" in result.output and "Sharpe en exceso de DGS3MO" in result.output
-    with (tmp_path / "intentos.csv").open() as f:
-        intentos = list(csv.DictReader(f))
+    intentos = _intentos_db()
     intento = next(f for f in intentos if f["sharpe_base"] == "DGS3MO")
     assert intento["activo"] == "cartera" and intento["etapa"] == "3"
     assert intento["desde"] == "2023-01-01" and intento["hasta"] == "2024-01-02"
-    assert "CORTA" in (tmp_path / "hipotesis.csv").read_text()
+    assert any(e["veredicto"] == "CORTA" for e in _etapas_db())
 
 
 def test_reserva_veredicto_recupera_m1_una_vez_desde_curvas(tmp_path, monkeypatch):
@@ -191,9 +205,9 @@ def test_reserva_veredicto_recupera_m1_una_vez_desde_curvas(tmp_path, monkeypatc
     pasa, _ = evaluar_etapa3_cartera(eq_cartera, sharpe_benchmark(cierres), None,
                                      sharpe_benchmark(cierres_etapa2) if not cierres_etapa2.empty else None,
                                      trades=2)
-    intentos = list(csv.DictReader((tmp_path / "intentos.csv").open()))
+    intentos = _intentos_db()
     assert len(intentos) == 1 and float(intentos[0]["sharpe"]) == pytest.approx(esperado, abs=0.01)
-    assert len([r for r in csv.DictReader((tmp_path / "hipotesis.csv").open()) if r["etapa"] == "3"]) == 1
+    assert len([r for r in _etapas_db() if r["etapa"] == "3"]) == 1
     assert "M1 cartera" in primera.output
     assert f"C0: {'PASA' if pasa else 'CORTA'}" in primera.output
     assert f"M1 benchmark {esperado_benchmark:.2f}" in primera.output and "trades 2" in primera.output
@@ -327,8 +341,7 @@ def test_correr_corte_real_y_estado(tmp_path, monkeypatch, rechazo):
         "hipotesis", "correr", str(archivo), "--snapshot", "sintetico", "--carpeta", str(tmp_path / "salida"),
     ])
     assert result.exit_code == 1, result.output
-    with (tmp_path / "hipotesis.csv").open() as f:
-        filas = list(csv.DictReader(f))
+    filas = _etapas_db()
     assert [(r["etapa"], r["veredicto"]) for r in filas] == (
         [("0", "CORTA")] if rechazo else [("0", "PASA"), ("1", "CORTA")]
     )
@@ -341,8 +354,7 @@ def test_correr_corte_real_y_estado(tmp_path, monkeypatch, rechazo):
         f"Llegó a la etapa {filas[-1]['etapa']}: CORTA ({filas[-1]['motivo']})",
     ]
     assert ("justificación" if rechazo else "menos de 30 trades") in filas[-1]["motivo"]
-    with (tmp_path / "intentos.csv").open() as f:
-        intentos = list(csv.DictReader(f))
+    intentos = _intentos_db()
     assert [r["etapa"] for r in intentos] == ["0" if rechazo else "1"]
     assert not (tmp_path / "hipotesis-candado.csv").exists()
 
@@ -401,13 +413,11 @@ def test_correr_control_real(tmp_path, monkeypatch, cortar):
     params, (veredicto, resultados) = controles[0]
     assert params == elegidos[0] and set(params) == {"SPY", "TLT"}
     assert veredicto == ("CORTA" if cortar else "PASA")
-    with (tmp_path / "intentos.csv").open() as f:
-        intentos = list(csv.DictReader(f))
+    intentos = _intentos_db()
     assert [r["etapa"] for r in intentos] == ["1", "2", "2"]
     assert {r["activo"]: json.loads(r["params"]) for r in intentos[1:]} == params
     assert all((tmp_path / "motor" / f"{a}.csv").exists() for a in params)
-    with (tmp_path / "hipotesis.csv").open() as f:
-        filas = list(csv.DictReader(f))
+    filas = _etapas_db()
     assert [(r["etapa"], r["veredicto"]) for r in filas] == [
         ("0", "PASA"), ("1", "PASA"), ("2", veredicto),
     ] + ([] if cortar else [("3", "PASA")])
@@ -468,8 +478,7 @@ def test_correr_prueba_real_y_reapertura(tmp_path, monkeypatch, rechazo):
     runner = CliRunner()
     primera = runner.invoke(backtest_group, args)
     assert primera.exception is None or isinstance(primera.exception, SystemExit), primera.output
-    with (tmp_path / "hipotesis.csv").open() as f:
-        estados = list(csv.DictReader(f))
+    estados = _etapas_db()
     assert [(r["etapa"], r["veredicto"]) for r in estados[:3]] == [
         ("0", "PASA"), ("1", "PASA"), ("2", "PASA"),
     ]
@@ -478,14 +487,14 @@ def test_correr_prueba_real_y_reapertura(tmp_path, monkeypatch, rechazo):
     assert "V30" in primera.output and "DSR" in primera.output
     candado = (tmp_path / "hipotesis-candado.csv").read_text()
     assert [r[:2] for r in csv.reader(candado.splitlines())] == [[data["id"], "prueba"]]
-    with (tmp_path / "intentos.csv").open() as f:
-        intentos = list(csv.DictReader(f))
+    intentos = _intentos_db()
     assert [r["etapa"] for r in intentos] == ["1", "2", "3"]
     for carpeta, desde, hasta in [("motor", "2007-01-01", "2018-12-31"),
                                  ("motor/etapa3", "2019-01-01", "2022-12-31")]:
         curva = pd.read_csv(tmp_path / carpeta / "equity/rsi-SPY.csv")
         assert list(pd.to_datetime(curva["date"])) == list(velas.loc[desde:hasta].index)
-    antes = {p: (tmp_path / p).read_bytes() for p in ("intentos.csv", "hipotesis.csv")}
+    from quantagent.fabrica.registro_db import eventos, intentos as intentos_registrados
+    antes = (eventos(), intentos_registrados(valida_solo=False))
 
     def filtro_prohibido(*args):
         pytest.fail("La reapertura no debe ejecutar el filtro")
@@ -500,7 +509,7 @@ def test_correr_prueba_real_y_reapertura(tmp_path, monkeypatch, rechazo):
     assert segunda.output == f"prueba de {data['id']} ya abierta el {fecha}; no se vuelve a correr\n"
     assert comandos == [("2007-01-01", "2018-12-31"), ("2019-01-01", "2022-12-31")]
     assert (tmp_path / "hipotesis-candado.csv").read_text() == candado
-    assert {p: (tmp_path / p).read_bytes() for p in antes} == antes
+    assert (eventos(), intentos_registrados(valida_solo=False)) == antes
 
 
 @pytest.mark.parametrize("final", ["PASA", "CORTA"])
@@ -530,8 +539,7 @@ def test_correr_etapa3(tmp_path, monkeypatch, final):
     result = CliRunner().invoke(backtest_group, ["hipotesis", "correr", str(archivo),
         "--snapshot", "sintetico", "--carpeta", str(tmp_path / "motor")])
     assert result.exit_code == int(final != "PASA"), result.output
-    with (tmp_path / "hipotesis.csv").open() as f:
-        filas = list(csv.DictReader(f))
+    filas = _etapas_db()
     assert [f["etapa"] for f in filas] == ["0", "1", "2", "3"]
     assert filas[-1]["veredicto"] == ("PASA" if final == "PASA" else "CORTA")
     assert f"Llegó a la etapa 3: {filas[-1]['veredicto']} ({filas[-1]['motivo']})" in result.output
@@ -579,8 +587,7 @@ def test_admision_rango_y_registro(tmp_path, monkeypatch):
     assert motivos and all(motivo in result.output for motivo in motivos)
     if rechazo:
         assert "justificación" in result.output and "AAPL" in result.output
-        with (tmp_path / "intentos.csv").open() as f:
-            filas = list(csv.DictReader(f))
+        filas = _intentos_db()
         assert len(filas) == 1 and filas[0]["hipotesis"] == data["id"] and filas[0]["etapa"] == "0"
     ayuda = runner.invoke(backtest_group, ["hipotesis", "filtrar", "--help"])
     assert ayuda.exit_code == 0 and "--snapshot" in ayuda.output and "ARCHIVO" in ayuda.output
@@ -626,8 +633,7 @@ def test_filtro_real_dos_activos(tmp_path, monkeypatch, exportar):
     result = CliRunner().invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico", *args])
     assert result.exit_code == 0, result.output
     assert "CORTA" in result.output
-    with (tmp_path / "intentos.csv").open() as f:
-        filas = list(csv.DictReader(f))
+    filas = _intentos_db()
     assert len(filas) == 1 and filas[0]["activo"] == "cartera"
     for activo, r in zip(data["activos"], resultados):
         celdas = next(line for line in result.output.splitlines() if f" {activo} " in line).split("|")
@@ -666,8 +672,7 @@ def test_etapa1_cartera_12_activos_5_trades_pasa(tmp_path, monkeypatch):
     })
     res = CliRunner().invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico"])
     assert res.exit_code == 0 and "PASA" in res.output
-    with (tmp_path / "intentos.csv").open() as f:
-        filas = list(csv.DictReader(f))
+    filas = _intentos_db()
     assert len(filas) == 1 and filas[0]["activo"] == "cartera" and int(filas[0]["trades"]) == 60
 
 
@@ -715,8 +720,7 @@ def test_etapa1_cartera_dos_piernas_tres_activos_un_intento(tmp_path, monkeypatc
     })
     res = CliRunner().invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico"])
     assert res.exit_code == 0
-    with (tmp_path / "intentos.csv").open() as f:
-        filas = list(csv.DictReader(f))
+    filas = _intentos_db()
     assert len(filas) == 1 and filas[0]["activo"] == "cartera" and filas[0]["etapa"] == "1" and int(filas[0]["trades"]) == 60
 
 
@@ -837,8 +841,7 @@ def test_correr_cartera_alarma(tmp_path, monkeypatch):
     assert res.exit_code == 1, res.output
     assert "Etapa 2: ALARMA (filtro optimista en la cartera)" in res.output
     assert "Llegó a la etapa 2: ALARMA (filtro optimista en la cartera)" in res.output
-    with (tmp_path / "hipotesis.csv").open() as f:
-        estados = list(csv.DictReader(f))
+    estados = _etapas_db()
     assert estados[-1]["veredicto"] == "ALARMA"
     assert estados[-1]["motivo"] == "filtro optimista en la cartera"
 
@@ -939,8 +942,7 @@ def test_correr_hasta_etapa(tmp_path, monkeypatch, hasta_etapa):
         "hipotesis", "correr", str(archivo), "--snapshot", "sintetico", "--carpeta", str(tmp_path / "motor"), *extra,
     ])
     assert res.exit_code == 0, res.output
-    with (tmp_path / "hipotesis.csv").open() as f:
-        filas = list(csv.DictReader(f))
+    filas = _etapas_db()
     assert [f["etapa"] for f in filas] == [str(i) for i in range(tope + 1)]
     assert res.output.splitlines()[-1] == f"Llegó a la etapa {tope}: PASA ({filas[-1]['motivo']})"
     assert abierto(h.id, "prueba") == (tope == 3)
@@ -959,7 +961,7 @@ def test_correr_hasta_etapa_fuera_de_rango(tmp_path, monkeypatch, valor):
     ])
     assert res.exit_code != 0
     assert "--hasta-etapa" in res.output and "0<=x<=3" in res.output
-    assert not (tmp_path / "hipotesis.csv").exists()
+    assert _etapas_db() == []
     assert not (tmp_path / "hipotesis-candado.csv").exists()
 
 

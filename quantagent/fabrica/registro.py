@@ -81,8 +81,8 @@ def importar_csv(dry_run=False):
                 if tipo == "intento" and not hipotesis:
                     continue
                 try:
-                    fecha = datetime.fromisoformat(row["fecha_utc"].replace("Z", "+00:00"))
-                    fecha_utc = row["fecha_utc"]
+                    fecha_utc = str(row["fecha_utc"])
+                    fecha = datetime.fromisoformat(fecha_utc.replace("Z", "+00:00"))
                     if tipo == "etapa":
                         etapa, veredicto = row["etapa"], row["veredicto"]
                         if etapa not in ETAPAS or veredicto not in VEREDICTOS:
