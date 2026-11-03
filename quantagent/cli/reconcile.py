@@ -2,7 +2,7 @@
 
 import json
 import os
-from datetime import datetime, time, timezone
+from datetime import date, datetime, time, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
@@ -155,6 +155,12 @@ def _crear_db_m5(db_path):
     return engine
 
 
+def _digest_session_day(day: date, now_utc: datetime | None = None):
+    now_utc = now_utc or datetime.now(timezone.utc)
+    as_of = now_utc if day == now_utc.date() else datetime.combine(day, time.max, tzinfo=timezone.utc)
+    return ultima_sesion_cerrada_nyse(as_of).date()
+
+
 @trading_group.command("m5-correr", help="Run one M5 weekly or daily paper trading cycle.",
                        epilog="Example: quantagent trading m5-correr --modo semanal")
 @click.option("--modo", type=click.Choice(["semanal", "diario"]), required=True, help="Cycle mode: semanal or diario.")
@@ -298,28 +304,29 @@ def trading_digest(archivo, digest_date, bucket: str | None, db: str | None, sha
         with utils.session_scope() as session:
             portfolios, trades, heartbeats, cumulative_pnl, orders = consultar_datos_paper(session, day, portfolio)
             if dedicated:
-                portfolios, executions, pending = consultar_datos_cartera(session, day, portfolio)
-                trades, cumulative_pnl = [], None
                 try:
                     broker = crear_broker_alpaca_paper()
+                    portfolios, executions, pending, trades, cumulative_pnl = consultar_datos_cartera(
+                        session, day, portfolio, broker)
                     valuation = consultar_valuacion_actual(broker, portfolios)
                 except (RuntimeError, ValueError) as exc:
                     raise click.ClickException(str(exc)) from exc
                 portfolios = valuation["portfolios"]
             values = {p["symbol"]: float(p["value"]) for p in portfolios[0]["positions"]} if portfolios else {}
             invested = sum(values.values())
-            paper_weights = {symbol: value / invested for symbol, value in values.items()} if invested else {}
-            session_day = ultima_sesion_cerrada_nyse(datetime.combine(day, time.max)).date()
+            equity = valuation["equity"] if dedicated else invested
+            paper_weights = {symbol: value / equity for symbol, value in values.items()} if equity else {}
+            session_day = _digest_session_day(day)
             try:
                 shadow_weights = leer_sombra(shadow_path, portfolio, session_day)["pesos"]
             except (KeyError, FileNotFoundError):
                 warnings.append(f"Sombra sin datos para {portfolio} en {session_day}")
             else:
                 tolerancias = {
-                    symbol: float(price) / invested
+                    symbol: float(price) / equity
                     for symbol, price in session.query(Position.symbol, Position.current_price)
                     .filter(Position.symbol.in_(set(paper_weights) | set(shadow_weights))).all()
-                } if invested else {}
+                } if equity else {}
                 differences = comparar_pesos(paper_weights, shadow_weights, tolerancias=tolerancias)
     except (SQLAlchemyError, ValueError) as exc:
         if dedicated:

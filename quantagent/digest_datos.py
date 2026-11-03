@@ -46,14 +46,14 @@ def consultar_valuacion_actual(broker, portfolios: list[dict]) -> dict:
             "notice": "Foto actual de Alpaca; no es saldo histórico de --date."}
 
 
-def consultar_datos_cartera(session: Session, day: date, portfolio_name: str) -> tuple[list[dict], list[dict], list[dict]]:
+def consultar_datos_cartera(session: Session, day: date, portfolio_name: str, broker) -> tuple[list[dict], list[dict], list[dict], list[dict], float]:
     """Read a dedicated portfolio DB; fills are executions, not realized P&L.
 
     Positions and pending statuses are the current local snapshot, not historical balances.
     """
     start = datetime.combine(day, time.min)
     end = start + timedelta(days=1)
-    positions = session.query(Position).order_by(Position.symbol).all()
+    positions = broker.get_positions()
     fills = (
         session.query(Fill, Order).join(Order, Fill.order_id == Order.id)
         .filter(Order.environment == Environment.PAPER, Fill.filled_at >= start, Fill.filled_at < end)
@@ -65,17 +65,38 @@ def consultar_datos_cartera(session: Session, day: date, portfolio_name: str) ->
                 Order.status.in_([OrderStatus.PENDING, OrderStatus.PARTIALLY_FILLED]))
         .order_by(Order.created_at, Order.id).all()
     )
+    fills_historicos = (
+        session.query(Fill, Order).join(Order, Fill.order_id == Order.id)
+        .filter(Order.environment == Environment.PAPER, Fill.filled_at < end)
+        .order_by(Fill.filled_at, Fill.id).all()
+    )
+    quantities, costs = {}, {}
+    realized, daily = 0.0, []
+    for fill, order in fills_historicos:
+        quantity, price, commission = float(fill.quantity), float(fill.price), float(fill.commission or 0)
+        symbol = order.symbol
+        if order.side.value == "buy":
+            old_quantity = quantities.get(symbol, 0.0)
+            costs[symbol] = (costs.get(symbol, 0.0) * old_quantity + price * quantity) / (old_quantity + quantity)
+            quantities[symbol] = old_quantity + quantity
+        else:
+            pnl = (price - costs.get(symbol, 0.0)) * quantity - commission
+            realized += pnl
+            quantities[symbol] = quantities.get(symbol, 0.0) - quantity
+            if fill.filled_at >= start:
+                daily.append({"symbol": symbol, "side": "sell", "quantity": quantity, "pnl": pnl})
     return (
         [{"name": portfolio_name, "positions": [
-            {"symbol": p.symbol, "quantity": p.quantity, "price": p.current_price,
-             "value": p.quantity * p.current_price, "unrealized_pnl": p.unrealized_pnl}
-            for p in positions]}],
+            {"symbol": p.symbol, "quantity": float(p.qty), "side": p.side,
+             "price": float(p.current_price), "value": float(p.market_value),
+             "unrealized_pnl": float(p.unrealized_pl)}
+            for p in positions.values()]}],
         [{"symbol": o.symbol, "side": o.side.value, "quantity": f.quantity,
           "price": f.price, "commission": f.commission, "filled_at": f.filled_at}
          for f, o in fills],
         [{"symbol": o.symbol, "side": o.side.value, "status": o.status.value,
           "quantity": o.quantity, "filled_quantity": o.filled_quantity, "comment": o.comment}
-         for o in pending],
+         for o in pending], daily, realized,
     )
 
 

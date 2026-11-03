@@ -61,7 +61,7 @@ def test_valuacion_actual_alpaca_sin_api_real(failure):
         def get_all_positions(self):
             if failure == "positions":
                 raise RuntimeError("unavailable")
-            return [SimpleNamespace(symbol=symbol, current_price="475", market_value="950",
+            return [SimpleNamespace(symbol=symbol, qty="2", side="long", current_price="475", market_value="950",
                                     unrealized_pl="-30") for symbol in ["QQQ", "SPY"]
                     if failure != "missing" or symbol != "SPY"]
 
@@ -114,9 +114,14 @@ def test_consultar_cartera_sin_active_position_ni_trade(tmp_path, monkeypatch, a
                               fills=[Fill(quantity=1, price=500, commission=1,
                                           filled_at=start + timedelta(seconds=offset)) for offset in offsets]))
         session.commit()
-        portfolios, fills, pending = consultar_datos_cartera(session, start.date(), "alpha")
+        broker_positions = {"SPY": SimpleNamespace(symbol="SPY", qty="2", side="long", current_price="500",
+                                                       market_value="1000", unrealized_pl="20")}
+        portfolios, fills, pending, realized, cumulative = consultar_datos_cartera(
+            session, start.date(), "alpha", SimpleNamespace(get_positions=lambda: broker_positions))
+        assert realized == [] and cumulative == 0
         assert portfolios == [{"name": "alpha", "positions": [
-            {"symbol": "SPY", "quantity": 2, "price": 500, "value": 1000, "unrealized_pnl": 20}]}]
+            {"symbol": "SPY", "quantity": 2.0, "side": "long", "price": 500.0,
+             "value": 1000.0, "unrealized_pnl": 20.0}]}]
         assert fills == [
             {"symbol": symbol, "side": "buy", "quantity": 1, "price": 500,
              "commission": 1, "filled_at": start + timedelta(seconds=offset)}
@@ -134,7 +139,8 @@ def test_consultar_cartera_sin_active_position_ni_trade(tmp_path, monkeypatch, a
             return SimpleNamespace(equity="1000", cash="50")
 
         def get_all_positions(self):
-            return [SimpleNamespace(symbol="SPY", current_price="475", market_value="950", unrealized_pl="-30")]
+            return [SimpleNamespace(symbol="SPY", qty="2", side="long", current_price="475",
+                                    market_value="950", unrealized_pl="-30")]
 
     monkeypatch.setitem(StrategyAssembler.BROKER_CONSTRUCTORS, "alpaca_paper", lambda config: AlpacaBroker(Client()))
     result = CliRunner().invoke(cli, ["trading", "digest", "--date", "2026-10-25", "--sin-dividendos",
@@ -144,9 +150,10 @@ def test_consultar_cartera_sin_active_position_ni_trade(tmp_path, monkeypatch, a
         assert "Valuación actual: error al consultar Alpaca (RuntimeError)" in result.output
         assert "@ 500" not in result.output
     else:
-        for text in ("Posiciones de alpha", "SPY: 2.00000000 @ 475.0", "valor de mercado 950.00 USD",
-                     "Equity: 1000.00 USD", "Caja: 50.00 USD (5.00 %)", "Sin datos de P&L realizado",
-                     "Ejecuciones del día (3)", "SPY buy 1.00000000 @ 500.00000000", "Órdenes pendientes (2)",
+        for text in ("Posiciones de alpha", "SPY:", "long", "2.0 @ 475.0", "valor de mercado 950.00 USD",
+                     "Equity: 1000.00 USD", "Caja: 50.00 USD (5.00 %)", "P&L realizado diario: 0.00",
+                     "P&L realizado acumulado: 0.00", "Ejecuciones del día (3)",
+                     "SPY buy 1.00000000 @ 500.00000000", "Órdenes pendientes (2)",
                      "IWM buy: pending", "REJECT: rechazo, motivo"):
             assert text in result.output
         shadow = tmp_path / "shadow.json"
@@ -154,7 +161,78 @@ def test_consultar_cartera_sin_active_position_ni_trade(tmp_path, monkeypatch, a
         result = CliRunner().invoke(cli, ["trading", "digest", "--date", "2026-10-25", "--sin-dividendos",
                                           "--db", str(tmp_path / "cartera.db"), "--portfolio", "alpha",
                                           "--shadow", str(shadow)])
-        assert result.exit_code == 1 and "SPY: peso paper 1.0 difiere" in result.output
+        assert result.exit_code == 1 and "SPY: peso paper 0.95 difiere" in result.output
+
+
+def test_cartera_digest_posiciones_salen_de_alpaca_no_de_position_local(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'positions.db'}")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        session.add(Position(symbol="EEM", quantity=-7, average_entry_price=40, current_price=40,
+                             unrealized_pnl=0, unrealized_pnl_pct=0, side=OrderSide.SELL))
+        session.commit()
+        broker = SimpleNamespace(get_positions=lambda: {"EEM": SimpleNamespace(symbol="EEM",
+            qty="7", side="long", current_price="41", market_value="287", unrealized_pl="7")})
+        portfolios, *_ = consultar_datos_cartera(session, date(2026, 10, 25), "alpha", broker)
+    assert portfolios[0]["positions"] == [{"symbol": "EEM", "quantity": 7.0, "side": "long",
+        "price": 41.0, "value": 287.0, "unrealized_pnl": 7.0}]
+
+
+def test_digest_session_day_uses_live_clock_for_today_and_closed_day_for_past():
+    from quantagent.cli.reconcile import _digest_session_day
+    assert _digest_session_day(date(2026, 11, 3), datetime(2026, 11, 3, 8, 20, tzinfo=timezone.utc)) == date(2026, 11, 2)
+    assert _digest_session_day(date(2026, 11, 1), datetime(2026, 11, 3, 8, 20, tzinfo=timezone.utc)) == date(2026, 10, 30)
+    assert _digest_session_day(date(2026, 11, 26), datetime(2026, 11, 28, 8, 20, tzinfo=timezone.utc)) == date(2026, 11, 25)
+
+
+def test_cartera_pnl_realizado_por_costo_promedio_en_venta_parcial(tmp_path):
+    engine = create_engine(f"sqlite:///{tmp_path / 'pnl.db'}")
+    Base.metadata.create_all(engine)
+    day = date(2026, 10, 25)
+    with Session(engine) as session:
+        buy = Order(symbol="SPY", side=OrderSide.BUY, order_type=OrderType.MARKET, quantity=4,
+                    status=OrderStatus.FILLED, environment=Environment.PAPER)
+        sell = Order(symbol="SPY", side=OrderSide.SELL, order_type=OrderType.MARKET, quantity=1,
+                     status=OrderStatus.FILLED, environment=Environment.PAPER)
+        buy.fills = [Fill(quantity=2, price=100, commission=0, filled_at=datetime(2026, 10, 24, 10)),
+                     Fill(quantity=2, price=120, commission=0, filled_at=datetime(2026, 10, 24, 11))]
+        sell.fills = [Fill(quantity=1, price=130, commission=1, filled_at=datetime(2026, 10, 25, 10))]
+        session.add_all([buy, sell])
+        session.commit()
+        broker = SimpleNamespace(get_positions=lambda: {})
+        _, _, _, daily, cumulative = consultar_datos_cartera(session, day, "alpha", broker)
+    assert daily == [{"symbol": "SPY", "side": "sell", "quantity": 1.0, "pnl": 19.0}]
+    assert cumulative == 19.0
+
+
+def test_pesos_cartera_comparan_valor_con_equity_incluida_caja(tmp_path, monkeypatch):
+    from quantagent.strategy.assembler import StrategyAssembler
+
+    class Client:
+        def get_account(self):
+            return SimpleNamespace(equity="1000", cash="790")
+
+        def get_all_positions(self):
+            return [SimpleNamespace(symbol="SPY", qty="1", side="long", current_price="210",
+                                    market_value="210", unrealized_pl="0")]
+
+    monkeypatch.setitem(StrategyAssembler.BROKER_CONSTRUCTORS, "alpaca_paper",
+                       lambda config: AlpacaBroker(Client()))
+    db_path, shadow_path = tmp_path / "cartera.db", tmp_path / "shadow.json"
+    engine = create_engine(f"sqlite:///{db_path}")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        session.add(Position(symbol="SPY", quantity=1, average_entry_price=210, current_price=210,
+                             unrealized_pnl=0, unrealized_pnl_pct=0, side=OrderSide.BUY))
+        session.commit()
+    shadow_path.write_text('{"2026-10-23":{"alpha":{"pesos":{"SPY":0.21}}}}')
+    args = ["trading", "digest", "--date", "2026-10-25", "--sin-dividendos", "--db", str(db_path),
+            "--portfolio", "alpha", "--shadow", str(shadow_path)]
+    result = CliRunner().invoke(cli, args)
+    assert result.exit_code == 0 and "difiere" not in result.output
+    shadow_path.write_text('{"2026-10-23":{"alpha":{"pesos":{"SPY":0.50}}}}')
+    result = CliRunner().invoke(cli, args)
+    assert result.exit_code == 1 and "peso paper 0.21 difiere" in result.output
 
 
 def test_digest_renders_seeded_paper_data(tmp_path):
