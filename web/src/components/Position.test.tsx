@@ -41,10 +41,11 @@ describe('StopDistanceBar', () => {
 });
 
 describe('PositionCard', () => {
-  const shortPosition: Position = { symbol: 'XYZ', description: 'Empresa XYZ', side: 'short', qty: 5, status: 'executed', avg_entry_price: 110, current_price: 100, market_value: 500, unrealized_pl: 50, unrealized_pl_pct: 9.09, stop_price: 120, opened_at: '2026-10-20' };
+  const shortPosition: Position = { symbol: 'XYZ', description: 'Empresa XYZ', side: 'short', qty: 5, status: 'executed', avg_entry_price: 110, current_price: 100, market_value: 500, unrealized_pl: 50, unrealized_pl_pct: 0.0909, stop_price: 120, opened_at: '2026-10-20' };
   it('explains a short profit when price falls', () => {
     render(<PositionCard position={shortPosition} />);
     expect(screen.getByText('Gana si el precio baja: bajó de 110,00 a 100,00.')).toBeTruthy();
+    expect(screen.getByText('+9,09 %')).toBeTruthy();
   });
   it('explains a short loss when price rises', () => {
     render(<PositionCard position={{ ...shortPosition, current_price: 120, unrealized_pl: -50 }} />);

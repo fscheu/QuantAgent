@@ -47,8 +47,8 @@ export const equity: EquityPoint[] = [
 ]
 export const dividends = [{ date: '2026-10-15', symbols: ['SPY', 'MSFT'], net: 24.8, withheld: 3.2 }] satisfies Dividend[]
 export const sectorExposure = [
-  { sector: 'Tecnología', long: 42, short: 8, pct: 34 },
-  { sector: 'Consumo', long: 18, short: 0, pct: 18 },
+  { sector: 'Tecnología', long: 4200, short: 800, pct: 0.5 },
+  { sector: 'Consumo', long: 1800, short: 0, pct: 0.18 },
 ] satisfies SectorExposure[]
 
 export const orders = [

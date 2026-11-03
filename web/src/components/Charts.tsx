@@ -14,15 +14,14 @@ const visible = (rows: EquityPoint[], key: 'benchmark' | 'shadow') => rows.some(
 const change = (rows: EquityPoint[], key: 'account' | 'benchmark' | 'shadow') => {
   const first = rows.find(row => row[key] !== null)?.[key]
   const last = [...rows].reverse().find(row => row[key] !== null)?.[key]
-  return first && last !== null && last !== undefined ? (last / first - 1) * 100 : null
+  return first && last !== null && last !== undefined ? (last / first - 1) : null
 }
-const signed = (value: number) => `${value > 0 ? '+' : ''}${pct(value)}`
 
 export function EquityChart({ data, range = '3M', onRangeChange, loading = false }: { data: EquityPoint[]; range?: EquityRange; onRangeChange?: (range: EquityRange) => void; loading?: boolean }) {
   const { theme } = useTheme()
   const colors = chartSeries[theme]
   const summaryValues = { account: change(data, 'account'), benchmark: change(data, 'benchmark'), shadow: change(data, 'shadow') }
-  const summary = data.length ? `En ${data.length} días la cuenta ${summaryValues.account === null ? 'no tiene variación calculable' : `subió ${signed(summaryValues.account)}`}${summaryValues.benchmark === null ? '' : `; SPY, ${signed(summaryValues.benchmark)}`}${summaryValues.shadow === null ? '' : `; sombra, ${signed(summaryValues.shadow)}`}` : 'Curva de valor sin datos'
+  const summary = data.length ? `En ${data.length} días la cuenta ${summaryValues.account === null ? 'no tiene variación calculable' : `subió ${pct(summaryValues.account)}`}${summaryValues.benchmark === null ? '' : `; SPY, ${pct(summaryValues.benchmark)}`}${summaryValues.shadow === null ? '' : `; sombra, ${pct(summaryValues.shadow)}`}` : 'Curva de valor sin datos'
   if (loading) return <div className="qa-chart-loading" aria-label="Cargando curva de valor"><Skeleton label="Curva de valor" /></div>
   if (!data.length) return <EmptyState title="Sin datos de valor" message="No hay puntos de valor para este rango." />
   const series = [{ key: 'account', label: 'Cuenta' }, ...(visible(data, 'benchmark') ? [{ key: 'benchmark', label: 'SPY' }] : []), ...(visible(data, 'shadow') ? [{ key: 'shadow', label: 'Sombra' }] : [])] as const
@@ -49,10 +48,10 @@ export function DivergingBar({ data, loading = false }: { data: SectorExposure[]
   if (loading) return <div className="qa-chart-loading" aria-label="Cargando exposición"><Skeleton label="Exposición por sector" /></div>
   if (!data.length) return <EmptyState title="Sin exposición por sector" message="No hay posiciones para calcular la exposición." />
   const max = Math.max(1, ...data.flatMap(row => [Math.abs(row.short), Math.abs(row.long)]))
-  const summary = `Exposición por sector: ${data.map(row => `${row.sector}, corta ${pct(Math.abs(row.short))}, larga ${pct(row.long)}`).join('; ')}`
+  const summary = `Exposición por sector: ${data.map(row => `${row.sector}, corta ${money(Math.abs(row.short))}, larga ${money(row.long)}`).join('; ')}`
   return <div className="qa-diverging" role="img" aria-label={summary}>
     {data.map(row => <div className="qa-diverging-row" key={row.sector}><span className="qa-diverging-sector">{row.sector}</span><div className="qa-diverging-bars"><span className="qa-diverging-left"><span className="qa-diverging-short" style={{ width: `${Math.abs(row.short) / max * 100}%`, background: colors[1] }} /></span><span className="qa-diverging-axis" /><span className="qa-diverging-right"><span className="qa-diverging-long" style={{ width: `${row.long / max * 100}%`, background: colors[0] }} /></span></div><span className="qa-diverging-value">{pct(row.pct)}</span></div>)}
-    <div className="qa-visually-hidden"><table><caption>{summary}</caption><thead><tr><th>Sector</th><th>Short</th><th>Long</th><th>Exposición</th></tr></thead><tbody>{data.map(row => <tr key={row.sector}><th>{row.sector}</th><td>{pct(row.short)}</td><td>{pct(row.long)}</td><td>{pct(row.pct)}</td></tr>)}</tbody></table></div>
+    <div className="qa-visually-hidden"><table><caption>{summary}</caption><thead><tr><th>Sector</th><th>Short</th><th>Long</th><th>Exposición</th></tr></thead><tbody>{data.map(row => <tr key={row.sector}><th>{row.sector}</th><td>{money(row.short)}</td><td>{money(row.long)}</td><td>{pct(row.pct)}</td></tr>)}</tbody></table></div>
   </div>
 }
 

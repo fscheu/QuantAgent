@@ -50,10 +50,12 @@ export interface AccountSummaryActive extends AccountRef, Freshness {
   /** Valor de mercado de las posiciones cortas, en absoluto (positivo). */
   short_value: number;
   cash: number;
-  day_change: number;
-  day_change_pct: number;
-  week_change: number;
-  week_change_pct: number;
+  day_change: number | null;
+  /** Fracción: 0.01 = 1 %. null si falta la base de comparación. */
+  day_change_pct: number | null;
+  week_change: number | null;
+  /** Fracción: 0.01 = 1 %. null si falta la base de comparación. */
+  week_change_pct: number | null;
   positions_count: number;
   orders_today: number;
   orders_rejected_today: number;
