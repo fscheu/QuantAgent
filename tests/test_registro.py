@@ -113,6 +113,45 @@ def test_recibo_se_reconstruye_solo_desde_jsonl(raiz, tmp_path):
     assert esperado["hashes_manifiesto"] == {"ausente": None}
 
 
+def test_ciclos_sin_etapa3_cuenta_cierres_consecutivos_y_ignora_abiertos(raiz):
+    for mes in range(1, 6):
+        ciclo = f"2026-{mes:02d}"
+        registro.abrir_ciclo(ciclo, [f"H{mes}"])
+        registro.cerrar_ciclo(ciclo)
+    registro.abrir_ciclo("2026-06", ["H6"])
+
+    assert registro.ciclos_sin_etapa3() == 5
+
+    registro.cerrar_ciclo("2026-06")
+    assert registro.ciclos_sin_etapa3() == 6
+
+
+def test_ciclo_con_pase_a_etapa3_reinicia_cuenta(raiz):
+    for mes in range(1, 5):
+        ciclo = f"2026-{mes:02d}"
+        registro.abrir_ciclo(ciclo, [f"H{mes}"])
+        registro.cerrar_ciclo(ciclo)
+    registro.abrir_ciclo("2026-05", ["H5"])
+    registro.registrar_evento("H5", "etapa", "3", "PASA", ciclo="2026-05")
+    registro.cerrar_ciclo("2026-05")
+    registro.abrir_ciclo("2026-06", ["H6"])
+    registro.cerrar_ciclo("2026-06")
+
+    assert registro.ciclos_sin_etapa3() == 1
+
+
+def test_cli_corte_informa_umbral_y_referencia():
+    from click.testing import CliRunner
+    from quantagent.cli.__main__ import cli
+
+    ayuda = CliRunner().invoke(cli, ["registro", "corte", "--help"])
+    assert ayuda.exit_code == 0
+    assert "Show consecutive closed cycles without a stage 3 pass." in ayuda.output
+    assert "Example: quantagent registro corte" in ayuda.output
+    referencia = Path("docs/manual/reference/cli/registro.md").read_text()
+    assert "quantagent registro corte" in referencia
+
+
 def test_cli_ciclo_expone_help_epilog_y_referencia():
     from click.testing import CliRunner
     from quantagent.cli.__main__ import cli
