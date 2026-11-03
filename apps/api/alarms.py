@@ -9,8 +9,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy import inspect, select
 
 from quantagent.models import CalendarEvent, EquitySnapshot, Event, Position
+
 from .accounts import account_session_factory
 from .alarm_config import AlarmConfig
+from .positions import read_positions
 
 NEW_YORK = ZoneInfo("America/New_York")
 UTC = ZoneInfo("UTC")
@@ -63,14 +65,16 @@ def evaluate_account_alarms(account, master_db, now, config=None):
         database = account.database_url
         sqlite_file = database.startswith("sqlite:////") or database.startswith("sqlite:///")
         path = database.removeprefix("sqlite:///") if sqlite_file else None
-        if path and Path(path).is_file() and positions:
+        holdings = read_positions(db, "prod" if account.env == "live" else "paper")
+        valued = [p for p in holdings if p.market_value is not None]
+        if path and Path(path).is_file() and valued and all(p.current_price is not None for p in holdings):
             shadow_path = Path(path).with_suffix(".sombra.json")
             try:
                 raw = json.loads(shadow_path.read_text())
                 shadow_date = max(raw)
                 shadow = raw[shadow_date][Path(path).stem]["pesos"]
-                values = {p.symbol: abs(float(p.quantity) * float(p.current_price)) for p in positions}
-                total = sum(values.values())
+                values = {p.symbol: p.market_value * (1 if p.side == "long" else -1) for p in valued}
+                total = float(snapshots[-1].equity) if snapshots else sum(abs(value) for value in values.values())
                 if total > 0:
                     actual = {symbol: value / total for symbol, value in values.items()}
                     gap = max((abs(actual.get(symbol, 0) - float(shadow.get(symbol, 0))) for symbol in set(actual) | set(shadow)), default=0)
@@ -83,12 +87,21 @@ def evaluate_account_alarms(account, master_db, now, config=None):
         if timestamps:
             last_seen = max(_aware(value) for value in timestamps)
             local = now.astimezone(NEW_YORK)
-            holiday = (master_db.scalar(select(CalendarEvent.id).where(CalendarEvent.kind == "holiday", CalendarEvent.date == local.date()).limit(1))
-                       if inspect(master_db.get_bind()).has_table("calendar_events") else None)
-            market_open = local.weekday() < 5 and time(9, 30) <= local.time().replace(tzinfo=None) < time(16) and not holiday
+            day = last_seen.astimezone(NEW_YORK).date()
+            holidays = (set(master_db.scalars(select(CalendarEvent.date).where(CalendarEvent.kind == "holiday",
+                CalendarEvent.date >= day, CalendarEvent.date <= local.date())).all())
+                if inspect(master_db.get_bind()).has_table("calendar_events") else set())
+            market_open = local.weekday() < 5 and time(9, 30) <= local.time().replace(tzinfo=None) < time(16) and local.date() not in holidays
+            session_since_data = False
+            while day <= local.date():
+                opening = datetime.combine(day, time(9, 30), tzinfo=NEW_YORK)
+                if day.weekday() < 5 and day not in holidays and last_seen < opening <= now:
+                    session_since_data = True
+                    break
+                day += timedelta(days=1)
             threshold = config.stale_minutes_market_open if market_open else config.stale_minutes_market_closed
             age = (now - last_seen.astimezone(UTC)).total_seconds() / 60
-            if age > threshold:
+            if age > threshold and (market_open or session_since_data):
                 duration = f"{age / 60:.1f} horas" if age >= 60 else f"{age:.0f} minutos"
                 alarms.append(("data_stale", "warning", "Sin datos recientes", f"Último dato hace {duration} ({last_seen.isoformat()})", {"duration": duration, "last_seen": last_seen.astimezone(NEW_YORK).strftime("%Y-%m-%d %H:%M")}))
 

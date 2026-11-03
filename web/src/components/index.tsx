@@ -23,13 +23,14 @@ export function Num({ value, size = 'm', className = '', ...props }: { value: nu
   return <span className={`qa-num qa-num-${size} ${className}`} {...props}>{num(value)}</span>;
 }
 
-export function Delta({ value, pct: percentage, layout = 'inline', size = 'm' }: { value: number; pct?: number; layout?: 'inline' | 'stacked'; size?: 'm' | 's' }) {
+export function Delta({ value, pct: percentage, missingLabel = 'Sin historial', layout = 'inline', size = 'm' }: { value: number | null; pct?: number | null; missingLabel?: string; layout?: 'inline' | 'stacked'; size?: 'm' | 's' }) {
+  if (value === null) return <span className={`qa-delta qa-delta-${layout} qa-delta-${size}`}><span>—</span><span>{missingLabel}</span></span>;
   const pos = value > 0, neg = value < 0;
   const arrow = pos ? '▲' : neg ? '▼' : '—';
   const tone = pos ? 'pos' : neg ? 'neg' : 'neutral';
   const amount = `${value > 0 ? '+' : value < 0 ? '−' : ''}${money(Math.abs(value))}`;
-  const label = `${pos ? 'subió' : neg ? 'bajó' : 'sin cambio'} ${num(Math.abs(value))} dólares${percentage === undefined ? '' : `, ${num(Math.abs(percentage))} por ciento`}`;
-  return <span className={`qa-delta qa-${tone} qa-delta-${layout} qa-delta-${size}`} aria-label={label}><span aria-hidden="true">{arrow}</span> {amount}{percentage !== undefined && <span>{pct(percentage)}</span>}</span>;
+  const label = `${pos ? 'subió' : neg ? 'bajó' : 'sin cambio'} ${num(Math.abs(value))} dólares${percentage == null ? '' : `, ${num(Math.abs(percentage) * 100)} por ciento`}`;
+  return <span className={`qa-delta qa-${tone} qa-delta-${layout} qa-delta-${size}`} aria-label={label}><span aria-hidden="true">{arrow}</span> {amount}{percentage != null && <span>{pct(percentage)}</span>}</span>;
 }
 
 export type BadgeStatus = 'filled' | 'pending' | 'partial' | 'rejected' | 'cancelled' | 'expired' | 'paper' | 'live' | 'no-data' | 'long' | 'short' | 'stage' | 'candidate' | 'production' | 'discarded' | 'soon';

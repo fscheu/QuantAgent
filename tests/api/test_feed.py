@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -97,6 +98,23 @@ def test_feed_deduplicates_active_alarm_but_shows_resolved_pair(tmp_path):
     assert len(rows) == 3
     assert sorted(r.type for r in rows) == ["alarm_resolved", "stop_near", "stop_near"]
     assert next(r for r in rows if r.type == "stop_near" and r.id == "1").group_count == 1
+
+
+@pytest.mark.parametrize("seconds, subtitle", [
+    (None, None), (90, "Duró 1,5 min"), (3599, "Duró 59,98 min"),
+    (3600, "Duró 1 h"), (79027.2, "Duró 22 h"),
+    (86400, "Duró 1 día"), (172800, "Duró 2 días"),
+])
+def test_resolved_alarm_duration(tmp_path, seconds, subtitle):
+    engine = _db(tmp_path)
+    now = datetime(2026, 11, 3, 15, tzinfo=timezone.utc)
+    with Session(engine) as db:
+        db.add(_event("alarm_resolved", now, severity="neutral", payload={"duration_seconds": seconds}))
+        db.commit()
+        rows = feed_route(since=now - timedelta(hours=1), limit=50, db=db)
+        assert len(rows) == 1
+        assert rows[0].subtitle == subtitle
+    engine.dispose()
 
 
 def test_feed_endpoint_session_is_read_only(tmp_path, monkeypatch):

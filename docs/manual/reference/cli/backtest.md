@@ -14,6 +14,7 @@ Commands:
   cuenta-chica  Compare small-account backtests with a cost-matched SPY...
   data          Manage frozen market data.
   hipotesis     Evaluate strategy factory hypotheses.
+  import        Import every equity/*.csv below ROOT (default:...
   run           Run a backtest against a versioned fixture.
   sweep         Run a strategy parameter grid against an asset.
   verdict       Evaluate strategies against a comparison table.
@@ -230,6 +231,34 @@ Commands:
   resumen            Summarize recent statuses and batch attempts.
   tanda              Process YAML files in order and save reports, logs,...
 ```
+
+## `quantagent backtest import`
+
+```text
+Usage: quantagent backtest import [OPTIONS] [ROOT]
+
+  Import every equity/*.csv below ROOT (default: local-data) into the database
+  and API curve directory.
+
+Options:
+  --database-url TEXT     Destination SQLAlchemy database URL (with the
+                          existing schema).  [required]
+  --equity-dir DIRECTORY  Output directory for API curves; default:
+                          QUANTAGENT_BACKTEST_EQUITY_DIR or local-
+                          data/backtest-equity.
+  --dry-run               Count new runs without writing database rows or
+                          curves (default: disabled).
+  --help                  Show this message and exit.
+
+  Example: quantagent backtest import local-data --database-url
+  sqlite:////tmp/backtests.db --equity-dir /tmp/backtest-equity
+```
+
+Options and defaults:
+
+- `--database-url` — default: `None`
+- `--equity-dir` — default: `'local-data/backtest-equity'`
+- `--dry-run` — default: `False`
 
 ## `quantagent backtest run`
 

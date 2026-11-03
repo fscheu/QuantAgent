@@ -23,13 +23,15 @@ describe('charts', () => {
     expect(screen.getByRole('table', { name: 'Valores de la curva de valor' })).toBeTruthy()
     expect(screen.getByText('USD 13.000,00')).toBeTruthy()
     expect(screen.getByText('USD 693,00')).toBeTruthy()
+    expect(screen.getByRole('img', { name: /cuenta subió \+2,77 %; SPY, \+1,76 %; sombra, \+2,22 %/ })).toBeTruthy()
   })
 
   it('renders sector values in the accessible text table', () => {
     themed(<DivergingBar data={sectorExposure} />)
     expect(screen.getAllByRole('img').some(image => /Tecnología/.test(image.getAttribute('aria-label') ?? ''))).toBe(true)
     expect(screen.getByRole('table', { name: /Exposición por sector/ })).toBeTruthy()
-    expect(screen.getByText('+42,00 %')).toBeTruthy()
+    expect(screen.getByText('USD 4.200,00')).toBeTruthy()
+    expect(screen.getAllByText('+50,00 %')).toHaveLength(2)
   })
 
   it('describes sparkline mock values accessibly', () => {
