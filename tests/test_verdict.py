@@ -289,9 +289,12 @@ def test_dsr_contra_intentos_ignora_sharpe_absurdo_inf_y_sintetico(tmp_path):
     limpio.write_text(cab + base)
     contaminado = tmp_path / "contaminado.csv"
     contaminado.write_text(cab + base + "s,real,1e13,tasa_0\ns,real,inf,tasa_0\ns,sintetico,0.8,tasa_0\n")
-    dsr = dsr_contra_intentos(EQUITY_DSR, limpio)
+    def leer(path):
+        with path.open(newline="") as f:
+            return list(csv.DictReader(f))
+    dsr = dsr_contra_intentos(EQUITY_DSR, leer(limpio))
     assert dsr is not None
-    assert dsr_contra_intentos(EQUITY_DSR, contaminado) == pytest.approx(dsr, abs=1e-12)
+    assert dsr_contra_intentos(EQUITY_DSR, leer(contaminado)) == pytest.approx(dsr, abs=1e-12)
 
 
 def test_n_efectivo_cuenta_intentos_distintos():
@@ -360,7 +363,9 @@ def test_filtro_valido_compartido_por_dsr_y_conteos(tmp_path, monkeypatch, exclu
         w = csv.DictWriter(f, campos)
         w.writeheader()
         w.writerows(filas)
-    esperado = dsr_contra_intentos(EQUITY_DSR, path)
+    with path.open(newline="") as f:
+        intentos = list(csv.DictReader(f))
+    esperado = dsr_contra_intentos(EQUITY_DSR, intentos)
     assert esperado is not None
     # Encabezado viejo sin estado también acepta el filtro por snapshot.
     campos = list(dict.fromkeys([*campos, *excluida]))
@@ -369,7 +374,8 @@ def test_filtro_valido_compartido_por_dsr_y_conteos(tmp_path, monkeypatch, exclu
         w = csv.DictWriter(f, campos)
         w.writeheader()
         w.writerows(filas)
-    assert dsr_contra_intentos(EQUITY_DSR, path) == pytest.approx(esperado, abs=1e-12)
+    with path.open(newline="") as f:
+        assert dsr_contra_intentos(EQUITY_DSR, list(csv.DictReader(f))) == pytest.approx(esperado, abs=1e-12)
     assert n_efectivo(filas) == 2
     assert _n_intentos(path) == contar_intentos() == 2
     assert contar_intentos("h1") == contar_intentos("h2") == 1

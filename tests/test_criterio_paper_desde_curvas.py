@@ -62,7 +62,7 @@ def test_criterio_paper_cli(tmp_path, monkeypatch, capsys):
     filas_antes = intentos()
     assert main([str(yaml_path), str(tmp_path / "etapa2"), str(tmp_path / "etapa3"), "snap_bajo"]) == 0
     out, _ = capsys.readouterr()
-    for esperada in ("cartera-sint", "Sharpe etapa 3", "Benchmark etapa 3", "3 de 4", "DSR con N efectivo (2)", "DSR con N crudo (2)", "Recargo de paper", "Veredicto: PASA"):
+    for esperada in ("cartera-sint", "Sharpe etapa 3", "Benchmark etapa 3", "3 de 4", "n_efectivo=2", "DSR con N crudo (2)", "Recargo de paper", "Veredicto: PASA"):
         assert esperada in out
     assert intentos() == filas_antes and not (tmp_path / "hipotesis.csv").exists() and not abierto("cartera-sint", "prueba")
     assert main([str(yaml_path), str(tmp_path / "etapa2"), str(tmp_path / "etapa3"), "snap_alto"]) == 0

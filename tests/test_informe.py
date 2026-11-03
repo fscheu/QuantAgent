@@ -77,14 +77,14 @@ def test_informe_epoca_y_conteos_globales_sin_modificar_registros(raiz, con_esta
         marca.write_text(json.dumps(epoca), encoding="utf-8")
     antes = {p: p.read_bytes() for p in (marca,) if p.exists()}
     datos = datos_informe("h-corta1")
-    assert datos["intentos_validos"] == (2 if con_estado else 3)
-    assert datos["intentos_invalidados"] == (1 if con_estado else 0)
+    assert datos["intentos_validos"] == (6 if con_estado else 8)
+    assert datos["intentos_invalidados"] == (3 if con_estado else 0)
     assert datos["epoca_limpia"] == (epoca if con_epoca else None)
-    assert datos["n_total"] == 4 and datos["dsr"] == "no evaluado"
+    assert datos["n_total"] == 9 and datos["dsr"] == "no evaluado"
     resultado, out = informe(raiz, "h-corta1")
     assert resultado.exit_code == 0, resultado.output
     html = out.read_text()
-    assert f"Registro global de intentos: {2 if con_estado else 3} válidos; {1 if con_estado else 0} invalidados por bug" in html
+    assert f"Registro global de intentos: {6 if con_estado else 8} válidos; {3 if con_estado else 0} invalidados por bug" in html
     if con_epoca:
         assert epoca["desde_utc"] in html
         assert "&lt;script&gt;bug &amp; &quot;arreglo&quot;&lt;/script&gt;" in html

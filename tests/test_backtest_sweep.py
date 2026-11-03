@@ -297,7 +297,7 @@ def test_sweep_integracion_snapshot_sintetico_rsi_2x2(monkeypatch, tmp_path: Pat
     for intento, salida in zip(intentos_rows, out_rows * 2):
         assert datetime.fromisoformat(intento["fecha_utc"]).utcoffset() == timezone.utc.utcoffset(None)
         assert (intento["estrategia"], intento["activo"], intento["snapshot"]) == ("rsi", "SPY", "snap_rsi")
-        assert (intento["costos"], intento["tamano"]) == ("", "1.0")
+        assert (intento["costos"], intento["tamano"]) == ("", 1.0)
         assert intento["params"] == json.dumps({
             "llenado": "apertura",
             "oversold_threshold": float(salida["oversold_threshold"]),

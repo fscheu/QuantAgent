@@ -339,7 +339,7 @@ def test_correr_corte_real_y_estado(tmp_path, monkeypatch, rechazo):
         f"Llegó a la etapa {filas[-1]['etapa']}: CORTA ({filas[-1]['motivo']})",
     ]
     assert ("justificación" if rechazo else "menos de 30 trades") in filas[-1]["motivo"]
-    intentos = leer_intentos()
+    intentos = leer_intentos(valida_solo=False)
     assert [r["etapa"] for r in intentos] == ["0" if rechazo else "1"]
     assert not (tmp_path / "hipotesis-candado.csv").exists()
 
@@ -398,7 +398,7 @@ def test_correr_control_real(tmp_path, monkeypatch, cortar):
     params, (veredicto, resultados) = controles[0]
     assert params == elegidos[0] and set(params) == {"SPY", "TLT"}
     assert veredicto == ("CORTA" if cortar else "PASA")
-    intentos = leer_intentos()
+    intentos = leer_intentos(valida_solo=False)
     assert [r["etapa"] for r in intentos] == ["1", "2", "2"]
     assert {r["activo"]: json.loads(r["params"]) for r in intentos[1:]} == params
     assert all((tmp_path / "motor" / f"{a}.csv").exists() for a in params)
@@ -474,13 +474,13 @@ def test_correr_prueba_real_y_reapertura(tmp_path, monkeypatch, rechazo):
     assert "V30" in primera.output and "DSR" in primera.output
     candado = (tmp_path / "hipotesis-candado.csv").read_text()
     assert [r[:2] for r in csv.reader(candado.splitlines())] == [[data["id"], "prueba"]]
-    intentos = leer_intentos()
+    intentos = leer_intentos(valida_solo=False)
     assert [r["etapa"] for r in intentos] == ["1", "2", "3"]
     for carpeta, desde, hasta in [("motor", "2007-01-01", "2018-12-31"),
                                  ("motor/etapa3", "2019-01-01", "2022-12-31")]:
         curva = pd.read_csv(tmp_path / carpeta / "equity/rsi-SPY.csv")
         assert list(pd.to_datetime(curva["date"])) == list(velas.loc[desde:hasta].index)
-    intentos_antes = leer_intentos()
+    intentos_antes = leer_intentos(valida_solo=False)
     estado_antes = (tmp_path / "hipotesis.csv").read_bytes()
 
     def filtro_prohibido(*args):
@@ -496,7 +496,7 @@ def test_correr_prueba_real_y_reapertura(tmp_path, monkeypatch, rechazo):
     assert segunda.output == f"prueba de {data['id']} ya abierta el {fecha}; no se vuelve a correr\n"
     assert comandos == [("2007-01-01", "2018-12-31"), ("2019-01-01", "2022-12-31")]
     assert (tmp_path / "hipotesis-candado.csv").read_text() == candado
-    assert leer_intentos() == intentos_antes
+    assert leer_intentos(valida_solo=False) == intentos_antes
     assert (tmp_path / "hipotesis.csv").read_bytes() == estado_antes
 
 
@@ -576,7 +576,7 @@ def test_admision_rango_y_registro(tmp_path, monkeypatch):
     assert motivos and all(motivo in result.output for motivo in motivos)
     if rechazo:
         assert "justificación" in result.output and "AAPL" in result.output
-        filas = leer_intentos()
+        filas = leer_intentos(valida_solo=False)
         assert len(filas) == 1 and filas[0]["hipotesis"] == data["id"] and filas[0]["etapa"] == "0"
     ayuda = runner.invoke(backtest_group, ["hipotesis", "filtrar", "--help"])
     assert ayuda.exit_code == 0 and "--snapshot" in ayuda.output and "ARCHIVO" in ayuda.output
@@ -622,7 +622,7 @@ def test_filtro_real_dos_activos(tmp_path, monkeypatch, exportar):
     result = CliRunner().invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico", *args])
     assert result.exit_code == 0, result.output
     assert "CORTA" in result.output
-    filas = leer_intentos()
+    filas = leer_intentos(valida_solo=False)
     assert len(filas) == 1 and filas[0]["activo"] == "cartera"
     for activo, r in zip(data["activos"], resultados):
         celdas = next(line for line in result.output.splitlines() if f" {activo} " in line).split("|")
@@ -661,7 +661,7 @@ def test_etapa1_cartera_12_activos_5_trades_pasa(tmp_path, monkeypatch):
     })
     res = CliRunner().invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico"])
     assert res.exit_code == 0 and "PASA" in res.output
-    filas = leer_intentos()
+    filas = leer_intentos(valida_solo=False)
     assert len(filas) == 1 and filas[0]["activo"] == "cartera" and int(filas[0]["trades"]) == 60
 
 
@@ -709,7 +709,7 @@ def test_etapa1_cartera_dos_piernas_tres_activos_un_intento(tmp_path, monkeypatc
     })
     res = CliRunner().invoke(backtest_group, ["hipotesis", "filtrar", str(archivo), "--snapshot", "sintetico"])
     assert res.exit_code == 0
-    filas = leer_intentos()
+    filas = leer_intentos(valida_solo=False)
     assert len(filas) == 1 and filas[0]["activo"] == "cartera" and filas[0]["etapa"] == "1" and int(filas[0]["trades"]) == 60
 
 

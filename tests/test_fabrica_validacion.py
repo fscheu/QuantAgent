@@ -152,7 +152,7 @@ def test_motor_dos_activos(tmp_path, monkeypatch, abrir_prueba, etapa, desde):
     for intento, fila in zip(intentos, filas):
         assert intento["hipotesis"] == h.id and intento["etapa"] == etapa
         assert json.loads(intento["params"]) == params[fila["activo"]]
-        assert intento["pnl"] == fila["pnl"]
+        assert intento["pnl"] == pytest.approx(float(fila["pnl"]))
         assert intento["sharpe"] == fila["sharpe_tasa_0"]
         assert intento["sharpe_base"] == "tasa_0"
     with pytest.raises(RuntimeError, match="AUSENTE"):
@@ -444,7 +444,7 @@ def test_etapa2_cartera_2_piernas_3_activos_agrega_una_fila_intentos(tmp_path, m
     assert intento["activo"] == "cartera"
     assert intento["etapa"] == "2"
     assert intento["sharpe_base"] == "tasa_0"
-    assert intento["trades"] == "30"
+    assert intento["trades"] == 30
     assert intento["estrategia"] == "rsi+sma"
 
 
@@ -703,7 +703,7 @@ def test_etapa3_cartera_2_piernas_3_activos_agrega_una_fila_intentos(tmp_path, m
         {"activo": a, "estrategia": "sma", "trades": "5", "pnl": "100", "sharpe_tasa_0": "0.4", "max_drawdown": "0.02"} for a in p2_activos
     ]
     monkeypatch.setattr(validacion, "correr_motor", lambda *a, **k: filas_falsas)
-    monkeypatch.setattr(validacion, "dsr_contra_intentos", lambda *a: 0.96)
+    monkeypatch.setattr(validacion, "dsr_contra_intentos", lambda *a, **k: 0.96)
     monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas_snap)}))
 
     veredicto, filas = validacion.validar_etapa3(h, "sintetico", {(p.clase, a): {} for p in h.piernas for a in p.activos}, tmp_path / "salida")
@@ -716,7 +716,7 @@ def test_etapa3_cartera_2_piernas_3_activos_agrega_una_fila_intentos(tmp_path, m
     assert intento["activo"] == "cartera"
     assert intento["etapa"] == "3"
     assert intento["sharpe_base"] == "tasa_0"
-    assert intento["trades"] == "30"
+    assert intento["trades"] == 30
     assert intento["desde"] == "2019-01-01"
     assert intento["hasta"] == "2022-12-31"
 
