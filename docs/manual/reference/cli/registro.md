@@ -9,8 +9,9 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  ciclo  Open or close a monthly hypothesis cycle.
-  corte  Show consecutive closed cycles without a stage 3 pass.
+  ciclo     Open or close a monthly hypothesis cycle.
+  corte     Show consecutive closed cycles without a stage 3 pass.
+  importar  Import hypothesis stages and attempts from snapshot CSV files.
 
   Examples: quantagent registro ciclo abrir 2026-11 H1 H2 quantagent registro
   ciclo cerrar 2026-11
@@ -45,3 +46,21 @@ Options:
 
   Example: quantagent registro corte
 ```
+
+## `quantagent registro importar`
+
+```text
+Usage: quantagent registro importar [OPTIONS]
+
+  Import hypothesis stages and attempts from snapshot CSV files.
+
+Options:
+  --dry-run  Preview counts without writing to the hypothesis registry.
+  --help     Show this message and exit.
+
+  Example: quantagent registro importar --dry-run
+```
+
+Options and defaults:
+
+- `--dry-run` — default: `False`

@@ -3,7 +3,7 @@
 import click
 
 from quantagent.default_config import CICLOS_PARA_REVISAR
-from quantagent.fabrica.registro import abrir_ciclo, cerrar_ciclo, ciclos_sin_etapa3
+from quantagent.fabrica.registro import abrir_ciclo, cerrar_ciclo, ciclos_sin_etapa3, importar_csv
 
 
 @click.group("registro", help="Manage hypothesis evaluation cycles.",
@@ -21,6 +21,20 @@ def corte_command():
         click.echo(f"Se llegó a {CICLOS_PARA_REVISAR}: revisar el enfoque.")
     else:
         click.echo(f"Todavía no se llegó a {CICLOS_PARA_REVISAR} ciclos; no hace falta revisar.")
+
+
+@registro_group.command("importar", help="Import hypothesis stages and attempts from snapshot CSV files.",
+                        epilog="Example: quantagent registro importar --dry-run")
+@click.option("--dry-run", is_flag=True, help="Preview counts without writing to the hypothesis registry.")
+def importar_command(dry_run):
+    resultado = importar_csv(dry_run=dry_run)
+    etapas, intentos = resultado["etapas"], resultado["intentos"]
+    if dry_run:
+        click.echo(f"(dry-run) agregaría etapas {etapas['agregados']} de {etapas['leidos']}; "
+                   f"intentos {intentos['agregados']} de {intentos['leidos']}; omitidas {resultado['omitidas']}")
+    else:
+        click.echo(f"Importación: etapas {etapas['agregados']} agregadas de {etapas['leidos']}; "
+                   f"intentos {intentos['agregados']} agregados de {intentos['leidos']}; omitidas {resultado['omitidas']}")
 
 
 @registro_group.group("ciclo", help="Open or close a monthly hypothesis cycle.",
