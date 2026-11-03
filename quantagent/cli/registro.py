@@ -31,18 +31,22 @@ def corte_command():
         click.echo(f"Todavía no se llegó a {CICLOS_PARA_REVISAR} ciclos; no hace falta revisar.")
 
 
-@registro_group.command("importar", help="Import hypothesis stages and attempts from snapshot CSV files.",
-                        epilog="Example: quantagent registro importar --dry-run")
+@registro_group.command("importar", help="Import CSV and JSONL hypothesis history into the database.",
+                        epilog="Examples:\n  quantagent registro importar --dry-run\n  quantagent registro importar --datos ./historial")
 @click.option("--dry-run", is_flag=True, help="Preview counts without writing to the hypothesis registry.")
-def importar_command(dry_run):
-    resultado = importar_csv(dry_run=dry_run)
-    etapas, intentos = resultado["etapas"], resultado["intentos"]
+@click.option("--datos", type=click.Path(file_okay=False, path_type=str), default=None,
+              help="Directory containing the history files; defaults to the snapshot data directory.")
+def importar_command(dry_run, datos):
+    resultado = importar_csv(dry_run=dry_run, datos=datos)
+    etapas, intentos, eventos, ciclos = (resultado[k] for k in ("etapas", "intentos", "eventos", "ciclos"))
     if dry_run:
-        click.echo(f"(dry-run) agregaría etapas {etapas['agregados']} de {etapas['leidos']}; "
-                   f"intentos {intentos['agregados']} de {intentos['leidos']}; omitidas {resultado['omitidas']}")
+        prefijo = "(dry-run) agregaría "
     else:
-        click.echo(f"Importación: etapas {etapas['agregados']} agregadas de {etapas['leidos']}; "
-                   f"intentos {intentos['agregados']} agregados de {intentos['leidos']}; omitidas {resultado['omitidas']}")
+        prefijo = "Importación: "
+    click.echo(f"{prefijo}etapas {etapas['agregados']} de {etapas['leidos']}; "
+               f"intentos {intentos['agregados']} de {intentos['leidos']}; "
+               f"eventos {eventos['agregados']} de {eventos['leidos']}; "
+               f"ciclos {ciclos['agregados']} de {ciclos['leidos']}; omitidas {resultado['omitidas']}")
 
 
 @registro_group.command("calendario", help="Show monthly hypothesis cycle dates and registry status.",
