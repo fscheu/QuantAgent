@@ -91,8 +91,8 @@ def importar_csv(dry_run=False):
                         etapa = row.get("etapa")
                         datos = {"snapshot": row["snapshot"], "estrategia": row["estrategia"],
                                  "activo": row["activo"], "params": params,
-                                 "sharpe": float(row["sharpe"]), "trades": _numero_entero(row["trades"]),
-                                 "pnl": float(row["pnl"]), "importado": True}
+                                 "sharpe": _decimal(row["sharpe"]), "trades": _numero_entero(row["trades"]),
+                                 "pnl": _decimal(row["pnl"]), "importado": True}
                         item = {"hipotesis": hipotesis, "evento": "intento",
                                 "etapa": etapa if etapa in ETAPAS else None, "veredicto": None,
                                 "motivo": "", "ciclo": None, "datos": datos}
@@ -111,8 +111,8 @@ def importar_csv(dry_run=False):
             return ("etapa", e["hipotesis"], str(e["etapa"]), str(e["veredicto"]), str(e["motivo"]))
         d = e["datos"]
         return ("intento", e["hipotesis"], None if e["etapa"] is None else str(e["etapa"]), d["snapshot"],
-                d["estrategia"], d["activo"], json.dumps(d["params"], sort_keys=True), float(d["sharpe"]),
-                _numero_entero(d["trades"]), float(d["pnl"]))
+                d["estrategia"], d["activo"], json.dumps(d["params"], sort_keys=True), d["sharpe"],
+                _numero_entero(d["trades"]), d["pnl"])
 
     cuenta_existente = Counter()
     for evento in existentes:
@@ -130,8 +130,8 @@ def importar_csv(dry_run=False):
                               "snapshot": d.get("snapshot"), "estrategia": d.get("estrategia"),
                               "activo": d.get("activo"), "params": json.loads(d.get("params", "{}"))
                               if isinstance(d.get("params", {}), str) else d.get("params", {}),
-                              "sharpe": float(d.get("sharpe")), "trades": _numero_entero(d.get("trades")),
-                              "pnl": float(d.get("pnl"))}}
+                              "sharpe": _decimal(d.get("sharpe")), "trades": _numero_entero(d.get("trades")),
+                              "pnl": _decimal(d.get("pnl"))}}
             cuenta_existente[clave(normal)] += 1
         except (TypeError, ValueError):
             continue
@@ -150,6 +150,10 @@ def importar_csv(dry_run=False):
     return {"etapas": {"leidos": sum(e["evento"] == "etapa" for e in filas), "agregados": agregadas["etapa"]},
             "intentos": {"leidos": sum(e["evento"] == "intento" for e in filas), "agregados": agregadas["intento"]},
             "omitidas": omitidas}
+
+
+def _decimal(valor):
+    return None if valor in (None, "") else float(valor)
 
 
 def _numero_entero(valor):

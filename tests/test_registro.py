@@ -176,6 +176,7 @@ def _csv_importables(tmp_path):
         writer = csv.writer(f)
         writer.writerow(["fecha_utc", "estrategia", "activo", "snapshot", "desde", "hasta", "costos", "tamano", "params", "trades", "pnl", "sharpe", "hipotesis", "etapa", "sharpe_base", "estado"])
         writer.writerow(["2026-01-01T00:30:00+00:00", "s", "BTC", "snap", "", "", "", "", '{"x": 1}', "2", "3.5", "0.7", "H1", "0", "", ""])
+        writer.writerow(["2026-01-02T00:30:00+00:00", "cartera", "cartera", "snap", "", "", "", "", "{}", "4", "", "0.9", "H2", "1", "", ""])
 
 
 def test_importar_csv_preserva_estados_orden_e_idempotencia(raiz, tmp_path):
@@ -183,7 +184,7 @@ def test_importar_csv_preserva_estados_orden_e_idempotencia(raiz, tmp_path):
     resultado = registro.importar_csv()
 
     assert resultado == {"etapas": {"leidos": 6, "agregados": 6},
-                         "intentos": {"leidos": 1, "agregados": 1}, "omitidas": 0}
+                         "intentos": {"leidos": 2, "agregados": 2}, "omitidas": 0}
     assert {h: (e["etapa"], e["veredicto"]) for h, e in registro.estados_actuales().items()} == {
         "H1": ("1", "CORTA"), "H2": ("1", "CORTA"), "H3": ("1", "CORTA")}
     events = [json.loads(line) for line in raiz.read_text().splitlines()]
