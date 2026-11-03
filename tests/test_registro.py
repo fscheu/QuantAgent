@@ -262,3 +262,20 @@ def test_cli_calendario_muestra_ciclos_y_corte(raiz):
     assert "2026-12: propuesta 2026-12-01; embudo 2026-12-08; revisión paper 2026-12-25; pendiente" in resultado.output
     assert "Corte: 6/6 ciclos cerrados consecutivos sin pasar etapa 3." in resultado.output
     assert "Toca revisar el enfoque." in resultado.output
+
+
+
+def test_cli_ver_lista_eventos_ordenados_y_filtra_hipotesis(raiz):
+    from click.testing import CliRunner
+    from quantagent.cli.__main__ import cli
+
+    registro.registrar_evento("H1", "etapa", "1", "PASA", fecha_utc="2026-02-02T00:00:00+00:00")
+    registro.registrar_evento("H2", "admision", fecha_utc="2026-02-01T00:00:00+00:00")
+    registro.registrar_evento("H1", "etapa", "0", "CORTA", fecha_utc="2026-02-01T00:00:00+00:00")
+    resultado = CliRunner().invoke(cli, ["registro", "ver", "--hipotesis", "H1"])
+    assert resultado.exit_code == 0
+    assert [line.split(" | ")[0] for line in resultado.output.splitlines()] == [
+        "2026-02-01T00:00:00+00:00", "2026-02-02T00:00:00+00:00"]
+    todos = CliRunner().invoke(cli, ["registro", "ver"])
+    assert todos.exit_code == 0
+    assert todos.output.index("H2") < todos.output.index("H1")

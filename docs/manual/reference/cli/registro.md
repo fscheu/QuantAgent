@@ -13,6 +13,7 @@ Commands:
   ciclo       Open or close a monthly hypothesis cycle.
   corte       Show consecutive closed cycles without a stage 3 pass.
   importar    Import hypothesis stages and attempts from snapshot CSV files.
+  ver         List hypothesis registry events in chronological order.
 
   Examples: quantagent registro ciclo abrir 2026-11 H1 H2 quantagent registro
   ciclo cerrar 2026-11
@@ -78,3 +79,21 @@ Options:
 Options and defaults:
 
 - `--dry-run` — default: `False`
+
+## `quantagent registro ver`
+
+```text
+Usage: quantagent registro ver [OPTIONS]
+
+  List hypothesis registry events in chronological order.
+
+Options:
+  --hipotesis TEXT  Show events for this hypothesis ID.
+  --help            Show this message and exit.
+
+  Examples: quantagent registro ver quantagent registro ver --hipotesis H1
+```
+
+Options and defaults:
+
+- `--hipotesis` — default: `None`
