@@ -208,45 +208,60 @@ def _csv_importables(tmp_path):
         writer.writerow(["2026-01-02T00:30:00+00:00", "cartera", "cartera", "snap", "", "", "", "", "{}", "4", "", "0.9", "H2", "1", "", ""])
 
 
-def test_importar_csv_preserva_estados_orden_e_idempotencia(raiz, tmp_path):
+def test_importar_csv_a_db_preserva_fuentes_y_es_idempotente(db_temporal, tmp_path):
+    from sqlalchemy import select
+    from quantagent.database import SessionLocal
+    from quantagent.fabrica import registro_db
+    from quantagent.models import Cycle, HypothesisAttempt, HypothesisEvent
+
     _csv_importables(tmp_path)
-    resultado = registro.importar_csv()
+    with (tmp_path / "registro-hipotesis.jsonl").open("w", encoding="utf-8") as f:
+        f.write(json.dumps({"fecha_utc":"2026-02-01T00:00:00Z", "hipotesis":"H9", "evento":"admision",
+            "etapa":None,"veredicto":None,"motivo":"", "ciclo":None,"datos":{"origen":"jsonl"}})+"\n")
+        f.write(json.dumps({"fecha_utc":"2026-02-02T00:00:00Z", "hipotesis":None, "evento":"ciclo",
+            "etapa":None,"veredicto":None,"motivo":"", "ciclo":"2026-02",
+            "datos":{"accion":"cerrar","recibo":{"hipotesis":["H9"],"promovidas":0}}})+"\n")
+    result = registro.importar_csv(datos=tmp_path)
+    assert result["etapas"] == {"leidos": 6, "agregados": 6}
+    assert result["intentos"] == {"leidos": 2, "agregados": 2}
+    assert result["eventos"] == {"leidos": 2, "agregados": 2}
+    with SessionLocal() as db:
+        assert len(db.scalars(select(HypothesisEvent)).all()) == 8
+        attempts = db.scalars(select(HypothesisAttempt)).all()
+        assert len(attempts) == 2
+        assert attempts[0].extra == {"desde":"", "hasta":"", "costos":"", "tamano":None, "sharpe_base":""}
+        cycle = db.get(Cycle, "2026-02")
+        assert cycle.closed_at is not None and cycle.receipt["hipotesis"] == ["H9"]
+    assert len(registro_db.intentos(valida_solo=False)) == 2
+    assert registro_db.recibo_ciclo("2026-02")["promovidas"] == 0
+    again = registro.importar_csv(datos=tmp_path)
+    assert all(v["agregados"] == 0 for k, v in again.items() if isinstance(v, dict))
 
-    assert resultado == {"etapas": {"leidos": 6, "agregados": 6},
-                         "intentos": {"leidos": 2, "agregados": 2}, "omitidas": 0}
-    assert {h: (e["etapa"], e["veredicto"]) for h, e in registro.estados_actuales().items()} == {
-        "H1": ("1", "CORTA"), "H2": ("1", "CORTA"), "H3": ("1", "CORTA")}
-    events = [json.loads(line) for line in raiz.read_text().splitlines()]
-    assert [e["fecha_utc"] for e in events] == sorted(e["fecha_utc"] for e in events)
-    assert events[0]["datos"]["importado"] is True
-    assert registro.importar_csv()["etapas"]["agregados"] == 0
-    assert registro.importar_csv()["intentos"]["agregados"] == 0
 
-
-def test_importar_csv_dry_run_no_crea_registro(raiz, tmp_path):
-    _csv_importables(tmp_path)
+def test_importar_csv_dry_run_y_filas_invalidas(db_temporal, tmp_path):
+    from sqlalchemy import func, select
     from click.testing import CliRunner
     from quantagent.cli.__main__ import cli
+    from quantagent.database import SessionLocal
+    from quantagent.models import HypothesisAttempt, HypothesisEvent
 
-    resultado = CliRunner().invoke(cli, ["registro", "importar", "--dry-run"])
-    assert resultado.exit_code == 0
-    assert "(dry-run) agregaría etapas 6 de 6" in resultado.output
-    assert not raiz.exists()
-
-
-def test_importar_csv_no_duplica_evento_vivo_y_omite_fila_mala(raiz, tmp_path):
     _csv_importables(tmp_path)
-    registro.registrar_evento("H1", "etapa", "0", "PASA", "inicio",
-                              fecha_utc="2026-02-01T00:00:00+00:00")
-    with (tmp_path / "hipotesis.csv").open("a", newline="", encoding="utf-8") as f:
-        csv.writer(f).writerow(["fecha-incorrecta", "H4", "9", "INVALIDO", ""])
-
-    resultado = registro.importar_csv()
-    assert resultado["omitidas"] == 1
-    assert resultado["etapas"]["agregados"] == 5
-    assert len(registro.historial("H1")) == 3
-    assert registro.estado_actual("H1")["fecha_utc"] == "2026-02-01T00:00:00+00:00"
-    assert registro.estados_actuales()["H1"]["etapa"] == "0"
+    with (tmp_path / "intentos.csv").open("a", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerow(["bad-date", "s", "BTC", "snap", "d", "h", "fees", "0.4", "{bad", "1", "0", "0", "", "0", "base", "invalida_bug"])
+    result = CliRunner().invoke(cli, ["registro", "importar", "--dry-run", "--datos", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    assert "(dry-run) agregaría etapas 6 de 6" in result.output
+    with SessionLocal() as db:
+        assert db.scalar(select(func.count()).select_from(HypothesisEvent)) == 0
+        assert db.scalar(select(func.count()).select_from(HypothesisAttempt)) == 0
+    with (tmp_path / "intentos.csv").open("a", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerow(["2026-01-03T00:00:00Z", "s", "BTC", "snap", "d", "h", "fees", "0.4", "{}", "1", "2", "0.5", "", "0", "base", "invalida_bug"])
+    imported = registro.importar_csv(datos=tmp_path)
+    assert imported["omitidas"] == 1
+    assert imported["intentos"]["leidos"] == 3
+    rows = __import__("quantagent.fabrica.registro_db", fromlist=["intentos"]).intentos(valida_solo=False)
+    assert sum(r["estado"] == "invalida_bug" for r in rows) == 1
+    assert any(r["hipotesis"] == "" for r in rows)
 
 def test_cli_calendario_muestra_ciclos_y_corte(raiz, db_temporal):
     from click.testing import CliRunner

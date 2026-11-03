@@ -12,7 +12,7 @@ Commands:
   calendario  Show monthly hypothesis cycle dates and registry status.
   ciclo       Open or close a monthly hypothesis cycle.
   corte       Show consecutive closed cycles without a stage 3 pass.
-  importar    Import hypothesis stages and attempts from snapshot CSV files.
+  importar    Import CSV and JSONL hypothesis history into the database.
   ver         List hypothesis registry events in chronological order.
 
   Examples: quantagent registro ciclo abrir 2026-11 H1 H2 quantagent registro
@@ -68,18 +68,23 @@ Options:
 ```text
 Usage: quantagent registro importar [OPTIONS]
 
-  Import hypothesis stages and attempts from snapshot CSV files.
+  Import CSV and JSONL hypothesis history into the database.
 
 Options:
-  --dry-run  Preview counts without writing to the hypothesis registry.
-  --help     Show this message and exit.
+  --dry-run          Preview counts without writing to the hypothesis
+                     registry.
+  --datos DIRECTORY  Directory containing the history files; defaults to the
+                     snapshot data directory.
+  --help             Show this message and exit.
 
-  Example: quantagent registro importar --dry-run
+  Examples: quantagent registro importar --dry-run quantagent registro
+  importar --datos ./historial
 ```
 
 Options and defaults:
 
 - `--dry-run` — default: `False`
+- `--datos` — default: `None`
 
 ## `quantagent registro ver`
 
