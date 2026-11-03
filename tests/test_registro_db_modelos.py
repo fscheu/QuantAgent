@@ -33,7 +33,7 @@ def test_hypothesis_migration_upgrade_and_downgrade_on_empty_sqlite(tmp_path):
     assert {"hypotheses", "hypothesis_events", "hypothesis_attempts", "cycles"}.issubset(
         inspector.get_table_names()
     )
-    _migrate(database_url, "downgrade -1")
+    _migrate(database_url, "downgrade 9d7c4a1b2e60")
     assert not {
         "hypotheses", "hypothesis_events", "hypothesis_attempts", "cycles"
     }.intersection(inspect(engine).get_table_names())
