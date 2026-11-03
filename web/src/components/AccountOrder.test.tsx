@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { AccountSummary, Order } from '../api/types';
 import { AccountCard, AccountNoData, AccountSummaryCard } from './Account';
+import { money } from '../lib/format';
 import { DataTable } from './DataTable';
 import { OrderCard, orderColumns, orderGroupBy, orderSubRow, RejectReason } from './Order';
 
@@ -26,12 +27,35 @@ describe('Account cards', () => {
     expect(screen.getByLabelText('subió 1,00 dólares')).toBeTruthy();
     unmount();
   });
-  it('never renders amounts or zeros for no data', () => {
+  it('omits amounts when no local cash is available', () => {
     const { container, rerender } = render(<AccountCard account={noData} />);
     expect(container.textContent).not.toMatch(/0,00|USD\s*0/);
     rerender(<AccountNoData account={noData} />);
     expect(container.textContent).not.toMatch(/0,00|USD\s*0/);
     expect(screen.queryByText(/Próxima/)).toBeNull();
+  });
+  it.each([AccountCard, AccountSummaryCard])('shows only recorded cash, including zero', (Card) => {
+    const { rerender, unmount } = render(<Card account={{ ...noData, cash: 3000 }} />);
+    expect(screen.getByText('Efectivo disponible')).toBeTruthy();
+    expect(screen.getByText(money(3000))).toBeTruthy();
+    rerender(<Card account={{ ...noData, cash: 0 }} />);
+    expect(screen.getByText(money(0))).toBeTruthy();
+    rerender(<Card account={{ ...noData, cash: null }} />);
+    expect(screen.queryByText('Efectivo disponible')).toBeNull();
+    unmount();
+  });
+  it.each([
+    ['not_opened', 'Todavía no operó.'],
+    ['not_funded', 'La cuenta no tiene fondos registrados.'],
+    ['unknown', 'Todavía no hay datos suficientes para mostrar el resumen.'],
+  ] as const)('explains %s without guessing broker state', (reason, message) => {
+    const { rerender, container, unmount } = render(<AccountCard account={{ ...noData, no_data_reason: reason }} />);
+    expect(screen.getByText(message)).toBeTruthy();
+    rerender(<AccountSummaryCard account={{ ...noData, no_data_reason: reason }} />);
+    expect(screen.getByText(message)).toBeTruthy();
+    rerender(<AccountNoData account={{ ...noData, no_data_reason: reason }} />);
+    expect(container.textContent).toContain(message);
+    unmount();
   });
   it('uses one no-data badge and calculates the next check from its timestamp', () => {
     const nextAt = (next_check_at: string | null) => ({ ...noData, next_check_at });

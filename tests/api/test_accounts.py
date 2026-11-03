@@ -116,13 +116,43 @@ def test_account_summary_and_positions_read_account_sqlite(tmp_path, db):
     source_engine.dispose()
 
 
-def test_account_without_positions_has_no_data(tmp_path, db):
+@pytest.mark.parametrize("activity,snapshots,reason,cash", [
+    ("none", None, "not_opened", None),
+    ("none", [], "not_opened", None),
+    ("none", [(3000, 3000)], "not_opened", 3000),
+    ("none", [(3000, 3000), (0, 0)], "not_funded", 0),
+    ("none", [(0, 0), (3000, 3000)], "not_opened", 3000),
+    ("none", [(3000, 0)], "not_opened", 0),
+    ("none", [(0, 3000)], "not_opened", 3000),
+    ("order", [], "unknown", None),
+    ("fill", [(3000, 3000)], "unknown", 3000),
+    ("order", [(0, 0)], "not_funded", 0),
+])
+def test_account_without_positions_has_no_data(tmp_path, db, activity, snapshots, reason, cash):
+    from datetime import date, datetime, timedelta
+
     account_url = f"sqlite:///{tmp_path / 'empty.db'}"
     source_engine = create_engine(account_url)
-    Base.metadata.create_all(source_engine)
+    Base.metadata.create_all(source_engine, tables=[table for table in Base.metadata.sorted_tables
+                                                    if snapshots is not None or table is not EquitySnapshot.__table__])
+    with Session(source_engine) as source:
+        for index, (equity, available) in enumerate(snapshots or []):
+            source.add(EquitySnapshot(snapshot_date=date(2026, 10, 29) + timedelta(days=index),
+                                      taken_at=datetime(2026, 10, 30), equity=equity,
+                                      cash=available, invested=equity - available))
+        if activity == "order":
+            source.add(Order(symbol="SPY", side=OrderSide.BUY, quantity=1,
+                             order_type=OrderType.MARKET, status=OrderStatus.REJECTED,
+                             environment=Environment.PAPER))
+        elif activity == "fill":
+            # Incomplete local history still proves there was activity.
+            source.add(Fill(order_id=99, quantity=1, price=100))
+        source.commit()
     add_account(db, **account_values(database_url=account_url))
     response = account_summary("paper-nucleo-curva", db).model_dump()
     assert response["status"] == "no_data"
+    assert response["no_data_reason"] == reason
+    assert response["cash"] == cash
     assert "equity" not in response and "long_value" not in response
     source_engine.dispose()
 

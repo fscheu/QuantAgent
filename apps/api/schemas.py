@@ -29,6 +29,7 @@ class AccountRef(BaseModel):
 class AccountSummaryNoData(AccountRef):
     status: Literal["no_data"]
     no_data_reason: Literal["not_opened", "not_funded", "unknown"] = "unknown"
+    cash: float | None = None
     checked_at: str
     next_check_at: None = None
 

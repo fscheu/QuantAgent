@@ -263,7 +263,7 @@ def utc_z(value):
 
 @app.get("/api/accounts/{account_id}/summary", response_model=AccountSummaryActive | AccountSummaryNoData)
 def account_summary(account_id: str, db: Session = Depends(get_db)):
-    from quantagent.models import EquitySnapshot, Order, Position
+    from quantagent.models import EquitySnapshot, Fill, Order, Position
 
     from .accounts import account_session_factory
     from .alarms import evaluate_account_alarms
@@ -272,9 +272,19 @@ def account_summary(account_id: str, db: Session = Depends(get_db)):
     with account_session_factory(account)() as source:
         positions = source.scalars(select(Position).order_by(Position.symbol)).all()
         checked_at = utc_z(datetime.now(ZoneInfo("UTC")))
+        snapshots = []
+        if inspect(source.get_bind()).has_table("equity_snapshots"):
+            snapshots = source.scalars(select(EquitySnapshot).order_by(EquitySnapshot.snapshot_date.desc()).limit(30)).all()
+        latest = snapshots[0] if snapshots else None
         if not positions:
+            reason = "unknown"
+            if latest and latest.equity == 0 and latest.cash == 0:
+                reason = "not_funded"
+            elif not source.scalar(select(Order.id).limit(1)) and not source.scalar(select(Fill.id).limit(1)):
+                reason = "not_opened"
             return AccountSummaryNoData(id=account.id, name=account.name, env=account.env,
-                                        status="no_data", checked_at=checked_at)
+                                        status="no_data", no_data_reason=reason,
+                                        cash=float(latest.cash) if latest else None, checked_at=checked_at)
         now_ny = datetime.now(NEW_YORK)
         day_start = now_ny.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
         orders_today = source.scalar(select(func.count()).select_from(Order).where(Order.created_at >= day_start)) or 0
@@ -283,10 +293,6 @@ def account_summary(account_id: str, db: Session = Depends(get_db)):
         long_value = sum(abs(float(p.quantity)) * float(p.current_price) for p in positions if p.side.value == "buy")
         short_value = sum(abs(float(p.quantity)) * float(p.current_price) for p in positions if p.side.value == "sell")
         as_of = utc_z(max(p.updated_at for p in positions))
-        snapshots = []
-        if inspect(source.get_bind()).has_table("equity_snapshots"):
-            snapshots = source.scalars(select(EquitySnapshot).order_by(EquitySnapshot.snapshot_date.desc()).limit(30)).all()
-        latest = snapshots[0] if snapshots else None
         previous = snapshots[1] if len(snapshots) > 1 else None
         week_base = next((point for point in snapshots if point.snapshot_date <= latest.snapshot_date - timedelta(days=7)), None) if latest else None
         day_change = float(latest.equity - previous.equity) if latest and previous else None

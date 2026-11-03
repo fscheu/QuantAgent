@@ -191,6 +191,17 @@
       },
       "AccountSummaryNoData": {
         "properties": {
+          "cash": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cash"
+          },
           "checked_at": {
             "title": "Checked At",
             "type": "string"

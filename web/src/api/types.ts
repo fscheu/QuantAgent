@@ -36,7 +36,8 @@ export interface AccountSummaryNoData extends AccountRef {
   status: 'no_data';
   /** Por qué no hay datos. 'unknown' si el backend no lo puede distinguir. */
   no_data_reason: 'not_opened' | 'not_funded' | 'unknown';
-  /** Última vez que el backend consultó al broker por esta cuenta. */
+  cash?: number | null;
+  /** Última consulta del backend a los datos locales de esta cuenta. */
   checked_at: string;
   /** Próxima consulta programada (opcional). */
   next_check_at: string | null;
