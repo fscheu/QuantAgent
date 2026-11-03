@@ -12,6 +12,17 @@ from quantagent.fabrica import validacion
 from quantagent.fabrica.hipotesis import cargar_hipotesis
 
 
+def _registrar_intento(estrategia="rsi", activo="SPY", snapshot="real", etapa="2",
+                       hipotesis="h-c", sharpe=0.5, trades=10, pnl=100.0,
+                       desde="2007-01-01", hasta="2018-12-31", params=None):
+    from quantagent.fabrica.registro_db import registrar_intento
+
+    registrar_intento(estrategia, activo, snapshot, "", 1.0, params or {},
+                      {"desde": desde, "hasta": hasta, "sharpe": sharpe,
+                       "trades": trades, "pnl": pnl}, hipotesis=hipotesis,
+                      etapa=etapa, sharpe_base="tasa_0")
+
+
 @pytest.mark.parametrize("etapa,anio", [("2", 2007), ("3", 2019), ("3", 2023)])
 def test_seleccion_csv_cartera_t4(tmp_path, monkeypatch, etapa, anio):
     from quantagent.backtesting.vbt_filter import equity_metrics
@@ -135,8 +146,8 @@ def test_motor_dos_activos(tmp_path, monkeypatch, abrir_prueba, etapa, desde):
         for sub in ("trades", "equity"):
             with (carpeta / sub / f"rsi-{activo}.csv").open() as f:
                 assert len(list(csv.DictReader(f))) > 0
-    with (tmp_path / "intentos.csv").open() as f:
-        intentos = list(csv.DictReader(f))
+    from quantagent.fabrica.registro_db import intentos as leer_intentos
+    intentos = leer_intentos(valida_solo=False)
     assert len(intentos) == 2
     for intento, fila in zip(intentos, filas):
         assert intento["hipotesis"] == h.id and intento["etapa"] == etapa
@@ -146,8 +157,7 @@ def test_motor_dos_activos(tmp_path, monkeypatch, abrir_prueba, etapa, desde):
         assert intento["sharpe_base"] == "tasa_0"
     with pytest.raises(RuntimeError, match="AUSENTE"):
         validacion.correr_motor(h, "sintetico", {"AUSENTE": {}}, desde, fechas[-1].date(), carpeta, etapa, abrir_prueba)
-    with (tmp_path / "intentos.csv").open() as f:
-        assert list(csv.DictReader(f)) == intentos
+    assert leer_intentos(valida_solo=False) == intentos
 
 
 @pytest.mark.parametrize("caso", ["pasa", "sin validar", "ninguno pasa", "otro directorio"])
@@ -310,14 +320,14 @@ def test_etapa3_real(tmp_path, monkeypatch):
             curva = list(csv.DictReader(f))
         assert all("2019-01-01" <= r["date"][:10] <= "2022-12-31" for r in curva)
         equity = [float(r["equity"]) for r in curva]
-        assert fila["dsr"] == validacion.dsr_contra_intentos(equity, tmp_path / "intentos.csv")
+        assert fila["dsr"] == validacion.dsr_contra_intentos(equity)
         pasa, _ = validacion.evaluar(*(float(fila[c]) for c in
                                      ("trades", "pnl", "sharpe_tasa_0", "max_drawdown")))
         assert fila["v30"] == ("PASA" if pasa else "NO PASA")
     assert filas[0]["dsr"] != filas[1]["dsr"]
     assert veredicto == ("PASA" if any(not f["motivos"] for f in filas) else "CORTA")
-    with (tmp_path / "intentos.csv").open() as f:
-        intentos = list(csv.DictReader(f))
+    from quantagent.fabrica.registro_db import intentos as leer_intentos
+    intentos = leer_intentos(valida_solo=False)
     assert [(r["activo"], r["hipotesis"], r["etapa"]) for r in intentos] == [
         (a, h.id, "3") for a in ("SPY", "TLT")]
 
@@ -427,8 +437,8 @@ def test_etapa2_cartera_2_piernas_3_activos_agrega_una_fila_intentos(tmp_path, m
     veredicto, filas = validacion.validar_etapa2(h, "sintetico", {(p.clase, a): {} for p in h.piernas for a in p.activos}, tmp_path / "salida")
     assert veredicto == "PASA"
     assert len(filas) == 6
-    with (tmp_path / "intentos.csv").open() as f:
-        intentos = list(csv.DictReader(f))
+    from quantagent.fabrica.registro_db import intentos as leer_intentos
+    intentos = leer_intentos(valida_solo=False)
     assert len(intentos) == 1
     intento = intentos[0]
     assert intento["activo"] == "cartera"
@@ -523,8 +533,14 @@ def test_etapa3_dsr_real_distingue_configuraciones_y_filas(tmp_path, monkeypatch
     from quantagent.fabrica.hipotesis import Hipotesis, Pierna
 
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
-    path = tmp_path / "intentos.csv"
-    path.write_text("estrategia,sharpe,estado,snapshot\na,0.5,,real\na,1.5,,real\n" + extra)
+    _registrar_intento(sharpe=0.5, hipotesis="h")
+    _registrar_intento(sharpe=1.5, hipotesis="h")
+    if extra.startswith("bug"):
+        _registrar_intento(sharpe=50, hipotesis="bug")
+        from quantagent.fabrica.registro_db import invalidar_intentos
+        invalidar_intentos({"hipotesis": "bug"})
+    elif extra.startswith("fake"):
+        _registrar_intento(sharpe=50, hipotesis="fake", snapshot="sintetico")
     equity = pd.Series([100, 101, 99.5, 102, 103.5, 102.8, 105],
                        index=pd.bdate_range("2019-01-01", periods=7))
     h = Hipotesis("h", "autor", "just", "1d", piernas=(
@@ -532,15 +548,14 @@ def test_etapa3_dsr_real_distingue_configuraciones_y_filas(tmp_path, monkeypatch
     monkeypatch.setattr(validacion, "correr_motor", lambda *a, **k: [{"trades": "4"}])
     monkeypatch.setattr(validacion, "_curva_y_v30_cartera", lambda *a: (equity, None, None))
     _, filas = validacion.validar_etapa3(h, None, {}, tmp_path)
-    dsr = validacion.dsr_contra_intentos(equity, path)
-    crudo = validacion.dsr_contra_intentos(equity, path, 2)
+    dsr = validacion.dsr_contra_intentos(equity)
+    crudo = validacion.dsr_contra_intentos(equity, n_intentos=2)
     assert filas[0]["n_efectivo"] == 1
     assert filas[0]["dsr"] == pytest.approx(dsr)
     assert filas[0]["dsr_crudo"] == pytest.approx(crudo)
     assert dsr > crudo
-    path.write_text("estrategia,sharpe,estado,snapshot\na,0.5,,real\na,1.5,,real\n")
-    assert dsr == pytest.approx(validacion.dsr_contra_intentos(equity, path))
-    assert crudo == pytest.approx(validacion.dsr_contra_intentos(equity, path, 2))
+    assert dsr == pytest.approx(validacion.dsr_contra_intentos(equity))
+    assert crudo == pytest.approx(validacion.dsr_contra_intentos(equity, n_intentos=2))
 
 
 def test_etapa3_cartera_criterio_pasa_con_dsr_bajo(tmp_path, monkeypatch):
@@ -550,7 +565,7 @@ def test_etapa3_cartera_criterio_pasa_con_dsr_bajo(tmp_path, monkeypatch):
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     fechas = pd.bdate_range("2019-01-01", "2022-12-31")
     fechas_snap = pd.bdate_range("2007-01-01", "2022-12-31")
-    (tmp_path / "intentos.csv").write_text("activo,hipotesis,etapa,sharpe\ncartera,h-c,2,0.5\n")
+    _registrar_intento(activo="cartera", etapa="2", hipotesis="h-c", sharpe=0.5)
     eq_dir = tmp_path / "salida" / "equity"
     eq_dir.mkdir(parents=True)
     pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(len(fechas), 0.001))}).to_csv(eq_dir / "rsi-SPY.csv", index=False)
@@ -579,7 +594,7 @@ def test_etapa3_cartera_solo_2_anios_positivos_corta(tmp_path, monkeypatch):
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     fechas = pd.bdate_range("2019-01-01", "2022-12-31")
     fechas_snap = pd.bdate_range("2007-01-01", "2022-12-31")
-    (tmp_path / "intentos.csv").write_text("activo,hipotesis,etapa,sharpe\ncartera,h-c,2,0.5\n")
+    _registrar_intento(activo="cartera", etapa="2", hipotesis="h-c", sharpe=0.5)
     retornos = np.where(fechas.year >= 2021, -0.0005, 0.001)
     eq_dir = tmp_path / "salida" / "equity"
     eq_dir.mkdir(parents=True)
@@ -607,7 +622,7 @@ def test_etapa3_cartera_menor_al_benchmark_corta_con_dsr_alto(tmp_path, monkeypa
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     fechas = pd.bdate_range("2019-01-01", "2022-12-31")
     fechas_snap = pd.bdate_range("2007-01-01", "2022-12-31")
-    (tmp_path / "intentos.csv").write_text("activo,hipotesis,etapa,sharpe\ncartera,h-c,2,0.5\n")
+    _registrar_intento(activo="cartera", etapa="2", hipotesis="h-c", sharpe=0.5)
     eq_dir = tmp_path / "salida" / "equity"
     eq_dir.mkdir(parents=True)
     pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(len(fechas), 0.0001))}).to_csv(eq_dir / "rsi-SPY.csv", index=False)
@@ -638,7 +653,7 @@ def test_etapa3_cartera_dsr_cero_cumple_lo_demas_pasa(tmp_path, monkeypatch):
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     fechas = pd.bdate_range("2019-01-01", "2022-12-31")
     fechas_snap = pd.bdate_range("2007-01-01", "2022-12-31")
-    (tmp_path / "intentos.csv").write_text("activo,hipotesis,etapa,sharpe\ncartera,h-c,2,0.5\n")
+    _registrar_intento(activo="cartera", etapa="2", hipotesis="h-c", sharpe=0.5)
     eq_dir = tmp_path / "salida" / "equity"
     eq_dir.mkdir(parents=True)
     pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + np.full(len(fechas), 0.001))}).to_csv(eq_dir / "rsi-SPY.csv", index=False)
@@ -665,7 +680,7 @@ def test_etapa3_cartera_2_piernas_3_activos_agrega_una_fila_intentos(tmp_path, m
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     fechas = pd.bdate_range("2019-01-01", "2022-12-31")
     fechas_snap = pd.bdate_range("2007-01-01", "2022-12-31")
-    (tmp_path / "intentos.csv").write_text("activo,hipotesis,etapa,sharpe\ncartera,h-c2x3,2,0.5\n")
+    _registrar_intento(activo="cartera", etapa="2", hipotesis="h-c2x3", sharpe=0.5)
     eq_dir = tmp_path / "salida" / "equity"
     eq_dir.mkdir(parents=True)
     p1_activos = ("SPY", "TLT", "GLD")
@@ -694,8 +709,8 @@ def test_etapa3_cartera_2_piernas_3_activos_agrega_una_fila_intentos(tmp_path, m
     veredicto, filas = validacion.validar_etapa3(h, "sintetico", {(p.clase, a): {} for p in h.piernas for a in p.activos}, tmp_path / "salida")
     assert veredicto == "PASA"
     assert len(filas) == 6
-    with (tmp_path / "intentos.csv").open() as f:
-        intentos = list(csv.DictReader(f))
+    from quantagent.fabrica.registro_db import intentos as leer_intentos
+    intentos = leer_intentos(valida_solo=False)
     assert len(intentos) == 2
     intento = intentos[1]
     assert intento["activo"] == "cartera"
@@ -707,7 +722,7 @@ def test_etapa3_cartera_2_piernas_3_activos_agrega_una_fila_intentos(tmp_path, m
 
 
 def test_etapa3_cartera_sin_etapa2_o_benchmark_corta(tmp_path, monkeypatch):
-    """Falla si se saltea el chequeo de etapa 2 (falta intento en intentos.csv o falta benchmark etapa 2)."""
+    """Falla si se saltea el chequeo de etapa 2 (falta intento en intentos en la base o falta benchmark etapa 2)."""
     from quantagent.fabrica.hipotesis import Hipotesis, Pierna
 
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
@@ -724,7 +739,7 @@ def test_etapa3_cartera_sin_etapa2_o_benchmark_corta(tmp_path, monkeypatch):
     ])
     monkeypatch.setattr(validacion, "dsr_contra_intentos", lambda *a, **k: 0.90)
 
-    # Caso 1: snapshot sin 2007-2018 (sb2 is None) y sin intentos.csv (s2 is None)
+    # Caso 1: snapshot sin 2007-2018 (sb2 is None) y sin intentos en la base (s2 is None)
     monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas)}))
     veredicto, filas = validacion.validar_etapa3(h, "sintetico", {("rsi", "SPY"): {}, ("sma", "TLT"): {}}, tmp_path / "salida")
     assert veredicto == "CORTA"
@@ -732,7 +747,7 @@ def test_etapa3_cartera_sin_etapa2_o_benchmark_corta(tmp_path, monkeypatch):
     assert "sin Sharpe de etapa 2" in filas[0]["motivos"]
     assert "sin benchmark de etapa 2" in filas[0]["motivos"]
 
-    # Caso 2: con benchmark pero sin fila de etapa 2 en intentos.csv
+    # Caso 2: con benchmark pero sin fila de etapa 2 en intentos en la base
     fechas_snap = pd.bdate_range("2007-01-01", "2022-12-31")
     monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas_snap)}))
     veredicto, filas = validacion.validar_etapa3(h, "sintetico", {("rsi", "SPY"): {}, ("sma", "TLT"): {}}, tmp_path / "salida")
@@ -741,7 +756,7 @@ def test_etapa3_cartera_sin_etapa2_o_benchmark_corta(tmp_path, monkeypatch):
     assert "sin benchmark de etapa 2" not in filas[0]["motivos"]
 
     # Caso 3: con fila de etapa 2 pero sin benchmark
-    (tmp_path / "intentos.csv").write_text("activo,hipotesis,etapa,sharpe\ncartera,h-c,2,0.5\n")
+    _registrar_intento(activo="cartera", etapa="2", hipotesis="h-c", sharpe=0.5)
     monkeypatch.setattr("quantagent.data.snapshot.read_snapshot", lambda snap, sym: pd.DataFrame({"close": pd.Series(100.0, index=fechas)}))
     veredicto, filas = validacion.validar_etapa3(h, "sintetico", {("rsi", "SPY"): {}, ("sma", "TLT"): {}}, tmp_path / "salida")
     assert veredicto == "CORTA"
@@ -767,8 +782,7 @@ def test_etapa3_pesos_objetivo_calcula_c0_desde_curvas_por_activo(tmp_path, monk
     for activo, retorno in rendimientos.items():
         pd.DataFrame({"date": fechas, "equity": 100_000 * np.cumprod(1 + retorno)}).to_csv(
             out / f"{activo}.csv", index=False)
-    (tmp_path / "intentos.csv").write_text(
-        "activo,hipotesis,etapa,sharpe\ncartera,h-f1,2,20\n", encoding="utf-8")
+    _registrar_intento(activo="cartera", etapa="2", hipotesis="h-f1", sharpe=20)
     h = Hipotesis("h-f1", "autor", "just", "1d", piernas=(
         Pierna("rebalanceo-fin-de-mes", {}, ("SPY", "IEF"), "U"),))
     monkeypatch.setattr(validacion, "correr_motor", lambda *a, **k: [
@@ -795,7 +809,7 @@ def test_etapa3_pesos_objetivo_calcula_c0_desde_curvas_por_activo(tmp_path, monk
     cierres = pd.DataFrame({a: precios for a in h.activos})
     expected_eq = curva_cartera(cierres, {0: list(h.activos)}, retornos)
     assert filas[0]["sharpe_cartera"] == pytest.approx(round(equity_metrics(expected_eq, 0.0)["sharpe"], 2))
-    assert filas[0]["dsr"] == pytest.approx(validacion.dsr_contra_intentos(expected_eq, tmp_path / "intentos.csv"))
+    assert filas[0]["dsr"] == pytest.approx(validacion.dsr_contra_intentos(expected_eq))
     pesos_1n = pd.DataFrame(0.5, index=cierres.index, columns=cierres.columns)
     assert filas[0]["benchmark"] == pytest.approx(validacion.sharpe_benchmark(cierres.loc[fechas]))
     assert filas[0]["benchmark_mismo_peso"] == pytest.approx(

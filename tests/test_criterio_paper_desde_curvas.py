@@ -36,17 +36,15 @@ def test_criterio_paper_desde_curvas_pasa_corta_y_sin_escrituras(tmp_path, monke
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     monkeypatch.chdir(tmp_path)
     yaml_path, _, e3 = _preparar_fixtures(tmp_path)
-    registros = [tmp_path / n for n in ("intentos.csv", "hipotesis.csv", "hipotesis-candado.csv")]
+    from quantagent.fabrica.registro_db import intentos
     res = calcular_criterio_paper(yaml_path, tmp_path / "etapa2", tmp_path / "etapa3", "snap_bajo")
     assert res["veredicto"] == "PASA" and res["pasa"] is True and res["motivos"] == []
     assert res["anios_positivos"] == (3, 4) and 0 < res["max_drawdown"] <= 0.35
     assert res["sharpe_etapa2"] > res["benchmark_etapa2"] and res["sharpe_etapa3"] > res["benchmark_etapa3"]
-    assert not abierto("cartera-sint", "prueba") and all(not r.exists() for r in registros)
-    for r in registros:
-        r.write_text("intacto\n", encoding="utf-8")
+    assert not abierto("cartera-sint", "prueba") and intentos() == []
     res_corta = calcular_criterio_paper(yaml_path, tmp_path / "etapa2", tmp_path / "etapa3", "snap_alto")
     assert res_corta["veredicto"] == "CORTA" and any("Sharpe de cartera" in m and "<= benchmark" in m for m in res_corta["motivos"])
-    assert not abierto("cartera-sint", "prueba") and all(r.read_text(encoding="utf-8") == "intacto\n" for r in registros)
+    assert not abierto("cartera-sint", "prueba") and intentos() == []
     (e3 / "sma-cross-TLT.csv").unlink()
     with pytest.raises(FileNotFoundError, match="sma-cross-TLT"):
         calcular_criterio_paper(yaml_path, tmp_path / "etapa2", tmp_path / "etapa3", "snap_bajo")
@@ -56,14 +54,17 @@ def test_criterio_paper_cli(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     monkeypatch.chdir(tmp_path)
     yaml_path, _, e3 = _preparar_fixtures(tmp_path)
-    int_csv = tmp_path / "intentos.csv"
-    int_csv.write_text("hipotesis,etapa,estrategia,params,activo,desde,hasta,sharpe,sharpe_base\nh1,2,rsi,{},SPY,2007-01-01,2018-12-31,0.8,tasa_0\nh1,2,sma,{},TLT,2007-01-01,2018-12-31,0.5,tasa_0\n", encoding="utf-8")
-    txt_int = int_csv.read_text(encoding="utf-8")
+    from quantagent.fabrica.registro_db import registrar_intento, intentos
+    for estrategia, activo, sharpe in (("rsi", "SPY", 0.8), ("sma", "TLT", 0.5)):
+        registrar_intento(estrategia, activo, "snap_bajo", "", 1.0, {},
+            {"desde": "2007-01-01", "hasta": "2018-12-31", "sharpe": sharpe,
+             "trades": 10, "pnl": 100.0}, hipotesis="h1", etapa="2", sharpe_base="tasa_0")
+    filas_antes = intentos()
     assert main([str(yaml_path), str(tmp_path / "etapa2"), str(tmp_path / "etapa3"), "snap_bajo"]) == 0
     out, _ = capsys.readouterr()
     for esperada in ("cartera-sint", "Sharpe etapa 3", "Benchmark etapa 3", "3 de 4", "DSR con N efectivo (2)", "DSR con N crudo (2)", "Recargo de paper", "Veredicto: PASA"):
         assert esperada in out
-    assert int_csv.read_text(encoding="utf-8") == txt_int and not (tmp_path / "hipotesis.csv").exists() and not abierto("cartera-sint", "prueba")
+    assert intentos() == filas_antes and not (tmp_path / "hipotesis.csv").exists() and not abierto("cartera-sint", "prueba")
     assert main([str(yaml_path), str(tmp_path / "etapa2"), str(tmp_path / "etapa3"), "snap_alto"]) == 0
     out_corta, _ = capsys.readouterr()
     assert "Veredicto: CORTA" in out_corta and "Motivos:" in out_corta and "<= benchmark" in out_corta
@@ -71,7 +72,7 @@ def test_criterio_paper_cli(tmp_path, monkeypatch, capsys):
     assert main([str(yaml_path), str(tmp_path / "etapa2"), str(tmp_path / "etapa3"), "snap_bajo"]) == 1
     _, err = capsys.readouterr()
     assert "Curva faltante: sma-cross-TLT" in err
-    assert int_csv.read_text(encoding="utf-8") == txt_int and not (tmp_path / "hipotesis.csv").exists()
+    assert intentos() == filas_antes and not (tmp_path / "hipotesis.csv").exists()
 
 
 @pytest.mark.parametrize("etapa", ["etapa2", "etapa3"])

@@ -71,14 +71,17 @@ def registrar_evento(hipotesis_id, evento, etapa=None, veredicto=None, motivo=""
 def registrar_intento(strategy_name, symbol, snapshot_name, costos, tamano_posicion, combo, row,
                       hipotesis=None, etapa=None, sharpe_base="tasa_libre", fecha_utc=None):
     ts = _fecha(fecha_utc)
+    sharpe = row["sharpe"]
+    pnl = row["pnl"]
     extra = {"desde": row["desde"], "hasta": row["hasta"], "costos": costos or "",
              "tamano": tamano_posicion, "sharpe_base": sharpe_base or ""}
     with SessionLocal() as db:
         if hipotesis is not None and db.get(Hypothesis, hipotesis) is None:
             db.add(Hypothesis(id=hipotesis, created_at=ts))
         db.add(HypothesisAttempt(ts=ts, hypothesis_id=hipotesis, snapshot=snapshot_name,
-            strategy=strategy_name, asset=symbol, params=combo, sharpe=row["sharpe"],
-            trades=row["trades"], pnl=row["pnl"], stage=etapa, status=None, extra=extra))
+            strategy=strategy_name, asset=symbol, params=combo,
+            sharpe=None if sharpe == "" else sharpe, trades=row["trades"],
+            pnl=None if pnl == "" else pnl, stage=etapa, status=None, extra=extra))
         db.commit()
 
 

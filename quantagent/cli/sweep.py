@@ -1,5 +1,6 @@
 """Carga y validación de grillas para backtest sweep (V31a)."""
 
+import csv
 import itertools
 import json
 import logging

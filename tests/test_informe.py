@@ -1,4 +1,3 @@
-import csv
 import json
 from pathlib import Path
 
@@ -6,8 +5,14 @@ import pytest
 from click.testing import CliRunner
 
 from quantagent.cli.backtest import backtest_group
-from quantagent.cli.sweep import CAMPOS_INTENTOS
 from quantagent.fabrica.estado import registrar_estado
+from quantagent.fabrica import registro_db
+
+
+def registrar_fila(h, e, a, s, t, **extra):
+    registro_db.registrar_intento("test", a, extra.pop("snapshot", "real"), None, None, {},
+        {"desde": "2020-01-01", "hasta": "2020-12-31", "trades": t, "pnl": 123.4,
+         "sharpe": s}, h, e)
 
 
 @pytest.fixture
@@ -19,11 +24,8 @@ def raiz(tmp_path, monkeypatch):
     filas = [("h-corta1", "1", "SPY", "0.02", "12"), ("h-corta1", "1", "IWM", "0.05", "20"),
              ("h-corta3", "2", "SPY", "0.9", "40"), ("h-corta3", "3", "QQQ", "0.31", "55"),
              ("h-corta3", "3", "EFA", "0.44", "61")]
-    with (tmp_path / "intentos.csv").open("w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=CAMPOS_INTENTOS, restval="")
-        w.writeheader()
-        for h, e, a, s, t in filas:
-            w.writerow({"hipotesis": h, "etapa": e, "activo": a, "sharpe": s, "trades": t, "pnl": "123.4"})
+    for h, e, a, s, t in filas:
+        registrar_fila(h, e, a, s, t)
     return tmp_path
 
 
@@ -63,24 +65,17 @@ def test_hipotesis_desconocida_falla(raiz):
 def test_informe_epoca_y_conteos_globales_sin_modificar_registros(raiz, con_estado, con_epoca):
     from quantagent.fabrica.informe import datos_informe
 
-    path = raiz / "intentos.csv"
-    campos = CAMPOS_INTENTOS if con_estado else CAMPOS_INTENTOS[:-1]
-    with path.open("w", newline="", encoding="utf-8") as archivo:
-        writer = csv.DictWriter(archivo, fieldnames=campos, restval="")
-        writer.writeheader()
-        for hid, snapshot, estado in (("h-corta1", "real", ""), ("otra", "real", ""),
-                                       ("otra", "real", "invalida_bug"),
-                                       ("otra", "sintetico", "")):
-            fila = {"hipotesis": hid, "etapa": "1", "activo": "SPY", "snapshot": snapshot}
-            if con_estado:
-                fila["estado"] = estado
-            writer.writerow(fila)
+    for hid, snapshot in (("h-corta1", "real"), ("otra", "real"),
+                          ("otra", "real"), ("otra", "sintetico")):
+        registrar_fila(hid, "1", "SPY", 0.2, 2, snapshot=snapshot)
+    if con_estado:
+        registro_db.invalidar_intentos({"hipotesis": "otra"})
     marca = raiz / "epoca_limpia.json"
     epoca = {"desde_utc": "2026-10-27T00:00:00+00:00", "motivo": '<script>bug & "arreglo"</script>',
              "creada_utc": "2026-10-28T00:00:00+00:00"}
     if con_epoca:
         marca.write_text(json.dumps(epoca), encoding="utf-8")
-    antes = {p: p.read_bytes() for p in (path, marca) if p.exists()}
+    antes = {p: p.read_bytes() for p in (marca,) if p.exists()}
     datos = datos_informe("h-corta1")
     assert datos["intentos_validos"] == (2 if con_estado else 3)
     assert datos["intentos_invalidados"] == (1 if con_estado else 0)
@@ -151,10 +146,8 @@ def test_informe_cartera_dos_piernas_contiene_universos_y_fila_cartera_sin_preci
         ]
     }))
     registrar_estado("h-cartera", "1", "PASA", "ok")
-    with (raiz / "intentos.csv").open("a", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=CAMPOS_INTENTOS, restval="")
-        w.writerow({"hipotesis": "h-cartera", "etapa": "1", "activo": "cartera", "sharpe": "0.45", "trades": "120", "pnl": "5000.0"})
-        w.writerow({"hipotesis": "h-cartera", "etapa": "1", "activo": "SPY", "sharpe": "0.20", "trades": "60", "pnl": "2500.0"})
+    registrar_fila("h-cartera", "1", "cartera", .45, 120)
+    registrar_fila("h-cartera", "1", "SPY", .20, 60)
     r, out = informe(raiz, "h-cartera", archivo=yaml_path)
     assert r.exit_code == 0, r.output
     html = out.read_text()
@@ -174,8 +167,7 @@ def test_informe_etapa3_muestra_cuatro_cifras_recargo_y_glosario_nuevo(raiz):
     fila_e3 = {"dsr": 0.80, "dsr_crudo": 0.55, "anios_positivos": "3 de 4", "benchmark": 0.12,
                "benchmark_mismo_peso": 0.34, "n_efectivo": 5}
     registrar_estado("h-etapa3-completa", "3", "PASA", motivo_etapa3_cartera("cartera pasa V30 y DSR", fila_e3))
-    with (raiz / "intentos.csv").open("a", newline="") as f:
-        csv.DictWriter(f, fieldnames=CAMPOS_INTENTOS, restval="").writerow({"hipotesis": "h-etapa3-completa", "etapa": "3", "activo": "cartera", "sharpe": "0.45", "trades": "100"})
+    registrar_fila("h-etapa3-completa", "3", "cartera", .45, 100)
     r, out = informe(raiz, "h-etapa3-completa")
     assert r.exit_code == 0, r.output
     html = out.read_text()
@@ -250,7 +242,7 @@ def test_diagnostico_exceso_solo_lee_curvas_y_fechas_guardadas(raiz, monkeypatch
                           "realtime_end": [pd.Timestamp("2099-01-01")], "valor": [3.0]})
     _escribir(raiz / "macro-2026-10", "macro-2026-10", {"DGS3MO": macro})
     (raiz / "hipotesis-candado.csv").write_text("h,prueba,2020-01-01\n")
-    entradas = ["intentos.csv", "hipotesis.csv", "hipotesis-candado.csv"]
+    entradas = ["hipotesis.csv", "hipotesis-candado.csv"]
     antes = {n: (raiz / n).read_bytes() for n in entradas}
     dsr_antes = modulo.datos_informe("h-corta3")["dsr"]
     eq = pd.Series([100, 102, 104, 106], index=fechas)

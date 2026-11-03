@@ -52,11 +52,16 @@ def test_escribir_propuestas_no_persiste_doi_sin_verificar(tmp_path, monkeypatch
 
 
 def test_pedido_sin_cifras_de_sharpe_dsr_ni_pnl(tmp_path):
-    pm, intentos = tmp_path / "postmortem", tmp_path / "intentos.csv"
+    from quantagent.fabrica import registro_db
+
+    pm = tmp_path / "postmortem"
     pm.mkdir()
     (pm / "c1.yaml").write_text(yaml.safe_dump({"id": "c1", "causas": ["pocos_trades"], "sharpe": 0.4321, "dsr": 0.9876, "pnl": -1234.56, "trades": 789}), encoding="utf-8")
-    intentos.write_text("hipotesis,sharpe,dsr,pnl,trades\nc1,0.4321,0.9876,-1234.56,789\nc2,0.5555,0.8888,999.0,654\n", encoding="utf-8")
-    pedido = armar_pedido("catalogo/primas.yaml", pm, intentos)
+    for hipotesis, sharpe in (("c1", 0.4321), ("c2", 0.5555)):
+        registro_db.registrar_intento("rsi", "SPY", "real", "", 1.0, {},
+            {"desde": "2007-01-01", "hasta": "2018-12-31", "sharpe": sharpe,
+             "trades": 10, "pnl": 100.0}, hipotesis=hipotesis, etapa="2")
+    pedido = armar_pedido("catalogo/primas.yaml", pm, len(registro_db.intentos()))
     pedido_plano = " ".join(pedido.split())
     assert all(e in pedido_plano for e in ("Cómo se evalúa", "comprar y mantener", "Los overlays solo largos sobre los activos del benchmark no superaron a comprar y mantener.", "AGG: '2007-01-03'", "DGS3MO", "RSIMeanReversionStrategy", "momentum-transversal", "deriva-pre-fomc", "intentos_registrados: 2", "pocos_trades", "tendencia-series-de-tiempo"))
     assert "diversificador" not in pedido
@@ -108,7 +113,7 @@ def test_proponer_cli_lista_aceptadas_y_rechazadas_sin_correr_hipotesis(tmp_path
     guardado = yaml.safe_load((prop_dir / "prop-ok.yaml").read_text(encoding="utf-8"))
     assert guardado["refutacion"].startswith("Sin refutación confirmada")
     assert "efecto_esperado" not in refuter_input.read_text() and all(p not in refuter_input.read_text().lower() for p in ("sharpe", "dsr", "ganancias", "pnl"))
-    assert not (tmp_path / "hipotesis.csv").exists() and not (tmp_path / "intentos.csv").exists()
+    assert not (tmp_path / "hipotesis.csv").exists()
 
 
 @pytest.mark.parametrize("cmd,esperado", [("", "QUANTAGENT_LLM_CMD no está definido"), (f"{sys.executable} -c 'import sys; sys.stderr.write(\"fallo de red\\n\"); sys.exit(2)'", "fallo de red")])

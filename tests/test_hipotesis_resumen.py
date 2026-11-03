@@ -6,6 +6,7 @@ from click.testing import CliRunner
 from quantagent.cli.hipotesis import hipotesis_group
 from quantagent.fabrica.estado import COLUMNAS
 from quantagent.fabrica.estado import resumen_tanda
+from quantagent.fabrica.registro_db import registrar_intento, invalidar_intentos
 
 
 def test_resumen_ultimos_fecha_causas_e_intentos(tmp_path, monkeypatch):
@@ -15,13 +16,14 @@ def test_resumen_ultimos_fecha_causas_e_intentos(tmp_path, monkeypatch):
              ("2026-02-02T00:00:00+00:00", "h1", "3", "CORTA", "SPY: DSR < 0.95"),
              ("2026-02-02T00:00:00+00:00", "h2", "3", "CORTA", "XLK: DSR < 0.95"),
              ("2026-02-02T00:00:00+00:00", "h3", "2", "ALARMA", "filtro optimista")]
-    for nombre, columnas, datos in [("hipotesis.csv", COLUMNAS, filas),
-                                    ("intentos.csv", ("fecha_utc", "hipotesis"),
-                                     [(r[0], r[1]) for r in filas])]:
-        with (tmp_path / nombre).open("w", newline="") as f:
-            w = csv.writer(f)
-            w.writerow(columnas)
-            w.writerows(datos)
+    with (tmp_path / "hipotesis.csv").open("w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(COLUMNAS)
+        w.writerows(filas)
+    for fecha, hipotesis, etapa, _, _ in filas:
+        registrar_intento("rsi", "SPY", "real", "etf", 1.0, {},
+                          {"desde": "2026-01-01", "hasta": "2026-12-31", "trades": 1,
+                           "pnl": 1.0, "sharpe": 0.5}, hipotesis=hipotesis, etapa=etapa, fecha_utc=fecha)
     runner = CliRunner()
     completo = runner.invoke(hipotesis_group, ["resumen"])
     assert completo.exit_code == 0
@@ -49,10 +51,10 @@ def test_resumen_causa_en_varios_activos_cuenta_una_vez_por_hipotesis(tmp_path, 
         w = csv.writer(f)
         w.writerow(COLUMNAS)
         w.writerows(filas)
-    with (tmp_path / "intentos.csv").open("w", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(("fecha_utc", "hipotesis"))
-        w.writerows([(r[0], r[1]) for r in filas])
+    for fecha, hipotesis, etapa, _, _ in filas:
+        registrar_intento("rsi", "SPY", "real", "etf", 1.0, {},
+                          {"desde": "2026-01-01", "hasta": "2026-12-31", "trades": 1,
+                           "pnl": 1.0, "sharpe": 0.5}, hipotesis=hipotesis, etapa=etapa, fecha_utc=fecha)
     runner = CliRunner()
     completo = runner.invoke(hipotesis_group, ["resumen"])
     assert completo.exit_code == 0
@@ -65,12 +67,14 @@ def test_resumen_usa_eventos_etapa_y_fallback_sin_eventos(tmp_path, monkeypatch)
         writer = csv.writer(f)
         writer.writerow(COLUMNAS)
         writer.writerow(["2026-02-01T00:00:00+00:00", "H1", "0", "PASA", "csv"])
-    with (tmp_path / "intentos.csv").open("w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["fecha_utc", "hipotesis", "estado", "snapshot"])
-        writer.writerow(["2026-02-01T00:30:00+00:00", "H1", "", "real"])
-        writer.writerow(["2026-02-01T01:00:00+00:00", "H1", "invalida_bug", "s1"])
-        writer.writerow(["2026-02-01T02:00:00+00:00", "H1", "", "sintetico"])
+    for fecha, snapshot in [("2026-02-01T00:30:00+00:00", "real"),
+                            ("2026-02-01T01:00:00+00:00", "s1"),
+                            ("2026-02-01T02:00:00+00:00", "sintetico")]:
+        registrar_intento("rsi", "SPY", snapshot, "etf", 1.0, {},
+                          {"desde": "2026-01-01", "hasta": "2026-12-31", "trades": 1,
+                           "pnl": 1.0, "sharpe": 0.5}, hipotesis="H1", etapa="1", fecha_utc=fecha)
+    invalidar_intentos({"hipotesis": "H1", "desde": "2026-02-01T01:00:00+00:00",
+                        "hasta": "2026-02-01T01:00:00+00:00"})
 
     solo_csv = resumen_tanda()
     assert "| 0 | PASA | 1 |" in solo_csv

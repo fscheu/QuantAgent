@@ -232,16 +232,17 @@ def test_sharpe_deflactado_un_intento_tiene_sr0_cero():
 EQUITY_DSR = [100, 101, 99.5, 102, 103.5, 102.8, 105]
 
 
-def _intentos(path, sharpes):
-    with open(path, "w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f)
-        w.writerow(["estrategia", "sharpe"])
-        w.writerows([[f"s{i}", v] for i, v in enumerate(sharpes)])
-    return path
+def _intentos(sharpes, base="tasa_libre"):
+    from quantagent.fabrica.registro_db import intentos, registrar_intento
+    for i, valor in enumerate(sharpes):
+        registrar_intento(f"s{i}", f"A{i}", "real", None, None, {"i": i},
+                          {"desde": "2020-01-01", "hasta": "2020-12-31", "trades": 2,
+                           "pnl": 1, "sharpe": valor}, sharpe_base=base)
+    return intentos()
 
 
 def test_dsr_contra_intentos_coincide_con_calculo_a_mano(tmp_path):
-    ruta = _intentos(tmp_path / "intentos.csv", [0.5, 1.0, 1.5, ""])
+    ruta = _intentos([0.5, 1.0, 1.5, ""])
     r = np.diff(EQUITY_DSR) / np.array(EQUITY_DSR[:-1])
     sr = r.mean() / r.std(ddof=1)
     z = (r - r.mean()) / r.std()  # momentos poblacionales, como scipy por defecto
@@ -252,13 +253,13 @@ def test_dsr_contra_intentos_coincide_con_calculo_a_mano(tmp_path):
 
 def test_dsr_contra_intentos_baja_con_mas_filas(tmp_path):
     base = [0.5, 1.0, 1.5]
-    chico = dsr_contra_intentos(EQUITY_DSR, _intentos(tmp_path / "a.csv", base))
-    grande = dsr_contra_intentos(EQUITY_DSR, _intentos(tmp_path / "b.csv", base + [0.5, 1.5] * 5))
+    chico = dsr_contra_intentos(EQUITY_DSR, _intentos(base))
+    grande = dsr_contra_intentos(EQUITY_DSR, _intentos(base + [0.5, 1.5] * 5))
     assert grande < chico
 
 
 def test_dsr_contra_intentos_curva_plana_y_filas_vacias(tmp_path):
-    ruta = _intentos(tmp_path / "intentos.csv", [0.5, 1.0, ""])
+    ruta = _intentos([0.5, 1.0, ""])
     assert dsr_contra_intentos([100] * 7, ruta) is None
     assert dsr_contra_intentos([100, 101, 102], ruta) is None  # solo 2 retornos
     # La fila vacía cuenta en N (cambia SR0) pero no en la varianza.
@@ -272,17 +273,7 @@ def test_dsr_contra_intentos_curva_plana_y_filas_vacias(tmp_path):
 
 
 def test_dsr_contra_intentos_ignora_tasa_libre_con_suficientes_tasa_0(tmp_path):
-    path = tmp_path / "intentos.csv"
-    with open(path, "w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f)
-        w.writerow(["estrategia", "sharpe", "sharpe_base"])
-        w.writerows([
-            ["s0", 0.5, "tasa_0"],
-            ["s1", 1.0, "tasa_0"],
-            ["s2", 1.5, "tasa_0"],
-            ["s3", 10.0, "tasa_libre"],
-            ["s4", -10.0, "tasa_libre"],
-        ])
+    path = _intentos([0.5, 1.0, 1.5, 10.0, -10.0], "tasa_0")
     r = np.diff(EQUITY_DSR) / np.array(EQUITY_DSR[:-1])
     sr = r.mean() / r.std(ddof=1)
     z = (r - r.mean()) / r.std()
@@ -332,7 +323,7 @@ def test_n_efectivo_dos_corridas_misma_cartera_tres_etapas_cuentan_como_tres():
 
 
 def test_dsr_contra_intentos_parametro_n_intentos(tmp_path):
-    path = _intentos(tmp_path / "intentos.csv", [0.5, 1.0, 1.5, 0.8, 1.2])
+    path = _intentos([0.5, 1.0, 1.5, 0.8, 1.2])
     dsr_crudo = dsr_contra_intentos(EQUITY_DSR, path)
     dsr_k_menor = dsr_contra_intentos(EQUITY_DSR, path, n_intentos=3)
     assert dsr_crudo is not None and dsr_k_menor is not None
@@ -341,8 +332,7 @@ def test_dsr_contra_intentos_parametro_n_intentos(tmp_path):
 
 
 def test_dsr_deduplica_n_pero_conserva_varianza_de_repeticiones(tmp_path):
-    path = tmp_path / "intentos.csv"
-    path.write_text("estrategia,sharpe\na,0.5\na,1.0\nb,1.5\n")
+    path = _intentos([0.5, 1.0, 1.5])
     r = np.diff(EQUITY_DSR) / np.array(EQUITY_DSR[:-1])
     z = (r - r.mean()) / r.std()
     esperado = sharpe_deflactado(r.mean() / r.std(ddof=1), 2,
