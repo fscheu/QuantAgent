@@ -43,8 +43,9 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  abrir   Open a cycle with up to five hypothesis IDs.
-  cerrar  Close an open cycle and save its immutable receipt.
+  abrir    Open a cycle with up to five hypothesis IDs.
+  cerrar   Close an open cycle and save its immutable receipt.
+  informe  Show a phone-friendly report for a monthly cycle.
 
   Example: quantagent registro ciclo abrir 2026-11 H1 H2
 ```

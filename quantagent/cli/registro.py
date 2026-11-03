@@ -11,6 +11,7 @@ from quantagent.fabrica.registro import (
     ciclos_sin_etapa3,
     importar_csv,
 )
+from quantagent.fabrica.registro_vista import informe_ciclo
 
 
 @click.group("registro", help="Manage hypothesis evaluation cycles.",
@@ -113,3 +114,14 @@ def cerrar_command(ciclo):
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
     click.echo(f"Ciclo cerrado: {ciclo}; promovidas: {recibo['promovidas']}")
+
+
+@ciclo_group.command("informe", help="Show a phone-friendly report for a monthly cycle.",
+                     epilog="Example: quantagent registro ciclo informe 2026-11")
+@click.argument("ciclo")
+def informe_command(ciclo):
+    try:
+        texto = informe_ciclo(ciclo)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+    click.echo(texto)

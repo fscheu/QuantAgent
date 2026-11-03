@@ -2,6 +2,7 @@
 
 from collections import Counter
 from datetime import datetime, timedelta, timezone
+from textwrap import fill
 
 from quantagent.fabrica import estado, registro
 
@@ -100,3 +101,74 @@ def hipotesis(estado=None, etapa=None, ciclo=None):
                        "discard_reason": ultimo.get("motivo") if descartada else None,
                        "discard_detail": None, "updated_at": ultimo.get("fecha_utc")})
     return sorted(salida, key=lambda h: (h["stage"], h["updated_at"] or ""), reverse=True)
+
+
+def informe_ciclo(ciclo):
+    eventos_ciclo = registro._eventos_ciclo(ciclo)
+    apertura = next((e for e in eventos_ciclo if e.get("evento") == "ciclo"
+                     and e.get("datos", {}).get("accion") == "abrir"), None)
+    if apertura is None:
+        raise ValueError(f"el ciclo {ciclo} no existe")
+    recibo = registro.recibo_ciclo(ciclo)
+    parcial = recibo is None
+    cierre = next((e for e in eventos_ciclo if e.get("evento") == "ciclo"
+                   and e.get("datos", {}).get("accion") == "cerrar"), None)
+    ids = apertura.get("datos", {}).get("hipotesis", [])
+    if parcial:
+        eventos, _ = registro._leer_eventos()
+        inicio = eventos.index(apertura)
+        propios = [e for e in eventos[inicio + 1:]
+                   if e.get("hipotesis") in ids and e.get("evento") in ("etapa", "intento")]
+        recibo = {"ciclo": ciclo, "hipotesis": ids,
+                  "etapas": {etapa: len({e.get("hipotesis") for e in propios
+                                         if e.get("evento") == "etapa" and e.get("etapa") == etapa})
+                             for etapa in _ETAPAS},
+                  "promovidas": sum(any(e.get("evento") == "etapa" and e.get("etapa") == "3"
+                                         and e.get("veredicto") == "PASA" and e.get("hipotesis") == h
+                                         for e in propios) for h in ids),
+                  "caidas": {}, "intentos": {}, "snapshots": [], "hashes_manifiesto": {}}
+        for h in ids:
+            propios_h = [e for e in propios if e.get("hipotesis") == h]
+            caidas = [e for e in propios_h if e.get("evento") == "etapa" and e.get("veredicto") in _CAIDAS]
+            if caidas:
+                caida = max(caidas, key=registro._fecha)
+                recibo["caidas"][h] = {k: caida.get(k, "") for k in ("etapa", "veredicto", "motivo")}
+            recibo["intentos"][h] = sum(e.get("evento") == "intento" for e in propios_h)
+        recibo["snapshots"] = sorted({e.get("datos", {}).get("snapshot") for e in propios
+                                      if e.get("evento") == "intento" and e.get("datos", {}).get("snapshot")})
+        recibo["hashes_manifiesto"] = {s: registro.snapshot_manifest_hash(s) for s in recibo["snapshots"]}
+
+    lineas = [f"Ciclo {ciclo}: {len(recibo.get('hipotesis', ids))} hipótesis entraron;",
+              f"{recibo.get('promovidas', 0)} promovieron.", ""]
+    if parcial:
+        lineas.append("AVISO: ciclo abierto, informe parcial.")
+    lineas.append("Embudo:")
+    for etapa in _ETAPAS:
+        lineas.append(f"e{etapa}: {recibo.get('etapas', {}).get(etapa, 0)} alcanzaron esta etapa")
+    lineas.extend(["", "Caídas:"])
+    for h, caida in recibo.get("caidas", {}).items():
+        motivo = caida.get("motivo", "") or "sin motivo registrado"
+        causas = estado.causas_de_motivo(motivo)
+        explicacion = "Indica que la evaluación detectó: " + ", ".join(sorted(causas)) if causas else "El motivo registrado describe por qué se detuvo."
+        lineas.append(f"{h}: e{caida.get('etapa')} {caida.get('veredicto')}. Motivo: {motivo}")
+        lineas.append(explicacion)
+    lineas.extend(["", "Intentos:"])
+    lineas.extend(f"{h}: {n}" for h, n in recibo.get("intentos", {}).items())
+    lineas.extend(["", "Snapshots:"])
+    for snapshot in recibo.get("snapshots", []):
+        hash_manifiesto = recibo.get("hashes_manifiesto", {}).get(snapshot, "")
+        lineas.append(f"{snapshot}: {(hash_manifiesto or '')[:12]}")
+    if recibo.get("promovidas", 0) == 0 and cierre:
+        lineas.extend(["", f"Cierre: {cierre.get('motivo') or 'sin promoción'}"])
+    usados = {caida.get("veredicto") for caida in recibo.get("caidas", {}).values()}
+    if recibo.get("promovidas", 0):
+        usados.add("PASA")
+    descripciones = {"PASA": "avanza", "CORTA": "se descarta",
+                     "ERROR": "falló", "ALARMA": "requiere atención"}
+    terminos = ["Glosario:", "e0–e3: etapas de evaluación."]
+    terminos.extend(f"{veredicto}: {descripciones[veredicto]}." for veredicto in
+                    ("PASA", "CORTA", "ERROR", "ALARMA") if veredicto in usados)
+    terminos.append("snapshot: datos usados.")
+    lineas.extend(["", *terminos])
+    return "\n".join(fill(str(linea), width=60, break_long_words=True,
+                            break_on_hyphens=False) if linea else "" for linea in lineas)
