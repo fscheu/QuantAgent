@@ -72,3 +72,11 @@ flowchart LR
 - **Pass criterion:** no candidate promotion rule is defined; paper results do not authorize live trading.
 - **Command:** no factory CLI command is defined for candidate promotion.
 - **Source:** [R01 research purpose](../04_decisions/QuantAgent-R01-DC-decisiones-investigacion-edge.md), 2026-10-21/22.
+
+## Hypothesis registry and monthly cycle
+
+- **Input:** every stage verdict and every attempt, written by the factory commands to `registro-hipotesis.jsonl` (append-only, next to `hipotesis.csv` and `intentos.csv`, which are still written).
+- **Measure:** one cycle per month (`YYYY-MM`) with at most 5 hypotheses; closing a cycle saves an immutable receipt with stage counts, drops with their reason, attempts, snapshots and their manifest hashes. A hypothesis counts as promoted when it reaches stage 3 with PASA.
+- **Pass criterion:** none. After 6 consecutive closed cycles with no promoted hypothesis, the approach is reviewed (`CICLOS_PARA_REVISAR`).
+- **Commands:** `quantagent registro importar` (load the CSV history once), `ver`, `ciclo abrir|cerrar|informe`, `corte`, `calendario`. Attempt counts for the deflated Sharpe still come from `intentos.csv`, so rows marked `invalida_bug` stay excluded.
+- **Source:** [roadmap after M5, section 1](../02_planning/2026-10-28_roadmap_post_m5.md), decisions C1–C4, 2026-10-28.

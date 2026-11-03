@@ -32,3 +32,5 @@ Each entry gives a plain definition, a quick example, and its source.
 ### Control (backtesting.py) — An independent backtest implementation; for example, matching trades provide a cross-check. [Edge research §3](../02_planning/2026-10-20_investigacion_edge_y_generacion.md)
 ### Golden test — A saved expected result; for example, fail when a trade or metric changes. [Edge research §3](../02_planning/2026-10-20_investigacion_edge_y_generacion.md)
 ### Walk-forward — Fit on one period and measure on the next; for example, roll the training window forward yearly. [Edge research §3](../02_planning/2026-10-20_investigacion_edge_y_generacion.md)
+
+### Cycle receipt — The immutable record saved when a monthly hypothesis cycle closes, also when nothing was promoted; for example, `quantagent registro ciclo informe 2026-11`. [Roadmap after M5, section 1](../02_planning/2026-10-28_roadmap_post_m5.md)
