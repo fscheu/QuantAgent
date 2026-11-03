@@ -35,8 +35,8 @@ export const calendarEvents = [
 ] satisfies CalendarEvent[]
 
 export const positions = [
-  { symbol: 'SPY', description: 'ETF S&P 500', side: 'long', qty: 20, avg_entry_price: 490, current_price: 500, market_value: 10000, unrealized_pl: 200, unrealized_pl_pct: 0.02, stop_price: 475, opened_at: '2026-10-01T14:30:00Z' },
-  { symbol: 'TSLA', description: 'Tesla', side: 'short', qty: 10, avg_entry_price: 205, current_price: 200, market_value: 2000, unrealized_pl: 50, unrealized_pl_pct: 0.025, stop_price: 220, opened_at: '2026-10-15T14:30:00Z' },
+  { symbol: 'SPY', description: 'ETF S&P 500', side: 'long', qty: 20, status: 'executed', avg_entry_price: 490, current_price: 500, market_value: 10000, unrealized_pl: 200, unrealized_pl_pct: 0.02, stop_price: 475, opened_at: '2026-10-01T14:30:00Z' },
+  { symbol: 'TSLA', description: 'Tesla', side: 'short', qty: 10, status: 'executed', avg_entry_price: 205, current_price: 200, market_value: 2000, unrealized_pl: 50, unrealized_pl_pct: 0.025, stop_price: 220, opened_at: '2026-10-15T14:30:00Z' },
 ] satisfies Position[]
 export const equity: EquityPoint[] = [
   { date: '2026-10-26', account: 12650, benchmark: 681, shadow: 12620 },

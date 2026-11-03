@@ -11,7 +11,7 @@ from apps.api.alarms import evaluate_account_alarms
 from apps.api.app import account_summary, home_status
 from apps.api.cli import api_group
 from quantagent.database import Base
-from quantagent.models import Account, CalendarEvent, EquitySnapshot, Event, Order, OrderSide, Position
+from quantagent.models import Account, CalendarEvent, EquitySnapshot, Event, Environment, Fill, MarketData, Order, OrderSide, OrderStatus, OrderType, Position
 
 
 def _account_values(db_url):
@@ -22,7 +22,7 @@ def _account_values(db_url):
 def _source(path, *, positions=True, snapshots=True):
     url = f"sqlite:///{path}"
     engine = create_engine(url)
-    tables = [Position.__table__, Order.__table__]
+    tables = [Position.__table__, Order.__table__, Fill.__table__, MarketData.__table__]
     if snapshots:
         tables.append(EquitySnapshot.__table__)
     Base.metadata.create_all(engine, tables=tables)
@@ -31,6 +31,14 @@ def _source(path, *, positions=True, snapshots=True):
             db.add(Position(symbol="A", quantity=10, average_entry_price=10, current_price=10,
                 unrealized_pnl=0, unrealized_pnl_pct=0, side=OrderSide.BUY,
                 opened_at=datetime(2026, 10, 30), updated_at=datetime(2026, 10, 30)))
+        if positions:
+            order = Order(symbol="A", side=OrderSide.BUY, quantity=10, order_type=OrderType.MARKET,
+                          status=OrderStatus.FILLED, environment=Environment.PAPER)
+            db.add(order)
+            db.flush()
+            db.add(Fill(order_id=order.id, quantity=10, price=10, filled_at=datetime(2026, 10, 30)))
+            db.add(MarketData(symbol="A", timeframe="1d", timestamp=datetime(2026, 10, 30),
+                              open=10, high=10, low=10, close=10, volume=100))
         if snapshots:
             db.add_all([EquitySnapshot(snapshot_date=day, taken_at=taken, equity=value, cash=0, invested=value)
                 for day, taken, value in [(date(2026, 10, 29), datetime(2026, 10, 29), 100),

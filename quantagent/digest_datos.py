@@ -1,6 +1,7 @@
 """Paper trading data queries used by the operational digest."""
 
 from datetime import date, datetime, time, timedelta, timezone
+from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
@@ -46,6 +47,38 @@ def consultar_valuacion_actual(broker, portfolios: list[dict]) -> dict:
             "notice": "Foto actual de Alpaca; no es saldo histórico de --date."}
 
 
+def reconstruir_posiciones(fills):
+    """Consolidate ordered fills at average cost, including reductions and reversals.
+
+    Used by the digest's realized P&L and the read-only web without a live broker.
+    """
+    positions, sales = {}, []
+    for fill, order in fills:
+        quantity = fill.quantity if order.side.value == "buy" else -fill.quantity
+        price = fill.price
+        position = positions.setdefault(order.symbol, {
+            "quantity": Decimal(0), "average_entry_price": Decimal(0),
+            "opened_at": fill.filled_at, "updated_at": fill.filled_at,
+        })
+        old = position["quantity"]
+        cost = position["average_entry_price"]
+        remaining = old + quantity
+        if old * quantity < 0:
+            closed = min(abs(old), abs(quantity))
+            pnl = (price - cost) * closed * (1 if old > 0 else -1)
+            sales.append({"symbol": order.symbol, "side": order.side.value,
+                          "quantity": float(closed), "pnl": float(pnl - (fill.commission or 0)),
+                          "filled_at": fill.filled_at})
+        if old == 0 or old * remaining < 0:
+            position["average_entry_price"] = price
+            position["opened_at"] = fill.filled_at
+        elif old * quantity > 0:
+            position["average_entry_price"] = (cost * abs(old) + price * abs(quantity)) / abs(remaining)
+        position["quantity"] = remaining
+        position["updated_at"] = fill.filled_at
+    return {symbol: position for symbol, position in positions.items() if position["quantity"]}, sales
+
+
 def consultar_datos_cartera(session: Session, day: date, portfolio_name: str, broker) -> tuple[list[dict], list[dict], list[dict], list[dict], float]:
     """Read a dedicated portfolio DB; fills are executions, not realized P&L.
 
@@ -70,21 +103,10 @@ def consultar_datos_cartera(session: Session, day: date, portfolio_name: str, br
         .filter(Order.environment == Environment.PAPER, Fill.filled_at < end)
         .order_by(Fill.filled_at, Fill.id).all()
     )
-    quantities, costs = {}, {}
-    realized, daily = 0.0, []
-    for fill, order in fills_historicos:
-        quantity, price, commission = float(fill.quantity), float(fill.price), float(fill.commission or 0)
-        symbol = order.symbol
-        if order.side.value == "buy":
-            old_quantity = quantities.get(symbol, 0.0)
-            costs[symbol] = (costs.get(symbol, 0.0) * old_quantity + price * quantity) / (old_quantity + quantity)
-            quantities[symbol] = old_quantity + quantity
-        else:
-            pnl = (price - costs.get(symbol, 0.0)) * quantity - commission
-            realized += pnl
-            quantities[symbol] = quantities.get(symbol, 0.0) - quantity
-            if fill.filled_at >= start:
-                daily.append({"symbol": symbol, "side": "sell", "quantity": quantity, "pnl": pnl})
+    _, sales = reconstruir_posiciones(fills_historicos)
+    realized = sum(sale["pnl"] for sale in sales)
+    daily = [{key: value for key, value in sale.items() if key != "filled_at"}
+             for sale in sales if sale["filled_at"] >= start]
     return (
         [{"name": portfolio_name, "positions": [
             {"symbol": p.symbol, "quantity": float(p.qty), "side": p.side,

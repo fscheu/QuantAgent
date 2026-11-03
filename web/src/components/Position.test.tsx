@@ -1,8 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
 import type { Position } from '../api/types';
-import { PositionCard } from './Position';
+import { PositionCard, positionColumns } from './Position';
 import { StopDistanceBar } from './StopDistanceBar';
+
+afterEach(cleanup);
 
 const props = { side: 'long' as const, price: 100, stop: 90, qty: 10 };
 
@@ -39,7 +41,7 @@ describe('StopDistanceBar', () => {
 });
 
 describe('PositionCard', () => {
-  const shortPosition: Position = { symbol: 'XYZ', description: 'Empresa XYZ', side: 'short', qty: 5, avg_entry_price: 110, current_price: 100, market_value: 500, unrealized_pl: 50, unrealized_pl_pct: 9.09, stop_price: 120, opened_at: '2026-10-20' };
+  const shortPosition: Position = { symbol: 'XYZ', description: 'Empresa XYZ', side: 'short', qty: 5, status: 'executed', avg_entry_price: 110, current_price: 100, market_value: 500, unrealized_pl: 50, unrealized_pl_pct: 9.09, stop_price: 120, opened_at: '2026-10-20' };
   it('explains a short profit when price falls', () => {
     render(<PositionCard position={shortPosition} />);
     expect(screen.getByText('Gana si el precio baja: bajó de 110,00 a 100,00.')).toBeTruthy();
@@ -49,8 +51,32 @@ describe('PositionCard', () => {
     expect(screen.getByText('Pierde si el precio sube: subió de 110,00 a 120,00.')).toBeTruthy();
   });
   it('shows no current stop for a long position without a stop', () => {
-    const { container } = render(<PositionCard position={{ ...shortPosition, side: 'long', qty: 10, stop_price: null }} />);
-    expect(container.querySelector('.qa-stop-copy')?.textContent).toContain('Sin stop vigente');
+    render(<PositionCard position={{ ...shortPosition, side: 'long', qty: 10, stop_price: null }} />);
+    expect(screen.getByText('Sin stop')).toBeTruthy();
+  });
+  it.each([110, null])('hides direction text when the current price is %s', current_price => {
+    const { container } = render(<PositionCard position={{ ...shortPosition, current_price }} />);
+    expect(container.querySelector('.qa-position-explanation')).toBeNull();
+  });
+  it('does not describe a profit or loss for an unfilled short order', () => {
+    const { container } = render(<PositionCard position={{ ...shortPosition, status: 'pending', unrealized_pl: null, unrealized_pl_pct: null, market_value: null }} />);
+    expect(container.querySelector('.qa-position-explanation')).toBeNull();
+    expect(screen.getByText('Sin valuación')).toBeTruthy();
+  });
+  it.each(['executed', 'pending'] as const)('shows %s status in cards and rows', status => {
+    const position = { ...shortPosition, status };
+    const label = status === 'pending' ? 'Orden pendiente' : 'Ejecutada';
+    const { unmount } = render(<PositionCard position={position} />);
+    expect(screen.getByText(label)).toBeTruthy();
+    unmount();
+    const column = positionColumns.find(column => column.key === 'status')!;
+    render(<>{column.render!(position)}</>);
+    expect(screen.getByText(label)).toBeTruthy();
+  });
+  it('shows an explicit missing stop in the table', () => {
+    const column = positionColumns.find(column => column.key === 'stop_price')!;
+    render(<>{column.render!({ ...shortPosition, stop_price: null })}</>);
+    expect(screen.getByText('Sin stop')).toBeTruthy();
   });
   it('shows absolute value and positive quantity for a negative short quantity', () => {
     const { container } = render(<PositionCard position={{ ...shortPosition, qty: -5, market_value: -500 }} />);

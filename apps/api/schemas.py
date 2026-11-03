@@ -77,12 +77,13 @@ class PositionResponse(BaseModel):
     symbol: str
     description: None = None
     side: Literal["long", "short"]
+    status: Literal["executed", "pending"]
     qty: float
-    avg_entry_price: float
-    current_price: float
-    market_value: float
-    unrealized_pl: float
-    unrealized_pl_pct: float
+    avg_entry_price: float | None
+    current_price: float | None
+    market_value: float | None
+    unrealized_pl: float | None
+    unrealized_pl_pct: float | None
     stop_price: float | None
     stop_distance: float | None
     opened_at: str

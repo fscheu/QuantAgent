@@ -735,20 +735,41 @@
       "PositionResponse": {
         "properties": {
           "avg_entry_price": {
-            "title": "Avg Entry Price",
-            "type": "number"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Entry Price"
           },
           "current_price": {
-            "title": "Current Price",
-            "type": "number"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Price"
           },
           "description": {
             "title": "Description",
             "type": "null"
           },
           "market_value": {
-            "title": "Market Value",
-            "type": "number"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Value"
           },
           "opened_at": {
             "title": "Opened At",
@@ -764,6 +785,14 @@
               "short"
             ],
             "title": "Side",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "executed",
+              "pending"
+            ],
+            "title": "Status",
             "type": "string"
           },
           "stop_distance": {
@@ -793,17 +822,32 @@
             "type": "string"
           },
           "unrealized_pl": {
-            "title": "Unrealized Pl",
-            "type": "number"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unrealized Pl"
           },
           "unrealized_pl_pct": {
-            "title": "Unrealized Pl Pct",
-            "type": "number"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unrealized Pl Pct"
           }
         },
         "required": [
           "symbol",
           "side",
+          "status",
           "qty",
           "avg_entry_price",
           "current_price",

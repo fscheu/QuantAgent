@@ -67,15 +67,16 @@ export interface Position {
   symbol: string;
   description: string | null;         // 'ETF S&P 500'
   side: PositionSide;
+  status: 'executed' | 'pending';
   /** Siempre positiva. El broker informa negativa en cortas: el backend la normaliza. */
   qty: number;
-  avg_entry_price: number;
-  current_price: number;
+  avg_entry_price: number | null;
+  current_price: number | null;
   /** En absoluto (positivo) también en cortas. */
-  market_value: number;
+  market_value: number | null;
   /** Ya con el signo correcto según el lado: en una corta, gana si el precio baja. */
-  unrealized_pl: number;
-  unrealized_pl_pct: number;
+  unrealized_pl: number | null;
+  unrealized_pl_pct: number | null;
   /** Larga: por debajo del precio. Corta: por encima. null → "Sin stop vigente". */
   stop_price: number | null;
   opened_at: string;

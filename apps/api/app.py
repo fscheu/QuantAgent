@@ -380,32 +380,12 @@ def account_sector_exposure(account_id: str, db: Session = Depends(get_db)):
 
 @app.get("/api/accounts/{account_id}/positions", response_model=list[PositionResponse])
 def account_positions(account_id: str, db: Session = Depends(get_db)):
-    from quantagent.models import ActivePosition, Position
-
     from .accounts import account_session_factory
+    from .positions import read_positions
 
     account = configured_account(account_id, db)
     with account_session_factory(account)() as source:
-        active_columns = (ActivePosition.symbol, ActivePosition.side, ActivePosition.stop_loss,
-                          ActivePosition.environment, ActivePosition.is_active)
-        rows = source.execute(select(Position, *active_columns).outerjoin(ActivePosition,
-            (ActivePosition.symbol == Position.symbol) & (ActivePosition.side == Position.side) &
-            (ActivePosition.environment == ("prod" if account.env == "live" else "paper")) &
-            ActivePosition.is_active.is_(True)).order_by(Position.symbol)).all()
-        result = []
-        for row in rows:
-            position = row[0]
-            side = "long" if position.side.value == "buy" else "short"
-            qty, price = abs(float(position.quantity)), float(position.current_price)
-            stop_loss = row[3]
-            stop = float(stop_loss) if stop_loss is not None else None
-            result.append(PositionResponse(symbol=position.symbol, side=side, qty=qty,
-                avg_entry_price=float(position.average_entry_price), current_price=price,
-                market_value=qty * price, unrealized_pl=float(position.unrealized_pnl),
-                unrealized_pl_pct=float(position.unrealized_pnl_pct), stop_price=stop,
-                stop_distance=(price - stop if side == "long" else stop - price) if stop is not None else None,
-                opened_at=utc_z(position.opened_at)))
-        return result
+        return read_positions(source, "prod" if account.env == "live" else "paper")
 
 
 @app.get("/api/accounts/{account_id}/orders", response_model=list[OrderResponse])
