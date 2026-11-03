@@ -87,12 +87,21 @@ def evaluate_account_alarms(account, master_db, now, config=None):
         if timestamps:
             last_seen = max(_aware(value) for value in timestamps)
             local = now.astimezone(NEW_YORK)
-            holiday = (master_db.scalar(select(CalendarEvent.id).where(CalendarEvent.kind == "holiday", CalendarEvent.date == local.date()).limit(1))
-                       if inspect(master_db.get_bind()).has_table("calendar_events") else None)
-            market_open = local.weekday() < 5 and time(9, 30) <= local.time().replace(tzinfo=None) < time(16) and not holiday
+            day = last_seen.astimezone(NEW_YORK).date()
+            holidays = (set(master_db.scalars(select(CalendarEvent.date).where(CalendarEvent.kind == "holiday",
+                CalendarEvent.date >= day, CalendarEvent.date <= local.date())).all())
+                if inspect(master_db.get_bind()).has_table("calendar_events") else set())
+            market_open = local.weekday() < 5 and time(9, 30) <= local.time().replace(tzinfo=None) < time(16) and local.date() not in holidays
+            session_since_data = False
+            while day <= local.date():
+                opening = datetime.combine(day, time(9, 30), tzinfo=NEW_YORK)
+                if day.weekday() < 5 and day not in holidays and last_seen < opening <= now:
+                    session_since_data = True
+                    break
+                day += timedelta(days=1)
             threshold = config.stale_minutes_market_open if market_open else config.stale_minutes_market_closed
             age = (now - last_seen.astimezone(UTC)).total_seconds() / 60
-            if age > threshold:
+            if age > threshold and (market_open or session_since_data):
                 duration = f"{age / 60:.1f} horas" if age >= 60 else f"{age:.0f} minutos"
                 alarms.append(("data_stale", "warning", "Sin datos recientes", f"Último dato hace {duration} ({last_seen.isoformat()})", {"duration": duration, "last_seen": last_seen.astimezone(NEW_YORK).strftime("%Y-%m-%d %H:%M")}))
 

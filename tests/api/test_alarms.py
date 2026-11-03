@@ -1,6 +1,7 @@
 from datetime import date, datetime, timezone
 import json
 
+import pytest
 from click.testing import CliRunner
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
@@ -97,6 +98,44 @@ def test_market_stale_threshold_and_holiday(tmp_path):
         master.add(CalendarEvent(date=date(2026, 10, 30), kind="holiday", title="Feriado", source="manual"))
         master.commit()
         assert "data_stale" not in [a.kind for a in evaluate_account_alarms(account, master, now, AlarmConfig())]
+    engine.dispose()
+
+
+@pytest.mark.parametrize("last_seen, now, holidays, stale", [
+    ("2026-10-30T18:45:00+00:00", "2026-10-31T18:00:00+00:00", [], False),
+    ("2026-10-30T18:45:00+00:00", "2026-11-01T18:00:00+00:00", [], False),
+    ("2026-10-30T18:45:00+00:00", "2026-11-02T12:00:00+00:00", [], False),
+    ("2026-10-30T18:45:00+00:00", "2026-11-02T15:30:00+00:00", [], True),
+    ("2026-10-30T20:00:00+00:00", "2026-11-03T12:00:00+00:00", ["2026-11-02"], False),
+    ("2026-10-30T20:00:00+00:00", "2026-11-03T12:00:00+00:00", [], True),
+    ("2026-10-30T18:45:00+00:00", "2026-11-02T15:30:00+00:00", ["2026-11-02"], False),
+    ("2026-10-29T18:45:00+00:00", "2026-11-01T18:00:00+00:00", [], True),
+    # During the same open session, retain the 30-minute threshold.
+    ("2026-10-30T18:45:00+00:00", "2026-10-30T19:00:00+00:00", [], False),
+    ("2026-10-30T18:45:00+00:00", "2026-10-30T19:30:00+00:00", [], True),
+    # Closed hours retain the 24-hour threshold, even after a new opening.
+    ("2026-10-29T22:00:00+00:00", "2026-10-30T21:00:00+00:00", [], False),
+    ("2026-10-29T22:00:00+00:00", "2026-10-30T23:00:00+00:00", [], True),
+    # After the DST change, Monday opens at 14:30 UTC; equality is included.
+    ("2026-10-30T18:45:00+00:00", "2026-11-02T14:29:00+00:00", [], False),
+    ("2026-10-30T18:45:00+00:00", "2026-11-02T14:30:00+00:00", [], True),
+    ("2026-11-02T14:30:00+00:00", "2026-11-03T12:00:00+00:00", [], False),
+])
+def test_stale_requires_new_session_or_open_market(tmp_path, last_seen, now, holidays, stale):
+    engine = _master(tmp_path)
+    url = _source(tmp_path / "stale.db", snapshots=False)
+    source = create_engine(url)
+    with Session(source) as db:
+        db.query(Position).update({Position.updated_at: datetime.fromisoformat(last_seen)})
+        db.commit()
+    source.dispose()
+    with Session(engine) as master:
+        account = add_account(master, **_account_values(url))
+        master.add_all([CalendarEvent(date=date.fromisoformat(day), kind="holiday", title="Feriado", source="manual")
+                       for day in holidays])
+        master.commit()
+        alarms = evaluate_account_alarms(account, master, datetime.fromisoformat(now), AlarmConfig())
+        assert ("data_stale" in [alarm.kind for alarm in alarms]) == stale
     engine.dispose()
 
 
