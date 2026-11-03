@@ -4,7 +4,7 @@ from datetime import datetime
 
 import pytest
 
-from quantagent.cli.sweep import CAMPOS_INTENTOS
+from quantagent.fabrica.campos_intentos import CAMPOS_INTENTOS
 
 
 @pytest.fixture(params=["jsonl", "db"])
@@ -129,6 +129,44 @@ def test_intentos_son_compatibles_con_verdict_y_excluyen_invalidos(registro_modu
     assert json.loads(rows[0]["params"]) == {"x": 1}
     assert len(filas_validas(rows)) == 3
     assert n_efectivo(rows) == 2
+
+
+def test_paridad_n_efectivo_e_informe_con_filas_fijas(registro_modulo):
+    from quantagent.fabrica import registro_db as modulo_db
+    if registro_modulo[0] is not modulo_db:
+        pytest.skip("el conteo SQL se valida en la variante db")
+
+    from quantagent.backtesting.verdict import filas_validas, n_efectivo
+    from quantagent.fabrica.informe import datos_informe
+    from quantagent.fabrica.registro_db import registrar_evento
+
+    resultado = {"desde": "2020-01-01", "hasta": "2021-01-01", "trades": 3, "pnl": 2.5, "sharpe": 0.8}
+    for params, activo, etapa in (({"p": 1}, "SPY", "1"), ({"p": 1}, "SPY", "2"),
+                                  ({"p": 2}, "SPY", "1")):
+        modulo_db.registrar_intento("rsi", activo, "real", None, None, params, resultado,
+                                    "H-paridad", etapa)
+    registrar_evento("H-paridad", "etapa", "3", "PASA")
+    todas = modulo_db.intentos(valida_solo=False)
+    # Las tres filas son válidas; las dos primeras comparten clave efectiva.
+    assert len(filas_validas(todas)) == 3
+    assert n_efectivo(todas) == 2
+    datos = datos_informe("H-paridad")
+    assert datos["n_total"] == 3
+    assert datos["n_efectivo"] == 2
+
+
+def test_error_database_url_faltante_es_explicito(monkeypatch):
+    from quantagent import database, settings
+    from quantagent.fabrica.registro_db import intentos
+
+    if database._engine is not None:
+        database._engine.dispose()
+    database._engine = None
+    database._SessionLocal = None
+    monkeypatch.setenv("DATABASE_URL", "")
+    monkeypatch.setattr(settings, "DATABASE_URL", "", raising=False)
+    with pytest.raises(ValueError, match="DATABASE_URL no está configurada.*URL SQLAlchemy"):
+        intentos()
 
 
 def test_sin_eventos_retorna_vacios(registro_modulo):

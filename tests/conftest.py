@@ -30,6 +30,26 @@ from quantagent.agent_models import (
 )
 
 
+@pytest.fixture(autouse=True)
+def isolated_database(tmp_path, monkeypatch):
+    """Give every test a fresh SQLite database for production persistence."""
+    from quantagent import database, settings
+
+    url = f"sqlite:///{tmp_path / 'test.db'}"
+    monkeypatch.setenv("DATABASE_URL", url)
+    monkeypatch.setattr(settings, "DATABASE_URL", url, raising=False)
+    if database._engine is not None:
+        database._engine.dispose()
+    database._engine = None
+    database._SessionLocal = None
+    database.init_db()
+    yield
+    if database._engine is not None:
+        database._engine.dispose()
+    database._engine = None
+    database._SessionLocal = None
+
+
 def _configure_xdist_worker_database() -> None:
     """Derive worker-specific SQLite database when running under pytest-xdist."""
     worker = os.environ.get("PYTEST_XDIST_WORKER")
