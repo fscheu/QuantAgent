@@ -53,7 +53,7 @@ def build_digest(day: date, portfolios: list[dict], trades: list[dict],
     for portfolio in portfolios:
         positions = portfolio.get("positions", [])
         lines = [f"## Posiciones de {portfolio['name']}"]
-        lines.extend(f"- {p['symbol']}: {p['quantity']} @ {p['price']} "
+        lines.extend(f"- {p['symbol']}: {p.get('side', '') + ' ' if p.get('side') else ''}{p['quantity']} @ {p['price']} "
                      + (f"(valor de mercado {p['value']:.2f} USD) " if valuation is not None else "")
                      + f"(P&L no realizado {p['unrealized_pnl']})" for p in positions)
         if not positions:
