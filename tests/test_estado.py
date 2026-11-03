@@ -1,3 +1,5 @@
+import csv
+
 import pytest
 
 from quantagent.fabrica.estado import registrar_estado, ultimo_estado
@@ -39,3 +41,27 @@ def test_invalido_no_crea_archivo(_raiz):
     with pytest.raises(ValueError):
         registrar_estado("H1", "4", "PASA")
     assert not _raiz.exists()
+
+
+def test_estado_registra_evento_con_los_mismos_campos(_raiz, tmp_path, monkeypatch):
+    import json
+
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    registrar_estado("H1", "2", "CORTA", "sin edge")
+
+    with _raiz.open(newline="") as archivo:
+        fila = next(csv.DictReader(archivo))
+    evento = json.loads((tmp_path / "registro-hipotesis.jsonl").read_text().splitlines()[0])
+    assert {k: evento[k] for k in ("hipotesis", "etapa", "veredicto", "motivo")} == {
+        k: fila[k] for k in ("hipotesis", "etapa", "veredicto", "motivo")
+    }
+
+
+def test_estado_csv_sobrevive_a_error_del_registro(_raiz, tmp_path, monkeypatch, caplog):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    (tmp_path / "registro-hipotesis.jsonl").mkdir()
+
+    registrar_estado("H1", "0", "PASA")
+
+    assert ultimo_estado("H1")["veredicto"] == "PASA"
+    assert "No se pudo registrar el evento de etapa" in caplog.text

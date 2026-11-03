@@ -108,3 +108,45 @@ def test_epoca_limpia_fecha_invalida(registro, desde):
     assert "ISO con zona UTC" in result.output
     assert registro.read_bytes() == original
     assert list(registro.parent.iterdir()) == [registro]
+
+
+def test_registrar_intento_escribe_evento_con_snapshot(registro):
+    from quantagent.cli.sweep import registrar_intento
+
+    row = {"desde": "2020-01-01", "hasta": "2021-01-01", "trades": 3, "pnl": 2.5, "sharpe": 0.8}
+    registrar_intento("rsi", "SPY", "snap-1", None, 1.0, {"period": 14}, row,
+                      hipotesis="H1", etapa="1")
+
+    evento = json.loads((registro.parent / "registro-hipotesis.jsonl").read_text().splitlines()[0])
+    assert evento["evento"] == "intento"
+    assert evento["hipotesis"] == "H1"
+    assert evento["etapa"] == "1"
+    assert evento["datos"]["snapshot"] == "snap-1"
+    assert evento["datos"]["params"] == {"period": 14}
+    with registro.open(newline="") as archivo:
+        fila = list(csv.DictReader(archivo))[-1]
+    assert (fila["hipotesis"], fila["snapshot"]) == ("H1", "snap-1")
+
+
+def test_csv_intentos_sobrevive_a_error_del_registro(registro, caplog):
+    from quantagent.cli.sweep import registrar_intento
+
+    (registro.parent / "registro-hipotesis.jsonl").mkdir()
+    row = {"desde": "2020-01-01", "hasta": "2021-01-01", "trades": 3, "pnl": 2.5, "sharpe": 0.8}
+    registrar_intento("rsi", "SPY", "snap-2", None, 1.0, {}, row, hipotesis="H2")
+
+    with registro.open(newline="") as archivo:
+        fila = list(csv.DictReader(archivo))[-1]
+    assert (fila["hipotesis"], fila["snapshot"]) == ("H2", "snap-2")
+    assert "No se pudo registrar el evento de intento" in caplog.text
+
+
+def test_registrar_intento_sin_hipotesis_no_emite_evento(registro):
+    from quantagent.cli.sweep import registrar_intento
+
+    row = {"desde": "2020-01-01", "hasta": "2021-01-01", "trades": 3, "pnl": 2.5, "sharpe": 0.8}
+    registrar_intento("rsi", "SPY", "snap-3", None, 1.0, {}, row)
+
+    assert not (registro.parent / "registro-hipotesis.jsonl").exists()
+    with registro.open(newline="") as archivo:
+        assert list(csv.DictReader(archivo))[-1]["snapshot"] == "snap-3"

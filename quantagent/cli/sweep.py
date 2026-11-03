@@ -3,6 +3,7 @@
 import csv
 import itertools
 import json
+import logging
 import math
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -17,6 +18,7 @@ from quantagent.strategy.registry import STRATEGY_REGISTRY, cli_aliases
 from quantagent.trading.position_sizer import PositionSizer
 
 MAX_SWEEP_COMBINATIONS = 50
+logger = logging.getLogger(__name__)
 
 
 def validar_grilla(data: Any, strategy: str) -> list[dict[str, Any]]:
@@ -170,6 +172,25 @@ def registrar_intento(
             writer.writeheader()
             writer.writerows(previas or [])
         writer.writerow(intento)
+    if hipotesis:
+        try:
+            from quantagent.fabrica.estado import ETAPAS
+            from quantagent.fabrica.registro import registrar_evento
+
+            datos = {
+                "snapshot": snapshot_name,
+                "estrategia": strategy_name,
+                "activo": symbol,
+                "params": combo,
+                "sharpe": row["sharpe"],
+                "trades": row["trades"],
+                "pnl": row["pnl"],
+            }
+            registrar_evento(
+                hipotesis, "intento", etapa=etapa if etapa in ETAPAS else None, datos=datos
+            )
+        except Exception:
+            logger.warning("No se pudo registrar el evento de intento para %s", hipotesis, exc_info=True)
 
 
 @click.command("attempts", help="Count runs and parameter combinations recorded by sweep.")
