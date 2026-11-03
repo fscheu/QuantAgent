@@ -221,6 +221,15 @@ def estados_actuales():
     return estados
 
 
+def eventos_etapa(hipotesis_id=None):
+    """Return stage events ordered by UTC date, preserving file order for ties."""
+    eventos, _ = _leer_eventos()
+    etapas = [(i, e) for i, e in enumerate(eventos)
+              if e.get("evento") == "etapa"
+              and (hipotesis_id is None or e.get("hipotesis") == hipotesis_id)]
+    return [e for _, e in sorted(etapas, key=lambda item: (_fecha(item[1]), item[0]))]
+
+
 def _eventos_ciclo(ciclo):
     if not isinstance(ciclo, str) or not _CICLO_RE.fullmatch(ciclo):
         raise ValueError(f"ciclo inválido: {ciclo!r}; debe tener formato YYYY-MM")

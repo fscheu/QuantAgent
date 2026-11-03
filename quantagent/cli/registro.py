@@ -68,6 +68,24 @@ def calendario_command(desde):
         click.echo("Todavía no toca revisar el enfoque.")
 
 
+@registro_group.command("ver", help="List hypothesis registry events in chronological order.",
+                        epilog="Examples:\n  quantagent registro ver\n  quantagent registro ver --hipotesis H1")
+@click.option("--hipotesis", "hipotesis_id", help="Show events for this hypothesis ID.")
+def ver_command(hipotesis_id):
+    from quantagent.fabrica.registro import _leer_eventos, _fecha
+
+    eventos, _ = _leer_eventos()
+    if hipotesis_id is not None:
+        eventos = [e for e in eventos if e.get("hipotesis") == hipotesis_id]
+    eventos = sorted(enumerate(eventos), key=lambda item: (_fecha(item[1]), item[0]))
+    if not eventos:
+        click.echo("No hay eventos en el registro.")
+        return
+    for _, evento in eventos:
+        click.echo(" | ".join(str(evento.get(campo) or "") for campo in
+                              ("fecha_utc", "hipotesis", "evento", "etapa", "veredicto", "ciclo", "motivo")))
+
+
 @registro_group.group("ciclo", help="Open or close a monthly hypothesis cycle.",
                       epilog="Example: quantagent registro ciclo abrir 2026-11 H1 H2")
 def ciclo_group():

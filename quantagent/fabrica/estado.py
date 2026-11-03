@@ -39,6 +39,15 @@ def registrar_estado(hipotesis_id, etapa, veredicto, motivo=""):
 
 
 def ultimo_estado(hipotesis_id):
+    from quantagent.fabrica.registro import eventos_etapa
+
+    try:
+        etapas = eventos_etapa(hipotesis_id)
+    except OSError:
+        etapas = []
+    if etapas:
+        evento = etapas[-1]
+        return {columna: evento.get(columna, "") for columna in COLUMNAS}
     path = snapshot_root() / ESTADO_CSV
     if not path.exists():
         return None
@@ -61,7 +70,20 @@ def resumen_tanda(desde=None):
                 filas = [r for r in csv.DictReader(f) if desde is None or
                          datetime.fromisoformat(r["fecha_utc"]) >= desde]
         registros[nombre] = filas
-    ultimos = {r["hipotesis"]: r for r in registros[ESTADO_CSV]}
+    from quantagent.fabrica.registro import eventos_etapa
+
+    try:
+        eventos_etapa_registro = eventos_etapa()
+    except OSError:
+        eventos_etapa_registro = []
+    etapas = [e for e in eventos_etapa_registro
+              if desde is None or datetime.fromisoformat(str(e.get("fecha_utc")).replace("Z", "+00:00")) >= desde]
+    if etapas:
+        ultimos = {}
+        for evento in etapas:
+            ultimos[evento.get("hipotesis")] = {columna: evento.get(columna, "") for columna in COLUMNAS}
+    else:
+        ultimos = {r["hipotesis"]: r for r in registros[ESTADO_CSV]}
     conteos = Counter((r["etapa"], r["veredicto"]) for r in ultimos.values())
     causas = Counter(causa
                      for r in ultimos.values() if r["veredicto"] != "PASA"

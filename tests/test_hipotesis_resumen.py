@@ -1,9 +1,11 @@
 import csv
+from datetime import datetime
 
 from click.testing import CliRunner
 
 from quantagent.cli.hipotesis import hipotesis_group
 from quantagent.fabrica.estado import COLUMNAS
+from quantagent.fabrica.estado import resumen_tanda
 
 
 def test_resumen_ultimos_fecha_causas_e_intentos(tmp_path, monkeypatch):
@@ -55,4 +57,30 @@ def test_resumen_causa_en_varios_activos_cuenta_una_vez_por_hipotesis(tmp_path, 
     completo = runner.invoke(hipotesis_group, ["resumen"])
     assert completo.exit_code == 0
     assert "- DSR < 0.95: 2" in completo.output
+
+
+def test_resumen_usa_eventos_etapa_y_fallback_sin_eventos(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    with (tmp_path / "hipotesis.csv").open("w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(COLUMNAS)
+        writer.writerow(["2026-02-01T00:00:00+00:00", "H1", "0", "PASA", "csv"])
+    with (tmp_path / "intentos.csv").open("w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["fecha_utc", "hipotesis", "estado", "snapshot"])
+        writer.writerow(["2026-02-01T00:30:00+00:00", "H1", "", "real"])
+        writer.writerow(["2026-02-01T01:00:00+00:00", "H1", "invalida_bug", "s1"])
+        writer.writerow(["2026-02-01T02:00:00+00:00", "H1", "", "sintetico"])
+
+    solo_csv = resumen_tanda()
+    assert "| 0 | PASA | 1 |" in solo_csv
+    assert "Intentos: 1" in solo_csv
+    from quantagent.fabrica.registro import importar_csv, registrar_evento
+    importar_csv()
+    assert resumen_tanda() == solo_csv
+    assert resumen_tanda(desde=datetime.fromisoformat("2026-02-01T00:00:00+00:00")) == solo_csv
+
+    registrar_evento("H2", "etapa", "3", "CORTA", "registro",
+                     fecha_utc="2026-02-02T00:00:00+00:00")
+    assert "| 3 | CORTA | 1 |" in resumen_tanda()
 

@@ -8,6 +8,7 @@ from quantagent.fabrica.estado import registrar_estado, ultimo_estado
 @pytest.fixture(autouse=True)
 def _raiz(tmp_path, monkeypatch):
     monkeypatch.setattr("quantagent.fabrica.estado.snapshot_root", lambda: tmp_path)
+    monkeypatch.setattr("quantagent.fabrica.registro.snapshot_root", lambda: tmp_path)
     return tmp_path / "hipotesis.csv"
 
 
@@ -65,3 +66,16 @@ def test_estado_csv_sobrevive_a_error_del_registro(_raiz, tmp_path, monkeypatch,
 
     assert ultimo_estado("H1")["veredicto"] == "PASA"
     assert "No se pudo registrar el evento de etapa" in caplog.text
+
+
+def test_ultimo_estado_prefiere_evento_de_registro_y_mantiene_columnas(tmp_path, monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    registrar_estado("H1", "0", "PASA", "csv")
+    from quantagent.fabrica.registro import registrar_evento
+    registrar_evento("H1", "etapa", "2", "CORTA", "registro",
+                     fecha_utc="2099-02-01T00:00:00+00:00")
+
+    assert ultimo_estado("H1") == {
+        "fecha_utc": "2099-02-01T00:00:00+00:00", "hipotesis": "H1",
+        "etapa": "2", "veredicto": "CORTA", "motivo": "registro",
+    }
