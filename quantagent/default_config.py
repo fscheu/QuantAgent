@@ -16,6 +16,9 @@ DEFAULT_MODELS = {
 # Default temperature (professional, deterministic outputs)
 DEFAULT_TEMPERATURE = 0.1
 
+# Consecutive closed hypothesis cycles without a stage 3 pass before reviewing the approach.
+CICLOS_PARA_REVISAR = 6
+
 # Retry configuration for LLM API calls
 RETRY_CONFIG = {
     "max_retries": 5,

@@ -171,3 +171,20 @@ def cerrar_ciclo(ciclo):
 def recibo_ciclo(ciclo):
     return next((e.get("datos", {}).get("recibo") for e in _eventos_ciclo(ciclo)
                  if e.get("evento") == "ciclo" and e.get("datos", {}).get("accion") == "cerrar"), None)
+
+
+def ciclos_sin_etapa3():
+    """Count the latest consecutive closed cycles without a stage 3 pass."""
+    eventos, _ = _leer_eventos()
+    cierres = [
+        evento.get("datos", {}).get("recibo", {})
+        for evento in eventos
+        if evento.get("evento") == "ciclo"
+        and evento.get("datos", {}).get("accion") == "cerrar"
+    ]
+    cuenta = 0
+    for recibo in reversed(cierres):
+        if recibo.get("promovidas", 0):
+            break
+        cuenta += 1
+    return cuenta
