@@ -130,3 +130,73 @@ def test_defaults_flat_curve_and_unrelated_trades(tmp_path, monkeypatch, destina
         assert run.total_pnl == 0 and run.max_drawdown == 0
         assert run.total_trades is None and run.win_rate is None
         assert (tmp_path / "curves" / f"{run.id}.csv").is_file()
+
+
+def _write_curve(root, group, filename="rsi-SPY.csv"):
+    equity = root / group / "equity"
+    equity.mkdir(parents=True)
+    (equity / filename).write_text("date,equity\n2024-01-01,100\n2024-01-02,110\n")
+
+
+def test_import_links_only_known_hypothesis_ids(tmp_path, destination):
+    url, engine = destination
+    root = tmp_path / "input"
+    _write_curve(root, "cartera-transversal")
+    _write_curve(root, "control")
+    _write_curve(root, "cartera-sin-yaml")
+    hypotheses = tmp_path / "hipotesis"
+    hypotheses.mkdir()
+    (hypotheses / "transversal.yaml").write_text("id: cartera-transversal\n")
+
+    result = CliRunner().invoke(backtest_group, ["import", str(root), "--database-url", url,
+                                                  "--hipotesis-dir", str(hypotheses),
+                                                  "--equity-dir", str(tmp_path / "curves")])
+    assert result.exit_code == 0, result.output
+    with Session(engine) as db:
+        rows = {row.config_snapshot["group"]: row for row in db.scalars(select(BacktestRun)).all()}
+        assert rows["cartera-transversal"].hypothesis_id == "cartera-transversal"
+        assert rows["control"].hypothesis_id is None
+        assert rows["cartera-sin-yaml"].hypothesis_id is None
+
+
+def test_vincular_known_runs_dry_run_idempotency_and_preserves_ids(tmp_path, destination):
+    url, engine = destination
+    root = tmp_path / "input"
+    _write_curve(root, "cartera-transversal")
+    _write_curve(root, "cartera-preservada")
+    _write_curve(root, "control")
+    hypotheses = tmp_path / "hipotesis"
+    hypotheses.mkdir()
+    runner = CliRunner()
+    imported = runner.invoke(backtest_group, ["import", str(root), "--database-url", url,
+                                               "--hipotesis-dir", str(hypotheses),
+                                               "--equity-dir", str(tmp_path / "curves")])
+    assert imported.exit_code == 0, imported.output
+    with Session(engine) as db:
+        preserved = next(row for row in db.scalars(select(BacktestRun)).all()
+                         if row.config_snapshot["group"] == "cartera-preservada")
+        preserved.hypothesis_id = "id-manual"
+        db.commit()
+
+    (hypotheses / "transversal.yaml").write_text("id: cartera-transversal\n")
+    (hypotheses / "preservada.yaml").write_text("id: cartera-preservada\n")
+    args = ["vincular", "--database-url", url, "--hipotesis-dir", str(hypotheses)]
+    dry = runner.invoke(backtest_group, [*args, "--dry-run"])
+    assert dry.exit_code == 0, dry.output
+    assert "Vincularía: 1; sin cambios: 1" in dry.output
+    with Session(engine) as db:
+        rows = {row.config_snapshot["group"]: row for row in db.scalars(select(BacktestRun)).all()}
+        assert rows["cartera-transversal"].hypothesis_id is None
+        assert rows["cartera-preservada"].hypothesis_id == "id-manual"
+
+    linked = runner.invoke(backtest_group, args)
+    assert linked.exit_code == 0, linked.output
+    assert "Vinculadas: 1; sin cambios: 1" in linked.output
+    repeated = runner.invoke(backtest_group, args)
+    assert repeated.exit_code == 0, repeated.output
+    assert "Vinculadas: 0" in repeated.output
+    with Session(engine) as db:
+        rows = {row.config_snapshot["group"]: row for row in db.scalars(select(BacktestRun)).all()}
+        assert rows["cartera-transversal"].hypothesis_id == "cartera-transversal"
+        assert rows["cartera-preservada"].hypothesis_id == "id-manual"
+        assert rows["control"].hypothesis_id is None
