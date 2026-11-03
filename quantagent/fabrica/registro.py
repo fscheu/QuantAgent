@@ -113,9 +113,8 @@ def importar_csv(dry_run=False, datos=None):
                         params = json.loads(row["params"])
                         if not isinstance(params, dict):
                             raise ValueError
+                        # La etapa de un intento es texto libre (p. ej. "comparar"): no se descarta.
                         stage = row["etapa"] or None
-                        if stage is not None and stage not in ETAPAS:
-                            raise ValueError
                         status = row["estado"] or None
                         if status not in (None, "", "valida", "invalida_bug"):
                             raise ValueError

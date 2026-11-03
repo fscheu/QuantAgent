@@ -296,3 +296,16 @@ def test_cli_ver_lista_eventos_ordenados_y_filtra_hipotesis(raiz, db_temporal):
     todos = CliRunner().invoke(cli, ["registro", "ver"])
     assert todos.exit_code == 0
     assert todos.output.index("H2") < todos.output.index("H1")
+
+
+def test_importar_csv_conserva_intentos_con_etapa_de_texto_libre(db_temporal, tmp_path):
+    from quantagent.fabrica import registro_db
+
+    _csv_importables(tmp_path)
+    with (tmp_path / "intentos.csv").open("a", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerow(["2026-01-03T00:30:00+00:00", "cartera", "cartera", "snap", "", "", "", "",
+                                "{}", "5", "", "0.4", "H3", "comparar", "", ""])
+    resultado = registro.importar_csv(datos=str(tmp_path))
+
+    assert resultado["omitidas"] == 0 and resultado["intentos"]["agregados"] == 3
+    assert [i["etapa"] for i in registro_db.intentos() if i["hipotesis"] == "H3"] == ["comparar"]
