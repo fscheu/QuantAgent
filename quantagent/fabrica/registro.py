@@ -4,7 +4,7 @@ import json
 import re
 from datetime import datetime, timezone
 
-from quantagent.data.snapshot import snapshot_root
+from quantagent.data.snapshot import snapshot_manifest_hash, snapshot_root
 from quantagent.fabrica.estado import ETAPAS, VEREDICTOS
 
 EVENTOS = ("admision", "etapa", "intento", "ciclo")
@@ -99,3 +99,75 @@ def estados_actuales():
         if evento.get("evento") == "etapa":
             estados[evento.get("hipotesis")] = evento
     return estados
+
+
+def _eventos_ciclo(ciclo):
+    if not isinstance(ciclo, str) or not _CICLO_RE.fullmatch(ciclo):
+        raise ValueError(f"ciclo inválido: {ciclo!r}; debe tener formato YYYY-MM")
+    return [e for e in _leer_eventos()[0] if e.get("ciclo") == ciclo]
+
+
+def abrir_ciclo(ciclo, hipotesis_ids):
+    if not isinstance(ciclo, str) or not _CICLO_RE.fullmatch(ciclo):
+        raise ValueError(f"ciclo inválido: {ciclo!r}; debe tener formato YYYY-MM")
+    hipotesis = list(hipotesis_ids)
+    if len(hipotesis) > 5:
+        raise ValueError("un ciclo admite como máximo 5 hipótesis")
+    if len(set(hipotesis)) != len(hipotesis):
+        raise ValueError("el ciclo no admite hipótesis duplicadas")
+    if any(e.get("evento") == "ciclo" and e.get("datos", {}).get("accion") == "abrir"
+           for e in _eventos_ciclo(ciclo)):
+        raise ValueError(f"el ciclo {ciclo} ya fue abierto")
+    registrar_evento(None, "ciclo", ciclo=ciclo, datos={"accion": "abrir", "hipotesis": hipotesis})
+
+
+def cerrar_ciclo(ciclo):
+    todos, _ = _leer_eventos()
+    eventos = [e for e in todos if e.get("ciclo") == ciclo]
+    apertura = next((e for e in eventos if e.get("evento") == "ciclo"
+                     and e.get("datos", {}).get("accion") == "abrir"), None)
+    if apertura is None:
+        raise ValueError(f"el ciclo {ciclo} no está abierto")
+    if any(e.get("evento") == "ciclo" and e.get("datos", {}).get("accion") == "cerrar" for e in eventos):
+        raise ValueError(f"el ciclo {ciclo} ya fue cerrado")
+
+    ids = apertura["datos"]["hipotesis"]
+    inicio = todos.index(apertura)
+    eventos = todos[inicio + 1:]
+    etapas = {str(i): 0 for i in range(4)}
+    promovidas = 0
+    caidas, intentos = {}, {}
+    snapshots = set()
+    manifiestos = {}
+    for hipotesis in ids:
+        propios = [e for e in eventos if e.get("evento") in ("etapa", "intento")
+                   and e.get("hipotesis") == hipotesis]
+        vistas = {e.get("etapa") for e in propios if e.get("evento") == "etapa"}
+        for etapa in vistas:
+            if etapa in etapas:
+                etapas[etapa] += 1
+        estados = [e for e in propios if e.get("evento") == "etapa"]
+        if any(e.get("etapa") == "3" and e.get("veredicto") == "PASA" for e in estados):
+            promovidas += 1
+        for e in estados:
+            if e.get("veredicto") in ("CORTA", "ERROR", "ALARMA"):
+                caidas[hipotesis] = {"etapa": e.get("etapa"), "veredicto": e.get("veredicto"), "motivo": e.get("motivo", "")}
+        intentos[hipotesis] = sum(e.get("evento") == "intento" for e in propios)
+        for e in propios:
+            snapshot = e.get("datos", {}).get("snapshot") if e.get("evento") == "intento" else None
+            if snapshot:
+                snapshots.add(snapshot)
+    for snapshot in sorted(snapshots):
+        manifiestos[snapshot] = snapshot_manifest_hash(snapshot)
+    recibo = {"ciclo": ciclo, "hipotesis": ids, "etapas": etapas, "promovidas": promovidas,
+              "caidas": caidas, "intentos": intentos, "snapshots": sorted(snapshots),
+              "hashes_manifiesto": manifiestos}
+    motivo = "" if promovidas else "ninguna hipótesis promovida: ninguna llegó a etapa 3 con PASA"
+    registrar_evento(None, "ciclo", ciclo=ciclo, motivo=motivo,
+                     datos={"accion": "cerrar", "recibo": recibo})
+    return recibo
+
+
+def recibo_ciclo(ciclo):
+    return next((e.get("datos", {}).get("recibo") for e in _eventos_ciclo(ciclo)
+                 if e.get("evento") == "ciclo" and e.get("datos", {}).get("accion") == "cerrar"), None)

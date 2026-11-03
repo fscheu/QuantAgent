@@ -14,6 +14,7 @@ Commands:
   data      Manage frozen market data.
   intentos  Manage the run attempts log.
   profile   Manage StrategyConfig profiles (list, show, create, update,...
+  registro  Manage hypothesis evaluation cycles.
   trading   Paper trading operations.
 
   Run 'quantagent COMMAND --help' for command details.
