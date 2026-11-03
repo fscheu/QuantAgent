@@ -1,7 +1,9 @@
 """Registro append-only de eventos de hipótesis."""
 
+import csv
 import json
 import re
+from collections import Counter
 from datetime import datetime, timezone
 
 from quantagent.data.snapshot import snapshot_manifest_hash, snapshot_root
@@ -24,6 +26,7 @@ def registrar_evento(
     motivo="",
     ciclo=None,
     datos=None,
+    fecha_utc=None,
 ):
     if evento not in EVENTOS:
         raise ValueError(f"evento inválido: {evento!r}; debe ser uno de {EVENTOS}")
@@ -41,7 +44,7 @@ def registrar_evento(
 
     registro = {
         "version_esquema": 1,
-        "fecha_utc": datetime.now(timezone.utc).isoformat(),
+        "fecha_utc": fecha_utc if fecha_utc is not None else datetime.now(timezone.utc).isoformat(),
         "hipotesis": hipotesis_id,
         "evento": evento,
         "etapa": etapa,
@@ -54,6 +57,106 @@ def registrar_evento(
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(registro, ensure_ascii=False) + "\n")
+
+
+def importar_csv(dry_run=False):
+    """Import hypothesis stages and attempts from the snapshot CSV files."""
+    root = snapshot_root()
+    existentes, _ = _leer_eventos()
+    filas, omitidas = [], 0
+
+    def leer(path, tipo):
+        nonlocal omitidas
+        if not path.exists():
+            return
+        with path.open(newline="", encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                hipotesis = row.get("hipotesis", "")
+                if tipo == "intento" and not hipotesis:
+                    continue
+                try:
+                    fecha = datetime.fromisoformat(row["fecha_utc"].replace("Z", "+00:00"))
+                    fecha_utc = row["fecha_utc"]
+                    if tipo == "etapa":
+                        etapa, veredicto = row["etapa"], row["veredicto"]
+                        if etapa not in ETAPAS or veredicto not in VEREDICTOS:
+                            raise ValueError
+                        item = {"hipotesis": hipotesis, "evento": "etapa", "etapa": etapa,
+                                "veredicto": veredicto, "motivo": row["motivo"], "ciclo": None,
+                                "datos": {"importado": True}}
+                    else:
+                        params = json.loads(row["params"])
+                        if not isinstance(params, dict):
+                            raise ValueError
+                        etapa = row.get("etapa")
+                        datos = {"snapshot": row["snapshot"], "estrategia": row["estrategia"],
+                                 "activo": row["activo"], "params": params,
+                                 "sharpe": float(row["sharpe"]), "trades": _numero_entero(row["trades"]),
+                                 "pnl": float(row["pnl"]), "importado": True}
+                        item = {"hipotesis": hipotesis, "evento": "intento",
+                                "etapa": etapa if etapa in ETAPAS else None, "veredicto": None,
+                                "motivo": "", "ciclo": None, "datos": datos}
+                    item["fecha_utc"] = fecha_utc
+                    item["_orden"] = fecha.timestamp()
+                    filas.append(item)
+                except (AttributeError, KeyError, TypeError, ValueError):
+                    omitidas += 1
+
+    leer(root / "hipotesis.csv", "etapa")
+    leer(root / "intentos.csv", "intento")
+    filas.sort(key=lambda e: e["_orden"])
+
+    def clave(e):
+        if e["evento"] == "etapa":
+            return ("etapa", e["hipotesis"], str(e["etapa"]), str(e["veredicto"]), str(e["motivo"]))
+        d = e["datos"]
+        return ("intento", e["hipotesis"], None if e["etapa"] is None else str(e["etapa"]), d["snapshot"],
+                d["estrategia"], d["activo"], json.dumps(d["params"], sort_keys=True), float(d["sharpe"]),
+                _numero_entero(d["trades"]), float(d["pnl"]))
+
+    cuenta_existente = Counter()
+    for evento in existentes:
+        if evento.get("evento") not in ("etapa", "intento"):
+            continue
+        try:
+            if evento["evento"] == "etapa":
+                normal = {"evento": "etapa", "hipotesis": evento.get("hipotesis"),
+                          "etapa": evento.get("etapa"), "veredicto": evento.get("veredicto"),
+                          "motivo": evento.get("motivo", "")}
+            else:
+                d = evento.get("datos", {})
+                normal = {"evento": "intento", "hipotesis": evento.get("hipotesis"),
+                          "etapa": evento.get("etapa"), "datos": {
+                              "snapshot": d.get("snapshot"), "estrategia": d.get("estrategia"),
+                              "activo": d.get("activo"), "params": json.loads(d.get("params", "{}"))
+                              if isinstance(d.get("params", {}), str) else d.get("params", {}),
+                              "sharpe": float(d.get("sharpe")), "trades": _numero_entero(d.get("trades")),
+                              "pnl": float(d.get("pnl"))}}
+            cuenta_existente[clave(normal)] += 1
+        except (TypeError, ValueError):
+            continue
+    vistos, agregar = Counter(), []
+    for evento in filas:
+        key = clave(evento)
+        vistos[key] += 1
+        if vistos[key] > cuenta_existente[key]:
+            agregar.append(evento)
+    agregadas = Counter(e["evento"] for e in agregar)
+    if not dry_run:
+        for e in agregar:
+            e.pop("_orden")
+            registrar_evento(e["hipotesis"], e["evento"], e["etapa"], e["veredicto"],
+                             e["motivo"], datos=e["datos"], fecha_utc=e["fecha_utc"])
+    return {"etapas": {"leidos": sum(e["evento"] == "etapa" for e in filas), "agregados": agregadas["etapa"]},
+            "intentos": {"leidos": sum(e["evento"] == "intento" for e in filas), "agregados": agregadas["intento"]},
+            "omitidas": omitidas}
+
+
+def _numero_entero(valor):
+    try:
+        return int(valor)
+    except (TypeError, ValueError):
+        return valor
 
 
 def _leer_eventos():
@@ -85,11 +188,16 @@ def historial(hipotesis_id):
     return [evento for evento in eventos if evento.get("hipotesis") == hipotesis_id]
 
 
+def _fecha(evento):
+    try:
+        return datetime.fromisoformat(str(evento.get("fecha_utc")).replace("Z", "+00:00"))
+    except ValueError:
+        return datetime.min.replace(tzinfo=timezone.utc)
+
+
 def estado_actual(hipotesis_id):
-    return next(
-        (evento for evento in reversed(historial(hipotesis_id)) if evento.get("evento") == "etapa"),
-        None,
-    )
+    etapas = [e for e in historial(hipotesis_id) if e.get("evento") == "etapa"]
+    return max(etapas, key=_fecha, default=None)
 
 
 def estados_actuales():
@@ -97,7 +205,9 @@ def estados_actuales():
     estados = {}
     for evento in eventos:
         if evento.get("evento") == "etapa":
-            estados[evento.get("hipotesis")] = evento
+            previo = estados.get(evento.get("hipotesis"))
+            if previo is None or _fecha(evento) >= _fecha(previo):
+                estados[evento.get("hipotesis")] = evento
     return estados
 
 

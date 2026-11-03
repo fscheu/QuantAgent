@@ -1,5 +1,6 @@
 import json
 import re
+import csv
 from pathlib import Path
 
 import pytest
@@ -162,3 +163,57 @@ def test_cli_ciclo_expone_help_epilog_y_referencia():
     assert "Example: quantagent registro ciclo abrir 2026-11 H1 H2" in ayuda.output
     referencia = Path("docs/manual/reference/cli/registro/ciclo.md").read_text()
     assert "Example: quantagent registro ciclo cerrar 2026-11" in referencia
+
+
+def _csv_importables(tmp_path):
+    with (tmp_path / "hipotesis.csv").open("w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["fecha_utc", "hipotesis", "etapa", "veredicto", "motivo"])
+        for i, h in enumerate(("H1", "H2", "H3"), 1):
+            writer.writerow([f"2026-01-0{i}T00:00:00+00:00", h, "0", "PASA", "inicio"])
+            writer.writerow([f"2026-01-0{i}T01:00:00+00:00", h, "1", "CORTA", "final"])
+    with (tmp_path / "intentos.csv").open("w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["fecha_utc", "estrategia", "activo", "snapshot", "desde", "hasta", "costos", "tamano", "params", "trades", "pnl", "sharpe", "hipotesis", "etapa", "sharpe_base", "estado"])
+        writer.writerow(["2026-01-01T00:30:00+00:00", "s", "BTC", "snap", "", "", "", "", '{"x": 1}', "2", "3.5", "0.7", "H1", "0", "", ""])
+
+
+def test_importar_csv_preserva_estados_orden_e_idempotencia(raiz, tmp_path):
+    _csv_importables(tmp_path)
+    resultado = registro.importar_csv()
+
+    assert resultado == {"etapas": {"leidos": 6, "agregados": 6},
+                         "intentos": {"leidos": 1, "agregados": 1}, "omitidas": 0}
+    assert {h: (e["etapa"], e["veredicto"]) for h, e in registro.estados_actuales().items()} == {
+        "H1": ("1", "CORTA"), "H2": ("1", "CORTA"), "H3": ("1", "CORTA")}
+    events = [json.loads(line) for line in raiz.read_text().splitlines()]
+    assert [e["fecha_utc"] for e in events] == sorted(e["fecha_utc"] for e in events)
+    assert events[0]["datos"]["importado"] is True
+    assert registro.importar_csv()["etapas"]["agregados"] == 0
+    assert registro.importar_csv()["intentos"]["agregados"] == 0
+
+
+def test_importar_csv_dry_run_no_crea_registro(raiz, tmp_path):
+    _csv_importables(tmp_path)
+    from click.testing import CliRunner
+    from quantagent.cli.__main__ import cli
+
+    resultado = CliRunner().invoke(cli, ["registro", "importar", "--dry-run"])
+    assert resultado.exit_code == 0
+    assert "(dry-run) agregaría etapas 6 de 6" in resultado.output
+    assert not raiz.exists()
+
+
+def test_importar_csv_no_duplica_evento_vivo_y_omite_fila_mala(raiz, tmp_path):
+    _csv_importables(tmp_path)
+    registro.registrar_evento("H1", "etapa", "0", "PASA", "inicio",
+                              fecha_utc="2026-02-01T00:00:00+00:00")
+    with (tmp_path / "hipotesis.csv").open("a", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerow(["fecha-incorrecta", "H4", "9", "INVALIDO", ""])
+
+    resultado = registro.importar_csv()
+    assert resultado["omitidas"] == 1
+    assert resultado["etapas"]["agregados"] == 5
+    assert len(registro.historial("H1")) == 3
+    assert registro.estado_actual("H1")["fecha_utc"] == "2026-02-01T00:00:00+00:00"
+    assert registro.estados_actuales()["H1"]["etapa"] == "0"
