@@ -94,3 +94,57 @@ def test_sin_imports_de_framework_web():
     imports |= {node.module.split(".")[0] for node in ast.walk(tree)
                 if isinstance(node, ast.ImportFrom) and node.module}
     assert not imports.intersection({"fastapi", "flask", "streamlit"})
+
+
+def test_informe_ciclo_cerrado_promocion_y_cli(raiz):
+    from click.testing import CliRunner
+    from quantagent.cli.__main__ import cli
+
+    registro.abrir_ciclo("2026-01", ["A"])
+    for etapa in ("0", "1", "2", "3"):
+        registro.registrar_evento("A", "etapa", etapa, "PASA")
+    registro.cerrar_ciclo("2026-01")
+    texto = vista.informe_ciclo("2026-01")
+    assert "1 hipótesis entraron" in texto and "1 promovieron" in texto
+    assert "Cierre:" not in texto
+    resultado = CliRunner().invoke(cli, ["registro", "ciclo", "informe", "2026-01"])
+    assert resultado.exit_code == 0
+    assert texto in resultado.output
+
+
+def test_informe_ciclo_sin_promocion_y_causa(raiz):
+    registro.abrir_ciclo("2026-02", ["A"])
+    registro.registrar_evento("A", "etapa", "1", "CORTA", "RIESGO: exposición alta")
+    registro.cerrar_ciclo("2026-02")
+    texto = vista.informe_ciclo("2026-02")
+    assert "Cierre: ninguna hipótesis promovida" in texto
+    assert "A: e1 CORTA" in texto
+    assert "Motivo: RIESGO: exposición alta" in " ".join(texto.split())
+    assert "Indica que la evaluación detectó: exposición alta" in " ".join(texto.split())
+
+
+def test_informe_hashes_parciales_validacion_y_ancho(raiz):
+    import hashlib
+    import json
+
+    for ciclo, nombre, contenido in (("2026-03", "snap-a", "uno"),
+                                     ("2026-04", "snap-b", "dos")):
+        carpeta = raiz / nombre
+        carpeta.mkdir()
+        (carpeta / "manifest.json").write_text(json.dumps({"contenido": contenido}))
+        registro.abrir_ciclo(ciclo, ["A"])
+        registro.registrar_evento("A", "intento", datos={"snapshot": nombre})
+        registro.cerrar_ciclo(ciclo)
+    primero = vista.informe_ciclo("2026-03")
+    segundo = vista.informe_ciclo("2026-04")
+    assert primero != segundo
+    assert hashlib.sha256((raiz / "snap-a" / "manifest.json").read_bytes()).hexdigest()[:12] in primero
+
+    registro.abrir_ciclo("2026-05", ["A"])
+    parcial = vista.informe_ciclo("2026-05")
+    assert "AVISO: ciclo abierto, informe parcial." in parcial
+    assert all(len(linea) <= 60 for linea in (primero + "\n" + segundo + "\n" + parcial).splitlines())
+    with pytest.raises(ValueError, match="no existe"):
+        vista.informe_ciclo("2026-06")
+    with pytest.raises(ValueError, match="ciclo inválido"):
+        vista.informe_ciclo("2026-13")
