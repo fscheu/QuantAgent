@@ -163,6 +163,13 @@ PRs against `lote/*` (not `feature/`), deliveries do not stop to ask (they deliv
 and per-change docs are only written when the ticket asks for them. `main` is protected: every change
 enters through a PR.
 
+Si el diff de un PR toca `web/`, el revisor debe correr
+`scripts/loop/try.sh <rama-del-PR> -- 'cd web && npm ci && npm run e2e'`
+y mirar los screenshots de 390px antes de escribir la línea `PM:`. Debe registrar el resultado y
+las pantallas revisadas; un e2e fallido impide aprobar. Las capturas están en `web/e2e-artifacts/`
+dentro del worktree temporal: hay que mirarlas o copiarlas antes de que `try.sh` lo elimine,
+o descargar el artefacto `web-e2e-screenshots` del CI del commit revisado.
+
 ---
 
 ## Documentation as a Single System (`docs/`)

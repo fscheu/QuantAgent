@@ -1,14 +1,14 @@
 # QuantAgent-wsxd — Despliegue de la web
 
 **Issue:** QuantAgent-wsxd (WEB-17)  
-**Estado:** propuesta; no se aplicó ningún paso.  
+**Estado:** desplegado; rutas y unidades actualizadas por QuantAgent-l7xn.7 según contexto del PM del 2026-11-02.
 **Alcance:** API y frontend web en la VM de paper, detrás de Cloudflare Access.
 
 ## 1. Prerrequisitos
 
 1. Confirmar que lote/M-web quedó mergeado en `main`. **[OK Fede]**
 2. Crear un tag nuevo de versión sobre ese `main` y usarlo para el despliegue. El checkout estable es `/home/azureuser/paper-ops/QuantAgent`; el venv es `/home/azureuser/paper-ops/venv`. El código desplegado debe incluir `trading snapshot`; el tag actual `paper-2026-11-02` no tiene ese comando.
-3. Confirmar que existen las dos bases paper y `/home/azureuser/web-ops/maestro.db`. Las cuentas ya están dadas de alta en el maestro.
+3. Confirmar que existen las tres bases paper (`cartera-nucleo-curva`, `cartera-transversal`, `m5`) en `/home/azureuser/paper-ops/local-data/` y `/home/azureuser/web-ops/maestro.db`. Las tres cuentas ya están dadas de alta en el maestro.
 4. Confirmar acceso de Fede al dashboard Cloudflare Zero Trust. Cloudflare Access debe proteger la API; nunca apuntar el hostname a la API sin Access.
 
 ## 2. Backup y despliegue del tag
@@ -18,8 +18,9 @@ Antes de cambiar el checkout, respaldar las bases mediante SQLite `.backup` (no 
 ```bash
 BACKUP=/home/azureuser/paper-ops/backups/$(date -u +%Y%m%dT%H%M%SZ)
 mkdir -p "$BACKUP"
-sqlite3 /home/azureuser/paper-ops/QuantAgent/local-data/cartera-nucleo-curva.db ".backup '$BACKUP/cartera-nucleo-curva.db'"
-sqlite3 /home/azureuser/paper-ops/QuantAgent/local-data/cartera-transversal.db ".backup '$BACKUP/cartera-transversal.db'"
+sqlite3 /home/azureuser/paper-ops/local-data/cartera-nucleo-curva.db ".backup '$BACKUP/cartera-nucleo-curva.db'"
+sqlite3 /home/azureuser/paper-ops/local-data/cartera-transversal.db ".backup '$BACKUP/cartera-transversal.db'"
+sqlite3 /home/azureuser/paper-ops/local-data/m5.db ".backup '$BACKUP/m5.db'"
 sqlite3 /home/azureuser/web-ops/maestro.db ".backup '$BACKUP/maestro.db'"
 ```
 
@@ -33,7 +34,7 @@ git checkout <TAG_NUEVO>
 cd web && npm ci && npm run build
 ```
 
-El instalador [install.sh](../../deploy/web/install.sh) hace backup, build, migración con `--apply`, instala las unidades y habilita la API. Por defecto sólo imprime los pasos. Revisá primero con `DRY_RUN=1 bash deploy/web/install.sh`; ejecutalo con `DRY_RUN=0` sólo después de aprobar el despliegue. El instalador presupone que el código nuevo ya está en el checkout `paper-ops` y no cambia el tag.
+El instalador [install.sh](../../deploy/web/install.sh) hace backup de las cuatro bases, build, migración paper con `--apply`, instala las unidades y habilita la API. Preserva la unit API existente; sólo instala la plantilla si falta. Por defecto sólo imprime los pasos. Revisá primero con `DRY_RUN=1 deploy/web/install.sh`; ejecutalo con `DRY_RUN=0` sólo después de aprobar el despliegue. El instalador presupone que el código nuevo ya está en el checkout `paper-ops` y no cambia el tag.
 
 ## 3. Migración de bases
 
@@ -41,22 +42,24 @@ Primero inspeccionar el plan sin modificar ninguna base:
 
 ```bash
 cd /home/azureuser/paper-ops/QuantAgent
-for cartera in cartera-nucleo-curva cartera-transversal; do
+for cartera in cartera-nucleo-curva cartera-transversal m5; do
   /home/azureuser/paper-ops/venv/bin/quantagent api migrate-paper-db \
-    --database-url "sqlite:////home/azureuser/paper-ops/QuantAgent/local-data/${cartera}.db"
+    --database-url "sqlite:////home/azureuser/paper-ops/local-data/${cartera}.db"
 done
 ```
 
-Revisar la salida de ambas. Aplicar únicamente si las migraciones reportadas son las esperadas. **[OK Fede]**
+Revisar la salida de las tres. Aplicar únicamente si las migraciones reportadas son las esperadas. **[OK Fede]**
 
 ```bash
-for cartera in cartera-nucleo-curva cartera-transversal; do
+for cartera in cartera-nucleo-curva cartera-transversal m5; do
   /home/azureuser/paper-ops/venv/bin/quantagent api migrate-paper-db \
-    --database-url "sqlite:////home/azureuser/paper-ops/QuantAgent/local-data/${cartera}.db" --apply
+    --database-url "sqlite:////home/azureuser/paper-ops/local-data/${cartera}.db" --apply
 done
 ```
 
 Ante una migración inesperada, detenerse y restaurar desde el backup antes de continuar.
+
+El maestro no tiene migración automatizada y `install.sh` no migra su esquema. Inicialmente sólo tenía `accounts`; en el despliegue se crearon `events`, `backtest_runs` y `calendar_events` a mano, con `Model.__table__.create(engine, checkfirst=True)` para `Event`, `BacktestRun` y `CalendarEvent` de `quantagent.models`, usando el engine del maestro. Las migraciones paper de arriba no reemplazan ese paso.
 
 ## 4. Cuentas y API
 
@@ -73,11 +76,11 @@ Si hiciera falta registrar una cuenta en una base paper, el patrón CLI es:
 QUANTAGENT_DATABASE_URL=sqlite:////home/azureuser/web-ops/maestro.db \
   /home/azureuser/paper-ops/venv/bin/quantagent api accounts add \
   --id <cartera> --name '<nombre>' --env paper --kind alpaca \
-  --database-url sqlite:////home/azureuser/paper-ops/QuantAgent/local-data/<cartera>.db \
+  --database-url sqlite:////home/azureuser/paper-ops/local-data/<cartera>.db \
   --strategy <estrategia>
 ```
 
-Instalar `deploy/web/quantagent-api.service` en `~/.config/systemd/user/`, recargar systemd y arrancar la API. **[OK Fede]**
+La unit viva `~/.config/systemd/user/quantagent-api.service` usa `WorkingDirectory=/home/azureuser/paper-ops` y configura `QUANTAGENT_SNAPSHOT_DIR`. Difiere de la plantilla `deploy/web/quantagent-api.service`, cuyo directorio es `/home/azureuser/paper-ops/QuantAgent` y que no define esa variable. No reemplazar la unit viva: `install.sh` la preserva. Recargar systemd y habilitar la API requiere **[OK Fede]**.
 
 ```bash
 systemctl --user daemon-reload
@@ -95,6 +98,8 @@ No se detienen ni reinician los timers paper durante este despliegue. Verificar 
 ```bash
 systemctl --user list-timers 'paper-cartera@*' 'paper-digest@*'
 ```
+
+El instalador también instala y habilita `quantagent-sync-events.timer` (06:00 ART / 09:00 UTC) y `quantagent-evaluate-alarms.timer` (06:10 ART / 09:10 UTC), junto con sus servicios homónimos. Ambos timers ya están instalados en la VM según el contexto del PM del 2026-11-02.
 
 ## 6. Cloudflare Access e ingress
 
@@ -122,7 +127,7 @@ Desde fuera de una sesión Access, `https://quantagent.fedes.dev/api/accounts` d
 
 ## 8. Rollback
 
-- Si falla el build, migración o arranque antes del cambio Cloudflare, volver al tag anterior (`paper-2026-11-02`), reinstalar dependencias de ese tag y reconstruir web. Si ya se aplicó una migración, restaurar las tres bases desde el backup correspondiente antes de reabrir la API.
+- Si falla el build, migración o arranque antes del cambio Cloudflare, volver al tag anterior (`paper-2026-11-02`), reinstalar dependencias de ese tag y reconstruir web. Si ya se aplicó una migración, restaurar las cuatro bases desde el backup correspondiente antes de reabrir la API.
 - Si falla la API después de instalar la unidad, ejecutar `systemctl --user disable --now quantagent-api.service`, volver al tag anterior y restaurar las bases desde backup si se migraron.
 - Si falla el cutover Cloudflare, restaurar el ingress anterior `quantagent.fedes.dev -> http://localhost:8501` y ejecutar `sudo systemctl restart cloudflared`. Esto devuelve Streamlit a esa URL. Revisar o retirar la aplicación Access según lo que Fede decida.
 - Los timers `paper-cartera@` y `paper-digest@` no se detienen ni reinician como parte del despliegue o rollback.

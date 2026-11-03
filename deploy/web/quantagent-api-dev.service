@@ -1,0 +1,15 @@
+[Unit]
+Description=QuantAgent web API (preview / dev)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/tmp/quantagent-web-preview/worktree
+Environment=PYTHONPATH=/tmp/quantagent-web-preview/worktree
+Environment=NUMBA_CACHE_DIR=/tmp/numba-cache-preview
+EnvironmentFile=-/tmp/quantagent-web-preview/preview.env
+ExecStart=/home/azureuser/repos/projects/QuantAgent/.venv/bin/python3 -m quantagent.cli api serve --host 127.0.0.1 --port 8012
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

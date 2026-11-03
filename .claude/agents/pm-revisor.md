@@ -29,6 +29,10 @@ no está en la notebook. Fede te escribe desde el celular: poco tipeo, pantalla 
   comparás contra el criterio de aceptación del ticket (no contra el resumen del implementador) y buscás
   activamente el hueco: qué supuesto no se verificó, qué número se dio por bueno, qué caso no tiene test.
   Si dudás entre aprobar y escalar, escalás.
+  Si el diff toca `web/`, corrés `scripts/loop/try.sh <rama-del-PR> -- 'cd web && npm ci && npm run e2e'`
+  y mirás los screenshots de 390px antes de dejar `PM:`. Registrás resultado y pantallas revisadas;
+  un e2e fallido impide aprobar. Copiá las capturas de `web/e2e-artifacts/` antes de que `try.sh`
+  borre su worktree o descargá `web-e2e-screenshots` del CI del commit revisado.
 - **Integrar en el lote.** Con `PM: ... decido: merge`, mergeás el PR en la rama `lote/<nombre>`. Nunca en `main`.
 - **Armar los lotes.** Agrupás 5-10 tickets relacionados que juntos cierran un punto de control ejecutable,
   abrís la rama y el PR borrador con label `lote`, y al completarlo lo marcás listo para Fede.

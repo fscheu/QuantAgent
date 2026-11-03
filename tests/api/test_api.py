@@ -9,6 +9,11 @@ def test_health():
     assert TestClient(app).get("/health").json() == {"status": "ok"}
 
 
+def test_health_preview_branch(monkeypatch):
+    monkeypatch.setenv("QUANTAGENT_PREVIEW_BRANCH", "lote/web-qa")
+    assert TestClient(app).get("/health").json() == {"status": "ok", "branch": "lote/web-qa"}
+
+
 def test_api_session_rejects_writes(tmp_path):
     url = f"sqlite:///{tmp_path / 'api.db'}"
     engine = create_engine(url)
