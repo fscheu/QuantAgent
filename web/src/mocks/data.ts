@@ -35,8 +35,8 @@ export const calendarEvents = [
 ] satisfies CalendarEvent[]
 
 export const positions = [
-  { symbol: 'SPY', description: 'ETF S&P 500', side: 'long', qty: 20, avg_entry_price: 490, current_price: 500, market_value: 10000, unrealized_pl: 200, unrealized_pl_pct: 0.02, stop_price: 475, opened_at: '2026-10-01T14:30:00Z' },
-  { symbol: 'TSLA', description: 'Tesla', side: 'short', qty: 10, avg_entry_price: 205, current_price: 200, market_value: 2000, unrealized_pl: 50, unrealized_pl_pct: 0.025, stop_price: 220, opened_at: '2026-10-15T14:30:00Z' },
+  { symbol: 'SPY', description: 'ETF S&P 500', side: 'long', qty: 20, status: 'executed', avg_entry_price: 490, current_price: 500, market_value: 10000, unrealized_pl: 200, unrealized_pl_pct: 0.02, stop_price: 475, opened_at: '2026-10-01T14:30:00Z' },
+  { symbol: 'TSLA', description: 'Tesla', side: 'short', qty: 10, status: 'executed', avg_entry_price: 205, current_price: 200, market_value: 2000, unrealized_pl: 50, unrealized_pl_pct: 0.025, stop_price: 220, opened_at: '2026-10-15T14:30:00Z' },
 ] satisfies Position[]
 export const equity: EquityPoint[] = [
   { date: '2026-10-26', account: 12650, benchmark: 681, shadow: 12620 },
@@ -47,8 +47,8 @@ export const equity: EquityPoint[] = [
 ]
 export const dividends = [{ date: '2026-10-15', symbols: ['SPY', 'MSFT'], net: 24.8, withheld: 3.2 }] satisfies Dividend[]
 export const sectorExposure = [
-  { sector: 'Tecnología', long: 42, short: 8, pct: 34 },
-  { sector: 'Consumo', long: 18, short: 0, pct: 18 },
+  { sector: 'Tecnología', long: 4200, short: 800, pct: 0.5 },
+  { sector: 'Consumo', long: 1800, short: 0, pct: 0.18 },
 ] satisfies SectorExposure[]
 
 export const orders = [

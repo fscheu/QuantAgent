@@ -36,9 +36,9 @@ export function moneyCompact(v: number): string {
   return `${s}USD ${nf(2).format(a)}`;
 }
 
-/** Porcentaje con signo: +1,28 % · −0,94 % (espacio normal antes del %) */
+/** Fracción a porcentaje con signo: 0,0128 → +1,28 % (espacio normal antes del %). */
 export function pct(v: number, decimals = 2, withSign = true): string {
-  return (withSign ? signed(v, decimals) : num(v, decimals)) + ' %';
+  return (withSign ? signed(v * 100, decimals) : num(v * 100, decimals)) + ' %';
 }
 
 /** Puntos porcentuales: +6,2 pp */

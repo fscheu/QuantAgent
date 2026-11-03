@@ -5,7 +5,7 @@ import { setupServer } from 'msw/node'
 import { Inicio } from './Inicio'
 import { ThemeProvider } from '../ThemeContext'
 import { handlers } from '../mocks/handlers'
-import { calendarEvents, feedEvents, homeStatus } from '../mocks/data'
+import { accounts, calendarEvents, feedEvents, homeStatus } from '../mocks/data'
 
 const server = setupServer(...handlers)
 beforeAll(() => server.listen())
@@ -13,6 +13,13 @@ afterEach(() => { server.resetHandlers(); cleanup() })
 afterAll(() => server.close())
 
 describe('Inicio', () => {
+  it('shows API fractions as percentages and explains missing weekly history', async () => {
+    server.use(http.get('*/api/accounts/:id/summary', ({ params }) => HttpResponse.json({ ...accounts[0], id: String(params.id), day_change_pct: 0.00029, week_change: null, week_change_pct: null })))
+    render(<ThemeProvider><Inicio navigate={() => undefined} /></ThemeProvider>)
+    expect((await screen.findAllByText('+0,03 %')).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Sin 7 días de historial').length).toBeGreaterThan(0)
+    expect(screen.queryByText('0,00 %')).toBeNull()
+  })
   it('shows state banner severity and links it to the affected account', async () => {
     server.use(http.get('*/api/home/status', () => HttpResponse.json({ ...homeStatus, level: 'critical', headline: 'Atención: 1 alarma crítica' })))
     render(<ThemeProvider><Inicio navigate={() => undefined} /></ThemeProvider>)

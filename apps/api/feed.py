@@ -94,7 +94,16 @@ def _template(event, account_name, group=None):
     elif typ == "alarm_resolved":
         title = f"Se resolvió: {_value(p, 'title')}" if _value(p, "title") is not None else "Se resolvió una alarma"
         d = _value(p, "duration_seconds")
-        subtitle = f"Duró {_number(float(d) / 60 if isinstance(d, (int, float)) else d)} min" if d is not None else None
+        if isinstance(d, (int, float)):
+            if d >= 86400:
+                days = round(d / 86400)
+                subtitle = f"Duró {days} {'día' if days == 1 else 'días'}"
+            elif d >= 3600:
+                subtitle = f"Duró {round(d / 3600)} h"
+            else:
+                subtitle = f"Duró {_number(d / 60)} min"
+        elif d is not None:
+            subtitle = f"Duró {_number(d)} min"
     elif typ in ("hypothesis_promoted", "hypothesis_discarded_late"):
         name, stage = _value(p, "name"), _value(p, "stage")
         if typ == "hypothesis_promoted":

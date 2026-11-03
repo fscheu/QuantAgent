@@ -36,7 +36,8 @@ export interface AccountSummaryNoData extends AccountRef {
   status: 'no_data';
   /** Por qué no hay datos. 'unknown' si el backend no lo puede distinguir. */
   no_data_reason: 'not_opened' | 'not_funded' | 'unknown';
-  /** Última vez que el backend consultó al broker por esta cuenta. */
+  cash?: number | null;
+  /** Última consulta del backend a los datos locales de esta cuenta. */
   checked_at: string;
   /** Próxima consulta programada (opcional). */
   next_check_at: string | null;
@@ -50,10 +51,12 @@ export interface AccountSummaryActive extends AccountRef, Freshness {
   /** Valor de mercado de las posiciones cortas, en absoluto (positivo). */
   short_value: number;
   cash: number;
-  day_change: number;
-  day_change_pct: number;
-  week_change: number;
-  week_change_pct: number;
+  day_change: number | null;
+  /** Fracción: 0.01 = 1 %. null si falta la base de comparación. */
+  day_change_pct: number | null;
+  week_change: number | null;
+  /** Fracción: 0.01 = 1 %. null si falta la base de comparación. */
+  week_change_pct: number | null;
   positions_count: number;
   orders_today: number;
   orders_rejected_today: number;
@@ -67,15 +70,16 @@ export interface Position {
   symbol: string;
   description: string | null;         // 'ETF S&P 500'
   side: PositionSide;
+  status: 'executed' | 'pending';
   /** Siempre positiva. El broker informa negativa en cortas: el backend la normaliza. */
   qty: number;
-  avg_entry_price: number;
-  current_price: number;
+  avg_entry_price: number | null;
+  current_price: number | null;
   /** En absoluto (positivo) también en cortas. */
-  market_value: number;
+  market_value: number | null;
   /** Ya con el signo correcto según el lado: en una corta, gana si el precio baja. */
-  unrealized_pl: number;
-  unrealized_pl_pct: number;
+  unrealized_pl: number | null;
+  unrealized_pl_pct: number | null;
   /** Larga: por debajo del precio. Corta: por encima. null → "Sin stop vigente". */
   stop_price: number | null;
   opened_at: string;

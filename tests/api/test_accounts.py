@@ -6,7 +6,7 @@ from apps.api.accounts import account_session_factory, add_account
 from apps.api.app import accounts
 from apps.api.app import account_equity, account_positions, account_summary
 from quantagent.database import Base
-from quantagent.models import Account, ActivePosition, Environment, EquitySnapshot, ExitPolicy, Order, OrderSide, Position
+from quantagent.models import Account, ActivePosition, Environment, EquitySnapshot, ExitPolicy, Fill, MarketData, Order, OrderSide, OrderType, OrderStatus, Position
 
 
 def account_values(**overrides):
@@ -87,6 +87,15 @@ def test_account_summary_and_positions_read_account_sqlite(tmp_path, db):
                      opened_at=__import__('datetime').datetime(2026, 10, 30),
                      updated_at=__import__('datetime').datetime(2026, 10, 30, 15)),
         ])
+        for symbol, side, qty, entry, price in [("LONG", OrderSide.BUY, 2, 10, 12),
+                                                ("SHORT", OrderSide.SELL, 3, 20, 18)]:
+            order = Order(symbol=symbol, side=side, quantity=qty, order_type=OrderType.MARKET,
+                          status=OrderStatus.FILLED, environment=Environment.PAPER)
+            source.add(order)
+            source.flush()
+            source.add(Fill(order_id=order.id, quantity=qty, price=entry))
+            source.add(MarketData(symbol=symbol, timeframe="1d", timestamp=__import__('datetime').datetime(2026, 10, 30),
+                                  open=price, high=price, low=price, close=price, volume=100))
         source.add_all([
             ActivePosition(symbol="LONG", side=OrderSide.BUY, entry_price=10, stop_loss=9,
                 take_profit=15, quantity=2, decision_timestamp=__import__('datetime').datetime(2026, 10, 30),
@@ -107,18 +116,48 @@ def test_account_summary_and_positions_read_account_sqlite(tmp_path, db):
     source_engine.dispose()
 
 
-def test_account_without_positions_has_no_data(tmp_path, db):
+@pytest.mark.parametrize("activity,snapshots,reason,cash", [
+    ("none", None, "not_opened", None),
+    ("none", [], "not_opened", None),
+    ("none", [(3000, 3000)], "not_opened", 3000),
+    ("none", [(3000, 3000), (0, 0)], "not_funded", 0),
+    ("none", [(0, 0), (3000, 3000)], "not_opened", 3000),
+    ("none", [(3000, 0)], "not_opened", 0),
+    ("none", [(0, 3000)], "not_opened", 3000),
+    ("order", [], "unknown", None),
+    ("fill", [(3000, 3000)], "unknown", 3000),
+    ("order", [(0, 0)], "not_funded", 0),
+])
+def test_account_without_positions_has_no_data(tmp_path, db, activity, snapshots, reason, cash):
+    from datetime import date, datetime, timedelta
+
     account_url = f"sqlite:///{tmp_path / 'empty.db'}"
     source_engine = create_engine(account_url)
-    Base.metadata.create_all(source_engine)
+    Base.metadata.create_all(source_engine, tables=[table for table in Base.metadata.sorted_tables
+                                                    if snapshots is not None or table is not EquitySnapshot.__table__])
+    with Session(source_engine) as source:
+        for index, (equity, available) in enumerate(snapshots or []):
+            source.add(EquitySnapshot(snapshot_date=date(2026, 10, 29) + timedelta(days=index),
+                                      taken_at=datetime(2026, 10, 30), equity=equity,
+                                      cash=available, invested=equity - available))
+        if activity == "order":
+            source.add(Order(symbol="SPY", side=OrderSide.BUY, quantity=1,
+                             order_type=OrderType.MARKET, status=OrderStatus.REJECTED,
+                             environment=Environment.PAPER))
+        elif activity == "fill":
+            # Incomplete local history still proves there was activity.
+            source.add(Fill(order_id=99, quantity=1, price=100))
+        source.commit()
     add_account(db, **account_values(database_url=account_url))
     response = account_summary("paper-nucleo-curva", db).model_dump()
     assert response["status"] == "no_data"
+    assert response["no_data_reason"] == reason
+    assert response["cash"] == cash
     assert "equity" not in response and "long_value" not in response
     source_engine.dispose()
 
 
-def test_account_positions_supports_legacy_active_positions_schema(tmp_path, db):
+def test_account_positions_does_not_trust_legacy_positions_without_fills(tmp_path, db):
     account_url = f"sqlite:///{tmp_path / 'legacy.db'}"
     source_engine = create_engine(account_url)
     Position.__table__.create(source_engine)
@@ -139,8 +178,7 @@ def test_account_positions_supports_legacy_active_positions_schema(tmp_path, db)
 
     positions = account_positions("paper-nucleo-curva", db)
 
-    assert len(positions) == 1
-    assert (positions[0].side, positions[0].stop_price, positions[0].stop_distance) == ("short", None, None)
+    assert positions == []
     source_engine.dispose()
 
 
