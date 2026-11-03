@@ -1,5 +1,6 @@
 """Estado por hipótesis (plan M3): hasta qué etapa llegó y si pasó o cortó. Solo agregado."""
 import csv
+import logging
 import re
 from collections import Counter
 from datetime import datetime, timezone
@@ -11,6 +12,7 @@ ESTADO_CSV = "hipotesis.csv"
 COLUMNAS = ("fecha_utc", "hipotesis", "etapa", "veredicto", "motivo")
 ETAPAS = ("0", "1", "2", "3")
 VEREDICTOS = ("PASA", "CORTA", "ALARMA", "ERROR")
+logger = logging.getLogger(__name__)
 
 
 def registrar_estado(hipotesis_id, etapa, veredicto, motivo=""):
@@ -28,6 +30,12 @@ def registrar_estado(hipotesis_id, etapa, veredicto, motivo=""):
         w.writerow(
             [datetime.now(timezone.utc).isoformat(), hipotesis_id, etapa, veredicto, motivo]
         )
+    try:
+        from quantagent.fabrica.registro import registrar_evento
+
+        registrar_evento(hipotesis_id, "etapa", etapa, veredicto, motivo)
+    except Exception:
+        logger.warning("No se pudo registrar el evento de etapa para %s", hipotesis_id, exc_info=True)
 
 
 def ultimo_estado(hipotesis_id):
