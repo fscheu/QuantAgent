@@ -2,8 +2,14 @@
 
 import json
 import re
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
+from quantagent.default_config import (
+    CICLOS_PARA_REVISAR,
+    DIA_INICIO_EMBUDO,
+    DIA_PROPUESTA_HIPOTESIS,
+    DIA_REVISION_PAPER,
+)
 from quantagent.data.snapshot import snapshot_manifest_hash, snapshot_root
 from quantagent.fabrica.estado import ETAPAS, VEREDICTOS
 
@@ -188,3 +194,38 @@ def ciclos_sin_etapa3():
             break
         cuenta += 1
     return cuenta
+
+
+def calendario_ciclos(desde, cantidad=CICLOS_PARA_REVISAR):
+    """Return scheduled dates and registry status for consecutive monthly cycles."""
+    if not isinstance(desde, str) or not _CICLO_RE.fullmatch(desde):
+        raise ValueError(f"ciclo inválido: {desde!r}; debe tener formato YYYY-MM")
+
+    anio, mes = map(int, desde.split("-"))
+    eventos, _ = _leer_eventos()
+    calendario = []
+    for _ in range(cantidad):
+        ciclo = f"{anio:04d}-{mes:02d}"
+        eventos_mes = [evento for evento in eventos if evento.get("ciclo") == ciclo]
+        apertura = next((evento for evento in eventos_mes if evento.get("evento") == "ciclo"
+                         and evento.get("datos", {}).get("accion") == "abrir"), None)
+        cierre = next((evento for evento in eventos_mes if evento.get("evento") == "ciclo"
+                       and evento.get("datos", {}).get("accion") == "cerrar"), None)
+        estado = {"estado": "pendiente"}
+        if apertura:
+            estado = {"estado": "abierto"}
+        if cierre:
+            recibo = cierre.get("datos", {}).get("recibo", {})
+            estado = {"estado": "cerrado", "promovidas": recibo.get("promovidas", 0)}
+        calendario.append({
+            "ciclo": ciclo,
+            "propuesta": date(anio, mes, DIA_PROPUESTA_HIPOTESIS).isoformat(),
+            "embudo": date(anio, mes, DIA_INICIO_EMBUDO).isoformat(),
+            "revision_paper": date(anio, mes, DIA_REVISION_PAPER).isoformat(),
+            **estado,
+        })
+        mes += 1
+        if mes == 13:
+            anio += 1
+            mes = 1
+    return calendario

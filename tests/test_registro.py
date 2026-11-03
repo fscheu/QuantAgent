@@ -140,6 +140,35 @@ def test_ciclo_con_pase_a_etapa3_reinicia_cuenta(raiz):
     assert registro.ciclos_sin_etapa3() == 1
 
 
+def test_calendario_cruza_anio_y_usa_dias_configurados(raiz):
+    from quantagent import default_config
+
+    ciclos = registro.calendario_ciclos("2026-12", 2)
+    assert [ciclo["ciclo"] for ciclo in ciclos] == ["2026-12", "2027-01"]
+    assert ciclos[0]["propuesta"] == f"2026-12-{default_config.DIA_PROPUESTA_HIPOTESIS:02d}"
+    assert ciclos[0]["embudo"] == f"2026-12-{default_config.DIA_INICIO_EMBUDO:02d}"
+    assert ciclos[0]["revision_paper"] == f"2026-12-{default_config.DIA_REVISION_PAPER:02d}"
+    assert ciclos[1]["propuesta"] == f"2027-01-{default_config.DIA_PROPUESTA_HIPOTESIS:02d}"
+
+
+def test_calendario_informa_estados_del_registro(raiz):
+    registro.abrir_ciclo("2026-01", ["H1"])
+    registro.abrir_ciclo("2026-02", ["H2"])
+    registro.registrar_evento("H2", "etapa", "3", "PASA", ciclo="2026-02")
+    registro.cerrar_ciclo("2026-02")
+
+    ciclos = registro.calendario_ciclos("2026-01", 3)
+    assert ciclos[0]["estado"] == "abierto"
+    assert ciclos[1]["estado"] == "cerrado"
+    assert ciclos[1]["promovidas"] == 1
+    assert ciclos[2]["estado"] == "pendiente"
+
+
+def test_calendario_rechaza_desde_invalido(raiz):
+    with pytest.raises(ValueError, match="ciclo inválido"):
+        registro.calendario_ciclos("2026-13")
+
+
 def test_cli_corte_informa_umbral_y_referencia():
     from click.testing import CliRunner
     from quantagent.cli.__main__ import cli
@@ -162,3 +191,19 @@ def test_cli_ciclo_expone_help_epilog_y_referencia():
     assert "Example: quantagent registro ciclo abrir 2026-11 H1 H2" in ayuda.output
     referencia = Path("docs/manual/reference/cli/registro/ciclo.md").read_text()
     assert "Example: quantagent registro ciclo cerrar 2026-11" in referencia
+
+
+def test_cli_calendario_muestra_ciclos_y_corte(raiz):
+    from click.testing import CliRunner
+    from quantagent.cli.__main__ import cli
+
+    for mes in range(1, 7):
+        ciclo = f"2026-{mes:02d}"
+        registro.abrir_ciclo(ciclo, [f"H{mes}"])
+        registro.cerrar_ciclo(ciclo)
+
+    resultado = CliRunner().invoke(cli, ["registro", "calendario", "2026-12"])
+    assert resultado.exit_code == 0
+    assert "2026-12: propuesta 2026-12-01; embudo 2026-12-08; revisión paper 2026-12-25; pendiente" in resultado.output
+    assert "Corte: 6/6 ciclos cerrados consecutivos sin pasar etapa 3." in resultado.output
+    assert "Toca revisar el enfoque." in resultado.output

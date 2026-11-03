@@ -9,11 +9,25 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  ciclo  Open or close a monthly hypothesis cycle.
-  corte  Show consecutive closed cycles without a stage 3 pass.
+  calendario  Show monthly hypothesis cycle dates and registry status.
+  ciclo       Open or close a monthly hypothesis cycle.
+  corte       Show consecutive closed cycles without a stage 3 pass.
 
   Examples: quantagent registro ciclo abrir 2026-11 H1 H2 quantagent registro
   ciclo cerrar 2026-11
+```
+
+## `quantagent registro calendario`
+
+```text
+Usage: quantagent registro calendario [OPTIONS] [DESDE]
+
+  Show monthly hypothesis cycle dates and registry status.
+
+Options:
+  --help  Show this message and exit.
+
+  Example: quantagent registro calendario 2026-11
 ```
 
 ## `quantagent registro ciclo`
