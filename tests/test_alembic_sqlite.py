@@ -19,3 +19,34 @@ def test_alembic_upgrade_head_on_empty_sqlite(tmp_path):
         assert schema.has_table("accounts")
         assert schema.has_table("equity_snapshots")
         assert "broker_stop_order_id" in {column["name"] for column in schema.get_columns("active_positions")}
+
+
+def test_backtest_run_hypothesis_id_upgrade_downgrade_upgrade(tmp_path):
+    database = tmp_path / "hypothesis-id.db"
+    url = f"sqlite:///{database}"
+    env = os.environ | {"DATABASE_URL": url, "NUMBA_CACHE_DIR": "/tmp/numba-c"}
+    python = sys.executable
+
+    subprocess.run([python, "-m", "alembic", "upgrade", "head"], check=True, env=env)
+    with create_engine(url).connect() as connection:
+        schema = inspect(connection)
+        assert "hypothesis_id" in {column["name"] for column in schema.get_columns("backtest_runs")}
+        assert "ix_backtest_runs_hypothesis_id" in {
+            index["name"] for index in schema.get_indexes("backtest_runs")
+        }
+
+    subprocess.run([python, "-m", "alembic", "downgrade", "-1"], check=True, env=env)
+    with create_engine(url).connect() as connection:
+        schema = inspect(connection)
+        assert "hypothesis_id" not in {column["name"] for column in schema.get_columns("backtest_runs")}
+        assert "ix_backtest_runs_hypothesis_id" not in {
+            index["name"] for index in schema.get_indexes("backtest_runs")
+        }
+
+    subprocess.run([python, "-m", "alembic", "upgrade", "head"], check=True, env=env)
+    with create_engine(url).connect() as connection:
+        schema = inspect(connection)
+        assert "hypothesis_id" in {column["name"] for column in schema.get_columns("backtest_runs")}
+        assert "ix_backtest_runs_hypothesis_id" in {
+            index["name"] for index in schema.get_indexes("backtest_runs")
+        }

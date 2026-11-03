@@ -370,6 +370,7 @@ class BacktestRun(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(200), nullable=True)
+    hypothesis_id = Column(String(200), nullable=True, index=True)
     timeframe = Column(String(10), nullable=False)  # "1h", "4h", "1d", etc.
     assets = Column(JSON, nullable=False)  # List of symbols, e.g., ["BTC", "SPX", "CL"]
     start_date = Column(DateTime, nullable=False, index=True)
