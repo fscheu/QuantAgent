@@ -291,9 +291,43 @@ def test_diario_sin_candidatos_golden_pre_m555d(db_session, mercado, tmp_path, a
     assert [(r.symbol, r.status, r.reject_reason) for r in intents] == [
         ("XLK", "aprobado", None), ("XLP", "aprobado", None), ("XLF", "aprobado", None)]
     assert [(o.symbol, o.side.value, str(o.quantity), str(o.stop_price)) for o in broker.orders] == [
-        ("XLK", "buy", "0.20665971", "131.29154391"), ("XLK", "sell", "0.20665971", "95.00000000"),
-        ("XLP", "buy", "0.19672895", "133.12351894"), ("XLP", "sell", "0.19672895", "95.00000000"),
-        ("XLF", "buy", "0.22986678", "127.62759385"), ("XLF", "sell", "0.22986678", "95.00000000")]
+        ("XLK", "buy", "0.20665971", "131.29000000"), ("XLK", "sell", "0.20665971", "95.00000000"),
+        ("XLP", "buy", "0.19672895", "133.12000000"), ("XLP", "sell", "0.19672895", "95.00000000"),
+        ("XLF", "buy", "0.22986678", "127.63000000"), ("XLF", "sell", "0.22986678", "95.00000000")]
+
+
+def test_pipeline_stop_rechazado_cancela_entrada_y_persiste_intent(db_session, mercado, tmp_path):
+    as_of, data = mercado
+    path = tmp_path / "regimen.csv"
+    correr_semanal(as_of, data_provider=data, regimen_path=path, narrador=None)
+
+    class BrokerConStopFallido(BrokerMemoria):
+        def __init__(self):
+            super().__init__()
+            self.cancelados = []
+
+        def submit_order(self, order):
+            self.orders.append(order)
+            if order.side == OrderSide.BUY:
+                order.alpaca_order_id = "entrada-1"
+            else:
+                raise RuntimeError("invalid stop_price")
+            return order
+
+        def cancel_order(self, order_id):
+            self.cancelados.append(order_id)
+            return True
+
+    broker = BrokerConStopFallido()
+    intents = correr_diario(as_of, data_provider=data, db=db_session, broker=broker,
+                            regimen_path=path, estrategias=(("test", SiempreSenala()),), narrador=None)
+
+    assert intents and all((r.status, r.reject_reason) == ("rechazado_riesgo", "stop_rechazado")
+                           for r in intents)
+    assert len(broker.cancelados) == len(intents)
+    assert set(broker.cancelados) == {"entrada-1"}
+    assert all(db_session.get(Order, r.order_id).status.value == "cancelled" for r in intents)
+    assert db_session.query(TradeIntentRecord).count() == len(intents)
 
 
 def test_semana_acciones_arquetipos_reales_fracciones_e_idempotencia(db_session, mercado, tmp_path):
@@ -328,7 +362,7 @@ def test_semana_acciones_arquetipos_reales_fracciones_e_idempotencia(db_session,
     for intent in aprobados:
         entrada = db_session.get(Order, intent.order_id)
         assert entrada.order_type == OrderType.STOP and 0 < entrada.quantity < 1
-        assert entrada.quantity * entrada.stop_price <= 300
+        assert entrada.quantity * entrada.stop_price <= Decimal("300.01")
         assert any(o.side == OrderSide.SELL and o.symbol == entrada.symbol
                    and o.quantity == entrada.quantity and o.order_type == OrderType.STOP
                    and 0 < o.stop_price < entrada.stop_price for o in broker.orders)
