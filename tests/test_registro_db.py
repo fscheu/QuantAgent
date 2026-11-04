@@ -7,14 +7,8 @@ import pytest
 from quantagent.fabrica.campos_intentos import CAMPOS_INTENTOS
 
 
-@pytest.fixture(params=["jsonl", "db"])
-def registro_modulo(request, tmp_path, monkeypatch):
-    if request.param == "jsonl":
-        from quantagent.fabrica import registro
-        monkeypatch.setattr("quantagent.fabrica.registro.snapshot_root", lambda: tmp_path)
-        monkeypatch.setattr(registro, "snapshot_manifest_hash", lambda _: None)
-        yield registro, tmp_path / "registro-hipotesis.jsonl"
-        return
+@pytest.fixture
+def registro_modulo(tmp_path, monkeypatch):
     from quantagent import database
     url = f"sqlite:///{tmp_path / 'registro.db'}"
     monkeypatch.setenv("DATABASE_URL", url)
@@ -42,7 +36,7 @@ def test_eventos_se_apilan_y_estado_actual(registro_modulo):
 
 
 def _eventos(registro):
-    return registro.eventos() if hasattr(registro, "eventos") else registro._leer_eventos()[0]
+    return registro.eventos()
 
 
 # Se dejan en test_registro.py los casos ligados al JSONL, reconstrucción/importación

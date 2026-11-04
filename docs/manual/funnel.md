@@ -75,8 +75,8 @@ flowchart LR
 
 ## Hypothesis registry and monthly cycle
 
-- **Input:** every stage verdict and every attempt, written by the factory commands to `registro-hipotesis.jsonl` (append-only, next to `hipotesis.csv` and `intentos.csv`, which are still written).
+- **Input:** every stage verdict, attempt and cycle, written to the database (`quantagent.models`: `Hypothesis`, `HypothesisEvent`, `HypothesisAttempt`, `Cycle`). CSV and JSONL files are no longer written; `quantagent registro importar` loads the legacy files once.
 - **Measure:** one cycle per month (`YYYY-MM`) with at most 5 hypotheses; closing a cycle saves an immutable receipt with stage counts, drops with their reason, attempts, snapshots and their manifest hashes. A hypothesis counts as promoted when it reaches stage 3 with PASA.
 - **Pass criterion:** none. After 6 consecutive closed cycles with no promoted hypothesis, the approach is reviewed (`CICLOS_PARA_REVISAR`).
-- **Commands:** `quantagent registro importar` (load the CSV history once), `ver`, `ciclo abrir|cerrar|informe`, `corte`, `calendario`. Attempt counts for the deflated Sharpe still come from `intentos.csv`, so rows marked `invalida_bug` stay excluded.
+- **Commands:** `quantagent registro importar` (load the legacy CSV/JSONL history once), `ver`, `ciclo abrir|cerrar|informe`, `corte`, `calendario`. Deflated-Sharpe N is the number of distinct valid DB attempts by strategy, params, asset, start and end date (`n_efectivo`); attempts marked `invalida_bug` and synthetic-snapshot attempts are excluded.
 - **Source:** [roadmap after M5, section 1](../02_planning/2026-10-28_roadmap_post_m5.md), decisions C1–C4, 2026-10-28.
