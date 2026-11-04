@@ -2,6 +2,7 @@
 
 import json
 import os
+import subprocess
 from datetime import date, datetime, time, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -17,14 +18,14 @@ from quantagent import settings
 from quantagent.data.provider import DataProvider
 from quantagent.data.sources import build_source
 from quantagent.database import Base
-from quantagent.digest import build_digest
+from quantagent.digest import SEPARADOR_MENSAJES, build_digest_mensajes
 from quantagent.digest_datos import (
     consultar_datos_cartera,
     consultar_datos_paper,
     consultar_valuacion_actual,
     crear_broker_alpaca_paper,
 )
-from quantagent.digest_m5 import build_digest_m5, consultar_datos_m5
+from quantagent.digest_m5 import build_digest_m5_mensajes, consultar_datos_m5
 from quantagent.digest_m5_semanal import resumen_semanal
 from quantagent.fabrica.cartera import leer_sombra
 from quantagent.fabrica.chequeos_paper import comparar_pesos, reconciliar_cartera, reportar_dividendos, reportar_rechazos
@@ -227,6 +228,19 @@ def m5_correr(modo: str, as_of: datetime | None, db_path: str) -> None:
         raise click.exceptions.Exit(1) from exc
 
 
+def _emitir_digest(messages: list[str], titulo: str | None) -> None:
+    if titulo is None:
+        click.echo(SEPARADOR_MENSAJES.join(messages))
+        return
+    for index, message in enumerate(messages, 1):
+        try:
+            subprocess.run([os.environ.get("HERMES_BIN", "hermes"), "send", "-t", "telegram", "-s", titulo],
+                           input=message, text=True, capture_output=True, check=True)
+        except (OSError, subprocess.CalledProcessError) as exc:
+            detail = exc.stderr if isinstance(exc, subprocess.CalledProcessError) else str(exc)
+            raise click.ClickException(f"Telegram: falló el envío del mensaje {index}: {detail}") from exc
+
+
 @trading_group.command("digest", help="Show the daily paper trading digest.",
                        epilog="Example: quantagent trading digest --bucket m5 --date 2026-10-29")
 @click.argument("archivo", required=False, type=click.File("r", encoding="utf-8"))
@@ -237,8 +251,9 @@ def m5_correr(modo: str, as_of: datetime | None, db_path: str) -> None:
 @click.option("--portfolio", help="Dedicated portfolio for positions, executions, and current Alpaca valuation.")
 @click.option("--dividendos-alpaca", is_flag=True, help="Read Alpaca dividends for the selected date.")
 @click.option("--sin-dividendos", is_flag=True, help="Disable the Alpaca dividend query.")
+@click.option("--enviar-telegram", metavar="TITULO", help="Send each digest message to Telegram with this title; defaults to stdout.")
 def trading_digest(archivo, digest_date, bucket: str | None, db: str | None, shadow: str | None, portfolio: str,
-                   dividendos_alpaca: bool, sin_dividendos: bool) -> None:
+                   dividendos_alpaca: bool, sin_dividendos: bool, enviar_telegram: str | None) -> None:
     if bucket:
         if digest_date is None:
             raise click.UsageError("Provide --date YYYY-MM-DD.")
@@ -261,7 +276,7 @@ def trading_digest(archivo, digest_date, bucket: str | None, db: str | None, sha
                     CAPITAL_INICIAL + sum(p["unrealized_pnl"] for p in datos["posiciones"]),
                     carpeta=carpeta, data_provider=provider,
                     base_dir=os.environ.get("QUANTAGENT_SNAPSHOT_DIR"))
-            click.echo(build_digest_m5(digest_date.date(), datos))
+            _emitir_digest(build_digest_m5_mensajes(digest_date.date(), datos), enviar_telegram)
         finally:
             settings.DATABASE_URL = previous_settings_url
             if previous_url is None:
@@ -373,9 +388,9 @@ def trading_digest(archivo, digest_date, bucket: str | None, db: str | None, sha
         else:
             os.environ["DATABASE_URL"] = previous_url
     rejection_reports = reportar_rechazos([SimpleNamespace(**order) for order in orders])
-    click.echo(build_digest(day, portfolios, trades, heartbeats, warnings=warnings,
+    _emitir_digest(build_digest_mensajes(day, portfolios, trades, heartbeats, warnings=warnings,
                             reconciliations=[*differences, *rejection_reports], cumulative_pnl=cumulative_pnl,
-                            valuation=valuation, executions=executions, pending=pending))
+                            valuation=valuation, executions=executions, pending=pending), enviar_telegram)
     if dividendos_error or differences or any(str(order.get("status")).lower() == "rejected" and not order.get("comment")
                           for order in orders):
         raise click.exceptions.Exit(1)
