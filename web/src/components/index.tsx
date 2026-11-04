@@ -95,4 +95,4 @@ export function ChipGroup({ label, options, selected, onChange }: { label: strin
 }
 export { DateStepper } from './DateStepper';
 export { AccountSelect } from './AccountSelect';
-export { MarketAsOfLine, RegimeCard, RegimeStrip } from './Market';
+export { MarketAsOfLine, RegimeCard, RegimeStrip, MotorStateCard, MacroIndicatorCard } from './Market';
