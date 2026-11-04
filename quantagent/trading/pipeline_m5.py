@@ -19,12 +19,13 @@ from quantagent.fabrica.cartera import pesos, pesos_h3
 from quantagent.fabrica.regimen import regimen_semanal
 from quantagent.fabrica.screener import COLS_CANDIDATOS
 from quantagent.fabrica.transversal import MASCARAS, METRICAS, PRIORS_M5, REGLAS, señales_transversales
-from quantagent.models import ActivePosition, Environment, Order, OrderSide, OrderType, TradeIntentRecord
+from quantagent.models import ActivePosition, Environment, Order, OrderSide, OrderStatus, OrderType, TradeIntentRecord
 from quantagent.portfolio.manager import PortfolioManager
 from quantagent.strategy.arquetipo_a_strategy import ArquetipoAStrategy
 from quantagent.strategy.arquetipo_b_strategy import ArquetipoBStrategy
 from quantagent.strategy.indicadores import atr
 from quantagent.strategy.trade_intent import TradeIntent
+from quantagent.trading.alpaca_broker import quantize_order_price
 from quantagent.trading.bucket_m5 import CAPITAL_INICIAL, crear_position_sizer, crear_risk_manager
 from quantagent.trading.cartera_paper import sesiones_cerradas_nyse, ultima_sesion_cerrada_nyse
 from quantagent.trading.intent_persistence import save_trade_intent
@@ -331,8 +332,8 @@ def correr_diario(as_of, *, data_provider, db: Session, broker,
                 continue
             entrada = Order(symbol=simbolo, side=OrderSide.BUY, quantity=Decimal(str(qty)),
                             order_type=OrderType.STOP if intent.order_type == "stop" else OrderType.MARKET,
-                            price=Decimal(str(intent.entry_price)) if intent.order_type == "market" else None,
-                            stop_price=Decimal(str(intent.entry_price)) if intent.order_type == "stop" else None,
+                            price=quantize_order_price(intent.entry_price) if intent.order_type == "market" else None,
+                            stop_price=quantize_order_price(intent.entry_price) if intent.order_type == "stop" else None,
                             environment=Environment.PAPER, created_at=timestamp.to_pydatetime(),
                             comment=f"m5; vence={intent.entry_expires_bars} barras")
             db.add(entrada)
@@ -340,13 +341,31 @@ def correr_diario(as_of, *, data_provider, db: Session, broker,
             broker.submit_order(entrada)
             db.add(entrada)
             proteccion = Order(symbol=simbolo, side=OrderSide.SELL, quantity=Decimal(str(qty)),
-                               order_type=OrderType.STOP, stop_price=Decimal(str(intent.stop_loss)),
+                               order_type=OrderType.STOP, stop_price=quantize_order_price(intent.stop_loss),
                                environment=Environment.PAPER, created_at=timestamp.to_pydatetime(),
                                comment=f"proteccion intent={simbolo}:{strategy_id}")
             db.add(proteccion)
             db.flush()
-            broker.submit_order(proteccion)
-            record = save_trade_intent(db, intent, "aprobado", order_id=entrada.id)
+            try:
+                resultado_stop = broker.submit_order(proteccion)
+                if resultado_stop.status == OrderStatus.REJECTED:
+                    proteccion.status = OrderStatus.REJECTED
+            except Exception as exc:
+                proteccion.status, proteccion.comment = OrderStatus.REJECTED, str(exc)
+                logger.warning("M5 stop rechazado para %s", simbolo, exc_info=True)
+            stop_rechazado = proteccion.status == OrderStatus.REJECTED
+            if stop_rechazado:
+                entrada.status = OrderStatus.REJECTED
+                entrada.comment = "stop_rechazado"
+                cancelar = getattr(broker, "cancel_order", None)
+                if cancelar is not None:
+                    try:
+                        if cancelar(entrada.alpaca_order_id) is not False:
+                            entrada.status = OrderStatus.CANCELLED
+                    except Exception:
+                        logger.warning("M5 no pudo cancelar entrada de %s", simbolo, exc_info=True)
+            record = save_trade_intent(db, intent, "rechazado_riesgo" if stop_rechazado else "aprobado",
+                                       "stop_rechazado" if stop_rechazado else None, order_id=entrada.id)
             record.created_at = record.updated_at = timestamp.to_pydatetime()
             db.commit()
             creados.append(record)
