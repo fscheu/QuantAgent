@@ -1,0 +1,11 @@
+# Ejemplo: instalar a mano en /etc/systemd/system/.
+[Unit]
+Description=Backup diario del registro QuantAgent
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+Unit=quantagent-registro-backup.service
+
+[Install]
+WantedBy=timers.target

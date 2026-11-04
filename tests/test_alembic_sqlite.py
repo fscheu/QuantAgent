@@ -35,7 +35,7 @@ def test_backtest_run_hypothesis_id_upgrade_downgrade_upgrade(tmp_path):
             index["name"] for index in schema.get_indexes("backtest_runs")
         }
 
-    subprocess.run([python, "-m", "alembic", "downgrade", "-1"], check=True, env=env)
+    subprocess.run([python, "-m", "alembic", "downgrade", "cd34ef56ab78-1"], check=True, env=env)
     with create_engine(url).connect() as connection:
         schema = inspect(connection)
         assert "hypothesis_id" not in {column["name"] for column in schema.get_columns("backtest_runs")}
