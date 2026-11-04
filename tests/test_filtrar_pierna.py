@@ -6,13 +6,35 @@ import pytest
 from quantagent.fabrica import transversal
 from quantagent.fabrica.admision import admitir
 from quantagent.fabrica.cartera import combinar, pesos
-from quantagent.fabrica.filtro import filtrar_pierna, veredicto_etapa1
+from quantagent.fabrica.filtro import (
+    MIN_SHARPE_ETAPA1,
+    MIN_TRADES_ETAPA1,
+    filtrar_pierna,
+    medida_etapa1,
+    veredicto_etapa1,
+)
 from quantagent.fabrica.hipotesis import Hipotesis, Pierna
 from quantagent.settings import COSTOS_PERFILES
 from quantagent.strategy.registry import STRATEGY_REGISTRY
 
 COSTOS = {"commission_pct": 0.0, "slippage_pct": 0.0}
 ACTIVOS = ("SPY", "QQQ", "IWM", "EFA", "EEM", "XLE")
+
+
+def test_medida_etapa1_sigue_los_mismos_limites_y_precedencia_que_el_veredicto():
+    veredicto, _ = veredicto_etapa1(MIN_SHARPE_ETAPA1, MIN_TRADES_ETAPA1 - 1)
+    medida, causa = medida_etapa1(MIN_SHARPE_ETAPA1, MIN_TRADES_ETAPA1 - 1)
+    assert veredicto == "CORTA"
+    assert (medida["metric"], medida["threshold"], causa) == ("trades", MIN_TRADES_ETAPA1, "few_trades")
+
+    veredicto, _ = veredicto_etapa1(MIN_SHARPE_ETAPA1 - 0.01, MIN_TRADES_ETAPA1)
+    medida, causa = medida_etapa1(MIN_SHARPE_ETAPA1 - 0.01, MIN_TRADES_ETAPA1)
+    assert veredicto == "CORTA"
+    assert (medida["metric"], medida["threshold"], causa) == ("sharpe", MIN_SHARPE_ETAPA1, "sharpe_below")
+
+    veredicto, _ = veredicto_etapa1(MIN_SHARPE_ETAPA1, MIN_TRADES_ETAPA1)
+    assert veredicto == "PASA"
+    assert medida_etapa1(MIN_SHARPE_ETAPA1, MIN_TRADES_ETAPA1) == (None, None)
 
 
 def _velas(n=365 * 9, seed=3):
