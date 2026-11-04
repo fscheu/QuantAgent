@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from quantagent.cli.__main__ import cli
 from quantagent.database import Base
 from quantagent.digest_m5 import build_digest_m5, consultar_datos_m5
-from quantagent.models import Order, OrderSide, OrderStatus, OrderType, Position, TradeIntentRecord
+from quantagent.models import Environment, Order, OrderSide, OrderStatus, OrderType, Position, SchedulerHeartbeat, TradeIntentRecord
 
 
 def _database(path):
@@ -22,10 +22,17 @@ def _intent(symbol, status, when, *, reason=None, order_id=None, entry=100, stop
                              status=status, reject_reason=reason, order_id=order_id, reasoning_metadata={})
 
 
+def _completed(day):
+    return SchedulerHeartbeat(timestamp=datetime.combine(day, datetime.min.time()), status="completed",
+                              completed_at=datetime.combine(day, datetime.min.time()),
+                              environment=Environment.PAPER, stats={"modo": "diario"})
+
+
 def test_digest_m5_reports_rejection_symbol_and_reason(tmp_path):
     engine = _database(tmp_path / "m5.db")
     with Session(engine) as session:
         session.add(_intent("QQQ", "rechazado_riesgo", datetime(2026, 10, 29, 12), reason="max_heat"))
+        session.add(_completed(date(2026, 10, 29)))
         session.commit()
         text = build_digest_m5(date(2026, 10, 29), consultar_datos_m5(session, date(2026, 10, 29)))
     assert "- QQQ: max_heat" in text
@@ -40,6 +47,7 @@ def test_digest_m5_uses_open_stops_and_calculates_heat(tmp_path):
             Position(symbol="QQQ", quantity=1, average_entry_price=50, current_price=52,
                      unrealized_pnl=20, unrealized_pnl_pct=0.04, side=OrderSide.BUY),
         ])
+        session.add(_completed(date(2026, 10, 29)))
         session.add_all([
             Order(symbol="SPY", side=OrderSide.SELL, order_type=OrderType.STOP, quantity=2,
                   stop_price=90, status=OrderStatus.PENDING),
@@ -58,6 +66,7 @@ def test_digest_m5_explicitly_reports_no_intents(tmp_path):
     with Session(engine) as session:
         text = build_digest_m5(date(2026, 10, 29), consultar_datos_m5(session, date(2026, 10, 29)))
     assert "Sin actividad de intents hoy." in text
+    assert text.startswith("ALERTA: el ciclo diario M5 no terminó OK")
     assert "- Sin posiciones abiertas" in text
 
 
@@ -66,8 +75,23 @@ def test_digest_m5_cli_uses_selected_database(tmp_path):
     engine = _database(db_path)
     with Session(engine) as session:
         session.add(_intent("QQQ", "rechazado_riesgo", datetime(2026, 10, 29, 12), reason="max_heat"))
+        session.add(_completed(date(2026, 10, 29)))
         session.commit()
     result = CliRunner().invoke(cli, ["trading", "digest", "--bucket", "m5", "--date", "2026-10-29",
                                       "--db", str(db_path)])
     assert result.exit_code == 0, result.output
     assert "Resumen M5 — 2026-10-29" in result.output and "- QQQ: max_heat" in result.output
+
+
+def test_digest_m5_alerta_error_y_completed_conserva_texto(tmp_path):
+    engine = _database(tmp_path / "m5.db")
+    day = date(2026, 10, 29)
+    with Session(engine) as session:
+        session.add(SchedulerHeartbeat(timestamp=datetime.combine(day, datetime.min.time()), status="error",
+                                       environment=Environment.PAPER, stats={"modo": "diario"},
+                                       error_message="RuntimeError: falló"))
+        session.commit()
+        data = consultar_datos_m5(session, day)
+        assert "ALERTA: el ciclo diario M5 falló: RuntimeError: falló" in build_digest_m5(day, data)
+        data["ciclo"].append({"modo": "diario", "status": "completed", "error_message": None})
+        assert not build_digest_m5(day, data).startswith("ALERTA:")
