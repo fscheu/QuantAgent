@@ -313,9 +313,10 @@ def correr_diario(as_of, *, data_provider, db: Session, broker,
                 if (r.reasoning_metadata or {}).get("session_date") == str(fecha.date())), None)
             if duplicado:
                 continue
+            usa_oto = hasattr(broker, "submit_oto") and intent.order_type == "stop"
             qty = sizer.calculate_size(simbolo, intent.confidence, float(intent.entry_price),
                                        manager.get_total_value(), stop_price=float(intent.stop_loss),
-                                       fraccionable=permite_fracciones)
+                                       fraccionable=permite_fracciones and not usa_oto)
             if accion:
                 qty = float(Decimal(str(qty)).quantize(Decimal("0.00000001"), rounding=ROUND_DOWN))
             valido, motivo = risk.validate_trade(simbolo, OrderSide.BUY, qty,

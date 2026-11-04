@@ -330,7 +330,7 @@ def test_pipeline_stop_rechazado_cancela_entrada_y_persiste_intent(db_session, m
     assert db_session.query(TradeIntentRecord).count() == len(intents)
 
 
-def test_pipeline_usa_oto_y_persiste_ambas_ordenes_locales(db_session, mercado, tmp_path):
+def test_pipeline_oto_rechaza_cantidad_cero_sin_crear_ordenes(db_session, mercado, tmp_path):
     as_of, data = mercado
     path = tmp_path / "regimen.csv"
     correr_semanal(as_of, data_provider=data, regimen_path=path, narrador=None)
@@ -338,26 +338,25 @@ def test_pipeline_usa_oto_y_persiste_ambas_ordenes_locales(db_session, mercado, 
     class BrokerOTO(BrokerMemoria):
         def submit_oto(self, entrada, proteccion):
             self.orders.extend((entrada, proteccion))
-            entrada.status = proteccion.status = OrderStatus.REJECTED
-            entrada.comment = proteccion.comment = "oto_no_soporta_fracciones"
             return entrada, proteccion
 
     broker = BrokerOTO()
     intents = correr_diario(as_of, data_provider=data, db=db_session, broker=broker,
                             regimen_path=path, estrategias=(("test", SiempreSenala()),), narrador=None)
 
-    assert len(broker.orders) == 2 * len(intents)
-    assert all({order.side for order in broker.orders[i:i + 2]} == {OrderSide.BUY, OrderSide.SELL}
-               for i in range(0, len(broker.orders), 2))
-    assert all((record.status, record.reject_reason) ==
-               ("rechazado_riesgo", "oto_no_soporta_fracciones") for record in intents)
-    assert all(db_session.get(Order, record.order_id) is not None for record in intents)
+    assert intents and all((record.status, record.reject_reason) ==
+                           ("rechazado_riesgo", "tamano_cero") for record in intents)
+    assert not broker.orders
 
 
 def test_pipeline_persists_intent_when_oto_submit_raises(db_session, mercado, tmp_path):
     as_of, data = mercado
     path = tmp_path / "regimen.csv"
     correr_semanal(as_of, data_provider=data, regimen_path=path, narrador=None)
+    path.write_text("fecha,estado,habilitados\n2026-10-23,risk-on,\n")
+    (tmp_path / "m5-candidatos-semanales.csv").write_text("fecha,simbolo,rank\n2026-10-23,CARA,1\n")
+    data.panel["CARA"] = data.panel["SPY"].copy()
+    data.panel["CARA"][["open", "high", "low", "close"]] *= 0.1
 
     class BrokerOTOFalla(BrokerMemoria):
         def submit_oto(self, entrada, proteccion):
@@ -366,11 +365,60 @@ def test_pipeline_persists_intent_when_oto_submit_raises(db_session, mercado, tm
 
     broker = BrokerOTOFalla()
     intents = correr_diario(as_of, data_provider=data, db=db_session, broker=broker,
-                            regimen_path=path, estrategias=(("test", SiempreSenala()),), narrador=None)
+                            regimen_path=path, estrategias=(("test", SiempreSenala(stop=9)),), narrador=None,
+                            es_fraccionable=lambda _: True)
 
     assert intents and all((record.status, record.reject_reason) ==
                            ("rechazado_riesgo", "entrada_rechazada") for record in intents)
     assert all(db_session.get(Order, record.order_id).status == OrderStatus.REJECTED for record in intents)
+
+
+def test_pipeline_oto_redondea_cantidad_entera_hacia_abajo(db_session, mercado, tmp_path):
+    as_of, data = mercado
+    path = tmp_path / "regimen.csv"
+    correr_semanal(as_of, data_provider=data, regimen_path=path, narrador=None)
+    path.write_text("fecha,estado,habilitados\n2026-10-23,risk-on,\n")
+    (tmp_path / "m5-candidatos-semanales.csv").write_text("fecha,simbolo,rank\n2026-10-23,CARA,1\n")
+    data.panel["CARA"] = data.panel["SPY"].copy()
+    data.panel["CARA"][["open", "high", "low", "close"]] *= 0.1
+
+    class BrokerOTO(BrokerMemoria):
+        def submit_oto(self, entrada, proteccion):
+            self.orders.extend((entrada, proteccion))
+            return entrada, proteccion
+
+    broker = BrokerOTO()
+    intents = correr_diario(as_of, data_provider=data, db=db_session, broker=broker,
+                            regimen_path=path, estrategias=(("test", SiempreSenala(stop=9)),), narrador=None,
+                            es_fraccionable=lambda _: True)
+
+    assert intents and all(record.status == "aprobado" for record in intents)
+    entradas = broker.orders[::2]
+    assert all(cantidad > 0 and cantidad == cantidad.to_integral_value() for cantidad in
+               (order.quantity for order in entradas))
+    assert all(order.quantity <= Decimal("500") for order in entradas)
+
+
+def test_pipeline_oto_cantidad_cero_rechaza_sin_enviar(db_session, mercado, tmp_path):
+    as_of, data = mercado
+    path = tmp_path / "regimen.csv"
+    path.write_text("fecha,estado,habilitados\n2026-10-23,risk-on,\n")
+    (tmp_path / "m5-candidatos-semanales.csv").write_text("fecha,simbolo,rank\n2026-10-23,CARA,1\n")
+    data.panel["CARA"] = data.panel["SPY"].copy()
+    data.panel["CARA"][["open", "high", "low", "close"]] *= 10
+
+    class BrokerOTO(BrokerMemoria):
+        def submit_oto(self, entrada, proteccion):
+            self.orders.extend((entrada, proteccion))
+
+    broker = BrokerOTO()
+    intents = correr_diario(as_of, data_provider=data, db=db_session, broker=broker,
+                            regimen_path=path, estrategias=(("test", SiempreSenala(stop=900)),),
+                            narrador=None, es_fraccionable=lambda _: True)
+
+    assert len(intents) == 1
+    assert (intents[0].status, intents[0].reject_reason) == ("rechazado_riesgo", "tamano_cero")
+    assert not broker.orders
 
 
 def test_pipeline_entrada_rechazada_por_gatillo_superado_persiste_y_sigue(db_session, mercado, tmp_path):
