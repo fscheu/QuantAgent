@@ -27,8 +27,8 @@ from quantagent.digest_datos import (
 from quantagent.digest_m5 import build_digest_m5, consultar_datos_m5
 from quantagent.digest_m5_semanal import resumen_semanal
 from quantagent.fabrica.cartera import leer_sombra
-from quantagent.fabrica.chequeos_paper import comparar_pesos, reportar_dividendos, reportar_rechazos
-from quantagent.models import Environment, EquitySnapshot, Position
+from quantagent.fabrica.chequeos_paper import comparar_pesos, reconciliar_cartera, reportar_dividendos, reportar_rechazos
+from quantagent.models import Environment, EquitySnapshot, Position, SchedulerHeartbeat
 from quantagent.strategy.assembler import StrategyAssembler
 from quantagent.trading.bucket_m5 import CAPITAL_INICIAL
 from quantagent.trading.cartera_paper import ultima_sesion_cerrada_nyse
@@ -171,12 +171,22 @@ def _digest_session_day(day: date, now_utc: datetime | None = None):
               help="SQLite file for M5 intents and orders.")
 def m5_correr(modo: str, as_of: datetime | None, db_path: str) -> None:
     as_of = as_of or datetime.now(timezone.utc).replace(tzinfo=None)
+    session = None
+    heartbeat = None
     try:
         from quantagent.trading.bucket_m5 import cargar_credenciales
         cargar_credenciales()
         engine = _crear_db_m5(db_path)
         session = sessionmaker(bind=engine, expire_on_commit=False)()
         try:
+            heartbeat = SchedulerHeartbeat(timestamp=datetime.utcnow(), status="running",
+                                           environment=Environment.PAPER, stats={"modo": modo})
+            session.add(heartbeat)
+            try:
+                session.commit()
+            except Exception:
+                session.rollback()
+                heartbeat = None
             resolved = StrategyAssembler.from_profiles(
                 overrides={"broker_type": "alpaca_paper"}, environment=Environment.PAPER
             )
@@ -185,6 +195,23 @@ def m5_correr(modo: str, as_of: datetime | None, db_path: str) -> None:
             resultado = (correr_semanal(as_of, data_provider=provider, db=session)
                          if modo == "semanal" else
                          correr_diario(as_of, data_provider=provider, db=session, broker=components.broker))
+            if heartbeat is not None:
+                heartbeat.status = "completed"
+                heartbeat.completed_at = datetime.utcnow()
+                try:
+                    session.commit()
+                except Exception:
+                    session.rollback()
+        except Exception as exc:
+            if heartbeat is not None:
+                try:
+                    session.rollback()
+                    heartbeat.status = "error"
+                    heartbeat.error_message = f"{type(exc).__name__}: {exc}"
+                    session.commit()
+                except Exception:
+                    session.rollback()
+            raise
         finally:
             session.close()
             engine.dispose()
@@ -322,12 +349,19 @@ def trading_digest(archivo, digest_date, bucket: str | None, db: str | None, sha
             except (KeyError, FileNotFoundError):
                 warnings.append(f"Sombra sin datos para {portfolio} en {session_day}")
             else:
-                tolerancias = {
-                    symbol: float(price) / equity
-                    for symbol, price in session.query(Position.symbol, Position.current_price)
-                    .filter(Position.symbol.in_(set(paper_weights) | set(shadow_weights))).all()
-                } if equity else {}
-                differences = comparar_pesos(paper_weights, shadow_weights, tolerancias=tolerancias)
+                if dedicated:
+                    precios = {symbol: float(price) for symbol, price in
+                               session.query(Position.symbol, Position.current_price).all()}
+                    posiciones = portfolios[0]["positions"] if portfolios else []
+                    precios.update({p["symbol"]: p["price"] for p in posiciones})
+                    differences = reconciliar_cartera(posiciones, pending, precios, equity, shadow_weights)
+                else:
+                    tolerancias = {
+                        symbol: float(price) / equity
+                        for symbol, price in session.query(Position.symbol, Position.current_price)
+                        .filter(Position.symbol.in_(set(paper_weights) | set(shadow_weights))).all()
+                    } if equity else {}
+                    differences = comparar_pesos(paper_weights, shadow_weights, tolerancias=tolerancias)
     except (SQLAlchemyError, ValueError) as exc:
         if dedicated:
             raise click.ClickException(f"Cartera: error al consultar datos ({type(exc).__name__}).") from exc

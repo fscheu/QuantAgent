@@ -78,6 +78,53 @@ def test_stop_orders_use_fraction_aware_tif_and_both_sides(quantity, tif):
         assert Decimal(str(request.stop_price)) == Decimal("95")
         assert request.time_in_force == tif
 
+def test_stop_price_is_rounded_to_alpaca_tick():
+    client = Client(SimpleNamespace(id="stop-1", status="new", filled_qty="0"))
+    order = make_order(OrderType.STOP)
+    order.stop_price = Decimal("186.0104555038258")
+    AlpacaBroker(client).submit_order(order)
+    assert Decimal(str(client.request.stop_price)) == Decimal("186.01")
+    assert order.stop_price == Decimal("186.01")
+
+def test_submit_oto_sends_one_rounded_request_and_maps_stop_leg():
+    leg = SimpleNamespace(id="oto-stop", status="new", filled_qty="0")
+    result = SimpleNamespace(id="oto-entry", status="new", filled_qty="0", legs=[leg])
+    client = Client(result)
+    entrada, proteccion = make_order(OrderType.STOP), make_order(OrderType.STOP)
+    entrada.stop_price = Decimal("190")
+    proteccion.side, proteccion.stop_price = OrderSide.SELL, Decimal("186.0104555")
+
+    returned = AlpacaBroker(client).submit_oto(entrada, proteccion)
+
+    assert returned == (entrada, proteccion)
+    assert client.submitted == 1
+    assert client.request.order_class.value == "oto"
+    assert Decimal(str(client.request.stop_loss.stop_price)) == Decimal("186.01")
+    assert proteccion.alpaca_order_id == "oto-stop"
+    assert entrada.alpaca_order_id == "oto-entry"
+
+def test_submit_oto_fractional_quantity_is_rejected_without_request():
+    client = Client()
+    entrada, proteccion = make_order(OrderType.STOP), make_order(OrderType.STOP)
+    entrada.quantity = proteccion.quantity = Decimal("1.25")
+    entrada.stop_price, proteccion.stop_price = Decimal("100"), Decimal("95")
+
+    AlpacaBroker(client).submit_oto(entrada, proteccion)
+
+    assert client.submitted == 0
+    assert entrada.status == proteccion.status == OrderStatus.REJECTED
+    assert entrada.comment == proteccion.comment == "oto_no_soporta_fracciones"
+
+def test_submit_oto_submit_error_propagates_without_remote_order():
+    error = RuntimeError("submit unavailable")
+    client = Client(error=error)
+    entrada, proteccion = make_order(OrderType.STOP), make_order(OrderType.STOP)
+    entrada.stop_price, proteccion.stop_price = Decimal("100"), Decimal("95")
+
+    with pytest.raises(RuntimeError, match="submit unavailable"):
+        AlpacaBroker(client).submit_oto(entrada, proteccion)
+    assert client.submitted == 1
+
 def test_replace_stop_uses_order_id_and_new_price():
     result = SimpleNamespace(id="updated")
     client = Client(result)
@@ -85,6 +132,11 @@ def test_replace_stop_uses_order_id_and_new_price():
     order_id, request = client.replacements[0]
     assert order_id == "alpaca-stop-id"
     assert Decimal(str(request.stop_price)) == Decimal("97.5")
+
+def test_replace_stop_rounds_price_to_alpaca_tick():
+    client = Client(SimpleNamespace(id="updated"))
+    AlpacaBroker(client).replace_stop("alpaca-stop-id", Decimal("186.0104555038258"))
+    assert Decimal(str(client.replacements[0][1].stop_price)) == Decimal("186.01")
 
 def test_stop_without_stop_price_is_rejected():
     order = make_order(OrderType.STOP)

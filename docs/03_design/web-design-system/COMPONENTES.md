@@ -164,7 +164,7 @@ Comportamiento:
 - **Grupos y sub-filas**: `groupBy` agrega encabezados de grupo (ej. "Rechazadas · 3" en neg-soft); `subRow` agrega una línea debajo de la fila (motivo), sin romper la grilla.
 
 ### `BottomNav` (< 1024 px) / `SideNav` (≥ 1024 px)
-5 destinos (v0.3.1): Inicio, Cuenta, Backtests, Embudo, Mercado. Backtests es sección propia (ícono de reloj con flecha). En la barra inferior, etiquetas de 11,5 px y ancho flexible para que entren los 5 en 390 px. Ícono + texto siempre. Activo: `aria-current="page"`, accent-soft. Destinos aún no construidos: texto apagado + "pronto". SideNav: ícono de advertencia junto a "Cuenta" si hay alarmas. Densidad y tema al pie (escritorio) o en el ícono de ajustes de Inicio (teléfono).
+5 destinos (v0.3.1): Inicio, Cuenta, Backtests, Embudo, Mercado. Backtests es sección propia (ícono de reloj con flecha). En la barra inferior, etiquetas de 11,5 px y ancho flexible para que entren los 5 en 390 px. Ícono + texto siempre. Activo: `aria-current="page"`, accent-soft. Desde v0.4 los 5 destinos están activos (Embudo y Mercado ya no dicen "pronto"); el estilo "pronto" queda para destinos futuros. SideNav: ícono de advertencia junto a "Cuenta" si hay alarmas. Densidad y tema al pie (escritorio) o en el ícono de ajustes de Inicio (teléfono).
 
 ---
 
@@ -225,17 +225,17 @@ Anchos de referencia (contenido 1096 px): `120 80 44 76 76 96 156 68 minmax(190p
 - Hora: siempre con "ET".
 - Recomendado: construir `OrderRow` como configuración de `DataTable` con sub-filas.
 
-### `FunnelChart`
-Barras horizontales escalonadas: largo = `reached / total`; dentro, 3 segmentos: pasaron (`--qa-chart-1`), están acá (`--qa-accent`), cayeron (`.qa-hatch`). Separador entre segmentos: `inset -2px 0 0 var(--qa-surface)`. Texto por fila: "26 llegaron · 1 acá · −11". Etapa con 0: pista vacía + "todavía ninguna".
+### `FunnelChart` (v0.4)
+Ver §7. Resumen: filas E0–E3 con “llegaron N · acá N · cayeron N”; segmentos pasaron (`--qa-chart-1`), acá (`--qa-accent`), cayeron (`.qa-hatch`), **ERROR** (`.qa-seg-error`, rayas verticales warn) y **ALARMA** (`.qa-seg-alarm`, rayas horizontales neg) en segmentos propios, más la línea “Detenidas aparte: error N”. Promovidas al pie de E3. Fase posterior (Sombra local → Paper → Candidata) atenuada al 62 %, sin métricas. Etapa vacía: pista punteada + “Todavía ninguna”. Con `sample_too_small` no se dibuja.
 
-### `DropReasons`
-Por etapa: lista de motivos con conteo y barra (text-3). Teléfono: acordeón (`aria-expanded`), cerrado muestra el motivo principal. Escritorio: tarjetas abiertas en grilla de 3. Enlace "Ver las N descartadas" → filtra `HypothesisList`.
+### `DropReasons` (v0.4)
+Agrupado por etapa y causa (`cause_code`), solo CORTA. Cada motivo: etiqueta, conteo, barra rayada y un ejemplo con valor vs umbral (“ej.: Sharpe 0,31 · umbral 0,50”). Teléfono: acordeón (la etapa con más caídas abierta). Escritorio: tarjetas abiertas en grilla de 2. Debajo, bloque punteado **Detenidas por error o alarma** (no son caídas por mérito). Enlace “Ver las N descartadas”.
 
-### `CycleSummaryCard`
-Entraron / siguen / cayeron + paso por etapa + `headline`.
+### `CycleSummaryCard` (v0.4)
+Mes (“Noviembre 2026”) + id en mono secundario (`2026-11`), `Badge` Abierto (info) / Cerrado (contorno). Abierto: `Notice info` “informe parcial”. Entraron / Siguen / Cayeron / Promovidas, paso por etapa (E0 5 → E1 … → fase posterior), `CycleMilestones`, frase. Debajo, tira de 3 ciclos anteriores compactos (botones de 64 px que cambian el filtro). Botón “Ver informe parcial” / “Ver recibo” → `CycleReceipt`.
 
-### `HypothesisCard`
-Nombre, `Badge stage`, idea, métrica + fecha, chevrón. Descartada: nombre en text-2, `Badge discarded`, bloque sunken con motivo y detalle (valor vs umbral). Enlace a ficha.
+### `HypothesisCard` (v0.4)
+Nombre + `StageVerdictBadge`; línea `ciclo · dónde está` (“2026-06 · Promovida · ahora en Paper”, “Cayó en E1 · Filtro”, “Detenida en E2 por alarma”); idea **solo si existe** (no reserva espacio ni dice “sin idea”); bloque sunken con motivo + valor vs umbral si cayó o se detuvo; pie con intentos válidos (“3 intentos · 1 inválido”) y, si existe, métrica + fecha. Detenida (ERROR/ALARMA): borde punteado. Toda la tarjeta enlaza a `/hipotesis/:id`. Orden: etapa más avanzada primero, después fecha descendente.
 
 ### `HomeStatusBanner`
 `level` ok → neutro "Todo en orden"; warning/critical → fondo soft + ícono + enlace.
@@ -362,3 +362,95 @@ Variante `unregistered_flows`, detalle: Tarjeta punteada: ícono, “Retorno no 
 
 ### `CalcConventions`
 Pie en `--qa-surface-sunken` con las convenciones del informe y enlace al manual (44 px en teléfono).
+
+---
+
+## 7. Embudo v0.4 — nuevos y extendidos
+
+Hojas: página **Embudo v0.4** (teléfono, escritorio, recibo, variantes, estados) y **v0.4 · Componentes** del canvas.
+
+### `StageVerdictBadge` (nuevo, sobre `Badge`)
+| Prop | Tipo |
+|---|---|
+| `verdict` | `'PASA' \| 'CORTA' \| 'ERROR' \| 'ALARMA'` |
+| `promoted?` | `boolean` → variante PROMOVIDA (acento lleno + estrella) |
+| `size?` | `'md' \| 'sm'` |
+- PASA: accent-soft + círculo con tilde. CORTA: neutral-soft + círculo con cruz (gris: caer es normal, no es un error). ERROR: warn-soft + **borde punteado** warn + rombo con “!”. ALARMA: neg-soft + **borde lleno** neg + campana. El texto en mayúsculas siempre visible.
+- Variantes de contexto con el mismo `Badge`: `wait` (“Espera E1”), `phase` (“Paper · fase posterior”, borde punteado), `reserve` (“Usó la reserva 2023+”, info), `open`/`closed`.
+
+### `ReviewCounter` (nuevo)
+| Prop | Tipo |
+|---|---|
+| `rule` | `ReviewRule` |
+- Frase siempre visible: “{streak} de 6 ciclos seguidos sin promovida”. Tira de hasta 6 cajas de 40 px, la más reciente a la derecha: con promovida = accent + estrella; sin = sunken + cruz; sin ciclo = punteada. Debajo, el texto alternativo visible (“jun: con promovida · jul…”).
+- `streak >= limit`: la tarjeta toma borde warn de 2 px y la pantalla muestra arriba un `Notice strong` (“Hay que revisar el enfoque”).
+- **No** alimenta `HomeStatusBanner` ni el feed de alarmas: es un indicador de proceso.
+- Estados: normal · alcanzada · sin datos (“todavía no hay ciclos cerrados”) · cargando · error.
+
+### `CycleMilestones` (nuevo)
+Lista ordenada de hitos del mes (`cycleConfig.milestones`): día 1 propuesta, día 8 arranca el embudo, día 25 revisión de paper; en ciclos cerrados suma “Cierre”. Cada hito: punto (hecho = accent, próximo = warn, pendiente = punteado), etiqueta, fecha con día de semana y `Badge` (“hecho”, “en 5 días”, “cerrado”). El próximo va en 600.
+
+### `CycleReceipt` (nuevo)
+| Prop | Tipo |
+|---|---|
+| `receipt` | `CycleReceipt` |
+| `presentation` | `'screen' \| 'panel'` |
+- Bloques en orden: encabezado (mes, id, estado, fechas) → aviso (cerrado: “recibo inmutable”, neutral con candado; abierto: “informe parcial”, info) → 5 conteos → tabla por etapa (Llegaron · PASA · CORTA · ERR. · ALAR.; etapa sin empezar = “pendiente · arranca dom 08/11”, nunca 0) → descartes y detenidas con motivo y valor vs umbral → intentos por hipótesis → **datos usados al pie**: snapshots con hash de 12 en mono.
+- Teléfono: pantalla propia `/embudo/ciclo/:id`. Escritorio: panel lateral de 520 px (`role="dialog"`, `aria-modal`, foco atrapado, Esc cierra, el foco vuelve al botón). Query `?recibo=2026-10`.
+
+### `CycleFilter` (extiende `Select`)
+Opciones: Todos · cada `YYYY-MM` (más nuevo arriba, con “abierto” al lado del actual) · Sin ciclo. Junto a `SegmentedControl` de período (30d / 90d / Todo) rotulado **“Período: aplica al embudo y a la lista”**; con un ciclo concreto elegido el período queda deshabilitado (`aria-disabled`, opacidad 45 %) porque el ciclo es su propia ventana. `CycleSummaryCard` y `ReviewCounter` nunca dependen del período. Con 30d/90d, `Notice neutral` “Hipótesis con actividad en los últimos N días (desde {fecha}); cada una muestra el estado de su último evento de etapa en la ventana”. Ambos en la URL (`?ciclo=2026-10&periodo=90d`). Texto de ayuda: “Todos = ciclos mensuales. El historial importado está en Sin ciclo”.
+
+### `HistoryPanel` (nuevo, “Sin ciclo”)
+Reemplaza `CycleSummaryCard`, `ReviewCounter` y `FunnelChart` cuando el filtro es Sin ciclo. Conteos (eventos de etapa, intentos) con la aclaración “son eventos, no hipótesis”; tabla Etapa · Eventos · PASA · CORTA · ERR. · ALAR. con frase-resumen; lista “Intentos por etiqueta” con la etiqueta de texto libre entre comillas, tal cual (null → “(sin etiqueta)”). Sin embudo.
+
+### `FeedItem` `review_rule_reached`
+Glifo info (cuadrado 28 px), “Embudo: {n} ciclos seguidos sin promovida”, “Al cerrar {Mes AAAA} · toca revisar el enfoque · {fecha hora ART}”, chevrón; todo el ítem enlaza a Embudo. Informativo: no toca `HomeStatusBanner`.
+
+### `StageTimeline` (nuevo, ficha)
+Lista vertical E0–E3: punto, código + nombre, `StageVerdictBadge`, motivo · fecha, valor vs umbral en mono. Etapas no alcanzadas: punto punteado + “no llegó”. Si hubo fase posterior, separador “Fase posterior · sin métricas de etapa” y filas atenuadas (desde/hasta, cuenta).
+
+### `AttemptList` (nuevo, ficha)
+Teléfono: tarjetas (n.º · fecha · etapa, activo o cartera, grilla Sharpe / Operaciones / PnL, hash). Escritorio: `DataTable` con las mismas columnas. Inválido: fila atenuada + `Badge` “no cuenta” + motivo subrayado punteado. Valores nulos (el intento falló) = “sin datos”.
+
+---
+
+## 8. Mercado v0.4 — nuevos y extendidos
+
+Hojas: página **Mercado** del canvas. Todo es diario, al cierre de la sesión anterior; nunca en vivo.
+
+### `MarketAsOfLine`
+“Al cierre del {día dd/mm/aaaa} · actualizado {hh:mm} ART”. Siempre bajo el título. Con `stale`: `Notice warn` con las sesiones faltantes y cifras en text-2.
+
+### `RegimeCard` + `RegimeStrip` (nuevos)
+- Card: muestra de régimen (52 px, mismo patrón que la tira), nombre en lenguaje llano (“Alcista agitado”), “desde el {fecha} · N sesiones”, dos ejes en bloques sunken (Tendencia: precio vs media 200 d con `Delta`; Volatilidad: 20 d vs mediana 1 año), frase.
+- Strip: 12 meses, alto 30 px, tramos por régimen. Color = tendencia (`--qa-chart-1` alcista, `--qa-chart-2` bajista); **rayado = volatilidad alta**; ▲/▼ escrito en tramos de 20+ sesiones. Meses debajo, leyenda de 4 y frase con sesiones por régimen. Alternativa: tabla desde / hasta / sesiones. `regime: null` en un tramo = “sin datos” (punteado).
+- Sin 200 sesiones: “sin datos: hacen falta 200 sesiones para la media”.
+
+### `MotorStateCard` (nuevo)
+Estado actual (Risk-on / Neutral / Risk-off), “Calculado el {fecha hora ART} · próximo cálculo {día}”, bloque sunken con `state_description` del backend (en el canvas, marcado “texto de ejemplo”; null → no se muestra), y escala de 3 filas con la definición fija (help-texts) y la actual resaltada (`aria-current`): risk-off = sin compras nuevas; neutral = estrés macro elevado sin que SPY esté en risk-off; risk-on = el resto. Nota: “Es la regla del motor para las carteras paper, no una recomendación”. `motor: null` → estado vacío punteado “el motor todavía no calculó el score semanal” y el resto de la pantalla sigue.
+
+### `SectorTable` (configuración de `DataTable`) + `SectorHeatmap` (nuevo)
+- Tabla: # · Sector (+ debajo del nombre: `Badge` Habilitado / Bloqueado · motivo y, si corresponde, `Badge` “En cartera · {cuenta} ›” que enlaza a la cuenta) · 1d · 1s · 1m · 3m · Año · Score. Los 11 con score y ranking. Referencias (SPY, EEM, EWZ) al final, sin ranking.
+- Estados de un habilitado: **con posición** (Habilitado + “En cartera · {cuenta} ›”) y **sin posición todavía** (Habilitado + `Badge` contorno con reloj “sin posición todavía”). “En cartera” sale de `held_in` (posiciones reales de M4 y M5), nunca del ranking; un sector no habilitado también puede estar en cartera. Debajo de la tabla: “Paper M5 tiene USD {efectivo} en efectivo y todavía no operó” cuando M5 no tiene posiciones.
+- Mapa de calor: misma grilla con celdas `heatScale`; umbrales por plazo (`marketConfig.heatThresholds`); el número con signo siempre escrito; ✓ / candado junto al símbolo. `role="table"`.
+- Teléfono: lista de tarjetas con “Ordenar por” y conmutador Lista / Mapa.
+
+### `MacroIndicatorCard` (nuevo)
+Activa: título + `HelpTip`, valor, cambio a 1 mes con flecha, “dato del {día}, publicado el {fecha}” (diaria) o “dato de {mes}, publicado el {fecha}” (mensual), código FRED. Fantasma: `.qa-ghost` punteada, `Badge` “próximamente”, valor y serie punteados. Vencida (`stale`): `Notice stale` dentro de la tarjeta (“Desactualizado. Se esperaba un dato el {fecha} y pasaron 2 días hábiles sin dato nuevo”) y la cifra atenuada en text-2. Regla: fecha esperada del calendario de FRED + `macroStale.graceBusinessDays` (2) días hábiles; sin calendario, 1,5 × frecuencia. Un dato que todavía no tocaba publicarse **no** es viejo.
+
+### `MacroLineChart` (extiende `CumulativeChart`) + sombreado de recesiones
+T10Y2Y con 1A / 5A / Todo (teléfono 5A, escritorio Todo). Línea 0 marcada y “debajo de 0 = invertida”. Prop nueva `recessions?: RecessionPeriod[]` también en `CumulativeChart` y `EquityChart`: rectángulos `--qa-text-3` al 16 % detrás de la serie. Sin recesiones en el rango: nota. Explicación plegable “¿Qué es una curva invertida?” + vista tabla.
+
+### `EtfTable` (configuración de `DataTable`)
+Agrupada por clase de activo (encabezados plegables con contador). Columnas: casilla · Símbolo + nombre (+ `Badge` “En cartera · {cuenta}” que enlaza a la cuenta) · Cierre · 1d · 1s · 1m · Año · 30 días (sparkline con el color y trazo de su serie si está tildado). Máximo 5 tildados (`marketConfig.maxCompare`); el 6.º queda deshabilitado con aviso. Historia corta: “sin datos” + “13 sesiones” con el motivo en `title`/HelpTip. Teléfono: filas compactas (casilla 44 px, símbolo, sparkline, cierre, 1d) y “Ordenar por”.
+
+### `CompareChart` (usa `CumulativeChart`)
+Base 0 % al inicio del período (1M / 3M / 1A). Series con `chartSeries[i]` y `seriesDash[i]` en el mismo orden de selección. Leyenda con último valor (`Delta`). Teléfono: tocar fija un tooltip (“fijado · tocá afuera para soltar”) con los valores del día. Frase-resumen + tabla.
+
+### `EtfDetail` (usa `CandleChart`)
+Teléfono: pantalla `/mercado/etf/:symbol`; escritorio: panel lateral de 560 px. Cierre, `Delta` del día, línea de fecha, “En cartera hoy · {cuenta} ›” si corresponde, período 3M / 6M / 1A, escala Lineal / Log, velas diarias (verde hueco / rojo lleno), retornos 1d · 1s · 1m · Año, frase y tabla.
+
+### `EventList` (filtro)
+`kinds = ['macro','fomc','holiday','early_close']`, 14 días, con línea “Sin reunión de la Fed (FOMC) en estos 14 días · próxima: …” cuando no hay. Enlace “Todos los eventos en Inicio”.
+

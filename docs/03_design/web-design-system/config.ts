@@ -77,24 +77,118 @@ export const dataConfig = {
   pollSecondsMarketClosed: 900,
 } as const;
 
+/**
+ * Embudo (v0.4). Etapas y reglas del proceso mensual de hipótesis.
+ * La reserva 2023+ NO es una etapa: es un chip en la ficha (`Hypothesis.used_reserve`).
+ */
 export const funnelConfig = {
-  /** Orden canónico de etapas. Nombres de 0–3 PROVISORIOS. */
   stages: [
-    { id: 'e0', label: 'Etapa 0' },
-    { id: 'e1', label: 'Etapa 1' },
-    { id: 'e2', label: 'Etapa 2' },
-    { id: 'e3', label: 'Etapa 3' },
-    { id: 'reserve', label: 'Reserva' },
-    { id: 'shadow', label: 'Sombra' },
+    { id: 'e0', code: 'E0', label: 'Admisión' },
+    { id: 'e1', code: 'E1', label: 'Filtro' },
+    { id: 'e2', code: 'E2', label: 'Validación en el motor' },  // barra a barra contra un control independiente
+    { id: 'e3', code: 'E3', label: 'Holdout' },
+  ],
+  /** Fase posterior: mismo eje, atenuada, sin métricas de etapa. */
+  laterPhases: [
+    { id: 'shadow', label: 'Sombra local' },
     { id: 'paper', label: 'Paper' },
     { id: 'candidate', label: 'Candidata' },
-    { id: 'production', label: 'Producción' },
   ],
-  /** Ciclo por defecto al abrir Embudo: 'all' | 'latest'. PROVISORIO */
+  /** Ciclo por defecto al abrir Embudo: 'all' = todos los ciclos mensuales (el historial va aparte). PROVISORIO (#9) */
   defaultCycle: 'all' as 'all' | 'latest',
-  /** Período por defecto (días). */
-  defaultPeriodDays: 90,
+  /** Período por defecto. */
+  defaultPeriod: 'all' as '30d' | '90d' | 'all',
+  /** Debajo de esto no se dibuja el embudo: se muestra el recorrido y el aviso de muestra mínima. PROVISORIO */
+  minForChart: 2,
+  /** Escritorio: tarjetas hasta este número; con más, DataTable (#10). */
+  cardsUpTo: 30,
+  /** Teléfono: tarjetas antes de "Ver N más". */
+  phoneInitialCards: 8,
+  /** Ciclos anteriores compactos bajo el ciclo actual. */
+  previousCyclesShown: 3,
 } as const;
+
+export const cycleConfig = {
+  /** Máximo de hipótesis por ciclo (lo hace cumplir el backend; el front solo lo muestra). */
+  maxHypotheses: 5,
+  /** Hitos del mes (día del mes). */
+  milestones: { proposal: 1, funnelStart: 8, paperReview: 25 },
+  /** Regla de revisión: N ciclos CERRADOS seguidos sin promovida → revisar el enfoque. */
+  reviewAfterCycles: 6,
+  /** Al llegar a N: un evento informativo en el feed de Inicio, una vez por cierre (no es alarma). */
+  reviewFeedEvent: true,
+  /** Comandos que la ayuda puede mencionar (nunca como botón). */
+  cli: {
+    open: 'quantagent registro ciclo abrir {ciclo} {hipótesis…}',
+    close: 'quantagent registro ciclo cerrar {ciclo}',
+    report: 'quantagent registro ciclo informe {ciclo}',
+    streak: 'quantagent registro corte',
+  },
+  /** Formato del id de ciclo. */
+  idPattern: /^\d{4}-(0[1-9]|1[0-2])$/,
+} as const;
+
+/**
+ * Mercado (v0.4). Todo diario, al cierre de la sesión anterior, con snapshots propios.
+ */
+export const marketConfig = {
+  /** Snapshot esperado tras el cierre; después de esto sin snapshot nuevo → desactualizado (minutos tras 16:00 ET). PROVISORIO */
+  staleAfterCloseMinutes: 180,
+  /** Régimen: media larga y ventana de volatilidad (los calcula el backend; acá solo para textos). */
+  regime: { maDays: 200, volDays: 20, volMedianDays: 252, stripMonths: 12 },
+  /** Sectores habilitados por el motor: top N con score positivo (se muestra; lo decide el backend). */
+  enabledTop: 3,
+  /** Tabla de Sectores: los 11 SPDR, todos con score y ranking (los rankea el motor de M5). */
+  sectorSymbols: ['XLB', 'XLC', 'XLE', 'XLF', 'XLI', 'XLK', 'XLP', 'XLRE', 'XLU', 'XLV', 'XLY'],
+  /** Universo de M5 (catalogo/m5-priors.yaml): 11 SPDR + SPY, EEM, EWZ = 14. Opera en su propia cuenta paper. */
+  m5Universe: ['XLB', 'XLC', 'XLE', 'XLF', 'XLI', 'XLK', 'XLP', 'XLRE', 'XLU', 'XLV', 'XLY', 'SPY', 'EEM', 'EWZ'],
+  /** Universo de las carteras M4: 29 ETF (sin efectivo). Es el que lista la tabla de ETF de Mercado.
+   *  La admisión de hipótesis acepta activos de cualquiera de los dos universos. */
+  universe: {
+    us_equity: ['SPY', 'QQQ', 'IWM'],
+    sector: ['XLB', 'XLE', 'XLF', 'XLI', 'XLK', 'XLP', 'XLU', 'XLV', 'XLY'],
+    international: ['EFA', 'EEM', 'EWJ', 'EWZ', 'FXI'],
+    bonds: ['SHY', 'IEF', 'TLT', 'TIP', 'AGG', 'LQD'],
+    commodities: ['GLD', 'SLV', 'DBC', 'USO'],
+    currency: ['FXE'],
+    real_estate: ['VNQ'],
+  },
+  /** Dato macro viejo: fecha esperada (calendario FRED) + N días hábiles sin dato; sin calendario, N × frecuencia. */
+  macroStale: { graceBusinessDays: 2, fallbackFrequencyMultiplier: 1.5 },
+  referenceSymbols: ['SPY', 'EEM', 'EWZ'],
+  /** Umbrales del mapa de calor de sectores por plazo (en %): [neutro, medio, fuerte]. PROVISORIO */
+  heatThresholds: { d1: [0.25, 0.75, 1.5], w1: [0.5, 1.5, 3], m1: [1, 3, 6], m3: [2, 5, 10], ytd: [3, 8, 15] },
+  /** Sesiones mínimas por plazo; con menos, "sin datos" (nunca 0). */
+  minSessions: { d1: 2, w1: 6, m1: 21, m3: 63, ytd: 0 /* requiere cierre del 31/12 previo */ },
+  macroRanges: ['1y', '5y', 'all'] as const,
+  defaultMacroRange: { phone: '5y', desktop: 'all' } as const,
+  /** Series FRED: solo T10Y2Y activa; el resto, fantasma "próximamente". */
+  macroSeries: [
+    { code: 'T10Y2Y', active: true },
+    { code: 'CPIAUCSL', active: false }, { code: 'UNRATE', active: false }, { code: 'PAYEMS', active: false },
+    { code: 'INDPRO', active: false }, { code: 'BAMLH0A0HYM2', active: false }, { code: 'VIXCLS', active: false },
+    { code: 'T5YIE', active: false }, { code: 'DFII10', active: false }, { code: 'DTWEXBGS', active: false },
+  ],
+  /** Comparación de ETF: máximo de series (igual que tableConfig.maxSelectedForChart). */
+  maxCompare: 5,
+  defaultCompare: ['SPY'],
+  defaultCompareRange: '1y' as '1m' | '3m' | '1y',
+  candleRanges: ['3m', '6m', '1y'] as const,
+  eventsDays: 14,
+  eventKinds: ['macro', 'fomc', 'holiday', 'early_close'] as const,
+} as const;
+
+/** Paso del mapa de calor de sectores según el plazo. */
+export function sectorHeatStep(pct: number, key: keyof typeof marketConfig.heatThresholds): number {
+  const [a, b, c] = marketConfig.heatThresholds[key];
+  if (pct <= -c) return 0;
+  if (pct <= -b) return 1;
+  if (pct < -a) return 2;
+  if (pct <= a) return 3;
+  if (pct < b) return 4;
+  if (pct < c) return 5;
+  return 6;
+}
 
 export const tableConfig = {
   /** Debajo de este ancho, DataTable se muestra como tarjetas. */

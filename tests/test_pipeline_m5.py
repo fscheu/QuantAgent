@@ -12,7 +12,7 @@ from quantagent.fabrica.candidatos_vivo import candidatos_en_vivo
 from quantagent.fabrica.cartera import pesos, pesos_h3
 from quantagent.fabrica.regimen import regimen_semanal
 from quantagent.fabrica.transversal import MASCARAS, METRICAS, PRIORS_M5, REGLAS, señales_transversales
-from quantagent.models import ActivePosition, Environment, ExitPolicy, Order, OrderSide, OrderType, TradeIntentRecord
+from quantagent.models import ActivePosition, Environment, ExitPolicy, Order, OrderSide, OrderStatus, OrderType, TradeIntentRecord
 from quantagent.portfolio.manager import PortfolioManager
 from quantagent.strategy.base import TradingSignal, TradingStrategy
 from quantagent.trading.cartera_paper import sesiones_cerradas_nyse
@@ -291,9 +291,182 @@ def test_diario_sin_candidatos_golden_pre_m555d(db_session, mercado, tmp_path, a
     assert [(r.symbol, r.status, r.reject_reason) for r in intents] == [
         ("XLK", "aprobado", None), ("XLP", "aprobado", None), ("XLF", "aprobado", None)]
     assert [(o.symbol, o.side.value, str(o.quantity), str(o.stop_price)) for o in broker.orders] == [
-        ("XLK", "buy", "0.20665971", "131.29154391"), ("XLK", "sell", "0.20665971", "95.00000000"),
-        ("XLP", "buy", "0.19672895", "133.12351894"), ("XLP", "sell", "0.19672895", "95.00000000"),
-        ("XLF", "buy", "0.22986678", "127.62759385"), ("XLF", "sell", "0.22986678", "95.00000000")]
+        ("XLK", "buy", "0.20665971", "131.29000000"), ("XLK", "sell", "0.20665971", "95.00000000"),
+        ("XLP", "buy", "0.19672895", "133.12000000"), ("XLP", "sell", "0.19672895", "95.00000000"),
+        ("XLF", "buy", "0.22986678", "127.63000000"), ("XLF", "sell", "0.22986678", "95.00000000")]
+
+
+def test_pipeline_stop_rechazado_cancela_entrada_y_persiste_intent(db_session, mercado, tmp_path):
+    as_of, data = mercado
+    path = tmp_path / "regimen.csv"
+    correr_semanal(as_of, data_provider=data, regimen_path=path, narrador=None)
+
+    class BrokerConStopFallido(BrokerMemoria):
+        def __init__(self):
+            super().__init__()
+            self.cancelados = []
+
+        def submit_order(self, order):
+            self.orders.append(order)
+            if order.side == OrderSide.BUY:
+                order.alpaca_order_id = "entrada-1"
+            else:
+                raise RuntimeError("invalid stop_price")
+            return order
+
+        def cancel_order(self, order_id):
+            self.cancelados.append(order_id)
+            return True
+
+    broker = BrokerConStopFallido()
+    intents = correr_diario(as_of, data_provider=data, db=db_session, broker=broker,
+                            regimen_path=path, estrategias=(("test", SiempreSenala()),), narrador=None)
+
+    assert intents and all((r.status, r.reject_reason) == ("rechazado_riesgo", "stop_rechazado")
+                           for r in intents)
+    assert len(broker.cancelados) == len(intents)
+    assert set(broker.cancelados) == {"entrada-1"}
+    assert all(db_session.get(Order, r.order_id).status.value == "cancelled" for r in intents)
+    assert db_session.query(TradeIntentRecord).count() == len(intents)
+
+
+def test_pipeline_oto_rechaza_cantidad_cero_sin_crear_ordenes(db_session, mercado, tmp_path):
+    as_of, data = mercado
+    path = tmp_path / "regimen.csv"
+    correr_semanal(as_of, data_provider=data, regimen_path=path, narrador=None)
+
+    class BrokerOTO(BrokerMemoria):
+        def submit_oto(self, entrada, proteccion):
+            self.orders.extend((entrada, proteccion))
+            return entrada, proteccion
+
+    broker = BrokerOTO()
+    intents = correr_diario(as_of, data_provider=data, db=db_session, broker=broker,
+                            regimen_path=path, estrategias=(("test", SiempreSenala()),), narrador=None)
+
+    assert intents and all((record.status, record.reject_reason) ==
+                           ("rechazado_riesgo", "tamano_cero") for record in intents)
+    assert not broker.orders
+
+
+def test_pipeline_persists_intent_when_oto_submit_raises(db_session, mercado, tmp_path):
+    as_of, data = mercado
+    path = tmp_path / "regimen.csv"
+    correr_semanal(as_of, data_provider=data, regimen_path=path, narrador=None)
+    path.write_text("fecha,estado,habilitados\n2026-10-23,risk-on,\n")
+    (tmp_path / "m5-candidatos-semanales.csv").write_text("fecha,simbolo,rank\n2026-10-23,CARA,1\n")
+    data.panel["CARA"] = data.panel["SPY"].copy()
+    data.panel["CARA"][["open", "high", "low", "close"]] *= 0.1
+
+    class BrokerOTOFalla(BrokerMemoria):
+        def submit_oto(self, entrada, proteccion):
+            self.orders.extend((entrada, proteccion))
+            raise RuntimeError("submit unavailable")
+
+    broker = BrokerOTOFalla()
+    intents = correr_diario(as_of, data_provider=data, db=db_session, broker=broker,
+                            regimen_path=path, estrategias=(("test", SiempreSenala(stop=9)),), narrador=None,
+                            es_fraccionable=lambda _: True)
+
+    assert intents and all((record.status, record.reject_reason) ==
+                           ("rechazado_riesgo", "entrada_rechazada") for record in intents)
+    assert all(db_session.get(Order, record.order_id).status == OrderStatus.REJECTED for record in intents)
+
+
+def test_pipeline_oto_redondea_cantidad_entera_hacia_abajo(db_session, mercado, tmp_path):
+    as_of, data = mercado
+    path = tmp_path / "regimen.csv"
+    correr_semanal(as_of, data_provider=data, regimen_path=path, narrador=None)
+    path.write_text("fecha,estado,habilitados\n2026-10-23,risk-on,\n")
+    (tmp_path / "m5-candidatos-semanales.csv").write_text("fecha,simbolo,rank\n2026-10-23,CARA,1\n")
+    data.panel["CARA"] = data.panel["SPY"].copy()
+    data.panel["CARA"][["open", "high", "low", "close"]] *= 0.1
+
+    class BrokerOTO(BrokerMemoria):
+        def submit_oto(self, entrada, proteccion):
+            self.orders.extend((entrada, proteccion))
+            return entrada, proteccion
+
+    broker = BrokerOTO()
+    intents = correr_diario(as_of, data_provider=data, db=db_session, broker=broker,
+                            regimen_path=path, estrategias=(("test", SiempreSenala(stop=9)),), narrador=None,
+                            es_fraccionable=lambda _: True)
+
+    assert intents and all(record.status == "aprobado" for record in intents)
+    entradas = broker.orders[::2]
+    assert all(cantidad > 0 and cantidad == cantidad.to_integral_value() for cantidad in
+               (order.quantity for order in entradas))
+    assert all(order.quantity <= Decimal("500") for order in entradas)
+
+
+def test_pipeline_oto_cantidad_cero_rechaza_sin_enviar(db_session, mercado, tmp_path):
+    as_of, data = mercado
+    path = tmp_path / "regimen.csv"
+    path.write_text("fecha,estado,habilitados\n2026-10-23,risk-on,\n")
+    (tmp_path / "m5-candidatos-semanales.csv").write_text("fecha,simbolo,rank\n2026-10-23,CARA,1\n")
+    data.panel["CARA"] = data.panel["SPY"].copy()
+    data.panel["CARA"][["open", "high", "low", "close"]] *= 10
+
+    class BrokerOTO(BrokerMemoria):
+        def submit_oto(self, entrada, proteccion):
+            self.orders.extend((entrada, proteccion))
+
+    broker = BrokerOTO()
+    intents = correr_diario(as_of, data_provider=data, db=db_session, broker=broker,
+                            regimen_path=path, estrategias=(("test", SiempreSenala(stop=900)),),
+                            narrador=None, es_fraccionable=lambda _: True)
+
+    assert len(intents) == 1
+    assert (intents[0].status, intents[0].reject_reason) == ("rechazado_riesgo", "tamano_cero")
+    assert not broker.orders
+
+
+def test_pipeline_entrada_rechazada_por_gatillo_superado_persiste_y_sigue(db_session, mercado, tmp_path):
+    as_of, data = mercado
+    path = tmp_path / "regimen.csv"
+    correr_semanal(as_of, data_provider=data, regimen_path=path, narrador=None)
+
+    class BrokerEntradaRechazada(BrokerMemoria):
+        def submit_order(self, order):
+            self.orders.append(order)
+            raise RuntimeError("stop price must be greater than current price")
+
+    broker = BrokerEntradaRechazada()
+    intents = correr_diario(as_of, data_provider=data, db=db_session, broker=broker,
+                            regimen_path=path, estrategias=(("test", SiempreSenala()),), narrador=None)
+
+    assert intents and all((r.status, r.reject_reason) == ("rechazado_riesgo", "gatillo_superado")
+                           for r in intents)
+    assert all(db_session.get(Order, r.order_id).status == OrderStatus.REJECTED for r in intents)
+    assert all(db_session.get(Order, r.order_id).comment ==
+               "stop price must be greater than current price" for r in intents)
+    assert all(order.side == OrderSide.BUY for order in broker.orders)
+    assert db_session.query(TradeIntentRecord).count() == len(intents)
+
+
+def test_pipeline_entrada_rechazada_no_impide_aprobar_otro_simbolo(db_session, mercado, tmp_path):
+    as_of, data = mercado
+    path = tmp_path / "regimen.csv"
+    correr_semanal(as_of, data_provider=data, regimen_path=path, narrador=None)
+
+    class BrokerRechazaPrimeraEntrada(BrokerMemoria):
+        def submit_order(self, order):
+            if order.side == OrderSide.BUY and not any(o.side == OrderSide.BUY for o in self.orders):
+                self.orders.append(order)
+                raise RuntimeError("stop price must be greater than current price")
+            return super().submit_order(order)
+
+    broker = BrokerRechazaPrimeraEntrada()
+    intents = correr_diario(as_of, data_provider=data, db=db_session, broker=broker,
+                            regimen_path=path, estrategias=(("test", SiempreSenala()),), narrador=None)
+
+    rechazados = [r for r in intents if r.status == "rechazado_riesgo"]
+    aprobados = [r for r in intents if r.status == "aprobado"]
+    assert rechazados and aprobados
+    assert rechazados[0].reject_reason == "gatillo_superado"
+    assert any(db_session.get(Order, r.order_id).status == OrderStatus.REJECTED for r in rechazados)
+    assert all(any(o.symbol == r.symbol and o.side == OrderSide.SELL for o in broker.orders)
+               for r in aprobados)
 
 
 def test_semana_acciones_arquetipos_reales_fracciones_e_idempotencia(db_session, mercado, tmp_path):
@@ -328,7 +501,7 @@ def test_semana_acciones_arquetipos_reales_fracciones_e_idempotencia(db_session,
     for intent in aprobados:
         entrada = db_session.get(Order, intent.order_id)
         assert entrada.order_type == OrderType.STOP and 0 < entrada.quantity < 1
-        assert entrada.quantity * entrada.stop_price <= 300
+        assert entrada.quantity * entrada.stop_price <= Decimal("300.01")
         assert any(o.side == OrderSide.SELL and o.symbol == entrada.symbol
                    and o.quantity == entrada.quantity and o.order_type == OrderType.STOP
                    and 0 < o.stop_price < entrada.stop_price for o in broker.orders)

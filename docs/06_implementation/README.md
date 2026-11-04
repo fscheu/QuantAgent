@@ -7,6 +7,7 @@ This folder contains implementation notes, technical details, and post-implement
 Agents working in this repository should read implementation documents relevant to the feature being worked on:
 
 ### Current Implementation Notes
+- [QuantAgent-c03q-IM-reconciliacion-paper-sombra.md](./QuantAgent-c03q-IM-reconciliacion-paper-sombra.md) - Reserva compartida y pendientes en la reconciliación de cartera dedicada.
 - [backtest_data_pipeline_alignment.md](./backtest_data_pipeline_alignment.md) - OHLCV data pipeline alignment and remediation
 - [20251130_Implementation_AgentParallelization.md](./20251130_Implementation_AgentParallelization.md) - Agent parallelization implementation details
 - [SHORT_POSITIONS_IMPLEMENTATION.md](./SHORT_POSITIONS_IMPLEMENTATION.md) - Short position support implementation
@@ -34,6 +35,9 @@ Implementation documents should include:
 ## Active Per-Change Implementation
 
 - [QuantAgent-w9vi-IM-calendario-mensual.md](./QuantAgent-w9vi-IM-calendario-mensual.md) - Fechas mensuales del ciclo, estado del registro y corte de revisión.
+- [QuantAgent-oto-IM-01.md](./QuantAgent-oto-IM-01.md) - Entrada M5 buy-stop y stop de protección enviados como una orden OTO de Alpaca.
+
+- [QuantAgent-gatillo-superado-IM-01.md](./QuantAgent-gatillo-superado-IM-01.md) - Rechaza y persiste entradas M5 cuyo gatillo ya superó el precio actual sin abortar el ciclo.
 
 - [QuantAgent-fnpr.6.6.5-IM-digest-acciones.md](./QuantAgent-fnpr.6.6.5-IM-digest-acciones.md) - Digest M5 con candidatos, descartes y comparación semanal H1/H3/1/N.
 - [QuantAgent-fnpr.6.6.4-IM-diario-acciones.md](./QuantAgent-fnpr.6.6.4-IM-diario-acciones.md) - Diario con candidatos vigentes, stops, fracciones según Alpaca y seguimiento de posiciones retiradas.

@@ -26,14 +26,17 @@ Criterio para que un hecho entre: **cambia algo que deberías saber o revisar**.
 | `shadow_divergence` | advertencia | Broker y sombra difieren más que el umbral | cuenta | "Sombra desalineada en {cuenta}" | "Difieren {gap} desde {fecha}" | Cuenta |
 | `data_stale` | advertencia | Una cuenta supera el umbral sin datos | cuenta | "Sin datos de {cuenta} desde hace {t}" | "Último dato {hora} ART" | Cuenta |
 | `alarm_resolved` | neutro | Se cierra una alarma | alarma | "Se resolvió: {título}" | "Duró {duración}" | Cuenta |
-| `hypothesis_promoted` | info | Una hipótesis llega a **sombra, paper, candidata o producción** | hipótesis | "{nombre} pasó a {etapa}" | Métrica clave | Ficha |
-| `hypothesis_discarded_late` | info | Cae una hipótesis en **etapa 3 o posterior** (las tempranas son ruido) | día | "Se descartó {nombre} en {etapa}" | Motivo | Ficha |
-| `cycle_completed` | info | Termina un ciclo del embudo | ciclo | "Terminó el ciclo {n} del embudo" | "{entraron} entraron, {siguen} siguen, {cayeron} cayeron" | Embudo filtrado por ciclo |
+| `hypothesis_promoted` | info | Una hipótesis pasa E3 con PASA (promovida) o entra a una fase posterior (sombra local, paper, candidata) | hipótesis | "{nombre} quedó promovida" / "{nombre} pasó a {fase}" | Métrica clave si existe | Ficha |
+| `hypothesis_discarded_late` | info | CORTA en **E3** (las tempranas son ruido) | día | "Se descartó {nombre} en E3 · Holdout" | Motivo + valor vs umbral | Ficha |
+| `cycle_closed` | info | Se cierra un ciclo (`quantagent registro ciclo cerrar`) | ciclo | "Se cerró el ciclo {Mes AAAA}" | "{entraron} entraron · {cayeron} cayeron · {promovidas} promovidas" | Embudo filtrado por ciclo (recibo) |
+| `review_rule_reached` | info | Al cerrar un ciclo, la racha llega a 6 (o sigue en 6 o más) ciclos cerrados seguidos sin promovida | cierre de ciclo (una vez por cierre) | "Embudo: {n} ciclos seguidos sin promovida" | "Al cerrar {Mes AAAA} · toca revisar el enfoque" | Embudo |
 | `order_filled` | neutro | Se ejecuta una orden (que no sea por stop) | cuenta + día | "{n} compras/ventas ejecutadas" | "MSFT 25 a 431,55 · SPY 4 a 565,98" | Cuenta › órdenes |
 | `position_closed` | neutro | Se cierra una posición entera | posición | "Se cerró {símbolo}" | "P&L realizado {monto} · {pct}" | Cuenta |
 | `dividend_received` | neutro | Entra un dividendo | cuenta + día | "Cobraste dividendos de {símbolos}" | "Neto {monto} · retenido {monto}" | Cuenta › dividendos |
 
 Fuera del feed a propósito: aperturas de posición (ya se ven como órdenes ejecutadas), hipótesis descartadas en etapas 0–2 (van al resumen de ciclo), variaciones de precio, órdenes canceladas o vencidas (no requieren acción; se ven en Cuenta) y cuentas sin datos (no es un problema).
+
+`review_rule_reached` es **informativo**: no cuenta para `HomeStatusBanner`, no es alarma y no se repite fuera de los cierres.
 
 ### Reglas de presentación
 

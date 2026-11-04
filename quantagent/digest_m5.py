@@ -4,7 +4,7 @@ from datetime import date, datetime, time, timedelta
 
 from sqlalchemy.orm import Session
 
-from quantagent.models import Order, OrderSide, OrderStatus, OrderType, Position, TradeIntentRecord
+from quantagent.models import Environment, Order, OrderSide, OrderStatus, OrderType, Position, SchedulerHeartbeat, TradeIntentRecord
 from quantagent.trading.bucket_m5 import CAPITAL_INICIAL, MAX_HEAT_PCT
 
 
@@ -15,6 +15,12 @@ def consultar_datos_m5(session: Session, day: date) -> dict:
                .filter(TradeIntentRecord.bucket_id == "m5", TradeIntentRecord.created_at >= start,
                        TradeIntentRecord.created_at < end)
                .order_by(TradeIntentRecord.created_at, TradeIntentRecord.id).all())
+    heartbeats = (session.query(SchedulerHeartbeat)
+                  .filter(SchedulerHeartbeat.environment == Environment.PAPER,
+                          SchedulerHeartbeat.timestamp >= start, SchedulerHeartbeat.timestamp < end)
+                  .order_by(SchedulerHeartbeat.timestamp).all())
+    ciclo = [{"status": item.status, "error_message": item.error_message,
+              "modo": (item.stats or {}).get("modo")} for item in heartbeats]
     approved = [intent for intent in intents if intent.status == "aprobado"]
     rejected = [intent for intent in intents if intent.status == "rechazado_riesgo"]
     aprobados = []
@@ -39,7 +45,7 @@ def consultar_datos_m5(session: Session, day: date) -> dict:
         posiciones.append({"symbol": position.symbol, "quantity": float(position.quantity),
                            "avg_entry": float(position.average_entry_price), "unrealized_pnl": float(position.unrealized_pnl),
                            "stop": float(stop) if stop is not None else None})
-    return {"aprobados": aprobados,
+    return {"aprobados": aprobados, "ciclo": ciclo,
             "rechazados": [{"symbol": item.symbol, "reject_reason": item.reject_reason} for item in rejected],
             "posiciones": posiciones}
 
@@ -49,7 +55,18 @@ def build_digest_m5(day: date, datos: dict, *, capital: float = CAPITAL_INICIAL,
     approved = datos["aprobados"]
     rejected = datos["rechazados"]
     positions = datos["posiciones"]
-    lines = [f"Resumen M5 — {day.isoformat()}", f"Intents aprobados ({len(approved)})"]
+    lines = []
+    ciclos_diarios = [ciclo for ciclo in datos.get("ciclo", []) if ciclo.get("modo") == "diario"]
+    if day.weekday() < 5 and not any(ciclo.get("status") == "completed" for ciclo in ciclos_diarios):
+        fallidos = [ciclo for ciclo in ciclos_diarios if ciclo.get("status") == "error"]
+        corriendo = [ciclo for ciclo in ciclos_diarios if ciclo.get("status") == "running"]
+        if fallidos:
+            lines.append(f"ALERTA: el ciclo diario M5 falló: {fallidos[-1].get('error_message') or 'error sin detalle'}")
+        elif corriendo:
+            lines.append("ALERTA: el ciclo diario M5 sigue en running")
+        else:
+            lines.append("ALERTA: el ciclo diario M5 no terminó OK (sin heartbeat completed)")
+    lines.extend([f"Resumen M5 — {day.isoformat()}", f"Intents aprobados ({len(approved)})"])
     lines.extend(f"- {item['symbol']} {format(item['qty'], '.4f').rstrip('0').rstrip('.')} @ {float(item['entry']):.2f}, stop {float(item['stop']):.2f}"
                  for item in approved)
     lines.append(f"Intents rechazados ({len(rejected)})")
