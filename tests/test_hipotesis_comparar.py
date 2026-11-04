@@ -1,5 +1,4 @@
-"""`hipotesis comparar` (QuantAgent-d4cq.73): ΔDSR de la capa con el N de intentos.csv."""
-import csv
+"""`hipotesis comparar` (QuantAgent-d4cq.73): ΔDSR de la capa con el N de intentos registrados."""
 
 import numpy as np
 import pandas as pd
@@ -7,8 +6,8 @@ import pytest
 from click.testing import CliRunner
 
 from quantagent.cli import hipotesis
-from quantagent.cli.sweep import registrar_intento
 from quantagent.fabrica.comparar import comparar
+from quantagent.fabrica.registro_db import registrar_intento, intentos as leer_intentos
 
 DIAS = 2500
 
@@ -25,19 +24,14 @@ def _series():
     return nucleo, _curva(0.5 * nucleo + 0.5 * ruido), _curva(0.5 * nucleo + 0.5 * independiente)
 
 
-def _intentos(ruta, sharpes):
-    filas = [{"sharpe": s, "sharpe_base": "tasa_0"} for s in sharpes]
-    with ruta.open("w", newline="") as f:
-        w = csv.DictWriter(f, ["sharpe", "sharpe_base"])
-        w.writeheader()
-        w.writerows(filas)
-
-
 @pytest.fixture
-def intentos(tmp_path):
-    ruta = tmp_path / "intentos.csv"
-    _intentos(ruta, [0.1, 0.4, 0.9, 0.3, 0.6, 0.55, 0.62])
-    return ruta
+def intentos():
+    for sharpe in [0.1, 0.4, 0.9, 0.3, 0.6, 0.55, 0.62]:
+        registrar_intento("rsi", "SPY", "real", "etf", 1.0, {},
+                          {"desde": "2007-01-01", "hasta": "2018-12-31", "trades": 1,
+                           "pnl": 1.0, "sharpe": sharpe}, hipotesis="previa", etapa="1",
+                          sharpe_base="tasa_0")
+    return None
 
 
 def test_capa_que_agrega_ruido_se_descarta(intentos):
@@ -80,8 +74,7 @@ def test_cli_registra_una_fila_por_cartera_y_muestra_las_dos_cuentas_de_n(tmp_pa
         "comparar", str(tmp_path / "nucleo.yaml"), str(tmp_path / "capa.yaml"), "--snapshot", "s",
         "--carpeta", str(tmp_path / "m"), "--margen", "0", "--out", str(out)])
     assert r.exit_code in (0, 1), r.output  # 1 = la capa se descarta; este test mira el registro y las cuentas de N
-    with (tmp_path / "datos" / "intentos.csv").open() as f:
-        filas = [x for x in csv.DictReader(f) if x["etapa"] == "comparar"]
+    filas = [x for x in leer_intentos() if x["etapa"] == "comparar"]
     assert [x["hipotesis"] for x in filas] == ["n", "c"]
     assert "N 6 con la capa, 5 sin ella" in r.output
     assert "6 contando la capa, 5 sin ella" in out.read_text()
@@ -177,7 +170,10 @@ def test_cli_abrir_prueba_abre_el_candado_de_la_capa_una_sola_vez(tmp_path, monk
 
     monkeypatch.setattr(hipotesis, "correr_cartera", correr)
     monkeypatch.setattr(hipotesis, "cargar_hipotesis", lambda a: type("H", (), {"id": "cartera-capa"})())
-    (tmp_path / "datos" / "intentos.csv").write_text("sharpe,sharpe_base\n0.1,tasa_0\n0.4,tasa_0\n0.9,tasa_0\n")
+    for sharpe in (0.1, 0.4, 0.9):
+        registrar_intento("rsi", "SPY", "real", "etf", 1.0, {},
+                          {"desde": "2007-01-01", "hasta": "2018-12-31", "trades": 1,
+                           "pnl": 1.0, "sharpe": sharpe}, hipotesis="previa", etapa="1")
     (tmp_path / "nucleo.yaml").write_text("")
     (tmp_path / "capa.yaml").write_text("")
     args = ["comparar", str(tmp_path / "nucleo.yaml"), str(tmp_path / "capa.yaml"), "--snapshot", "s",

@@ -127,3 +127,25 @@ def test_feed_endpoint_session_is_read_only(tmp_path, monkeypatch):
     assert client.get("/api/feed").status_code == 200
     with engine.connect() as conn:
         assert conn.exec_driver_sql("SELECT COUNT(*) FROM events").scalar_one() == 1
+
+
+def test_feed_cycle_closed_and_review_rule_reached(tmp_path):
+    engine = _db(tmp_path)
+    now = datetime(2026, 11, 30, 15, tzinfo=timezone.utc)
+    with Session(engine) as db:
+        db.add_all([
+            _event("cycle_closed", now, account=None, severity="info",
+                   payload={"cycle": "2026-11", "entered": 5, "dropped": 4, "promoted": 0}),
+            _event("review_rule_reached", now, account=None, severity="info",
+                   payload={"cycle": "2026-11", "streak": 6}),
+        ])
+        db.commit()
+    with Session(engine) as db:
+        rows = {r.type: r for r in feed_route(since=now - timedelta(days=1), limit=50, db=db)}
+
+    assert rows["cycle_closed"].title == "Se cerró el ciclo noviembre 2026"
+    assert rows["cycle_closed"].subtitle == "5 entraron · 4 cayeron · 0 promovidas"
+    assert rows["cycle_closed"].link == "/embudo?cycle=2026-11"
+    assert rows["review_rule_reached"].title == "Embudo: 6 ciclos seguidos sin promovida"
+    assert rows["review_rule_reached"].subtitle == "Al cerrar noviembre 2026 · toca revisar el enfoque"
+    assert rows["review_rule_reached"].link == "/embudo"

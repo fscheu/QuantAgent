@@ -15,6 +15,7 @@ from quantagent.backtesting.verdict import dsr_contra_intentos, n_efectivo
 from quantagent.fabrica.cartera import curva_cartera
 from quantagent.fabrica.criterio import anios_positivos, evaluar_etapa3_cartera, recargo_paper, sharpe_benchmark
 from quantagent.fabrica.hipotesis import Hipotesis, cargar_hipotesis
+from quantagent.fabrica.registro_db import intentos as leer_intentos
 from quantagent.fabrica.transversal import leer_seleccion
 
 
@@ -51,7 +52,6 @@ def calcular_criterio_paper(
     carpeta_etapa2: str | Path,
     carpeta_etapa3: str | Path,
     snapshot: str,
-    intentos_path: str | Path | None = None,
 ) -> dict:
     """Evalúa el criterio de paper sobre curvas guardadas de etapas 2 y 3 sin escribir registros."""
     h = cartera if isinstance(cartera, Hipotesis) else cargar_hipotesis(cartera)
@@ -62,11 +62,10 @@ def calcular_criterio_paper(
     m2, m3 = equity_metrics(eq2, 0.0), equity_metrics(eq3, 0.0)
     sharpe2, sharpe3, bench2, bench3 = float(m2["sharpe"]), float(m3["sharpe"]), sharpe_benchmark(c2), sharpe_benchmark(c3)
     pasa, motivos = evaluar_etapa3_cartera(eq3, bench3, sharpe2, bench2)
-    p_int = Path(intentos_path) if intentos_path else snap_mod.snapshot_root() / "intentos.csv"
-    filas = list(csv.DictReader(p_int.open(newline="", encoding="utf-8"))) if p_int.exists() else []
+    filas = leer_intentos()
     neff, ncrudo = (n_efectivo(filas), len(filas)) if filas else (0, 0)
-    dsr_crudo = dsr_contra_intentos(eq3, p_int) if p_int.exists() else None
-    dsr_eff = dsr_contra_intentos(eq3, p_int, neff) if p_int.exists() else None
+    dsr_crudo = dsr_contra_intentos(eq3, filas)
+    dsr_eff = dsr_contra_intentos(eq3, filas, neff)
     return {
         "id": h.id, "eq_etapa2": eq2, "eq_etapa3": eq3, "sharpe_etapa2": sharpe2, "benchmark_etapa2": bench2,
         "sharpe_etapa3": sharpe3, "benchmark_etapa3": bench3, "anios_positivos": anios_positivos(eq3),
@@ -87,7 +86,8 @@ def formatear_tablas(res: dict) -> str:
     h1 = ["Cartera", "Sharpe etapa 3", "Benchmark etapa 3", "Sharpe etapa 2", "Benchmark etapa 2", "Años positivos", "Drawdown", "Veredicto"]
     t2 = [[res["id"], dsr_e, dsr_c, rec_str]]
     h2 = ["Cartera", f"DSR con N efectivo ({res['n_efectivo']})", f"DSR con N crudo ({res['n_crudo']})", "Recargo de paper si pasara"]
-    lineas = [tabulate(t1, headers=h1, tablefmt="github"), "", tabulate(t2, headers=h2, tablefmt="github"), f"\nVeredicto: {res['veredicto']}"]
+    lineas = [tabulate(t1, headers=h1, tablefmt="github"), "", tabulate(t2, headers=h2, tablefmt="github"),
+              f"n_efectivo={res['n_efectivo']}", f"\nVeredicto: {res['veredicto']}"]
     if res["motivos"]:
         lineas.append(f"Motivos: {'; '.join(res['motivos'])}")
     return "\n".join(lineas)
@@ -100,10 +100,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("etapa2", help="Carpeta de curvas de etapa 2")
     parser.add_argument("etapa3", help="Carpeta de curvas de etapa 3")
     parser.add_argument("snapshot", help="Nombre del snapshot")
-    parser.add_argument("--intentos", default=None, help="Ruta opcional a intentos.csv")
     args = parser.parse_args(argv)
     try:
-        res = calcular_criterio_paper(args.cartera, args.etapa2, args.etapa3, args.snapshot, args.intentos)
+        res = calcular_criterio_paper(args.cartera, args.etapa2, args.etapa3, args.snapshot)
     except FileNotFoundError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1

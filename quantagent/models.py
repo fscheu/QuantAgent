@@ -370,6 +370,7 @@ class BacktestRun(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(200), nullable=True)
+    hypothesis_id = Column(String(200), nullable=True, index=True)
     timeframe = Column(String(10), nullable=False)  # "1h", "4h", "1d", etc.
     assets = Column(JSON, nullable=False)  # List of symbols, e.g., ["BTC", "SPX", "CL"]
     start_date = Column(DateTime, nullable=False, index=True)
@@ -560,3 +561,69 @@ class CashFlow(Base):
     amount = Column(Float, nullable=False)
     kind = Column(String(20), nullable=False)
     reconciled = Column(Boolean, nullable=False, default=False)
+
+
+class Hypothesis(Base):
+    """Registered hypothesis identified by its source registry id."""
+
+    __tablename__ = "hypotheses"
+
+    id = Column(String(100), primary_key=True)
+    created_at = Column(DateTime(timezone=True), nullable=False)
+
+
+class HypothesisEvent(Base):
+    """Append-only hypothesis event; hypothesis_id may be absent for global events."""
+
+    __tablename__ = "hypothesis_events"
+
+    id = Column(Integer, primary_key=True)
+    ts = Column(DateTime(timezone=True), nullable=False)
+    hypothesis_id = Column(String(100), nullable=True, index=True)
+    event = Column(String(100), nullable=False)
+    stage = Column(String(50), nullable=True)
+    verdict = Column(String(50), nullable=True)
+    reason = Column(Text, nullable=True)
+    cycle = Column(String(7), nullable=True, index=True)
+    data = Column(JSON, nullable=False)
+
+
+class HypothesisAttempt(Base):
+    """Attempt row mapping: fecha_utc→ts, hipotesis→hypothesis_id,
+    estrategia→strategy, activo→asset, params→params, sharpe/trades/pnl map directly,
+    etapa→stage, estado→status. snapshot maps directly. The remaining CAMPOS_INTENTOS
+    fields (desde, hasta, costos, tamano, sharpe_base) are stored in extra under their
+    original CSV names, so every CSV field has a lossless destination.
+    """
+
+    __tablename__ = "hypothesis_attempts"
+
+    id = Column(Integer, primary_key=True)
+    ts = Column(DateTime(timezone=True), nullable=False)
+    hypothesis_id = Column(String(100), nullable=True, index=True)
+    snapshot = Column(String(300), nullable=True)
+    strategy = Column(String(100), nullable=True)
+    asset = Column(String(100), nullable=True)
+    params = Column(JSON, nullable=True)
+    sharpe = Column(Float, nullable=True)
+    trades = Column(Integer, nullable=True)
+    pnl = Column(Float, nullable=True)
+    stage = Column(String(50), nullable=True)
+    status = Column(String(20), nullable=True)
+    extra = Column(JSON, nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("status IS NULL OR status IN ('valida', 'invalida_bug')", name="ck_hypothesis_attempts_status"),
+    )
+
+
+class Cycle(Base):
+    """Monthly hypothesis cycle and its optional closing receipt."""
+
+    __tablename__ = "cycles"
+
+    cycle = Column(String(7), primary_key=True)
+    opened_at = Column(DateTime(timezone=True), nullable=False)
+    closed_at = Column(DateTime(timezone=True), nullable=True)
+    hypothesis_ids = Column(JSON, nullable=False)
+    receipt = Column(JSON, nullable=True)

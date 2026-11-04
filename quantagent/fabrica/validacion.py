@@ -203,15 +203,15 @@ def curva_cartera_guardada(h, carpeta, cierres):
                          retornos_dict, seleccion=seleccion, semanales=semanales(h.piernas))
 
 
-def evaluar_c0_cartera(eq_cartera, c3, c2, sharpe_etapa2, trades, filas_intentos, intentos_csv):
+def evaluar_c0_cartera(eq_cartera, c3, c2, sharpe_etapa2, trades, filas_intentos):
     """Aplica C0 de etapa 3 a una curva guardada y devuelve sus métricas compartidas."""
     sb3 = sharpe_benchmark(c3) if c3 is not None and not c3.empty else 0.0
     sb2 = sharpe_benchmark(c2) if c2 is not None and not c2.empty else None
     pasa, motivos = evaluar_etapa3_cartera(eq_cartera, sb3, sharpe_etapa2, sb2, trades=trades)
     neff = n_efectivo(filas_intentos) if filas_intentos else None
     try:
-        dsr_eff = dsr_contra_intentos(eq_cartera, intentos_csv, neff) if eq_cartera is not None else None
-        dsr_crudo = dsr_contra_intentos(eq_cartera, intentos_csv, len(filas_validas(filas_intentos))) if eq_cartera is not None else None
+        dsr_eff = dsr_contra_intentos(eq_cartera, n_intentos=neff) if eq_cartera is not None else None
+        dsr_crudo = dsr_contra_intentos(eq_cartera, n_intentos=len(filas_validas(filas_intentos))) if eq_cartera is not None else None
     except FileNotFoundError:
         dsr_eff, dsr_crudo = None, None
     ap = anios_positivos(eq_cartera) if eq_cartera is not None and not eq_cartera.empty else None
@@ -320,21 +320,18 @@ def validar_etapa3(h, snapshot, params_por_activo, carpeta, desde="2019-01-01", 
              if c3 is not None and not c3.empty else None)
         sb3_mismo_peso = sharpe_benchmark(c3, pesos=w) if w is not None else None
 
-        intentos_csv = snapshot_root() / "intentos.csv"
-        todas_filas, s2 = [], None
-        if intentos_csv.exists():
-            with open(intentos_csv, newline="", encoding="utf-8") as f:
-                todas_filas = list(csv.DictReader(f))
-            for r in todas_filas:
-                if r.get("hipotesis") == h.id and r.get("etapa") == "2" and r.get("activo") == "cartera":
-                    try:
-                        s2 = float(r["sharpe"])
-                    except (ValueError, TypeError):
-                        pass
+        from quantagent.fabrica.registro_db import intentos as leer_intentos
+        todas_filas, s2 = leer_intentos(), None
+        for r in todas_filas:
+            if r.get("hipotesis") == h.id and r.get("etapa") == "2" and r.get("activo") == "cartera":
+                try:
+                    s2 = float(r["sharpe"])
+                except (ValueError, TypeError):
+                    pass
 
         tot_trades = sum(int(f["trades"]) for f in filas if f.get("trades") not in (None, ""))
         pasa, motivos, c0 = evaluar_c0_cartera(eq_cartera, c3, c2, s2, tot_trades,
-                                                todas_filas, intentos_csv)
+                                                todas_filas)
         dsr_eff, dsr_crudo = c0["dsr"], c0["dsr_crudo"]
 
         sb3, neff, ap = c0["benchmark"], c0["n_efectivo"], c0["anios_positivos"]
@@ -352,7 +349,7 @@ def validar_etapa3(h, snapshot, params_por_activo, carpeta, desde="2019-01-01", 
         pasa, motivos = evaluar(*(float(fila[c]) if fila[c] != "" else None
                                   for c in ("trades", "pnl", "sharpe_tasa_0", "max_drawdown")))
         fila["v30"] = "PASA" if pasa else "NO PASA"
-        fila["dsr"] = dsr_contra_intentos(equity, snapshot_root() / "intentos.csv")
+        fila["dsr"] = dsr_contra_intentos(equity)
         if fila["dsr"] is None or not fila["dsr"] >= 0.95:
             motivos.append("sin DSR" if fila["dsr"] is None else "DSR < 0.95")
         fila["motivos"] = [f"{activo}: {motivo}" for motivo in motivos]

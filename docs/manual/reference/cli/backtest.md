@@ -19,6 +19,7 @@ Commands:
   sweep         Run a strategy parameter grid against an asset.
   verdict       Evaluate strategies against a comparison table.
   verify        Verify backtest reproducibility across two runs.
+  vincular      Link backtest runs without a hypothesis to known...
   walkforward   Select parameters on training data and evaluate the...
 ```
 
@@ -241,14 +242,16 @@ Usage: quantagent backtest import [OPTIONS] [ROOT]
   and API curve directory.
 
 Options:
-  --database-url TEXT     Destination SQLAlchemy database URL (with the
-                          existing schema).  [required]
-  --equity-dir DIRECTORY  Output directory for API curves; default:
-                          QUANTAGENT_BACKTEST_EQUITY_DIR or local-
-                          data/backtest-equity.
-  --dry-run               Count new runs without writing database rows or
-                          curves (default: disabled).
-  --help                  Show this message and exit.
+  --database-url TEXT        Destination SQLAlchemy database URL (with the
+                             existing schema).  [required]
+  --hipotesis-dir DIRECTORY  Directory with hypothesis YAML files; default:
+                             hipotesis.  [default: hipotesis]
+  --equity-dir DIRECTORY     Output directory for API curves; default:
+                             QUANTAGENT_BACKTEST_EQUITY_DIR or local-
+                             data/backtest-equity.
+  --dry-run                  Count new runs without writing database rows or
+                             curves (default: disabled).
+  --help                     Show this message and exit.
 
   Example: quantagent backtest import local-data --database-url
   sqlite:////tmp/backtests.db --equity-dir /tmp/backtest-equity
@@ -257,6 +260,7 @@ Options:
 Options and defaults:
 
 - `--database-url` — default: `None`
+- `--hipotesis-dir` — default: `PosixPath('hipotesis')`
 - `--equity-dir` — default: `'local-data/backtest-equity'`
 - `--dry-run` — default: `False`
 
@@ -503,6 +507,32 @@ Options and defaults:
 - `--riesgo-por-trade` — default: `None`
 - `--regla-tamano` — default: `None`
 - `--orden-minima` — default: `None`
+
+## `quantagent backtest vincular`
+
+```text
+Usage: quantagent backtest vincular [OPTIONS]
+
+  Link backtest runs without a hypothesis to known hypothesis IDs.
+
+Options:
+  --database-url TEXT        SQLAlchemy URL of the existing database.
+                             [required]
+  --hipotesis-dir DIRECTORY  Directory with hypothesis YAML files; default:
+                             hipotesis.  [default: hipotesis]
+  --dry-run                  Count the changes without writing to the database
+                             (default: disabled).
+  --help                     Show this message and exit.
+
+  Example: quantagent backtest vincular --database-url
+  sqlite:////tmp/backtests.db
+```
+
+Options and defaults:
+
+- `--database-url` — default: `None`
+- `--hipotesis-dir` — default: `PosixPath('hipotesis')`
+- `--dry-run` — default: `False`
 
 ## `quantagent backtest walkforward`
 

@@ -1,19 +1,13 @@
 #!/usr/bin/env python3
 """Arma la retrospectiva por lote (QuantAgent-qr1n) sin cifras de rendimiento."""
 import argparse
-import csv
 from collections import Counter
 from pathlib import Path
 
 import yaml
 
 
-def buscar_intentos_csv(ruta=None):
-    candidatos = [Path(ruta)] if ruta else [Path("local-data/intentos.csv"), Path("intentos.csv")]
-    return next((c for c in candidatos if c.exists()), None)
-
-
-def armar_retrospectiva(lote, postmortem_dir=None, intentos_path=None, intentos_n=None, out=None):
+def armar_retrospectiva(lote, postmortem_dir=None, intentos_n=None, out=None):
     p_dir = Path(postmortem_dir or "catalogo/postmortem")
     fichas = []
     if p_dir.exists():
@@ -31,12 +25,9 @@ def armar_retrospectiva(lote, postmortem_dir=None, intentos_path=None, intentos_
     if intentos_n is not None:
         n_intentos = int(intentos_n)
     else:
-        csv_f, ids = buscar_intentos_csv(intentos_path), {f["id"] for f in fichas}
-        if csv_f and ids:
-            with open(csv_f, newline="", encoding="utf-8") as fp:
-                n_intentos = sum(1 for r in csv.DictReader(fp) if r.get("hipotesis") in ids)
-        else:
-            n_intentos = 0
+        from quantagent.fabrica.registro_db import intentos as leer_intentos
+        ids = {f["id"] for f in fichas}
+        n_intentos = sum(1 for r in leer_intentos() if r.get("hipotesis") in ids)
 
     filas_causas = [f"| {c} | {conteo[c]} | {', '.join(sorted(por_causa[c]))} |" for c in sorted(conteo)] or ["| (ninguna) | 0 | - |"]
     filas_carteras = [f"| {f['id']} | {', '.join(f['causas']) or '(ninguna)'} |" for f in fichas] or ["| (ninguna) | - |"]
@@ -56,11 +47,10 @@ def main(argv=None):
     p = argparse.ArgumentParser(description="Retrospectiva por lote.")
     p.add_argument("lote")
     p.add_argument("--postmortem-dir", "-d")
-    p.add_argument("--intentos-csv", "-i")
     p.add_argument("--intentos", "-n", type=int)
     p.add_argument("--out", "-o")
     args = p.parse_args(argv)
-    _, dest = armar_retrospectiva(args.lote, args.postmortem_dir, args.intentos_csv, args.intentos, args.out)
+    _, dest = armar_retrospectiva(args.lote, args.postmortem_dir, args.intentos, args.out)
     print(f"Retrospectiva generada en {dest}")
 
 

@@ -167,13 +167,13 @@ def reserva_veredicto_command(archivo, snapshot_name):
     if fecha_apertura(h.id, "reserva") is None:
         raise click.ClickException(f"{h.id}/reserva todavía no fue abierta")
     raiz = snapshot_root()
-    intentos_path = raiz / "intentos.csv"
-    if ultimo_estado(h.id) and ultimo_estado(h.id)["etapa"] == "3" and intentos_path.exists():
-        with intentos_path.open(newline="", encoding="utf-8") as f:
-            if any(r.get("hipotesis") == h.id and r.get("etapa") == "3" and r.get("activo") == "cartera"
-                   and r.get("sharpe_base") == "DGS3MO" for r in csv.DictReader(f)):
-                click.echo(f"Reserva ya recuperada: {h.id}")
-                return
+    from quantagent.fabrica.registro_db import intentos as leer_intentos
+    filas_intentos = leer_intentos()
+    if ultimo_estado(h.id) and ultimo_estado(h.id)["etapa"] == "3" and any(
+            r.get("hipotesis") == h.id and r.get("etapa") == "3" and r.get("activo") == "cartera"
+            and r.get("sharpe_base") == "DGS3MO" for r in filas_intentos):
+        click.echo(f"Reserva ya recuperada: {h.id}")
+        return
     from quantagent.data import snapshot as snap_mod
     from quantagent.fabrica.informe import diagnostico_exceso
     carpeta = raiz / "reserva" / h.id
@@ -186,12 +186,11 @@ def reserva_veredicto_command(archivo, snapshot_name):
                        for a in activos})
     c2 = pd.DataFrame({a: snap_mod.read_snapshot(snapshot_name, a, raiz)["close"].loc["2007-01-01":"2018-12-31"]
                        for a in activos})
-    filas_intentos = list(csv.DictReader(intentos_path.open(newline="", encoding="utf-8"))) if intentos_path.exists() else []
     s2 = next((float(r["sharpe"]) for r in filas_intentos
                if r.get("hipotesis") == h.id and r.get("etapa") == "2" and r.get("activo") == "cartera"), None)
     trades = sum(len(list(csv.DictReader(p.open(newline="", encoding="utf-8"))))
                  for p in (carpeta / "trades").glob("*.csv"))
-    c0_pasa, _, c0 = evaluar_c0_cartera(eq, c3, c2, s2, trades, filas_intentos, intentos_path)
+    c0_pasa, _, c0 = evaluar_c0_cartera(eq, c3, c2, s2, trades, filas_intentos)
     diagnostico = diagnostico_exceso(h, carpeta / "equity", snapshot_name, base_dir=raiz)
     if not diagnostico["disponible"]:
         raise click.ClickException(diagnostico["motivo"])
@@ -546,7 +545,7 @@ def rechazar_command(propuesta_id, motivo, quien, propuestas_dir):
 
 
 def correr_cartera(archivo, snapshot_name, desde, hasta, carpeta, abrir_prueba=False):
-    """Corre una cartera con los parámetros de su YAML y registra una fila en intentos.csv; devuelve su curva."""
+    """Corre una cartera con los parámetros de su YAML y registra una corrida; devuelve su curva."""
     from quantagent.fabrica.validacion import _curva_y_v30_cartera, correr_motor
 
     h = cargar_hipotesis(archivo)
@@ -599,7 +598,7 @@ def comparar_command(nucleo, con_capa, snapshot_name, carpeta, margen, desde, ha
                         shutil.copy2(f, dst_file)
         id_c, eq_c = correr_cartera(con_capa, snapshot_name, desde, hasta, carpeta, abrir_prueba)
 
-        c = comparar(eq_n, eq_c, snapshot_root() / "intentos.csv", margen)
+        c = comparar(eq_n, eq_c, None, margen)
 
     except (ValueError, SnapshotError) as exc:
         raise click.ClickException(str(exc)) from exc

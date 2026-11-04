@@ -30,6 +30,27 @@ from quantagent.agent_models import (
 )
 
 
+@pytest.fixture(autouse=True)
+def isolated_database(tmp_path_factory, monkeypatch):
+    """Give every test a fresh SQLite database for production persistence."""
+    from quantagent import database, settings
+
+    # Fuera de tmp_path: hay tests que exigen que su tmp_path quede vacío.
+    url = f"sqlite:///{tmp_path_factory.mktemp('db') / 'test.db'}"
+    monkeypatch.setenv("DATABASE_URL", url)
+    monkeypatch.setattr(settings, "DATABASE_URL", url, raising=False)
+    if database._engine is not None:
+        database._engine.dispose()
+    database._engine = None
+    database._SessionLocal = None
+    database.init_db()
+    yield
+    if database._engine is not None:
+        database._engine.dispose()
+    database._engine = None
+    database._SessionLocal = None
+
+
 def _configure_xdist_worker_database() -> None:
     """Derive worker-specific SQLite database when running under pytest-xdist."""
     worker = os.environ.get("PYTEST_XDIST_WORKER")
@@ -913,3 +934,21 @@ def _cleanup_xdist_worker_database():
         except Exception:
             pass
 
+
+
+@pytest.fixture
+def db_temporal(tmp_path, monkeypatch):
+    """Inicializa una base SQLite aislada para pruebas del registro de hipótesis."""
+    from quantagent import database, settings
+
+    url = f"sqlite:///{tmp_path / 'registro.db'}"
+    monkeypatch.setenv("DATABASE_URL", url)
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    monkeypatch.setattr(settings, "DATABASE_URL", url, raising=False)
+    database._engine = None
+    database._SessionLocal = None
+    database.init_db()
+    yield tmp_path
+    database._engine.dispose()
+    database._engine = None
+    database._SessionLocal = None

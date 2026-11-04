@@ -34,6 +34,7 @@ Implementation documents should include:
 
 ## Active Per-Change Implementation
 
+- [QuantAgent-w9vi-IM-calendario-mensual.md](./QuantAgent-w9vi-IM-calendario-mensual.md) - Fechas mensuales del ciclo, estado del registro y corte de revisión.
 - [QuantAgent-oto-IM-01.md](./QuantAgent-oto-IM-01.md) - Entrada M5 buy-stop y stop de protección enviados como una orden OTO de Alpaca.
 
 - [QuantAgent-gatillo-superado-IM-01.md](./QuantAgent-gatillo-superado-IM-01.md) - Rechaza y persiste entradas M5 cuyo gatillo ya superó el precio actual sin abortar el ciclo.

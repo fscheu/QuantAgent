@@ -44,6 +44,15 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def snapshot_manifest_hash(name: str, base_dir: Optional[Path] = None) -> Optional[str]:
+    """Devuelve el SHA-256 del manifiesto disponible, o None si el snapshot no existe."""
+    try:
+        path = snapshot_root(base_dir) / name / MANIFEST_NAME
+    except SnapshotError:
+        return None
+    return _sha256(path) if path.is_file() else None
+
+
 def write_snapshot(
     name: str,
     frames: Dict[str, pd.DataFrame],

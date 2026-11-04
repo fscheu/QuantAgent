@@ -9,7 +9,10 @@ import pandas as pd
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
+from quantagent.fabrica.investigador import HIPOTESIS_DIR
 from quantagent.models import BacktestRun
+
+from .backtest_vincular import known_hypothesis_ids, resolve_hypothesis_id
 
 
 @click.command(
@@ -18,15 +21,18 @@ from quantagent.models import BacktestRun
 )
 @click.argument("root", type=click.Path(exists=True, file_okay=False, path_type=Path), default="local-data")
 @click.option("--database-url", required=True, help="Destination SQLAlchemy database URL (with the existing schema).")
+@click.option("--hipotesis-dir", type=click.Path(file_okay=False, path_type=Path), default=HIPOTESIS_DIR,
+              show_default=True, help=f"Directory with hypothesis YAML files; default: {HIPOTESIS_DIR}.")
 @click.option("--equity-dir", type=click.Path(file_okay=False, path_type=Path),
               default=lambda: os.environ.get("QUANTAGENT_BACKTEST_EQUITY_DIR", "local-data/backtest-equity"),
               help="Output directory for API curves; default: QUANTAGENT_BACKTEST_EQUITY_DIR or local-data/backtest-equity.")
 @click.option("--dry-run", is_flag=True, help="Count new runs without writing database rows or curves (default: disabled).")
-def import_command(root, database_url, equity_dir, dry_run):
+def import_command(root, database_url, hipotesis_dir, equity_dir, dry_run):
     engine = create_engine(database_url)
     imported = skipped = 0
     try:
         with Session(engine) as session:
+            known_ids = known_hypothesis_ids(session, hipotesis_dir)
             existing = set(session.scalars(select(BacktestRun.data_source)).all())
             for path in sorted(root.rglob("equity/*.csv")):
                 source = path.relative_to(root).as_posix()
@@ -69,6 +75,7 @@ def import_command(root, database_url, equity_dir, dry_run):
                     name=" · ".join((*parts, path.stem)), timeframe="1d", assets=[symbol],
                     start_date=dates.iloc[0].to_pydatetime(), end_date=dates.iloc[-1].to_pydatetime(),
                     data_source=source, config_snapshot=config, sharpe_ratio=sharpe,
+                    hypothesis_id=resolve_hypothesis_id(config.get("hypothesis_name"), known_ids),
                     max_drawdown=float(((values.cummax() - values) / values.cummax()).max()),
                     total_pnl=float(values.iloc[-1] - values.iloc[0]),
                 )

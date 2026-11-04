@@ -3,23 +3,15 @@ import pytest
 from quantagent.fabrica.estado import registrar_estado, ultimo_estado
 
 
-@pytest.fixture(autouse=True)
-def _raiz(tmp_path, monkeypatch):
-    monkeypatch.setattr("quantagent.fabrica.estado.snapshot_root", lambda: tmp_path)
-    return tmp_path / "hipotesis.csv"
-
-
-def test_dos_registros_dejan_dos_filas_y_ultimo_es_el_segundo(_raiz):
+def test_dos_registros_y_ultimo_estado(db_temporal):
     registrar_estado("H1", "0", "PASA")
     registrar_estado("H2", "1", "PASA")
     registrar_estado("H1", "1", "CORTA", "sin edge")
-    # encabezado + 3 filas, un solo encabezado
-    assert len(_raiz.read_text().splitlines()) == 4
     u = ultimo_estado("H1")
     assert (u["etapa"], u["veredicto"], u["motivo"]) == ("1", "CORTA", "sin edge")
 
 
-def test_sin_filas_none_y_motivo_con_coma_y_comillas_roundtrip():
+def test_sin_filas_none_y_motivo_roundtrip(db_temporal):
     assert ultimo_estado("H9") is None
     registrar_estado("H1", "2", "CORTA", 'sharpe < 0.5, "ruido"')
     assert ultimo_estado("H9") is None
@@ -27,15 +19,17 @@ def test_sin_filas_none_y_motivo_con_coma_y_comillas_roundtrip():
 
 
 @pytest.mark.parametrize("etapa,veredicto", [("4", "PASA"), ("0", "OK")])
-def test_invalidos_levantan_y_no_escriben(_raiz, etapa, veredicto):
+def test_invalidos_levantan_y_no_escriben(db_temporal, etapa, veredicto):
     registrar_estado("H1", "0", "PASA")
-    antes = _raiz.read_text()
+    from quantagent.fabrica.registro_db import eventos
+    antes = eventos()
     with pytest.raises(ValueError):
         registrar_estado("H1", etapa, veredicto)
-    assert _raiz.read_text() == antes
+    assert eventos() == antes
 
 
-def test_invalido_no_crea_archivo(_raiz):
-    with pytest.raises(ValueError):
-        registrar_estado("H1", "4", "PASA")
-    assert not _raiz.exists()
+def test_ultimo_estado_usa_eventos_ordenados_por_fecha(db_temporal):
+    from quantagent.fabrica.registro_db import registrar_evento
+    registrar_evento("H1", "etapa", "0", "PASA", "viejo", fecha_utc="2026-01-01T00:00:00+00:00")
+    registrar_evento("H1", "etapa", "2", "CORTA", "nuevo", fecha_utc="2099-02-01T00:00:00+00:00")
+    assert ultimo_estado("H1")["etapa"] == "2"

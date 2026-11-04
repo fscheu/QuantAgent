@@ -10,7 +10,7 @@ Options:
 
 Commands:
   epoca-limpia  Record the start of the clean period.
-  invalidar     List matching rows; invalidate them with a backup only...
+  invalidar     List matching rows and mark them invalid in the database...
 ```
 
 ## `quantagent intentos epoca-limpia`
@@ -36,7 +36,7 @@ Options and defaults:
 ```text
 Usage: quantagent intentos invalidar [OPTIONS]
 
-  List matching rows; invalidate them with a backup only when --aplicar is
+  List matching rows and mark them invalid in the database when --aplicar is
   set.
 
 Options:
@@ -45,8 +45,7 @@ Options:
   --desde TEXT      Inclusive start timestamp in ISO 8601 UTC format.
   --hasta TEXT      Inclusive end timestamp in ISO 8601 UTC format.
   --motivo TEXT     Reason for invalidating the selected attempts.  [required]
-  --aplicar         Write invalidation marks and create a backup; otherwise
-                    show a dry run.
+  --aplicar         Persist invalidation marks; otherwise show a dry run.
   --help            Show this message and exit.
 ```
 

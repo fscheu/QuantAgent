@@ -11,7 +11,8 @@ Payload keys used by templates (missing keys are omitted gracefully):
 - alarm_resolved: title, duration_seconds, alarm_type
 - hypothesis_promoted: name, stage, metric
 - hypothesis_discarded_late: name, stage, reason
-- cycle_completed: cycle, entered, remaining, dropped
+- cycle_closed: cycle, entered, dropped, promoted
+- review_rule_reached: cycle, streak
 - order_filled: symbol, side, quantity, price
 - position_closed: symbol, pnl, pct
 - dividend_received: symbols, net, withheld
@@ -33,8 +34,21 @@ from quantagent.models import Account, Event
 NEW_YORK = ZoneInfo("America/New_York")
 ALARM_TYPES = {"drawdown_limit", "stop_near", "stop_breached", "shadow_divergence", "data_stale"}
 ENTITY_TYPES = {"stop_near", "stop_breached", "alarm_resolved", "hypothesis_promoted",
-                "hypothesis_discarded_late", "cycle_completed"}
+                "hypothesis_discarded_late", "cycle_closed"}
 SEVERITY_ORDER = {"critical": 0, "warning": 1, "info": 2, "neutral": 3}
+
+
+MESES = ("enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
+         "septiembre", "octubre", "noviembre", "diciembre")
+
+
+def _month_label(cycle):
+    """'2026-11' -> 'noviembre 2026'; None si el id no tiene formato YYYY-MM."""
+    try:
+        year, month = str(cycle).split("-")
+        return f"{MESES[int(month) - 1]} {int(year)}"
+    except (ValueError, IndexError):
+        return None
 
 
 def _value(payload, key):
@@ -113,12 +127,18 @@ def _template(event, account_name, group=None):
             title = f"Se descartó {name} en {stage}" if name and stage else "Se descartó una hipótesis"
             detail = _value(p, "reason")
         subtitle = str(detail) if detail is not None else None
-    elif typ == "cycle_completed":
-        cycle = _value(p, "cycle")
-        title = f"Terminó el ciclo {cycle} del embudo" if cycle is not None else "Terminó un ciclo del embudo"
-        vals = [_value(p, k) for k in ("entered", "remaining", "dropped")]
-        if any(v is not None for v in vals):
-            subtitle = ", ".join(f"{_number(v)} {label}" for v, label in zip(vals, ("entraron", "siguen", "cayeron")) if v is not None)
+    elif typ == "cycle_closed":
+        month = _month_label(_value(p, "cycle"))
+        title = f"Se cerró el ciclo {month}" if month else "Se cerró un ciclo del embudo"
+        parts = [f"{_number(_value(p, key))} {label}" for key, label in
+                 (("entered", "entraron"), ("dropped", "cayeron"), ("promoted", "promovidas"))
+                 if _value(p, key) is not None]
+        subtitle = " · ".join(parts) or None
+    elif typ == "review_rule_reached":
+        streak = _value(p, "streak")
+        month = _month_label(_value(p, "cycle"))
+        title = f"Embudo: {_number(streak)} ciclos seguidos sin promovida" if streak is not None else "Embudo: toca revisar el enfoque"
+        subtitle = f"Al cerrar {month} · toca revisar el enfoque" if month else "Toca revisar el enfoque"
     elif typ == "order_filled":
         sides = {_value(item.payload or {}, "side") for item in group}
         count = len(group)
@@ -152,6 +172,11 @@ def _template(event, account_name, group=None):
 
 
 def _link(event):
+    if event.type in {"hypothesis_promoted", "hypothesis_discarded_late", "review_rule_reached"}:
+        return "/embudo"
+    if event.type == "cycle_closed":
+        cycle = _value(event.payload, "cycle")
+        return f"/embudo?cycle={cycle}" if cycle else "/embudo"
     if not event.account_id:
         return "/"
     base = f"/cuenta/{event.account_id}"
@@ -161,8 +186,6 @@ def _link(event):
         return base + "?tab=posiciones"
     if event.type == "dividend_received":
         return base + "?tab=dividendos"
-    if event.type in {"hypothesis_promoted", "hypothesis_discarded_late", "cycle_completed"}:
-        return "/embudo"
     return base
 
 

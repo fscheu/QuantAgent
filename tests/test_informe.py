@@ -1,17 +1,16 @@
-import csv
 import json
 from pathlib import Path
+from datetime import datetime, timezone
 
 import pytest
 from click.testing import CliRunner
 
 from quantagent.cli.backtest import backtest_group
-from quantagent.cli.sweep import CAMPOS_INTENTOS
 from quantagent.fabrica.estado import registrar_estado
 
 
 @pytest.fixture
-def raiz(tmp_path, monkeypatch):
+def raiz(tmp_path, monkeypatch, db_temporal):
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     registrar_estado("h-corta1", "1", "CORTA", "2 de 2 bajo 0,10")
     for e, v, m in (("1", "PASA", "ok"), ("2", "PASA", "ok"), ("3", "CORTA", "DSR bajo en QQQ")):
@@ -19,11 +18,11 @@ def raiz(tmp_path, monkeypatch):
     filas = [("h-corta1", "1", "SPY", "0.02", "12"), ("h-corta1", "1", "IWM", "0.05", "20"),
              ("h-corta3", "2", "SPY", "0.9", "40"), ("h-corta3", "3", "QQQ", "0.31", "55"),
              ("h-corta3", "3", "EFA", "0.44", "61")]
-    with (tmp_path / "intentos.csv").open("w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=CAMPOS_INTENTOS, restval="")
-        w.writeheader()
-        for h, e, a, s, t in filas:
-            w.writerow({"hipotesis": h, "etapa": e, "activo": a, "sharpe": s, "trades": t, "pnl": "123.4"})
+    from quantagent.fabrica.registro_db import registrar_intento
+    for h, e, a, s, t in filas:
+        registrar_intento("estrategia", a, "real", "", 1, {},
+                          {"desde": "", "hasta": "", "trades": t, "pnl": "123.4", "sharpe": s},
+                          hipotesis=h, etapa=e)
     return tmp_path
 
 
@@ -33,6 +32,13 @@ def informe(raiz, hid, archivo=None):
     if archivo:
         args.extend(["--archivo", str(archivo)])
     return CliRunner().invoke(backtest_group, args), out
+
+
+def _registrar_intento(hid, etapa, activo, sharpe="", trades="", pnl="", snapshot="real"):
+    from quantagent.fabrica.registro_db import registrar_intento
+    registrar_intento("estrategia", activo, snapshot, "", 1, {},
+                      {"desde": "", "hasta": "", "trades": trades, "pnl": pnl, "sharpe": sharpe},
+                      hipotesis=hid, etapa=etapa)
 
 
 def test_corte_en_etapa_1_nombra_etapa_motivo_y_activos(raiz):
@@ -63,24 +69,26 @@ def test_hipotesis_desconocida_falla(raiz):
 def test_informe_epoca_y_conteos_globales_sin_modificar_registros(raiz, con_estado, con_epoca):
     from quantagent.fabrica.informe import datos_informe
 
-    path = raiz / "intentos.csv"
-    campos = CAMPOS_INTENTOS if con_estado else CAMPOS_INTENTOS[:-1]
-    with path.open("w", newline="", encoding="utf-8") as archivo:
-        writer = csv.DictWriter(archivo, fieldnames=campos, restval="")
-        writer.writeheader()
-        for hid, snapshot, estado in (("h-corta1", "real", ""), ("otra", "real", ""),
-                                       ("otra", "real", "invalida_bug"),
-                                       ("otra", "sintetico", "")):
-            fila = {"hipotesis": hid, "etapa": "1", "activo": "SPY", "snapshot": snapshot}
-            if con_estado:
-                fila["estado"] = estado
-            writer.writerow(fila)
+    from quantagent import database
+    from quantagent.models import HypothesisAttempt
+    with database.SessionLocal() as db:
+        db.query(HypothesisAttempt).delete()
+        db.add_all([
+            HypothesisAttempt(hypothesis_id=hid, snapshot=snapshot, strategy="s", asset="SPY",
+                              params={}, sharpe=None, trades=None, pnl=None, stage="1",
+                              status=estado if con_estado else None, extra={"desde": "", "hasta": "", "costos": "", "tamano": 1, "sharpe_base": ""},
+                              ts=datetime.now(timezone.utc))
+            for hid, snapshot, estado in (("h-corta1", "real", None), ("otra", "real", None),
+                                           ("otra", "real", "invalida_bug"), ("otra", "sintetico", None))
+        ])
+        db.commit()
     marca = raiz / "epoca_limpia.json"
     epoca = {"desde_utc": "2026-10-27T00:00:00+00:00", "motivo": '<script>bug & "arreglo"</script>',
              "creada_utc": "2026-10-28T00:00:00+00:00"}
     if con_epoca:
         marca.write_text(json.dumps(epoca), encoding="utf-8")
-    antes = {p: p.read_bytes() for p in (path, marca) if p.exists()}
+    from quantagent.fabrica.registro_db import eventos, intentos
+    antes = (eventos(), intentos(valida_solo=False))
     datos = datos_informe("h-corta1")
     assert datos["intentos_validos"] == (2 if con_estado else 3)
     assert datos["intentos_invalidados"] == (1 if con_estado else 0)
@@ -96,7 +104,7 @@ def test_informe_epoca_y_conteos_globales_sin_modificar_registros(raiz, con_esta
         assert epoca["motivo"] not in html
     else:
         assert "Época limpia: no definida" in html and not marca.exists()
-    assert {p: p.read_bytes() for p in antes} == antes
+    assert (eventos(), intentos(valida_solo=False)) == antes
 
 
 @pytest.mark.parametrize("hid", ["cartera-tendencia-momentum", "cartera-transversal",
@@ -151,10 +159,8 @@ def test_informe_cartera_dos_piernas_contiene_universos_y_fila_cartera_sin_preci
         ]
     }))
     registrar_estado("h-cartera", "1", "PASA", "ok")
-    with (raiz / "intentos.csv").open("a", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=CAMPOS_INTENTOS, restval="")
-        w.writerow({"hipotesis": "h-cartera", "etapa": "1", "activo": "cartera", "sharpe": "0.45", "trades": "120", "pnl": "5000.0"})
-        w.writerow({"hipotesis": "h-cartera", "etapa": "1", "activo": "SPY", "sharpe": "0.20", "trades": "60", "pnl": "2500.0"})
+    _registrar_intento("h-cartera", "1", "cartera", "0.45", "120", "5000.0")
+    _registrar_intento("h-cartera", "1", "SPY", "0.20", "60", "2500.0")
     r, out = informe(raiz, "h-cartera", archivo=yaml_path)
     assert r.exit_code == 0, r.output
     html = out.read_text()
@@ -174,8 +180,7 @@ def test_informe_etapa3_muestra_cuatro_cifras_recargo_y_glosario_nuevo(raiz):
     fila_e3 = {"dsr": 0.80, "dsr_crudo": 0.55, "anios_positivos": "3 de 4", "benchmark": 0.12,
                "benchmark_mismo_peso": 0.34, "n_efectivo": 5}
     registrar_estado("h-etapa3-completa", "3", "PASA", motivo_etapa3_cartera("cartera pasa V30 y DSR", fila_e3))
-    with (raiz / "intentos.csv").open("a", newline="") as f:
-        csv.DictWriter(f, fieldnames=CAMPOS_INTENTOS, restval="").writerow({"hipotesis": "h-etapa3-completa", "etapa": "3", "activo": "cartera", "sharpe": "0.45", "trades": "100"})
+    _registrar_intento("h-etapa3-completa", "3", "cartera", "0.45", "100")
     r, out = informe(raiz, "h-etapa3-completa")
     assert r.exit_code == 0, r.output
     html = out.read_text()
@@ -250,8 +255,9 @@ def test_diagnostico_exceso_solo_lee_curvas_y_fechas_guardadas(raiz, monkeypatch
                           "realtime_end": [pd.Timestamp("2099-01-01")], "valor": [3.0]})
     _escribir(raiz / "macro-2026-10", "macro-2026-10", {"DGS3MO": macro})
     (raiz / "hipotesis-candado.csv").write_text("h,prueba,2020-01-01\n")
-    entradas = ["intentos.csv", "hipotesis.csv", "hipotesis-candado.csv"]
-    antes = {n: (raiz / n).read_bytes() for n in entradas}
+    from quantagent.fabrica.registro_db import eventos, intentos
+    registros_antes = (eventos(), intentos(valida_solo=False))
+    candado_antes = (raiz / "hipotesis-candado.csv").read_bytes()
     dsr_antes = modulo.datos_informe("h-corta3")["dsr"]
     eq = pd.Series([100, 102, 104, 106], index=fechas)
     precios = frame[["SPY"]]
@@ -263,7 +269,8 @@ def test_diagnostico_exceso_solo_lee_curvas_y_fechas_guardadas(raiz, monkeypatch
     resultado = modulo.diagnostico_exceso(h, carpeta, "snapshot", raiz)
     assert (resultado["sharpe_cartera"], resultado["sharpe_benchmark"]) == pytest.approx(esperado)
     assert fechas_benchmark == list(fechas)
-    assert {n: (raiz / n).read_bytes() for n in antes} == antes
+    assert (eventos(), intentos(valida_solo=False)) == registros_antes
+    assert (raiz / "hipotesis-candado.csv").read_bytes() == candado_antes
     assert modulo.datos_informe("h-corta3")["dsr"] == dsr_antes
     assert "curva faltante: SPY" in modulo.diagnostico_exceso(h, carpeta / "nada", "snapshot", raiz)["motivo"]
     monkeypatch.setattr("quantagent.fabrica.criterio.serie_punto_en_el_tiempo",
@@ -278,7 +285,8 @@ def test_diagnostico_exceso_solo_lee_curvas_y_fechas_guardadas(raiz, monkeypatch
                                                "--snapshot", "snapshot"])
     assert cli.exit_code == 0, cli.output
     assert "Sharpe en exceso de DGS3MO" in out.read_text()
-    assert {n: (raiz / n).read_bytes() for n in antes} == antes
+    assert (raiz / "hipotesis-candado.csv").read_bytes() == candado_antes
+    assert (eventos(), intentos(valida_solo=False)) == registros_antes
     assert modulo.datos_informe("h-corta3")["dsr"] == dsr_antes
 
 

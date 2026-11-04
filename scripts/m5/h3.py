@@ -2,7 +2,7 @@
 
 Calcula los pesos semanales de H1 con las mismas piezas del embudo (`señales_transversales`, `pesos`), los pasa por
 `pesos_h3` con `candidatos_semanales_panel` y mide H3 y H1 con la misma curva (llenado a la apertura de la sesión
-siguiente a la decisión, costo `etf` sobre el volumen operado). Registra etapa 1 y 2 en hipotesis.csv e intentos.csv.
+siguiente a la decisión, costo `etf` sobre el volumen operado). Registra etapa 1 y 2 en la base (eventos de etapa e intentos).
 
 Uso: python scripts/m5/h3.py [--cache RUTA] [--sin-registro]
 """

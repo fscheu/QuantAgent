@@ -1,16 +1,18 @@
 """Estado por hipótesis (plan M3): hasta qué etapa llegó y si pasó o cortó. Solo agregado."""
-import csv
 import re
 from collections import Counter
 from datetime import datetime, timezone
 
 from quantagent.backtesting.verdict import filas_validas
-from quantagent.data.snapshot import snapshot_root
-
-ESTADO_CSV = "hipotesis.csv"
 COLUMNAS = ("fecha_utc", "hipotesis", "etapa", "veredicto", "motivo")
 ETAPAS = ("0", "1", "2", "3")
 VEREDICTOS = ("PASA", "CORTA", "ALARMA", "ERROR")
+
+
+def causas_de_motivo(motivo):
+    return {causa for causa in
+            (re.sub(r"\b[A-Z][A-Z0-9.-]*:\s*", "", c).strip() for c in motivo.split(";"))
+            if causa}
 
 
 def registrar_estado(hipotesis_id, etapa, veredicto, motivo=""):
@@ -18,49 +20,37 @@ def registrar_estado(hipotesis_id, etapa, veredicto, motivo=""):
         raise ValueError(f"etapa inválida: {etapa!r}; debe ser una de {ETAPAS}")
     if veredicto not in VEREDICTOS:
         raise ValueError(f"veredicto inválido: {veredicto!r}; debe ser uno de {VEREDICTOS}")
-    path = snapshot_root() / ESTADO_CSV
-    path.parent.mkdir(parents=True, exist_ok=True)
-    nuevo = not path.exists()
-    with path.open("a", newline="") as f:
-        w = csv.writer(f)
-        if nuevo:
-            w.writerow(COLUMNAS)
-        w.writerow(
-            [datetime.now(timezone.utc).isoformat(), hipotesis_id, etapa, veredicto, motivo]
-        )
+    from quantagent.fabrica.registro_db import registrar_evento
+    registrar_evento(hipotesis_id, "etapa", etapa, veredicto, motivo)
 
 
 def ultimo_estado(hipotesis_id):
-    path = snapshot_root() / ESTADO_CSV
-    if not path.exists():
-        return None
-    ultimo = None
-    with path.open(newline="") as f:
-        for fila in csv.DictReader(f):
-            if fila["hipotesis"] == hipotesis_id:
-                ultimo = fila
-    return ultimo
+    from quantagent.fabrica.registro_db import eventos_etapa
+    etapas = eventos_etapa(hipotesis_id)
+    if etapas:
+        evento = etapas[-1]
+        return {columna: evento.get(columna, "") for columna in COLUMNAS}
+    return None
 
 
 def resumen_tanda(desde=None):
     """Último estado por hipótesis e intentos dentro del período UTC indicado."""
-    registros = {}
-    for nombre in (ESTADO_CSV, "intentos.csv"):
-        path = snapshot_root() / nombre
-        filas = []
-        if path.exists():
-            with path.open(newline="") as f:
-                filas = [r for r in csv.DictReader(f) if desde is None or
-                         datetime.fromisoformat(r["fecha_utc"]) >= desde]
-        registros[nombre] = filas
-    ultimos = {r["hipotesis"]: r for r in registros[ESTADO_CSV]}
+    from quantagent.fabrica.registro_db import eventos_etapa, intentos
+    eventos_etapa_registro = eventos_etapa()
+    etapas = [e for e in eventos_etapa_registro
+              if desde is None or datetime.fromisoformat(str(e.get("fecha_utc")).replace("Z", "+00:00")) >= desde]
+    if etapas:
+        ultimos = {}
+        for evento in etapas:
+            ultimos[evento.get("hipotesis")] = {columna: evento.get(columna, "") for columna in COLUMNAS}
+    else:
+        ultimos = {}
     conteos = Counter((r["etapa"], r["veredicto"]) for r in ultimos.values())
-    causas = Counter(causa
-                     for r in ultimos.values() if r["veredicto"] != "PASA"
-                     for causa in {re.sub(r"\b[A-Z][A-Z0-9.-]*:\s*", "", c).strip()
-                                   for c in r["motivo"].split(";")
-                                   if re.sub(r"\b[A-Z][A-Z0-9.-]*:\s*", "", c).strip()})
-    intentos = sum(r.get("hipotesis") in ultimos for r in filas_validas(registros["intentos.csv"]))
+    causas = Counter(causa for r in ultimos.values() if r["veredicto"] != "PASA"
+                     for causa in causas_de_motivo(r["motivo"]))
+    desde_utc = desde or datetime.min.replace(tzinfo=timezone.utc)
+    filas_intentos = [r for r in intentos() if datetime.fromisoformat(r["fecha_utc"]) >= desde_utc]
+    intentos = sum(r.get("hipotesis") in ultimos for r in filas_validas(filas_intentos))
     lineas = ["# Resumen de la tanda", "", "| Etapa | Veredicto | Hipótesis |",
               "| --- | --- | ---: |"]
     lineas += [f"| {e} | {v} | {n} |" for (e, v), n in sorted(conteos.items())]

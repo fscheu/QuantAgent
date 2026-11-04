@@ -143,10 +143,12 @@ def test_entrypoint_registro_unico_y_reproduccion(monkeypatch, tmp_path, capsys)
     h4.main(["--cache", str(cache), "--sin-registro"])
     assert not list(tmp_path.glob("*.csv"))
     h4.main(["--cache", str(cache)])
-    registros = {p: p.read_bytes() for p in tmp_path.glob("*.csv")}
-    assert len(registros) == 2 and len(pd.read_csv(tmp_path / "intentos.csv")) == 1
-    assert pd.read_csv(tmp_path / "hipotesis.csv")["etapa"].tolist() == [2]
+    from quantagent.fabrica.registro_db import estados_actuales, intentos
+    assert not list(tmp_path.glob("*.csv")) and not list(tmp_path.glob("*.jsonl"))
+    assert len(intentos()) == 1
+    assert [e["etapa"] for e in estados_actuales().values()] == ["2"]
     h4.main(["--cache", str(cache), "--sin-registro"])
     h4.main(["--cache", str(cache)])
-    assert registros == {p: p.read_bytes() for p in tmp_path.glob("*.csv")}
+    assert len(intentos()) == 1
+    assert len(estados_actuales()) == 1
     assert "ΔSharpe" in capsys.readouterr().out
