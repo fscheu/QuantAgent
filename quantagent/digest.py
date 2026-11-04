@@ -1,22 +1,42 @@
 """Formatting for the daily paper trading digest."""
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 
-def build_digest(day: date, portfolios: list[dict], trades: list[dict],
+LIMITE_MENSAJE = 3900
+SEPARADOR_MENSAJES = "\n\n──────── Mensaje siguiente ────────\n\n"
+
+
+def dividir_seccion(section: str) -> list[str]:
+    """Split a section at line boundaries, preserving every character of its content."""
+    messages = []
+    current = ""
+    for line in section.splitlines(keepends=True):
+        while len(line) > LIMITE_MENSAJE:
+            if current:
+                messages.append(current)
+                current = ""
+            messages.append(line[:LIMITE_MENSAJE])
+            line = line[LIMITE_MENSAJE:]
+        if len(current) + len(line) > LIMITE_MENSAJE:
+            messages.append(current)
+            current = ""
+        current += line
+    if current:
+        messages.append(current)
+    return messages
+
+
+def build_digest_mensajes(day: date, portfolios: list[dict], trades: list[dict],
                  heartbeats: list[dict], warnings: list[str] | None = None,
                  reconciliations: list[str] | None = None,
                  cumulative_pnl: float | None = None, *,
                  valuation: dict | None = None, executions: list[dict] | None = None,
-                 pending: list[dict] | None = None) -> str:
+                 pending: list[dict] | None = None) -> list[str]:
     """Build a plain-text digest from already queried paper trading data."""
     header = f"Resumen de paper trading — {day.isoformat()}"
     warning_items = [f"- {item}" for item in (warnings or [])]
     warning_text = "\n".join(warning_items)
-    if len(warning_text) > 1000:
-        warning_items = [item[:980] for item in warning_items[:1]]
-        warning_items.append(f"... y {len(warnings) - 1 if warnings else 0} más")
-        warning_text = "\n".join(warning_items)
     warning_section = "## Alertas y avisos\n" + (warning_text or "- Ninguno")
     heartbeat_lines = ["## Señal del scheduler"]
     for heartbeat in heartbeats[-3:]:
@@ -26,7 +46,8 @@ def build_digest(day: date, portfolios: list[dict], trades: list[dict],
     successful = [h["timestamp"].date() for h in heartbeats if h.get("status") == "completed" and h.get("timestamp")]
     latest = max(successful, default=None)
     business_days = sum(1 for offset in range(1, (day - latest).days + 1) if (latest + timedelta(days=offset)).weekday() < 5) if latest else 0
-    if not heartbeats or latest is None or business_days > 1:
+    scheduler_alert = not heartbeats or latest is None or business_days > 1
+    if scheduler_alert:
         heartbeat_lines.append("- ALERT: sin ciclo completado en más de un día hábil")
     if not heartbeats:
         heartbeat_lines.append("- Sin heartbeat")
@@ -49,7 +70,6 @@ def build_digest(day: date, portfolios: list[dict], trades: list[dict],
         if executions is not None and cumulative_pnl is None:
             trade_lines = ["## P&L realizado", "Sin datos de P&L realizado"]
     position_groups = []
-    position_remaining = []
     for portfolio in portfolios:
         positions = portfolio.get("positions", [])
         lines = [f"## Posiciones de {portfolio['name']}"]
@@ -59,7 +79,6 @@ def build_digest(day: date, portfolios: list[dict], trades: list[dict],
         if not positions:
             lines.append("- Sin posiciones abiertas")
         position_groups.append(lines)
-        position_remaining.append(len(positions))
     for title, items in [
         ("Ejecuciones del día", None if executions is None else [
             f"- {e['filled_at']}: {e['symbol']} {e['side']} {e['quantity']} @ {e['price']}; comisión {e['commission']}"
@@ -70,40 +89,28 @@ def build_digest(day: date, portfolios: list[dict], trades: list[dict],
     ]:
         if items is not None:
             position_groups.append([f"## {title} ({len(items)})", *(items or ["- Ninguna"])])
-            position_remaining.append(len(items))
-    trade_index = len(sections)
     sections.append("\n".join(trade_lines))
-    position_indexes = []
-    for group in position_groups:
-        position_indexes.append(len(sections))
-        sections.append("\n".join(group))
-    marker = "\n\n[Resumen truncado]"
-    truncated_positions = [0] * len(position_groups)
-    truncated_trades = 0
-    text = "\n\n".join(sections)
-    while len(text) >= 4000:
-        if any(count > 0 for count in position_remaining):
-            group_index = next(i for i in reversed(range(len(position_groups))) if position_remaining[i] > 0)
-            group = position_groups[group_index]
-            group.pop(-2 if group[-1].startswith("... y ") else -1)
-            position_remaining[group_index] -= 1
-            truncated_positions[group_index] += 1
-            if group[-1].startswith("... y "):
-                group[-1] = f"... y {truncated_positions[group_index]} más"
-            else:
-                group.append(f"... y {truncated_positions[group_index]} más")
-            sections[position_indexes[group_index]] = "\n".join(group)
-        elif len(trade_items) > 0:
-            trade_items.pop()
-            truncated_trades += 1
-            trade_lines = [f"## Actividad y P&L ({len(trades)} operaciones)", *trade_items,
-                           f"... y {truncated_trades} más",
-                           f"P&L realizado diario: {sum(float(t.get('pnl') or 0) for t in trades):.2f}",
-                           f"P&L realizado acumulado: {total_pnl:.2f}"]
-            sections[trade_index] = "\n".join(trade_lines)
-        else:
-            break
-        text = "\n\n".join(sections) + marker
-        if len(text) < 4000:
-            return text
-    return text
+    sections.extend("\n".join(group) for group in position_groups)
+    daily_pnl = ("sin datos" if not trades and executions is not None and cumulative_pnl is None
+                 else f"{sum(float(t.get('pnl') or 0) for t in trades):.2f} USD")
+    summary = [header,
+               f"Equity: {valuation['equity']:.2f} USD" if valuation else "Equity: no disponible (sin caja en DB)",
+               f"Caja: {valuation['cash']:.2f} USD" if valuation else "Caja: no disponible",
+               f"P&L del día realizado: {daily_pnl}",
+               f"Desvíos de reconciliación: {len(reconciliations or [])}",
+               f"Órdenes pendientes: {len(pending)}" if pending is not None else "Órdenes pendientes: sin datos",
+               f"Alertas y avisos: {len(warnings or [])}; scheduler: {'ALERT' if scheduler_alert else 'con ciclo completado'}",
+               f"Ejecuciones del día: {len(executions)}" if executions is not None else f"Operaciones del día: {len(trades)}"]
+    return ["\n".join(summary), *[message for section in sections[1:] for message in dividir_seccion(section)]]
+
+
+def build_digest(day: date, portfolios: list[dict], trades: list[dict],
+                 heartbeats: list[dict], warnings: list[str] | None = None,
+                 reconciliations: list[str] | None = None,
+                 cumulative_pnl: float | None = None, *,
+                 valuation: dict | None = None, executions: list[dict] | None = None,
+                 pending: list[dict] | None = None) -> str:
+    """Build the human-readable digest with separators between messages."""
+    return SEPARADOR_MENSAJES.join(build_digest_mensajes(
+        day, portfolios, trades, heartbeats, warnings, reconciliations, cumulative_pnl,
+        valuation=valuation, executions=executions, pending=pending))

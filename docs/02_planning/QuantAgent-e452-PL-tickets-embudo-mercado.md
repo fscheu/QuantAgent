@@ -1,6 +1,6 @@
 # QuantAgent-e452 · Revisión del diseño v0.4.2 y tickets de Embudo, Ficha de hipótesis y Mercado
 
-- **Fecha:** 2026-11-04. **Estado:** propuesta para Fede; los tickets todavía no están cargados en Beads (ver "Cómo cargar").
+- **Fecha:** 2026-11-04. **Estado:** plan aprobado por Fede el 2026-11-04 (decisiones D1–D5 aceptadas, ver §4); PR #806 ya está en `main`. Los tickets se cargan en Beads desde la VM (ver §5).
 - **Fuente:** paquete del designer `quantagent-web-design-v0.4.2`, ya copiado a `docs/03_design/web-design-system/` (archivo nuevo `EMBUDO-MERCADO.md`; tocados `COMPONENTES`, `PANTALLAS`, `DECISIONES`, `EVENTOS`, `RENDIMIENTO`, `README`, `api-types.ts`, `config.ts`, `help-texts.es.json`, `tokens.css`).
 - **Epic:** `QuantAgent-e452`. Reemplaza el alcance de WEB-14 (`e452.14`) y FE-08 (`e452.22`), que pasan a ser paraguas de los tickets de abajo.
 - **Lote sugerido:** `lote/m-embudo-mercado`. IDs provisorios `EM-xx` hasta que Beads asigne los reales.
@@ -91,15 +91,15 @@ Granularidad pensada para entregas chicas (límite de ~100 líneas por entrega d
 
 Camino crítico: EM-10 (precios) y EM-01/02 (registro y medida estructurada). Estimación gruesa: unos 28 tickets chicos; Mercado y Embudo pueden avanzar en paralelo porque solo comparten EM-17.
 
-## 4. Decisiones que necesita Fede
+## 4. Decisiones (aceptadas por Fede el 2026-11-04)
 
-| # | Decisión | Recomendación |
+| # | Decisión | Resuelto |
 |---|---|---|
-| D1 | ¿Dónde lee la API el registro de hipótesis? | Importarlo en `maestro.db` (la base que ya lee la web) y seguir el patrón de jtvz: backup, dry-run, import real. |
-| D2 | Nueva dependencia `lightweight-charts` (el design system la pide para velas). | Aceptarla; solo se carga en la pantalla de detalle de ETF. |
-| D3 | Fases posteriores (sombra, paper, candidata): no hay eventos en el registro. | v1: solo `paper`, derivado de `accounts`; sombra y candidata en "todavía ninguna". |
-| D4 | EM-02 toca `quantagent/fabrica`, que M-web había dejado fuera. | Permitirlo: sin medida estructurada, el motivo de caída solo puede mostrarse como texto. |
-| D5 | Formato del recibo (RH-05) y días del calendario (1, 8, 25): siguen pendientes. | Cerrarlos antes de EM-08 y de los hitos de EM-05. |
+| D1 | ¿Dónde lee la API el registro de hipótesis? | **Aceptada:** importarlo en `maestro.db` (la base que ya lee la web) y seguir el patrón de jtvz: backup, dry-run, import real. |
+| D2 | Nueva dependencia `lightweight-charts` (el design system la pide para velas). | **Aceptada:** aceptarla; solo se carga en la pantalla de detalle de ETF. |
+| D3 | Fases posteriores (sombra, paper, candidata): no hay eventos en el registro. | **Aceptada:** v1: solo `paper`, derivado de `accounts`; sombra y candidata en "todavía ninguna". |
+| D4 | EM-02 toca `quantagent/fabrica`, que M-web había dejado fuera. | **Aceptada:** permitirlo: sin medida estructurada, el motivo de caída solo puede mostrarse como texto. |
+| D5 | Formato del recibo (RH-05) y días del calendario (1, 8, 25): siguen pendientes. | **Aceptada como orden de trabajo:** cerrarlos antes de EM-08 y de los hitos de EM-05. Los valores siguen pendientes de Fede. |
 
 ## 5. Cómo cargar
 

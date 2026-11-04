@@ -4,6 +4,7 @@ from datetime import date, datetime, time, timedelta
 
 from sqlalchemy.orm import Session
 
+from quantagent.digest import SEPARADOR_MENSAJES, dividir_seccion
 from quantagent.models import Environment, Order, OrderSide, OrderStatus, OrderType, Position, SchedulerHeartbeat, TradeIntentRecord
 from quantagent.trading.bucket_m5 import CAPITAL_INICIAL, MAX_HEAT_PCT
 
@@ -50,30 +51,33 @@ def consultar_datos_m5(session: Session, day: date) -> dict:
             "posiciones": posiciones}
 
 
-def build_digest_m5(day: date, datos: dict, *, capital: float = CAPITAL_INICIAL,
-                    max_heat: float = MAX_HEAT_PCT) -> str:
+def build_digest_m5_mensajes(day: date, datos: dict, *, capital: float = CAPITAL_INICIAL,
+                    max_heat: float = MAX_HEAT_PCT) -> list[str]:
     approved = datos["aprobados"]
     rejected = datos["rechazados"]
     positions = datos["posiciones"]
-    lines = []
+    alertas = []
     ciclos_diarios = [ciclo for ciclo in datos.get("ciclo", []) if ciclo.get("modo") == "diario"]
     if day.weekday() < 5 and not any(ciclo.get("status") == "completed" for ciclo in ciclos_diarios):
         fallidos = [ciclo for ciclo in ciclos_diarios if ciclo.get("status") == "error"]
         corriendo = [ciclo for ciclo in ciclos_diarios if ciclo.get("status") == "running"]
         if fallidos:
-            lines.append(f"ALERTA: el ciclo diario M5 falló: {fallidos[-1].get('error_message') or 'error sin detalle'}")
+            alertas.append(f"ALERTA: el ciclo diario M5 falló: {fallidos[-1].get('error_message') or 'error sin detalle'}")
         elif corriendo:
-            lines.append("ALERTA: el ciclo diario M5 sigue en running")
+            alertas.append("ALERTA: el ciclo diario M5 sigue en running")
         else:
-            lines.append("ALERTA: el ciclo diario M5 no terminó OK (sin heartbeat completed)")
-    lines.extend([f"Resumen M5 — {day.isoformat()}", f"Intents aprobados ({len(approved)})"])
+            alertas.append("ALERTA: el ciclo diario M5 no terminó OK (sin heartbeat completed)")
+    sections = []
+    lines = [f"Intents aprobados ({len(approved)})"]
     lines.extend(f"- {item['symbol']} {format(item['qty'], '.4f').rstrip('0').rstrip('.')} @ {float(item['entry']):.2f}, stop {float(item['stop']):.2f}"
                  for item in approved)
-    lines.append(f"Intents rechazados ({len(rejected)})")
+    sections.append("\n".join(lines))
+    lines = [f"Intents rechazados ({len(rejected)})"]
     lines.extend(f"- {item['symbol']}: {item['reject_reason']}" for item in rejected)
     if not approved and not rejected:
         lines.append("Sin actividad de intents hoy.")
-    lines.append("Stops vigentes")
+    sections.append("\n".join(lines))
+    lines = ["Stops vigentes"]
     lines.extend(f"- {position['symbol']}: " +
                  (f"{position['stop']:.2f}" if position["stop"] is not None else "sin stop")
                  for position in positions)
@@ -84,10 +88,25 @@ def build_digest_m5(day: date, datos: dict, *, capital: float = CAPITAL_INICIAL,
                if position["stop"] is not None and position["stop"] < position["avg_entry"])
     equity = capital + sum(position["unrealized_pnl"] for position in positions)
     heat_pct = heat / equity * 100 if equity else 0.0
-    lines.append(f"Heat: {heat_pct:.2f} % (límite {max_heat * 100:.2f} %)")
+    heat_line = (f"Heat: {heat_pct:.2f} % (límite {max_heat * 100:.2f} %)")
+    sections.append("\n".join(lines))
+    lines = []
     if positions:
         lines.append("Posiciones")
         lines.extend(f"- {p['symbol']}: {format(p['quantity'], '.4f').rstrip('0').rstrip('.')}"
                      for p in positions)
-    lines.extend(datos.get("semanal", []))
-    return "\n".join(lines)
+    if lines:
+        sections.append("\n".join(lines))
+    if datos.get("semanal"):
+        sections.append("\n".join(datos["semanal"]))
+    summary = [*alertas, f"Resumen M5 — {day.isoformat()}", f"Equity: {equity:.2f} USD",
+               "Caja: no disponible", "P&L del día realizado: sin datos",
+               f"Intents aprobados: {len(approved)}; rechazados: {len(rejected)}",
+               f"Posiciones: {len(positions)}", heat_line,
+               f"Avisos: {sum(p['stop'] is None for p in positions)} posiciones sin stop"]
+    return ["\n".join(summary), *[message for section in sections for message in dividir_seccion(section)]]
+
+
+def build_digest_m5(day: date, datos: dict, *, capital: float = CAPITAL_INICIAL,
+                    max_heat: float = MAX_HEAT_PCT) -> str:
+    return SEPARADOR_MENSAJES.join(build_digest_m5_mensajes(day, datos, capital=capital, max_heat=max_heat))
