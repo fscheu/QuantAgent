@@ -14,6 +14,8 @@ def _fecha(e):
 _CAIDAS = ("CORTA", "ERROR", "ALARMA")
 _ETAPAS = ("0", "1", "2", "3")
 _MIN_FOR_CHART = 2  # web/src/config.ts: funnelConfig.minForChart
+_HITOS_CICLO = (("proposal", 1), ("funnel_start", 8), ("paper_review", 25))  # config.ts: cycleConfig.milestones; días pendientes de confirmar (D5)
+_LIMITE_REVISION = 6  # config.ts: cycleConfig.reviewAfterCycles
 
 
 def _aperturas(eventos):
@@ -105,20 +107,51 @@ def ciclos(limite):
                        and e.get("datos", {}).get("accion") == "cerrar"), None)
         recibo = registro.recibo_ciclo(ciclo)
         ids = apertura.get("datos", {}).get("hipotesis", [])
+        propios = [e for e in eventos if e.get("hipotesis") in ids]
+        etapas = [e for e in propios if e.get("evento") == "etapa"]
+        estados = _estados(propios)
         if recibo is not None:
-            caidas = len(recibo.get("caidas", {}))
+            promovidas = recibo.get("promovidas", 0)
+            caidas = recibo.get("caidas", {})
             alcanzadas = {f"e{e}": recibo.get("etapas", {}).get(e, 0) for e in _ETAPAS}
         else:
-            estados = _estados(eventos)
-            caidas = sum(h in estados and estados[h].get("veredicto") in _CAIDAS for h in ids)
-            alcanzadas = {f"e{e}": len({x.get("hipotesis") for x in eventos
-                                      if x.get("evento") == "etapa" and x.get("etapa") == e
-                                      and x.get("hipotesis") in ids}) for e in _ETAPAS}
-        resultado.append({"cycle": ciclo, "started_at": apertura.get("fecha_utc"),
-                          "ended_at": cierre.get("fecha_utc") if cierre else None,
-                          "entered": len(ids), "active": len(ids) - caidas, "dropped": caidas,
-                          "reached_by_stage": alcanzadas, "headline": None})
+            caidas = {h: e for h, e in estados.items() if e.get("veredicto") in _CAIDAS}
+            promovidas = sum(any(e.get("etapa") == "3" and e.get("veredicto") == "PASA"
+                                 for e in etapas if e.get("hipotesis") == h) for h in ids)
+            alcanzadas = {f"e{e}": len({x.get("hipotesis") for x in etapas if x.get("etapa") == e}) or None
+                          for e in _ETAPAS}
+        cut = sum(e.get("veredicto") == "CORTA" for e in caidas.values())
+        held = sum(e.get("veredicto") in ("ERROR", "ALARMA") for e in caidas.values())
+        year, month = map(int, ciclo.split("-"))
+        milestones = [{"key": key, "day": day,
+                       "date": f"{year:04d}-{month:02d}-{day:02d}",
+                       "done": key == "proposal" or (key == "funnel_start" and bool(etapas))}
+                      for key, day in _HITOS_CICLO]
+        resultado.append({"cycle": ciclo, "status": "closed" if cierre else "open",
+                          "started_at": apertura.get("fecha_utc"),
+                          "closed_at": cierre.get("fecha_utc") if cierre else None,
+                          "entered": len(ids), "active": len(ids) - cut - held - promovidas,
+                          "cut": cut, "held": held, "promoted": promovidas,
+                          "reached_by_stage": alcanzadas, "milestones": milestones,
+                          "headline": None, "receipt_id": ciclo if cierre else None})
     return resultado
+
+
+def regla_revision():
+    eventos = registro.eventos()
+    cierres = {}
+    for e in eventos:
+        if e.get("evento") == "ciclo" and e.get("datos", {}).get("accion") == "cerrar":
+            cierres[e.get("ciclo")] = e.get("datos", {}).get("recibo", {}).get("promovidas", 0)
+    ordenados = sorted(cierres.items())
+    racha = 0
+    for _, promovidas in reversed(ordenados):
+        if promovidas:
+            break
+        racha += 1
+    ultimos = ordenados[-_LIMITE_REVISION:]
+    return {"limit": _LIMITE_REVISION, "streak": racha, "reached": racha >= _LIMITE_REVISION,
+            "last_cycles": [{"cycle": ciclo, "promoted": promovidas} for ciclo, promovidas in ultimos]}
 
 
 def hipotesis(estado=None, etapa=None, ciclo=None):
