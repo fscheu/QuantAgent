@@ -1,6 +1,7 @@
-import type { MarketAsOf, Regime, RegimeId } from '../api/types';
-import { dateLong, time } from '../lib/format';
-import { Card, Notice } from './index';
+import type { MacroSeries, MarketAsOf, MotorStateResponse, Regime, RegimeId, SectorRow } from '../api/types';
+import { marketConfig } from '../config';
+import { dateLong, num, time } from '../lib/format';
+import { Badge, Card, Delta, Notice } from './index';
 import './Market.css';
 
 const labels: Record<RegimeId, string> = { up_calm: 'Alcista tranquilo', up_vol: 'Alcista agitado', down_calm: 'Bajista tranquilo', down_vol: 'Bajista agitado' };
@@ -36,5 +37,33 @@ export function RegimeCard({ regime, stale = false }: { regime: Regime | null; s
     <h2>Régimen de SPY</h2><div className="qa-regime-summary"><RegimeSegment regime={regime.regime} label={labels[regime.regime]} /><div><strong>{labels[regime.regime]}</strong><p>Desde el {dateLong(`${regime.since}T12:00:00Z`)} · {regime.sessions} sesiones</p></div></div>
     <div className="qa-regime-facts"><div><strong>Tendencia</strong><span>{regime.ma200 == null ? 'Sin datos: hacen falta 200 sesiones para la media.' : `${up ? 'Alcista' : 'Bajista'} · precio ${up ? 'sobre' : 'bajo'} la media de 200 días`}</span></div><div><strong>Volatilidad</strong><span>{regime.vol20 == null || regime.vol_median_1y == null ? 'Sin datos: no se puede calcular el régimen.' : `${highVol ? 'Alta' : 'Baja'} · 20 días vs. mediana de 1 año`}</span></div></div>
     <RegimeStrip strip={regime.strip} />
+  </Card>;
+}
+
+const motorLabels = { risk_on: 'Risk-on', neutral: 'Neutral', risk_off: 'Risk-off' } as const;
+
+export function MotorStateCard({ motor, sectors }: { motor: MotorStateResponse; sectors: SectorRow[] }) {
+  const enabled = sectors.filter(sector => sector.enabled).sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity)).slice(0, marketConfig.enabledTop);
+  const blocked = sectors.filter(sector => sector.blocked);
+  return <Card as="section" className="qa-motor-card">
+    <h2>Motor M5</h2>
+    {!motor ? <p className="qa-market-empty">El motor todavía no calculó.</p> : <>
+      <div className="qa-motor-state"><strong>{motorLabels[motor.state]}</strong><span>Calculado el {time(motor.computed_at, 'ART')} · próximo cálculo {dateLong(`${motor.next_at.slice(0, 10)}T12:00:00Z`)}</span></div>
+      {motor.state_description && <p className="qa-motor-description">{motor.state_description}</p>}
+      <ol className="qa-motor-scale">{(['risk_off', 'neutral', 'risk_on'] as const).map(state => <li key={state} aria-current={motor.state === state ? 'step' : undefined}><strong>{motorLabels[state]}</strong><span>{state === 'risk_off' ? 'Sin compras nuevas' : state === 'neutral' ? 'Estrés macro elevado sin que SPY esté en risk-off' : 'El resto'}</span></li>)}</ol>
+      <p>Sectores habilitados ({enabled.length}): {enabled.length ? enabled.map(s => s.symbol).join(', ') : 'ninguno'}</p>
+      <p>Sectores bloqueados ({blocked.length}): {blocked.length ? blocked.map(s => `${s.symbol}${s.blocked_reason ? ` (${s.blocked_reason})` : ''}`).join(', ') : 'ninguno'}</p>
+      <p className="qa-market-note">Es la regla del motor para las carteras paper, no una recomendación.</p>
+    </>}
+  </Card>;
+}
+
+export function MacroIndicatorCard({ series }: { series: MacroSeries }) {
+  if (series.status === 'coming_soon') return <Card as="section" className="qa-macro-card qa-ghost"><header><h2>{series.title}</h2><Badge status="soon" /></header><div className="qa-macro-ghost" aria-label="Serie próximamente" /></Card>;
+  const last = series.last;
+  return <Card as="section" className={`qa-macro-card${series.stale ? ' is-stale' : ''}`}>
+    <header><h2>{series.title}</h2><code>{series.code}</code></header>
+    {series.stale && <Notice severity="warning" title="Dato desactualizado" message={`Se esperaba un dato el ${series.expected_release ?? 'según la frecuencia de la serie'}.`} />}
+    {last ? <><strong className="qa-macro-value">{num(last.value)} {series.unit}</strong><Delta value={series.change_1m} missingLabel="Sin cambio mensual" /><p>Dato del {series.frequency === 'monthly' ? dateLong(`${last.observation_date}T12:00:00Z`) : dateLong(`${last.observation_date}T12:00:00Z`)}, publicado el {dateLong(`${last.published_at.slice(0, 10)}T12:00:00Z`)}</p></> : <p className="qa-market-empty">Sin datos publicados.</p>}
   </Card>;
 }
