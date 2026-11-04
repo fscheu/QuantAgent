@@ -21,6 +21,8 @@
 - [Fundamentals data commands](data/fundamentales.md)
 - [Macro data commands](data/macro.md)
 - [Snapshot data commands](data/snapshot.md)
+- [Market data commands](mercado.md)
+- [Daily market bar commands](mercado/barras.md)
 - [Trade attempt commands](intentos.md)
 - [Profile commands](profile.md)
 - [Hypothesis cycle commands](registro.md)
