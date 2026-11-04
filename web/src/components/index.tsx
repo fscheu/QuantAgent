@@ -10,6 +10,7 @@ export type { StopDistanceBarProps } from './StopDistanceBar';
 export { PositionCard, PositionRow, positionColumns } from './Position';
 export { OrderCard, OrderRow, RejectReason, orderColumns, orderGroupBy, orderSubRow } from './Order';
 export { AccountCard, AccountSummaryCard, AccountNoData } from './Account';
+export { StageVerdictBadge, ReviewCounter, CycleMilestones } from './Funnel';
 export { EquityChart, DivergingBar, Sparkline } from './Charts';
 export type { EquityRange } from './Charts';
 
@@ -95,3 +96,4 @@ export function ChipGroup({ label, options, selected, onChange }: { label: strin
 }
 export { DateStepper } from './DateStepper';
 export { AccountSelect } from './AccountSelect';
+export { MarketAsOfLine, RegimeCard, RegimeStrip } from './Market';

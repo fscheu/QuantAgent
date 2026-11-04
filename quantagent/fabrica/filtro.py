@@ -10,7 +10,11 @@ from quantagent.backtesting.vbt_filter import equity_metrics, run_filter
 from quantagent.cli.walkforward import construir_ventanas, seleccionar_ganador
 from quantagent.fabrica.cartera import combinar, pesos
 from quantagent.fabrica.transversal import MASCARAS, METRICAS, REGLAS, semanales, señales_transversales
+from quantagent.fabrica.estado import medida
 from quantagent.strategy.registry import build_strategy, cli_aliases
+
+MIN_TRADES_ETAPA1 = 30
+MIN_SHARPE_ETAPA1 = 0.10
 
 
 def parametros_elegidos(ganadores) -> dict:
@@ -23,11 +27,21 @@ def parametros_elegidos(ganadores) -> dict:
 
 def veredicto_etapa1(sharpe_cartera, trades_totales) -> tuple:
     """Veredicto a nivel cartera (D3): mínimo 30 trades y Sharpe >= 0,10."""
-    if trades_totales < 30:
+    _, causa = medida_etapa1(sharpe_cartera, trades_totales)
+    if causa == "few_trades":
         return "CORTA", "menos de 30 trades en la cartera"
-    if sharpe_cartera is None or isnan(sharpe_cartera) or sharpe_cartera < 0.10:
+    if causa == "sharpe_below":
         return "CORTA", "Sharpe de cartera bajo 0,10"
     return "PASA", f"Sharpe de cartera {sharpe_cartera:.2f}"
+
+
+def medida_etapa1(sharpe_cartera, trades_totales) -> tuple:
+    """Medida y causa del mismo corte que aplica `veredicto_etapa1`; `(None, None)` si pasa."""
+    if trades_totales < MIN_TRADES_ETAPA1:
+        return medida("trades", trades_totales, MIN_TRADES_ETAPA1, ">=", "count"), "few_trades"
+    if sharpe_cartera is None or isnan(sharpe_cartera) or sharpe_cartera < MIN_SHARPE_ETAPA1:
+        return medida("sharpe", None if sharpe_cartera is None or isnan(sharpe_cartera) else sharpe_cartera, MIN_SHARPE_ETAPA1, ">=", "ratio"), "sharpe_below"
+    return None, None
 
 
 def filtrar_activo(h, velas: pd.DataFrame, *, costos: dict, capital: float, panel_cierres: pd.DataFrame | None = None, train_years: int = 4, test_years: int = 2) -> dict:

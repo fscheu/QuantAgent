@@ -23,6 +23,7 @@ from quantagent.fabrica.estado import registrar_estado, resumen_tanda, ultimo_es
 from quantagent.fabrica.filtro import (
     filtrar_activo,
     filtrar_pierna,
+    medida_etapa1,
     parametros_elegidos,
     veredicto_etapa1,
 )
@@ -384,8 +385,10 @@ def correr_command(archivo, snapshot_name, carpeta, hasta_etapa=None):
         ret_filtro = filtrar_hipotesis(h, snapshot_name)
         resultados, parametros, veredicto, motivo = ret_filtro[:4]
         sharpe_car = ret_filtro[4] if len(ret_filtro) > 4 else None
+        trades_car = ret_filtro[5] if len(ret_filtro) > 5 else None
         etapa = "1"
-        registrar_estado(h.id, etapa, veredicto, motivo)
+        medida_corte, causa_corte = medida_etapa1(sharpe_car, trades_car) if trades_car is not None else (None, None)
+        registrar_estado(h.id, etapa, veredicto, motivo, medida_corte, causa_corte)
         click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
         if veredicto == "PASA" and hasta_etapa >= 2:
             try:
