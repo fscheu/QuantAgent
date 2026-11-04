@@ -1,0 +1,14 @@
+[Unit]
+Description=QuantAgent web: actualizar barras diarias de mercado
+
+[Service]
+Type=oneshot
+User=azureuser
+WorkingDirectory=/home/azureuser/paper-ops
+EnvironmentFile=/etc/quantagent/market-bars.env
+Environment=PYTHONPATH=/home/azureuser/paper-ops/QuantAgent
+Environment=NUMBA_CACHE_DIR=/tmp/numba-cache
+ExecStart=/home/azureuser/paper-ops/venv/bin/quantagent mercado barras actualizar --fallar-si-stale
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=10min

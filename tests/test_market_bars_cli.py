@@ -1,6 +1,7 @@
 from datetime import date
 
 import pandas as pd
+import pandas_market_calendars as mcal
 from click.testing import CliRunner
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
@@ -53,6 +54,43 @@ def test_update_cli_reports_symbol_missing_from_alpaca(tmp_path, monkeypatch):
     assert result.exit_code == 0, result.output
     assert "SPY: 0 barras" in result.output
     assert "QQQ: 0 barras" in result.output
+
+
+def test_fail_if_stale_exits_nonzero_but_prints_summary(tmp_path, monkeypatch):
+    db = tmp_path / "bars.db"
+    engine = create_engine(f"sqlite:///{db}")
+    Base.metadata.create_all(engine, tables=[MarketBar.__table__])
+    monkeypatch.setenv("QUANTAGENT_DATABASE_URL", f"sqlite:///{db}")
+
+    class Alpaca:
+        def fetch(self, symbols, start, end):
+            previous = mcal.get_calendar("NYSE").valid_days(start_date=end - pd.Timedelta(days=7), end_date=end)[-2].date()
+            frame = pd.DataFrame({"open": [1], "high": [2], "low": [1], "close": [2], "volume": [10]},
+                                 index=pd.to_datetime([previous]))
+            return {"SPY": frame}
+
+    monkeypatch.setattr("quantagent.cli.market_bars.DailyAlpacaClient", Alpaca)
+    result = CliRunner().invoke(cli, ["mercado", "barras", "actualizar", "--simbolos", "SPY", "--fallar-si-stale"])
+    assert result.exit_code != 0
+    assert "SPY: 1 barras" in result.output
+
+
+def test_fail_if_stale_succeeds_with_current_session(tmp_path, monkeypatch):
+    db = tmp_path / "bars.db"
+    engine = create_engine(f"sqlite:///{db}")
+    Base.metadata.create_all(engine, tables=[MarketBar.__table__])
+    monkeypatch.setenv("QUANTAGENT_DATABASE_URL", f"sqlite:///{db}")
+
+    class Alpaca:
+        def fetch(self, symbols, start, end):
+            frame = pd.DataFrame({"open": [1], "high": [2], "low": [1], "close": [2], "volume": [10]},
+                                 index=pd.to_datetime([end]))
+            return {"SPY": frame}
+
+    monkeypatch.setattr("quantagent.cli.market_bars.DailyAlpacaClient", Alpaca)
+    result = CliRunner().invoke(cli, ["mercado", "barras", "actualizar", "--simbolos", "SPY", "--fallar-si-stale"])
+    assert result.exit_code == 0, result.output
+    assert "SPY: 1 barras" in result.output
 
 
 def test_update_cli_snapshot_persists_unless_dry_run(tmp_path, monkeypatch):

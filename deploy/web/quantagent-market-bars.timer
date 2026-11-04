@@ -1,0 +1,10 @@
+[Unit]
+Description=QuantAgent web: actualizar barras diarias de mercado (días hábiles)
+
+[Timer]
+# 03:00 UTC de martes a sábado: después del cierre NYSE y antes del job paper de las 08:00 UTC.
+OnCalendar=Tue..Sat *-*-* 03:00:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target
