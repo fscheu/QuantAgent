@@ -178,6 +178,37 @@ def test_cartera_digest_posiciones_salen_de_alpaca_no_de_position_local(tmp_path
         "price": 41.0, "value": 287.0, "unrealized_pnl": 7.0}]
 
 
+@pytest.mark.parametrize("pending_quantity, code", [(15, 0), (14, 1)])
+def test_digest_cartera_reconcilia_reserva_y_pendientes(tmp_path, monkeypatch, pending_quantity, code):
+    from quantagent.strategy.assembler import StrategyAssembler
+
+    db = tmp_path / "cartera.db"
+    engine = create_engine(f"sqlite:///{db}")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        session.add(Order(symbol="DBC", side=OrderSide.BUY, order_type=OrderType.MARKET,
+                          quantity=pending_quantity, filled_quantity=5,
+                          status=OrderStatus.PARTIALLY_FILLED, environment=Environment.PAPER))
+        session.commit()
+
+    class Client:
+        def get_account(self):
+            return SimpleNamespace(equity="8900", cash="4872")
+
+        def get_all_positions(self):
+            return [SimpleNamespace(symbol="DBC", qty="212", side="long", current_price="19",
+                                    market_value="4028", unrealized_pl="0")]
+
+    monkeypatch.setitem(StrategyAssembler.BROKER_CONSTRUCTORS, "alpaca_paper", lambda config: AlpacaBroker(Client()))
+    monkeypatch.setattr("quantagent.cli.reconcile._digest_session_day", lambda day: day)
+    shadow = tmp_path / "shadow.json"
+    shadow.write_text('{"2026-11-04":{"alpha":{"pesos":{"DBC":0.5}}}}')
+    result = CliRunner().invoke(cli, ["trading", "digest", "--date", "2026-11-04", "--sin-dividendos",
+                                      "--db", str(db), "--portfolio", "alpha", "--shadow", str(shadow)])
+    assert result.exit_code == code, result.output
+    assert ("DBC: peso paper" in result.output) == bool(code)
+
+
 def test_digest_session_day_uses_live_clock_for_today_and_closed_day_for_past():
     from quantagent.cli.reconcile import _digest_session_day
     assert _digest_session_day(date(2026, 11, 3), datetime(2026, 11, 3, 8, 20, tzinfo=timezone.utc)) == date(2026, 11, 2)

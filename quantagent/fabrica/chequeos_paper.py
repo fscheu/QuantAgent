@@ -2,6 +2,29 @@
 
 from math import isclose
 
+PAPER_CASH_RESERVE_PCT = 0.05
+
+
+def reconciliar_cartera(posiciones, pendientes, precios, equity, pesos_sombra):
+    """Compare effective holdings, including unfilled orders, with reserved shadow targets.
+
+    Missing prices for effective holdings are reported; shadow-only symbols
+    without a price retain comparar_pesos's default tolerance.
+    """
+    cantidades = {p["symbol"]: p["quantity"] for p in posiciones}
+    for orden in pendientes:
+        simbolo = orden["symbol"]
+        restante = float(orden["quantity"]) - float(orden["filled_quantity"])
+        cantidades[simbolo] = cantidades.get(simbolo, 0) + (
+            restante if orden["side"] == "buy" else -restante)
+    sin_precio = [f"{s}: sin precio para reconciliar posición y pendientes"
+                  for s, q in sorted(cantidades.items()) if q and s not in precios]
+    pesos = {s: float(q) * precios[s] / equity for s, q in cantidades.items()
+             if s in precios} if equity else {}
+    objetivos = {s: p * (1 - PAPER_CASH_RESERVE_PCT) for s, p in pesos_sombra.items()}
+    tolerancias = {s: p / equity for s, p in precios.items()} if equity else {}
+    return comparar_pesos(pesos, objetivos, tolerancias=tolerancias) + sin_precio
+
 
 def comparar_pesos(pesos_paper, pesos_sombra, tolerancia=1e-4, tolerancias=None):
     """Report weight differences above each asset's tolerance, defaulting to tolerancia."""

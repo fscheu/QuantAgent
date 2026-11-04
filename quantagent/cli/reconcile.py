@@ -27,7 +27,7 @@ from quantagent.digest_datos import (
 from quantagent.digest_m5 import build_digest_m5, consultar_datos_m5
 from quantagent.digest_m5_semanal import resumen_semanal
 from quantagent.fabrica.cartera import leer_sombra
-from quantagent.fabrica.chequeos_paper import comparar_pesos, reportar_dividendos, reportar_rechazos
+from quantagent.fabrica.chequeos_paper import comparar_pesos, reconciliar_cartera, reportar_dividendos, reportar_rechazos
 from quantagent.models import Environment, EquitySnapshot, Position
 from quantagent.strategy.assembler import StrategyAssembler
 from quantagent.trading.bucket_m5 import CAPITAL_INICIAL
@@ -322,12 +322,19 @@ def trading_digest(archivo, digest_date, bucket: str | None, db: str | None, sha
             except (KeyError, FileNotFoundError):
                 warnings.append(f"Sombra sin datos para {portfolio} en {session_day}")
             else:
-                tolerancias = {
-                    symbol: float(price) / equity
-                    for symbol, price in session.query(Position.symbol, Position.current_price)
-                    .filter(Position.symbol.in_(set(paper_weights) | set(shadow_weights))).all()
-                } if equity else {}
-                differences = comparar_pesos(paper_weights, shadow_weights, tolerancias=tolerancias)
+                if dedicated:
+                    precios = {symbol: float(price) for symbol, price in
+                               session.query(Position.symbol, Position.current_price).all()}
+                    posiciones = portfolios[0]["positions"] if portfolios else []
+                    precios.update({p["symbol"]: p["price"] for p in posiciones})
+                    differences = reconciliar_cartera(posiciones, pending, precios, equity, shadow_weights)
+                else:
+                    tolerancias = {
+                        symbol: float(price) / equity
+                        for symbol, price in session.query(Position.symbol, Position.current_price)
+                        .filter(Position.symbol.in_(set(paper_weights) | set(shadow_weights))).all()
+                    } if equity else {}
+                    differences = comparar_pesos(paper_weights, shadow_weights, tolerancias=tolerancias)
     except (SQLAlchemyError, ValueError) as exc:
         if dedicated:
             raise click.ClickException(f"Cartera: error al consultar datos ({type(exc).__name__}).") from exc

@@ -7,6 +7,7 @@ This folder contains implementation notes, technical details, and post-implement
 Agents working in this repository should read implementation documents relevant to the feature being worked on:
 
 ### Current Implementation Notes
+- [QuantAgent-c03q-IM-reconciliacion-paper-sombra.md](./QuantAgent-c03q-IM-reconciliacion-paper-sombra.md) - Reserva compartida y pendientes en la reconciliación de cartera dedicada.
 - [backtest_data_pipeline_alignment.md](./backtest_data_pipeline_alignment.md) - OHLCV data pipeline alignment and remediation
 - [20251130_Implementation_AgentParallelization.md](./20251130_Implementation_AgentParallelization.md) - Agent parallelization implementation details
 - [SHORT_POSITIONS_IMPLEMENTATION.md](./SHORT_POSITIONS_IMPLEMENTATION.md) - Short position support implementation
