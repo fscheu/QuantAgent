@@ -69,3 +69,38 @@ QuantAgent-<issue-id>-PL-<short-slug>.md
 Example: `QuantAgent-a3f2dd-PL-backtest-optimization.md`
 
 These files describe planning deltas, task breakdowns, and execution strategies for specific changes linked to Beads issues (when applicable for system implementations).
+
+### Mapeo EM-xx → Beads (Embudo, Ficha de hipótesis y Mercado)
+
+Cargados el 2026-11-04 bajo el epic `QuantAgent-e452`; plan en [QuantAgent-e452-PL-tickets-embudo-mercado.md](./QuantAgent-e452-PL-tickets-embudo-mercado.md). Los paraguas `QuantAgent-e452.14` (WEB-14, depende de EM-01..09) y `QuantAgent-e452.22` (FE-08, depende de EM-17..20) pasaron a `open`.
+
+| Plan | Beads | Título |
+|---|---|---|
+| EM-01 | `QuantAgent-e452.27` | El registro en la base de la web |
+| EM-02 | `QuantAgent-e452.28` | Medida estructurada y causa en cada etapa |
+| EM-03 | `QuantAgent-e452.29` | Nombre e idea de cada hipótesis |
+| EM-04 | `QuantAgent-e452.30` | `GET /api/funnel` con embudo y motivos |
+| EM-05 | `QuantAgent-e452.31` | Ciclos, regla de revisión e historial |
+| EM-06 | `QuantAgent-e452.32` | `GET /api/hypotheses` |
+| EM-07 | `QuantAgent-e452.33` | `GET /api/hypotheses/:id` (ficha) |
+| EM-08 | `QuantAgent-e452.34` | Recibo del ciclo |
+| EM-09 | `QuantAgent-e452.35` | Eventos de feed `cycle_closed` y `review_rule_reached` |
+| EM-10 | `QuantAgent-e452.36` | Almacén de barras diarias de mercado |
+| EM-11 | `QuantAgent-e452.37` | Job diario post-cierre y timer |
+| EM-12 | `QuantAgent-e452.38` | Régimen de SPY |
+| EM-13 | `QuantAgent-e452.39` | Estado del motor y sectores |
+| EM-14 | `QuantAgent-e452.40` | Retornos, `spark_30d` y "En cartera" |
+| EM-15 | `QuantAgent-e452.41` | Macro: T10Y2Y y USREC |
+| EM-16 | `QuantAgent-e452.42` | `GET /api/market` y series bajo demanda |
+| EM-17 | `QuantAgent-e452.43` | Base: tipos, config, textos, rutas y mocks |
+| EM-18 | `QuantAgent-e452.44` | Componentes de Embudo |
+| EM-19 | `QuantAgent-e452.45` | Pantalla Embudo |
+| EM-20 | `QuantAgent-e452.46` | Recibo del ciclo y ficha de hipótesis |
+| EM-21 | `QuantAgent-e452.47` | Componentes base de Mercado |
+| EM-22 | `QuantAgent-e452.48` | Sectores y 29 ETFs |
+| EM-23 | `QuantAgent-e452.49` | Macro y detalle de ETF |
+| EM-24 | `QuantAgent-e452.50` | Pantalla Mercado |
+| EM-25 | `QuantAgent-e452.51` | Inicio: ciclo actual y evento de revisión |
+| EM-26 | `QuantAgent-e452.52` | E2E y accesibilidad |
+| EM-27 | `QuantAgent-e452.53` | Manual de usuario |
+| EM-28 | `QuantAgent-e452.54` | Deploy y migración en producción |
