@@ -104,3 +104,4 @@ Cargados el 2026-11-04 bajo el epic `QuantAgent-e452`; plan en [QuantAgent-e452-
 | EM-26 | `QuantAgent-e452.52` | E2E y accesibilidad |
 | EM-27 | `QuantAgent-e452.53` | Manual de usuario |
 | EM-28 | `QuantAgent-e452.54` | Deploy y migración en producción |
+| RH-06b | `QuantAgent-e452.55` | Adaptar registro_vista al contrato v0.4 (embudo, ciclos, hipótesis); EM-04..06 y EM-09 dependen de él |
