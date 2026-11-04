@@ -1,7 +1,32 @@
-# QuantAgent Web — traspaso de diseño a código (v0.3)
+# QuantAgent Web — traspaso de diseño a código (v0.4.2)
 
 Paquete para empezar a programar el frontend (React + TypeScript) a partir del canvas de diseño.
-Canvas: https://claude.ai/artifact/G3CGyvdzFTek2bSSRTr1uc (páginas: Sistema de diseño, Cuenta, Embudo, Inicio, v0.2 · Ajustes, Rendimiento).
+Canvas: https://claude.ai/artifact/G3CGyvdzFTek2bSSRTr1uc (páginas: Embudo v0.4, Ficha de hipótesis, Mercado, v0.4 · Componentes, Sistema de diseño, Cuenta, Embudo v1 (reemplazada), Inicio, v0.2 · Ajustes, Rendimiento).
+
+## Cambios en v0.4.2 (04/11/2026)
+
+- Sectores: los 11 con score y ranking (motor de M5, universo de 14); habilitados = top 3 con score positivo, sean cuales sean. Se corrigió el supuesto #55.
+- “En cartera” sale de posiciones reales de M4 y M5 (hoy M5 en efectivo, USD 3.000): estados “habilitado con posición” y “habilitado sin posición todavía”.
+- Embudo: “Período: aplica al embudo y a la lista”; el ciclo actual y la regla no dependen del período; con un ciclo elegido, el período se deshabilita.
+- FXE sin bloque propio (no es el dólar amplio). `config.ts` suma `m5Universe`.
+
+## Cambios en v0.4.1 (04/11/2026, respuestas de Fede)
+
+- “Sin ciclo”: 55 **eventos de etapa** (no hipótesis) + 202 intentos por etiqueta de texto libre; sin embudo. Tipo `HistorySummary` nuevo.
+- Período 30d/90d = “con actividad en los últimos N días”; estado del último evento en la ventana.
+- Motor: `state_description` del backend (texto de ejemplo marcado) y definiciones fijas de risk-on / neutral / risk-off.
+- Comandos reales `quantagent registro …` en los textos de ayuda (`cycleConfig.cli`).
+- Mercado: universo real de 29 (sin efectivo, con Sectores 9 y Moneda FXE); ranking del motor sobre los 9 sectores del universo, XLC y XLRE como contexto (supuesto corregido en v0.4.2); “En cartera” también en sectores.
+- Evento informativo `review_rule_reached` en el feed (EVENTOS.md) y regla de dato macro viejo (`marketConfig.macroStale`).
+
+## Cambios en v0.4 (03/11/2026)
+
+- **Embudo rediseñado** sobre el registro real: ciclos `YYYY-MM` abiertos/cerrados, hitos del mes (1 · 8 · 25), máximo 5 hipótesis, etapas E0 Admisión · E1 Filtro · E2 Validación en el motor · E3 Holdout + fase posterior atenuada, veredictos PASA / CORTA / ERROR / ALARMA (ERROR y ALARMA aparte, como “detenidas”), promovida, intentos con inválidos, recibo inmutable con snapshots, “Sin ciclo (historial)” y regla de revisión 6 de 6.
+- **Ficha de hipótesis** mínima (`/hipotesis/:id`).
+- **Mercado** (`/mercado`): régimen de SPY y estado del motor, sectores (tabla y mapa de calor), macro (T10Y2Y con recesiones + indicadores “próximamente”), 29 ETF con comparación y velas, eventos de 14 días.
+- Navegación: Embudo y Mercado activos.
+- Archivo nuevo: `EMBUDO-MERCADO.md` (cambios de contrato y lista de datos por elemento con qué pasa si es null).
+- Tocados: `api-types.ts` (Funnel, CycleSummary, Hypothesis corregidos + tipos nuevos de Embudo y Mercado), `config.ts` (`funnelConfig`, `cycleConfig`, `marketConfig`, `sectorHeatStep()`), `help-texts.es.json` (etapas, veredictos, promovida, holdout, snapshot, régimen, risk-on/off, momentum, curva invertida…), `COMPONENTES.md` (§3 actualizada, §7 y §8 nuevas), `PANTALLAS.md`, `DECISIONES.md` (#1 cerrada, #2/#3/#9/#10 actualizadas, #41–#54), `tokens.css` (solo clases utilitarias; **ninguna variable nueva**).
 
 ## Cambios en v0.3.2 (01/11/2026)
 
@@ -42,6 +67,7 @@ Archivos tocados: `api-types.ts`, `config.ts`, `help-texts.es.json`, `COMPONENTE
 | `api-types.ts` | Contrato de datos que necesitan las pantallas (propuesta para Pydantic) | `web/src/api/types.ts` + espejo en `api/schemas.py` |
 | `COMPONENTES.md` | Inventario: props, variantes, estados, accesibilidad, gráficos | `docs/design/` |
 | `RENDIMIENTO.md` | Pantalla Rendimiento completa + contrato de datos para el backend | `docs/design/` |
+| `EMBUDO-MERCADO.md` | Embudo v0.4, Ficha y Mercado: cambios de contrato y datos por elemento (null → qué se muestra) | `docs/design/` |
 | `PANTALLAS.md` | Composición de cada pantalla, endpoints y comportamiento común | `docs/design/` |
 | `EVENTOS.md` | Catálogo del feed "Desde tu última visita" y fuentes del calendario | `docs/design/` |
 | `DECISIONES.md` | Decisiones abiertas con valor provisorio + registro de las tomadas | `docs/design/` (o raíz) |
@@ -59,7 +85,7 @@ Archivos tocados: `api-types.ts`, `config.ts`, `help-texts.es.json`, `COMPONENTE
 2. **Catálogo de componentes** (Storybook o Ladle) que reproduzca las hojas 03 y 04 en claro y oscuro: `Num`, `Delta`, `Badge`, `HelpTip`, `Notice`, `Skeleton`, estados vacío/error, `SegmentedControl`, `Chip`, navegación.
 3. **`DataTable`** y después los componentes de dominio: `StopDistanceBar` (larga y corta), `PositionCard/Row`, `OrderCard/Row` + `RejectReason`, `AccountCard` (con variante sin datos), `AccountNoData`, `FunnelChart`, `HypothesisCard`.
 4. **Mocks** (MSW) con los datos del canvas, que cuadran entre pantallas.
-5. **Pantallas**: Cuenta → Embudo → Inicio, primero con mocks y después con la API real.
+5. **Pantallas**: Cuenta → Embudo → Inicio, primero con mocks y después con la API real. Después: Ficha de hipótesis y Mercado (v0.4).
 6. **Backend**: tabla `events` + `/api/feed`, jobs de calendario (Alpaca primero, FRED después).
 
 ## Prompt sugerido para arrancar con Claude Code
@@ -68,6 +94,5 @@ Archivos tocados: `api-types.ts`, `config.ts`, `help-texts.es.json`, `COMPONENTE
 
 ## Pendiente de diseño
 
-- Mercado y Ficha de hipótesis (cuando se pidan).
 - Pantalla "Ver todo" del feed.
 - Ajustes en teléfono (tema y densidad): hoja simple, no diseñada en detalle.
