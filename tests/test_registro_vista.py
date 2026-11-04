@@ -16,13 +16,21 @@ def raiz(db_temporal):
     return db_temporal
 
 
+# Forma v0.3 del contrato (api-types.ts antes del 04/11/2026). El contrato vigente es v0.4
+# (docs/03_design/web-design-system/EMBUDO-MERCADO.md); adaptar la vista es el ticket RH-06b.
+_FORMA_V03 = {
+    "Funnel": {"cycle", "period_days", "total", "stages", "drop_reasons"},
+    "FunnelStage": {"stage", "reached", "here", "dropped"},
+    "DropReason": {"stage", "reason", "count"},
+    "CycleSummary": {"cycle", "started_at", "ended_at", "entered", "active", "dropped",
+                     "reached_by_stage", "headline"},
+    "Hypothesis": {"id", "name", "idea", "cycle", "stage", "status", "last_metric",
+                   "discard_reason", "discard_detail", "updated_at"},
+}
+
+
 def _keys(interface):
-    source = Path("docs/03_design/web-design-system/api-types.ts").read_text()
-    linea = re.search(rf"export interface {interface} \{{(.*)$", source, re.M)
-    if linea.group(1).rstrip().endswith("}"):  # interface en una sola línea
-        return set(re.findall(r"(?:^|[;\s])(\w+)\??:", linea.group(1)))
-    body = re.search(rf"export interface {interface} \{{(.*?)\n\}}", source, re.S).group(1)
-    return set(re.findall(r"^\s*(\w+)\??:", body, re.M))
+    return _FORMA_V03[interface]
 
 
 def test_embudo_claves_y_agregados(raiz):
