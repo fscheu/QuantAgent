@@ -26,10 +26,11 @@ COLUMNS = ["timestamp", "open", "high", "low", "close", "volume"]
 class AlpacaSource:
     name = "alpaca"
 
-    def __init__(self, session=None, now=None, sleep=time.sleep):
+    def __init__(self, session=None, now=None, sleep=time.sleep, base_url=DATA_HOST):
         self._session = session or requests.Session()
         self._now = now or (lambda: datetime.now(timezone.utc))
         self._sleep = sleep
+        self._base_url = base_url.rstrip("/")
 
     def _headers(self) -> dict:
         key, secret = os.getenv("APCA_API_KEY_ID"), os.getenv("APCA_API_SECRET_KEY")
@@ -48,7 +49,7 @@ class AlpacaSource:
     def _get(self, params, headers):
         for attempt in range(MAX_RETRIES + 1):
             resp = self._session.get(
-                DATA_HOST + BARS_PATH, params=params, headers=headers, timeout=30
+                self._base_url + BARS_PATH, params=params, headers=headers, timeout=30
             )
             if resp.status_code != 429 or attempt == MAX_RETRIES:
                 resp.raise_for_status()

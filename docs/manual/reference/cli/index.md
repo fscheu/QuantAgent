@@ -13,6 +13,7 @@ Commands:
   backtest  Run deterministic backtests against versioned fixtures.
   data      Manage frozen market data.
   intentos  Manage the run attempts log.
+  mercado   Manage stored market data.
   profile   Manage StrategyConfig profiles (list, show, create, update,...
   registro  Manage hypothesis evaluation cycles.
   trading   Paper trading operations.
