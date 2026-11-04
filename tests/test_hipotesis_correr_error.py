@@ -7,11 +7,12 @@ from click.testing import CliRunner
 from quantagent.cli import hipotesis
 from quantagent.cli.backtest import backtest_group
 from quantagent.fabrica.hipotesis import cargar_hipotesis
+from quantagent.fabrica import registro_db
 
 
 @pytest.mark.parametrize("etapa", ["2", "3"])
 @pytest.mark.parametrize("mensaje", ["falta un CSV", "x" * 250])
-def test_error_registra_estado_y_propaga(tmp_path, monkeypatch, etapa, mensaje):
+def test_error_registra_estado_y_propaga(tmp_path, monkeypatch, db_temporal, etapa, mensaje):
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     archivo = Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml"
     h = cargar_hipotesis(archivo)
@@ -36,8 +37,7 @@ def test_error_registra_estado_y_propaga(tmp_path, monkeypatch, etapa, mensaje):
         "--snapshot", "sintetico", "--carpeta", str(tmp_path / "motor")])
     assert result.exit_code != 0
     assert result.exception is error
-    with (tmp_path / "hipotesis.csv").open() as f:
-        estados = list(csv.DictReader(f))
+    estados = registro_db.eventos_etapa(h.id)
     assert [(r["etapa"], r["veredicto"]) for r in estados] == [
         ("0", "PASA"), ("1", "PASA"),
     ] + ([("2", "PASA")] if etapa == "3" else []) + [(etapa, "ERROR")]
@@ -50,7 +50,7 @@ def test_error_registra_estado_y_propaga(tmp_path, monkeypatch, etapa, mensaje):
             assert [r[:2] for r in csv.reader(f)] == [[h.id, "prueba"]]
 
 
-def test_error_motivo_traceback_5_lineas(tmp_path, monkeypatch):
+def test_error_motivo_traceback_5_lineas(tmp_path, monkeypatch, db_temporal):
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     archivo = Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml"
     h = cargar_hipotesis(archivo)
@@ -75,8 +75,7 @@ def test_error_motivo_traceback_5_lineas(tmp_path, monkeypatch):
         "--snapshot", "sintetico", "--carpeta", str(tmp_path / "motor")])
     assert result.exit_code != 0
     assert result.exception is error
-    with (tmp_path / "hipotesis.csv").open() as f:
-        estados = list(csv.DictReader(f))
+    estados = registro_db.eventos_etapa(h.id)
     assert estados[-1]["veredicto"] == "ERROR"
     assert estados[-1]["motivo"] == "RuntimeError: ValueError: argumento invalido en el motor"
 

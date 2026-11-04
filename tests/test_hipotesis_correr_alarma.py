@@ -7,10 +7,11 @@ from click.testing import CliRunner
 from quantagent.cli import hipotesis
 from quantagent.cli.backtest import backtest_group
 from quantagent.fabrica.hipotesis import cargar_hipotesis
+from quantagent.fabrica import registro_db
 
 
 @pytest.mark.parametrize("sharpe_motor", [0.0, 0.5])
-def test_alarma_corta_antes_del_candado(tmp_path, monkeypatch, sharpe_motor):
+def test_alarma_corta_antes_del_candado(tmp_path, monkeypatch, db_temporal, sharpe_motor):
     monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
     archivo = Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml"
     h = cargar_hipotesis(archivo)
@@ -37,8 +38,7 @@ def test_alarma_corta_antes_del_candado(tmp_path, monkeypatch, sharpe_motor):
         "--snapshot", "sintetico", "--carpeta", str(tmp_path / "motor")])
     alarma = sharpe_motor == 0
     assert result.exit_code == int(alarma), result.output
-    with (tmp_path / "hipotesis.csv").open() as f:
-        estados = list(csv.DictReader(f))
+    estados = registro_db.eventos_etapa(h.id)
     assert [(r["etapa"], r["veredicto"]) for r in estados] == [
         ("0", "PASA"), ("1", "PASA"), ("2", "ALARMA" if alarma else "PASA"),
     ] + ([] if alarma else [("3", "PASA")])
