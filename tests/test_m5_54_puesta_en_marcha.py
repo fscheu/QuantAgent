@@ -1,8 +1,12 @@
 from types import SimpleNamespace
 
 from click.testing import CliRunner
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
 from quantagent.cli.__main__ import cli
+from quantagent.database import Base
+from quantagent.models import SchedulerHeartbeat
 
 
 def _m5_fakes(monkeypatch):
@@ -33,6 +37,13 @@ def test_m5_correr_diario_usa_db_y_as_of(tmp_path, monkeypatch):
     assert seen["as_of"].isoformat() == "2026-11-02T13:00:00+00:00"
     assert seen["db"].bind.url.database == str(db_path)
     assert "1 intents, 1 órdenes" in result.output
+    engine = create_engine(f"sqlite:///{db_path}")
+    with Session(engine) as session:
+        heartbeat = session.query(SchedulerHeartbeat).one()
+        assert heartbeat.status == "completed"
+        assert heartbeat.completed_at is not None
+        assert heartbeat.stats["modo"] == "diario"
+    engine.dispose()
 
 
 def test_m5_correr_semanal_invoca_pipeline(tmp_path, monkeypatch):
@@ -57,6 +68,13 @@ def test_m5_correr_excepcion_sale_con_uno(tmp_path, monkeypatch):
     result = CliRunner().invoke(cli, ["trading", "m5-correr", "--modo", "diario", "--db", str(tmp_path / "m5.db")])
     assert result.exit_code == 1
     assert "RuntimeError: falló" in result.output
+    engine = create_engine(f"sqlite:///{tmp_path / 'm5.db'}")
+    with Session(engine) as session:
+        heartbeat = session.query(SchedulerHeartbeat).one()
+        assert heartbeat.status == "error"
+        assert heartbeat.error_message == "RuntimeError: falló"
+        assert heartbeat.stats["modo"] == "diario"
+    engine.dispose()
 
 
 def test_pre_apertura_m5_usa_db_y_falla_si_sin_stop(tmp_path, monkeypatch):
