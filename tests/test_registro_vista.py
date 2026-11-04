@@ -16,12 +16,10 @@ def raiz(db_temporal):
 
 
 def _keys(interface):
-    if interface == "Hypothesis":
-        return {"id", "name", "idea", "cycle", "stage", "status", "last_metric",
-                "discard_reason", "discard_detail", "updated_at"}
     source = Path("docs/03_design/web-design-system/api-types.ts").read_text()
-    body = re.search(rf"interface {interface} \{{(.*?)\n\}}", source, re.S).group(1)
-    return set(re.findall(r"^\s*(\w+):", body, re.M))
+    match = re.search(rf"interface {interface}(?: extends (\w+))? \{{(.*?)\n\}}", source, re.S)
+    keys = set(re.findall(r"^\s*(\w+):", match.group(2), re.M))
+    return keys | (_keys(match.group(1)) if match.group(1) else set())
 
 
 def test_embudo_claves_y_agregados(raiz):
@@ -104,15 +102,38 @@ def test_regla_revision_racha_se_corta_con_promocion(raiz):
 
 
 def test_hipotesis_claves_filtros_y_orden(raiz):
-    registro.abrir_ciclo("2026-01", ["A", "B"])
+    registro.abrir_ciclo("2026-01", ["A", "B", "C", "D", "E"])
     registro.registrar_evento("A", "etapa", "0", "PASA", fecha_utc="2026-01-01T00:00:00+00:00")
     registro.registrar_evento("B", "etapa", "2", "CORTA", "falla", fecha_utc="2026-01-02T00:00:00+00:00")
+    registro.registrar_evento("C", "etapa", "3", "PASA", ciclo="2026-01")
+    registro.registrar_evento("D", "etapa", "1", "ERROR", ciclo="2026-01")
+    registro.registrar_evento("E", "etapa", "1", "ALARMA", ciclo="2026-01")
     result = vista.hipotesis()
     assert all(set(h) == _keys("Hypothesis") for h in result)
-    assert [h["id"] for h in result] == ["B", "A"]
+    assert [h["id"] for h in result] == ["C", "B", "E", "D", "A"]
+    assert {h["id"]: h["status"] for h in result} == {"A": "active", "B": "discarded", "C": "promoted", "D": "held", "E": "held"}
     assert vista.hipotesis(estado="discarded")[0]["id"] == "B"
     assert vista.hipotesis(etapa="e0")[0]["id"] == "A"
-    assert vista.hipotesis(ciclo="2026-01") == result
+    assert len(vista.hipotesis(ciclo="2026-01")) == 5
+
+
+def test_hipotesis_intentos_invalidos_y_detalle(raiz):
+    registro.abrir_ciclo("2026-01", ["A"])
+    registro.registrar_evento("A", "etapa", "0", "CORTA", "umbral", ciclo="2026-01",
+        datos={"measure": {"metric": "sharpe", "value": 0.2, "threshold": 0.5, "unit": "ratio", "comparator": ">="}})
+    row = {"desde": "2026-01-01", "hasta": "2026-01-02", "trades": 3, "pnl": 1, "sharpe": 0.4}
+    registro.registrar_intento("estrategia", "SPY", "snap", None, None, {}, row, "A", "0")
+    registro.registrar_intento("estrategia", "SPY", "snap", None, None, {}, row, "A", "0")
+    from quantagent.fabrica.registro_db import invalidar_intentos
+    assert invalidar_intentos({"hipotesis": "A"}) == 2
+    h = vista.hipotesis()[0]
+    assert (h["attempts_valid"], h["attempts_invalid"]) == (0, 2)
+    detalle = vista.hipotesis_detalle("A")
+    assert set(detalle) == _keys("HypothesisDetail")
+    assert detalle["timeline"][0]["measure"]["value"] == 0.2
+    assert all(a["invalid"] for a in detalle["attempts"])
+    assert detalle["later_phases"] == [] and detalle["backtests"] == [] and detalle["paper_account"] is None
+    assert vista.hipotesis_detalle("missing") is None
 
 
 def test_periodo_usa_utc_y_ahora_inyectable(raiz):
