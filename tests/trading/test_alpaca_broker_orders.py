@@ -78,6 +78,14 @@ def test_stop_orders_use_fraction_aware_tif_and_both_sides(quantity, tif):
         assert Decimal(str(request.stop_price)) == Decimal("95")
         assert request.time_in_force == tif
 
+def test_stop_price_is_rounded_to_alpaca_tick():
+    client = Client(SimpleNamespace(id="stop-1", status="new", filled_qty="0"))
+    order = make_order(OrderType.STOP)
+    order.stop_price = Decimal("186.0104555038258")
+    AlpacaBroker(client).submit_order(order)
+    assert Decimal(str(client.request.stop_price)) == Decimal("186.01")
+    assert order.stop_price == Decimal("186.01")
+
 def test_replace_stop_uses_order_id_and_new_price():
     result = SimpleNamespace(id="updated")
     client = Client(result)
@@ -85,6 +93,11 @@ def test_replace_stop_uses_order_id_and_new_price():
     order_id, request = client.replacements[0]
     assert order_id == "alpaca-stop-id"
     assert Decimal(str(request.stop_price)) == Decimal("97.5")
+
+def test_replace_stop_rounds_price_to_alpaca_tick():
+    client = Client(SimpleNamespace(id="updated"))
+    AlpacaBroker(client).replace_stop("alpaca-stop-id", Decimal("186.0104555038258"))
+    assert Decimal(str(client.replacements[0][1].stop_price)) == Decimal("186.01")
 
 def test_stop_without_stop_price_is_rejected():
     order = make_order(OrderType.STOP)

@@ -1,11 +1,18 @@
 """Paper Alpaca order adapter using an injected trading client."""
 
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from types import SimpleNamespace
 
 from quantagent.models import Fill, Order, OrderStatus, OrderType
 from quantagent.trading.paper_broker import Broker
+
+
+def quantize_order_price(price) -> Decimal:
+    price = Decimal(str(price))
+    tick = Decimal("0.01") if price >= 1 else Decimal("0.0001")
+    # HALF_UP aproxima al tick más cercano sin el sesgo par de ROUND_HALF_EVEN.
+    return price.quantize(tick, rounding=ROUND_HALF_UP)
 
 
 class AlpacaBroker(Broker):
@@ -28,8 +35,10 @@ class AlpacaBroker(Broker):
         fields = dict(symbol=order.symbol, qty=str(order.quantity), side=order.side.value,
                       time_in_force=tif)
         if order.order_type == OrderType.LIMIT:
+            order.price = quantize_order_price(order.price)
             fields["limit_price"] = str(order.price)
         elif order.order_type == OrderType.STOP:
+            order.stop_price = quantize_order_price(order.stop_price)
             fields["stop_price"] = str(order.stop_price)
         try:
             from alpaca.trading.requests import LimitOrderRequest, MarketOrderRequest, StopOrderRequest
@@ -49,7 +58,7 @@ class AlpacaBroker(Broker):
         return self._update_order(order, result)
 
     def replace_stop(self, alpaca_order_id: str, new_stop_price) -> Order:
-        fields = dict(stop_price=new_stop_price)
+        fields = dict(stop_price=quantize_order_price(new_stop_price))
         try:
             from alpaca.trading.requests import ReplaceOrderRequest
             request = ReplaceOrderRequest(**fields)
