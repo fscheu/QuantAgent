@@ -36,22 +36,16 @@
   },
   "cycle": {
     "title": "Ciclo",
-    "body": "Una tanda de hipótesis de estrategia que se propone y se evalúa junta."
+    "body": "Un mes de trabajo con hasta 5 hipótesis. El día 1 se proponen, el día 8 arranca el embudo y el día 25 se revisa lo que está en paper. Al cerrar se guarda un recibo que no cambia.",
+    "example": "Noviembre 2026 (2026-11)"
   },
   "stages": {
     "title": "Etapas del embudo",
-    "body": "Cada hipótesis pasa por etapas cada vez más exigentes: 0, 1, 2, 3, reserva, sombra, paper, candidata y producción. Si falla una, queda descartada con su motivo.",
-    "pending": true
-  },
-  "stage_e3": {
-    "title": "Etapa 3",
-    "body": "[A CONFIRMAR] Prueba si la estrategia aguanta cambios: otros parámetros, otros períodos y costos más altos.",
-    "pending": true
+    "body": "E0 Admisión: ¿la idea se puede probar con los datos que hay? E1 Filtro: una primera prueba rápida con umbrales mínimos. E2 Validación en el motor: se corre en el motor real, barra a barra, y se compara contra un cálculo de control independiente. E3 Holdout: se prueba con datos que no se usaron antes. Después vienen sombra local, paper y candidata, fuera del ciclo."
   },
   "reserve": {
-    "title": "Reserva",
-    "body": "Datos que se guardan sin usar durante el diseño de la estrategia (por ejemplo, de 2023 en adelante) para probarla al final, como un examen que no vio antes.",
-    "pending": true
+    "title": "Reserva 2023+",
+    "body": "Datos de 2023 en adelante que se guardan sin tocar mientras se diseña. No es una etapa: la ficha marca si una hipótesis ya la usó, porque después no se puede volver a usar como examen limpio."
   },
   "deflated_sharpe": {
     "title": "Sharpe deflactado",
@@ -83,8 +77,188 @@
     "title": "Cuenta sin datos",
     "body": "La cuenta está en la configuración, pero el broker todavía no informó nada: no se abrió o no tiene fondos. Se vuelve a consultar sola."
   },
+  "total_return": {
+    "title": "Retorno acumulado",
+    "body": "Cuánto subió o bajó en todo el período, sumando el efecto de cada día sobre el anterior. No cuenta depósitos ni retiros como ganancia."
+  },
+  "cagr": {
+    "title": "CAGR",
+    "body": "Retorno anual compuesto: el ritmo parejo por año que daría el mismo resultado final. Necesita al menos 12 meses; con menos, anualizar exagera."
+  },
+  "positive_months": {
+    "title": "Meses positivos",
+    "body": "Qué parte de los meses completos terminó en suba. Habla de regularidad, no de cuánto se ganó."
+  },
+  "best_worst_month": {
+    "title": "Mejor y peor mes",
+    "body": "El mes completo con mayor suba y el de mayor baja. Muestran los extremos que hubo que atravesar."
+  },
+  "volatility": {
+    "title": "Volatilidad",
+    "body": "Cuánto se mueven los retornos día a día, llevado a un año. Más volatilidad = recorrido más movido, aunque termine igual."
+  },
+  "sharpe": {
+    "title": "Sharpe",
+    "body": "Retorno por encima de la tasa libre de riesgo por cada unidad de volatilidad. Más alto = mejor recompensa por el riesgo. Arriba de 1 es bueno; con pocos meses varía mucho."
+  },
+  "sortino": {
+    "title": "Sortino",
+    "body": "Como el Sharpe, pero solo castiga los movimientos hacia abajo: las subas bruscas no cuentan como riesgo."
+  },
+  "max_drawdown": {
+    "title": "Drawdown máximo",
+    "body": "La peor caída desde un máximo hasta el punto más bajo siguiente, y cuánto tardó en recuperarse."
+  },
+  "calmar": {
+    "title": "Calmar",
+    "body": "CAGR dividido por el drawdown máximo: cuánto rinde por año en relación con su peor caída."
+  },
+  "alpha": {
+    "title": "Alfa",
+    "body": "Lo que ganó por año de más (o de menos) que SPY, después de descontar cuánto se mueve junto con SPY. Positivo = suma algo propio."
+  },
+  "beta": {
+    "title": "Beta",
+    "body": "Cuánto se mueve junto con SPY. 1 = igual que SPY; 0,5 = la mitad; 0 = no tiene relación."
+  },
+  "relative_return": {
+    "title": "Retorno relativo",
+    "body": "Cuánto más (o menos) vale al final que si se hubiera invertido lo mismo en SPY."
+  },
+  "log_scale": {
+    "title": "Escala logarítmica",
+    "body": "Muestra cambios porcentuales con el mismo tamaño: subir de 100 a 200 se ve igual que de 200 a 400. Útil en períodos largos."
+  },
+  "underwater": {
+    "title": "Curva de caídas",
+    "body": "En cada fecha, cuánto está por debajo de su máximo anterior. Cero = está en un máximo."
+  },
+  "rolling": {
+    "title": "Métricas móviles",
+    "body": "La métrica calculada sobre los últimos 6 o 12 meses en cada fecha. Muestra si el comportamiento cambió con el tiempo."
+  },
+  "out_of_sample": {
+    "title": "Reserva (fuera de muestra)",
+    "body": "Período que el backtest no usó al diseñarse. Si la estrategia funciona también ahí, es más creíble."
+  },
+  "short_sample": {
+    "title": "Muestra corta",
+    "body": "Con pocos meses o pocas decisiones, varias métricas cambian mucho con un solo día bueno o malo. Por eso algunas no se calculan y otras se marcan como poco confiables."
+  },
+  "time_weighted": {
+    "title": "Ponderado por tiempo",
+    "body": "Forma de medir el retorno que ignora cuándo entró o salió plata de la cuenta. Así un depósito no parece ganancia."
+  },
+  "var_95": {
+    "title": "VaR 95 %",
+    "body": "La caída diaria que solo se supera 1 de cada 20 días, según la historia. No es el peor caso: es el umbral de los días malos."
+  },
+  "cvar_95": {
+    "title": "CVaR 95 %",
+    "body": "El promedio de las caídas en ese 5 % de peores días. Dice qué tan malos son los días malos."
+  },
+  "flows_unregistered": {
+    "title": "Aportes sin registrar",
+    "body": "Si entra o sale plata de la cuenta y el sistema no lo registra, el valor de la cuenta cambia sin que haya ganancia o pérdida. Hasta registrarlos, el rendimiento de la cuenta no se puede calcular bien."
+  },
   "rebalance": {
     "title": "Rebalanceo",
     "body": "Momento programado en que una estrategia ajusta sus posiciones para volver a los pesos que define."
+  },
+  "stage_e0": {
+    "title": "E0 · Admisión",
+    "body": "Revisa que la hipótesis se pueda evaluar: historia suficiente, datos disponibles y una muestra mínima de eventos."
+  },
+  "stage_e1": {
+    "title": "E1 · Filtro",
+    "body": "Primera prueba con umbrales mínimos (por ejemplo, Sharpe, cantidad de operaciones y máxima caída). Corta rápido lo que no tiene chances."
+  },
+  "stage_e2": {
+    "title": "E2 · Validación en el motor",
+    "body": "Se corre la estrategia en el motor de verdad, barra a barra, y se compara contra un control independiente. Si los dos no coinciden, el veredicto es ALARMA."
+  },
+  "stage_e3": {
+    "title": "E3 · Holdout",
+    "body": "Prueba final con datos guardados que la estrategia no vio durante el diseño. Si pasa, la hipótesis queda promovida."
+  },
+  "verdicts": {
+    "title": "Veredictos",
+    "body": "PASA: superó la etapa. CORTA: no llegó a un umbral y cae, con el motivo y el valor contra el umbral. ERROR: la ejecución falló (datos, código). ALARMA: el motor y el control no coinciden. ERROR y ALARMA no cuentan como caídas: quedan detenidas y se revisan aparte."
+  },
+  "promoted": {
+    "title": "Promovida",
+    "body": "Una hipótesis que pasó E3 (holdout) con PASA. Es el único logro que cuenta para la regla de revisión. Después sigue en sombra local, paper y candidata."
+  },
+  "review_rule": {
+    "title": "Regla de revisión",
+    "body": "Si pasan 6 ciclos cerrados seguidos sin ninguna promovida, hay que revisar el enfoque con el que se generan las hipótesis. Es un indicador del proceso, no una alarma de las cuentas. Por línea de comandos: quantagent registro corte.",
+    "example": "{n} de 6 ciclos seguidos sin promovida"
+  },
+  "attempt_invalid": {
+    "title": "Intento inválido",
+    "body": "Un intento que se marcó como inválido porque lo afectó un error de código ya corregido. Se muestra para tener la historia completa, pero no cuenta para el veredicto ni para los totales."
+  },
+  "holdout": {
+    "title": "Holdout",
+    "body": "Un tramo de datos que se aparta y no se usa para diseñar ni ajustar la estrategia. Sirve como examen final: si la estrategia solo funciona en los datos que ya vio, acá se nota."
+  },
+  "snapshot": {
+    "title": "Snapshot",
+    "body": "Una copia fija de los datos (precios, series) tomada en un momento. Se identifica con un código de 12 caracteres: si dos pruebas usan el mismo código, usaron exactamente los mismos datos.",
+    "example": "precios_diarios · 01/10/2026 · a3f9c2e81b7d"
+  },
+  "cycle_receipt": {
+    "title": "Recibo del ciclo",
+    "body": "Lo que se guarda al cerrar un ciclo: cuántas entraron y en qué etapa cayó cada una, con su motivo, los intentos y los datos usados. No se modifica después. Por línea de comandos: quantagent registro ciclo informe {ciclo}."
+  },
+  "no_cycle": {
+    "title": "Sin ciclo (historial)",
+    "body": "Eventos de etapa (E0–E3) importados de antes de los ciclos mensuales. Son eventos, no hipótesis: una hipótesis puede tener varios. Los intentos importados guardan la etapa como texto libre y se muestran tal cual. No tienen recibo ni cuentan para la regla de revisión."
+  },
+  "regime": {
+    "title": "Régimen",
+    "body": "Una forma simple de describir cómo viene el mercado, con dos preguntas: ¿SPY está por encima o por debajo de su promedio de 200 días (tendencia)? ¿Se mueve más o menos que lo habitual en el último año (volatilidad)? Las combinaciones dan 4 regímenes.",
+    "example": "Alcista agitado: sobre la media, con volatilidad alta."
+  },
+  "risk_on_off": {
+    "title": "Risk-on / neutral / risk-off",
+    "body": "El estado semanal del motor. Risk-off: sin compras nuevas. Neutral: hay estrés macro elevado, pero SPY no está en risk-off. Risk-on: el resto. Lo calcula el motor para las carteras paper; no es una recomendación."
+  },
+  "momentum": {
+    "title": "Momentum",
+    "body": "Qué tan fuerte viene subiendo o bajando un activo frente a los demás en los últimos meses. El motor lo resume en un score: los 3 sectores con mejor score positivo quedan habilitados; los de score negativo, bloqueados."
+  },
+  "inverted_curve": {
+    "title": "Curva invertida",
+    "body": "Normalmente la tasa del bono a 10 años es mayor que la del bono a 2 años. Cuando pasa lo contrario, el diferencial es negativo y se dice que la curva está invertida. Históricamente precedió a varias recesiones, con demoras muy distintas; no es una señal para operar.",
+    "example": "Hoy: {value} pp."
+  },
+  "recession_shading": {
+    "title": "Recesiones sombreadas",
+    "body": "Las franjas grises marcan los meses en que EE. UU. estuvo en recesión según la serie USREC de FRED."
+  },
+  "market_daily": {
+    "title": "Datos al cierre",
+    "body": "Mercado muestra datos diarios guardados al cierre de cada sesión. No hay precios en vivo."
+  },
+  "etf_short_history": {
+    "title": "Historia insuficiente",
+    "body": "El ETF se agregó hace poco y todavía no hay sesiones guardadas para calcular ese plazo. Por eso dice \"sin datos\" en lugar de un número."
+  },
+  "period_activity": {
+    "title": "Con actividad en los últimos N días",
+    "body": "Con 30 o 90 días se ven las hipótesis que tuvieron algún evento de etapa en esa ventana, y cada una muestra el estado de su último evento dentro de ella."
+  },
+  "macro_stale": {
+    "title": "Dato macro desactualizado",
+    "body": "Se marca cuando pasó la fecha en que FRED tenía que publicar el dato, más 2 días hábiles, y no llegó uno nuevo. Para series sin calendario, cuando pasó 1,5 veces su frecuencia desde el último dato."
+  },
+  "sector_enabled_no_position": {
+    "title": "Habilitado, sin posición todavía",
+    "body": "El motor habilita a los 3 sectores con mejor score positivo, pero eso no quiere decir que ya estén comprados. “En cartera” sale de las posiciones reales de cada cuenta."
+  },
+  "universes": {
+    "title": "Dos universos",
+    "body": "M5 trabaja con 14 ETF: los 11 sectores SPDR más SPY, EEM y EWZ. Las carteras M4 usan otro universo de 29 ETF. Una hipótesis puede usar activos de cualquiera de los dos."
   }
 }
