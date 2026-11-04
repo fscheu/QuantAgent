@@ -4,7 +4,8 @@ from pathlib import Path
 import click
 import pytest
 
-from quantagent.cli.sweep import CAMPOS_INTENTOS, MAX_SWEEP_COMBINATIONS, cargar_grilla, validar_grilla
+from quantagent.cli.sweep import MAX_SWEEP_COMBINATIONS, cargar_grilla, validar_grilla
+from quantagent.fabrica.campos_intentos import CAMPOS_INTENTOS
 
 
 def test_vecinos_rsi_un_parametro_por_vez():

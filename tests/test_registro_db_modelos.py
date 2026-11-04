@@ -5,7 +5,7 @@ from pathlib import Path
 
 from sqlalchemy import create_engine, inspect
 
-from quantagent.cli.sweep import CAMPOS_INTENTOS
+from quantagent.fabrica.campos_intentos import CAMPOS_INTENTOS
 from quantagent.models import HypothesisAttempt
 
 

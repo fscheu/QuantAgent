@@ -102,8 +102,6 @@ def grilla_vecinos(strategy: str) -> tuple[list[dict[str, Any]], list[str]]:
     return combos, labels
 
 
-from quantagent.fabrica.campos_intentos import CAMPOS_INTENTOS
-
 
 def contar_intentos(hipotesis: Optional[str] = None) -> int:
     """Cuenta intentos válidos almacenados en la base."""
