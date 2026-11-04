@@ -32,13 +32,13 @@ def resolve_hypothesis_id(hypothesis_name, known_ids):
 
 
 @click.command(
-    "vincular", help="Vincula corridas sin hipótesis a IDs conocidos.",
+    "vincular", help="Link backtest runs without a hypothesis to known hypothesis IDs.",
     epilog="Example: quantagent backtest vincular --database-url sqlite:////tmp/backtests.db",
 )
-@click.option("--database-url", required=True, help="URL SQLAlchemy de la base existente.")
+@click.option("--database-url", required=True, help="SQLAlchemy URL of the existing database.")
 @click.option("--hipotesis-dir", type=click.Path(file_okay=False, path_type=Path), default=HIPOTESIS_DIR,
-              show_default=True, help=f"Directorio de hipótesis YAML; default: {HIPOTESIS_DIR}.")
-@click.option("--dry-run", is_flag=True, help="Cuenta los cambios sin escribir en la base (default: desactivado).")
+              show_default=True, help=f"Directory with hypothesis YAML files; default: {HIPOTESIS_DIR}.")
+@click.option("--dry-run", is_flag=True, help="Count the changes without writing to the database (default: disabled).")
 def vincular_command(database_url, hipotesis_dir, dry_run):
     engine = create_engine(database_url)
     linked = unchanged = 0

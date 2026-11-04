@@ -19,7 +19,7 @@ Commands:
   sweep         Run a strategy parameter grid against an asset.
   verdict       Evaluate strategies against a comparison table.
   verify        Verify backtest reproducibility across two runs.
-  vincular      Vincula corridas sin hipótesis a IDs conocidos.
+  vincular      Link backtest runs without a hypothesis to known...
   walkforward   Select parameters on training data and evaluate the...
 ```
 
@@ -513,14 +513,15 @@ Options and defaults:
 ```text
 Usage: quantagent backtest vincular [OPTIONS]
 
-  Vincula corridas sin hipótesis a IDs conocidos.
+  Link backtest runs without a hypothesis to known hypothesis IDs.
 
 Options:
-  --database-url TEXT        URL SQLAlchemy de la base existente.  [required]
-  --hipotesis-dir DIRECTORY  Directorio de hipótesis YAML; default: hipotesis.
-                             [default: hipotesis]
-  --dry-run                  Cuenta los cambios sin escribir en la base
-                             (default: desactivado).
+  --database-url TEXT        SQLAlchemy URL of the existing database.
+                             [required]
+  --hipotesis-dir DIRECTORY  Directory with hypothesis YAML files; default:
+                             hipotesis.  [default: hipotesis]
+  --dry-run                  Count the changes without writing to the database
+                             (default: disabled).
   --help                     Show this message and exit.
 
   Example: quantagent backtest vincular --database-url

@@ -31,11 +31,12 @@ from quantagent.agent_models import (
 
 
 @pytest.fixture(autouse=True)
-def isolated_database(tmp_path, monkeypatch):
+def isolated_database(tmp_path_factory, monkeypatch):
     """Give every test a fresh SQLite database for production persistence."""
     from quantagent import database, settings
 
-    url = f"sqlite:///{tmp_path / 'test.db'}"
+    # Fuera de tmp_path: hay tests que exigen que su tmp_path quede vacío.
+    url = f"sqlite:///{tmp_path_factory.mktemp('db') / 'test.db'}"
     monkeypatch.setenv("DATABASE_URL", url)
     monkeypatch.setattr(settings, "DATABASE_URL", url, raising=False)
     if database._engine is not None:
