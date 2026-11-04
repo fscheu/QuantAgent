@@ -14,6 +14,24 @@ function Preferences() {
 }
 
 describe('App', () => {
+  afterEach(() => { window.history.replaceState(null, '', '/') })
+
+  it.each([
+    ['/embudo', 'Embudo'], ['/embudo/ciclo/ciclo-7', 'Embudo · ciclo-7'],
+    ['/hipotesis/hip-2', 'Hipótesis · hip-2'], ['/mercado', 'Mercado'], ['/mercado/etf/SPY', 'Mercado · SPY'],
+  ])('renders the route %s with its parameter', (path, title) => {
+    window.history.replaceState(null, '', path)
+    render(<ThemeProvider><App /></ThemeProvider>)
+    expect(screen.getByRole('heading', { name: title })).toBeTruthy()
+    expect(screen.getByText('En construcción')).toBeTruthy()
+  })
+
+  it('falls back to Inicio for an unknown route', () => {
+    window.history.replaceState(null, '', '/desconocida')
+    render(<ThemeProvider><App /></ThemeProvider>)
+    expect(screen.getByRole('heading', { name: 'Inicio' })).toBeTruthy()
+  })
+
   it('renders the Inicio screen', () => {
     render(<ThemeProvider><App /></ThemeProvider>)
     expect(screen.getByRole('heading', { name: 'Inicio' })).toBeTruthy()

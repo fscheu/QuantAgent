@@ -4,8 +4,8 @@ const destinations = [
   { label: 'Inicio', href: '/', icon: '⌂', match: (path: string) => path === '/' },
   { label: 'Cuenta', href: '/cuenta', icon: '◉', match: (path: string) => path.startsWith('/cuenta') },
   { label: 'Backtests', href: '/backtests', icon: '◷', match: (path: string) => path === '/backtests' || path.startsWith('/rendimiento/backtest/') },
-  { label: 'Embudo', icon: '▽' },
-  { label: 'Mercado', icon: '⌁' },
+  { label: 'Embudo', href: '/embudo', icon: '▽', match: (path: string) => path.startsWith('/embudo') || path.startsWith('/hipotesis') },
+  { label: 'Mercado', href: '/mercado', icon: '⌁', match: (path: string) => path.startsWith('/mercado') },
 ]
 
 function Icon({ name }: { name: string }) {
@@ -23,7 +23,7 @@ export function AppNav({ path, navigate }: { path: string; navigate: (path: stri
   return <nav className="qa-app-nav" aria-label="Secciones">
     {destinations.map(destination => {
       const active = destination.match?.(path.split('?')[0])
-      const content = <><Icon name={destination.icon} /><span className="qa-app-nav-label">{destination.label}</span>{!destination.href && <span className="qa-app-nav-soon">pronto</span>}</>
+      const content = <><Icon name={destination.icon} /><span className="qa-app-nav-label">{destination.label}</span></>
       return destination.href
         ? <a key={destination.label} href={destination.href} className={active ? 'is-active' : ''} aria-current={active ? 'page' : undefined} onClick={event => { event.preventDefault(); navigate(destination.href!) }}>{content}</a>
         : <span key={destination.label} className="qa-app-nav-disabled" aria-disabled="true">{content}</span>
