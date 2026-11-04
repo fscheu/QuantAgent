@@ -1,10 +1,13 @@
+import json
+import os
 import sqlite3
+import sys
 from datetime import date, datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
 
-from quantagent.digest import build_digest
+from quantagent.digest import SEPARADOR_MENSAJES, build_digest, build_digest_mensajes, dividir_seccion
 from quantagent.database import Base
 from quantagent.digest_datos import consultar_datos_cartera, consultar_datos_paper, consultar_valuacion_actual
 from quantagent import settings
@@ -38,16 +41,23 @@ def test_digest_cartera_valuacion_ejecuciones_y_pendientes(count):
     if count == 1:
         assert "SPY buy 2 @ 475; comisión 1" in text
         assert "QQQ sell: partially_filled, 2/5 ejecutadas" in text
-    assert len(text) < 4000
-    assert ("[Resumen truncado]" in text) == (count == 200)
+    messages = build_digest_mensajes(date(2026, 10, 25), [], [], [], valuation=snapshot,
+                                     executions=executions, pending=pending)
+    assert all(len(message) <= 3900 for message in messages)
+    assert len(messages[0].splitlines()) <= 10
+    assert "[Resumen truncado]" not in text and "... y " not in text
+    assert text.count("SPY buy 2 @ 475; comisión 1") == count
+    assert text.count("QQQ sell: partially_filled, 2/5 ejecutadas") == count
 
 
 def test_digest_sin_datos_nuevos_conserva_formato():
     text = build_digest(date(2026, 10, 25), [], [], [])
-    assert text == ("Resumen de paper trading — 2026-10-25\n\n## Alertas y avisos\n- Ninguno\n\n"
-                    "## Señal del scheduler\n- ALERT: sin ciclo completado en más de un día hábil\n"
-                    "- Sin heartbeat\n\n## Actividad y P&L (0 operaciones)\nP&L realizado diario: 0.00\n"
-                    "P&L realizado acumulado: 0.00\nSin actividad de trading")
+    summary = text.split(SEPARADOR_MENSAJES)[0]
+    assert len(summary.splitlines()) == 8
+    assert "Equity: no disponible" in summary and "Caja: no disponible" in summary
+    assert "Desvíos de reconciliación: 0" in summary
+    assert "Sin actividad de trading" in text and "Sin heartbeat" in text
+
 
 
 @pytest.mark.parametrize("failure", [None, "account", "positions", "missing"])
@@ -288,7 +298,7 @@ def test_digest_warns_after_stale_unsuccessful_heartbeat():
     assert "ALERT" in text
 
 
-def test_digest_reports_no_activity_and_truncates_by_section():
+def test_digest_reports_no_activity():
     text = build_digest(date.today(), [], [], [])
     assert "Sin actividad de trading" in text and "Sin heartbeat" in text and "ALERT" in text
 
@@ -298,13 +308,18 @@ def test_digest_keeps_warning_and_heartbeat_with_many_trades():
     text = build_digest(date.today(), [], trades,
                         [{"timestamp": datetime.now(), "status": "completed"}], ["API warning"])
     assert "API warning" in text and "Señal del scheduler" in text
-    assert "ALERT" not in text and "[Resumen truncado]" in text and len(text) < 4000
+    assert "ALERT" not in text and "[Resumen truncado]" not in text
+    for trade in trades:
+        assert f"{trade['symbol']} sell 1: P&L 1" in text
 
 
-def test_digest_limits_oversized_warnings_and_reports_omitted_count():
-    text = build_digest(date.today(), [], [], [], ["x" * 5000, "second warning"])
-    assert len(text) < 4000
-    assert "... y 1 más" in text
+def test_digest_preserves_oversized_warnings():
+    warnings = ["x" * 5000, "second warning"]
+    messages = build_digest_mensajes(date.today(), [], [], [], warnings)
+    assert all(len(message) <= 3900 for message in messages)
+    assert "x" * 5000 in "".join(messages)
+    assert "second warning" in "".join(messages)
+    assert "... y " not in "".join(messages)
 
 
 def test_digest_alerts_when_heartbeat_is_missing():
@@ -492,3 +507,86 @@ def test_trading_digest_reads_alpaca_dividends_and_reports_api_error(tmp_path):
         assert result.exit_code == 1 and "Dividendos: error al consultar Alpaca (RuntimeError)." in result.output
     finally:
         StrategyAssembler.BROKER_CONSTRUCTORS["alpaca_paper"] = previous
+
+
+
+def test_digest_completo_con_20_posiciones_16_ejecuciones_y_pendientes():
+    positions = [{"symbol": f"POS{i:02}", "quantity": i + 1, "price": 100,
+                  "value": 100 * (i + 1), "unrealized_pnl": i} for i in range(20)]
+    executions = [{"symbol": f"EXEC{i:02}", "side": "buy", "quantity": i + 1, "price": 100,
+                   "commission": 1, "filled_at": datetime(2026, 10, 25, 12)} for i in range(16)]
+    pending = [{"symbol": f"PEND{i:02}", "side": "sell", "status": "pending",
+                "quantity": i + 1, "filled_quantity": 0} for i in range(30)]
+    trades = [{"symbol": f"TRADE{i:02}", "side": "sell", "quantity": 1, "pnl": i} for i in range(16)]
+    reconciliations = [f"REC{i:02}: peso paper difiere de sombra" for i in range(150)]
+    valuation = {"equity": 50000, "cash": 29000, "consulted_at": datetime(2026, 10, 25),
+                 "notice": "Foto actual", "portfolios": [{"name": "alpha", "positions": positions}]}
+    messages = build_digest_mensajes(date(2026, 10, 25), [], trades, [], ["API warning"],
+                                     reconciliations, 200, valuation=valuation,
+                                     executions=executions, pending=pending)
+    assert all(len(message) <= 3900 for message in messages)
+    assert len(messages[0].splitlines()) <= 10
+    assert "Equity: 50000.00 USD" in messages[0] and "Caja: 29000.00 USD" in messages[0]
+    assert "P&L del día realizado: 120.00 USD" in messages[0]
+    assert "Desvíos de reconciliación: 150" in messages[0] and "Órdenes pendientes: 30" in messages[0]
+    text = SEPARADOR_MENSAJES.join(messages)
+    assert "[Resumen truncado]" not in text and "... y " not in text
+    for items in (positions, executions, pending, trades):
+        for item in items:
+            assert any(item["symbol"] in message for message in messages[1:])
+    for line in reconciliations:
+        assert line in text
+    assert len([message for message in messages if "REC" in message]) > 1
+    assert build_digest(date(2026, 10, 25), [], trades, [], ["API warning"], reconciliations,
+                        200, valuation=valuation, executions=executions, pending=pending) == text
+
+
+def test_secciones_se_parten_por_lineas_sin_perder_contenido():
+    section = "## Detalle\n" + "".join(f"registro {i}: " + "x" * 200 + "\n" for i in range(40))
+    messages = dividir_seccion(section)
+    assert len(messages) > 1 and all(len(message) <= 3900 for message in messages)
+    assert "".join(messages) == section
+    assert all(message.endswith("\n") for message in messages)
+
+
+@pytest.mark.parametrize("bucket", [None, "m5"])
+@pytest.mark.parametrize("via_path", [False, True])
+def test_cli_envia_mensajes_telegram_en_orden(tmp_path, monkeypatch, bucket, via_path):
+    db_path = tmp_path / "paper.db"
+    engine = create_engine(f"sqlite:///{db_path}")
+    Base.metadata.create_all(engine)
+    args = ["trading", "digest", "--date", "2026-10-25", "--db", str(db_path)]
+    args += ["--bucket", bucket] if bucket else ["--sin-dividendos"]
+    baseline = CliRunner().invoke(cli, args)
+    assert baseline.exit_code == 0, baseline.output
+    expected = baseline.stdout.rstrip("\n").split(SEPARADOR_MENSAJES)
+    log = tmp_path / "messages.jsonl"
+    hermes = tmp_path / "hermes"
+    hermes.write_text(f"#!{sys.executable}\n" +
+                      "import json, os, sys\n"
+                      "with open(os.environ['DIGEST_TEST_LOG'], 'a') as log:\n"
+                      "    log.write(json.dumps([sys.argv[1:], sys.stdin.read()]) + '\\n')\n"
+                      "if os.environ.get('DIGEST_TEST_FAIL'):\n"
+                      "    print('fallo de prueba', file=sys.stderr)\n"
+                      "    sys.exit(7)\n")
+    hermes.chmod(0o755)
+    monkeypatch.setenv("DIGEST_TEST_LOG", str(log))
+    if via_path:
+        monkeypatch.delenv("HERMES_BIN", raising=False)
+        monkeypatch.setenv("PATH", str(tmp_path) + os.pathsep + os.environ["PATH"])
+    else:
+        monkeypatch.setenv("HERMES_BIN", str(hermes))
+    result = CliRunner().invoke(cli, [*args, "--enviar-telegram", "Paper prueba"])
+    assert result.exit_code == 0, result.output
+    received = [json.loads(line) for line in log.read_text().splitlines()]
+    assert [item[0] for item in received] == [["send", "-t", "telegram", "-s", "Paper prueba"]] * len(expected)
+    assert [item[1] for item in received] == expected
+    assert all(len(item[1]) <= 3900 for item in received)
+    assert result.stdout == ""
+
+    log.unlink()
+    monkeypatch.setenv("DIGEST_TEST_FAIL", "1")
+    result = CliRunner().invoke(cli, [*args, "--enviar-telegram", "Paper prueba"])
+    assert result.exit_code != 0 and "falló el envío del mensaje 1" in result.stderr
+    assert "fallo de prueba" in result.stderr and result.stdout == ""
+    assert len(log.read_text().splitlines()) == 1

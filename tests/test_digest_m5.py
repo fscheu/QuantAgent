@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from quantagent.cli.__main__ import cli
 from quantagent.database import Base
-from quantagent.digest_m5 import build_digest_m5, consultar_datos_m5
+from quantagent.digest_m5 import build_digest_m5, build_digest_m5_mensajes, consultar_datos_m5
 from quantagent.models import Environment, Order, OrderSide, OrderStatus, OrderType, Position, SchedulerHeartbeat, TradeIntentRecord
 
 
@@ -95,3 +95,26 @@ def test_digest_m5_alerta_error_y_completed_conserva_texto(tmp_path):
         assert "ALERTA: el ciclo diario M5 falló: RuntimeError: falló" in build_digest_m5(day, data)
         data["ciclo"].append({"modo": "diario", "status": "completed", "error_message": None})
         assert not build_digest_m5(day, data).startswith("ALERTA:")
+
+
+def test_digest_m5_secciones_completas_y_resumen_corto():
+    datos = {
+        "aprobados": [{"symbol": f"APP{i:02}", "qty": i + 1, "entry": 100, "stop": 90} for i in range(16)],
+        "rechazados": [{"symbol": f"REJ{i:02}", "reject_reason": "riesgo " + "x" * 200} for i in range(40)],
+        "posiciones": [{"symbol": f"POS{i:02}", "quantity": i + 1, "avg_entry": 100,
+                        "unrealized_pnl": i, "stop": 90} for i in range(20)],
+        "semanal": ["Candidatos de la semana", *[f"CAND{i:02}: " + "y" * 200 for i in range(40)]],
+    }
+    messages = build_digest_m5_mensajes(date(2026, 10, 29), datos)
+    assert len(messages[0].splitlines()) <= 10
+    assert all(len(message) <= 3900 for message in messages)
+    assert "Equity: 3190.00 USD" in messages[0] and "Intents aprobados: 16; rechazados: 40" in messages[0]
+    text = build_digest_m5(date(2026, 10, 29), datos)
+    assert "[Resumen truncado]" not in text and "... y " not in text
+    for section in ("aprobados", "rechazados", "posiciones"):
+        for item in datos[section]:
+            assert any(item["symbol"] in message for message in messages[1:])
+    for line in datos["semanal"]:
+        assert line in text
+    assert len([message for message in messages if "REJ" in message]) > 1
+    assert len([message for message in messages if "CAND" in message]) > 1
