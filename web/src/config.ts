@@ -67,23 +67,63 @@ export const dataConfig = {
 export const screenConfig = { showComingSoon: true } as const;
 
 export const funnelConfig = {
-  /** Orden canónico de etapas. Nombres de 0–3 PROVISORIOS. */
   stages: [
-    { id: 'e0', label: 'Etapa 0' },
-    { id: 'e1', label: 'Etapa 1' },
-    { id: 'e2', label: 'Etapa 2' },
-    { id: 'e3', label: 'Etapa 3' },
-    { id: 'reserve', label: 'Reserva' },
-    { id: 'shadow', label: 'Sombra' },
+    { id: 'e0', code: 'E0', label: 'Admisión' },
+    { id: 'e1', code: 'E1', label: 'Filtro' },
+    { id: 'e2', code: 'E2', label: 'Validación en el motor' },
+    { id: 'e3', code: 'E3', label: 'Holdout' },
+  ],
+  laterPhases: [
+    { id: 'shadow', label: 'Sombra local' },
     { id: 'paper', label: 'Paper' },
     { id: 'candidate', label: 'Candidata' },
-    { id: 'production', label: 'Producción' },
   ],
-  /** Ciclo por defecto al abrir Embudo: 'all' | 'latest'. PROVISORIO */
-  defaultCycle: 'all' as 'all' | 'latest',
-  /** Período por defecto (días). */
   defaultPeriodDays: 90,
+  defaultCycle: 'all' as 'all' | 'latest',
+  defaultPeriod: 'all' as '30d' | '90d' | 'all',
+  minForChart: 2,
+  cardsUpTo: 30,
+  phoneInitialCards: 8,
+  previousCyclesShown: 3,
 } as const;
+
+export const cycleConfig = {
+  maxHypotheses: 5,
+  milestones: { proposal: 1, funnelStart: 8, paperReview: 25 },
+  reviewAfterCycles: 6,
+  reviewFeedEvent: true,
+  cli: { open: 'quantagent registro ciclo abrir {ciclo} {hipótesis…}', close: 'quantagent registro ciclo cerrar {ciclo}', report: 'quantagent registro ciclo informe {ciclo}', streak: 'quantagent registro corte' },
+  idPattern: /^\d{4}-(0[1-9]|1[0-2])$/,
+} as const;
+
+export const marketConfig = {
+  staleAfterCloseMinutes: 180,
+  regime: { maDays: 200, volDays: 20, volMedianDays: 252, stripMonths: 12 },
+  enabledTop: 3,
+  sectorSymbols: ['XLB', 'XLC', 'XLE', 'XLF', 'XLI', 'XLK', 'XLP', 'XLRE', 'XLU', 'XLV', 'XLY'],
+  m5Universe: ['XLB', 'XLC', 'XLE', 'XLF', 'XLI', 'XLK', 'XLP', 'XLRE', 'XLU', 'XLV', 'XLY', 'SPY', 'EEM', 'EWZ'],
+  universe: { us_equity: ['SPY', 'QQQ', 'IWM'], sector: ['XLB', 'XLE', 'XLF', 'XLI', 'XLK', 'XLP', 'XLU', 'XLV', 'XLY'], international: ['EFA', 'EEM', 'EWJ', 'EWZ', 'FXI'], bonds: ['SHY', 'IEF', 'TLT', 'TIP', 'AGG', 'LQD'], commodities: ['GLD', 'SLV', 'DBC', 'USO'], currency: ['FXE'], real_estate: ['VNQ'] },
+  macroStale: { graceBusinessDays: 2, fallbackFrequencyMultiplier: 1.5 },
+  referenceSymbols: ['SPY', 'EEM', 'EWZ'],
+  heatThresholds: { d1: [0.25, 0.75, 1.5], w1: [0.5, 1.5, 3], m1: [1, 3, 6], m3: [2, 5, 10], ytd: [3, 8, 15] },
+  minSessions: { d1: 2, w1: 6, m1: 21, m3: 63, ytd: 0 },
+  macroRanges: ['1y', '5y', 'all'] as const,
+  defaultMacroRange: { phone: '5y', desktop: 'all' } as const,
+  macroSeries: [{ code: 'T10Y2Y', active: true }, ...['CPIAUCSL', 'UNRATE', 'PAYEMS', 'INDPRO', 'BAMLH0A0HYM2', 'VIXCLS', 'T5YIE', 'DFII10', 'DTWEXBGS'].map(code => ({ code, active: false }))],
+  maxCompare: 5, defaultCompare: ['SPY'], defaultCompareRange: '1y' as '1m' | '3m' | '1y',
+  candleRanges: ['3m', '6m', '1y'] as const, eventsDays: 14, eventKinds: ['macro', 'fomc', 'holiday', 'early_close'] as const,
+} as const;
+
+export function sectorHeatStep(pct: number, key: keyof typeof marketConfig.heatThresholds): number {
+  const [a, b, c] = marketConfig.heatThresholds[key];
+  if (pct <= -c) return 0;
+  if (pct <= -b) return 1;
+  if (pct < -a) return 2;
+  if (pct <= a) return 3;
+  if (pct < b) return 4;
+  if (pct < c) return 5;
+  return 6;
+}
 
 export const tableConfig = {
   /** Debajo de este ancho, DataTable se muestra como tarjetas. */
@@ -104,5 +144,26 @@ export const homeConfig = {
   /** Severidades del feed, de mayor a menor prioridad. */
   feedSeverityOrder: ['critical', 'warning', 'info', 'neutral'] as const,
 } as const;
+
+export const performanceConfig = {
+  minDaysForReport: 21, dailyDistributionMinDays: 63,
+  defaultDistribution: 'monthly' as 'monthly' | 'daily',
+  minDays: { cagr: 252, calmar: 252, alpha: 252, volatility: 63, sharpe: 63, sortino: 63, beta: 63 },
+  shortSampleUntilDays: 252, minRebalances: 12, maxSubjects: 2,
+  defaultRange: 'all' as 'ytd' | '1y' | '3y' | '5y' | 'all', defaultCompare: 'spy',
+  rollingWindows: [126, 252] as const, monthlyHeatThresholds: [1, 3, 6] as const,
+  heatmapOpenYearsPhone: 3, retrySeconds: 30,
+} as const;
+
+export function monthlyHeatStep(pct: number): number {
+  const [a, b, c] = performanceConfig.monthlyHeatThresholds;
+  if (pct <= -c) return 0;
+  if (pct <= -b) return 1;
+  if (pct < -a) return 2;
+  if (pct <= a) return 3;
+  if (pct < b) return 4;
+  if (pct < c) return 5;
+  return 6;
+}
 
 export const featureFlags = { accountPerformanceTab: true, runPerformance: true } as const

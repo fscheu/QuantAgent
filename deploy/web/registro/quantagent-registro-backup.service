@@ -1,0 +1,8 @@
+# Ejemplo: instalar a mano en /etc/systemd/system/.
+[Unit]
+Description=Backup de la base del registro QuantAgent
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/quantagent/registro-backup.env
+ExecStart=/opt/quantagent/deploy/web/registro/backup_registro.sh

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   QuantAgent Web — tokens de diseño v0.2 (sin cambios desde v0.1)
+   QuantAgent Web — tokens de diseño v0.4 (variables sin cambios desde v0.1; v0.4 suma solo clases utilitarias al final)
    Fuente: canvas "QuantAgent Web — Sistema de diseño" (hojas 01 y 02).
    A partir de este archivo, el código es la fuente de verdad de los tokens.
 
@@ -294,3 +294,15 @@ html {
   background: repeating-linear-gradient(135deg, var(--qa-text-3) 0 1.5px, transparent 1.5px 5px);
   box-shadow: inset 0 0 0 1px var(--qa-text-3);
 }
+
+/* ---- v0.4: utilitarias (usan variables existentes; no hay tokens nuevos) ---- */
+/* Embudo: segmentos de detenidas, distinguibles sin color */
+.qa-seg-error { background: repeating-linear-gradient(90deg, var(--qa-warn) 0 3px, transparent 3px 6px); box-shadow: inset 0 0 0 1.5px var(--qa-warn); }
+.qa-seg-alarm { background: repeating-linear-gradient(0deg, var(--qa-neg) 0 2px, transparent 2px 5px); box-shadow: inset 0 0 0 1.5px var(--qa-neg); }
+/* Fantasma "próximamente" */
+.qa-ghost { border: 1.5px dashed var(--qa-border-strong); background: transparent; border-radius: var(--qa-radius-lg, 14px); }
+/* Régimen: color = tendencia, rayado = volatilidad alta */
+.qa-reg-up-calm { background: var(--qa-chart-1); }
+.qa-reg-up-vol { background: repeating-linear-gradient(135deg, var(--qa-chart-1) 0 3px, var(--qa-surface) 3px 6px); box-shadow: inset 0 0 0 1.5px var(--qa-chart-1); }
+.qa-reg-down-calm { background: var(--qa-chart-2); }
+.qa-reg-down-vol { background: repeating-linear-gradient(135deg, var(--qa-chart-2) 0 3px, var(--qa-surface) 3px 6px); box-shadow: inset 0 0 0 1.5px var(--qa-chart-2); }

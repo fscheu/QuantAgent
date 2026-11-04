@@ -26,7 +26,7 @@ export const homeStatus = { level: 'warning', headline: 'Casi todo bien: 1 adver
 export const feedEvents = [
   { id: 'drawdown-1', type: 'drawdown_limit', severity: 'critical', occurred_at: '2026-10-30T19:20:00Z', account_id: 'paper-m4', title: 'Drawdown sobre el límite en Paper M4', subtitle: '−8,4 % desde el máximo; límite 8 %', link: '/cuenta/paper-m4', group_count: 1 },
   { id: 'reject-1', type: 'order_rejected', severity: 'warning', occurred_at: '2026-10-30T18:00:00Z', account_id: 'paper-m4', title: '2 órdenes rechazadas en Paper M4', subtitle: 'Poder de compra insuficiente', link: '/cuenta/paper-m4?tab=ordenes', group_count: 2 },
-  { id: 'cycle-1', type: 'cycle_completed', severity: 'info', occurred_at: '2026-10-30T17:00:00Z', account_id: null, title: 'Terminó el ciclo 12 del embudo', subtitle: '24 entraron, 3 siguen, 21 cayeron', link: '/embudo?cycle=12', group_count: 1 },
+  { id: 'cycle-1', type: 'cycle_closed', severity: 'info', occurred_at: '2026-10-30T17:00:00Z', account_id: null, title: 'Terminó el ciclo 12 del embudo', subtitle: '24 entraron, 3 siguen, 21 cayeron', link: '/embudo?cycle=12', group_count: 1 },
   { id: 'filled-1', type: 'order_filled', severity: 'neutral', occurred_at: '2026-10-30T16:00:00Z', account_id: 'paper-m3', title: '1 compra ejecutada', subtitle: 'MSFT 25 a 431,55', link: '/cuenta/paper-m3?tab=ordenes', group_count: 1 },
 ] satisfies FeedEvent[]
 export const calendarEvents = [
