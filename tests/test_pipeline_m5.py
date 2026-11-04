@@ -330,6 +330,49 @@ def test_pipeline_stop_rechazado_cancela_entrada_y_persiste_intent(db_session, m
     assert db_session.query(TradeIntentRecord).count() == len(intents)
 
 
+def test_pipeline_usa_oto_y_persiste_ambas_ordenes_locales(db_session, mercado, tmp_path):
+    as_of, data = mercado
+    path = tmp_path / "regimen.csv"
+    correr_semanal(as_of, data_provider=data, regimen_path=path, narrador=None)
+
+    class BrokerOTO(BrokerMemoria):
+        def submit_oto(self, entrada, proteccion):
+            self.orders.extend((entrada, proteccion))
+            entrada.status = proteccion.status = OrderStatus.REJECTED
+            entrada.comment = proteccion.comment = "oto_no_soporta_fracciones"
+            return entrada, proteccion
+
+    broker = BrokerOTO()
+    intents = correr_diario(as_of, data_provider=data, db=db_session, broker=broker,
+                            regimen_path=path, estrategias=(("test", SiempreSenala()),), narrador=None)
+
+    assert len(broker.orders) == 2 * len(intents)
+    assert all({order.side for order in broker.orders[i:i + 2]} == {OrderSide.BUY, OrderSide.SELL}
+               for i in range(0, len(broker.orders), 2))
+    assert all((record.status, record.reject_reason) ==
+               ("rechazado_riesgo", "oto_no_soporta_fracciones") for record in intents)
+    assert all(db_session.get(Order, record.order_id) is not None for record in intents)
+
+
+def test_pipeline_persists_intent_when_oto_submit_raises(db_session, mercado, tmp_path):
+    as_of, data = mercado
+    path = tmp_path / "regimen.csv"
+    correr_semanal(as_of, data_provider=data, regimen_path=path, narrador=None)
+
+    class BrokerOTOFalla(BrokerMemoria):
+        def submit_oto(self, entrada, proteccion):
+            self.orders.extend((entrada, proteccion))
+            raise RuntimeError("submit unavailable")
+
+    broker = BrokerOTOFalla()
+    intents = correr_diario(as_of, data_provider=data, db=db_session, broker=broker,
+                            regimen_path=path, estrategias=(("test", SiempreSenala()),), narrador=None)
+
+    assert intents and all((record.status, record.reject_reason) ==
+                           ("rechazado_riesgo", "entrada_rechazada") for record in intents)
+    assert all(db_session.get(Order, record.order_id).status == OrderStatus.REJECTED for record in intents)
+
+
 def test_pipeline_entrada_rechazada_por_gatillo_superado_persiste_y_sigue(db_session, mercado, tmp_path):
     as_of, data = mercado
     path = tmp_path / "regimen.csv"

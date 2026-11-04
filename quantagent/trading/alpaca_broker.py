@@ -57,6 +57,48 @@ class AlpacaBroker(Broker):
         order.alpaca_order_id = str(result.id) if getattr(result, "id", None) else None
         return self._update_order(order, result)
 
+    def submit_oto(self, entrada: Order, proteccion: Order) -> tuple[Order, Order]:
+        if entrada.quantity != entrada.quantity.to_integral_value():
+            for order in (entrada, proteccion):
+                order.status = OrderStatus.REJECTED
+                order.comment = "oto_no_soporta_fracciones"
+            return entrada, proteccion
+        if entrada.order_type != OrderType.STOP or entrada.stop_price is None:
+            raise ValueError("OTO entry requires a stop order with stop_price")
+        if proteccion.stop_price is None:
+            raise ValueError("OTO protection requires stop_price")
+
+        entrada.stop_price = quantize_order_price(entrada.stop_price)
+        proteccion.stop_price = quantize_order_price(proteccion.stop_price)
+        tif = "gtc"
+        fields = dict(symbol=entrada.symbol, qty=str(entrada.quantity), side=entrada.side.value,
+                      time_in_force=tif, stop_price=str(entrada.stop_price))
+        try:
+            from alpaca.trading.enums import OrderClass
+            from alpaca.trading.requests import StopLossRequest, StopOrderRequest
+            request = StopOrderRequest(**fields, order_class=OrderClass.OTO,
+                                       stop_loss=StopLossRequest(stop_price=float(proteccion.stop_price)))
+        except ImportError:
+            request = SimpleNamespace(**fields, type="stop", order_class="oto",
+                                      stop_loss=SimpleNamespace(stop_price=float(proteccion.stop_price)))
+        try:
+            result = self.client.submit_order(order_data=request)
+        except Exception as exc:
+            if getattr(exc, "code", None) == 40310000:
+                entrada.status, entrada.comment = OrderStatus.REJECTED, str(exc)
+                proteccion.status, proteccion.comment = OrderStatus.REJECTED, str(exc)
+                return entrada, proteccion
+            raise
+
+        entrada.alpaca_order_id = str(result.id) if getattr(result, "id", None) else None
+        self._update_order(entrada, result)
+        legs = getattr(result, "legs", None) or []
+        if legs:
+            leg = legs[0]
+            proteccion.alpaca_order_id = str(leg.id) if getattr(leg, "id", None) else None
+            self._update_order(proteccion, leg)
+        return entrada, proteccion
+
     def replace_stop(self, alpaca_order_id: str, new_stop_price) -> Order:
         fields = dict(stop_price=quantize_order_price(new_stop_price))
         try:

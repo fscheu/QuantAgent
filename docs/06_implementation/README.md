@@ -34,6 +34,8 @@ Implementation documents should include:
 
 ## Active Per-Change Implementation
 
+- [QuantAgent-oto-IM-01.md](./QuantAgent-oto-IM-01.md) - Entrada M5 buy-stop y stop de protección enviados como una orden OTO de Alpaca.
+
 - [QuantAgent-gatillo-superado-IM-01.md](./QuantAgent-gatillo-superado-IM-01.md) - Rechaza y persiste entradas M5 cuyo gatillo ya superó el precio actual sin abortar el ciclo.
 
 - [QuantAgent-fnpr.6.6.5-IM-digest-acciones.md](./QuantAgent-fnpr.6.6.5-IM-digest-acciones.md) - Digest M5 con candidatos, descartes y comparación semanal H1/H3/1/N.
