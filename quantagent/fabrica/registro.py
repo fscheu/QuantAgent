@@ -107,8 +107,10 @@ def importar_csv(dry_run=False, datos=None):
                     attempt = None
                     if event == "intento":
                         params = data["params"]
-                        if isinstance(params, str): params = json.loads(params)
-                        if not isinstance(params, dict): raise ValueError
+                        if isinstance(params, str):
+                            params = json.loads(params)
+                        if not isinstance(params, dict):
+                            raise ValueError
                         attempt = HypothesisAttempt(ts=ts, hypothesis_id=hid,
                             snapshot=data["snapshot"], strategy=data["estrategia"], asset=data["activo"],
                             params=params, sharpe=_decimal(data.get("sharpe")),

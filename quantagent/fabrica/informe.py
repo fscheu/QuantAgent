@@ -89,7 +89,6 @@ def datos_informe(hipotesis_id):
                      if fila.get("hipotesis") == hipotesis_id and fila.get("evento") == "etapa"}
     if not por_etapa:
         raise ValueError(f"Hipótesis desconocida: {hipotesis_id}")
-    from quantagent.fabrica.registro_db import intentos as leer_intentos
     todas = leer_intentos(valida_solo=False)
     intentos = [fila for fila in todas if fila.get("hipotesis") == hipotesis_id]
     ultima = max(por_etapa)
