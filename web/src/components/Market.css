@@ -1,0 +1,24 @@
+.qa-market-as-of { display: grid; gap: var(--qa-space-2); }
+.qa-market-as-of > p { margin: 0; color: var(--qa-text-2); font: var(--qa-text-small); }
+.qa-market-as-of.is-stale > p,.qa-regime-card.is-stale .qa-regime-facts { color: var(--qa-text-2); }
+.qa-regime-card { display: grid; gap: var(--qa-space-3); }
+.qa-regime-card h2 { margin: 0; font: var(--qa-heading-sm); }
+.qa-market-empty { margin: 0; padding: var(--qa-space-3); color: var(--qa-text-2); border: 1px dashed var(--qa-border-strong); border-radius: var(--qa-radius-md); }
+.qa-regime-summary { display: flex; align-items: center; gap: var(--qa-space-3); }
+.qa-regime-summary > div { display: grid; gap: var(--qa-space-1); }
+.qa-regime-summary strong { font: var(--qa-heading-md); }
+.qa-regime-summary p { margin: 0; color: var(--qa-text-2); font: var(--qa-text-small); }
+.qa-regime-swatch { display: inline-grid; flex: 0 0 auto; place-items: center; min-width: 26px; height: 22px; color: var(--qa-text); font: var(--qa-text-small); }
+.qa-regime-summary > .qa-regime-swatch { width: 52px; height: 52px; border-radius: var(--qa-radius-md); }
+.qa-regime-missing { border: 1px dashed var(--qa-border-strong); border-radius: var(--qa-radius-sm); background: transparent; }
+.qa-regime-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--qa-space-2); }
+.qa-regime-facts > div { display: grid; gap: var(--qa-space-1); padding: var(--qa-space-3); border-radius: var(--qa-radius-md); background: var(--qa-surface-sunken); }
+.qa-regime-facts strong { font: var(--qa-text-small); }
+.qa-regime-facts span { font: var(--qa-text-small); }
+.qa-regime-segments { display: flex; min-height: 30px; gap: 2px; }
+.qa-regime-segments > * { flex: 1 1 0; min-width: 0; height: 30px; border-radius: 2px; }
+.qa-regime-legend { display: flex; flex-wrap: wrap; gap: var(--qa-space-2) var(--qa-space-3); color: var(--qa-text-2); font: var(--qa-text-small); }
+.qa-regime-legend > span { display: inline-flex; align-items: center; gap: var(--qa-space-1); }
+.qa-regime-table { display: grid; gap: var(--qa-space-1); color: var(--qa-text-2); font: var(--qa-text-small); }
+.qa-regime-table > div { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: var(--qa-space-2); }
+@media (max-width: 639px) { .qa-regime-facts { grid-template-columns: 1fr; } .qa-regime-table > div { grid-template-columns: 1fr; gap: 0; padding: var(--qa-space-1) 0; } }
