@@ -5,6 +5,9 @@ import { Inicio } from './screens/Inicio'
 import { Backtests } from './screens/Backtests'
 import { Performance } from './screens/Performance'
 import { AppNav } from './components/AppNav'
+import { Embudo } from './screens/Embudo'
+import { Mercado } from './screens/Mercado'
+import { Hipotesis } from './screens/Hipotesis'
 
 function routePath() {
   return `${window.location.pathname}${window.location.search}`
@@ -27,6 +30,14 @@ export function App() {
   if (runPerf) screen = <Performance id={runPerf[1]} type="run" navigate={navigate} />
   const accountPerf = path.match(/^\/cuenta\/([^/?]+)\/rendimiento/)
   if (accountPerf) screen = <Performance id={accountPerf[1]} type="portfolio" navigate={navigate} />
+  const cycle = path.match(/^\/embudo\/ciclo\/([^/?]+)/)
+  if (!screen && cycle) screen = <Embudo ciclo={cycle[1]} navigate={navigate} />
+  const hypothesis = path.match(/^\/hipotesis\/([^/?]+)/)
+  if (!screen && hypothesis) screen = <Hipotesis id={hypothesis[1]} navigate={navigate} />
+  const etf = path.match(/^\/mercado\/etf\/([^/?]+)/)
+  if (!screen && etf) screen = <Mercado symbol={etf[1]} navigate={navigate} />
+  if (!screen && path.split('?')[0] === '/embudo') screen = <Embudo navigate={navigate} />
+  if (!screen && path.split('?')[0] === '/mercado') screen = <Mercado navigate={navigate} />
   if (!screen && path.startsWith('/backtests')) screen = <Backtests navigate={navigate} />
   const match = path.match(/^\/cuenta(?:\/([^/?]+))?/)
   if (!screen && match) screen = match[1] ? <Cuenta accountId={match[1]} navigate={navigate} /> : <FirstAccount navigate={navigate} />

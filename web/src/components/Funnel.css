@@ -1,0 +1,38 @@
+.qa-stage-verdict { display: inline-flex; align-items: center; gap: var(--qa-space-2); border: 1px solid var(--qa-border); border-radius: 999px; padding: 3px 9px; font-weight: 650; font-size: var(--qa-text-sm); }
+.qa-stage-verdict-sm { padding: 2px 7px; font-size: var(--qa-text-xs); }
+.qa-stage-verdict .qa-seg-error, .qa-stage-verdict .qa-seg-alarm { background-clip: padding-box; }
+.qa-stage-verdict.qa-seg-passed { color: var(--qa-accent); background: var(--qa-accent-soft); }
+.qa-stage-verdict.qa-seg-cut { color: var(--qa-text-secondary); background: var(--qa-surface-sunken); }
+.qa-stage-verdict.qa-seg-error { color: var(--qa-warn); border-style: dotted; border-color: var(--qa-warn); background: var(--qa-surface); }
+.qa-stage-verdict.qa-seg-alarm { color: var(--qa-neg); border-color: var(--qa-neg); background: var(--qa-neg-soft); }
+.qa-stage-promoted { border-left: 1px solid currentColor; padding-left: 6px; font-size: .75em; }
+.qa-review-counter { border: 1px solid var(--qa-border); border-radius: var(--qa-radius-md); padding: var(--qa-space-4); }
+.qa-review-counter-reached { border: 2px solid var(--qa-warn); }
+.qa-review-cycle-track { display: flex; gap: 4px; margin-top: var(--qa-space-3); }
+.qa-review-cycle-track span { display: grid; width: 40px; height: 40px; place-items: center; background: var(--qa-surface-sunken); border: 1px solid var(--qa-border); }
+.qa-review-cycle-track .qa-review-promoted { color: var(--qa-accent); background: var(--qa-accent-soft); }
+.qa-review-counter p { color: var(--qa-text-secondary); }
+.qa-cycle-milestones { display: grid; gap: var(--qa-space-3); margin: 0; padding: 0; list-style: none; }
+.qa-cycle-milestones li { display: flex; align-items: center; gap: var(--qa-space-3); }
+.qa-cycle-milestones li > span:nth-child(2) { display: grid; flex: 1; }
+.qa-cycle-milestones small { color: var(--qa-text-secondary); }
+.qa-milestone-dot { color: var(--qa-warn); }
+.qa-cycle-milestones .is-done .qa-milestone-dot { color: var(--qa-accent); }
+.qa-cycle-milestones .is-overdue .qa-milestone-dot { font-weight: 700; }
+.qa-milestone-state { color: var(--qa-text-secondary); font-size: var(--qa-text-sm); }
+.qa-funnel-chart, .qa-drop-reasons { display: grid; gap: var(--qa-space-4); }
+.qa-funnel-row-heading { display: flex; justify-content: space-between; gap: var(--qa-space-3); }
+.qa-funnel-row-heading span, .qa-funnel-row small { color: var(--qa-text-secondary); }
+.qa-funnel-bar { display: flex; min-height: 28px; margin-top: var(--qa-space-2); overflow: hidden; border-radius: var(--qa-radius-sm); background: var(--qa-surface-sunken); }
+.qa-funnel-segment { display: grid; min-width: 0; place-items: center; overflow: hidden; font-size: var(--qa-text-xs); white-space: nowrap; }
+.qa-funnel-segment.qa-seg-passed { color: var(--qa-text); background: var(--qa-chart-1); }
+.qa-funnel-segment.qa-seg-cut { color: var(--qa-text-secondary); background: var(--qa-surface-sunken); background-image: repeating-linear-gradient(135deg, transparent 0 4px, var(--qa-border) 4px 6px); }
+.qa-funnel-segment.qa-seg-error { color: var(--qa-warn); background: repeating-linear-gradient(90deg, var(--qa-surface) 0 4px, var(--qa-warn) 4px 5px); }
+.qa-funnel-segment.qa-seg-alarm { color: var(--qa-neg); background: repeating-linear-gradient(0deg, var(--qa-neg-soft) 0 4px, var(--qa-neg) 4px 5px); }
+.qa-funnel-not-reached, .qa-funnel-empty, .qa-drop-empty { color: var(--qa-text-secondary); border: 1px dashed var(--qa-border); padding: var(--qa-space-3); }
+.qa-funnel-later { display: flex; gap: var(--qa-space-4); opacity: .62; }
+.qa-drop-reasons { list-style: none; padding: 0; }
+.qa-drop-reasons li { display: grid; grid-template-columns: 1fr auto; gap: var(--qa-space-2); padding: var(--qa-space-3); border-bottom: 1px solid var(--qa-border); }
+.qa-drop-reasons li > div { display: flex; justify-content: space-between; gap: var(--qa-space-3); }
+.qa-drop-reasons li > div span { color: var(--qa-text-secondary); }
+.qa-drop-reasons code { grid-column: 1 / -1; font-family: var(--qa-font-mono); color: var(--qa-text-secondary); }
