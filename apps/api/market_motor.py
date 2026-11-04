@@ -1,13 +1,13 @@
 """Lectura del estado semanal M5 y retornos de los ETFs de mercado."""
 
 import os
-from datetime import date, timedelta
 from pathlib import Path
 
 import pandas as pd
 
 from quantagent.fabrica.screener import ETF_SECTOR
 from quantagent.models import MarketBar
+from apps.api.market_etfs import retornos_simbolo
 
 SECTORS = ETF_SECTOR
 REFERENCES = {"SPY": "S&P 500", "EEM": "Emerging Markets", "EWZ": "Brazil"}
@@ -43,21 +43,6 @@ def estado_motor(carpeta=None):
             "state_description": None}
 
 
-def _returns(session, symbol, as_of):
-    start = as_of - timedelta(days=400)
-    bars = session.query(MarketBar.session_date, MarketBar.close).filter(
-        MarketBar.symbol == symbol, MarketBar.session_date >= start,
-        MarketBar.session_date <= as_of).order_by(MarketBar.session_date).all()
-    closes = pd.Series([float(b.close) for b in bars], index=[b.session_date for b in bars])
-    result = {}
-    for key, sessions in (("d1", 1), ("w1", 5), ("m1", 21), ("m3", 63), ("ytd", None)):
-        subset = closes[closes.index >= date(as_of.year, 1, 1)] if key == "ytd" else closes
-        n = len(subset) - 1 if sessions is None else sessions
-        result[key] = (float(subset.iloc[-1] / subset.iloc[-n - 1] - 1)
-                       if n > 0 and len(subset) > n and subset.iloc[-n - 1] else None)
-    return result
-
-
 def filas_sector(session, carpeta=None, held_in=None):
     row = _regimen(carpeta)
     enabled = set(str(row.habilitados).split(",")) if row is not None else set()
@@ -67,17 +52,13 @@ def filas_sector(session, carpeta=None, held_in=None):
         (s for s in SECTORS if s in enabled), key=lambda s: scores[s], reverse=True))}
     held_in = held_in or {}
     result = []
-    latest = (session.query(MarketBar.session_date).filter(
-        MarketBar.symbol.in_(UNIVERSE)).order_by(MarketBar.session_date.desc()).first()
-        if session is not None else None)
-    as_of = row.fecha.date() if row is not None else (latest[0] if latest else None)
     for symbol in UNIVERSE:
         sector = symbol in SECTORS
         score = scores.get(symbol) if row is not None else None
         is_blocked = (symbol in blocked or (sector and symbol not in enabled)) if row is not None else False
         result.append({"symbol": symbol, "name": SECTORS.get(symbol, REFERENCES.get(symbol)),
             "is_reference": not sector, "held_in": held_in.get(symbol, []),
-            "returns": _returns(session, symbol, as_of) if as_of is not None else
+            "returns": retornos_simbolo(session, symbol)[0] if session is not None else
                        {k: None for k in ("d1", "w1", "m1", "m3", "ytd")},
             "momentum_score": score, "rank": ranked.get(symbol), "enabled": symbol in enabled,
             "blocked": is_blocked, "blocked_reason": ("filtro de caída" if symbol in blocked else
