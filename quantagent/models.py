@@ -345,6 +345,21 @@ class MarketData(Base):
     )
 
 
+class MarketBar(Base):
+    """Daily bars share metadata so migrate-paper-db creates them in maestro.db."""
+
+    __tablename__ = "market_bars"
+
+    symbol = Column(String(20), primary_key=True)
+    session_date = Column(Date, primary_key=True)
+    open = Column(Numeric(precision=18, scale=8), nullable=False)
+    high = Column(Numeric(precision=18, scale=8), nullable=False)
+    low = Column(Numeric(precision=18, scale=8), nullable=False)
+    close = Column(Numeric(precision=18, scale=8), nullable=False)
+    volume = Column(Numeric(precision=20, scale=8), nullable=False)
+    source = Column(String(20), nullable=False)
+
+
 class StrategyConfig(Base):
     """StrategyConfig model for persisting portfolio and risk management profiles."""
 
