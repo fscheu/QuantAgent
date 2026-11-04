@@ -16,11 +16,9 @@ def raiz(db_temporal):
 
 
 def _keys(interface):
-    if interface in {"CycleSummary", "Hypothesis"}:
-        return {"CycleSummary": {"cycle", "started_at", "ended_at", "entered", "active", "dropped",
-                                 "reached_by_stage", "headline"},
-                "Hypothesis": {"id", "name", "idea", "cycle", "stage", "status", "last_metric",
-                               "discard_reason", "discard_detail", "updated_at"}}[interface]
+    if interface == "Hypothesis":
+        return {"id", "name", "idea", "cycle", "stage", "status", "last_metric",
+                "discard_reason", "discard_detail", "updated_at"}
     source = Path("docs/03_design/web-design-system/api-types.ts").read_text()
     body = re.search(rf"interface {interface} \{{(.*?)\n\}}", source, re.S).group(1)
     return set(re.findall(r"^\s*(\w+):", body, re.M))
@@ -58,11 +56,51 @@ def test_ciclos_abierto_cerrado_claves_y_limite(raiz):
     registro.cerrar_ciclo("2026-02")
     result = vista.ciclos(5)
     assert all(set(c) == _keys("CycleSummary") for c in result)
-    assert result[0]["cycle"] == "2026-02" and result[0]["ended_at"] is not None
-    assert result[0]["headline"] is None and result[0]["dropped"] == 0
-    assert result[1]["cycle"] == "2026-01" and result[1]["ended_at"] is None
-    assert result[1]["dropped"] == 1
+    assert result[0]["cycle"] == "2026-02" and result[0]["status"] == "closed"
+    assert result[0]["headline"] is None and result[0]["receipt_id"] == "2026-02"
+    assert result[1]["cycle"] == "2026-01" and result[1]["closed_at"] is None
+    assert result[1]["cut"] == 1 and result[1]["receipt_id"] is None
+    assert result[1]["reached_by_stage"] == {"e0": None, "e1": 1, "e2": None, "e3": None}
+    assert result[1]["milestones"] == [
+        {"key": "proposal", "day": 1, "date": "2026-01-01", "done": True},
+        {"key": "funnel_start", "day": 8, "date": "2026-01-08", "done": True},
+        {"key": "paper_review", "day": 25, "date": "2026-01-25", "done": False}]
     assert len(vista.ciclos(1)) == 1
+
+
+def test_ciclos_held_cuenta_error_y_alarma(raiz):
+    registro.abrir_ciclo("2026-03", ["A", "B"])
+    registro.registrar_evento("A", "etapa", "0", "ERROR", ciclo="2026-03")
+    registro.registrar_evento("B", "etapa", "1", "ALARMA", ciclo="2026-03")
+    ciclo = vista.ciclos(1)[0]
+    assert ciclo["held"] == 2 and ciclo["cut"] == 0 and ciclo["active"] == 0
+
+
+def test_regla_revision_racha_cerrada_y_ciclos_abiertos(raiz):
+    for mes in range(1, 7):
+        ciclo = f"2026-{mes:02d}"
+        registro.abrir_ciclo(ciclo, [f"H{mes}"])
+        registro.cerrar_ciclo(ciclo)
+    registro.abrir_ciclo("2026-07", ["OPEN"])
+    regla = vista.regla_revision()
+    assert set(regla) == _keys("ReviewRule")
+    assert all(set(ciclo) == {"cycle", "promoted"} for ciclo in regla["last_cycles"])
+    assert regla == {"limit": 6, "streak": 6, "reached": True,
+        "last_cycles": [{"cycle": f"2026-{mes:02d}", "promoted": 0} for mes in range(1, 7)]}
+
+
+def test_regla_revision_racha_se_corta_con_promocion(raiz):
+    for mes in range(1, 8):
+        ciclo = f"2026-{mes:02d}"
+        registro.abrir_ciclo(ciclo, [f"H{mes}"])
+        if mes == 5:
+            for etapa in ("0", "1", "2", "3"):
+                registro.registrar_evento(f"H{mes}", "etapa", etapa, "PASA", ciclo=ciclo)
+        registro.cerrar_ciclo(ciclo)
+    regla = vista.regla_revision()
+    assert regla["streak"] == 2 and not regla["reached"]
+    assert regla["last_cycles"][-3:] == [{"cycle": "2026-05", "promoted": 1},
+        {"cycle": "2026-06", "promoted": 0}, {"cycle": "2026-07", "promoted": 0}]
 
 
 def test_hipotesis_claves_filtros_y_orden(raiz):
