@@ -13,6 +13,7 @@ def _fecha(e):
 
 _CAIDAS = ("CORTA", "ERROR", "ALARMA")
 _ETAPAS = ("0", "1", "2", "3")
+_MIN_FOR_CHART = 2  # web/src/config.ts: funnelConfig.minForChart
 
 
 def _aperturas(eventos):
@@ -33,34 +34,66 @@ def _estados(eventos):
 
 
 def embudo(ciclo=None, periodo=None, *, ahora=None):
+    """Resume el embudo; un ciclo concreto ignora el período y 'all' omite el límite temporal."""
     eventos = registro.eventos()
+    aperturas = _aperturas(eventos)
+    if ciclo == "all":
+        ids_ciclo = {h for apertura in aperturas.values()
+                     for h in apertura.get("datos", {}).get("hipotesis", [])}
+        eventos = [e for e in eventos if e.get("hipotesis") in ids_ciclo or
+                   (e.get("evento") == "ciclo" and e.get("ciclo") in aperturas)]
     if ciclo is not None:
-        aperturas = _aperturas(eventos)
         ids = aperturas.get(ciclo, {}).get("datos", {}).get("hipotesis", [])
-        eventos = [e for e in eventos if e.get("hipotesis") in ids or
-                   (e.get("evento") == "ciclo" and e.get("ciclo") == ciclo)]
-    if periodo is not None:
+        if ciclo != "all":
+            eventos = [e for e in eventos if e.get("hipotesis") in ids or
+                       (e.get("evento") == "ciclo" and e.get("ciclo") == ciclo)]
+    if periodo not in (None, "all") and ciclo in (None, "all"):
         ahora = ahora or datetime.now(timezone.utc)
-        desde = ahora - timedelta(days=periodo)
+        dias = int(str(periodo).removesuffix("d"))
+        desde = ahora - timedelta(days=dias)
         eventos = [e for e in eventos if desde <= _fecha(e) <= ahora]
     estados = _estados(eventos)
     etapas_evento = [e for e in eventos if e.get("evento") == "etapa"]
     etapas = []
     for etapa in _ETAPAS:
-        en_etapa = [e for e in estados.values() if e.get("etapa") == etapa]
+        por_hipotesis = {}
+        for e in etapas_evento:
+            if e.get("etapa") != etapa:
+                continue
+            h = e.get("hipotesis")
+            previo = por_hipotesis.get(h)
+            if previo is None or _fecha(e) >= _fecha(previo):
+                por_hipotesis[h] = e
+        en_etapa = list(por_hipotesis.values())
+        actuales_en_etapa = [e for e in estados.values() if e.get("etapa") == etapa]
         etapas.append({"stage": f"e{etapa}",
-                       "reached": len({e.get("hipotesis") for e in etapas_evento if e.get("etapa") == etapa}),
-                       "here": sum(e.get("veredicto") == "PASA" for e in en_etapa),
-                       "dropped": sum(e.get("veredicto") in _CAIDAS for e in en_etapa)})
-    causas = Counter()
+                       "reached": len(por_hipotesis),
+                       "here": sum(e.get("veredicto") == "PASA" for e in actuales_en_etapa),
+                       "passed": sum(e.get("veredicto") == "PASA" for e in en_etapa),
+                       "cut": sum(e.get("veredicto") == "CORTA" for e in en_etapa),
+                       "error": sum(e.get("veredicto") == "ERROR" for e in en_etapa),
+                       "alarm": sum(e.get("veredicto") == "ALARMA" for e in en_etapa)})
+    causas = {}
     for e in estados.values():
-        if e.get("veredicto") != "PASA":
-            causas.update((e.get("etapa"), causa) for causa in estado.causas_de_motivo(e.get("motivo", "")))
-    # El registro identifica ciclos con YYYY-MM, aunque api-types.ts declare number.
-    return {"cycle": "all" if ciclo is None else ciclo, "period_days": periodo,
+        if e.get("veredicto") not in _CAIDAS:
+            continue
+        codigo, etiqueta = estado.causa_de_evento(e)
+        codigo, etiqueta = codigo or None, etiqueta or None
+        clave = (e.get("etapa"), e.get("veredicto"), codigo)
+        item = causas.setdefault(clave, {"stage": f"e{e.get('etapa')}", "verdict": e.get("veredicto"),
+                                        "cause_code": codigo, "cause_label": etiqueta,
+                                        "count": 0, "example": (e.get("datos") or {}).get("measure")})
+        item["count"] += 1
+    return {"cycle": "all" if ciclo is None else ciclo,
+            "period": "all" if periodo in (None, "all") else (f"{periodo}d" if str(periodo).isdigit() else periodo),
             "total": len(estados), "stages": etapas,
-            "drop_reasons": [{"stage": f"e{etapa}", "reason": razon, "count": cantidad}
-                             for (etapa, razon), cantidad in sorted(causas.items())]}
+            # D3: paper se deriva de cuentas; el registro todavía no las expone.
+            "later": [{"phase": "shadow", "reached": 0, "here": 0},
+                      {"phase": "paper", "reached": 0, "here": 0},
+                      {"phase": "candidate", "reached": 0, "here": 0}],
+            "promoted": sum(e.get("etapa") == "3" and e.get("veredicto") == "PASA" for e in estados.values()),
+            "sample_too_small": len(estados) < _MIN_FOR_CHART,
+            "drop_reasons": list(causas.values())}
 
 
 def ciclos(limite):
