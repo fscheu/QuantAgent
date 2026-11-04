@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Callable, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
+from quantagent.fabrica.chequeos_paper import PAPER_CASH_RESERVE_PCT
 from quantagent.models import Environment
 from quantagent.portfolio.manager import PortfolioManager
 from quantagent.trading_graph import TradingGraph
@@ -250,7 +251,7 @@ class StrategyAssembler:
             broker=broker,
             portfolio_manager=pm,
             db=db_session,
-            cash_reserve_pct=0.05 if resolved.environment != Environment.BACKTEST else 0.0,
+            cash_reserve_pct=PAPER_CASH_RESERVE_PCT if resolved.environment != Environment.BACKTEST else 0.0,
         )
 
         # TradingGraph configuration mapping
