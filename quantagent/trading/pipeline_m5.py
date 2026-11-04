@@ -313,9 +313,10 @@ def correr_diario(as_of, *, data_provider, db: Session, broker,
                 if (r.reasoning_metadata or {}).get("session_date") == str(fecha.date())), None)
             if duplicado:
                 continue
+            usa_oto = hasattr(broker, "submit_oto") and intent.order_type == "stop"
             qty = sizer.calculate_size(simbolo, intent.confidence, float(intent.entry_price),
                                        manager.get_total_value(), stop_price=float(intent.stop_loss),
-                                       fraccionable=permite_fracciones)
+                                       fraccionable=permite_fracciones and not usa_oto)
             if accion:
                 qty = float(Decimal(str(qty)).quantize(Decimal("0.00000001"), rounding=ROUND_DOWN))
             valido, motivo = risk.validate_trade(simbolo, OrderSide.BUY, qty,
@@ -337,13 +338,34 @@ def correr_diario(as_of, *, data_provider, db: Session, broker,
                             environment=Environment.PAPER, created_at=timestamp.to_pydatetime(),
                             comment=f"m5; vence={intent.entry_expires_bars} barras")
             db.add(entrada)
+            proteccion = Order(symbol=simbolo, side=OrderSide.SELL, quantity=Decimal(str(qty)),
+                               order_type=OrderType.STOP, stop_price=quantize_order_price(intent.stop_loss),
+                               environment=Environment.PAPER, created_at=timestamp.to_pydatetime(),
+                               comment=f"proteccion intent={simbolo}:{strategy_id}")
+            db.add(proteccion)
             db.flush()
+            submit_oto = getattr(broker, "submit_oto", None)
             try:
-                broker.submit_order(entrada)
+                if submit_oto is not None and entrada.order_type == OrderType.STOP:
+                    submit_oto(entrada, proteccion)
+                    if entrada.status == OrderStatus.REJECTED:
+                        motivo_rechazo = ("oto_no_soporta_fracciones" if entrada.comment == "oto_no_soporta_fracciones"
+                                          else "entrada_rechazada")
+                        record = save_trade_intent(db, intent, "rechazado_riesgo", motivo_rechazo,
+                                                   order_id=entrada.id)
+                        record.created_at = record.updated_at = timestamp.to_pydatetime()
+                        db.commit()
+                        creados.append(record)
+                        _narrar_intent(intent, narrador, narrativa_path, regimen_path, fecha, simbolo, strategy_id)
+                        continue
+                else:
+                    broker.submit_order(entrada)
             except Exception as exc:
                 mensaje = str(exc)
                 entrada.status = OrderStatus.REJECTED
                 entrada.comment = mensaje
+                proteccion.status = OrderStatus.REJECTED
+                proteccion.comment = mensaje
                 gatillo_superado = "must be greater than current price" in mensaje
                 motivo_rechazo = "gatillo_superado" if gatillo_superado else "entrada_rechazada"
                 record = save_trade_intent(db, intent, "rechazado_riesgo", motivo_rechazo,
@@ -354,20 +376,15 @@ def correr_diario(as_of, *, data_provider, db: Session, broker,
                 logger.warning("M5 entrada rechazada para %s: %s", simbolo, mensaje)
                 _narrar_intent(intent, narrador, narrativa_path, regimen_path, fecha, simbolo, strategy_id)
                 continue
-            db.add(entrada)
-            proteccion = Order(symbol=simbolo, side=OrderSide.SELL, quantity=Decimal(str(qty)),
-                               order_type=OrderType.STOP, stop_price=quantize_order_price(intent.stop_loss),
-                               environment=Environment.PAPER, created_at=timestamp.to_pydatetime(),
-                               comment=f"proteccion intent={simbolo}:{strategy_id}")
-            db.add(proteccion)
-            db.flush()
-            try:
-                resultado_stop = broker.submit_order(proteccion)
-                if resultado_stop.status == OrderStatus.REJECTED:
-                    proteccion.status = OrderStatus.REJECTED
-            except Exception as exc:
-                proteccion.status, proteccion.comment = OrderStatus.REJECTED, str(exc)
-                logger.warning("M5 stop rechazado para %s", simbolo, exc_info=True)
+            if submit_oto is None or entrada.order_type != OrderType.STOP:
+                db.add(entrada)
+                try:
+                    resultado_stop = broker.submit_order(proteccion)
+                    if resultado_stop.status == OrderStatus.REJECTED:
+                        proteccion.status = OrderStatus.REJECTED
+                except Exception as exc:
+                    proteccion.status, proteccion.comment = OrderStatus.REJECTED, str(exc)
+                    logger.warning("M5 stop rechazado para %s", simbolo, exc_info=True)
             stop_rechazado = proteccion.status == OrderStatus.REJECTED
             if stop_rechazado:
                 entrada.status = OrderStatus.REJECTED
