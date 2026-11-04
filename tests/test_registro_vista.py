@@ -1,6 +1,5 @@
 import ast
 import re
-from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -16,50 +15,40 @@ def raiz(db_temporal):
     return db_temporal
 
 
-# Forma v0.3 del contrato (api-types.ts antes del 04/11/2026). El contrato vigente es v0.4
-# (docs/03_design/web-design-system/EMBUDO-MERCADO.md); adaptar la vista es el ticket RH-06b.
-_FORMA_V03 = {
-    "Funnel": {"cycle", "period_days", "total", "stages", "drop_reasons"},
-    "FunnelStage": {"stage", "reached", "here", "dropped"},
-    "DropReason": {"stage", "reason", "count"},
-    "CycleSummary": {"cycle", "started_at", "ended_at", "entered", "active", "dropped",
-                     "reached_by_stage", "headline"},
-    "Hypothesis": {"id", "name", "idea", "cycle", "stage", "status", "last_metric",
-                   "discard_reason", "discard_detail", "updated_at"},
-}
-
-
 def _keys(interface):
-    return _FORMA_V03[interface]
+    if interface in {"CycleSummary", "Hypothesis"}:
+        return {"CycleSummary": {"cycle", "started_at", "ended_at", "entered", "active", "dropped",
+                                 "reached_by_stage", "headline"},
+                "Hypothesis": {"id", "name", "idea", "cycle", "stage", "status", "last_metric",
+                               "discard_reason", "discard_detail", "updated_at"}}[interface]
+    source = Path("docs/03_design/web-design-system/api-types.ts").read_text()
+    body = re.search(rf"interface {interface} \{{(.*?)\n\}}", source, re.S).group(1)
+    return set(re.findall(r"^\s*(\w+):", body, re.M))
 
 
 def test_embudo_claves_y_agregados(raiz):
-    registro.abrir_ciclo("2026-01", ["A", "B"])
+    registro.abrir_ciclo("2026-01", ["A", "B", "C"])
     registro.registrar_evento("A", "etapa", "0", "PASA", fecha_utc="2026-01-01T00:00:00+00:00")
     registro.registrar_evento("A", "etapa", "1", "PASA", fecha_utc="2026-01-02T00:00:00+00:00")
-    registro.registrar_evento("A", "etapa", "2", "CORTA", "X: uno; Y: dos", fecha_utc="2026-01-03T00:00:00+00:00")
-    registro.registrar_evento("B", "etapa", "1", "ERROR", "X: uno; Y: dos", fecha_utc="2026-01-04T00:00:00+00:00")
+    estado.registrar_estado("A", "2", "CORTA", medida=estado.medida("sharpe", 0.2, 0.5, ">=", "ratio"), causa="sharpe_below")
+    estado.registrar_estado("B", "1", "ERROR", medida=estado.medida("trades", 1, 5, ">=", "count"), causa="few_trades")
+    registro.registrar_evento("C", "etapa", "0", "ALARMA", fecha_utc="2026-01-05T00:00:00+00:00")
 
     result = vista.embudo()
     assert set(result) == _keys("Funnel")
-    assert all(set(s) == _keys("FunnelStage") for s in result["stages"])
+    assert all(set(s) == _keys("StageCounts") for s in result["stages"])
     assert all(set(r) == _keys("DropReason") for r in result["drop_reasons"])
     assert result["stages"] == [
-        {"stage": "e0", "reached": 1, "here": 0, "dropped": 0},
-        {"stage": "e1", "reached": 2, "here": 0, "dropped": 1},
-        {"stage": "e2", "reached": 1, "here": 0, "dropped": 1},
-        {"stage": "e3", "reached": 0, "here": 0, "dropped": 0},
+        {"stage": "e0", "reached": 2, "here": 0, "passed": 1, "cut": 0, "error": 0, "alarm": 1},
+        {"stage": "e1", "reached": 2, "here": 0, "passed": 1, "cut": 0, "error": 1, "alarm": 0},
+        {"stage": "e2", "reached": 1, "here": 0, "passed": 0, "cut": 1, "error": 0, "alarm": 0},
+        {"stage": "e3", "reached": 0, "here": 0, "passed": 0, "cut": 0, "error": 0, "alarm": 0},
     ]
     actual = registro.estados_actuales()
-    assert all(s["here"] + s["dropped"] == sum(e["etapa"] == str(i) for e in actual.values())
+    assert all(s["here"] + s["cut"] + s["error"] + s["alarm"] == sum(e["etapa"] == str(i) for e in actual.values())
                for i, s in enumerate(result["stages"]))
-    summary = estado.resumen_tanda()
-    counts = Counter({reason: int(count) for reason, count in
-                      re.findall(r"- (.*): (\d+)", summary.split("## Causas más frecuentes", 1)[1])})
-    actual = Counter()
-    for reason in result["drop_reasons"]:
-        actual[reason["reason"]] += reason["count"]
-    assert actual == counts
+    assert {reason["verdict"] for reason in result["drop_reasons"]} == {"CORTA", "ERROR", "ALARMA"}
+    assert next(r for r in result["drop_reasons"] if r["cause_code"] == "sharpe_below")["example"]["value"] == 0.2
 
 
 def test_ciclos_abierto_cerrado_claves_y_limite(raiz):
