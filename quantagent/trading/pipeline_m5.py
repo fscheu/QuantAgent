@@ -338,7 +338,22 @@ def correr_diario(as_of, *, data_provider, db: Session, broker,
                             comment=f"m5; vence={intent.entry_expires_bars} barras")
             db.add(entrada)
             db.flush()
-            broker.submit_order(entrada)
+            try:
+                broker.submit_order(entrada)
+            except Exception as exc:
+                mensaje = str(exc)
+                entrada.status = OrderStatus.REJECTED
+                entrada.comment = mensaje
+                gatillo_superado = "must be greater than current price" in mensaje
+                motivo_rechazo = "gatillo_superado" if gatillo_superado else "entrada_rechazada"
+                record = save_trade_intent(db, intent, "rechazado_riesgo", motivo_rechazo,
+                                           order_id=entrada.id)
+                record.created_at = record.updated_at = timestamp.to_pydatetime()
+                db.commit()
+                creados.append(record)
+                logger.warning("M5 entrada rechazada para %s: %s", simbolo, mensaje)
+                _narrar_intent(intent, narrador, narrativa_path, regimen_path, fecha, simbolo, strategy_id)
+                continue
             db.add(entrada)
             proteccion = Order(symbol=simbolo, side=OrderSide.SELL, quantity=Decimal(str(qty)),
                                order_type=OrderType.STOP, stop_price=quantize_order_price(intent.stop_loss),

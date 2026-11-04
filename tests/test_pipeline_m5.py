@@ -12,7 +12,7 @@ from quantagent.fabrica.candidatos_vivo import candidatos_en_vivo
 from quantagent.fabrica.cartera import pesos, pesos_h3
 from quantagent.fabrica.regimen import regimen_semanal
 from quantagent.fabrica.transversal import MASCARAS, METRICAS, PRIORS_M5, REGLAS, señales_transversales
-from quantagent.models import ActivePosition, Environment, ExitPolicy, Order, OrderSide, OrderType, TradeIntentRecord
+from quantagent.models import ActivePosition, Environment, ExitPolicy, Order, OrderSide, OrderStatus, OrderType, TradeIntentRecord
 from quantagent.portfolio.manager import PortfolioManager
 from quantagent.strategy.base import TradingSignal, TradingStrategy
 from quantagent.trading.cartera_paper import sesiones_cerradas_nyse
@@ -328,6 +328,54 @@ def test_pipeline_stop_rechazado_cancela_entrada_y_persiste_intent(db_session, m
     assert set(broker.cancelados) == {"entrada-1"}
     assert all(db_session.get(Order, r.order_id).status.value == "cancelled" for r in intents)
     assert db_session.query(TradeIntentRecord).count() == len(intents)
+
+
+def test_pipeline_entrada_rechazada_por_gatillo_superado_persiste_y_sigue(db_session, mercado, tmp_path):
+    as_of, data = mercado
+    path = tmp_path / "regimen.csv"
+    correr_semanal(as_of, data_provider=data, regimen_path=path, narrador=None)
+
+    class BrokerEntradaRechazada(BrokerMemoria):
+        def submit_order(self, order):
+            self.orders.append(order)
+            raise RuntimeError("stop price must be greater than current price")
+
+    broker = BrokerEntradaRechazada()
+    intents = correr_diario(as_of, data_provider=data, db=db_session, broker=broker,
+                            regimen_path=path, estrategias=(("test", SiempreSenala()),), narrador=None)
+
+    assert intents and all((r.status, r.reject_reason) == ("rechazado_riesgo", "gatillo_superado")
+                           for r in intents)
+    assert all(db_session.get(Order, r.order_id).status == OrderStatus.REJECTED for r in intents)
+    assert all(db_session.get(Order, r.order_id).comment ==
+               "stop price must be greater than current price" for r in intents)
+    assert all(order.side == OrderSide.BUY for order in broker.orders)
+    assert db_session.query(TradeIntentRecord).count() == len(intents)
+
+
+def test_pipeline_entrada_rechazada_no_impide_aprobar_otro_simbolo(db_session, mercado, tmp_path):
+    as_of, data = mercado
+    path = tmp_path / "regimen.csv"
+    correr_semanal(as_of, data_provider=data, regimen_path=path, narrador=None)
+
+    class BrokerRechazaPrimeraEntrada(BrokerMemoria):
+        def submit_order(self, order):
+            if order.side == OrderSide.BUY and not any(o.side == OrderSide.BUY for o in self.orders):
+                self.orders.append(order)
+                raise RuntimeError("stop price must be greater than current price")
+            return super().submit_order(order)
+
+    broker = BrokerRechazaPrimeraEntrada()
+    intents = correr_diario(as_of, data_provider=data, db=db_session, broker=broker,
+                            regimen_path=path, estrategias=(("test", SiempreSenala()),), narrador=None)
+
+    rechazados = [r for r in intents if r.status == "rechazado_riesgo"]
+    aprobados = [r for r in intents if r.status == "aprobado"]
+    assert rechazados and aprobados
+    assert rechazados[0].reject_reason == "gatillo_superado"
+    assert any(db_session.get(Order, r.order_id).status == OrderStatus.REJECTED for r in rechazados)
+    assert all(any(o.symbol == r.symbol and o.side == OrderSide.SELL for o in broker.orders)
+               for r in aprobados)
 
 
 def test_semana_acciones_arquetipos_reales_fracciones_e_idempotencia(db_session, mercado, tmp_path):
