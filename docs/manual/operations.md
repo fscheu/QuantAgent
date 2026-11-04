@@ -42,7 +42,7 @@ The read-only web app replaces the Streamlit QA interface.
 
 `local-data/` holds ignored local databases and snapshot files. Set `QUANTAGENT_SNAPSHOT_DIR` to the directory holding snapshots; do not commit its data. Verify an existing snapshot with `python -m quantagent.cli data snapshot verify <name>`; success prints `OK <symbols> símbolos, <rows> filas`. Check its sessions and OHLC quality with `python -m quantagent.cli data snapshot check --name <name>`; expect one quality summary per symbol and exit status 1 only for missing sessions.
 
-To load the legacy hypothesis registry history, first run `alembic upgrade head` to create the current database schema. Preview the import with `quantagent registro importar --dry-run`, then load it with `quantagent registro importar`. The importer reads legacy `hipotesis.csv`, `intentos.csv` and `registro-hipotesis.jsonl` files from the configured snapshot data directory.
+To load the legacy hypothesis registry history, first run `alembic upgrade head` to create the current database schema. Take a backup of the target database first (`quantagent intentos invalidar --aplicar` no longer writes a CSV backup). Preview the import with `quantagent registro importar --dry-run`, then load it with `quantagent registro importar`. The importer reads legacy `hipotesis.csv`, `intentos.csv` and `registro-hipotesis.jsonl` files from the configured snapshot data directory.
 
 To create a snapshot, run `python -m quantagent.cli data snapshot create --name <name> --symbols SPY --start YYYY-MM-DD --end YYYY-MM-DD`. It downloads from Yahoo and prints `Snapshot <name> creado: <symbols> símbolos, <rows> filas`. Use a completed session as the end date; snapshots are immutable.
 
