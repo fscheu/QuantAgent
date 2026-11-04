@@ -62,3 +62,52 @@ def market_bar_status(present_sessions: set[date], now: datetime) -> tuple[date,
     expected = calendar.valid_days(start_date=start, end_date=session_date)
     missing = [day.date() for day in expected if day.date() not in present_sessions]
     return session_date, session_date not in present_sessions, missing
+
+
+class DailyAlpacaClient:
+    """Fetch daily bars as timestamp-indexed frames accepted by upsert_bars."""
+
+    def __init__(self, source=None, base_url=None):
+        from quantagent.data.sources.alpaca import AlpacaSource
+
+        self.source = source or AlpacaSource(**({"base_url": base_url} if base_url else {}))
+
+    def fetch(self, symbols, start, end):
+        return {symbol: self.source.fetch(symbol, "1d", start, end).set_index("timestamp")
+                .loc[:, ["open", "high", "low", "close", "volume"]]
+                for symbol in symbols}
+
+
+def update_market_bars(session, symbols, client, start=None, dry_run=False, snapshot=None):
+    """Refresh selected symbols and return their latest-session status and row counts."""
+    if snapshot:
+        before = {symbol: present_sessions(session, symbol) for symbol in symbols}
+        missing = backfill_snapshot(session, snapshot)
+        results = {symbol: {"rows": len(present_sessions(session, symbol) - before[symbol]),
+                            "missing_snapshot": symbol in missing,
+                            "status": market_bar_status(present_sessions(session, symbol), datetime.now(timezone.utc))}
+                   for symbol in symbols}
+        if dry_run:
+            session.rollback()
+        else:
+            session.commit()
+        return results
+    now = datetime.now(timezone.utc)
+    ranges = {}
+    for symbol in symbols:
+        latest, _, missing = market_bar_status(present_sessions(session, symbol), now)
+        ranges[symbol] = (start or (min(missing) if missing else latest), latest)
+    frames = client.fetch(symbols, min(a for a, _ in ranges.values()), max(b for _, b in ranges.values()))
+    results = {}
+    for symbol in symbols:
+        frame = frames.get(symbol)
+        count = 0 if frame is None else len(frame)
+        if frame is not None and not dry_run:
+            upsert_bars(session, symbol, frame, "alpaca")
+        results[symbol] = {"rows": count, "status": market_bar_status(
+            present_sessions(session, symbol) if not dry_run else present_sessions(session, symbol) | {
+                idx.date() if hasattr(idx, "date") else idx for idx in (frame.index if frame is not None else [])
+            }, now)}
+    if not dry_run:
+        session.commit()
+    return results
