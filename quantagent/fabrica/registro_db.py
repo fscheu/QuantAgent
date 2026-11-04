@@ -71,8 +71,6 @@ def registrar_evento(hipotesis_id, evento, etapa=None, veredicto=None, motivo=""
 def registrar_intento(strategy_name, symbol, snapshot_name, costos, tamano_posicion, combo, row,
                       hipotesis=None, etapa=None, sharpe_base="tasa_libre", fecha_utc=None):
     ts = _fecha(fecha_utc)
-    sharpe = row["sharpe"]
-    pnl = row["pnl"]
     extra = {"desde": row["desde"], "hasta": row["hasta"], "costos": costos or "",
              "tamano": tamano_posicion, "sharpe_base": sharpe_base or ""}
     with SessionLocal() as db:
@@ -193,7 +191,8 @@ def cerrar_ciclo(ciclo):
     for h in ids:
         records = [e for e in own if e["evento"] in ("etapa", "intento") and e["hipotesis"] == h]
         for stage in {e["etapa"] for e in records if e["evento"] == "etapa"}:
-            if stage in etapas: etapas[stage] += 1
+            if stage in etapas:
+                etapas[stage] += 1
         stages = [e for e in records if e["evento"] == "etapa"]
         promoted += any(e["etapa"] == "3" and e["veredicto"] == "PASA" for e in stages)
         for e in stages:
@@ -231,7 +230,8 @@ def ciclos_sin_etapa3():
             Cycle.closed_at.is_not(None)).order_by(Cycle.closed_at)).all()]
     count = 0
     for receipt in reversed(closes):
-        if receipt.get("promovidas", 0): break
+        if receipt.get("promovidas", 0):
+            break
         count += 1
     return count
 
@@ -247,10 +247,12 @@ def calendario_ciclos(desde, cantidad=CICLOS_PARA_REVISAR):
         opened = next((e for e in monthly if e["evento"] == "ciclo" and e["datos"].get("accion") == "abrir"), None)
         closed = next((e for e in monthly if e["evento"] == "ciclo" and e["datos"].get("accion") == "cerrar"), None)
         status = {"estado": "abierto"} if opened else {"estado": "pendiente"}
-        if closed: status = {"estado": "cerrado", "promovidas": closed["datos"].get("recibo", {}).get("promovidas", 0)}
+        if closed:
+            status = {"estado": "cerrado", "promovidas": closed["datos"].get("recibo", {}).get("promovidas", 0)}
         result.append({"ciclo": cycle, "propuesta": date(year, month, DIA_PROPUESTA_HIPOTESIS).isoformat(),
             "embudo": date(year, month, DIA_INICIO_EMBUDO).isoformat(),
             "revision_paper": date(year, month, DIA_REVISION_PAPER).isoformat(), **status})
         month += 1
-        if month == 13: year, month = year + 1, 1
+        if month == 13:
+            year, month = year + 1, 1
     return result
