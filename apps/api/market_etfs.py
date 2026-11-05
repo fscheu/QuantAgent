@@ -40,25 +40,32 @@ def held_in_por_simbolo(cuentas):
     return result
 
 
+def retornos_simbolo(session, symbol):
+    """Return percentage returns and the number of stored sessions for a symbol."""
+    bars = session.scalars(select(MarketBar).where(MarketBar.symbol == symbol).order_by(MarketBar.session_date)).all()
+    closes = [float(bar.close) for bar in bars]
+    dates = [bar.session_date for bar in bars]
+    returns = {}
+    offsets = {"d1": 1, "w1": 5, "m1": 20, "m3": 62}
+    for key, offset in offsets.items():
+        returns[key] = ((closes[-1] / closes[-1 - offset] - 1) * 100 if len(closes) > offset and len(closes) >= MIN_SESSIONS[key] else None)
+    prior_year_close = next((i for i in range(len(dates) - 1, -1, -1) if dates[i].year == dates[-1].year - 1), None) if dates else None
+    returns["ytd"] = ((closes[-1] / closes[prior_year_close] - 1) * 100 if prior_year_close is not None else None)
+    return returns, len(closes)
+
+
 def filas_etf(session, positions_by_symbol=None):
     """Build the 29 ETF rows from daily bars, keeping symbols without data."""
     positions_by_symbol = positions_by_symbol or {}
     rows = []
     for symbol in ETF_SYMBOLS:
-        bars = session.scalars(select(MarketBar).where(MarketBar.symbol == symbol).order_by(MarketBar.session_date)).all()
-        closes = [float(bar.close) for bar in bars]
-        dates = [bar.session_date for bar in bars]
-        returns = {}
-        offsets = {"d1": 1, "w1": 5, "m1": 20, "m3": 62}
-        for key, offset in offsets.items():
-            returns[key] = ((closes[-1] / closes[-1 - offset] - 1) * 100 if len(closes) > offset and len(closes) >= MIN_SESSIONS[key] else None)
-        prior_year_close = next((i for i in range(len(dates) - 1, -1, -1) if dates[i].year == dates[-1].year - 1), None) if dates else None
-        returns["ytd"] = ((closes[-1] / closes[prior_year_close] - 1) * 100 if prior_year_close is not None else None)
+        returns, history_sessions = retornos_simbolo(session, symbol)
+        closes = [float(bar.close) for bar in session.scalars(select(MarketBar).where(MarketBar.symbol == symbol).order_by(MarketBar.session_date)).all()]
         rows.append({
             "symbol": symbol, "name": ETF_NAMES[symbol],
             "asset_class": next(key for key, members in ASSET_CLASSES.items() if symbol in members),
             "close": closes[-1] if closes else None,
-            "returns": returns, "history_sessions": len(closes),
+            "returns": returns, "history_sessions": history_sessions,
             "spark_30d": closes[-30:] if len(closes) >= 2 else None,
             "held_in": positions_by_symbol.get(symbol, []), "in_universe": True,
         })
