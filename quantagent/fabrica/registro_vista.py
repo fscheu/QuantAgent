@@ -142,7 +142,8 @@ def regla_revision():
     cierres = {}
     for e in eventos:
         if e.get("evento") == "ciclo" and e.get("datos", {}).get("accion") == "cerrar":
-            cierres[e.get("ciclo")] = e.get("datos", {}).get("recibo", {}).get("promovidas", 0)
+            receipt = registro.leer_recibo(e.get("datos", {}).get("recibo", {}))
+            cierres[e.get("ciclo")] = receipt.get("promovidas", 0)
     ordenados = sorted(cierres.items())
     racha = 0
     for _, promovidas in reversed(ordenados):

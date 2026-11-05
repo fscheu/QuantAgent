@@ -188,16 +188,33 @@ def cerrar_ciclo(ciclo):
     own = all_events[all_events.index(apertura)+1:]
     etapas = {str(i): 0 for i in range(4)}
     promoted, caidas, intentos_por_h, snapshots = 0, {}, {}, set()
+    por_etapa = {str(i): {k: 0 for k in ("arrived", "passed", "cut", "error", "alarm")} for i in range(4)}
+    por_hipotesis = {}
     for h in ids:
         records = [e for e in own if e["evento"] in ("etapa", "intento") and e["hipotesis"] == h]
         for stage in {e["etapa"] for e in records if e["evento"] == "etapa"}:
             if stage in etapas:
                 etapas[stage] += 1
-        stages = [e for e in records if e["evento"] == "etapa"]
-        promoted += any(e["etapa"] == "3" and e["veredicto"] == "PASA" for e in stages)
+        stages = sorted((e for e in records if e["evento"] == "etapa"), key=_fecha_evento)
+        ultimo_por_etapa = {}
         for e in stages:
-            if e["veredicto"] in ("CORTA", "ERROR", "ALARMA"):
-                caidas[h] = {"etapa": e["etapa"], "veredicto": e["veredicto"], "motivo": e["motivo"]}
+            if e["etapa"] in etapas:
+                ultimo_por_etapa[e["etapa"]] = e
+        for stage, e in ultimo_por_etapa.items():
+            por_etapa[stage]["arrived"] += 1
+            bucket = {"PASA": "passed", "CORTA": "cut", "ERROR": "error", "ALARMA": "alarm"}.get(e["veredicto"])
+            if bucket:
+                por_etapa[stage][bucket] += 1
+        promoted += any(e["etapa"] == "3" and e["veredicto"] == "PASA" for e in stages)
+        ultimo = stages[-1] if stages else None
+        if ultimo and ultimo["veredicto"] in ("CORTA", "ERROR", "ALARMA"):
+            caidas[h] = {"etapa": ultimo["etapa"], "veredicto": ultimo["veredicto"], "motivo": ultimo["motivo"]}
+        status = ("promovida" if any(e["etapa"] == "3" and e["veredicto"] == "PASA" for e in stages)
+                  else "cortada" if ultimo and ultimo["veredicto"] == "CORTA"
+                  else "detenida" if ultimo and ultimo["veredicto"] in ("ERROR", "ALARMA") else "en_curso")
+        por_hipotesis[h] = {"estado_final": status, "etapa": ultimo["etapa"] if ultimo else None,
+                            "veredicto": ultimo["veredicto"] if ultimo else None,
+                            "motivo": ultimo["motivo"] if ultimo else None}
         with SessionLocal() as db:
             attempts = db.scalars(select(HypothesisAttempt).where(
                 HypothesisAttempt.hypothesis_id == h)).all()
@@ -205,9 +222,10 @@ def cerrar_ciclo(ciclo):
         intentos_por_h[h] = len(attempts)
         snapshots.update(a.snapshot for a in attempts if a.snapshot)
     snapshots = sorted(snapshots)
-    receipt = {"ciclo": ciclo, "hipotesis": ids, "etapas": etapas, "promovidas": promoted,
+    receipt = {"version": 2, "ciclo": ciclo, "hipotesis": ids, "etapas": etapas, "promovidas": promoted,
                "caidas": caidas, "intentos": intentos_por_h, "snapshots": snapshots,
-               "hashes_manifiesto": {s: snapshot_manifest_hash(s) for s in snapshots}}
+               "hashes_manifiesto": {s: snapshot_manifest_hash(s) for s in snapshots},
+               "por_etapa": por_etapa, "por_hipotesis": por_hipotesis}
     reason = "" if promoted else "ninguna hipótesis promovida: ninguna llegó a etapa 3 con PASA"
     registrar_evento(None, "ciclo", ciclo=ciclo, motivo=reason, datos={"accion": "cerrar", "recibo": receipt})
     with SessionLocal() as db:
@@ -221,7 +239,29 @@ def cerrar_ciclo(ciclo):
 def recibo_ciclo(ciclo):
     with SessionLocal() as db:
         row = db.get(Cycle, ciclo)
-        return row.receipt if row else None
+        return leer_recibo(row) if row else None
+
+
+def leer_recibo(ciclo_o_dict):
+    """Normaliza recibos históricos sin mutar el JSON persistido."""
+    receipt = ciclo_o_dict if isinstance(ciclo_o_dict, dict) else getattr(ciclo_o_dict, "receipt", None)
+    if receipt is None:
+        return None
+    result = dict(receipt)
+    if result.get("version") == 2:
+        return result
+    result["version"] = 1
+    stages = result.get("etapas")
+    result["por_etapa"] = ({s: {"arrived": stages.get(s), "passed": None, "cut": None,
+                                 "error": None, "alarm": None} for s in ("0", "1", "2", "3")}
+                           if isinstance(stages, dict) else None)
+    drops = result.get("caidas")
+    result["por_hipotesis"] = ({h: {"estado_final": "cortada" if d.get("veredicto") == "CORTA" else
+                                     "detenida" if d.get("veredicto") in ("ERROR", "ALARMA") else None,
+                                     "etapa": d.get("etapa"), "veredicto": d.get("veredicto"),
+                                     "motivo": d.get("motivo")} for h, d in drops.items()}
+                              if isinstance(drops, dict) else None)
+    return result
 
 
 def ciclos_sin_etapa3():
