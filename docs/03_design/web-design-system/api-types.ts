@@ -520,4 +520,5 @@ export interface MarketPage {
   recessions: RecessionPeriod[];
   etfs: EtfRow[];
   events: CalendarEvent[];           // filtrado: macro | fomc | holiday | early_close, 14 días
+  errors?: Record<string, string>;
 }

@@ -615,6 +615,118 @@
         "title": "HomeStatus",
         "type": "object"
       },
+      "MarketPage": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "clock": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clock"
+          },
+          "errors": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "object"
+          },
+          "etfs": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Etfs",
+            "type": "array"
+          },
+          "events": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "macro": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Macro",
+            "type": "array"
+          },
+          "motor": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Motor"
+          },
+          "recessions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Recessions",
+            "type": "array"
+          },
+          "regime": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regime"
+          },
+          "sectors": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Sectors",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "clock",
+          "regime",
+          "motor",
+          "sectors",
+          "macro",
+          "recessions",
+          "etfs",
+          "events"
+        ],
+        "title": "MarketPage",
+        "type": "object"
+      },
       "OrderResponse": {
         "properties": {
           "avg_fill_price": {
@@ -1456,6 +1568,24 @@
           }
         },
         "summary": "Home Status"
+      }
+    },
+    "/api/market": {
+      "get": {
+        "operationId": "market_api_market_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Market"
       }
     },
     "/api/performance/backtest/{backtest_id}": {
