@@ -9,6 +9,7 @@ from scipy.stats import kurtosis, norm, skew, ttest_1samp
 MIN_TRADES = 2
 MIN_SHARPE_TASA_0 = 0.10
 MAX_DRAWDOWN = 0.35
+MIN_DSR = 0.95
 
 
 def montecarlo_bloques(equity, n=1000, bloque=20, semilla=0) -> tuple[float, float] | None:
