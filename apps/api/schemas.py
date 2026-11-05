@@ -117,6 +117,19 @@ class BacktestRef(BaseModel):
     total_return: float
 
 
+class MarketPage(BaseModel):
+    as_of: dict | None
+    clock: dict | None
+    regime: dict | None
+    motor: dict | None
+    sectors: list[dict]
+    macro: list[dict]
+    recessions: list[dict]
+    etfs: list[dict]
+    events: list[dict]
+    errors: dict[str, str] = Field(default_factory=dict)
+
+
 class FunnelStage(BaseModel):
     stage: str
     reached: int

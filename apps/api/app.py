@@ -25,6 +25,7 @@ from .schemas import (
     EquityPoint,
     Funnel,
     HomeStatus,
+    MarketPage,
     OrderResponse,
     PositionResponse,
     SectorExposure,
@@ -245,6 +246,76 @@ def calendar(days: int = Query(30, ge=1, le=120), db: Session = Depends(get_db))
         source="strategy", account_id=cuenta.id,
     ) for cuenta, fecha in rebalanceos)
     return sorted(result, key=lambda event: (event.date, event.kind))
+
+
+@app.get("/api/market", response_model=MarketPage)
+def market(db: Session = Depends(get_db)):
+    from quantagent.data.market_bars import market_bar_status, present_sessions
+    from quantagent.models import Account, MarketBar
+    from .accounts import account_session_factory
+    from .market_etfs import ETF_SYMBOLS, filas_etf, held_in_por_simbolo
+    from .market_motor import filas_sector, estado_motor
+    from .market_regime import regimen_spy
+    from .positions import read_positions
+
+    errors = {}
+    now = datetime.now(ZoneInfo("UTC"))
+    try:
+        bars = db.scalars(select(MarketBar).where(MarketBar.symbol == "SPY").order_by(MarketBar.session_date)).all()
+        session_date, stale, missing = market_bar_status(present_sessions(db, "SPY"), now)
+        as_of = {"session_date": session_date.isoformat(), "updated_at": bars[-1].session_date.isoformat() if bars else None,
+                 "stale": stale, "missing_sessions": [day.isoformat() for day in missing]}
+    except Exception as exc:
+        as_of = None
+        errors["as_of"] = str(exc)
+    try:
+        import pandas_market_calendars as mcal
+        market_calendar = mcal.get_calendar("NYSE")
+        schedule = market_calendar.schedule(start_date=now.date(), end_date=now.date() + timedelta(days=14))
+        upcoming = schedule[schedule.market_open > now]
+        current = schedule[(schedule.market_open <= now) & (schedule.market_close > now)]
+        clock = {"is_open": not current.empty,
+                 "next_open": (current.iloc[0].market_open if not current.empty else upcoming.iloc[0].market_open).isoformat(),
+                 "next_close": (current.iloc[0].market_close if not current.empty else upcoming.iloc[0].market_close).isoformat()}
+    except Exception as exc:
+        clock = None
+        errors["clock"] = str(exc)
+    def section(name, fn, empty=None):
+        try:
+            return fn()
+        except Exception as exc:
+            errors[name] = str(exc)
+            return empty
+    regime = section("regime", lambda: regimen_spy(db))
+    motor = section("motor", estado_motor)
+    holdings = []
+    try:
+        for account in db.scalars(select(Account).where(Account.status == "active", Account.env == "paper")).all():
+            try:
+                with account_session_factory(account)() as source:
+                    symbols = [p.symbol for p in read_positions(source, "paper") if p.status == "executed"]
+                holdings.append((account.id, symbols))
+            except Exception as exc:
+                errors[f"account:{account.id}"] = str(exc)
+    except Exception as exc:
+        errors["held_in"] = str(exc)
+    held = held_in_por_simbolo(holdings)
+    names = {a.id: a.name for a in db.scalars(select(Account)).all()} if holdings else {}
+    held = {symbol: [{"account_id": aid, "account_name": names.get(aid, aid)} for aid in ids] for symbol, ids in held.items()}
+    sectors = section("sectors", lambda: filas_sector(db, held_in=held), [])
+    etfs = section("etfs", lambda: filas_etf(db, held), [])
+    for row in sectors:
+        row["held_in"] = held.get(row["symbol"], [])
+    for row in etfs:
+        row["held_in"] = held.get(row["symbol"], [])
+        row["in_universe_since"] = db.scalar(select(func.min(MarketBar.session_date)).where(MarketBar.symbol == row["symbol"]))
+        row["in_universe_since"] = row["in_universe_since"].isoformat() if row["in_universe_since"] else ""
+    from .market_macro import series_macro
+
+    macro = series_macro()
+    events = section("events", lambda: [e.model_dump() for e in calendar(14, db)], [])
+    return MarketPage(as_of=as_of, clock=clock, regime=regime, motor=motor, sectors=sectors, macro=macro,
+                      recessions=[], etfs=etfs, events=events, errors=errors)
 
 
 @app.get("/api/feed", response_model=list[FeedEventResponse])
