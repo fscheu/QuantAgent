@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import type { MacroSeries, MarketAsOf, MotorStateResponse, Regime, RegimeId, SectorRow } from '../api/types';
-import { marketConfig } from '../config';
+import { marketConfig, sectorHeatStep } from '../config';
 import { dateLong, num, time } from '../lib/format';
 import { Badge, Card, Delta, Notice } from './index';
+import { DataTable, type Column } from './DataTable';
 import './Market.css';
 
 const labels: Record<RegimeId, string> = { up_calm: 'Alcista tranquilo', up_vol: 'Alcista agitado', down_calm: 'Bajista tranquilo', down_vol: 'Bajista agitado' };
@@ -66,4 +68,31 @@ export function MacroIndicatorCard({ series }: { series: MacroSeries }) {
     {series.stale && <Notice severity="warning" title="Dato desactualizado" message={`Se esperaba un dato el ${series.expected_release ?? 'según la frecuencia de la serie'}.`} />}
     {last ? <><strong className="qa-macro-value">{num(last.value)} {series.unit}</strong><Delta value={series.change_1m} missingLabel="Sin cambio mensual" /><p>Dato del {series.frequency === 'monthly' ? dateLong(`${last.observation_date}T12:00:00Z`) : dateLong(`${last.observation_date}T12:00:00Z`)}, publicado el {dateLong(`${last.published_at.slice(0, 10)}T12:00:00Z`)}</p></> : <p className="qa-market-empty">Sin datos publicados.</p>}
   </Card>;
+}
+
+const returnPeriods = [['d1', '1d'], ['w1', '1s'], ['m1', '1m'], ['m3', '3m'], ['ytd', 'YTD']] as const;
+const periodLabels = { d1: '1 día', w1: '1 semana', m1: '1 mes', m3: '3 meses', ytd: 'año' } as const;
+const heatLabels = ['≤ −3 umbrales', '−2 a −3 umbrales', '−1 a −2 umbrales', 'dentro del umbral neutro', '+1 a +2 umbrales', '+2 a +3 umbrales', '≥ +3 umbrales'];
+const sectorColumns: Column<SectorRow>[] = [
+  { key: 'sector', header: 'Sector', type: 'custom', sortable: true, sortValue: row => row.rank ?? Infinity, render: row => <span>{row.symbol} · {row.name}{row.is_reference && <small> · Referencia</small>}</span>, card: 'primary' },
+  ...returnPeriods.map(([key, label]) => ({ key, header: label, type: 'custom' as const, sortable: true, sortValue: (row: SectorRow) => row.returns[key] ?? -Infinity, render: (row: SectorRow) => row.returns[key] == null ? <span title={`Sin datos para ${periodLabels[key]}`} aria-label={`Sin datos para ${periodLabels[key]}`}>—</span> : <span>{row.returns[key]! > 0 ? '+' : ''}{num(row.returns[key]!)}</span> })),
+  { key: 'score', header: 'Score / ranking', type: 'custom', sortable: true, sortValue: row => row.rank ?? Infinity, render: row => row.is_reference ? 'Referencia' : row.momentum_score == null ? <span title="Score sin datos">Score: sin datos</span> : `${num(row.momentum_score)} · #${row.rank ?? '—'}` },
+  { key: 'status', header: 'Estado', type: 'custom', render: row => row.is_reference ? 'Referencia' : row.blocked ? `Bloqueado${row.blocked_reason ? ` · ${row.blocked_reason}` : ''}` : row.enabled ? 'Habilitado' : 'Sin habilitar' },
+  { key: 'held', header: 'En cartera', type: 'custom', render: row => row.held_in.length ? row.held_in.map(item => item.account_name).join(', ') : row.enabled ? 'Sin posición todavía' : '—' },
+];
+
+export function SectorTable({ sectors, state = 'ready' }: { sectors: SectorRow[]; state?: 'ready' | 'loading' | 'empty' | 'error' | 'stale' }) {
+  const rows = [...sectors.filter(row => !row.is_reference).sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity)), ...sectors.filter(row => row.is_reference)];
+  return <DataTable columns={sectorColumns} rows={rows} rowKey={row => row.symbol} caption="Retornos, estado y posiciones de sectores" state={state} />;
+}
+
+export function SectorHeatmap({ sectors }: { sectors: SectorRow[] }) {
+  const [period, setPeriod] = useState<keyof typeof marketConfig.heatThresholds>('d1');
+  const rows = [...sectors.filter(row => !row.is_reference).sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity)), ...sectors.filter(row => row.is_reference)];
+  return <section className="qa-sector-heatmap">
+    <label>Período <select aria-label="Período del mapa de calor" value={period} onChange={event => setPeriod(event.target.value as typeof period)}>{returnPeriods.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+    <div role="table" aria-label={`Mapa de calor sectorial, ${periodLabels[period]}`}><div role="row"><strong role="columnheader">Sector</strong><strong role="columnheader">Retorno {returnPeriods.find(([key]) => key === period)?.[1]}</strong><strong role="columnheader">Estado</strong></div>
+      {rows.map(row => { const value = row.returns[period]; const step = value == null ? null : sectorHeatStep(value, period); return <div role="row" key={row.symbol}><span role="cell">{row.symbol} · {row.name}{row.is_reference ? ' · Referencia' : ''}</span><span role="cell" className={step == null ? '' : `qa-heat-step-${step}`} aria-label={value == null ? `Sin datos para ${periodLabels[period]}` : `${value > 0 ? '+' : ''}${num(value)} por ciento, ${heatLabels[step!]}`} title={value == null ? 'Sin datos' : heatLabels[step!]}>{value == null ? '—' : `${value > 0 ? '+' : ''}${num(value)}%`}</span><span role="cell">{row.is_reference ? 'Referencia' : row.blocked ? `Bloqueado${row.blocked_reason ? ` · ${row.blocked_reason}` : ''}` : row.enabled ? 'Habilitado' : 'Sin habilitar'}</span></div>; })}
+    </div>
+  </section>;
 }

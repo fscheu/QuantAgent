@@ -1,8 +1,9 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { MacroSeries, MotorState, Regime } from '../api/types';
+import type { MacroSeries, MotorState, Regime, SectorRow } from '../api/types';
 import { ThemeProvider } from '../ThemeContext';
-import { MarketAsOfLine, RegimeCard, RegimeStrip, MotorStateCard, MacroIndicatorCard } from './Market';
+import { MarketAsOfLine, RegimeCard, RegimeStrip, MotorStateCard, MacroIndicatorCard, SectorHeatmap, SectorTable } from './Market';
+import { sectorHeatStep } from '../config';
 
 const themed = (ui: React.ReactNode) => render(<ThemeProvider>{ui}</ThemeProvider>);
 const sample = (regime: Regime['regime']): Regime => ({ symbol: 'SPY', regime, since: '2026-10-01', sessions: 20, price: 100, ma200: 90, vol20: 0.2, vol_median_1y: 0.1, strip: [] });
@@ -55,5 +56,21 @@ describe('Market components', () => {
     expect(screen.getByText('Próximamente')).toBeTruthy();
     expect(container.querySelector('.qa-ghost')).toBeTruthy();
     expect(screen.queryByText(/0.12/)).toBeNull();
+  });
+  const sector: SectorRow = { symbol: 'XLK', name: 'Tecnología', is_reference: false, held_in: [{ account_id: 'm5', account_name: 'Paper M5' }], returns: { d1: null, w1: 1, m1: 2, m3: 3, ytd: 4 }, momentum_score: 1.2, rank: 1, enabled: false, blocked: true, blocked_reason: 'score negativo', score_as_of: null };
+  it('shows missing returns as accessible missing values and includes blocked reason and holdings', () => {
+    themed(<SectorTable sectors={[sector]} />);
+    expect(screen.getByLabelText('Sin datos para 1 día')).toBeTruthy();
+    expect(screen.getByText('Bloqueado · score negativo')).toBeTruthy();
+    expect(screen.getByText('Paper M5')).toBeTruthy();
+  });
+  it.each([[-1.5, 0], [-0.75, 1], [-0.251, 2], [0, 3], [0.251, 4], [0.75, 5], [1.5, 6]] as const)('maps threshold boundary %s to heat step %s', (value, step) => {
+    expect(sectorHeatStep(value, 'd1')).toBe(step);
+  });
+  it('changes heatmap period and recalculates the displayed return', () => {
+    themed(<SectorHeatmap sectors={[{ ...sector, returns: { d1: 0.2, w1: -2, m1: 2, m3: 3, ytd: 4 } }]} />);
+    expect(screen.getByRole('cell', { name: /\+0,20 por ciento/ })).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Período del mapa de calor'), { target: { value: 'w1' } });
+    expect(screen.getByRole('cell', { name: /−2,00 por ciento/ })).toBeTruthy();
   });
 });
