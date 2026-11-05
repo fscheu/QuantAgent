@@ -430,11 +430,15 @@ def correr_command(archivo, snapshot_name, carpeta, hasta_etapa=None):
                     for f in filas:
                         if f.get("v30") != "PASA":
                             for campo, umbral, comparador, unidad in (("trades", MIN_TRADES, ">=", "count"), ("sharpe_tasa_0", MIN_SHARPE_TASA_0, ">=", "ratio"), ("max_drawdown", MAX_DRAWDOWN, "<=", "pct")):
-                                try: valor = float(f[campo])
-                                except (KeyError, TypeError, ValueError): continue
+                                try:
+                                    valor = float(f[campo])
+                                except (KeyError, TypeError, ValueError):
+                                    continue
                                 if (comparador == ">=" and valor < umbral) or (comparador == "<=" and valor > umbral):
-                                    medida_corte = medida(campo, valor, umbral, comparador, unidad); break
-                            if medida_corte: break
+                                    medida_corte = medida(campo, valor, umbral, comparador, unidad)
+                                    break
+                            if medida_corte:
+                                break
             registrar_estado(h.id, etapa, veredicto, motivo, medida_corte, causa_corte)
             click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
             if veredicto == "PASA" and hasta_etapa >= 3:
