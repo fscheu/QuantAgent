@@ -1,15 +1,16 @@
 """Daily digest for the M5 paper trading bucket."""
 
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
 from quantagent.digest import SEPARADOR_MENSAJES, dividir_seccion
-from quantagent.models import Environment, Order, OrderSide, OrderStatus, OrderType, Position, SchedulerHeartbeat, TradeIntentRecord
+from quantagent.models import Environment, Fill, Order, OrderSide, OrderStatus, OrderType, Position, SchedulerHeartbeat, TradeIntentRecord
 from quantagent.trading.bucket_m5 import CAPITAL_INICIAL, MAX_HEAT_PCT
+from quantagent.digest_datos import crear_broker_alpaca_paper, reconstruir_posiciones
 
 
-def consultar_datos_m5(session: Session, day: date) -> dict:
+def consultar_datos_m5(session: Session, day: date, broker=None) -> dict:
     start = datetime.combine(day, time.min)
     end = start + timedelta(days=1)
     intents = (session.query(TradeIntentRecord)
@@ -46,9 +47,25 @@ def consultar_datos_m5(session: Session, day: date) -> dict:
         posiciones.append({"symbol": position.symbol, "quantity": float(position.quantity),
                            "avg_entry": float(position.average_entry_price), "unrealized_pnl": float(position.unrealized_pnl),
                            "stop": float(stop) if stop is not None else None})
+    fills = (session.query(Fill, Order).join(Order, Fill.order_id == Order.id)
+             .filter(Order.environment == Environment.PAPER, Fill.filled_at < end)
+             .order_by(Fill.filled_at, Fill.id).all())
+    _, sales = reconstruir_posiciones(fills)
+    realized = sum(sale["pnl"] for sale in sales if start <= sale["filled_at"] < end)
+    from quantagent.trading.bucket_m5 import cargar_credenciales
+    try:
+        if broker is None:
+            cargar_credenciales()
+            broker = crear_broker_alpaca_paper()
+        account = broker.get_account()
+        cuenta = {"equity": float(account["equity"]), "consulted_at": datetime.now(timezone.utc)}
+        if "cash" in account:
+            cuenta["cash"] = float(account["cash"])
+    except Exception as exc:
+        cuenta = {"error": type(exc).__name__}
     return {"aprobados": aprobados, "ciclo": ciclo,
             "rechazados": [{"symbol": item.symbol, "reject_reason": item.reject_reason} for item in rejected],
-            "posiciones": posiciones}
+            "posiciones": posiciones, "cuenta": cuenta, "realized_pnl": realized}
 
 
 def build_digest_m5_mensajes(day: date, datos: dict, *, capital: float = CAPITAL_INICIAL,
@@ -86,7 +103,9 @@ def build_digest_m5_mensajes(day: date, datos: dict, *, capital: float = CAPITAL
     heat = sum(position["quantity"] * (position["avg_entry"] - position["stop"])
                for position in positions
                if position["stop"] is not None and position["stop"] < position["avg_entry"])
-    equity = capital + sum(position["unrealized_pnl"] for position in positions)
+    calculated_equity = capital + sum(position["unrealized_pnl"] for position in positions)
+    cuenta = datos.get("cuenta", {})
+    equity = cuenta.get("equity", calculated_equity)
     heat_pct = heat / equity * 100 if equity else 0.0
     heat_line = (f"Heat: {heat_pct:.2f} % (límite {max_heat * 100:.2f} %)")
     sections.append("\n".join(lines))
@@ -99,8 +118,16 @@ def build_digest_m5_mensajes(day: date, datos: dict, *, capital: float = CAPITAL
         sections.append("\n".join(lines))
     if datos.get("semanal"):
         sections.append("\n".join(datos["semanal"]))
-    summary = [*alertas, f"Resumen M5 — {day.isoformat()}", f"Equity: {equity:.2f} USD",
-               "Caja: no disponible", "P&L del día realizado: sin datos",
+    if cuenta.get("error"):
+        equity_line = cash_line = f"no disponible: {cuenta['error']}"
+    else:
+        equity_line = f"{equity:.2f} USD"
+        cash_line = f"{cuenta['cash']:.2f} USD" if "cash" in cuenta else "no disponible"
+    consulted = cuenta.get("consulted_at")
+    timestamp = consulted.strftime("%Y-%m-%d %H:%M:%S UTC") if consulted else "no disponible"
+    summary = [*alertas, f"Resumen M5 — {day.isoformat()}", f"Equity: {equity_line}",
+               f"Caja: {cash_line}", f"P&L del día realizado: {datos.get('realized_pnl', 0.0):.2f} USD",
+               f"Foto actual de Alpaca; no es saldo histórico de --date. Consultado: {timestamp}",
                f"Intents aprobados: {len(approved)}; rechazados: {len(rejected)}",
                f"Posiciones: {len(positions)}", heat_line,
                f"Avisos: {sum(p['stop'] is None for p in positions)} posiciones sin stop"]
