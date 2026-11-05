@@ -1,4 +1,4 @@
-import type { AccountRef, AccountSummary, CalendarEvent, Dividend, EquityPoint, FeedEvent, HomeStatus, Order, Position, SectorExposure } from './types'
+import type { AccountRef, AccountSummary, CalendarEvent, CycleSummary, Dividend, EquityPoint, FeedEvent, Funnel, HistorySummary, HomeStatus, Hypothesis, Order, Position, ReviewRule, SectorExposure } from './types'
 
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) { super(message); this.name = 'ApiError' }
@@ -16,6 +16,12 @@ export const getSummary = (accountId: string) => get<AccountSummary>(`/api/accou
 export const getFeed = () => get<FeedEvent[]>('/api/feed')
 export const getCalendar = (days: number) => get<CalendarEvent[]>(`/api/calendar?days=${days}`)
 export const getHomeStatus = () => get<HomeStatus>('/api/home/status')
+export const getFunnel = (cycle: string, period: string) => get<Funnel>(`/api/funnel?ciclo=${encodeURIComponent(cycle)}&periodo=${encodeURIComponent(period)}`)
+export const getCycles = () => get<CycleSummary[]>('/api/funnel/cycles')
+export const getCurrentCycle = () => get<CycleSummary>('/api/funnel/cycles/current')
+export const getReviewRule = () => get<ReviewRule>('/api/funnel/review')
+export const getHistory = () => get<HistorySummary>('/api/funnel/history')
+export const getHypotheses = (filters: { cycle?: string; period?: string }) => { const params = new URLSearchParams(); if (filters.cycle) params.set('ciclo', filters.cycle); if (filters.period) params.set('periodo', filters.period); return get<Hypothesis[]>(`/api/hypotheses?${params}`) }
 export const getPositions = (accountId: string) => get<Position[]>(`/api/accounts/${encodeURIComponent(accountId)}/positions`)
 export type EquityRange = '1W' | '1M' | '3M' | 'YTD' | 'ALL'
 export const getEquity = (accountId: string, range: EquityRange) => get<EquityPoint[]>(`/api/accounts/${encodeURIComponent(accountId)}/equity?range=${range}`)

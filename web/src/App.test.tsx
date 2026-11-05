@@ -23,7 +23,8 @@ describe('App', () => {
     window.history.replaceState(null, '', path)
     render(<ThemeProvider><App /></ThemeProvider>)
     expect(screen.getByRole('heading', { name: title })).toBeTruthy()
-    expect(screen.getByText('En construcción')).toBeTruthy()
+    if (path.startsWith('/embudo')) expect(screen.queryByText('En construcción')).toBeNull()
+    else expect(screen.getByText('En construcción')).toBeTruthy()
   })
 
   it('falls back to Inicio for an unknown route', () => {
