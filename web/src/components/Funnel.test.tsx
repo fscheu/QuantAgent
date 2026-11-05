@@ -1,6 +1,6 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
-import { CycleMilestones, DropReasons, FunnelChart, ReviewCounter, StageVerdictBadge } from './Funnel';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { CycleFilter, CycleMilestones, CycleSummaryCard, DropReasons, FunnelChart, HistoryPanel, HypothesisCard, ReviewCounter, StageVerdictBadge } from './Funnel';
 import type { Funnel } from '../api/types';
 
 afterEach(cleanup);
@@ -24,4 +24,9 @@ describe('ReviewCounter', () => {
 describe('CycleMilestones', () => {
   it('calcula hitos cuando el contrato trae null y los marca vencidos si corresponde', () => { render(<CycleMilestones milestones={null} cycle="2000-11" status="open" />); expect(screen.getByText('Propuesta')).toBeTruthy(); expect(screen.getByText('Arranque del embudo')).toBeTruthy(); expect(screen.getByText('Revisión de paper')).toBeTruthy(); expect(screen.getAllByText('vencido')).toHaveLength(3); });
   it('muestra como hechos los hitos recibidos', () => { render(<CycleMilestones milestones={[{ key: 'proposal', day: 1, date: '2026-11-01', done: true }]} cycle="2026-11" status="closed" />); expect(screen.getByText('hecho')).toBeTruthy(); });
+});
+describe('Embudo cycle components', () => {
+  it('filters cycles in descending order, reports selection, and disables period selection for a cycle', () => { const change = vi.fn(); render(<CycleFilter value="2026-10" cycles={[{ cycle: '2026-09', status: 'closed' }, { cycle: '2026-11', status: 'open' }]} period="90d" onChange={change} onPeriodChange={vi.fn()} />); expect(screen.getByRole('option', { name: /2026-11.*abierto/ })).toBeTruthy(); fireEvent.change(screen.getByLabelText('Ciclo'), { target: { value: 'none' } }); expect(change).toHaveBeenCalledWith('none'); expect((screen.getByRole('group', { name: /Período/ }) as HTMLFieldSetElement).disabled).toBe(true); });
+  it('renders event history labels without translating them to stages', () => { render(<HistoryPanel history={{ stage_events: 55, attempts: 202, events_by_stage: [], attempts_by_label: [{ label: 'comparar', count: 3 }, { label: null, count: 1 }] }} />); expect(screen.getByText('comparar')).toBeTruthy(); expect(screen.getByText('(sin etiqueta)')).toBeTruthy(); expect(screen.getByText(/son eventos, no hipótesis/)).toBeTruthy(); });
+  it('omits absent hypothesis idea and metric and supports compact open cycles', () => { const cycle = { cycle: '2026-11', status: 'open' as const, started_at: '', closed_at: null, entered: 1, active: 1, cut: 0, held: 0, promoted: 0, reached_by_stage: { e0: null, e1: null, e2: null, e3: null }, milestones: [], headline: null, receipt_id: null }; const { container } = render(<><CycleSummaryCard cycle={cycle} compact /><HypothesisCard hypothesis={{ id: 'h', name: 'Prueba', idea: null, cycle: '2026-11', stage: 'e0', verdict: null, status: 'active', promoted: false, used_reserve: false, attempts_valid: 0, attempts_invalid: 0, last_metric: null, discard_reason: null, discard_measure: null, updated_at: '' }} /></>); expect(screen.getByText('Abierto')).toBeTruthy(); expect(container.textContent).not.toContain('undefined'); expect(screen.queryByText(/umbral/)).toBeNull(); });
 });

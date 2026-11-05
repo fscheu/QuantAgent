@@ -1,4 +1,4 @@
-import type { CycleMilestone, DropReason, Funnel, Measure, ReviewRule, Verdict } from '../api/types';
+import type { CycleMilestone, CycleSummary, DropReason, Funnel, HistorySummary, Hypothesis, Measure, ReviewRule, Verdict } from '../api/types';
 import { cycleConfig, funnelConfig } from '../config';
 import './Funnel.css';
 
@@ -70,4 +70,23 @@ export function FunnelChart({ funnel }: { funnel: Funnel }) {
 export function DropReasons({ reasons }: { reasons: DropReason[] }) {
   if (!reasons.length) return <p className="qa-drop-empty" role="status">Ninguna cayó en esta etapa.</p>;
   return <ul className="qa-drop-reasons">{reasons.map((reason, index) => <li key={`${reason.stage}-${reason.cause_code}-${index}`}><div><strong>{reason.cause_label}</strong><span>{reason.stage.toUpperCase()} · {reason.count}</span></div><StageVerdictBadge verdict={reason.verdict} size="sm" />{reason.example && <code>{reason.example.metric}: {formatMeasure(reason.example)}</code>}</li>)}</ul>;
+}
+
+export function CycleFilter({ value, cycles, period, onChange, onPeriodChange }: { value: 'all' | 'none' | string; cycles: { cycle: string; status: 'open' | 'closed' }[]; period: '30d' | '90d' | 'all'; onChange: (value: 'all' | 'none' | string) => void; onPeriodChange: (value: '30d' | '90d' | 'all') => void }) {
+  return <div className="qa-cycle-filter"><label>Ciclo <select value={value} onChange={event => onChange(event.target.value)}><option value="all">Todos</option>{[...cycles].sort((a, b) => b.cycle.localeCompare(a.cycle)).map(item => <option key={item.cycle} value={item.cycle}>{item.cycle}{item.status === 'open' ? ' · abierto' : ''}</option>)}<option value="none">Sin ciclo</option></select></label><fieldset disabled={value !== 'all'} aria-disabled={value !== 'all'}><legend>Período: aplica al embudo y a la lista</legend>{(['30d', '90d', 'all'] as const).map(item => <label key={item}><input type="radio" name="cycle-period" checked={period === item} onChange={() => onPeriodChange(item)} />{item === 'all' ? 'Todo' : item}</label>)}</fieldset><small>Todos = ciclos mensuales. El historial importado está en Sin ciclo.</small></div>;
+}
+
+export function HistoryPanel({ history }: { history: HistorySummary }) {
+  return <section className="qa-history-panel"><h3>Historial importado</h3><p>{history.stage_events} eventos de etapa · {history.attempts} intentos <small>(son eventos, no hipótesis)</small></p><table><thead><tr><th>Etapa</th><th>Eventos</th><th>PASA</th><th>CORTA</th><th>ERR.</th><th>ALAR.</th></tr></thead><tbody>{history.events_by_stage.map(row => <tr key={row.stage}><th>{row.stage.toUpperCase()}</th><td>{row.total}</td><td>{row.pass}</td><td>{row.cut}</td><td>{row.error}</td><td>{row.alarm}</td></tr>)}</tbody></table><h4>Intentos por etiqueta</h4><ul>{history.attempts_by_label.map((row, i) => <li key={`${row.label}-${i}`}><q>{row.label ?? '(sin etiqueta)'}</q> · {row.count}</li>)}</ul></section>;
+}
+
+export function CycleSummaryCard({ cycle, compact = false }: { cycle: CycleSummary; compact?: boolean }) {
+  const headline = cycle.headline ?? `${cycle.entered} entraron · ${cycle.active} siguen · ${cycle.cut} cayeron · ${cycle.held} detenidas · ${cycle.promoted} promovidas`;
+  return <article className={`qa-cycle-summary${compact ? ' is-compact' : ''}`}><header><strong>{cycle.cycle}</strong><span className="qa-cycle-status">{cycle.status === 'open' ? 'Abierto' : 'Cerrado'}</span></header><h3>{headline}</h3><dl>{[['Entraron', cycle.entered], ['Siguen', cycle.active], ['Cayeron', cycle.cut], ['Detenidas', cycle.held], ['Promovidas', cycle.promoted]].map(([label, count]) => <div key={label}><dt>{label}</dt><dd>{count}</dd></div>)}</dl>{!compact && <CycleMilestones milestones={cycle.milestones} cycle={cycle.cycle} status={cycle.status} />}</article>;
+}
+
+export function HypothesisCard({ hypothesis }: { hypothesis: Hypothesis }) {
+  const where = hypothesis.promoted ? 'Promovida' : hypothesis.status === 'held' ? `Detenida en ${hypothesis.stage.toUpperCase()}` : hypothesis.status === 'discarded' ? `Cayó en ${hypothesis.stage.toUpperCase()}` : `En ${hypothesis.stage.toUpperCase()}`;
+  const measure = hypothesis.discard_measure;
+  return <article className={`qa-hypothesis-card${hypothesis.status === 'held' ? ' is-held' : ''}`}><header><strong>{hypothesis.name}</strong>{hypothesis.verdict && <StageVerdictBadge verdict={hypothesis.verdict} promoted={hypothesis.promoted} />}</header><p>{hypothesis.cycle ?? 'Sin ciclo'} · {where}</p>{hypothesis.idea && <p>{hypothesis.idea}</p>}{hypothesis.discard_reason && <blockquote>{hypothesis.discard_reason}{measure && <> · {formatMeasure(measure)}</>}</blockquote>}{hypothesis.last_metric && <small>{hypothesis.last_metric.name}: {hypothesis.last_metric.value} · {hypothesis.last_metric.at}</small>}</article>;
 }
