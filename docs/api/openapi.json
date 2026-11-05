@@ -560,6 +560,199 @@
         "title": "FeedEventResponse",
         "type": "object"
       },
+      "Funnel": {
+        "properties": {
+          "cycle": {
+            "title": "Cycle",
+            "type": "string"
+          },
+          "drop_reasons": {
+            "items": {
+              "$ref": "#/components/schemas/FunnelDropReason"
+            },
+            "title": "Drop Reasons",
+            "type": "array"
+          },
+          "later": {
+            "items": {
+              "$ref": "#/components/schemas/FunnelLater"
+            },
+            "title": "Later",
+            "type": "array"
+          },
+          "period": {
+            "enum": [
+              "30d",
+              "90d",
+              "all"
+            ],
+            "title": "Period",
+            "type": "string"
+          },
+          "promoted": {
+            "title": "Promoted",
+            "type": "integer"
+          },
+          "sample_too_small": {
+            "title": "Sample Too Small",
+            "type": "boolean"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/FunnelStage"
+            },
+            "title": "Stages",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cycle",
+          "period",
+          "total",
+          "stages",
+          "later",
+          "promoted",
+          "drop_reasons",
+          "sample_too_small"
+        ],
+        "title": "Funnel",
+        "type": "object"
+      },
+      "FunnelDropReason": {
+        "properties": {
+          "cause_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cause Code"
+          },
+          "cause_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cause Label"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "example": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Example"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "verdict": {
+            "enum": [
+              "CORTA",
+              "ERROR",
+              "ALARMA"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stage",
+          "verdict",
+          "cause_code",
+          "cause_label",
+          "count",
+          "example"
+        ],
+        "title": "FunnelDropReason",
+        "type": "object"
+      },
+      "FunnelLater": {
+        "properties": {
+          "here": {
+            "title": "Here",
+            "type": "integer"
+          },
+          "phase": {
+            "title": "Phase",
+            "type": "string"
+          },
+          "reached": {
+            "title": "Reached",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "phase",
+          "reached",
+          "here"
+        ],
+        "title": "FunnelLater",
+        "type": "object"
+      },
+      "FunnelStage": {
+        "properties": {
+          "alarm": {
+            "title": "Alarm",
+            "type": "integer"
+          },
+          "cut": {
+            "title": "Cut",
+            "type": "integer"
+          },
+          "error": {
+            "title": "Error",
+            "type": "integer"
+          },
+          "here": {
+            "title": "Here",
+            "type": "integer"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "integer"
+          },
+          "reached": {
+            "title": "Reached",
+            "type": "integer"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stage",
+          "reached",
+          "here",
+          "passed",
+          "cut",
+          "error",
+          "alarm"
+        ],
+        "title": "FunnelStage",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1438,6 +1631,56 @@
           }
         },
         "summary": "Feed"
+      }
+    },
+    "/api/funnel": {
+      "get": {
+        "operationId": "funnel_api_funnel_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ciclo",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "title": "Ciclo",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "periodo",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "title": "Periodo",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Funnel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Funnel"
       }
     },
     "/api/home/status": {

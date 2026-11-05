@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .feed import build_feed
+from .registro import registro_session
 from .schemas import (
     AccountRef,
     AccountSummaryActive,
@@ -22,6 +23,7 @@ from .schemas import (
     BacktestRef,
     DividendResponse,
     EquityPoint,
+    Funnel,
     HomeStatus,
     OrderResponse,
     PositionResponse,
@@ -30,6 +32,19 @@ from .schemas import (
 
 app = FastAPI(title="QuantAgent API")
 NEW_YORK = ZoneInfo("America/New_York")
+
+
+@app.get("/api/funnel", response_model=Funnel)
+def funnel(ciclo: str = "all", periodo: str = "all", db: Session = Depends(registro_session)):
+    import re
+
+    if ciclo not in ("all", "none") and not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", ciclo):
+        raise HTTPException(status_code=422, detail="ciclo debe ser 'all', 'none' o YYYY-MM")
+    if periodo not in ("30d", "90d", "all"):
+        raise HTTPException(status_code=422, detail="periodo debe ser '30d', '90d' o 'all'")
+    from quantagent.fabrica.registro_vista import embudo
+
+    return embudo(ciclo=ciclo, periodo=periodo, session=db)
 
 
 class SPAStaticFiles(StaticFiles):
