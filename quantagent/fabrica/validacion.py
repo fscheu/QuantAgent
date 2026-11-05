@@ -9,7 +9,7 @@ from tempfile import TemporaryDirectory
 
 import pandas as pd
 
-from quantagent.backtesting.verdict import dsr_contra_intentos, evaluar, filas_validas, n_efectivo
+from quantagent.backtesting.verdict import MIN_DSR, dsr_contra_intentos, evaluar, filas_validas, n_efectivo
 from quantagent.cli.sweep import registrar_intento
 from quantagent.data.snapshot import snapshot_root
 from quantagent.fabrica.criterio import anios_positivos, evaluar_etapa3_cartera, recargo_paper, sharpe_benchmark
@@ -350,7 +350,7 @@ def validar_etapa3(h, snapshot, params_por_activo, carpeta, desde="2019-01-01", 
                                   for c in ("trades", "pnl", "sharpe_tasa_0", "max_drawdown")))
         fila["v30"] = "PASA" if pasa else "NO PASA"
         fila["dsr"] = dsr_contra_intentos(equity)
-        if fila["dsr"] is None or not fila["dsr"] >= 0.95:
+        if fila["dsr"] is None or not fila["dsr"] >= MIN_DSR:
             motivos.append("sin DSR" if fila["dsr"] is None else "DSR < 0.95")
         fila["motivos"] = [f"{activo}: {motivo}" for motivo in motivos]
     return "PASA" if any(not f["motivos"] for f in filas) else "CORTA", filas

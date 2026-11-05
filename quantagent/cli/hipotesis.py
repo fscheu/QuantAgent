@@ -19,7 +19,7 @@ from quantagent.fabrica.admision import admitir
 from quantagent.fabrica.candado import CandadoError, abrir, fecha_apertura
 from quantagent.fabrica.cartera import evaluar_cartera
 from quantagent.fabrica.comparar import comparar
-from quantagent.fabrica.estado import registrar_estado, resumen_tanda, ultimo_estado
+from quantagent.fabrica.estado import medida, registrar_estado, resumen_tanda, ultimo_estado
 from quantagent.fabrica.filtro import (
     filtrar_activo,
     filtrar_pierna,
@@ -40,6 +40,7 @@ from quantagent.fabrica.validacion import (
     validar_etapa2,
     validar_etapa3,
 )
+from quantagent.backtesting.verdict import MAX_DRAWDOWN, MIN_SHARPE_TASA_0, MIN_TRADES, MIN_DSR
 from quantagent.settings import COSTOS_PERFILES
 from quantagent.strategy.registry import STRATEGY_REGISTRY, build_strategy, cli_aliases
 
@@ -153,7 +154,7 @@ def reserva_command(archivo, snapshot_name, abrir_reserva):
                               hipotesis=h.id, etapa="3", sharpe_base="DGS3MO")
         except Exception as exc:
             raise click.ClickException(str(exc)) from exc
-        registrar_estado(h.id, "3", veredicto, "reserva; C0 intacto")
+        registrar_estado(h.id, "3", veredicto, "reserva; C0 intacto", causa="lock_closed" if veredicto == "CORTA" else None)
         click.echo(f"Reserva: {h.id}; {desde} a {hasta}; C0: {veredicto}")
         click.echo(f"Sharpe en exceso de DGS3MO: cartera {m1['sharpe_cartera']:.2f}; benchmark {m1['sharpe_benchmark']:.2f}")
     else:
@@ -201,7 +202,7 @@ def reserva_veredicto_command(archivo, snapshot_name):
                       {"desde": str(desde.date()), "hasta": str(hasta.date()), "trades": trades, "pnl": "",
                        "sharpe": diagnostico["sharpe_cartera"]}, hipotesis=h.id,
                       etapa="3", sharpe_base="DGS3MO")
-    registrar_estado(h.id, "3", veredicto, "reserva; M1 DGS3MO")
+    registrar_estado(h.id, "3", veredicto, "reserva; M1 DGS3MO", causa="lock_closed" if veredicto == "CORTA" else None)
     click.echo(f"Reserva: {h.id}; M1 cartera {diagnostico['sharpe_cartera']:.2f}; M1 benchmark {diagnostico['sharpe_benchmark']:.2f}; C0: {veredicto}; benchmark {c0['benchmark']:.2f}; trades {trades}")
 
 
@@ -379,7 +380,7 @@ def correr_command(archivo, snapshot_name, carpeta, hasta_etapa=None):
     h, ok, motivos = admitir_hipotesis(archivo, snapshot_name, True)
     etapa, veredicto = "0", "PASA" if ok else "CORTA"
     motivo = "; ".join(motivos) if motivos else "admisión aceptada"
-    registrar_estado(h.id, etapa, veredicto, motivo)
+    registrar_estado(h.id, etapa, veredicto, motivo, causa="admission" if veredicto == "CORTA" else None)
     click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
     if ok and hasta_etapa >= 1:
         ret_filtro = filtrar_hipotesis(h, snapshot_name)
@@ -394,7 +395,7 @@ def correr_command(archivo, snapshot_name, carpeta, hasta_etapa=None):
             try:
                 veredicto, filas = validar_etapa2(h, snapshot_name, parametros, carpeta)
             except Exception as exc:
-                registrar_estado(h.id, "2", "ERROR", motivo_error(exc))
+                registrar_estado(h.id, "2", "ERROR", motivo_error(exc), causa="data_load" if isinstance(exc, SnapshotError) else "runtime_error")
                 raise
             etapa = "2"
             motivos = [m for fila in filas for m in fila["motivos"]]
@@ -414,7 +415,27 @@ def correr_command(archivo, snapshot_name, carpeta, hasta_etapa=None):
                     if alarma:
                         veredicto = "ALARMA"
                         motivo = "filtro optimista en " + ", ".join(activos)
-            registrar_estado(h.id, etapa, veredicto, motivo)
+            medida_corte, causa_corte = None, None
+            if veredicto == "ALARMA":
+                pares = [(sharpe_car, f.get("sharpe_cartera")) for f in filas] if h.es_cartera else [(r[1], f.get("sharpe_tasa_0")) for r, f in zip(resultados, filas)]
+                pares = [(a, b) for a, b in pares if a is not None and b is not None]
+                if pares:
+                    a, b = pares[0]
+                    medida_corte, causa_corte = medida("sharpe_filter_vs_motor", a - b, 0, ">=", "ratio"), "filter_optimistic"
+            elif veredicto == "CORTA":
+                if any(not f.get("control", "").startswith(("coinciden", "no aplica:")) for f in filas):
+                    causa_corte = "control_mismatch"
+                else:
+                    causa_corte = "v30_fail"
+                    for f in filas:
+                        if f.get("v30") != "PASA":
+                            for campo, umbral, comparador, unidad in (("trades", MIN_TRADES, ">=", "count"), ("sharpe_tasa_0", MIN_SHARPE_TASA_0, ">=", "ratio"), ("max_drawdown", MAX_DRAWDOWN, "<=", "pct")):
+                                try: valor = float(f[campo])
+                                except (KeyError, TypeError, ValueError): continue
+                                if (comparador == ">=" and valor < umbral) or (comparador == "<=" and valor > umbral):
+                                    medida_corte = medida(campo, valor, umbral, comparador, unidad); break
+                            if medida_corte: break
+            registrar_estado(h.id, etapa, veredicto, motivo, medida_corte, causa_corte)
             click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
             if veredicto == "PASA" and hasta_etapa >= 3:
                 etapa = "3"
@@ -426,7 +447,7 @@ def correr_command(archivo, snapshot_name, carpeta, hasta_etapa=None):
                     try:
                         veredicto, filas = validar_etapa3(h, snapshot_name, parametros, Path(carpeta) / "etapa3")
                     except Exception as exc:
-                        registrar_estado(h.id, "3", "ERROR", motivo_error(exc))
+                        registrar_estado(h.id, "3", "ERROR", motivo_error(exc), causa="data_load" if isinstance(exc, SnapshotError) else "runtime_error")
                         raise
                     headers = ["pierna", "activo", "V30", "DSR"] if h.es_cartera else ["activo", "V30", "DSR"]
                     filas_tab = [[f.get("estrategia", ""), f["activo"], f["v30"], f["dsr"]] if h.es_cartera else [f["activo"], f["v30"], f["dsr"]] for f in filas]
@@ -439,7 +460,19 @@ def correr_command(archivo, snapshot_name, carpeta, hasta_etapa=None):
                         motivo = "; ".join(motivos)
                         if veredicto == "PASA":
                             motivo = "pasan V30 y DSR: " + ", ".join(f["activo"] for f in filas if not f["motivos"])
-                registrar_estado(h.id, etapa, veredicto, motivo)
+                medida_corte = None
+                causa_corte = None
+                if veredicto == "CORTA":
+                    if "ya se abrió" in motivo or "candado" in motivo.lower():
+                        causa_corte = "lock_closed"
+                    elif "DSR" in motivo or "dsr" in motivo:
+                        causa_corte = "dsr_below"
+                        fila_dsr = next((f for f in filas if f.get("dsr") is not None), None)
+                        if fila_dsr:
+                            medida_corte = medida("dsr", fila_dsr["dsr"], MIN_DSR, ">=", "pct")
+                    else:
+                        causa_corte = "v30_fail"
+                registrar_estado(h.id, etapa, veredicto, motivo, medida_corte, causa_corte)
                 click.echo(f"Etapa {etapa}: {veredicto} ({motivo})")
     click.echo(f"Llegó a la etapa {etapa}: {veredicto} ({motivo})")
     raise click.exceptions.Exit(int(veredicto != "PASA"))

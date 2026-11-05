@@ -76,3 +76,31 @@ def test_etapa1_guarda_medida_del_corte(tmp_path, monkeypatch, db_temporal,
     assert evento["datos"]["measure"]["value"] == value
     assert evento["datos"]["measure"]["threshold"] == (MIN_TRADES_ETAPA1 if metric == "trades" else MIN_SHARPE_ETAPA1)
     assert causa_de_evento(evento)[0] == cause
+
+
+def test_etapa0_guarda_causa_admission(tmp_path, monkeypatch, db_temporal):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    archivo = Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml"
+    h = cargar_hipotesis(archivo)
+    monkeypatch.setattr(hipotesis, "admitir_hipotesis", lambda *a: (h, False, ["rechazo"]))
+    result = CliRunner().invoke(backtest_group, ["hipotesis", "correr", str(archivo),
+        "--snapshot", "sintetico", "--carpeta", str(tmp_path / "motor")])
+    assert result.exit_code == 1, result.output
+    evento = registro_db.eventos_etapa(h.id)[-1]
+    assert evento["datos"]["cause_code"] == "admission"
+    assert "measure" not in evento["datos"]
+
+
+def test_error_etapa2_guarda_causa_runtime(tmp_path, monkeypatch, db_temporal):
+    monkeypatch.setenv("QUANTAGENT_SNAPSHOT_DIR", str(tmp_path))
+    archivo = Path(__file__).parent / "fixtures/hipotesis/rsi-valida.yaml"
+    h = cargar_hipotesis(archivo)
+    monkeypatch.setattr(hipotesis, "admitir_hipotesis", lambda *a: (h, True, []))
+    monkeypatch.setattr(hipotesis, "filtrar_hipotesis", lambda *a: ([], {}, "PASA", "ok", 0.5, 40))
+    monkeypatch.setattr(hipotesis, "validar_etapa2", lambda *a: (_ for _ in ()).throw(RuntimeError("falla")))
+    result = CliRunner().invoke(backtest_group, ["hipotesis", "correr", str(archivo),
+        "--snapshot", "sintetico", "--carpeta", str(tmp_path / "motor")])
+    evento = registro_db.eventos_etapa(h.id)[-1]
+    assert evento["veredicto"] == "ERROR"
+    assert evento["datos"]["cause_code"] == "runtime_error"
+    assert "measure" not in evento["datos"]
