@@ -3,6 +3,7 @@
 import json
 import os
 import subprocess
+import traceback
 from datetime import date, datetime, time, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -238,6 +239,7 @@ def _emitir_digest(messages: list[str], titulo: str | None) -> None:
                            input=message, text=True, capture_output=True, check=True)
         except (OSError, subprocess.CalledProcessError) as exc:
             detail = exc.stderr if isinstance(exc, subprocess.CalledProcessError) else str(exc)
+            traceback.print_exception(exc)
             raise click.ClickException(f"Telegram: falló el envío del mensaje {index}: {detail}") from exc
 
 
@@ -352,6 +354,7 @@ def trading_digest(archivo, digest_date, bucket: str | None, db: str | None, sha
                         session, day, portfolio, broker)
                     valuation = consultar_valuacion_actual(broker, portfolios)
                 except (RuntimeError, ValueError) as exc:
+                    traceback.print_exception(exc)
                     raise click.ClickException(str(exc)) from exc
                 portfolios = valuation["portfolios"]
             values = {p["symbol"]: float(p["value"]) for p in portfolios[0]["positions"]} if portfolios else {}
@@ -379,6 +382,7 @@ def trading_digest(archivo, digest_date, bucket: str | None, db: str | None, sha
                     differences = comparar_pesos(paper_weights, shadow_weights, tolerancias=tolerancias)
     except (SQLAlchemyError, ValueError) as exc:
         if dedicated:
+            traceback.print_exception(exc)
             raise click.ClickException(f"Cartera: error al consultar datos ({type(exc).__name__}).") from exc
         portfolios, trades, heartbeats, cumulative_pnl, orders = [], [], [], 0.0, []
     finally:
@@ -391,6 +395,16 @@ def trading_digest(archivo, digest_date, bucket: str | None, db: str | None, sha
     _emitir_digest(build_digest_mensajes(day, portfolios, trades, heartbeats, warnings=warnings,
                             reconciliations=[*differences, *rejection_reports], cumulative_pnl=cumulative_pnl,
                             valuation=valuation, executions=executions, pending=pending), enviar_telegram)
-    if dividendos_error or differences or any(str(order.get("status")).lower() == "rejected" and not order.get("comment")
-                          for order in orders):
+    rechazos_sin_comentario = sum(
+        str(order.get("status")).lower() == "rejected" and not order.get("comment") for order in orders
+    )
+    if dividendos_error or differences or rechazos_sin_comentario:
+        if enviar_telegram:
+            click.echo(
+                f"Digest enviado con hallazgos: {len(differences)} desvíos, "
+                f"{'error de dividendos' if dividendos_error else 'sin error de dividendos'}, "
+                f"{rechazos_sin_comentario} rechazos sin comentario.",
+                err=True,
+            )
+            return
         raise click.exceptions.Exit(1)

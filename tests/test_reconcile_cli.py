@@ -1,8 +1,10 @@
 import json
+import subprocess
 from contextlib import contextmanager
 from datetime import datetime
 from types import SimpleNamespace
 
+import click
 import pytest
 from click.testing import CliRunner
 
@@ -59,7 +61,10 @@ def test_digest_dividendos_por_defecto_cliente_real(tmp_path, monkeypatch, activ
     (.1171, "UNKNOWN", .00005, 0),
     (12120 / 99941, "IWM", .001, 0),
 ])
-def test_digest_tolera_una_accion_con_db_y_sombra(db_session, tmp_path, monkeypatch, spy, extra, weight, code):
+@pytest.mark.parametrize("enviar_telegram", [False, True])
+def test_digest_tolera_una_accion_con_db_y_sombra(
+    db_session, tmp_path, monkeypatch, spy, extra, weight, code, enviar_telegram
+):
     for symbol, quantity, price in [("SPY", 19.2, 600), ("QQQ", 88.421, 1000), ("IWM", 0, 200)]:
         db_session.add(Position(symbol=symbol, quantity=quantity, current_price=price,
                                 average_entry_price=price, unrealized_pnl=0,
@@ -79,16 +84,41 @@ def test_digest_tolera_una_accion_con_db_y_sombra(db_session, tmp_path, monkeypa
     monkeypatch.setattr("quantagent.cli.reconcile.utils.session_scope", session_scope)
     shadow = tmp_path / "shadow.json"
     guardar_sombra(shadow, "paper", "2026-10-27", {"SPY": spy, "QQQ": 1 - spy - weight, extra: weight}, 99941)
+    enviados = []
+    monkeypatch.setenv("HERMES_BIN", "hermes-test")
+    monkeypatch.setattr(
+        "quantagent.cli.reconcile.subprocess.run",
+        lambda *args, **kwargs: enviados.append((args, kwargs)),
+    )
     result = CliRunner().invoke(cli, ["trading", "digest", "--date", "2026-10-27",
-                                      "--shadow", str(shadow)])
-    assert result.exit_code == code, result.output
-    if code:
+                                      "--shadow", str(shadow),
+                                      *( ["--enviar-telegram", "Paper"] if enviar_telegram else [])])
+    assert result.exit_code == (0 if enviar_telegram and code else code), result.output
+    assert bool(enviados) == enviar_telegram
+    if enviar_telegram and code:
+        assert "Digest enviado con hallazgos:" in result.stderr
+        assert any("SPY: peso paper" in kwargs["input"] or f"{extra}: peso paper" in kwargs["input"]
+                   for _, kwargs in enviados)
+    if code and not enviar_telegram:
         symbol = "SPY" if spy == .13 else extra
         tolerance = {"SPY": 600 / 99941, "IWM": 200 / 99941}.get(symbol, 1e-4)
         assert f"{symbol}: peso paper" in result.output
         assert f"(tolerancia {tolerance})" in result.output
     else:
         assert "difiere" not in result.output
+
+
+def test_digest_telegram_fallido_imprime_traceback(monkeypatch, capsys):
+    def fail_send(*args, **kwargs):
+        raise subprocess.CalledProcessError(1, args[0], stderr="send failed")
+
+    monkeypatch.setattr("quantagent.cli.reconcile.subprocess.run", fail_send)
+    from quantagent.cli.reconcile import _emitir_digest
+
+    with pytest.raises(click.ClickException, match="falló el envío"):
+        _emitir_digest(["digest"], "Paper")
+    err = capsys.readouterr().err
+    assert "Traceback" in err and "CalledProcessError" in err
 
 
 @pytest.mark.parametrize(
