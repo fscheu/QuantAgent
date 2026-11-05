@@ -30,6 +30,12 @@ export const useOrders = (accountId: string, date: string) => useLoad(() => api.
 export const useFeed = () => useLoad(api.getFeed, 'feed')
 export const useCalendar = (days: number) => useLoad(() => api.getCalendar(days), `calendar:${days}`)
 export const useHomeStatus = () => useLoad(api.getHomeStatus, 'home-status')
+export const useFunnel = (cycle: string, period: string) => useLoad(() => api.getFunnel(cycle, period), `funnel:${cycle}:${period}`)
+export const useCycles = () => useLoad(api.getCycles, 'funnel-cycles')
+export const useCurrentCycle = () => useLoad(api.getCurrentCycle, 'current-cycle')
+export const useReviewRule = () => useLoad(api.getReviewRule, 'review-rule')
+export const useHistory = () => useLoad(api.getHistory, 'funnel-history')
+export const useHypotheses = (filters: { cycle?: string; period?: string }) => useLoad(() => api.getHypotheses(filters), `hypotheses:${filters.cycle ?? ''}:${filters.period ?? ''}`)
 
 export const useBacktests = () => useLoad(api.getBacktests, 'backtests')
 export const useBacktestPerformance = (id: string, range: import('./types').PerfRange, vs: string | null) => useLoad(() => api.getBacktestPerformance(id, range, vs), `performance:${id}:${range}:${vs}`)
