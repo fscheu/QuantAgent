@@ -160,19 +160,53 @@ def hipotesis(estado=None, etapa=None, ciclo=None):
     aperturas = _aperturas(eventos)
     ciclo_por_h = {h: c for c, e in aperturas.items() for h in e.get("datos", {}).get("hipotesis", [])}
     actuales = _estados(eventos)
+    intentos = registro.intentos(valida_solo=False)
     salida = []
     for h, ultimo in actuales.items():
         stage = f"e{ultimo.get('etapa')}"
-        descartada = ultimo.get("veredicto") in _CAIDAS
-        status = "discarded" if descartada else "active"
+        veredicto = ultimo.get("veredicto")
+        promovida = ultimo.get("etapa") == "3" and veredicto == "PASA"
+        status = ("promoted" if promovida else "discarded" if veredicto == "CORTA"
+                  else "held" if veredicto in ("ERROR", "ALARMA") else "active")
         ciclo_h = ciclo_por_h.get(h)
         if (estado is not None and estado != status) or (etapa is not None and etapa != stage) or (ciclo is not None and ciclo != ciclo_h):
             continue
+        propios = [i for i in intentos if i.get("hipotesis") == h]
         salida.append({"id": h, "name": h, "idea": None, "cycle": ciclo_h, "stage": stage,
-                       "status": status, "last_metric": None,
-                       "discard_reason": ultimo.get("motivo") if descartada else None,
-                       "discard_detail": None, "updated_at": ultimo.get("fecha_utc")})
-    return sorted(salida, key=lambda h: (h["stage"], h["updated_at"] or ""), reverse=True)
+                       "verdict": veredicto, "status": status, "promoted": promovida,
+                       "used_reserve": None, "attempts_valid": sum(i.get("estado") != "invalida_bug" for i in propios),
+                       "attempts_invalid": sum(i.get("estado") == "invalida_bug" for i in propios),
+                       "last_metric": None,
+                       "discard_reason": ultimo.get("motivo") if veredicto in _CAIDAS else None,
+                       "discard_measure": (ultimo.get("datos") or {}).get("measure") if veredicto in _CAIDAS else None,
+                       "updated_at": ultimo.get("fecha_utc")})
+    return sorted(salida, key=lambda h: (int(h["stage"][1:]), h["updated_at"] or ""), reverse=True)
+
+
+def hipotesis_detalle(id):
+    resumen = next((h for h in hipotesis() if h["id"] == id), None)
+    if resumen is None:
+        return None
+    eventos = [e for e in registro.eventos() if e.get("hipotesis") == id and e.get("evento") == "etapa"]
+    resumen["timeline"] = [{"stage": f"e{e.get('etapa')}", "verdict": e.get("veredicto"),
+                            "decided_at": e.get("fecha_utc"), "reason": e.get("motivo", ""),
+                            "measure": (e.get("datos") or {}).get("measure"),
+                            "imported": bool((e.get("datos") or {}).get("importado"))}
+                           for e in sorted(eventos, key=_fecha)]
+    intentos = [i for i in registro.intentos(valida_solo=False) if i.get("hipotesis") == id]
+    resumen["attempts"] = [{"id": str(n), "hypothesis_id": id, "stage": i.get("etapa"),
+                            "ran_at": i.get("fecha_utc"), "subject": i.get("activo") or i.get("estrategia") or "",
+                            "snapshot_hash": "", "sharpe": _numero(i.get("sharpe")),
+                            "trades": _numero(i.get("trades")), "pnl_pct": _numero(i.get("pnl")),
+                            "invalid": i.get("estado") == "invalida_bug",
+                            "invalid_reason": None}
+                           for n, i in enumerate(intentos, 1)]
+    resumen.update(later_phases=[], backtests=[], paper_account=None)
+    return resumen
+
+
+def _numero(valor):
+    return None if valor in (None, "") else float(valor)
 
 
 def informe_ciclo(ciclo):
