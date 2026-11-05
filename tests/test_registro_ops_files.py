@@ -18,7 +18,7 @@ def test_registro_operations_files_are_read_only_and_scripts_parse(tmp_path):
         subprocess.run(["bash", "-n", str(script)], check=True)
     env = os.environ.copy()
     env.pop("QUANTAGENT_REGISTRO_ADMIN_URL", None)
-    env.pop("QUANTAGENT_REGISTRO_CONTAINER", None)
+    env["QUANTAGENT_REGISTRO_CONTAINER"] = ""
     result = subprocess.run([str(backup)], env=env, text=True, capture_output=True)
     assert result.returncode != 0
     assert "QUANTAGENT_REGISTRO_ADMIN_URL" in result.stderr

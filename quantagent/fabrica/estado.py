@@ -12,6 +12,9 @@ ETIQUETAS_CAUSA = {
     "sharpe_below": "Sharpe por debajo del umbral", "few_trades": "Pocos trades",
     "max_dd": "Drawdown máximo excedido", "history_short": "Historia insuficiente",
     "control_mismatch": "Control no coincide", "data_load": "Error al cargar datos",
+    "admission": "No admitida", "runtime_error": "Error de ejecución",
+    "filter_optimistic": "Filtro optimista", "v30_fail": "No pasa V30",
+    "dsr_below": "DSR por debajo del umbral", "lock_closed": "Candado cerrado",
 }
 
 

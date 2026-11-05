@@ -27,7 +27,8 @@ def bars_group():
 @click.option("--base", default=None, help="SQLAlchemy database URL; default: QUANTAGENT_DATABASE_URL.")
 @click.option("--snapshot", default=None, help="Snapshot name to backfill instead of downloading from Alpaca.")
 @click.option("--dry-run", is_flag=True, help="Report changes without saving them; default: save changes.")
-def update_bars(simbolos, desde, base, snapshot, dry_run):
+@click.option("--fallar-si-stale", is_flag=True, help="Exit with an error if any symbol is stale or has missing sessions; default: succeed.")
+def update_bars(simbolos, desde, base, snapshot, dry_run, fallar_si_stale):
     symbols = [s.strip().upper() for s in simbolos.split(",") if s.strip()] if simbolos else list(MARKET_BAR_SYMBOLS)
     start = date.fromisoformat(desde) if desde else None
     engine = create_engine(base or os.environ["QUANTAGENT_DATABASE_URL"])
@@ -39,3 +40,5 @@ def update_bars(simbolos, desde, base, snapshot, dry_run):
     for symbol, item in result.items():
         session_date, stale, missing = item["status"]
         click.echo(f"{symbol}: {item['rows']} barras; session_date={session_date}; stale={stale}; missing_sessions={len(missing)}")
+    if fallar_si_stale and any(stale or missing for _, stale, missing in (item["status"] for item in result.values())):
+        raise click.ClickException("Uno o más símbolos tienen datos stale o sesiones faltantes.")

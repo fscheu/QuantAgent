@@ -128,3 +128,39 @@ class MarketPage(BaseModel):
     etfs: list[dict]
     events: list[dict]
     errors: dict[str, str] = Field(default_factory=dict)
+
+
+class FunnelStage(BaseModel):
+    stage: str
+    reached: int
+    here: int
+    passed: int
+    cut: int
+    error: int
+    alarm: int
+
+
+class FunnelLater(BaseModel):
+    phase: str
+    reached: int
+    here: int
+
+
+class FunnelDropReason(BaseModel):
+    stage: str
+    verdict: Literal["CORTA", "ERROR", "ALARMA"]
+    cause_code: str | None
+    cause_label: str | None
+    count: int
+    example: dict | None
+
+
+class Funnel(BaseModel):
+    cycle: str
+    period: Literal["30d", "90d", "all"]
+    total: int
+    stages: list[FunnelStage]
+    later: list[FunnelLater]
+    promoted: int
+    drop_reasons: list[FunnelDropReason]
+    sample_too_small: bool
