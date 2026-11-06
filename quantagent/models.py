@@ -360,6 +360,15 @@ class MarketBar(Base):
     source = Column(String(20), nullable=False)
 
 
+class MacroObservation(Base):
+    __tablename__ = "macro_observations"
+
+    series_id = Column(String(20), primary_key=True)
+    observation_date = Column(Date, primary_key=True)
+    value = Column(Numeric(precision=18, scale=8), nullable=False)
+    published_at = Column(Date, nullable=False)
+
+
 class StrategyConfig(Base):
     """StrategyConfig model for persisting portfolio and risk management profiles."""
 

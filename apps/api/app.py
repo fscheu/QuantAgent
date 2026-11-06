@@ -252,9 +252,10 @@ def calendar(days: int = Query(30, ge=1, le=120), db: Session = Depends(get_db))
 def market(db: Session = Depends(get_db)):
     from quantagent.data.market_bars import market_bar_status, present_sessions
     from quantagent.models import Account, MarketBar
+
     from .accounts import account_session_factory
-    from .market_etfs import ETF_SYMBOLS, filas_etf, held_in_por_simbolo
-    from .market_motor import filas_sector, estado_motor
+    from .market_etfs import filas_etf, held_in_por_simbolo
+    from .market_motor import estado_motor, filas_sector
     from .market_regime import regimen_spy
     from .positions import read_positions
 
@@ -310,12 +311,18 @@ def market(db: Session = Depends(get_db)):
         row["held_in"] = held.get(row["symbol"], [])
         row["in_universe_since"] = db.scalar(select(func.min(MarketBar.session_date)).where(MarketBar.symbol == row["symbol"]))
         row["in_universe_since"] = row["in_universe_since"].isoformat() if row["in_universe_since"] else ""
-    from .market_macro import series_macro
+    from .market_macro import recession_periods, series_macro
 
-    macro = series_macro()
+    try:
+        macro = series_macro(db)
+        recessions = recession_periods(db)
+    except Exception as exc:
+        errors["macro"] = str(exc)
+        macro = series_macro(None)
+        recessions = []
     events = section("events", lambda: [e.model_dump() for e in calendar(14, db)], [])
     return MarketPage(as_of=as_of, clock=clock, regime=regime, motor=motor, sectors=sectors, macro=macro,
-                      recessions=[], etfs=etfs, events=events, errors=errors)
+                      recessions=recessions, etfs=etfs, events=events, errors=errors)
 
 
 @app.get("/api/feed", response_model=list[FeedEventResponse])

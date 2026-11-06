@@ -7,7 +7,8 @@ import click
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from quantagent.data.market_bars import DailyAlpacaClient, MARKET_BAR_SYMBOLS, update_market_bars
+from quantagent.data.macro_series import update_macro_series
+from quantagent.data.market_bars import MARKET_BAR_SYMBOLS, DailyAlpacaClient, update_market_bars
 
 
 @click.group("mercado", help="Manage stored market data.")
@@ -42,3 +43,26 @@ def update_bars(simbolos, desde, base, snapshot, dry_run, fallar_si_stale):
         click.echo(f"{symbol}: {item['rows']} barras; session_date={session_date}; stale={stale}; missing_sessions={len(missing)}")
     if fallar_si_stale and any(stale or missing for _, stale, missing in (item["status"] for item in result.values())):
         raise click.ClickException("Uno o más símbolos tienen datos stale o sesiones faltantes.")
+
+
+@market_group.group("macro", help="Manage stored FRED macroeconomic observations.")
+def macro_group():
+    pass
+
+
+@macro_group.command("actualizar", help="Update macroeconomic observations from FRED.",
+                     epilog="Example: quantagent mercado macro actualizar --series T10Y2Y,USREC")
+@click.option("--series", default="T10Y2Y,USREC", help="Comma-separated FRED series; default: T10Y2Y,USREC.")
+@click.option("--desde", default=None, help="First observation date in YYYY-MM-DD format; default: 2000-01-01 or last stored date minus 7 days.")
+@click.option("--base", default=None, help="SQLAlchemy database URL; default: QUANTAGENT_DATABASE_URL.")
+@click.option("--dry-run", is_flag=True, help="Report rows without saving them; default: save changes.")
+def update_macro(series, desde, base, dry_run):
+    from quantagent.data.sources.fred import FredClient
+
+    selected = [item.strip().upper() for item in series.split(",") if item.strip()]
+    start = date.fromisoformat(desde) if desde else None
+    engine = create_engine(base or os.environ["QUANTAGENT_DATABASE_URL"])
+    with Session(engine) as session:
+        result = update_macro_series(session, FredClient(), selected, start=start, dry_run=dry_run)
+    for series_id, count in result.items():
+        click.echo(f"{series_id}: {count} observaciones nuevas")
