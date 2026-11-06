@@ -23,6 +23,7 @@
 - [Snapshot data commands](data/snapshot.md)
 - [Market data commands](mercado.md)
 - [Daily market bar commands](mercado/barras.md)
+- [Market macro commands](mercado/macro.md)
 - [Trade attempt commands](intentos.md)
 - [Profile commands](profile.md)
 - [Hypothesis cycle commands](registro.md)

@@ -34,6 +34,8 @@ Implementation documents should include:
 
 ## Active Per-Change Implementation
 
+- [QuantAgent-e452.41-IM-macro-fred.md](./QuantAgent-e452.41-IM-macro-fred.md) - Ingesta FRED de T10Y2Y y USREC y exposición en Mercado.
+
 - [QuantAgent-w9vi-IM-calendario-mensual.md](./QuantAgent-w9vi-IM-calendario-mensual.md) - Fechas mensuales del ciclo, estado del registro y corte de revisión.
 - [QuantAgent-oto-IM-01.md](./QuantAgent-oto-IM-01.md) - Entrada M5 buy-stop y stop de protección enviados como una orden OTO de Alpaca.
 

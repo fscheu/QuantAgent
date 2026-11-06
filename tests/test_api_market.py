@@ -5,14 +5,14 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from apps.api.app import app, get_db
+from apps.api.app import app, get_db, market
 from quantagent.database import Base
-from quantagent.models import Account, CalendarEvent, MarketBar
+from quantagent.models import Account, CalendarEvent, MacroObservation, MarketBar
 
 
 def test_market_page_contract_and_independent_sections(tmp_path, monkeypatch):
     engine = create_engine(f"sqlite:///{tmp_path / 'maestro.db'}")
-    Base.metadata.create_all(engine, tables=[MarketBar.__table__, Account.__table__, CalendarEvent.__table__])
+    Base.metadata.create_all(engine, tables=[MarketBar.__table__, Account.__table__, CalendarEvent.__table__, MacroObservation.__table__])
     with Session(engine) as db:
         db.add(Account(id="paper-a", name="Paper A", env="paper", kind="simulated", database_url=f"sqlite:///{tmp_path / 'maestro.db'}", strategy="test", status="active"))
         db.commit()
@@ -39,3 +39,23 @@ def test_market_page_contract_and_independent_sections(tmp_path, monkeypatch):
     content = types.read_text()
     declared = set(re.findall(r"^  (\w+)\??:", content.split("export interface MarketPage {")[1].split("\n}")[0], re.M))
     assert expected == declared
+
+
+def test_macro_failure_does_not_fail_market_page(tmp_path, monkeypatch):
+    engine = create_engine(f"sqlite:///{tmp_path / 'maestro.db'}")
+    Base.metadata.create_all(engine, tables=[MarketBar.__table__, Account.__table__, CalendarEvent.__table__, MacroObservation.__table__])
+    with Session(engine) as db:
+        from apps.api.market_macro import series_macro
+
+        def broken_macro(session):
+            if session is not None:
+                raise ValueError("macro broken")
+            return series_macro(None)
+
+        monkeypatch.setattr("apps.api.market_macro.series_macro", broken_macro)
+        monkeypatch.setattr("apps.api.app.calendar", lambda days, db: [])
+        payload = market(db).model_dump()
+    assert payload["errors"]["macro"] == "macro broken"
+    assert isinstance(payload["etfs"], list)
+    assert payload["recessions"] == []
+    assert all(item["last"] is None and item["points"] == [] for item in payload["macro"])
