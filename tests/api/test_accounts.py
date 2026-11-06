@@ -183,9 +183,11 @@ def test_account_positions_does_not_trust_legacy_positions_without_fills(tmp_pat
 
 
 def test_equity_history_summary_and_ranges(tmp_path, db):
-    from datetime import date, datetime, timedelta
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
     from fastapi import HTTPException
 
+    hoy = datetime.now(ZoneInfo("America/New_York")).date()
     account_url = f"sqlite:///{tmp_path / 'history.db'}"
     engine = create_engine(account_url)
     Position.__table__.create(engine)
@@ -195,7 +197,7 @@ def test_equity_history_summary_and_ranges(tmp_path, db):
         source.add(Position(symbol="A", quantity=1, average_entry_price=10, current_price=10,
             unrealized_pnl=0, unrealized_pnl_pct=0, side=OrderSide.BUY,
             opened_at=datetime(2026, 10, 1), updated_at=datetime(2026, 10, 30)))
-        dates = [date(2026, 10, 20), date(2026, 10, 22), date(2026, 10, 29), date(2026, 10, 30)]
+        dates = [hoy - timedelta(days=offset) for offset in (10, 8, 1, 0)]
         source.add_all([EquitySnapshot(snapshot_date=day, taken_at=datetime(2026, 10, 30),
             equity=value, cash=20, invested=value - 20) for day, value in zip(dates, [100, 110, 120, 130])])
         source.commit()
