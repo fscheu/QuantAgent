@@ -1,20 +1,24 @@
 """Persistencia SQL del registro de eventos e intentos de hipótesis."""
 
-from datetime import date, datetime, timezone
+import hashlib
 import json
+from datetime import date, datetime, timezone
 
 from sqlalchemy import or_, select
 
+from quantagent.data.snapshot import snapshot_manifest_hash
 from quantagent.database import SessionLocal
 from quantagent.default_config import (
-    CICLOS_PARA_REVISAR, DIA_INICIO_EMBUDO, DIA_PROPUESTA_HIPOTESIS,
+    CICLOS_PARA_REVISAR,
+    DIA_INICIO_EMBUDO,
+    DIA_PROPUESTA_HIPOTESIS,
     DIA_REVISION_PAPER,
 )
-from quantagent.data.snapshot import snapshot_manifest_hash
-from quantagent.fabrica.estado import ETAPAS, VEREDICTOS
-from quantagent.fabrica.registro import EVENTOS, _CICLO_RE
-from quantagent.models import Cycle, Hypothesis, HypothesisAttempt, HypothesisEvent
 from quantagent.fabrica.campos_intentos import CAMPOS_INTENTOS
+from quantagent.fabrica.estado import ETAPAS, VEREDICTOS
+from quantagent.fabrica.registro import _CICLO_RE, EVENTOS
+from quantagent.models import Cycle, Hypothesis, HypothesisAttempt, HypothesisEvent
+
 
 def _fecha(value):
     if value is None:
@@ -226,6 +230,8 @@ def cerrar_ciclo(ciclo):
                "caidas": caidas, "intentos": intentos_por_h, "snapshots": snapshots,
                "hashes_manifiesto": {s: snapshot_manifest_hash(s) for s in snapshots},
                "por_etapa": por_etapa, "por_hipotesis": por_hipotesis}
+    canonical = json.dumps(receipt, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    receipt["hash"] = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
     reason = "" if promoted else "ninguna hipótesis promovida: ninguna llegó a etapa 3 con PASA"
     registrar_evento(None, "ciclo", ciclo=ciclo, motivo=reason, datos={"accion": "cerrar", "recibo": receipt})
     with SessionLocal() as db:
@@ -251,6 +257,7 @@ def leer_recibo(ciclo_o_dict):
     if result.get("version") == 2:
         return result
     result["version"] = 1
+    result["hash"] = None
     stages = result.get("etapas")
     result["por_etapa"] = ({s: {"arrived": stages.get(s), "passed": None, "cut": None,
                                  "error": None, "alarm": None} for s in ("0", "1", "2", "3")}
