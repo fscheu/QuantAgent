@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Restaura el último dump en una base temporal y cuenta filas de las 4 tablas del registro.
-# Modo Docker: QUANTAGENT_REGISTRO_CONTAINER=quantagent-dev-db (todo corre dentro del contenedor).
-# Modo host: usa createdb/pg_restore/psql/dropdb con las variables PG* del entorno.
+# Modo Docker (por defecto): contenedor quantagent-prod-db (QUANTAGENT_REGISTRO_CONTAINER); todo corre dentro del contenedor
+# y la base temporal se borra al terminar. Modo host: QUANTAGENT_REGISTRO_CONTAINER="" y variables PG* del entorno.
 set -euo pipefail
 
 backup_dir="${QUANTAGENT_REGISTRO_BACKUP_DIR:-/var/backups/quantagent-registro}"
 latest="$(find "$backup_dir" -maxdepth 1 -type f -name 'registro-*.dump' -printf '%T@ %p\n' | sort -rn | head -n1 | cut -d' ' -f2-)"
 if [[ -z "$latest" ]]; then echo "No hay dumps en $backup_dir" >&2; exit 2; fi
-container="${QUANTAGENT_REGISTRO_CONTAINER:-}"
+container="${QUANTAGENT_REGISTRO_CONTAINER-quantagent-prod-db}"
 user="${QUANTAGENT_REGISTRO_PGUSER:-postgres}"
 db="quantagent_registro_restore_$(date +%s)_$$"
 if [[ -n "$container" ]]; then

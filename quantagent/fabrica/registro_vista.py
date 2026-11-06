@@ -35,9 +35,9 @@ def _estados(eventos):
     return actuales
 
 
-def embudo(ciclo=None, periodo=None, *, ahora=None):
+def embudo(ciclo=None, periodo=None, *, ahora=None, session=None):
     """Resume el embudo; un ciclo concreto ignora el período y 'all' omite el límite temporal."""
-    eventos = registro.eventos()
+    eventos = registro.eventos(session)
     aperturas = _aperturas(eventos)
     if ciclo == "all":
         ids_ciclo = {h for apertura in aperturas.values()

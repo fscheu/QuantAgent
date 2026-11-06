@@ -42,9 +42,11 @@ def _dict(row):
             "motivo": row.reason or "", "ciclo": row.cycle, "datos": row.data or {}}
 
 
-def eventos():
+def eventos(session=None):
+    if session is not None:
+        return [_dict(row) for row in session.scalars(select(HypothesisEvent).order_by(HypothesisEvent.id))]
     with SessionLocal() as db:
-        return [_dict(row) for row in db.scalars(select(HypothesisEvent).order_by(HypothesisEvent.id))]
+        return eventos(db)
 
 
 def registrar_evento(hipotesis_id, evento, etapa=None, veredicto=None, motivo="", ciclo=None,
