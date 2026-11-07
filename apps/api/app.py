@@ -24,6 +24,9 @@ from .schemas import (
     DividendResponse,
     EquityPoint,
     Funnel,
+    CycleSummary,
+    ReviewRule,
+    HistorySummary,
     Hypothesis,
     HypothesisDetail,
     HomeStatus,
@@ -48,6 +51,37 @@ def funnel(ciclo: str = "all", periodo: str = "all", db: Session = Depends(regis
     from quantagent.fabrica.registro_vista import embudo
 
     return embudo(ciclo=ciclo, periodo=periodo, session=db)
+
+
+@app.get("/api/funnel/cycles", response_model=list[CycleSummary])
+def funnel_cycles(limite: int = Query(6, ge=1, le=120), db: Session = Depends(registro_session)):
+    from quantagent.fabrica.registro_vista import ciclos
+
+    return ciclos(limite, session=db)
+
+
+@app.get("/api/funnel/cycles/current", response_model=CycleSummary)
+def current_funnel_cycle(db: Session = Depends(registro_session)):
+    from quantagent.fabrica.registro_vista import ciclo_actual
+
+    result = ciclo_actual(session=db)
+    if result is None:
+        raise HTTPException(status_code=404, detail="No hay ciclos todavía.")
+    return result
+
+
+@app.get("/api/funnel/review", response_model=ReviewRule)
+def funnel_review(db: Session = Depends(registro_session)):
+    from quantagent.fabrica.registro_vista import regla_revision
+
+    return regla_revision(session=db)
+
+
+@app.get("/api/funnel/history", response_model=HistorySummary)
+def funnel_history(db: Session = Depends(registro_session)):
+    from quantagent.fabrica.registro_vista import historial_resumen
+
+    return historial_resumen(session=db)
 
 
 @app.get("/api/hypotheses", response_model=list[Hypothesis])

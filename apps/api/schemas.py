@@ -184,6 +184,65 @@ class Funnel(BaseModel):
     sample_too_small: bool
 
 
+class CycleMilestone(BaseModel):
+    key: str
+    day: int | None
+    date: str
+    done: bool
+
+
+class CycleSummary(BaseModel):
+    cycle: str
+    status: Literal["open", "closed"]
+    started_at: str
+    closed_at: str | None
+    entered: int
+    active: int
+    cut: int
+    held: int
+    promoted: int
+    reached_by_stage: dict[str, int | None]
+    milestones: list[CycleMilestone]
+    headline: str | None
+    receipt_id: str | None
+
+
+class ReviewCycle(BaseModel):
+    cycle: str
+    promoted: int
+
+
+class ReviewRule(BaseModel):
+    limit: int
+    streak: int
+    reached: bool
+    last_cycles: list[ReviewCycle]
+
+
+class HistoryStage(BaseModel):
+    stage: Literal["e0", "e1", "e2", "e3"]
+    total: int
+    pass_: int = Field(alias="pass")
+    cut: int
+    error: int
+    alarm: int
+
+    class Config:
+        populate_by_name = True
+
+
+class HistoryAttemptLabel(BaseModel):
+    label: str | None
+    count: int
+
+
+class HistorySummary(BaseModel):
+    stage_events: int
+    attempts: int
+    events_by_stage: list[HistoryStage]
+    attempts_by_label: list[HistoryAttemptLabel]
+
+
 class Hypothesis(BaseModel):
     id: str
     name: str

@@ -15,7 +15,6 @@ def _fecha(e):
 _CAIDAS = ("CORTA", "ERROR", "ALARMA")
 _ETAPAS = ("0", "1", "2", "3")
 _MIN_FOR_CHART = 2  # web/src/config.ts: funnelConfig.minForChart
-_HITOS_CICLO = (("proposal", 1), ("funnel_start", 8), ("paper_review", 25))  # config.ts: cycleConfig.milestones; días pendientes de confirmar (D5)
 _LIMITE_REVISION = 6  # config.ts: cycleConfig.reviewAfterCycles
 
 
@@ -99,8 +98,8 @@ def embudo(ciclo=None, periodo=None, *, ahora=None, session=None):
             "drop_reasons": list(causas.values())}
 
 
-def ciclos(limite):
-    eventos = registro.eventos()
+def ciclos(limite=6, *, session=None):
+    eventos = registro.eventos(session)
     aperturas = _aperturas(eventos)
     resultado = []
     for ciclo, apertura in sorted(aperturas.items(), reverse=True)[:limite]:
@@ -123,11 +122,11 @@ def ciclos(limite):
                           for e in _ETAPAS}
         cut = sum(e.get("veredicto") == "CORTA" for e in caidas.values())
         held = sum(e.get("veredicto") in ("ERROR", "ALARMA") for e in caidas.values())
-        year, month = map(int, ciclo.split("-"))
-        milestones = [{"key": key, "day": day,
-                       "date": f"{year:04d}-{month:02d}-{day:02d}",
-                       "done": key == "proposal" or (key == "funnel_start" and bool(etapas))}
-                      for key, day in _HITOS_CICLO]
+        inicio_embudo = min((e.get("fecha_utc") for e in etapas), default="")
+        # CycleMilestone.date is non-nullable; an unknown date is represented by "".
+        milestones = [{"key": "proposal", "day": 1, "date": apertura.get("fecha_utc", ""), "done": True},
+                      {"key": "funnel_start", "day": None, "date": inicio_embudo, "done": bool(etapas)},
+                      {"key": "close", "day": None, "date": cierre.get("fecha_utc", "") if cierre else "", "done": bool(cierre)}]
         resultado.append({"cycle": ciclo, "status": "closed" if cierre else "open",
                           "started_at": apertura.get("fecha_utc"),
                           "closed_at": cierre.get("fecha_utc") if cierre else None,
@@ -138,8 +137,14 @@ def ciclos(limite):
     return resultado
 
 
-def regla_revision():
-    eventos = registro.eventos()
+def ciclo_actual(*, session=None):
+    ciclos_registro = ciclos(limite=None, session=session)
+    return next((ciclo for ciclo in ciclos_registro if ciclo["status"] == "open"),
+                ciclos_registro[0] if ciclos_registro else None)
+
+
+def regla_revision(*, session=None):
+    eventos = registro.eventos(session)
     cierres = {}
     for e in eventos:
         if e.get("evento") == "ciclo" and e.get("datos", {}).get("accion") == "cerrar":
@@ -154,6 +159,28 @@ def regla_revision():
     ultimos = ordenados[-_LIMITE_REVISION:]
     return {"limit": _LIMITE_REVISION, "streak": racha, "reached": racha >= _LIMITE_REVISION,
             "last_cycles": [{"cycle": ciclo, "promoted": promovidas} for ciclo, promovidas in ultimos]}
+
+
+def historial_resumen(*, session=None):
+    eventos = [e for e in registro.eventos(session)
+               if e.get("evento") == "etapa" and e.get("ciclo") is None]
+    etapas = []
+    for etapa in _ETAPAS:
+        rows = [e for e in eventos if e.get("etapa") == etapa]
+        etapas.append({"stage": f"e{etapa}", "total": len(rows),
+                       "pass": sum(e.get("veredicto") == "PASA" for e in rows),
+                       "cut": sum(e.get("veredicto") == "CORTA" for e in rows),
+                       "error": sum(e.get("veredicto") == "ERROR" for e in rows),
+                       "alarm": sum(e.get("veredicto") == "ALARMA" for e in rows)})
+    intentos = registro.intentos(valida_solo=False, session=session)
+    ids_de_ciclo = {h for apertura in _aperturas(registro.eventos(session)).values()
+                    for h in apertura.get("datos", {}).get("hipotesis", [])}
+    por_etiqueta = Counter(i.get("etapa") or None for i in intentos
+                           if i.get("hipotesis") not in ids_de_ciclo)
+    return {"stage_events": len(eventos), "attempts": sum(por_etiqueta.values()),
+            "events_by_stage": etapas,
+            "attempts_by_label": [{"label": label, "count": count}
+                                  for label, count in sorted(por_etiqueta.items(), key=lambda item: item[0] or "")]}
 
 
 def hipotesis(estado=None, etapa=None, ciclo=None, periodo=None, *, session=None, ahora=None):

@@ -89,7 +89,7 @@ export const funnelConfig = {
 
 export const cycleConfig = {
   maxHypotheses: 5,
-  milestones: { proposal: 1, funnelStart: 8, paperReview: 25 },
+  milestones: { proposal: 1 },
   reviewAfterCycles: 6,
   reviewFeedEvent: true,
   cli: { open: 'quantagent registro ciclo abrir {ciclo} {hipótesis…}', close: 'quantagent registro ciclo cerrar {ciclo}', report: 'quantagent registro ciclo informe {ciclo}', streak: 'quantagent registro corte' },
