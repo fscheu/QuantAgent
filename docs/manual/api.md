@@ -10,6 +10,8 @@ Use `--host` and `--port` to change the bind address.
 
 The API reads the account registry from the database selected by `QUANTAGENT_DATABASE_URL`. This is the master accounts database. Each paper portfolio keeps its own SQLite database and Alpaca account; the master database only registers portfolios with `api accounts add --database-url`. The web app reads portfolio data and does not process it.
 
+The hypothesis registry is a separate, read-only database configured by `QUANTAGENT_REGISTRO_URL`. Set it to a database user with read-only access to the registry tables. If it is missing or the registry cannot be reached, registry endpoints return `503` with a message; see [registry operation](../06_implementation/QuantAgent-e452.27-IM-registro-postgres.md).
+
 The API has no application authentication of its own. Keep it bound to localhost and put an authenticating proxy in front of it before exposing it beyond the host. The same process can serve the React web app and the API.
 
 ## Register accounts
@@ -76,6 +78,18 @@ All endpoints use `GET`. Response bodies are JSON; `422` responses use FastAPI's
 | GET | `/api/backtests` | `200` `BacktestRef[]` | `hypothesis_id` and `q` queries, optional |
 | GET | `/api/performance/backtest/{backtest_id}` | `200` `PerformanceReport`; `404` unknown backtest or missing equity CSV; `422` invalid parameters | `backtest_id` path, integer; `range` query, default `all`; `align_with` query, optional backtest id (or `backtest:<id>`) |
 | GET | `/api/performance/portfolio/{account_id}` | `200` `PerformanceReport`; `404` unknown/inactive account or missing snapshots; `422` invalid parameters | `account_id` path, string; `range` query, default `all` |
+| GET | `/api/funnel` | `200` `Funnel`; `422` invalid `ciclo` or `periodo`; `503` registry unavailable | `ciclo` query: `all`, `none`, or `YYYY-MM`, default `all`; `periodo`: `30d`, `90d`, or `all`, default `all` |
+| GET | `/api/funnel/cycles` | `200` `CycleSummary[]`; `422` invalid limit; `503` registry unavailable | `limite` query, integer `1`–`120`, default `6` |
+| GET | `/api/funnel/cycles/current` | `200` `CycleSummary`; `404` no cycles; `503` registry unavailable | None |
+| GET | `/api/funnel/review` | `200` `ReviewRule`; `503` registry unavailable | None |
+| GET | `/api/funnel/history` | `200` `HistorySummary`; `503` registry unavailable | None |
+| GET | `/api/funnel/cycles/{id}/receipt` | `200` `CycleReceipt`; `404` unknown cycle; `422` invalid `YYYY-MM` id; `503` registry unavailable | `id` path, monthly cycle `YYYY-MM` |
+| GET | `/api/hypotheses` | `200` `Hypothesis[]`; `422` invalid filters; `503` registry unavailable | Optional `estado` (`active`, `promoted`, `discarded`, `held`), `etapa` (`e0`–`e3`), `ciclo` (`all` or `YYYY-MM`), and `periodo` (`30d`, `90d`, `all`) |
+| GET | `/api/hypotheses/{id}` | `200` `HypothesisDetail`; `404` unknown hypothesis; `503` registry unavailable | `id` path, string |
+| GET | `/api/market` | `200` `MarketPage` (section errors are returned in its `errors` field) | None |
+| GET | `/api/market/series` | `200` `MarketSeries[]` (`symbol` and dated close points); `422` invalid range, unknown symbol, or more than 5 symbols | Required comma-separated `symbols` (max 5) and `range` (`1m`, `3m`, `1y`) |
+| GET | `/api/market/etf/{symbol}/candles` | `200` `DailyCandle[]`; `404` unknown symbol; `422` invalid range | `symbol` path; required `range` (`3m`, `6m`, `1y`) |
+| GET | `/api/feed` | `200` `FeedEventResponse[]`; includes derived `cycle_closed` and `review_rule_reached` events when the registry is available; `422` invalid query | Optional `since` datetime; `limit` integer `1`–`200`, default `50` |
 
 `GET /api/accounts/{account_id}/equity` reads history from daily equity snapshots (`equity`, `cash`, and `invested`) in that portfolio's database. It includes optional SPY and shadow values when the configured snapshot or shadow file has matching dates. Dividends come from account-filtered master database events. Sector exposure reads portfolio positions, groups GICS sectors (or unclassified holdings), and reports cash from the latest equity snapshot.
 
