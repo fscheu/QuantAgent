@@ -1,4 +1,4 @@
-import type { AccountRef, AccountSummary, CalendarEvent, CycleSummary, DailyCandle, Dividend, EquityPoint, FeedEvent, Funnel, HistorySummary, HomeStatus, Hypothesis, Order, Position, ReviewRule, SectorExposure } from './types'
+import type { AccountRef, AccountSummary, CalendarEvent, CycleSummary, DailyCandle, Dividend, EquityPoint, FeedEvent, Funnel, HistorySummary, HomeStatus, Hypothesis, MarketPage, Order, Position, ReviewRule, SectorExposure } from './types'
 
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) { super(message); this.name = 'ApiError' }
@@ -29,6 +29,9 @@ export const getDividends = (accountId: string) => get<Dividend[]>(`/api/account
 export const getSectorExposure = (accountId: string) => get<SectorExposure[]>(`/api/accounts/${encodeURIComponent(accountId)}/sector-exposure`)
 export type CandleRange = typeof import('../config').marketConfig.candleRanges[number]
 export const getEtfCandles = (symbol: string, range: CandleRange) => get<DailyCandle[]>(`/api/market/etf/${encodeURIComponent(symbol)}/candles?range=${range}`)
+export type SeriesRange = '1m' | '3m' | '1y'
+export const getMarket = () => get<MarketPage>('/api/market')
+export const getMarketSeries = (symbols: string[], range: SeriesRange) => get<{ symbol: string; points: { date: string; value: number }[] }[]>(`/api/market/series?symbols=${symbols.map(encodeURIComponent).join(',')}&range=${range}`)
 /** Orden tal como la devuelve la API (OrderResponse del contrato OpenAPI). */
 interface OrderResponse {
   id: number; symbol: string; side: Order['side']; type: Order['type']; status: Order['status']

@@ -1,0 +1,11 @@
+.qa-mercado { display: grid; gap: var(--qa-space-5); }
+.qa-mercado > header { display: grid; gap: var(--qa-space-3); }
+.qa-mercado > header h1 { margin: 0; }
+.qa-mercado-top { display: grid; grid-template-columns: 1.45fr 1fr; gap: var(--qa-space-4); }
+.qa-mercado-section { min-width: 0; }
+.qa-mercado-section > h2 { margin: 0 0 var(--qa-space-3); }
+.qa-mercado-macro { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--qa-space-3); }
+.qa-mercado-macro > div { min-width: 0; }
+.qa-mercado-etfs { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(260px, 1fr); gap: var(--qa-space-4); }
+.qa-mercado-toggle { display: flex; gap: var(--qa-space-2); margin-bottom: var(--qa-space-3); }
+@media (max-width: 700px) { .qa-mercado-top,.qa-mercado-macro,.qa-mercado-etfs { grid-template-columns: minmax(0, 1fr); } }

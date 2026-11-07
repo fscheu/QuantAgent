@@ -23,7 +23,7 @@ describe('App', () => {
     window.history.replaceState(null, '', path)
     render(<ThemeProvider><App /></ThemeProvider>)
     expect(screen.getByRole('heading', { name: title })).toBeTruthy()
-    if (path.startsWith('/embudo')) expect(screen.queryByText('En construcción')).toBeNull()
+    if (path.startsWith('/embudo') || path === '/mercado') expect(screen.queryByText('En construcción')).toBeNull()
     else expect(screen.getByText('En construcción')).toBeTruthy()
   })
 

@@ -3,17 +3,17 @@ import type { DailyCandle } from '../api/types'
 import { useTheme } from '../ThemeContext'
 import { candleTheme } from '../styles/tokens'
 
-export function Candles({ candles, range }: { candles: DailyCandle[]; range: string }) {
+export function Candles({ candles, range, scale = 'linear' }: { candles: DailyCandle[]; range: string; scale?: 'linear' | 'log' }) {
   const host = useRef<HTMLDivElement>(null)
   const { theme } = useTheme()
   useEffect(() => {
     let disposed = false, chart: { remove: () => void; addCandlestickSeries: (options: ReturnType<typeof candleTheme>['candle']) => { setData: (data: { time: string; open: number; high: number; low: number; close: number }[]) => void } } | undefined
     import('lightweight-charts').then(({ createChart }) => {
       if (disposed || !host.current) return
-      chart = createChart(host.current, { width: host.current.clientWidth, height: 260 })
+      chart = createChart(host.current, { width: host.current.clientWidth, height: 260, rightPriceScale: { mode: scale === 'log' ? 1 : 0 } })
       chart.addCandlestickSeries(candleTheme(theme).candle).setData(candles.map(({ date: time, open, high, low, close }) => ({ time, open, high, low, close })))
     })
     return () => { disposed = true; chart?.remove() }
-  }, [candles, range, theme])
+  }, [candles, range, theme, scale])
   return <div ref={host} aria-label={`Velas, rango ${range}`} />
 }
