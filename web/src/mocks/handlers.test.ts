@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { setupServer } from 'msw/node'
-import { accountRefs, accounts, calendarEvents, currentCycle, cycles, etfCandles, feedEvents, funnel, history, homeStatus, hypotheses, hypothesisDetail, marketClock, marketPage, orders, positions, reviewRule } from './data'
+import { accountRefs, accounts, calendarEvents, currentCycle, cycleReceipts, cycles, etfCandles, feedEvents, funnel, history, homeStatus, hypotheses, hypothesisDetail, marketClock, marketPage, orders, positions, reviewRule } from './data'
 import { handlers } from './handlers'
 import { startMocks } from './mock-mode'
 
@@ -51,6 +51,7 @@ describe('MSW sample API data', () => {
       ['/api/funnel', funnel, 'cycle period total stages later promoted drop_reasons sample_too_small'],
       ['/api/funnel/cycles', cycles, 'cycle status started_at closed_at entered active cut held promoted reached_by_stage milestones headline receipt_id'],
       ['/api/funnel/cycles/current', currentCycle, 'cycle status started_at closed_at entered active cut held promoted reached_by_stage milestones headline receipt_id'],
+      ['/api/funnel/cycles/2026-10/receipt', cycleReceipts[0], 'id hash cycle partial generated_at counts stages drops attempts snapshots'],
       ['/api/funnel/review', reviewRule, 'limit streak reached last_cycles'],
       ['/api/funnel/history', history, 'stage_events attempts events_by_stage attempts_by_label'],
       ['/api/hypotheses', hypotheses, 'id name idea cycle stage verdict status promoted used_reserve attempts_valid attempts_invalid last_metric discard_reason discard_measure updated_at'],

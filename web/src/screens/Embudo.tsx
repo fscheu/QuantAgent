@@ -4,11 +4,13 @@ import type { CycleSummary } from '../api/types'
 import { funnelConfig } from '../config'
 import { CycleFilter, CycleMilestones, CycleSummaryCard, DropReasons, FunnelChart, HistoryPanel, HypothesisCard, ReviewCounter } from '../components/Funnel'
 import { ErrorState, Skeleton } from '../components'
+import { CycleReceiptScreen } from './CycleReceipt'
 
 type Period = '30d' | '90d' | 'all'
 const params = () => new URLSearchParams(window.location.search)
 
 export function Embudo({ navigate, ciclo: routeCycle }: { navigate: (path: string) => void; ciclo?: string }) {
+  if (routeCycle) return <CycleReceiptScreen id={routeCycle} navigate={navigate} />
   const initial = params(), [cycle, setCycle] = useState(routeCycle ?? initial.get('ciclo') ?? funnelConfig.defaultCycle), [period, setPeriod] = useState<Period>((initial.get('periodo') as Period) || funnelConfig.defaultPeriod)
   useEffect(() => { const query = new URLSearchParams(); if (cycle !== funnelConfig.defaultCycle) query.set('ciclo', cycle); if (period !== funnelConfig.defaultPeriod) query.set('periodo', period); const search = query.toString(); window.history.replaceState(null, '', `${window.location.pathname}${search ? `?${search}` : ''}`) }, [cycle, period])
   const funnel = useFunnel(cycle, period), cycles = useCycles(), current = useCurrentCycle(), review = useReviewRule(), history = useHistory(), hypotheses = useHypotheses({ cycle, period })
