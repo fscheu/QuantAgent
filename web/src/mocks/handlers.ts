@@ -27,6 +27,7 @@ export const handlers = [
     HttpResponse.json((params.accountId === 'paper-m4' ? orders : []).map(toOrderResponse))),
   http.get('*/api/market/clock', () => HttpResponse.json(marketClock)),
   http.get('*/api/market', () => HttpResponse.json<MarketPage>(marketPage)),
+  http.get('*/api/market/series', ({ request }) => { const params = new URL(request.url).searchParams; return HttpResponse.json(params.get('symbols')?.split(',').map(symbol => ({ symbol, points: symbol === 'QQQ' ? [] : [{ date: '2026-10-01', value: 100 }, { date: '2026-10-30', value: 104 }] })) ?? []) }),
   http.get('*/api/market/etf/:symbol/candles', () => HttpResponse.json<DailyCandle[]>(etfCandles)),
   http.get('*/api/funnel', () => HttpResponse.json<Funnel>(funnel)),
   http.get('*/api/funnel/cycles', () => HttpResponse.json<CycleSummary[]>(cycles)),

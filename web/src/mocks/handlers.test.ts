@@ -78,8 +78,18 @@ describe('MSW sample API data', () => {
     expect(marketPage.etfs).toHaveLength(29)
     expect(marketPage.motor).toBeNull()
     expect(marketPage.etfs[0].returns.m1).toBeNull()
+    expect(marketPage.etfs.every(row => Array.isArray(row.held_in))).toBe(true)
     expect(marketPage.macro[0].status).toBe('active')
     expect(marketPage.macro.slice(1).every(series => series.status === 'coming_soon')).toBe(true)
+  })
+
+  it('serves typed market series and represents an ETF without history', async () => {
+    const response = await fetch('http://localhost/api/market/series?symbols=SPY%2CQQQ&range=1y')
+    const body = await response.json()
+    expect(body.map((row: { symbol: string }) => row.symbol)).toEqual(['SPY', 'QQQ'])
+    expect(Object.keys(body[0]).sort()).toEqual(['points', 'symbol'])
+    expect(Object.keys(body[0].points[0]).sort()).toEqual(['date', 'value'])
+    expect(body[1].points).toEqual([])
   })
 
   it('serves ETF candles with the DailyCandle keys', async () => {
