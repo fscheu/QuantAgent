@@ -424,6 +424,152 @@
         "title": "CalendarEventResponse",
         "type": "object"
       },
+      "CycleMilestone": {
+        "properties": {
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "day": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day"
+          },
+          "done": {
+            "title": "Done",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "day",
+          "date",
+          "done"
+        ],
+        "title": "CycleMilestone",
+        "type": "object"
+      },
+      "CycleSummary": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "integer"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "cut": {
+            "title": "Cut",
+            "type": "integer"
+          },
+          "cycle": {
+            "title": "Cycle",
+            "type": "string"
+          },
+          "entered": {
+            "title": "Entered",
+            "type": "integer"
+          },
+          "headline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Headline"
+          },
+          "held": {
+            "title": "Held",
+            "type": "integer"
+          },
+          "milestones": {
+            "items": {
+              "$ref": "#/components/schemas/CycleMilestone"
+            },
+            "title": "Milestones",
+            "type": "array"
+          },
+          "promoted": {
+            "title": "Promoted",
+            "type": "integer"
+          },
+          "reached_by_stage": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Reached By Stage",
+            "type": "object"
+          },
+          "receipt_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receipt Id"
+          },
+          "started_at": {
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "closed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cycle",
+          "status",
+          "started_at",
+          "closed_at",
+          "entered",
+          "active",
+          "cut",
+          "held",
+          "promoted",
+          "reached_by_stage",
+          "milestones",
+          "headline",
+          "receipt_id"
+        ],
+        "title": "CycleSummary",
+        "type": "object"
+      },
       "DailyCandle": {
         "properties": {
           "close": {
@@ -797,6 +943,109 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HistoryAttemptLabel": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "required": [
+          "label",
+          "count"
+        ],
+        "title": "HistoryAttemptLabel",
+        "type": "object"
+      },
+      "HistoryStage": {
+        "properties": {
+          "alarm": {
+            "title": "Alarm",
+            "type": "integer"
+          },
+          "cut": {
+            "title": "Cut",
+            "type": "integer"
+          },
+          "error": {
+            "title": "Error",
+            "type": "integer"
+          },
+          "pass": {
+            "title": "Pass",
+            "type": "integer"
+          },
+          "stage": {
+            "enum": [
+              "e0",
+              "e1",
+              "e2",
+              "e3"
+            ],
+            "title": "Stage",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "stage",
+          "total",
+          "pass",
+          "cut",
+          "error",
+          "alarm"
+        ],
+        "title": "HistoryStage",
+        "type": "object"
+      },
+      "HistorySummary": {
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "attempts_by_label": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryAttemptLabel"
+            },
+            "title": "Attempts By Label",
+            "type": "array"
+          },
+          "events_by_stage": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryStage"
+            },
+            "title": "Events By Stage",
+            "type": "array"
+          },
+          "stage_events": {
+            "title": "Stage Events",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "stage_events",
+          "attempts",
+          "events_by_stage",
+          "attempts_by_label"
+        ],
+        "title": "HistorySummary",
         "type": "object"
       },
       "HomeStatus": {
@@ -1723,6 +1972,55 @@
         "title": "PositionResponse",
         "type": "object"
       },
+      "ReviewCycle": {
+        "properties": {
+          "cycle": {
+            "title": "Cycle",
+            "type": "string"
+          },
+          "promoted": {
+            "title": "Promoted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cycle",
+          "promoted"
+        ],
+        "title": "ReviewCycle",
+        "type": "object"
+      },
+      "ReviewRule": {
+        "properties": {
+          "last_cycles": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewCycle"
+            },
+            "title": "Last Cycles",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "reached": {
+            "title": "Reached",
+            "type": "boolean"
+          },
+          "streak": {
+            "title": "Streak",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "limit",
+          "streak",
+          "reached",
+          "last_cycles"
+        ],
+        "title": "ReviewRule",
+        "type": "object"
+      },
       "SectorExposure": {
         "properties": {
           "long": {
@@ -2339,6 +2637,106 @@
           }
         },
         "summary": "Funnel"
+      }
+    },
+    "/api/funnel/cycles": {
+      "get": {
+        "operationId": "funnel_cycles_api_funnel_cycles_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limite",
+            "required": false,
+            "schema": {
+              "default": 6,
+              "maximum": 120,
+              "minimum": 1,
+              "title": "Limite",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CycleSummary"
+                  },
+                  "title": "Response Funnel Cycles Api Funnel Cycles Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Funnel Cycles"
+      }
+    },
+    "/api/funnel/cycles/current": {
+      "get": {
+        "operationId": "current_funnel_cycle_api_funnel_cycles_current_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CycleSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Current Funnel Cycle"
+      }
+    },
+    "/api/funnel/history": {
+      "get": {
+        "operationId": "funnel_history_api_funnel_history_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistorySummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Funnel History"
+      }
+    },
+    "/api/funnel/review": {
+      "get": {
+        "operationId": "funnel_review_api_funnel_review_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewRule"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Funnel Review"
       }
     },
     "/api/home/status": {

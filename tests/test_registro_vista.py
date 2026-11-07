@@ -59,10 +59,14 @@ def test_ciclos_abierto_cerrado_claves_y_limite(raiz):
     assert result[1]["cycle"] == "2026-01" and result[1]["closed_at"] is None
     assert result[1]["cut"] == 1 and result[1]["receipt_id"] is None
     assert result[1]["reached_by_stage"] == {"e0": None, "e1": 1, "e2": None, "e3": None}
+    stage_date = next(e["fecha_utc"] for e in registro.eventos()
+                      if e.get("hipotesis") == "A" and e.get("evento") == "etapa")
     assert result[1]["milestones"] == [
-        {"key": "proposal", "day": 1, "date": "2026-01-01", "done": True},
-        {"key": "funnel_start", "day": 8, "date": "2026-01-08", "done": True},
-        {"key": "paper_review", "day": 25, "date": "2026-01-25", "done": False}]
+        {"key": "proposal", "day": 1, "date": result[1]["started_at"], "done": True},
+        {"key": "funnel_start", "day": None, "date": stage_date, "done": True},
+        {"key": "close", "day": None, "date": "", "done": False}]
+    assert all(m["key"] != "paper_review" for m in result[1]["milestones"])
+    assert vista.ciclo_actual()["cycle"] == "2026-01"
     assert len(vista.ciclos(1)) == 1
 
 
@@ -99,6 +103,16 @@ def test_regla_revision_racha_se_corta_con_promocion(raiz):
     assert regla["streak"] == 2 and not regla["reached"]
     assert regla["last_cycles"][-3:] == [{"cycle": "2026-05", "promoted": 1},
         {"cycle": "2026-06", "promoted": 0}, {"cycle": "2026-07", "promoted": 0}]
+
+
+def test_historial_resumen_solo_importados(raiz):
+    registro.registrar_evento("legacy", "etapa", "1", "CORTA")
+    registro.abrir_ciclo("2026-01", ["current"])
+    registro.registrar_evento("current", "etapa", "0", "PASA", ciclo="2026-01")
+    resumen = vista.historial_resumen()
+    assert resumen["stage_events"] == 1
+    assert resumen["events_by_stage"][1] == {"stage": "e1", "total": 1, "pass": 0,
+                                               "cut": 1, "error": 0, "alarm": 0}
 
 
 def test_hipotesis_claves_filtros_y_orden(raiz):
