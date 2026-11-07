@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .feed import build_feed
-from .registro import registro_session
+from .registro import eventos_de_ciclos_disponibles, registro_session
 from .schemas import (
     AccountRef,
     AccountSummaryActive,
@@ -359,7 +359,9 @@ def market(db: Session = Depends(get_db)):
 @app.get("/api/feed", response_model=list[FeedEventResponse])
 def feed(since: datetime | None = Query(None), limit: int = Query(50, ge=1, le=200),
          db: Session = Depends(get_db)):
-    return [FeedEventResponse(**row) for row in build_feed(db, since=since, limit=limit, utc_z=utc_z)]
+    derived = eventos_de_ciclos_disponibles()
+    return [FeedEventResponse(**row) for row in build_feed(
+        db, since=since, limit=limit, utc_z=utc_z, derived_events=derived)]
 
 
 @app.get("/api/accounts", response_model=list[AccountRef])
