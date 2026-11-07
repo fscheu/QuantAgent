@@ -24,6 +24,7 @@ from .schemas import (
     DividendResponse,
     EquityPoint,
     Funnel,
+    Hypothesis,
     HomeStatus,
     MarketPage,
     OrderResponse,
@@ -46,6 +47,25 @@ def funnel(ciclo: str = "all", periodo: str = "all", db: Session = Depends(regis
     from quantagent.fabrica.registro_vista import embudo
 
     return embudo(ciclo=ciclo, periodo=periodo, session=db)
+
+
+@app.get("/api/hypotheses", response_model=list[Hypothesis])
+def hypotheses(estado: str | None = None, etapa: str | None = None, ciclo: str = "all",
+               periodo: str = "all", db: Session = Depends(registro_session)):
+    import re
+
+    if estado is not None and estado not in ("active", "promoted", "discarded", "held"):
+        raise HTTPException(status_code=422, detail="estado debe ser active, promoted, discarded o held")
+    if etapa is not None and etapa not in ("e0", "e1", "e2", "e3"):
+        raise HTTPException(status_code=422, detail="etapa debe ser e0, e1, e2 o e3")
+    if ciclo != "all" and not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", ciclo):
+        raise HTTPException(status_code=422, detail="ciclo debe ser 'all' o YYYY-MM")
+    if periodo not in ("30d", "90d", "all"):
+        raise HTTPException(status_code=422, detail="periodo debe ser '30d', '90d' o 'all'")
+    from quantagent.fabrica.registro_vista import hipotesis
+
+    return hipotesis(estado=estado, etapa=etapa, ciclo=None if ciclo == "all" else ciclo,
+                     periodo=periodo, session=db)
 
 
 class SPAStaticFiles(StaticFiles):

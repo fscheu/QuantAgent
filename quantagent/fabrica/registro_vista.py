@@ -156,12 +156,24 @@ def regla_revision():
             "last_cycles": [{"cycle": ciclo, "promoted": promovidas} for ciclo, promovidas in ultimos]}
 
 
-def hipotesis(estado=None, etapa=None, ciclo=None):
-    eventos = registro.eventos()
+def hipotesis(estado=None, etapa=None, ciclo=None, periodo=None, *, session=None, ahora=None):
+    eventos = registro.eventos(session)
     aperturas = _aperturas(eventos)
     ciclo_por_h = {h: c for c, e in aperturas.items() for h in e.get("datos", {}).get("hipotesis", [])}
     actuales = _estados(eventos)
-    intentos = registro.intentos(valida_solo=False)
+    intentos = registro.intentos(valida_solo=False, session=session)
+    actividad = {}
+    for evento in eventos:
+        h = evento.get("hipotesis")
+        if h is not None and (h not in actividad or _fecha(evento) > actividad[h]):
+            actividad[h] = _fecha(evento)
+    for intento in intentos:
+        h = intento.get("hipotesis")
+        if h is not None and (h not in actividad or _fecha(intento) > actividad[h]):
+            actividad[h] = _fecha(intento)
+    if periodo not in (None, "all") and ciclo is None:
+        ahora = ahora or datetime.now(timezone.utc)
+        desde = ahora - timedelta(days=int(str(periodo).removesuffix("d")))
     salida = []
     nombres = {}
     for h, ultimo in actuales.items():
@@ -171,6 +183,8 @@ def hipotesis(estado=None, etapa=None, ciclo=None):
         status = ("promoted" if promovida else "discarded" if veredicto == "CORTA"
                   else "held" if veredicto in ("ERROR", "ALARMA") else "active")
         ciclo_h = ciclo_por_h.get(h)
+        if periodo not in (None, "all") and ciclo is None and not (desde <= actividad.get(h, _fecha(ultimo)) <= ahora):
+            continue
         if (estado is not None and estado != status) or (etapa is not None and etapa != stage) or (ciclo is not None and ciclo != ciclo_h):
             continue
         propios = [i for i in intentos if i.get("hipotesis") == h]
@@ -179,7 +193,7 @@ def hipotesis(estado=None, etapa=None, ciclo=None):
         nombre, idea = nombres[h]
         salida.append({"id": h, "name": nombre, "idea": idea, "cycle": ciclo_h, "stage": stage,
                        "verdict": veredicto, "status": status, "promoted": promovida,
-                       "used_reserve": None, "attempts_valid": sum(i.get("estado") != "invalida_bug" for i in propios),
+                       "used_reserve": any(e.get("hipotesis") == h and e.get("evento") == "etapa" and e.get("etapa") == "3" for e in eventos), "attempts_valid": sum(i.get("estado") != "invalida_bug" for i in propios),
                        "attempts_invalid": sum(i.get("estado") == "invalida_bug" for i in propios),
                        "last_metric": None,
                        "discard_reason": ultimo.get("motivo") if veredicto in _CAIDAS else None,
