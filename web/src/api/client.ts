@@ -1,4 +1,4 @@
-import type { AccountRef, AccountSummary, CalendarEvent, CycleSummary, Dividend, EquityPoint, FeedEvent, Funnel, HistorySummary, HomeStatus, Hypothesis, Order, Position, ReviewRule, SectorExposure } from './types'
+import type { AccountRef, AccountSummary, CalendarEvent, CycleSummary, DailyCandle, Dividend, EquityPoint, FeedEvent, Funnel, HistorySummary, HomeStatus, Hypothesis, Order, Position, ReviewRule, SectorExposure } from './types'
 
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) { super(message); this.name = 'ApiError' }
@@ -27,6 +27,8 @@ export type EquityRange = '1W' | '1M' | '3M' | 'YTD' | 'ALL'
 export const getEquity = (accountId: string, range: EquityRange) => get<EquityPoint[]>(`/api/accounts/${encodeURIComponent(accountId)}/equity?range=${range}`)
 export const getDividends = (accountId: string) => get<Dividend[]>(`/api/accounts/${encodeURIComponent(accountId)}/dividends`)
 export const getSectorExposure = (accountId: string) => get<SectorExposure[]>(`/api/accounts/${encodeURIComponent(accountId)}/sector-exposure`)
+export type CandleRange = typeof import('../config').marketConfig.candleRanges[number]
+export const getEtfCandles = (symbol: string, range: CandleRange) => get<DailyCandle[]>(`/api/market/etf/${encodeURIComponent(symbol)}/candles?range=${range}`)
 /** Orden tal como la devuelve la API (OrderResponse del contrato OpenAPI). */
 interface OrderResponse {
   id: number; symbol: string; side: Order['side']; type: Order['type']; status: Order['status']

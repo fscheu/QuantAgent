@@ -26,6 +26,7 @@ export const usePositions = (accountId: string) => useLoad(() => api.getPosition
 export const useEquity = (accountId: string, range: api.EquityRange) => useLoad(() => api.getEquity(accountId, range), `equity:${accountId}:${range}`)
 export const useDividends = (accountId: string) => useLoad(() => api.getDividends(accountId), `dividends:${accountId}`)
 export const useSectorExposure = (accountId: string) => useLoad(() => api.getSectorExposure(accountId), `sector-exposure:${accountId}`)
+export const useEtfCandles = (symbol: string, range: api.CandleRange) => useLoad(() => api.getEtfCandles(symbol, range), `etf-candles:${symbol}:${range}`)
 export const useOrders = (accountId: string, date: string) => useLoad(() => api.getOrders(accountId, date), `orders:${accountId}:${date}`)
 export const useFeed = () => useLoad(api.getFeed, 'feed')
 export const useCalendar = (days: number) => useLoad(() => api.getCalendar(days), `calendar:${days}`)

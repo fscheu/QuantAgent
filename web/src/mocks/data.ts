@@ -1,6 +1,10 @@
-import type { AccountRef, AccountSummary, CalendarEvent, CycleSummary, Dividend, EquityPoint, FeedEvent, Funnel, HistorySummary, HomeStatus, Hypothesis, HypothesisDetail, MarketClock, MarketPage, Order, Position, ReviewRule, SectorExposure } from '../api/types'
+import type { AccountRef, AccountSummary, CalendarEvent, CycleSummary, DailyCandle, Dividend, EquityPoint, FeedEvent, Funnel, HistorySummary, HomeStatus, Hypothesis, HypothesisDetail, MarketClock, MarketPage, Order, Position, ReviewRule, SectorExposure } from '../api/types'
 
 const asOf = '2026-10-30T19:30:00Z'
+export const etfCandles: DailyCandle[] = [
+  { date: '2026-10-29', open: 100, high: 103, low: 99, close: 102 },
+  { date: '2026-10-30', open: 102, high: 104, low: 101, close: 103 },
+]
 
 export const accounts = [
   {
