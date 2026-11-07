@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
-import type { AccountRef, AccountSummary, CalendarEvent, CycleSummary, Dividend, EquityPoint, FeedEvent, Funnel, HistorySummary, HomeStatus, Hypothesis, HypothesisDetail, MarketPage, Order, Position, ReviewRule, SectorExposure } from '../api/types'
-import { accountRefs, accounts, backtests, calendarEvents, currentCycle, cycles, dividends, equity, feedEvents, funnel, history, homeStatus, hypotheses, hypothesisDetail, marketClock, marketPage, orders, performance, positions, reviewRule, sectorExposure } from './data'
+import type { AccountRef, AccountSummary, CalendarEvent, CycleSummary, DailyCandle, Dividend, EquityPoint, FeedEvent, Funnel, HistorySummary, HomeStatus, Hypothesis, HypothesisDetail, MarketPage, Order, Position, ReviewRule, SectorExposure } from '../api/types'
+import { accountRefs, accounts, backtests, calendarEvents, currentCycle, cycles, dividends, equity, etfCandles, feedEvents, funnel, history, homeStatus, hypotheses, hypothesisDetail, marketClock, marketPage, orders, performance, positions, reviewRule, sectorExposure } from './data'
 
 /** Forma que devuelve la API real (OrderResponse); el cliente la convierte a Order. */
 const toOrderResponse = (o: Order) => ({
@@ -27,6 +27,7 @@ export const handlers = [
     HttpResponse.json((params.accountId === 'paper-m4' ? orders : []).map(toOrderResponse))),
   http.get('*/api/market/clock', () => HttpResponse.json(marketClock)),
   http.get('*/api/market', () => HttpResponse.json<MarketPage>(marketPage)),
+  http.get('*/api/market/etf/:symbol/candles', () => HttpResponse.json<DailyCandle[]>(etfCandles)),
   http.get('*/api/funnel', () => HttpResponse.json<Funnel>(funnel)),
   http.get('*/api/funnel/cycles', () => HttpResponse.json<CycleSummary[]>(cycles)),
   http.get('*/api/funnel/cycles/current', () => HttpResponse.json<CycleSummary>(currentCycle)),

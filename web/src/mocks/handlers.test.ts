@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { setupServer } from 'msw/node'
-import { accountRefs, accounts, calendarEvents, currentCycle, cycles, feedEvents, funnel, history, homeStatus, hypotheses, hypothesisDetail, marketClock, marketPage, orders, positions, reviewRule } from './data'
+import { accountRefs, accounts, calendarEvents, currentCycle, cycles, etfCandles, feedEvents, funnel, history, homeStatus, hypotheses, hypothesisDetail, marketClock, marketPage, orders, positions, reviewRule } from './data'
 import { handlers } from './handlers'
 import { startMocks } from './mock-mode'
 
@@ -80,6 +80,14 @@ describe('MSW sample API data', () => {
     expect(marketPage.etfs[0].returns.m1).toBeNull()
     expect(marketPage.macro[0].status).toBe('active')
     expect(marketPage.macro.slice(1).every(series => series.status === 'coming_soon')).toBe(true)
+  })
+
+  it('serves ETF candles with the DailyCandle keys', async () => {
+    const response = await fetch('http://localhost/api/market/etf/SPY/candles?range=6m')
+    const body = await response.json()
+    expect(response.status).toBe(200)
+    expect(Object.keys(body[0]).sort()).toEqual('date open high low close'.split(' ').sort())
+    expect(body).toEqual(etfCandles)
   })
 
   it('does not register the worker unless mock=1 is present', () => {
