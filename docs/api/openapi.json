@@ -808,6 +808,145 @@
         "title": "HomeStatus",
         "type": "object"
       },
+      "Hypothesis": {
+        "properties": {
+          "attempts_invalid": {
+            "title": "Attempts Invalid",
+            "type": "integer"
+          },
+          "attempts_valid": {
+            "title": "Attempts Valid",
+            "type": "integer"
+          },
+          "cycle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cycle"
+          },
+          "discard_measure": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discard Measure"
+          },
+          "discard_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discard Reason"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "idea": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idea"
+          },
+          "last_metric": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Metric"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "promoted": {
+            "title": "Promoted",
+            "type": "boolean"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "promoted",
+              "discarded",
+              "held"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "used_reserve": {
+            "title": "Used Reserve",
+            "type": "boolean"
+          },
+          "verdict": {
+            "anyOf": [
+              {
+                "enum": [
+                  "PASA",
+                  "CORTA",
+                  "ERROR",
+                  "ALARMA"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verdict"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "idea",
+          "cycle",
+          "stage",
+          "verdict",
+          "status",
+          "promoted",
+          "used_reserve",
+          "attempts_valid",
+          "attempts_invalid",
+          "last_metric",
+          "discard_reason",
+          "discard_measure",
+          "updated_at"
+        ],
+        "title": "Hypothesis",
+        "type": "object"
+      },
       "MarketPage": {
         "properties": {
           "as_of": {
@@ -1811,6 +1950,92 @@
           }
         },
         "summary": "Home Status"
+      }
+    },
+    "/api/hypotheses": {
+      "get": {
+        "operationId": "hypotheses_api_hypotheses_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "estado",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Estado"
+            }
+          },
+          {
+            "in": "query",
+            "name": "etapa",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Etapa"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ciclo",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "title": "Ciclo",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "periodo",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "title": "Periodo",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Hypothesis"
+                  },
+                  "title": "Response Hypotheses Api Hypotheses Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Hypotheses"
       }
     },
     "/api/market": {

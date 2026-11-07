@@ -91,9 +91,12 @@ def registrar_intento(strategy_name, symbol, snapshot_name, costos, tamano_posic
         db.commit()
 
 
-def intentos(valida_solo=True):
-    with SessionLocal() as db:
-        rows = db.scalars(select(HypothesisAttempt).order_by(HypothesisAttempt.id)).all()
+def intentos(valida_solo=True, session=None):
+    if session is None:
+        with SessionLocal() as db:
+            rows = db.scalars(select(HypothesisAttempt).order_by(HypothesisAttempt.id)).all()
+    else:
+        rows = session.scalars(select(HypothesisAttempt).order_by(HypothesisAttempt.id)).all()
     out = []
     for r in rows:
         if valida_solo and (r.status == "invalida_bug" or r.snapshot == "sintetico"):

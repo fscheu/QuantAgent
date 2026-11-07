@@ -164,3 +164,21 @@ class Funnel(BaseModel):
     promoted: int
     drop_reasons: list[FunnelDropReason]
     sample_too_small: bool
+
+
+class Hypothesis(BaseModel):
+    id: str
+    name: str
+    idea: str | None
+    cycle: str | None
+    stage: str
+    verdict: Literal["PASA", "CORTA", "ERROR", "ALARMA"] | None
+    status: Literal["active", "promoted", "discarded", "held"]
+    promoted: bool
+    used_reserve: bool
+    attempts_valid: int
+    attempts_invalid: int
+    last_metric: dict | None
+    discard_reason: str | None
+    discard_measure: dict | None
+    updated_at: str
