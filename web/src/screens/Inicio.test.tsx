@@ -28,6 +28,42 @@ describe('Inicio', () => {
     expect(banner.closest('a')?.getAttribute('href')).toBe('/cuenta/paper-m4')
   })
 
+  it('shows the current cycle counts and navigates to the funnel', async () => {
+    const paths: string[] = []
+    render(<ThemeProvider><Inicio navigate={path => paths.push(path)} /></ThemeProvider>)
+    expect(await screen.findByText('2026-11')).toBeTruthy()
+    expect(screen.getByText('Entraron').parentElement?.querySelector('dd')?.textContent).toBe('3')
+    screen.getByRole('link', { name: 'Ver embudo' }).click()
+    expect(paths).toContain('/embudo')
+  })
+
+  it('shows an empty cycle state on 404 without hiding Inicio', async () => {
+    server.use(http.get('*/api/funnel/cycles/current', () => HttpResponse.json({ detail: 'No hay ciclos todavía' }, { status: 404 })))
+    render(<ThemeProvider><Inicio navigate={() => undefined} /></ThemeProvider>)
+    expect(await screen.findByText('Todavía no hay ciclos.')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Próximos eventos' })).toBeTruthy()
+  })
+
+  it('keeps other Inicio sections available when the cycle request fails', async () => {
+    server.use(http.get('*/api/funnel/cycles/current', () => HttpResponse.json({}, { status: 500 })))
+    render(<ThemeProvider><Inicio navigate={() => undefined} /></ThemeProvider>)
+    expect(await screen.findByText('No pudimos cargar el ciclo actual.')).toBeTruthy()
+    expect(screen.getByText('Casi todo bien: 1 advertencia')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Próximos eventos' })).toBeTruthy()
+  })
+
+  it('shows cycle feed events as informational links without changing the status banner', async () => {
+    const paths: string[] = []
+    render(<ThemeProvider><Inicio navigate={path => paths.push(path)} /></ThemeProvider>)
+    const review = await screen.findByText('Embudo: 6 ciclos seguidos sin promovida')
+    expect(review.closest('li')?.querySelector('.qa-home-glyph')?.className).toContain('info')
+    expect(review.closest('a')?.getAttribute('href')).toBe('/embudo')
+    review.closest('a')?.click()
+    expect(paths).toContain('/embudo')
+    expect(screen.getByText('Casi todo bien: 1 advertencia').closest('.qa-notice-warning')).toBeTruthy()
+    expect(await screen.findByText('Terminó el ciclo 12 del embudo')).toBeTruthy()
+  })
+
   it('presents grouped feed items by severity and latest time, and sorts calendar dates', async () => {
     render(<ThemeProvider><Inicio navigate={() => undefined} /></ThemeProvider>)
     const feed = await screen.findByRole('heading', { name: 'Desde tu última visita' }).then(node => node.parentElement!)
