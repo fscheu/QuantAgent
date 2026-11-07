@@ -38,6 +38,11 @@ def test_hypotheses_endpoint_filters_and_contract(tmp_path, monkeypatch):
     # usó la reserva = llegó a la etapa 3 (holdout)
     assert {row["id"]: row["used_reserve"] for row in rows if row["id"] != "old"}["promoted"] is True
     assert {row["id"]: row["used_reserve"] for row in rows}["active"] is False
+    detail = client.get("/api/hypotheses/discarded")
+    assert detail.status_code == 200
+    assert set(detail.json()) == set(rows[0]) | {"timeline", "later_phases", "attempts", "backtests", "paper_account"}
+    assert detail.json()["timeline"][0]["stage"] == "e1"
+    assert client.get("/api/hypotheses/missing").status_code == 404
     assert len(client.get("/api/hypotheses?estado=held&etapa=e2&ciclo=2026-11&periodo=30d").json()) == 1
     recent = client.get("/api/hypotheses?periodo=30d").json()
     assert len(recent) == 4 and all(row["id"] != "old" for row in recent)
@@ -46,4 +51,6 @@ def test_hypotheses_endpoint_filters_and_contract(tmp_path, monkeypatch):
     monkeypatch.delenv("QUANTAGENT_REGISTRO_URL")
     missing = client.get("/api/hypotheses")
     assert missing.status_code == 503 and "QUANTAGENT_REGISTRO_URL" in missing.json()["detail"]
+    missing_detail = client.get("/api/hypotheses/discarded")
+    assert missing_detail.status_code == 503 and "QUANTAGENT_REGISTRO_URL" in missing_detail.json()["detail"]
     engine.dispose()

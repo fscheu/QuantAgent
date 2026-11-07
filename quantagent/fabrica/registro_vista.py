@@ -202,17 +202,17 @@ def hipotesis(estado=None, etapa=None, ciclo=None, periodo=None, *, session=None
     return sorted(salida, key=lambda h: (int(h["stage"][1:]), h["updated_at"] or ""), reverse=True)
 
 
-def hipotesis_detalle(id):
-    resumen = next((h for h in hipotesis() if h["id"] == id), None)
+def hipotesis_detalle(id, *, session=None):
+    resumen = next((h for h in hipotesis(session=session) if h["id"] == id), None)
     if resumen is None:
         return None
-    eventos = [e for e in registro.eventos() if e.get("hipotesis") == id and e.get("evento") == "etapa"]
+    eventos = [e for e in registro.eventos(session) if e.get("hipotesis") == id and e.get("evento") == "etapa"]
     resumen["timeline"] = [{"stage": f"e{e.get('etapa')}", "verdict": e.get("veredicto"),
                             "decided_at": e.get("fecha_utc"), "reason": e.get("motivo", ""),
                             "measure": (e.get("datos") or {}).get("measure"),
                             "imported": bool((e.get("datos") or {}).get("importado"))}
                            for e in sorted(eventos, key=_fecha)]
-    intentos = [i for i in registro.intentos(valida_solo=False) if i.get("hipotesis") == id]
+    intentos = [i for i in registro.intentos(valida_solo=False, session=session) if i.get("hipotesis") == id]
     resumen["attempts"] = [{"id": str(n), "hypothesis_id": id, "stage": i.get("etapa"),
                             "ran_at": i.get("fecha_utc"), "subject": i.get("activo") or i.get("estrategia") or "",
                             "snapshot_hash": "", "sharpe": _numero(i.get("sharpe")),

@@ -25,6 +25,7 @@ from .schemas import (
     EquityPoint,
     Funnel,
     Hypothesis,
+    HypothesisDetail,
     HomeStatus,
     MarketPage,
     OrderResponse,
@@ -66,6 +67,16 @@ def hypotheses(estado: str | None = None, etapa: str | None = None, ciclo: str =
 
     return hipotesis(estado=estado, etapa=etapa, ciclo=None if ciclo == "all" else ciclo,
                      periodo=periodo, session=db)
+
+
+@app.get("/api/hypotheses/{id}", response_model=HypothesisDetail)
+def hypothesis_detail(id: str, db: Session = Depends(registro_session)):
+    from quantagent.fabrica.registro_vista import hipotesis_detalle
+
+    result = hipotesis_detalle(id, session=db)
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"No existe la hipótesis {id}.")
+    return result
 
 
 class SPAStaticFiles(StaticFiles):

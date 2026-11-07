@@ -182,3 +182,34 @@ class Hypothesis(BaseModel):
     discard_reason: str | None
     discard_measure: dict | None
     updated_at: str
+
+
+class HypothesisStageResult(BaseModel):
+    stage: Literal["e0", "e1", "e2", "e3"]
+    verdict: Literal["PASA", "CORTA", "ERROR", "ALARMA"]
+    decided_at: str
+    reason: str
+    measure: dict | None
+    imported: bool
+
+
+class HypothesisAttempt(BaseModel):
+    id: str
+    hypothesis_id: str
+    stage: str
+    ran_at: str
+    subject: str
+    snapshot_hash: str
+    sharpe: float | None
+    trades: int | None
+    pnl_pct: float | None
+    invalid: bool
+    invalid_reason: str | None
+
+
+class HypothesisDetail(Hypothesis):
+    timeline: list[HypothesisStageResult]
+    later_phases: list[dict]
+    attempts: list[HypothesisAttempt]
+    backtests: list[dict]
+    paper_account: dict | None

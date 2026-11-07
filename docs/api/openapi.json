@@ -947,6 +947,341 @@
         "title": "Hypothesis",
         "type": "object"
       },
+      "HypothesisAttempt": {
+        "properties": {
+          "hypothesis_id": {
+            "title": "Hypothesis Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "invalid": {
+            "title": "Invalid",
+            "type": "boolean"
+          },
+          "invalid_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invalid Reason"
+          },
+          "pnl_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pnl Pct"
+          },
+          "ran_at": {
+            "title": "Ran At",
+            "type": "string"
+          },
+          "sharpe": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sharpe"
+          },
+          "snapshot_hash": {
+            "title": "Snapshot Hash",
+            "type": "string"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          },
+          "trades": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trades"
+          }
+        },
+        "required": [
+          "id",
+          "hypothesis_id",
+          "stage",
+          "ran_at",
+          "subject",
+          "snapshot_hash",
+          "sharpe",
+          "trades",
+          "pnl_pct",
+          "invalid",
+          "invalid_reason"
+        ],
+        "title": "HypothesisAttempt",
+        "type": "object"
+      },
+      "HypothesisDetail": {
+        "properties": {
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/HypothesisAttempt"
+            },
+            "title": "Attempts",
+            "type": "array"
+          },
+          "attempts_invalid": {
+            "title": "Attempts Invalid",
+            "type": "integer"
+          },
+          "attempts_valid": {
+            "title": "Attempts Valid",
+            "type": "integer"
+          },
+          "backtests": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Backtests",
+            "type": "array"
+          },
+          "cycle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cycle"
+          },
+          "discard_measure": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discard Measure"
+          },
+          "discard_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discard Reason"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "idea": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idea"
+          },
+          "last_metric": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Metric"
+          },
+          "later_phases": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Later Phases",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "paper_account": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paper Account"
+          },
+          "promoted": {
+            "title": "Promoted",
+            "type": "boolean"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "promoted",
+              "discarded",
+              "held"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "timeline": {
+            "items": {
+              "$ref": "#/components/schemas/HypothesisStageResult"
+            },
+            "title": "Timeline",
+            "type": "array"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "used_reserve": {
+            "title": "Used Reserve",
+            "type": "boolean"
+          },
+          "verdict": {
+            "anyOf": [
+              {
+                "enum": [
+                  "PASA",
+                  "CORTA",
+                  "ERROR",
+                  "ALARMA"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verdict"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "idea",
+          "cycle",
+          "stage",
+          "verdict",
+          "status",
+          "promoted",
+          "used_reserve",
+          "attempts_valid",
+          "attempts_invalid",
+          "last_metric",
+          "discard_reason",
+          "discard_measure",
+          "updated_at",
+          "timeline",
+          "later_phases",
+          "attempts",
+          "backtests",
+          "paper_account"
+        ],
+        "title": "HypothesisDetail",
+        "type": "object"
+      },
+      "HypothesisStageResult": {
+        "properties": {
+          "decided_at": {
+            "title": "Decided At",
+            "type": "string"
+          },
+          "imported": {
+            "title": "Imported",
+            "type": "boolean"
+          },
+          "measure": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measure"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "stage": {
+            "enum": [
+              "e0",
+              "e1",
+              "e2",
+              "e3"
+            ],
+            "title": "Stage",
+            "type": "string"
+          },
+          "verdict": {
+            "enum": [
+              "PASA",
+              "CORTA",
+              "ERROR",
+              "ALARMA"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stage",
+          "verdict",
+          "decided_at",
+          "reason",
+          "measure",
+          "imported"
+        ],
+        "title": "HypothesisStageResult",
+        "type": "object"
+      },
       "MarketPage": {
         "properties": {
           "as_of": {
@@ -2036,6 +2371,45 @@
           }
         },
         "summary": "Hypotheses"
+      }
+    },
+    "/api/hypotheses/{id}": {
+      "get": {
+        "operationId": "hypothesis_detail_api_hypotheses__id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HypothesisDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Hypothesis Detail"
       }
     },
     "/api/market": {
