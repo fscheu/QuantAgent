@@ -25,6 +25,7 @@ from .schemas import (
     EquityPoint,
     Funnel,
     CycleSummary,
+    CycleReceipt,
     ReviewRule,
     HistorySummary,
     Hypothesis,
@@ -67,6 +68,20 @@ def current_funnel_cycle(db: Session = Depends(registro_session)):
     result = ciclo_actual(session=db)
     if result is None:
         raise HTTPException(status_code=404, detail="No hay ciclos todavía.")
+    return result
+
+
+@app.get("/api/funnel/cycles/{id}/receipt", response_model=CycleReceipt)
+def funnel_cycle_receipt(id: str, db: Session = Depends(registro_session)):
+    import re
+
+    if not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", id):
+        raise HTTPException(status_code=422, detail="id debe tener formato YYYY-MM")
+    from quantagent.fabrica.registro_vista import recibo_ciclo
+
+    result = recibo_ciclo(id, session=db)
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"No existe el ciclo {id}.")
     return result
 
 

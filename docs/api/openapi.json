@@ -459,6 +459,95 @@
         "title": "CycleMilestone",
         "type": "object"
       },
+      "CycleReceipt": {
+        "properties": {
+          "attempts": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Attempts",
+            "type": "array"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "cycle": {
+            "title": "Cycle",
+            "type": "string"
+          },
+          "drops": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Drops",
+            "type": "array"
+          },
+          "generated_at": {
+            "title": "Generated At",
+            "type": "string"
+          },
+          "hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hash"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "partial": {
+            "title": "Partial",
+            "type": "boolean"
+          },
+          "snapshots": {
+            "items": {
+              "$ref": "#/components/schemas/ReceiptSnapshot"
+            },
+            "title": "Snapshots",
+            "type": "array"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/ReceiptStage"
+            },
+            "title": "Stages",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "hash",
+          "cycle",
+          "partial",
+          "generated_at",
+          "counts",
+          "stages",
+          "drops",
+          "attempts",
+          "snapshots"
+        ],
+        "title": "CycleReceipt",
+        "type": "object"
+      },
       "CycleSummary": {
         "properties": {
           "active": {
@@ -1972,6 +2061,83 @@
         "title": "PositionResponse",
         "type": "object"
       },
+      "ReceiptSnapshot": {
+        "properties": {
+          "as_of": {
+            "title": "As Of",
+            "type": "string"
+          },
+          "hash": {
+            "title": "Hash",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "as_of",
+          "hash"
+        ],
+        "title": "ReceiptSnapshot",
+        "type": "object"
+      },
+      "ReceiptStage": {
+        "properties": {
+          "alarm": {
+            "title": "Alarm",
+            "type": "integer"
+          },
+          "cut": {
+            "title": "Cut",
+            "type": "integer"
+          },
+          "error": {
+            "title": "Error",
+            "type": "integer"
+          },
+          "here": {
+            "title": "Here",
+            "type": "integer"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "integer"
+          },
+          "pending": {
+            "title": "Pending",
+            "type": "boolean"
+          },
+          "reached": {
+            "title": "Reached",
+            "type": "integer"
+          },
+          "stage": {
+            "enum": [
+              "e0",
+              "e1",
+              "e2",
+              "e3"
+            ],
+            "title": "Stage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stage",
+          "reached",
+          "here",
+          "passed",
+          "cut",
+          "error",
+          "alarm",
+          "pending"
+        ],
+        "title": "ReceiptStage",
+        "type": "object"
+      },
       "ReviewCycle": {
         "properties": {
           "cycle": {
@@ -2701,6 +2867,45 @@
           }
         },
         "summary": "Current Funnel Cycle"
+      }
+    },
+    "/api/funnel/cycles/{id}/receipt": {
+      "get": {
+        "operationId": "funnel_cycle_receipt_api_funnel_cycles__id__receipt_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CycleReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Funnel Cycle Receipt"
       }
     },
     "/api/funnel/history": {

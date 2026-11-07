@@ -7,6 +7,7 @@ from textwrap import fill
 from quantagent.fabrica import estado
 from quantagent.fabrica.hipotesis import nombre_e_idea
 from quantagent.fabrica import registro_db as registro
+from quantagent.models import Cycle
 
 
 def _fecha(e):
@@ -105,7 +106,8 @@ def ciclos(limite=6, *, session=None):
     for ciclo, apertura in sorted(aperturas.items(), reverse=True)[:limite]:
         cierre = next((e for e in eventos if e.get("evento") == "ciclo" and e.get("ciclo") == ciclo
                        and e.get("datos", {}).get("accion") == "cerrar"), None)
-        recibo = registro.recibo_ciclo(ciclo)
+        row = session.get(Cycle, ciclo) if session is not None else None
+        recibo = registro.leer_recibo(row) if row else registro.recibo_ciclo(ciclo)
         ids = apertura.get("datos", {}).get("hipotesis", [])
         propios = [e for e in eventos if e.get("hipotesis") in ids]
         etapas = [e for e in propios if e.get("evento") == "etapa"]
@@ -135,6 +137,54 @@ def ciclos(limite=6, *, session=None):
                           "reached_by_stage": alcanzadas, "milestones": milestones,
                           "headline": None, "receipt_id": ciclo if cierre else None})
     return resultado
+
+
+def recibo_ciclo(ciclo, *, session=None):
+    """Devuelve el recibo inmutable guardado o una vista del ciclo abierto."""
+    resumen = next((c for c in ciclos(limite=None, session=session) if c["cycle"] == ciclo), None)
+    if resumen is None:
+        return None
+    cycle_row = session.get(Cycle, ciclo) if session is not None else None
+    recibo = (registro.leer_recibo(cycle_row) if cycle_row else registro.recibo_ciclo(ciclo)) if resumen["status"] == "closed" else None
+    eventos = registro.eventos(session)
+    ids = next((e.get("datos", {}).get("hipotesis", []) for e in eventos
+                if e.get("evento") == "ciclo" and e.get("ciclo") == ciclo
+                and e.get("datos", {}).get("accion") == "abrir"), [])
+    propios = [e for e in eventos if e.get("hipotesis") in ids and e.get("evento") == "etapa"]
+    estados = _estados(propios)
+    por_etapa = recibo.get("por_etapa") if recibo else None
+    stages = []
+    for etapa in _ETAPAS:
+        datos = (por_etapa or {}).get(etapa) or {}
+        actual = [e for e in estados.values() if e.get("etapa") == etapa]
+        stages.append({"stage": f"e{etapa}", "reached": datos.get("arrived") or 0 if recibo else len({e.get("hipotesis") for e in propios if e.get("etapa") == etapa}),
+                       "here": sum(e.get("veredicto") == "PASA" for e in actual),
+                       "passed": datos.get("passed") or 0 if recibo else sum(e.get("veredicto") == "PASA" for e in propios if e.get("etapa") == etapa),
+                       "cut": datos.get("cut") or 0 if recibo else sum(e.get("veredicto") == "CORTA" for e in propios if e.get("etapa") == etapa),
+                       "error": datos.get("error") or 0 if recibo else sum(e.get("veredicto") == "ERROR" for e in propios if e.get("etapa") == etapa),
+                       "alarm": datos.get("alarm") or 0 if recibo else sum(e.get("veredicto") == "ALARMA" for e in propios if e.get("etapa") == etapa),
+                       "pending": not recibo and not any(e.get("etapa") == etapa for e in propios)})
+    por_h = recibo.get("por_hipotesis") if recibo else None
+    drops = []
+    for h, d in (por_h or {}).items() if recibo else ((h, e) for h, e in estados.items() if e.get("veredicto") in _CAIDAS):
+        nombre, _ = nombre_e_idea(h)
+        etapa, veredicto, motivo = d.get("etapa"), d.get("veredicto"), d.get("motivo")
+        evento = next((e for e in reversed(propios) if e.get("hipotesis") == h and e.get("etapa") == etapa and e.get("veredicto") == veredicto), {})
+        drops.append({"hypothesis_id": h, "name": nombre, "stage": f"e{etapa}", "verdict": veredicto,
+                      "reason": motivo or "", "measure": (evento.get("datos") or {}).get("measure")})
+    intentos = [i for i in registro.intentos(valida_solo=False, session=session) if i.get("hipotesis") in ids]
+    nombres = {h: nombre_e_idea(h)[0] for h in ids}
+    attempts = [{"hypothesis_id": h, "name": nombres[h],
+                 "valid": sum(i.get("hipotesis") == h and i.get("estado") != "invalida_bug" for i in intentos),
+                 "invalid": sum(i.get("hipotesis") == h and i.get("estado") == "invalida_bug" for i in intentos)} for h in ids]
+    snapshots = [{"name": s, "as_of": "", "hash": (recibo or {}).get("hashes_manifiesto", {}).get(s, "")[:12]}
+                 for s in (recibo or {}).get("snapshots", [])]
+    if recibo and recibo.get("version") != 2:
+        stages = [{**s, "passed": 0, "cut": 0, "error": 0, "alarm": 0} for s in stages]
+    return {"id": ciclo if recibo else None, "hash": (recibo or {}).get("hash"), "cycle": ciclo,
+            "partial": recibo is None, "generated_at": resumen["closed_at"] or datetime.now(timezone.utc).isoformat(),
+            "counts": {k: resumen[k] for k in ("entered", "active", "cut", "held", "promoted")},
+            "stages": stages, "drops": drops, "attempts": attempts, "snapshots": snapshots}
 
 
 def ciclo_actual(*, session=None):
