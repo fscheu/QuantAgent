@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from textwrap import fill
 
 from quantagent.fabrica import estado
+from quantagent.fabrica.hipotesis import nombre_e_idea
 from quantagent.fabrica import registro_db as registro
 
 
@@ -162,6 +163,7 @@ def hipotesis(estado=None, etapa=None, ciclo=None):
     actuales = _estados(eventos)
     intentos = registro.intentos(valida_solo=False)
     salida = []
+    nombres = {}
     for h, ultimo in actuales.items():
         stage = f"e{ultimo.get('etapa')}"
         veredicto = ultimo.get("veredicto")
@@ -172,7 +174,10 @@ def hipotesis(estado=None, etapa=None, ciclo=None):
         if (estado is not None and estado != status) or (etapa is not None and etapa != stage) or (ciclo is not None and ciclo != ciclo_h):
             continue
         propios = [i for i in intentos if i.get("hipotesis") == h]
-        salida.append({"id": h, "name": h, "idea": None, "cycle": ciclo_h, "stage": stage,
+        if h not in nombres:
+            nombres[h] = nombre_e_idea(h)
+        nombre, idea = nombres[h]
+        salida.append({"id": h, "name": nombre, "idea": idea, "cycle": ciclo_h, "stage": stage,
                        "verdict": veredicto, "status": status, "promoted": promovida,
                        "used_reserve": None, "attempts_valid": sum(i.get("estado") != "invalida_bug" for i in propios),
                        "attempts_invalid": sum(i.get("estado") == "invalida_bug" for i in propios),

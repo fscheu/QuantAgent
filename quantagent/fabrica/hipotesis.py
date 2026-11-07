@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,6 +11,24 @@ from typing import Any
 import yaml
 
 _TEXTOS = ("id", "autor", "justificacion", "timeframe")
+
+
+def nombre_e_idea(hipotesis_id: str, carpeta: str | Path | None = None) -> tuple[str, str | None]:
+    directorio = Path(carpeta or os.environ.get(
+        "QUANTAGENT_HIPOTESIS_DIR", Path(__file__).resolve().parents[2] / "hipotesis"))
+    path = directorio / f"{hipotesis_id}.yaml"
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict) or data.get("id") != hipotesis_id:
+            return hipotesis_id, None
+        if not isinstance(data.get("justificacion"), str) or not data["justificacion"].strip():
+            return hipotesis_id, None
+        nombre = data.get("nombre")
+        justificacion = data["justificacion"]
+        idea = next((linea.strip() for linea in justificacion.splitlines() if linea.strip()), None)
+        return (nombre.strip() if isinstance(nombre, str) and nombre.strip() else hipotesis_id, idea)
+    except (OSError, UnicodeError, yaml.YAMLError):
+        return hipotesis_id, None
 
 
 @dataclass(frozen=True)
