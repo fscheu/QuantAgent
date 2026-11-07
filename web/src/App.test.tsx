@@ -18,13 +18,12 @@ describe('App', () => {
 
   it.each([
     ['/embudo', 'Embudo'], ['/embudo/ciclo/ciclo-7', 'No pudimos conectar con la API'],
-    ['/hipotesis/hip-2', 'Hipótesis · hip-2'], ['/mercado', 'Mercado'],
+    ['/hipotesis/hip-2', 'No pudimos conectar con la API'], ['/mercado', 'Mercado'],
   ])('renders the route %s with its parameter', async (path, title) => {
     window.history.replaceState(null, '', path)
     render(<ThemeProvider><App /></ThemeProvider>)
     expect(await screen.findByRole('heading', { name: title })).toBeTruthy()
-    if (path.startsWith('/embudo') || path === '/mercado') expect(screen.queryByText('En construcción')).toBeNull()
-    else expect(screen.getByText('En construcción')).toBeTruthy()
+    expect(screen.queryByText('En construcción')).toBeNull()
   })
 
   it('renders the ETF detail route', () => {

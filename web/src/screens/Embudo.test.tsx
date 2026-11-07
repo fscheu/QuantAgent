@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { Embudo } from './Embudo'
@@ -31,5 +31,13 @@ describe('Embudo', () => {
     fireEvent.change(screen.getByRole('combobox', { name: 'Ciclo' }), { target: { value: '2026-11' } })
     await waitFor(() => expect(window.location.search).toContain('ciclo=2026-11'))
     expect(screen.getByRole('group', { name: /Período/ }).getAttribute('disabled')).not.toBeNull()
+  })
+  it('navega desde las tarjetas de hipótesis y ciclo a sus fichas', async () => {
+    const navigate = vi.fn()
+    render(<Embudo navigate={navigate} />)
+    fireEvent.click(await screen.findByText(hypotheses[0].name))
+    expect(navigate).toHaveBeenCalledWith(`/hipotesis/${hypotheses[0].id}`)
+    fireEvent.click(screen.getAllByRole('link', { name: /2026-11/ })[0])
+    expect(navigate).toHaveBeenCalledWith('/embudo/ciclo/2026-11')
   })
 })

@@ -11,6 +11,7 @@ export { PositionCard, PositionRow, positionColumns } from './Position';
 export { OrderCard, OrderRow, RejectReason, orderColumns, orderGroupBy, orderSubRow } from './Order';
 export { AccountCard, AccountSummaryCard, AccountNoData } from './Account';
 export { StageVerdictBadge, ReviewCounter, CycleMilestones } from './Funnel';
+export { StageTimeline, AttemptList, HypothesisDetailContent } from './HypothesisDetail';
 export { EquityChart, DivergingBar, Sparkline } from './Charts';
 export type { EquityRange } from './Charts';
 
