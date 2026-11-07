@@ -136,6 +136,30 @@ def test_hipotesis_intentos_invalidos_y_detalle(raiz):
     assert vista.hipotesis_detalle("missing") is None
 
 
+def test_nombre_idea_yaml_y_vistas(raiz, tmp_path, monkeypatch):
+    from quantagent.fabrica.hipotesis import nombre_e_idea
+
+    contenido = ("id: alpha\nautor: fede\nnombre: Reversión\njustificacion: |\n"
+                 "  Primera idea.\n\n  Segunda línea.\nclase: rsi\nparametros: {}\n"
+                 "activos: [SPY]\nuniverso: SPY\ntimeframe: 1d\n")
+    (tmp_path / "alpha.yaml").write_text(contenido)
+    assert nombre_e_idea("alpha", tmp_path) == ("Reversión", "Primera idea.")
+    assert nombre_e_idea("ausente", tmp_path) == ("ausente", None)
+    (tmp_path / "roto.yaml").write_text("no: [yaml")
+    assert nombre_e_idea("roto", tmp_path) == ("roto", None)
+
+    monkeypatch.setenv("QUANTAGENT_HIPOTESIS_DIR", str(tmp_path))
+    registro.abrir_ciclo("2026-08", ["alpha", "ausente", "roto"])
+    for h in ("alpha", "ausente", "roto"):
+        registro.registrar_evento(h, "etapa", "0", "PASA", ciclo="2026-08")
+    filas = {h["id"]: h for h in vista.hipotesis()}
+    assert (filas["alpha"]["name"], filas["alpha"]["idea"]) == ("Reversión", "Primera idea.")
+    assert (filas["ausente"]["name"], filas["ausente"]["idea"]) == ("ausente", None)
+    assert (filas["roto"]["name"], filas["roto"]["idea"]) == ("roto", None)
+    detalle = vista.hipotesis_detalle("alpha")
+    assert (detalle["name"], detalle["idea"]) == ("Reversión", "Primera idea.")
+
+
 def test_periodo_usa_utc_y_ahora_inyectable(raiz):
     registro.registrar_evento("A", "etapa", "0", "PASA", fecha_utc="2026-01-01T00:00:00+00:00")
     registro.registrar_evento("B", "etapa", "0", "PASA", fecha_utc="2026-01-09T00:00:00+00:00")
