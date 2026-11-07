@@ -189,10 +189,11 @@ def _link(event):
     return base
 
 
-def build_feed(db, since=None, limit=50, utc_z=None):
+def build_feed(db, since=None, limit=50, utc_z=None, derived_events=()):
     """Query and group events into FeedEventResponse-compatible dictionaries."""
     since = since or datetime.now(timezone.utc) - timedelta(hours=24)
     rows = db.scalars(select(Event).where(Event.occurred_at >= since).order_by(Event.occurred_at, Event.id)).all()
+    rows.extend(e for e in derived_events if e.occurred_at >= since)
     accounts = {a.id: a.name for a in db.scalars(select(Account)).all()}
     resolved = {(e.account_id, e.entity_id, (e.payload or {}).get("alarm_type")) for e in rows
                 if e.type == "alarm_resolved"}
