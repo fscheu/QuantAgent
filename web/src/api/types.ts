@@ -184,7 +184,7 @@ export interface Funnel {
   sample_too_small: boolean;
 }
 
-export interface CycleMilestone { key: 'proposal' | 'funnel_start' | 'paper_review' | 'close'; day: number | null; date: string; done: boolean; }
+export interface CycleMilestone { key: 'proposal' | 'funnel_start' | 'close'; day: number | null; date: string; done: boolean; }
 
 export interface CycleSummary {
   cycle: CycleId;                    // '2026-11'
@@ -197,7 +197,7 @@ export interface CycleSummary {
   held: number;
   promoted: number;
   reached_by_stage: Record<CycleStageId, number | null>;  // null = etapa no empezada (ciclo abierto) → "pendiente"
-  milestones: CycleMilestone[];
+  milestones: CycleMilestone[] | null;
   headline: string | null;           // frase generada; si null el cliente arma una con los conteos
   receipt_id: string | null;         // null si abierto
 }

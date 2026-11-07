@@ -28,17 +28,12 @@ export function ReviewCounter({ rule, loading = false, error = false }: { rule: 
   </section>;
 }
 
-const milestoneLabels: Record<CycleMilestone['key'], string> = { proposal: 'Propuesta', funnel_start: 'Arranque del embudo', paper_review: 'Revisión de paper', close: 'Cierre' };
-export function CycleMilestones({ milestones, cycle, status }: { milestones: CycleMilestone[] | null; cycle: string; status: 'open' | 'closed' }) {
-  const [year, month] = cycle.split('-').map(Number);
-  const items = milestones ?? (Object.entries(cycleConfig.milestones).map(([key, day]) => ({ key: key === 'funnelStart' ? 'funnel_start' : key === 'paperReview' ? 'paper_review' : 'proposal', day, date: new Date(Date.UTC(year, month - 1, day)).toISOString(), done: false })) as CycleMilestone[]);
-  const now = new Date();
-  return <ol className="qa-cycle-milestones" aria-label={`Hitos del ciclo ${cycle}`}>{items.map((item, index) => {
-    const date = new Date(item.date);
-    const overdue = !item.done && date < now;
-    const label = milestoneLabels[item.key];
-    const state = item.done ? 'hecho' : status === 'closed' ? 'cerrado' : overdue ? 'vencido' : 'pendiente';
-    return <li key={`${item.key}-${index}`} className={item.done ? 'is-done' : overdue ? 'is-overdue' : ''}><span className="qa-milestone-dot" aria-hidden="true">{item.done ? '✓' : overdue ? '!' : '·'}</span><span><strong>{label}</strong><small>{date.toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'short', timeZone: 'UTC' })}</small></span><span className="qa-milestone-state">{state}</span></li>;
+const milestoneLabels: Record<CycleMilestone['key'], string> = { proposal: 'Propuesta (día 1)', funnel_start: 'Aprobación y arranque del embudo', close: 'Cierre' };
+export function CycleMilestones({ milestones, cycle }: { milestones: CycleMilestone[] | null; cycle: string; status: 'open' | 'closed' }) {
+  if (milestones === null) return <p className="qa-cycle-milestones" role="status">Sin información del ciclo todavía</p>;
+  return <ol className="qa-cycle-milestones" aria-label={`Hitos del ciclo ${cycle}`}>{milestones.map((item, index) => {
+    const date = item.date ? new Date(item.date).toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'short', timeZone: 'UTC' }) : 'sin fecha todavía';
+    return <li key={`${item.key}-${index}`} className={item.done ? 'is-done' : ''}><span className="qa-milestone-dot" aria-hidden="true">{item.done ? '✓' : '·'}</span><span><strong>{milestoneLabels[item.key]}</strong><small>{date}</small></span><span className="qa-milestone-state">{item.done ? 'hecho' : 'pendiente'}</span></li>;
   })}</ol>;
 }
 
