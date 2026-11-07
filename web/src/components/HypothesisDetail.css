@@ -1,0 +1,12 @@
+.qa-hypothesis-detail { display: grid; gap: var(--qa-space-4); }
+.qa-hypothesis-detail > header { display: flex; align-items: center; gap: var(--qa-space-3); }
+.qa-hypothesis-detail > header h1 { margin: 0; }
+.qa-hypothesis-section { padding: var(--qa-space-4); border: 1px solid var(--qa-border); border-radius: var(--qa-radius-md); }
+.qa-stage-timeline, .qa-attempt-list { list-style: none; padding: 0; display: grid; gap: var(--qa-space-3); }
+.qa-stage-timeline li, .qa-attempt-list li { display: grid; grid-template-columns: 1fr auto; align-items: start; gap: var(--qa-space-2); padding: var(--qa-space-3); border-bottom: 1px solid var(--qa-border); }
+.qa-stage-timeline li > p, .qa-attempt-list li > p { grid-column: 1 / -1; margin: 0; }
+.qa-stage-timeline li.is-pending { color: var(--qa-text-secondary); }
+.qa-stage-timeline li.is-later { opacity: .5; }
+.qa-later-phases { opacity: .6; }
+.qa-attempt-list li.is-invalid { border: 1px solid var(--qa-warn); background: var(--qa-warn-soft); }
+.qa-imported, .qa-reserve-chip { width: fit-content; padding: 3px 8px; border: 1px solid var(--qa-border); border-radius: 999px; }

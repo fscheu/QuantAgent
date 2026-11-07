@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
-import type { AccountRef, AccountSummary, CalendarEvent, CycleSummary, DailyCandle, Dividend, EquityPoint, FeedEvent, Funnel, HistorySummary, HomeStatus, Hypothesis, HypothesisDetail, MarketPage, Order, Position, ReviewRule, SectorExposure } from '../api/types'
-import { accountRefs, accounts, backtests, calendarEvents, currentCycle, cycles, dividends, equity, etfCandles, feedEvents, funnel, history, homeStatus, hypotheses, hypothesisDetail, marketClock, marketPage, orders, performance, positions, reviewRule, sectorExposure } from './data'
+import type { AccountRef, AccountSummary, CalendarEvent, CycleReceipt, CycleSummary, DailyCandle, Dividend, EquityPoint, FeedEvent, Funnel, HistorySummary, HomeStatus, Hypothesis, HypothesisDetail, MarketPage, Order, Position, ReviewRule, SectorExposure } from '../api/types'
+import { accountRefs, accounts, backtests, calendarEvents, currentCycle, cycleReceipts, cycles, dividends, equity, etfCandles, feedEvents, funnel, history, homeStatus, hypotheses, hypothesisDetail, marketClock, marketPage, orders, performance, positions, reviewRule, sectorExposure } from './data'
 
 /** Forma que devuelve la API real (OrderResponse); el cliente la convierte a Order. */
 const toOrderResponse = (o: Order) => ({
@@ -32,6 +32,7 @@ export const handlers = [
   http.get('*/api/funnel', () => HttpResponse.json<Funnel>(funnel)),
   http.get('*/api/funnel/cycles', () => HttpResponse.json<CycleSummary[]>(cycles)),
   http.get('*/api/funnel/cycles/current', () => HttpResponse.json<CycleSummary>(currentCycle)),
+  http.get('*/api/funnel/cycles/:id/receipt', ({ params }) => { const receipt = cycleReceipts.find(item => item.cycle === params.id); return receipt ? HttpResponse.json<CycleReceipt>(receipt) : new HttpResponse(null, { status: 404 }) }),
   http.get('*/api/funnel/review', () => HttpResponse.json<ReviewRule>(reviewRule)),
   http.get('*/api/funnel/history', () => HttpResponse.json<HistorySummary>(history)),
   http.get('*/api/hypotheses', () => HttpResponse.json<Hypothesis[]>(hypotheses)),

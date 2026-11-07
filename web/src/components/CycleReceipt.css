@@ -1,0 +1,10 @@
+.qa-cycle-receipt { padding: 1rem; background: var(--qa-surface); color: var(--qa-text); }
+.qa-cycle-receipt header { display: flex; align-items: center; gap: 1rem; }
+.qa-cycle-receipt header h1 { flex: 1; }
+.qa-cycle-receipt code { font-family: var(--qa-font-mono); }
+.qa-cycle-receipt dl { display: flex; flex-wrap: wrap; gap: 1rem; }
+.qa-cycle-receipt dl div { background: var(--qa-surface-sunken); padding: .5rem; }
+.qa-cycle-receipt dd { margin: 0; font-weight: 700; }
+.qa-cycle-receipt table { border-collapse: collapse; width: 100%; }
+.qa-cycle-receipt th, .qa-cycle-receipt td { padding: .5rem; border-bottom: 1px solid var(--qa-border); text-align: left; }
+@media (min-width: 1024px) { .qa-cycle-receipt.panel { position: fixed; inset: 0 0 0 auto; width: 520px; overflow: auto; box-shadow: 0 0 0 100vmax #0005; } }
