@@ -207,6 +207,36 @@ class CycleSummary(BaseModel):
     receipt_id: str | None
 
 
+class ReceiptStage(BaseModel):
+    stage: Literal["e0", "e1", "e2", "e3"]
+    reached: int
+    here: int
+    passed: int
+    cut: int
+    error: int
+    alarm: int
+    pending: bool
+
+
+class ReceiptSnapshot(BaseModel):
+    name: str
+    as_of: str
+    hash: str
+
+
+class CycleReceipt(BaseModel):
+    id: str | None
+    hash: str | None
+    cycle: str
+    partial: bool
+    generated_at: str
+    counts: dict[str, int]
+    stages: list[ReceiptStage]
+    drops: list[dict]
+    attempts: list[dict]
+    snapshots: list[ReceiptSnapshot]
+
+
 class ReviewCycle(BaseModel):
     cycle: str
     promoted: int
