@@ -9,4 +9,5 @@
 - [Decisions](decisions.md): recorded decisions.
 - [Glossary](glossary.md): terms used across the manual.
 - [Research funnel](funnel.md): stage-by-stage process.
+- [Funnel, hypothesis detail, and market](web-funnel-market.md): Embudo, hypothesis records, cycle receipts, and Mercado screens.
 - [CLI reference](reference/cli/README.md): generated command help.

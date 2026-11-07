@@ -8,6 +8,7 @@ TERMS = (
     "N (attempts)", "Stages 0–3", "Candidate", "1/N", "Shadow (sombra local)", "Paper",
     "Fraccionable", "Cuenta cash", "Clean epoch (época limpia, `invalida_bug`)", "PDT", "Snapshot", "Equity snapshot", "Master accounts database", "Manifest",
     "Train, test, and reserve", "Buy and hold", "Intrabar", "Control (backtesting.py)", "Golden test", "Walk-forward", "Cuenta chica", "Cycle receipt",
+    "Cycle", "Review rule", "Held", "Market regime", "Motor state (M5)", "Cause code", "Imported history (“Sin ciclo”)",
 )
 
 
