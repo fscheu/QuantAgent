@@ -130,6 +130,24 @@ class MarketPage(BaseModel):
     errors: dict[str, str] = Field(default_factory=dict)
 
 
+class MarketSeriesPoint(BaseModel):
+    date: str
+    value: float
+
+
+class MarketSeries(BaseModel):
+    symbol: str
+    points: list[MarketSeriesPoint]
+
+
+class DailyCandle(BaseModel):
+    date: str
+    open: float
+    high: float
+    low: float
+    close: float
+
+
 class FunnelStage(BaseModel):
     stage: str
     reached: int

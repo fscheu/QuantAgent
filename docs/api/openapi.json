@@ -424,6 +424,39 @@
         "title": "CalendarEventResponse",
         "type": "object"
       },
+      "DailyCandle": {
+        "properties": {
+          "close": {
+            "title": "Close",
+            "type": "number"
+          },
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "high": {
+            "title": "High",
+            "type": "number"
+          },
+          "low": {
+            "title": "Low",
+            "type": "number"
+          },
+          "open": {
+            "title": "Open",
+            "type": "number"
+          }
+        },
+        "required": [
+          "date",
+          "open",
+          "high",
+          "low",
+          "close"
+        ],
+        "title": "DailyCandle",
+        "type": "object"
+      },
       "DividendResponse": {
         "properties": {
           "date": {
@@ -1392,6 +1425,45 @@
           "events"
         ],
         "title": "MarketPage",
+        "type": "object"
+      },
+      "MarketSeries": {
+        "properties": {
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/MarketSeriesPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "points"
+        ],
+        "title": "MarketSeries",
+        "type": "object"
+      },
+      "MarketSeriesPoint": {
+        "properties": {
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "date",
+          "value"
+        ],
+        "title": "MarketSeriesPoint",
         "type": "object"
       },
       "OrderResponse": {
@@ -2428,6 +2500,110 @@
           }
         },
         "summary": "Market"
+      }
+    },
+    "/api/market/etf/{symbol}/candles": {
+      "get": {
+        "operationId": "market_candles_api_market_etf__symbol__candles_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "range",
+            "required": true,
+            "schema": {
+              "title": "Range",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DailyCandle"
+                  },
+                  "title": "Response Market Candles Api Market Etf  Symbol  Candles Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Market Candles"
+      }
+    },
+    "/api/market/series": {
+      "get": {
+        "operationId": "market_series_api_market_series_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "symbols",
+            "required": true,
+            "schema": {
+              "title": "Symbols",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "range",
+            "required": true,
+            "schema": {
+              "title": "Range",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MarketSeries"
+                  },
+                  "title": "Response Market Series Api Market Series Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Market Series"
       }
     },
     "/api/performance/backtest/{backtest_id}": {

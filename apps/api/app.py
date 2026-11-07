@@ -134,6 +134,11 @@ def get_db():
         db.close()
 
 
+from .market_series import router as market_series_router
+
+app.include_router(market_series_router)
+
+
 def _backtest_curve(run_id: int):
     import csv
     from pathlib import Path
