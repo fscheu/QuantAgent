@@ -1,9 +1,11 @@
 import { useMemo } from 'react'
+import { ApiError } from '../api/client'
 import type { CalendarEvent, FeedEvent, HomeStatus } from '../api/types'
-import { useAccounts, useCalendar, useFeed, useHomeStatus } from '../api/hooks'
+import { useAccounts, useCalendar, useCurrentCycle, useFeed, useHomeStatus } from '../api/hooks'
 import { homeConfig } from '../config'
 import { AccountCard } from '../components/Account'
-import { ComingSoon, ErrorState, Notice, Skeleton } from '../components'
+import { ErrorState, Notice, Skeleton } from '../components'
+import { CycleSummaryCard } from '../components/Funnel'
 import { time } from '../lib/format'
 import './Inicio.css'
 
@@ -16,11 +18,16 @@ function HomeStatusBanner({ status, reload }: { status: HomeStatus | null; reloa
   return <div className="qa-home-banner">{status.link ? <a href={status.link} className="qa-home-status-link"><Notice severity={severity} title={status.headline} message={status.message} /></a> : <Notice severity={severity} title={status.headline} message={status.message} />}{!status.link && <button className="qa-home-reload" onClick={reload}>Actualizar estado</button>}</div>
 }
 
-function FeedList({ events, reload }: { events: FeedEvent[] | null; reload: () => void }) {
+function FeedList({ events, reload, navigate }: { events: FeedEvent[] | null; reload: () => void; navigate: (path: string) => void }) {
   if (!events) return <Skeleton label="Actividad" />
   if (events.length === 0) return <p className="qa-home-muted">Nada nuevo desde {time(new Date(Date.now() - homeConfig.feedFallbackHours * 3600000).toISOString(), 'ART')}.</p>
   const visible = sortFeed(events).slice(0, homeConfig.feedMaxItems)
-  return <><ul className="qa-home-feed">{visible.map(event => <li key={event.id}><a href={event.link}><span className={`qa-home-glyph qa-home-glyph-${event.severity}`} aria-hidden="true">{event.severity === 'critical' ? '⯃' : event.severity === 'warning' ? '△' : event.type === 'cycle_completed' ? '➜' : event.severity === 'neutral' ? '+' : 'ⓘ'}</span><span><strong>{event.title}{event.group_count > 1 ? ` · ${event.group_count}` : ''}</strong>{event.subtitle && <small>{event.subtitle}</small>}<small>{time(event.occurred_at, 'ART')}</small></span></a></li>)}</ul>{events.length > homeConfig.feedMaxItems && <button className="qa-home-reload" onClick={reload}>Ver todo</button>}</>
+  return <><ul className="qa-home-feed">{visible.map(event => <li key={event.id}><a href={event.link} onClick={event.type === 'cycle_closed' || event.type === 'review_rule_reached' ? click => { click.preventDefault(); navigate(event.link) } : undefined}><span className={`qa-home-glyph qa-home-glyph-${event.severity}`} aria-hidden="true">{event.severity === 'critical' ? '⯃' : event.severity === 'warning' ? '△' : event.severity === 'neutral' ? '+' : 'ⓘ'}</span><span><strong>{event.title}{event.group_count > 1 ? ` · ${event.group_count}` : ''}</strong>{event.subtitle && <small>{event.subtitle}</small>}<small>{time(event.occurred_at, 'ART')}</small></span></a></li>)}</ul>{events.length > homeConfig.feedMaxItems && <button className="qa-home-reload" onClick={reload}>Ver todo</button>}</>
+}
+
+function CurrentCycle({ navigate }: { navigate: (path: string) => void }) {
+  const cycle = useCurrentCycle()
+  return <section><h2>Embudo</h2>{cycle.status === 'loading' ? <Skeleton label="Ciclo actual" /> : cycle.status === 'error' ? cycle.error instanceof ApiError && cycle.error.status === 404 ? <p className="qa-home-muted">Todavía no hay ciclos.</p> : <ErrorState message="No pudimos cargar el ciclo actual." action={{ label: 'Reintentar', onClick: cycle.reload }} /> : <><CycleSummaryCard cycle={cycle.data} compact /><a href="/embudo" onClick={event => { event.preventDefault(); navigate('/embudo') }}>Ver embudo</a></>}</section>
 }
 
 function EventList({ events }: { events: CalendarEvent[] | null }) {
@@ -35,6 +42,6 @@ export function Inicio({ navigate }: { navigate: (path: string) => void }) {
   return <main className="qa-inicio"><header className="qa-inicio-header"><h1>Inicio</h1><nav aria-label="Navegación"><a href="/" aria-current="page">Inicio</a><a href="/cuenta" onClick={event => { event.preventDefault(); navigate('/cuenta') }}>Cuenta</a></nav></header>
     <section className="qa-home-status" aria-label="Estado general">{status.status === 'error' ? <ErrorState message="No pudimos cargar el estado general." action={{ label: 'Reintentar', onClick: status.reload }} /> : <HomeStatusBanner status={status.status === 'ok' ? status.data : null} reload={status.reload} />}</section>
     <section className="qa-home-accounts"><h2>Cuentas</h2>{accounts.status === 'loading' ? <Skeleton label="Cuentas" /> : accounts.status === 'error' ? <ErrorState message="No pudimos cargar las cuentas." action={{ label: 'Reintentar', onClick: accounts.reload }} /> : <div className="qa-home-account-grid">{accounts.data.map(account => <AccountCard key={account.id} account={account} href={`/cuenta/${account.id}`} />)}</div>}</section>
-    <div className="qa-home-panels"><section><h2>Desde tu última visita</h2>{feed.status === 'error' ? <ErrorState message="No pudimos cargar la actividad." action={{ label: 'Reintentar', onClick: feed.reload }} /> : <FeedList events={sortedFeed} reload={feed.reload} />}</section><ComingSoon title="Embudo" /><section><h2>Próximos eventos</h2>{calendar.status === 'error' ? <ErrorState message="No pudimos cargar los eventos." action={{ label: 'Reintentar', onClick: calendar.reload }} /> : <EventList events={calendar.status === 'ok' ? calendar.data : null} />}</section></div>
+    <div className="qa-home-panels"><section><h2>Desde tu última visita</h2>{feed.status === 'error' ? <ErrorState message="No pudimos cargar la actividad." action={{ label: 'Reintentar', onClick: feed.reload }} /> : <FeedList events={sortedFeed} reload={feed.reload} navigate={navigate} />}</section><CurrentCycle navigate={navigate} /><section><h2>Próximos eventos</h2>{calendar.status === 'error' ? <ErrorState message="No pudimos cargar los eventos." action={{ label: 'Reintentar', onClick: calendar.reload }} /> : <EventList events={calendar.status === 'ok' ? calendar.data : null} />}</section></div>
   </main>
 }
